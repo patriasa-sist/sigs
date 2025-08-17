@@ -1,3 +1,5 @@
+"use client";
+
 import { login } from "./actions";
 
 import { useRouter } from "next/navigation";
@@ -17,7 +19,7 @@ export default function LoginPage({ className, ...props }: React.ComponentPropsW
 	const [isLoading, setIsLoading] = useState(false);
 	const router = useRouter();
 
-	//pass the form data and form event
+	//pass the form data and form event to the internal functions
 	const handleLogin = async (formData: FormData, e: React.FormEvent) => {
 		e.preventDefault();
 		setIsLoading(true);
@@ -59,12 +61,6 @@ export default function LoginPage({ className, ...props }: React.ComponentPropsW
 							<div className="grid gap-2">
 								<div className="flex items-center">
 									<Label htmlFor="password">Password</Label>
-									<Link
-										href="/auth/forgot-password"
-										className="ml-auto inline-block text-sm underline-offset-4 hover:underline"
-									>
-										Forgot your password?
-									</Link>
 								</div>
 								<Input
 									id="password"
