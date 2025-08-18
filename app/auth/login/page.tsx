@@ -1,83 +1,133 @@
 "use client";
-
-import { login } from "./actions";
-
-import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { useState } from "react";
-
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
+import { InputOTP, InputOTPGroup, InputOTPSeparator, InputOTPSlot } from "@/components/ui/input-otp";
 
-export default function LoginPage({ className, ...props }: React.ComponentPropsWithoutRef<"div">) {
-	const [email, setEmail] = useState("");
-	const [password, setPassword] = useState("");
-	const [error, setError] = useState<string | null>(null);
-	const [isLoading, setIsLoading] = useState(false);
-	const router = useRouter();
+const formSchema = z.object({
+	em: z.email().min(1, { message: "Email can not be empty." }).endsWith("@patria-sa.com", {
+		message: "Correo no autorizado",
+	}),
+	pass: z
+		.string()
+		.min(1, { message: "Password can not be empty." })
+		.regex(/^.{8,20}$/, {
+			message: "Minimum 8 and maximum 20 characters.",
+		})
+		.regex(/(?=.*[A-Z])/, {
+			message: "At least one uppercase character.",
+		})
+		.regex(/(?=.*[a-z])/, {
+			message: "At least one lowercase character.",
+		})
+		.regex(/(?=.*\d)/, {
+			message: "At least one digit.",
+		})
+		.regex(/[$&+,:;=?@#|'<>.^*()%!-]/, {
+			message: "At least one special character.",
+		}),
+	otp: z.string().length(6, { message: "OTP can not be empty." }),
+});
 
-	//pass the form data and form event to the internal functions
-	const handleLogin = async (formData: FormData, e: React.FormEvent) => {
-		e.preventDefault();
-		setIsLoading(true);
-		setError(null);
+export default function MyForm() {
+	const form = useForm<z.infer<typeof formSchema>>({
+		resolver: zodResolver(formSchema),
+		defaultValues: {
+			em: "",
+			pass: "",
+			otp: "",
+		},
+	});
 
+	function onSubmit(values: z.infer<typeof formSchema>) {
 		try {
-			login(formData);
-			if (error) throw error;
-			// Update this route to redirect to an authenticated route. The user already has an active session.
-			router.push("/admin"); //pruebas con admin
-		} catch (error: unknown) {
-			setError(error instanceof Error ? error.message : "An error occurred");
-		} finally {
-			setIsLoading(false);
+			console.log(values);
+			toast(
+				<pre className="mt-2 w-[340px] rounded-md bg-slate-950 p-4">
+					<code className="text-white">{JSON.stringify(values, null, 2)}</code>
+				</pre>
+			);
+		} catch (error) {
+			console.error("Form submission error", error);
+			toast.error("Failed to submit the form. Please try again.");
 		}
-	};
+	}
 
 	return (
-		<div className={cn("flex flex-col gap-6", className)} {...props}>
-			<Card>
-				<CardHeader>
-					<CardTitle className="text-2xl">Login</CardTitle>
-					<CardDescription>Enter your email below to login to your account</CardDescription>
-				</CardHeader>
-				<CardContent>
-					<form onSubmit={(e) => handleLogin(new FormData(e.currentTarget), e)}>
-						<div className="flex flex-col gap-6">
-							<div className="grid gap-2">
-								<Label htmlFor="email">Email</Label>
-								<Input
-									id="email"
-									type="email"
-									placeholder="m@example.com"
-									required
-									value={email}
-									onChange={(e) => setEmail(e.target.value)}
-								/>
-							</div>
-							<div className="grid gap-2">
-								<div className="flex items-center">
-									<Label htmlFor="password">Password</Label>
-								</div>
-								<Input
-									id="password"
-									type="password"
-									required
-									value={password}
-									onChange={(e) => setPassword(e.target.value)}
-								/>
-							</div>
-							{error && <p className="text-sm text-red-500">{error}</p>}
-							<Button type="submit" className="w-full" disabled={isLoading}>
-								{isLoading ? "Iniciando Sesión..." : "Login"}
-							</Button>
-						</div>
-					</form>
-				</CardContent>
-			</Card>
+		<div className="flex justify-center items-center h-screen">
+			<Form {...form}>
+				<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 max-w-3xl mx-auto py-10">
+					<FormField
+						control={form.control}
+						name="em"
+						render={({ field }) => (
+							<FormItem>
+								<FormLabel>Usuario</FormLabel>
+								<FormControl>
+									<Input
+										placeholder="ejecutivo@correo.com"
+										type="email"
+										autoComplete="email"
+										{...field}
+									/>
+								</FormControl>
+								<FormDescription>Correo asociado al sistema</FormDescription>
+								<FormMessage />
+							</FormItem>
+						)}
+					/>
+
+					<FormField
+						control={form.control}
+						name="pass"
+						render={({ field }) => (
+							<FormItem>
+								<FormLabel>Contraseña</FormLabel>
+								<FormControl>
+									<PasswordInput autoComplete="current-password" {...field} />
+								</FormControl>
+								<FormDescription>Ingresa tu contraseña</FormDescription>
+								<FormMessage />
+							</FormItem>
+						)}
+					/>
+
+					<FormField
+						control={form.control}
+						name="otp"
+						render={({ field }) => (
+							<FormItem>
+								<FormLabel>Código de seguridad</FormLabel>
+								<FormControl>
+									<InputOTP maxLength={6} {...field}>
+										<InputOTPGroup>
+											<InputOTPSlot index={0} />
+											<InputOTPSlot index={1} />
+											<InputOTPSlot index={2} />
+										</InputOTPGroup>
+										<InputOTPSeparator />
+										<InputOTPGroup>
+											<InputOTPSlot index={3} />
+											<InputOTPSlot index={4} />
+											<InputOTPSlot index={5} />
+										</InputOTPGroup>
+									</InputOTP>
+								</FormControl>
+								<FormDescription>Copia el código de seguridad generado</FormDescription>
+								<FormMessage />
+							</FormItem>
+						)}
+					/>
+					<Button type="submit">Submit</Button>
+				</form>
+			</Form>
 		</div>
 	);
 }
