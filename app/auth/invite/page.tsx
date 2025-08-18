@@ -13,7 +13,7 @@ const formSchema = z.object({
 	"correo-invitacion": z.email(),
 });
 
-export default function Signup() {
+export default function SignUp() {
 	const form = useForm<z.infer<typeof formSchema>>({
 		resolver: zodResolver(formSchema),
 		defaultValues: {
@@ -21,17 +21,32 @@ export default function Signup() {
 		},
 	});
 
-	function onSubmit(values: z.infer<typeof formSchema>) {
+	async function onSubmit(values: z.infer<typeof formSchema>) {
 		try {
-			console.log(values);
-			toast(
-				<pre className="mt-2 w-[340px] rounded-md bg-slate-950 p-4">
-					<code className="text-white">{JSON.stringify(values, null, 2)}</code>
-				</pre>
-			);
-		} catch (error) {
-			console.error("Form submission error", error);
-			toast.error("Failed to submit the form. Please try again.");
+			const response = await fetch("/api/invite", {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				// El backend espera un objeto { email: '...' }
+				body: JSON.stringify({ email: values["correo-invitacion"] }),
+			});
+
+			const result = await response.json();
+
+			if (!response.ok) {
+				// Si el servidor responde con un error (ej. status 500)
+				// Muestra el mensaje de error que viene del backend
+				throw new Error(result.error || "Ocurrió un error en el servidor.");
+			}
+
+			// Si todo sale bien
+			toast.success("¡Invitación enviada exitosamente!");
+			form.reset(); // Opcional: limpiar el formulario después del envío
+		} catch (error: any) {
+			console.error("Error al enviar el formulario:", error);
+			// Muestra el mensaje de error en un toast
+			toast.error(error.message || "No se pudo enviar la invitación. Inténtalo de nuevo.");
 		}
 	}
 

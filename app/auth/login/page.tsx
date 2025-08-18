@@ -10,12 +10,13 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
 import { InputOTP, InputOTPGroup, InputOTPSeparator, InputOTPSlot } from "@/components/ui/input-otp";
+import { login } from "./actions";
+import { useRouter } from "next/navigation";
 
 const formSchema = z.object({
-	em: z.email().min(1, { message: "Email can not be empty." }).endsWith("@patria-sa.com", {
-		message: "Correo no autorizado",
-	}),
-	pass: z
+	email: z.email().min(1, { message: "Email can not be empty." }),
+	// .endsWith("@patria-sa.com", {message: "Correo no autorizado",}),
+	password: z
 		.string()
 		.min(1, { message: "Password can not be empty." })
 		.regex(/^.{8,20}$/, {
@@ -37,23 +38,28 @@ const formSchema = z.object({
 });
 
 export default function MyForm() {
+	const router = useRouter();
+
 	const form = useForm<z.infer<typeof formSchema>>({
 		resolver: zodResolver(formSchema),
 		defaultValues: {
-			em: "",
-			pass: "",
+			email: "",
+			password: "",
 			otp: "",
 		},
 	});
 
 	function onSubmit(values: z.infer<typeof formSchema>) {
 		try {
-			console.log(values);
-			toast(
-				<pre className="mt-2 w-[340px] rounded-md bg-slate-950 p-4">
-					<code className="text-white">{JSON.stringify(values, null, 2)}</code>
-				</pre>
-			);
+			// crear el objeto FormData y agregar los campos
+			const formData = new FormData();
+			formData.append("email", values.email);
+			formData.append("password", values.password);
+			formData.append("otp", values.otp);
+			login(formData);
+
+			// Update this route to redirect to an authenticated route. The user already has an active session.
+			router.push("/admin"); //pruebas con admin
 		} catch (error) {
 			console.error("Form submission error", error);
 			toast.error("Failed to submit the form. Please try again.");
@@ -66,7 +72,7 @@ export default function MyForm() {
 				<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 max-w-3xl mx-auto py-10">
 					<FormField
 						control={form.control}
-						name="em"
+						name="email"
 						render={({ field }) => (
 							<FormItem>
 								<FormLabel>Usuario</FormLabel>
@@ -86,7 +92,7 @@ export default function MyForm() {
 
 					<FormField
 						control={form.control}
-						name="pass"
+						name="password"
 						render={({ field }) => (
 							<FormItem>
 								<FormLabel>Contraseña</FormLabel>
