@@ -3,7 +3,6 @@
 import { login } from "./actions";
 
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { useState } from "react";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";

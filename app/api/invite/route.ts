@@ -1,11 +1,11 @@
 // app/api/invite/route.ts
-import { createClient } from "@/utils/supabase/server"; // Ajusta la ruta si es necesario
+//import { createClient } from "@/utils/supabase/server"; // Ajusta la ruta si es necesario
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
 	// 1. Cliente con el contexto del usuario que hace la llamada
-	const supabase = await createClient();
+	// const supabase = await createClient();
 
 	// 2. Verificar que el usuario que hace la llamada es un admin
 	// const {

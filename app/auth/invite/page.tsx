@@ -1,10 +1,10 @@
 "use client";
-import { useState } from "react";
+// import { useState } from "react";
 import { toast } from "sonner";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { cn } from "@/lib/utils";
+// import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -43,10 +43,14 @@ export default function SignUp() {
 			// Si todo sale bien
 			toast.success("¡Invitación enviada exitosamente!");
 			form.reset(); // Opcional: limpiar el formulario después del envío
-		} catch (error: any) {
-			console.error("Error al enviar el formulario:", error);
-			// Muestra el mensaje de error en un toast
-			toast.error(error.message || "No se pudo enviar la invitación. Inténtalo de nuevo.");
+		} catch (error: unknown) {
+			if (error instanceof Error) {
+				console.error("Error al enviar el formulario:", error.message);
+				toast.error(error.message || "No se pudo enviar la invitación. Inténtalo de nuevo.");
+			} else {
+				console.error("An unknown error occurred:", error);
+				toast.error("An unknown error occurred. Please try again.");
+			}
 		}
 	}
 
