@@ -1,4 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import Link from "next/link";
 
 export default async function Page({ searchParams }: { searchParams: Promise<{ error: string }> }) {
 	const params = await searchParams;
@@ -18,6 +19,9 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ e
 								<p className="text-sm text-muted-foreground">An unspecified error occurred.</p>
 							)}
 						</CardContent>
+						<div className="flex justify-end mr-6">
+							<Link href="/auth/login">Go Back</Link>
+						</div>
 					</Card>
 				</div>
 			</div>
