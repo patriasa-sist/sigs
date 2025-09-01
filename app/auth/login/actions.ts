@@ -36,6 +36,8 @@ export async function login(formData: FormData) {
 
 	const { email, password, otp } = validationResult.data;
 
+	let errorMsg = "An unexpected error occurred please contact support";
+
 	try {
 		// Attempt to sign in
 		const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
@@ -45,11 +47,12 @@ export async function login(formData: FormData) {
 
 		if (authError) {
 			console.error("Authentication error:", authError.message);
-			redirect(`/auth/error?error=${encodeURIComponent(authError.message)}`);
-		}
-
-		if (!authData.user) {
-			redirect("/auth/error?error=Authentication failed");
+			errorMsg = encodeURIComponent(authError.message);
+			throw new Error(errorMsg);
+		} else if (!authData.user) {
+			console.error("User Auth Data error");
+			errorMsg = encodeURIComponent("Authentication failed");
+			throw new Error(errorMsg);
 		}
 
 		// Check if user has a profile (should exist due to trigger)
@@ -70,7 +73,8 @@ export async function login(formData: FormData) {
 
 			if (createProfileError) {
 				console.error("Create profile error:", createProfileError.message);
-				redirect("/auth/error?error=Failed to initialize user profile");
+				errorMsg = encodeURIComponent(createProfileError.message);
+				throw new Error(errorMsg);
 			}
 		}
 
@@ -87,11 +91,11 @@ export async function login(formData: FormData) {
 		if (profile?.role === "admin") {
 			redirect("/admin");
 		} else {
-			redirect("/dashboard");
+			redirect("/");
 		}
 	} catch (error) {
 		console.error("Unexpected login error:", error);
-		redirect("/auth/error?error=An unexpected error occurred during login");
+		redirect(`/auth/error?error=${errorMsg}`);
 	}
 }
 
