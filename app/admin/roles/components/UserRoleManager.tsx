@@ -117,19 +117,21 @@ export function UserRoleManager({ userId, currentRole, userEmail, isCurrentUser 
 								<Crown className="h-5 w-5 text-orange-500" />
 								{getConfirmationMessage("admin").title}
 							</AlertDialogTitle>
-							<AlertDialogDescription className="space-y-2">
-								<div>{getConfirmationMessage("admin").description}</div>
-								<div className="bg-yellow-50 border border-yellow-200 rounded-md p-3 mt-3">
-									<div className="flex items-start gap-2">
-										<AlertTriangle className="h-4 w-4 text-yellow-600 mt-0.5" />
-										<div className="text-sm text-yellow-800">
-											<div className="font-medium">Security Notice:</div>
-											<div>This action will be logged for security auditing purposes.</div>
-										</div>
-									</div>
-								</div>
+							<AlertDialogDescription>
+								{getConfirmationMessage("admin").description}
 							</AlertDialogDescription>
 						</AlertDialogHeader>
+						<div className="space-y-4">
+							<div className="bg-yellow-50 border border-yellow-200 rounded-md p-3">
+								<div className="flex items-start gap-2">
+									<AlertTriangle className="h-4 w-4 text-yellow-600 mt-0.5" />
+									<div className="text-sm text-yellow-800">
+										<div className="font-medium">Security Notice:</div>
+										<div>This action will be logged for security auditing purposes.</div>
+									</div>
+								</div>
+							</div>
+						</div>
 						<AlertDialogFooter>
 							<AlertDialogCancel>Cancel</AlertDialogCancel>
 							<AlertDialogAction
@@ -177,19 +179,21 @@ export function UserRoleManager({ userId, currentRole, userEmail, isCurrentUser 
 								<UserCheck className="h-5 w-5 text-blue-500" />
 								{getConfirmationMessage("user").title}
 							</AlertDialogTitle>
-							<AlertDialogDescription className="space-y-2">
-								<div>{getConfirmationMessage("user").description}</div>
-								<div className="bg-blue-50 border border-blue-200 rounded-md p-3 mt-3">
-									<div className="flex items-start gap-2">
-										<AlertTriangle className="h-4 w-4 text-blue-600 mt-0.5" />
-										<div className="text-sm text-blue-800">
-											<div className="font-medium">Important:</div>
-											<div>This action cannot be undone without administrator intervention.</div>
-										</div>
-									</div>
-								</div>
+							<AlertDialogDescription>
+								{getConfirmationMessage("user").description}
 							</AlertDialogDescription>
 						</AlertDialogHeader>
+						<div className="space-y-4">
+							<div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+								<div className="flex items-start gap-2">
+									<AlertTriangle className="h-4 w-4 text-blue-600 mt-0.5" />
+									<div className="text-sm text-blue-800">
+										<div className="font-medium">Important:</div>
+										<div>This action cannot be undone without administrator intervention.</div>
+									</div>
+								</div>
+							</div>
+						</div>
 						<AlertDialogFooter>
 							<AlertDialogCancel>Cancel</AlertDialogCancel>
 							<AlertDialogAction
