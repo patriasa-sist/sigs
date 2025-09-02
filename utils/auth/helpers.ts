@@ -47,8 +47,27 @@ export async function getDisplayProfile(): Promise<UserProfile> {
 		throw new Error("User not authenticated");
 	}
 
+	console.log("🔍 [getDisplayProfile] User ID:", user.id);
+	console.log("🔍 [getDisplayProfile] User email:", user.email);
+
 	const supabase = await createClient();
-	const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single();
+	const { data: profile, error } = await supabase.from("profiles").select("*").eq("id", user.id).single();
+
+	if (error) {
+		console.log("❌ [getDisplayProfile] RLS blocking profile access:");
+		console.log("   Error code:", error.code);
+		console.log("   Error message:", error.message);
+		console.log("   Error details:", error.details);
+		console.log("   Error hint:", error.hint);
+		console.log("🔄 [getDisplayProfile] Falling back to user auth data");
+	} else if (profile) {
+		console.log("✅ [getDisplayProfile] Successfully fetched profile from Supabase:");
+		console.log("   Profile ID:", profile.id);
+		console.log("   Profile role:", profile.role);
+		console.log("   Profile email:", profile.email);
+	} else {
+		console.log("⚠️ [getDisplayProfile] No error but profile is null - falling back to user auth data");
+	}
 
 	// Return profile data if available, otherwise fallback to user data
 	return profile || {

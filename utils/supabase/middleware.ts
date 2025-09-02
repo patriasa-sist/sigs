@@ -55,18 +55,34 @@ export async function updateSession(request: NextRequest) {
 
 	// If user is authenticated, check role-based permissions
 	if (user) {
+		console.log("🔍 [Middleware] Authenticated user:", user.id, "accessing:", pathname);
+		
 		// Use admin client to get user profile with role (bypasses RLS policies)
 		const supabaseAdmin = createAdminClient(
 			process.env.NEXT_PUBLIC_SUPABASE_URL!,
 			process.env.SUPABASE_SERVICE_ROLE_KEY!
 		);
 		
-		const { data: profile } = await supabaseAdmin.from("profiles").select("role").eq("id", user.id).single();
+		const { data: profile, error } = await supabaseAdmin.from("profiles").select("role").eq("id", user.id).single();
+
+		if (error) {
+			console.log("❌ [Middleware] Admin client failed to fetch profile:");
+			console.log("   Error:", error.message);
+		} else if (profile) {
+			console.log("✅ [Middleware] Successfully fetched role via admin client:", profile.role);
+		} else {
+			console.log("⚠️ [Middleware] Admin client returned no profile data");
+		}
 
 		// Check if route requires specific role
 		const requiredRole = Object.entries(PROTECTED_ROUTES).find(([route]) => pathname.startsWith(route))?.[1];
 
+		if (requiredRole) {
+			console.log("🔒 [Middleware] Route requires role:", requiredRole, "| User has role:", profile?.role);
+		}
+
 		if (requiredRole && profile?.role !== requiredRole) {
+			console.log("🚫 [Middleware] Access denied - redirecting to /unauthorized");
 			url.pathname = "/unauthorized";
 			return NextResponse.redirect(url);
 		}
