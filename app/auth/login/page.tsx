@@ -1,5 +1,4 @@
 "use client";
-import { toast } from "sonner";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -9,7 +8,6 @@ import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
 import { InputOTP, InputOTPGroup, InputOTPSeparator, InputOTPSlot } from "@/components/ui/input-otp";
 import { login } from "./actions";
-import { useRouter } from "next/navigation";
 
 const formSchema = z.object({
 	email: z.email().min(1, { message: "Email can not be empty." }),
@@ -36,7 +34,6 @@ const formSchema = z.object({
 });
 
 export default function MyForm() {
-	const router = useRouter();
 
 	const form = useForm<z.infer<typeof formSchema>>({
 		resolver: zodResolver(formSchema),

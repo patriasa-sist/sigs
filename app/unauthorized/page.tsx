@@ -15,8 +15,8 @@ export default function UnauthorizedPage() {
 						</div>
 						<CardTitle className="text-2xl">Access Denied</CardTitle>
 						<p className="text-sm text-muted-foreground mt-2">
-							You don't have permission to access this resource. This area is restricted to administrators
-							only.
+							You don`&apos;`t have permission to access this resource. This area is restricted to
+							administrators only.
 						</p>
 					</CardHeader>
 					<CardContent className="space-y-4">

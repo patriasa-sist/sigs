@@ -144,7 +144,7 @@ export default function SignUp() {
 		};
 
 		verifyInvitation();
-	}, [confirmationUrl, emailParam, router]);
+	}, [confirmationUrl, emailParam, router, form]); //aded form just to get rid of linter warning
 
 	// Handle password submission.
 	/* 
