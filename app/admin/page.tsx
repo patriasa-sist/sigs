@@ -1,4 +1,3 @@
-import { requireAdmin } from "@/utils/auth/helpers";
 import { createClient } from "@/utils/supabase/server";
 import { InfoIcon, Users, Mail, Shield, Clock } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,10 +6,23 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 
 export default async function AdminPage() {
-	// This will redirect if user is not admin
-	const adminProfile = await requireAdmin();
+	// Route protection handled by middleware
 
 	const supabase = await createClient();
+
+	// Get current user for display purposes (not authorization)
+	const {
+		data: { user },
+	} = await supabase.auth.getUser();
+	const { data: adminProfile } = await supabase.from("profiles").select("*").eq("id", user!.id).single();
+
+	// Fallback profile data if RLS blocks the query (middleware already verified admin access)
+	const displayProfile = adminProfile || {
+		email: user!.email!,
+		role: "admin" as const,
+		created_at: user!.created_at,
+		updated_at: user!.updated_at || user!.created_at,
+	};
 
 	// Get admin statistics
 	const [
@@ -139,19 +151,19 @@ export default async function AdminPage() {
 						<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 							<div>
 								<label className="text-sm font-medium text-muted-foreground">Email</label>
-								<p className="text-sm">{adminProfile.email}</p>
+								<p className="text-sm">{displayProfile.email}</p>
 							</div>
 							<div>
 								<label className="text-sm font-medium text-muted-foreground">Role</label>
-								<p className="text-sm capitalize">{adminProfile.role}</p>
+								<p className="text-sm capitalize">{displayProfile.role}</p>
 							</div>
 							<div>
 								<label className="text-sm font-medium text-muted-foreground">Member Since</label>
-								<p className="text-sm">{new Date(adminProfile.created_at).toLocaleDateString()}</p>
+								<p className="text-sm">{new Date(displayProfile.created_at).toLocaleDateString()}</p>
 							</div>
 							<div>
 								<label className="text-sm font-medium text-muted-foreground">Last Updated</label>
-								<p className="text-sm">{new Date(adminProfile.updated_at).toLocaleDateString()}</p>
+								<p className="text-sm">{new Date(displayProfile.updated_at).toLocaleDateString()}</p>
 							</div>
 						</div>
 					</CardContent>

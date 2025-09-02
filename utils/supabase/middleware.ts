@@ -1,4 +1,5 @@
 import { createServerClient } from "@supabase/ssr";
+import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { NextResponse, type NextRequest } from "next/server";
 
 // Define protected routes and their required roles
@@ -54,8 +55,13 @@ export async function updateSession(request: NextRequest) {
 
 	// If user is authenticated, check role-based permissions
 	if (user) {
-		// Get user profile with role
-		const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
+		// Use admin client to get user profile with role (bypasses RLS policies)
+		const supabaseAdmin = createAdminClient(
+			process.env.NEXT_PUBLIC_SUPABASE_URL!,
+			process.env.SUPABASE_SERVICE_ROLE_KEY!
+		);
+		
+		const { data: profile } = await supabaseAdmin.from("profiles").select("role").eq("id", user.id).single();
 
 		// Check if route requires specific role
 		const requiredRole = Object.entries(PROTECTED_ROUTES).find(([route]) => pathname.startsWith(route))?.[1];
