@@ -48,19 +48,15 @@ export default function MyForm() {
 	});
 
 	async function onSubmit(values: z.infer<typeof formSchema>) {
-		try {
-			// crear el objeto FormData y agregar los campos
-			const formData = new FormData();
-			formData.append("email", values.email);
-			formData.append("password", values.password);
-			formData.append("otp", values.otp);
+		// crear el objeto FormData y agregar los campos
+		const formData = new FormData();
+		formData.append("email", values.email);
+		formData.append("password", values.password);
+		formData.append("otp", values.otp);
 
-			// The login server action will handle the redirect
-			await login(formData);
-		} catch (error) {
-			console.error("Form submission error", error);
-			toast.error("Failed to submit the form. Please try again.");
-		}
+		// The login server action will handle the redirect
+		// No try-catch needed as redirect() in server actions throws by design
+		await login(formData);
 	}
 
 	return (
