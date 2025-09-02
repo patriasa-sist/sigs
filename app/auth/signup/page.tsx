@@ -83,9 +83,8 @@ export default function SignUp() {
 				// Call verifyOtp to exchange the invite token for a session. According
 				// to Supabase docs the type for email invitations is `invite`.
 				const { data, error } = await supabase.auth.verifyOtp({
-					type: type as any,
+					type: (type as "invite") || "invite",
 					token_hash: tokenHash,
-					email: emailParam,
 				});
 				// If the invitation is invalid throw
 				if (error || !data?.user) {
