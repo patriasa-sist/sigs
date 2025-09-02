@@ -41,6 +41,25 @@ export async function getCurrentUserProfile(): Promise<UserProfile | null> {
 	return profile;
 }
 
+export async function getDisplayProfile(): Promise<UserProfile> {
+	const user = await getCurrentUser();
+	if (!user) {
+		throw new Error("User not authenticated");
+	}
+
+	const supabase = await createClient();
+	const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single();
+
+	// Return profile data if available, otherwise fallback to user data
+	return profile || {
+		id: user.id,
+		email: user.email!,
+		role: "user" as const, // Default role, actual role verified by middleware for protected routes
+		created_at: user.created_at,
+		updated_at: user.updated_at || user.created_at,
+	};
+}
+
 export async function requireAuth() {
 	const user = await getCurrentUser();
 	if (!user) {

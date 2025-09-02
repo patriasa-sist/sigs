@@ -1,4 +1,5 @@
 import { createClient } from "@/utils/supabase/server";
+import { getDisplayProfile } from "@/utils/auth/helpers";
 import { InfoIcon, Users, Mail, Shield, Clock } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -9,20 +10,9 @@ export default async function AdminPage() {
 	// Route protection handled by middleware
 
 	const supabase = await createClient();
-
-	// Get current user for display purposes (not authorization)
-	const {
-		data: { user },
-	} = await supabase.auth.getUser();
-	const { data: adminProfile } = await supabase.from("profiles").select("*").eq("id", user!.id).single();
-
-	// Fallback profile data if RLS blocks the query (middleware already verified admin access)
-	const displayProfile = adminProfile || {
-		email: user!.email!,
-		role: "admin" as const,
-		created_at: user!.created_at,
-		updated_at: user!.updated_at || user!.created_at,
-	};
+	
+	// Get user profile for display purposes (not authorization)
+	const displayProfile = await getDisplayProfile();
 
 	// Get admin statistics
 	const [
