@@ -11,7 +11,7 @@ import { PasswordInput } from "@/components/ui/password-input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { createClient } from "@/utils/supabase/client";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { Loader2, AlertTriangle } from "lucide-react";
 
 const passwordSchema = z
@@ -34,7 +34,7 @@ const formSchema = z
 		message: "Passwords do not match.",
 	});
 
-export default function SignUp() {
+function SignUpContent() {
 	const router = useRouter();
 	const searchParams = useSearchParams();
 	// Extract query parameters from the URL. The invitation email template
@@ -298,5 +298,20 @@ export default function SignUp() {
 				</CardContent>
 			</Card>
 		</div>
+	);
+}
+
+export default function SignUp() {
+	return (
+		<Suspense fallback={
+			<div className="flex justify-center items-center min-h-screen">
+				<div className="flex items-center space-x-2">
+					<Loader2 className="h-4 w-4 animate-spin" />
+					<span>Loading...</span>
+				</div>
+			</div>
+		}>
+			<SignUpContent />
+		</Suspense>
 	);
 }
