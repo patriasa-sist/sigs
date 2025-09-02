@@ -92,6 +92,7 @@ export default function SignUp() {
 				}
 				// sets the email on the form
 				setInviteEmail(emailParam);
+				form.setValue("email", emailParam);
 
 				/* old verification code against invitation tables
 				const { data: invitation, error } = await supabase
