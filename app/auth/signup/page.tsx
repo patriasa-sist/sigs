@@ -164,36 +164,23 @@ export default function SignUp() {
 				throw error;
 			}
 
-			// 	if (!authData.user) {
-			// 		throw new Error("Failed to create user account");
-			// 	}
+			// Mark invitation as used in the custom invitations table
+			const { error: updateError } = await supabase
+				.from("invitations")
+				.update({ used_at: new Date().toISOString() })
+				.eq("email", emailParam);
 
-			// 	// Mark invitation as used
-			// 	const { error: updateError } = await supabase
-			// 		.from("invitations")
-			// 		.update({ used_at: new Date().toISOString() })
-			// 		.eq("token", token);
-
-			// 	if (updateError) {
-			// 		console.error("Failed to mark invitation as used:", updateError);
-			// 		// Don't throw here as the user is already created
-			// 	}
-
-			// 	toast.success("Account created successfully! Please check your email to confirm your account.");
-			// 	router.push("/auth/login?message=Please confirm your email to complete registration");
-			// } catch (error: unknown) {
-			// 	console.error("Signup error:", error);
-			// 	const errorMessage = error instanceof Error ? error.message : "Failed to create account. Please try again.";
-			// 	toast.error(errorMessage);
-			// } finally {
-			// 	setIsSubmitting(false);
-			// }
+			if (updateError) {
+				console.error("Failed to mark invitation as used:", updateError);
+				// Don't throw here as the user password is already set
+			}
 
 			toast.success("Password updated successfully. You can now log in.");
 			router.push("/auth/login");
-		} catch (err: any) {
+		} catch (err: unknown) {
 			console.error("Failed to set password", err);
-			toast.error(err?.message || "Failed to set password. Please try again.");
+			const errorMessage = err instanceof Error ? err.message : "Failed to set password. Please try again.";
+			toast.error(errorMessage);
 		} finally {
 			setIsSubmitting(false);
 		}

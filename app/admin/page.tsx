@@ -10,7 +10,7 @@ export default async function AdminPage() {
 	// Route protection handled by middleware
 
 	const supabase = await createClient();
-	
+
 	// Get user profile for display purposes (not authorization)
 	const displayProfile = await getDisplayProfile();
 
@@ -37,17 +37,8 @@ export default async function AdminPage() {
 
 	// Get recent invitations
 	const { data: recentInvitations } = await supabase
-		.from("invitations")
-		.select(
-			`
-      id,
-      email,
-      created_at,
-      expires_at,
-      used_at,
-      profiles!invitations_invited_by_fkey(email)
-    `
-		)
+		.from("recent_invitations")
+		.select()
 		.order("created_at", { ascending: false })
 		.limit(5);
 
@@ -177,7 +168,7 @@ export default async function AdminPage() {
 									<div className="space-y-1">
 										<p className="text-sm font-medium">{invite.email}</p>
 										<p className="text-xs text-muted-foreground">
-											Invited by: {(invite.profiles as any)?.email || "Unknown"}
+											Invited by: {invite.inviter_email || "Unknown"}
 										</p>
 										<p className="text-xs text-muted-foreground">
 											{new Date(invite.created_at).toLocaleDateString()}
