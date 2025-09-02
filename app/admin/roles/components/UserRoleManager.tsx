@@ -118,13 +118,13 @@ export function UserRoleManager({ userId, currentRole, userEmail, isCurrentUser 
 								{getConfirmationMessage("admin").title}
 							</AlertDialogTitle>
 							<AlertDialogDescription className="space-y-2">
-								<p>{getConfirmationMessage("admin").description}</p>
+								<div>{getConfirmationMessage("admin").description}</div>
 								<div className="bg-yellow-50 border border-yellow-200 rounded-md p-3 mt-3">
 									<div className="flex items-start gap-2">
 										<AlertTriangle className="h-4 w-4 text-yellow-600 mt-0.5" />
 										<div className="text-sm text-yellow-800">
-											<p className="font-medium">Security Notice:</p>
-											<p>This action will be logged for security auditing purposes.</p>
+											<div className="font-medium">Security Notice:</div>
+											<div>This action will be logged for security auditing purposes.</div>
 										</div>
 									</div>
 								</div>
@@ -178,13 +178,13 @@ export function UserRoleManager({ userId, currentRole, userEmail, isCurrentUser 
 								{getConfirmationMessage("user").title}
 							</AlertDialogTitle>
 							<AlertDialogDescription className="space-y-2">
-								<p>{getConfirmationMessage("user").description}</p>
+								<div>{getConfirmationMessage("user").description}</div>
 								<div className="bg-blue-50 border border-blue-200 rounded-md p-3 mt-3">
 									<div className="flex items-start gap-2">
 										<AlertTriangle className="h-4 w-4 text-blue-600 mt-0.5" />
 										<div className="text-sm text-blue-800">
-											<p className="font-medium">Important:</p>
-											<p>This action cannot be undone without administrator intervention.</p>
+											<div className="font-medium">Important:</div>
+											<div>This action cannot be undone without administrator intervention.</div>
 										</div>
 									</div>
 								</div>
