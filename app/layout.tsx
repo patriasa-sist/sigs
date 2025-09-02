@@ -36,8 +36,8 @@ export default function RootLayout({
 					disableTransitionOnChange
 				>
 					{children}
-					<Analytics />
-					<SpeedInsights />
+					{/* <Analytics /> */}
+					{/* <SpeedInsights /> */}
 					<Toaster position="top-center" />
 				</ThemeProvider>
 			</body>

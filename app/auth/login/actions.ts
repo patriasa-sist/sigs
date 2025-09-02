@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
+import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { z } from "zod";
 
 // Validation schemas
@@ -36,66 +37,76 @@ export async function login(formData: FormData) {
 
 	const { email, password, otp } = validationResult.data;
 
-	let errorMsg = "An unexpected error occurred please contact support";
+	// Attempt to sign in
+	const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+		email,
+		password,
+	});
 
-	try {
-		// Attempt to sign in
-		const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-			email,
-			password,
-		});
+	if (authError) {
+		console.error("Authentication error:", authError.message);
+		const errorMsg = encodeURIComponent(authError.message);
+		redirect(`/auth/error?error=${errorMsg}`);
+	}
 
-		if (authError) {
-			console.error("Authentication error:", authError.message);
-			errorMsg = encodeURIComponent(authError.message);
-			throw new Error(errorMsg);
-		} else if (!authData.user) {
-			console.error("User Auth Data error");
-			errorMsg = encodeURIComponent("Authentication failed");
-			throw new Error(errorMsg);
-		}
+	if (!authData.user) {
+		console.error("User Auth Data error");
+		redirect("/auth/error?error=Authentication%20failed");
+	}
 
-		// Check if user has a profile (should exist due to trigger)
-		const { data: profile, error: profileError } = await supabase
-			.from("profiles")
-			.select("role, email")
-			.eq("id", authData.user.id)
-			.single();
+	// Check if user has a profile using admin client to bypass RLS policies
+	const supabaseAdmin = createAdminClient(
+		process.env.NEXT_PUBLIC_SUPABASE_URL!,
+		process.env.SUPABASE_SERVICE_ROLE_KEY!
+	);
 
-		if (profileError) {
-			console.error("Profile error:", profileError.message);
-			// Create profile if it doesn't exist (fallback)
-			const { error: createProfileError } = await supabase.from("profiles").insert({
+	const { data: profile, error: profileError } = await supabaseAdmin
+		.from("profiles")
+		.select("role, email")
+		.eq("id", authData.user.id)
+		.single();
+
+	let userProfile = profile;
+
+	if (profileError) {
+		console.error("Profile error:", profileError.message);
+		// Create or update profile if it doesn't exist (using admin client to bypass RLS)
+		const { error: upsertProfileError } = await supabaseAdmin.from("profiles").upsert(
+			{
 				id: authData.user.id,
 				email: authData.user.email!,
 				role: "user",
-			});
-
-			if (createProfileError) {
-				console.error("Create profile error:", createProfileError.message);
-				errorMsg = encodeURIComponent(createProfileError.message);
-				throw new Error(errorMsg);
+			},
+			{
+				onConflict: "id",
 			}
+		);
+
+		if (upsertProfileError) {
+			console.error("Upsert profile error:", upsertProfileError.message);
+			const errorMsg = encodeURIComponent(upsertProfileError.message);
+			redirect(`/auth/error?error=${errorMsg}`);
 		}
 
-		// Handle OTP verification if provided
-		if (otp && otp.length === 6) {
-			// Here you would implement your OTP verification logic
-			// For now, we'll skip OTP verification
-			console.log("OTP provided:", otp);
-		}
+		// Set default profile data since upsert was successful
+		userProfile = { role: "user", email: authData.user.email! };
+	}
 
-		revalidatePath("/", "layout");
+	// Handle OTP verification if provided
+	if (otp && otp.length === 6) {
+		// Here you would implement your OTP verification logic
+		// For now, we'll skip OTP verification
+		console.log("OTP provided:", otp);
+	}
 
-		// Redirect based on user role
-		if (profile?.role === "admin") {
-			redirect("/admin");
-		} else {
-			redirect("/");
-		}
-	} catch (error) {
-		console.error("Unexpected login error:", error);
-		redirect(`/auth/error?error=${errorMsg}`);
+	revalidatePath("/", "layout");
+
+	// Redirect based on user role
+	if (userProfile?.role === "admin") {
+		console.log("Redirecting to admin dashboard");
+		redirect("/admin");
+	} else {
+		redirect("/");
 	}
 }
 
@@ -162,18 +173,13 @@ export async function signup(formData: FormData) {
 export async function signOut() {
 	const supabase = await createClient();
 
-	try {
-		const { error } = await supabase.auth.signOut();
+	const { error } = await supabase.auth.signOut();
 
-		if (error) {
-			console.error("Sign out error:", error.message);
-			redirect(`/auth/error?error=${encodeURIComponent(error.message)}`);
-		}
-
-		revalidatePath("/", "layout");
-		redirect("/auth/login");
-	} catch (error) {
-		console.error("Unexpected sign out error:", error);
-		redirect("/auth/error?error=An unexpected error occurred during sign out");
+	if (error) {
+		console.error("Sign out error:", error.message);
+		redirect(`/auth/error?error=${encodeURIComponent(error.message)}`);
 	}
+
+	revalidatePath("/", "layout");
+	redirect("/auth/login");
 }

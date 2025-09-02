@@ -37,17 +37,21 @@ const formSchema = z
 export default function SignUp() {
 	const router = useRouter();
 	const searchParams = useSearchParams();
-	const token = searchParams.get("token");
+	// Extract query parameters from the URL. The invitation email template
+	// includes `confirmation_url` and `email`. If either is missing we
+	// immediately redirect back to the login page.
+	const confirmationUrl = searchParams.get("confirmation_url");
+	const emailParam = searchParams.get("email");
 
-	const [isLoading, setIsLoading] = useState(true);
-	const [isValidInvite, setIsValidInvite] = useState(false);
-	const [inviteEmail, setInviteEmail] = useState("");
-	const [isSubmitting, setIsSubmitting] = useState(false);
+	const [inviteEmail, setInviteEmail] = useState<string>("");
+	const [isLoading, setIsLoading] = useState<boolean>(true);
+	const [isValidInvite, setIsValidInvite] = useState<boolean>(false);
+	const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
 	const form = useForm<z.infer<typeof formSchema>>({
 		resolver: zodResolver(formSchema),
 		defaultValues: {
-			email: "",
+			email: inviteEmail,
 			password: "",
 			confirmPassword: "",
 		},
@@ -55,16 +59,42 @@ export default function SignUp() {
 
 	// Validate invitation token on component mount
 	useEffect(() => {
-		const validateInvitation = async () => {
-			if (!token) {
+		// Immediately validate the confirmation URL and token when the component
+		// mounts. If the token is valid a session will be created and we show
+		// the password form. Otherwise we redirect to the login page.
+		const verifyInvitation = async () => {
+			if (!confirmationUrl || !emailParam) {
 				toast.error("Invalid invitation link");
 				router.push("/auth/login");
 				return;
 			}
 
-			const supabase = createClient();
-
 			try {
+				const supabase = createClient();
+				// Parse the token_hash (or token) and type from the confirmation URL.
+				const url = new URL(confirmationUrl);
+				const tokenHash = url.searchParams.get("token_hash") || url.searchParams.get("token");
+				const type = url.searchParams.get("type") || "invite";
+
+				if (!tokenHash) {
+					throw new Error("Missing token");
+				}
+
+				// Call verifyOtp to exchange the invite token for a session. According
+				// to Supabase docs the type for email invitations is `invite`.
+				const { data, error } = await supabase.auth.verifyOtp({
+					type: type as any,
+					token_hash: tokenHash,
+					email: emailParam,
+				});
+				// If the invitation is invalid throw
+				if (error || !data?.user) {
+					throw error || new Error("Invalid or expired invitation token");
+				}
+				// sets the email on the form
+				setInviteEmail(emailParam);
+
+				/* old verification code against invitation tables
 				const { data: invitation, error } = await supabase
 					.from("invitations")
 					.select("email, expires_at, used_at")
@@ -99,72 +129,77 @@ export default function SignUp() {
 					return;
 				}
 
-				setInviteEmail(invitation.email);
-				form.setValue("email", invitation.email);
+				// Use email from URL parameter if available, otherwise use invitation email
+				const emailToUse = emailFromUrl || invitation.email;
+				form.setValue("email", emailToUse);*/
+				//confirm the invitation is valid flag
 				setIsValidInvite(true);
-			} catch (error) {
-				console.error("Error validating invitation:", error);
-				toast.error("Failed to validate invitation");
+			} catch (err) {
+				console.error("Error verifying invitation", err);
+				toast.error("This invitation link is invalid or has expired.");
 				router.push("/auth/login");
 			} finally {
 				setIsLoading(false);
 			}
 		};
 
-		validateInvitation();
-	}, [token, router, form]);
+		verifyInvitation();
+	}, [confirmationUrl, emailParam, router]);
 
+	// Handle password submission.
+	/* 
+	After verifying the invitation token the user has a session and we only need to set the new password. 
+	If successful redirect back to the login page.
+    */
 	const onSubmit = async (values: z.infer<typeof formSchema>) => {
-		if (!token || !isValidInvite) {
-			toast.error("Invalid invitation");
-			return;
-		}
-
 		setIsSubmitting(true);
-
 		try {
 			const supabase = createClient();
-
-			// Sign up the user
-			const { data: authData, error: signUpError } = await supabase.auth.signUp({
-				email: values.email,
+			// Update the user's password
+			const { error } = await supabase.auth.updateUser({
 				password: values.password,
-				options: {
-					data: {
-						invitation_token: token,
-					},
-				},
 			});
-
-			if (signUpError) {
-				throw signUpError;
+			// Throw if there is an error updating the password
+			if (error) {
+				throw error;
 			}
 
-			if (!authData.user) {
-				throw new Error("Failed to create user account");
-			}
+			// 	if (!authData.user) {
+			// 		throw new Error("Failed to create user account");
+			// 	}
 
-			// Mark invitation as used
-			const { error: updateError } = await supabase
-				.from("invitations")
-				.update({ used_at: new Date().toISOString() })
-				.eq("token", token);
+			// 	// Mark invitation as used
+			// 	const { error: updateError } = await supabase
+			// 		.from("invitations")
+			// 		.update({ used_at: new Date().toISOString() })
+			// 		.eq("token", token);
 
-			if (updateError) {
-				console.error("Failed to mark invitation as used:", updateError);
-				// Don't throw here as the user is already created
-			}
+			// 	if (updateError) {
+			// 		console.error("Failed to mark invitation as used:", updateError);
+			// 		// Don't throw here as the user is already created
+			// 	}
 
-			toast.success("Account created successfully! Please check your email to confirm your account.");
-			router.push("/auth/login?message=Please confirm your email to complete registration");
-		} catch (error: any) {
-			console.error("Signup error:", error);
-			toast.error(error.message || "Failed to create account. Please try again.");
+			// 	toast.success("Account created successfully! Please check your email to confirm your account.");
+			// 	router.push("/auth/login?message=Please confirm your email to complete registration");
+			// } catch (error: unknown) {
+			// 	console.error("Signup error:", error);
+			// 	const errorMessage = error instanceof Error ? error.message : "Failed to create account. Please try again.";
+			// 	toast.error(errorMessage);
+			// } finally {
+			// 	setIsSubmitting(false);
+			// }
+
+			toast.success("Password updated successfully. You can now log in.");
+			router.push("/auth/login");
+		} catch (err: any) {
+			console.error("Failed to set password", err);
+			toast.error(err?.message || "Failed to set password. Please try again.");
 		} finally {
 			setIsSubmitting(false);
 		}
 	};
 
+	// Loading state while verifying the invite token
 	if (isLoading) {
 		return (
 			<div className="flex justify-center items-center min-h-screen">
@@ -176,6 +211,7 @@ export default function SignUp() {
 		);
 	}
 
+	// If invite is invalid show an error card
 	if (!isValidInvite) {
 		return (
 			<div className="flex justify-center items-center min-h-screen">
@@ -199,13 +235,15 @@ export default function SignUp() {
 		);
 	}
 
+	// Once the token is verified render the password form.
 	return (
 		<div className="flex justify-center items-center min-h-screen p-4">
 			<Card className="w-full max-w-md">
 				<CardHeader>
 					<CardTitle className="text-2xl text-center">Complete Your Registration</CardTitle>
 					<CardDescription className="text-center">
-						You've been invited to join the system. Please set up your password to complete registration.
+						You&apos;ve been invited to join the system. Please set up your password to complete
+						registration.
 					</CardDescription>
 				</CardHeader>
 				<CardContent>
@@ -262,7 +300,7 @@ export default function SignUp() {
 								{isSubmitting ? (
 									<>
 										<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-										Creating Account...
+										Setting Password...
 									</>
 								) : (
 									"Complete Registration"

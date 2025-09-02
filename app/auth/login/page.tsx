@@ -10,8 +10,6 @@ import { PasswordInput } from "@/components/ui/password-input";
 import { InputOTP, InputOTPGroup, InputOTPSeparator, InputOTPSlot } from "@/components/ui/input-otp";
 import { login } from "./actions";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
-import { createClient } from "@/utils/supabase/client";
 
 const formSchema = z.object({
 	email: z.email().min(1, { message: "Email can not be empty." }),
@@ -37,30 +35,8 @@ const formSchema = z.object({
 	otp: z.string().length(6, { message: "OTP can not be empty." }),
 });
 
-const supabase = await createClient();
-
 export default function MyForm() {
 	const router = useRouter();
-
-	// ✅ AÑADE ESTA LÓGICA AQUÍ
-	useEffect(() => {
-		// Escucha el evento de inicio de sesión que ocurre al hacer clic en el enlace de invitación
-		const {
-			data: { subscription },
-		} = supabase.auth.onAuthStateChange((event, session) => {
-			if (event === "SIGNED_IN") {
-				// Si el usuario inicia sesión a través de la invitación, lo redirigimos
-				// para que establezca su contraseña.
-				console.log("Detectado inicio de sesión por invitación, redirigiendo...");
-				router.push("/auth/signup"); // La página que hiciste pública en el Paso 1
-			}
-		});
-
-		// Limpia la suscripción al desmontar el componente
-		return () => {
-			subscription?.unsubscribe();
-		};
-	}, [router]);
 
 	const form = useForm<z.infer<typeof formSchema>>({
 		resolver: zodResolver(formSchema),
@@ -71,17 +47,16 @@ export default function MyForm() {
 		},
 	});
 
-	function onSubmit(values: z.infer<typeof formSchema>) {
+	async function onSubmit(values: z.infer<typeof formSchema>) {
 		try {
 			// crear el objeto FormData y agregar los campos
 			const formData = new FormData();
 			formData.append("email", values.email);
 			formData.append("password", values.password);
 			formData.append("otp", values.otp);
-			login(formData);
 
-			// Update this route to redirect to an authenticated route. The user already has an active session.
-			router.push("/admin"); //pruebas con admin
+			// The login server action will handle the redirect
+			await login(formData);
 		} catch (error) {
 			console.error("Form submission error", error);
 			toast.error("Failed to submit the form. Please try again.");
@@ -153,7 +128,7 @@ export default function MyForm() {
 							</FormItem>
 						)}
 					/>
-					<Button type="submit">Submit</Button>
+					<Button type="submit">Iniciar sesión</Button>
 				</form>
 			</Form>
 		</div>
