@@ -1,0 +1,3 @@
+{
+	"conventionalCommits.scopes": ["users", "style", "admin", "dashboard", "login", "signup", "error", "unauthorized"]
+}
