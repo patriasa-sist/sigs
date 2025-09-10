@@ -18,6 +18,7 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
+import { DeleteUserDialog } from "@/components/ui/delete-user-dialog";
 import Link from "next/link";
 
 export default async function ManageUsersPage() {
@@ -188,9 +189,13 @@ export default async function ManageUsersPage() {
 														<DropdownMenuItem>
 															View Profile
 														</DropdownMenuItem>
-														<DropdownMenuItem className="text-destructive">
-															Remove User
-														</DropdownMenuItem>
+														<DeleteUserDialog
+															user={{
+																id: user.id,
+																email: user.email,
+																role: user.role,
+															}}
+														/>
 													</DropdownMenuContent>
 												</DropdownMenu>
 											</TableCell>
