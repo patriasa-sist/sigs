@@ -3,6 +3,7 @@ import React from "react";
 import { Document, Page, Text, View, StyleSheet, Image, Font } from "@react-pdf/renderer";
 import { LetterData } from "@/types/pdf";
 import { PDF_ASSETS } from "@/utils/pdfAssets";
+import { ExecutiveFooter } from "./ExecutiveFooter";
 
 // Registrar fuentes
 Font.register({
@@ -77,40 +78,6 @@ const styles = StyleSheet.create({
 	},
 	signature: {
 		textAlign: "left",
-	},
-	signatureBlock: {
-		flexDirection: "row",
-		justifyContent: "space-between",
-		marginTop: 10,
-		paddingHorizontal: 20,
-	},
-	signatureColumn: {
-		width: "45%",
-		alignItems: "center",
-	},
-	signatureImage: {
-		width: 100,
-		height: 50,
-		objectFit: "contain",
-	},
-	signatureName: {
-		fontSize: 8,
-		fontWeight: "bold",
-		marginTop: 5,
-	},
-	signatureTitle: {
-		fontSize: 7,
-		marginTop: 2,
-	},
-	companyName: {
-		fontSize: 11,
-		fontWeight: "bold",
-		textAlign: "center",
-		marginBottom: 5,
-	},
-	companySubtitle: {
-		fontSize: 9,
-		textAlign: "center",
 	},
 	additionalConditions: {
 		marginBottom: 10,
@@ -234,20 +201,8 @@ export const BaseTemplate: React.FC<BaseTemplateProps> = ({ letterData, children
 					<Text>Atentamente,</Text>
 				</View>
 
-				<View style={styles.companyName}>
-					<Text>PATRIA S.A.</Text>
-					<Text style={styles.companySubtitle}>Corredores y Asesores en Seguros</Text>
-				</View>
-
-				<View style={styles.signatureBlock}>
-					<View style={styles.signatureColumn}>
-						<Image style={styles.signatureImage} src={PDF_ASSETS.SIGNATURE_CARMEN} />
-					</View>
-
-					<View style={styles.signatureColumn}>
-						<Image style={styles.signatureImage} src={PDF_ASSETS.SIGNATURE_ERCILIA} />
-					</View>
-				</View>
+				{/* Executive Footer with personalized signature */}
+				<ExecutiveFooter executiveName={letterData.executive} />
 			</Page>
 		</Document>
 	);

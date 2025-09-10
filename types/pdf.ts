@@ -99,6 +99,7 @@ export const excecutives = [
 		charge: "Ejecutiva de Cuentas",
 		telf: "77342938",
 		mail: "tamara.torrez@patria-sa.com",
+		signature: "/images/firma_tamara.png",
 	},
 	{
 		user: "Eliana",
@@ -107,6 +108,7 @@ export const excecutives = [
 		charge: "Ejecutiva de Cuentas",
 		telf: "76031710",
 		mail: "comercial1@patria-sa.com",
+		signature: "/images/firma_eliana.png",
 	},
 	{
 		user: "Carmen",
@@ -115,6 +117,7 @@ export const excecutives = [
 		charge: "Ejecutiva de Cuentas Especiales",
 		telf: "69050289",
 		mail: "cferrufino@patria-sa.com",
+		signature: "/images/firma_carmen.png",
 	},
 	{
 		user: "Patricia",
@@ -123,6 +126,7 @@ export const excecutives = [
 		charge: "Subgerente Técnico",
 		telf: "77602062",
 		mail: "patricia.osuna@patria-sa.com",
+		signature: "/images/firma_patricia.png",
 	},
 	{
 		user: "Ercilia",
@@ -131,6 +135,7 @@ export const excecutives = [
 		charge: "Jefe de Producción",
 		telf: "78006016",
 		mail: "maria.vargas@patria-sa.com",
+		signature: "/images/firma_ercilia.png",
 	},
 	{
 		user: "Flavio",
@@ -139,6 +144,7 @@ export const excecutives = [
 		charge: "Gerente Comercial",
 		telf: "62243775",
 		mail: "flavio.colombo@patria-sa.com",
+		signature: "/images/firma_flavio.png",
 	},
 	{
 		user: "Marco",
@@ -147,5 +153,6 @@ export const excecutives = [
 		charge: "Gerente Regional",
 		telf: "75672652",
 		mail: "marco.eid@patria-sa.com",
+		signature: "/images/firma_marco.png",
 	},
 ];
