@@ -113,6 +113,9 @@ export default async function AdminPage() {
 						<Link href="/admin/users">Manage Users</Link>
 					</Button>
 					<Button variant="outline" asChild>
+						<Link href="/admin/roles">Manage Roles</Link>
+					</Button>
+					<Button variant="outline" asChild>
 						<Link href="/admin/invitations">Manage Invitations</Link>
 					</Button>
 				</CardContent>

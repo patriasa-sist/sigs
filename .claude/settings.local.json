@@ -2,5 +2,10 @@
   "enabledMcpjsonServers": [
     "shadcn",
     "supabase"
-  ]
+  ],
+  "permissions": {
+    "allow": [
+      "mcp__supabase__list_tables"
+    ]
+  }
 }
