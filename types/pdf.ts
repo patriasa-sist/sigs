@@ -90,3 +90,62 @@ export interface PDFGenerationResult {
 	errors: string[];
 	totalGenerated: number;
 }
+
+export const excecutives = [
+	{
+		user: "Tamara",
+		name: "Tamara Torrez Dencker",
+		glyph: "TTD",
+		charge: "Ejecutiva de Cuentas",
+		telf: "77342938",
+		mail: "tamara.torrez@patria-sa.com",
+	},
+	{
+		user: "Eliana",
+		name: "Eliana Ortiz Chávez",
+		glyph: "EOC",
+		charge: "Ejecutiva de Cuentas",
+		telf: "76031710",
+		mail: "comercial1@patria-sa.com",
+	},
+	{
+		user: "Carmen",
+		name: "Carmen Ferrufino Howard",
+		glyph: "CFH",
+		charge: "Ejecutiva de Cuentas Especiales",
+		telf: "69050289",
+		mail: "cferrufino@patria-sa.com",
+	},
+	{
+		user: "Patricia",
+		name: "Patricia Osuna Banegas",
+		glyph: "POB",
+		charge: "Subgerente Técnico",
+		telf: "77602062",
+		mail: "patricia.osuna@patria-sa.com",
+	},
+	{
+		user: "Ercilia",
+		name: "Maria Ercilia Vargas Becerra",
+		glyph: "MEV",
+		charge: "Jefe de Producción",
+		telf: "78006016",
+		mail: "maria.vargas@patria-sa.com",
+	},
+	{
+		user: "Flavio",
+		name: "Flavio Colombo Vargas",
+		glyph: "FCV",
+		charge: "Gerente Comercial",
+		telf: "62243775",
+		mail: "flavio.colombo@patria-sa.com",
+	},
+	{
+		user: "Marco",
+		name: "Marco A. Eid Aramayo",
+		glyph: "MAE",
+		charge: "Gerente Regional",
+		telf: "75672652",
+		mail: "marco.eid@patria-sa.com",
+	},
+];

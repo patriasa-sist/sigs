@@ -10,7 +10,10 @@ Font.register({
 	fonts: [
 		{ src: "https://cdn.jsdelivr.net/npm/@canvas-fonts/helvetica@1.0.4/Helvetica.ttf" },
 		{ src: "https://cdn.jsdelivr.net/npm/@canvas-fonts/helvetica@1.0.4/Helvetica-Bold.ttf", fontWeight: "bold" },
-		{ src: "https://cdn.jsdelivr.net/npm/@canvas-fonts/helvetica@1.0.4/Helvetica-Oblique.ttf", fontStyle: "italic" },
+		{
+			src: "https://cdn.jsdelivr.net/npm/@canvas-fonts/helvetica@1.0.4/Helvetica-Oblique.ttf",
+			fontStyle: "italic",
+		},
 	],
 });
 
@@ -153,7 +156,11 @@ export const BaseTemplate: React.FC<BaseTemplateProps> = ({ letterData, children
 
 				<View style={styles.clientInfo}>
 					<Text style={styles.clientName}>
-						{letterData.client.name.includes("SRL") || letterData.client.name.includes("S.A.") ? "Señores" : letterData.client.name.includes("BETTY") ? "Señora" : "Señor"}
+						{letterData.client.name.includes("SRL") || letterData.client.name.includes("S.A.")
+							? "Señores"
+							: letterData.client.name.includes("BETTY")
+							? "Señora"
+							: "Señor"}
 					</Text>
 					<Text style={styles.clientName}>{letterData.client.name.toUpperCase()}</Text>
 					{letterData.client.phone && (
@@ -161,12 +168,17 @@ export const BaseTemplate: React.FC<BaseTemplateProps> = ({ letterData, children
 							{letterData.client.name.includes("SRL") ? "Teléfono" : "Telf"}: {letterData.client.phone}
 						</Text>
 					)}
-					{letterData.client.email && <Text style={styles.clientDetails}>Correo: {letterData.client.email}</Text>}
+					{letterData.client.email && (
+						<Text style={styles.clientDetails}>Correo: {letterData.client.email}</Text>
+					)}
 					<Text style={styles.present}>Presente.</Text>
 				</View>
 
 				<View>
-					<Text style={styles.subject}>Ref.: AVISO DE VENCIMIENTO {letterData.templateType === "salud" ? "POLIZA DE SEGURO SALUD" : "POLIZA DE SEGURO"}</Text>
+					<Text style={styles.subject}>
+						Ref.: AVISO DE VENCIMIENTO{" "}
+						{letterData.templateType === "salud" ? "POLIZA DE SEGURO SALUD" : "POLIZA DE SEGURO"}
+					</Text>
 				</View>
 
 				<View>
@@ -175,33 +187,47 @@ export const BaseTemplate: React.FC<BaseTemplateProps> = ({ letterData, children
 
 				<View style={styles.content}>
 					<Text style={styles.paragraph}>
-						Por medio de la presente, nos permitimos recordarle que se aproxima el vencimiento de la{letterData.policies.length > 1 ? "s" : ""} Póliza{letterData.policies.length > 1 ? "s" : ""} de
+						Por medio de la presente, nos permitimos recordarle que se aproxima el vencimiento de la
+						{letterData.policies.length > 1 ? "s" : ""} Póliza{letterData.policies.length > 1 ? "s" : ""} de
 						Seguro cuyos detalles se especifican a continuación:
 					</Text>
 
 					{children}
 
-					<Text style={styles.paragraph}>Tenga a bien hacernos conocer cualquier cambio que desea realizar o en su defecto su consentimiento para la renovación.</Text>
+					<Text style={styles.paragraph}>
+						Tenga a bien hacernos conocer cualquier cambio que desea realizar o en su defecto su
+						consentimiento para la renovación.
+					</Text>
 
 					{letterData.additionalConditions && (
 						<View style={styles.additionalConditions}>
-							<FormattedText text={letterData.additionalConditions} isItalic={letterData.templateType === "salud"} />
+							<FormattedText
+								text={letterData.additionalConditions}
+								isItalic={letterData.templateType === "salud"}
+							/>
 						</View>
 					)}
 
 					{letterData.templateType === "salud" && (
 						<Text style={styles.paragraph}>
-							Nos permitimos recordarle que los seguros de Salud o Enfermedad se pagan por adelantado, al inicio de la vigencia, sea mensual o anual. En caso de tener primas pendientes no se podrá
+							Nos permitimos recordarle que los seguros de Salud o Enfermedad se pagan por adelantado, al
+							inicio de la vigencia, sea mensual o anual. En caso de tener primas pendientes no se podrá
 							renovar.
 						</Text>
 					)}
 
 					<Text style={styles.paragraph}>
-						Es importante informarle que {letterData.templateType !== "salud" ? ", en caso de tener primas pendientes no se podrá renovar hasta su regularización de estas, la" : "la"} NO RENOVACION,
-						suspende toda cobertura de la póliza de seguro.
+						Es importante informarle que{" "}
+						{letterData.templateType !== "salud"
+							? ", en caso de tener primas pendientes no se podrá renovar hasta su regularización de estas, la"
+							: "la"}{" "}
+						NO RENOVACION, suspende toda cobertura de la póliza de seguro.
 					</Text>
 
-					<Text style={styles.paragraph}>De esta manera quedamos a la espera de su respuesta, nos despedimos con la cordialidad de siempre.</Text>
+					<Text style={styles.paragraph}>
+						De esta manera quedamos a la espera de su respuesta, nos despedimos con la cordialidad de
+						siempre.
+					</Text>
 				</View>
 
 				<View style={styles.signature}>
@@ -219,7 +245,7 @@ export const BaseTemplate: React.FC<BaseTemplateProps> = ({ letterData, children
 					</View>
 
 					<View style={styles.signatureColumn}>
-						<Image style={styles.signatureImage} src={PDF_ASSETS.SIGNATURE_MARIA} />
+						<Image style={styles.signatureImage} src={PDF_ASSETS.SIGNATURE_ERCILIA} />
 					</View>
 				</View>
 			</Page>

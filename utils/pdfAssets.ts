@@ -7,11 +7,16 @@
 // Rutas relativas a la carpeta public
 export const PDF_ASSETS = {
 	// Logo de Patria S.A.
-	PATRIA_LOGO: "/images/logo-patria.png",
+	PATRIA_LOGO: "/patria-horizontal.png",
 
 	// Firmas
-	SIGNATURE_CARMEN: "/images/firma-carmen-howard.png",
-	SIGNATURE_MARIA: "/images/firma-maria-vargas.png",
+	SIGNATURE_CARMEN: "/images/firma_carmen.png",
+	SIGNATURE_ELIANA: "/images/firma_eliana.png",
+	SIGNATURE_ERCILIA: "/images/firma_ercilia.png",
+	SIGNATURE_MARCO: "/images/firma_marco.png",
+	SIGNATURE_FLAVIO: "/images/firma_flavio.png",
+	SIGNATURE_PATRICIA: "/images/firma_patricia.png",
+	SIGNATURE_TAMARA: "/images/firma_tamara.png",
 };
 
 // Función auxiliar para obtener la ruta completa de un asset
