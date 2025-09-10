@@ -820,7 +820,7 @@ function LetterCard({
 	const updatePolicy = (
 		policyIndex: number,
 		field: keyof NonNullable<PolicyForLetter["manualFields"]>,
-		value: string | number | string[] | VehicleForLetter[]
+		value: any
 	) => {
 		const updatedPolicies = editedLetter.policies.map((policy, index) => {
 			if (index === policyIndex) {

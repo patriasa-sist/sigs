@@ -29,9 +29,9 @@ export const PDF_CONSTANTS = {
 		border: "#e5e7eb",
 	},
 	FONTS: {
-		primary: "Helvetica",
-		bold: "Helvetica-Bold",
-		italic: "Helvetica-Oblique",
+		primary: "Cambria",
+		bold: "Cambria-Bold",
+		italic: "Cambria-Italic",
 		size: {
 			title: 14,
 			header: 12,

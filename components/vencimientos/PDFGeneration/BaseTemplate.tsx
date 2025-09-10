@@ -5,7 +5,26 @@ import { LetterData } from "@/types/pdf";
 import { PDF_ASSETS } from "@/utils/pdfAssets";
 import { ExecutiveFooter } from "./ExecutiveFooter";
 
-// Registrar fuentes
+// Registrar fuentes - Cambria
+Font.register({
+	family: "Cambria",
+	fonts: [
+		{ 
+			src: "https://db.onlinewebfonts.com/t/758d40d7ca52e3a9bff2655c7ab5703c.ttf",
+			fontWeight: "normal",
+		},
+		{ 
+			src: "https://db.onlinewebfonts.com/t/758d40d7ca52e3a9bff2655c7ab5703c.ttf",
+			fontWeight: "bold",
+		},
+		{
+			src: "https://db.onlinewebfonts.com/t/758d40d7ca52e3a9bff2655c7ab5703c.ttf",
+			fontStyle: "italic",
+		},
+	],
+});
+
+// Fallback to Helvetica if Cambria fails to load
 Font.register({
 	family: "Helvetica",
 	fonts: [
@@ -23,7 +42,7 @@ const styles = StyleSheet.create({
 		flexDirection: "column",
 		backgroundColor: "#ffffff",
 		padding: 30,
-		fontFamily: "Helvetica",
+		fontFamily: "Cambria",
 		fontSize: 10,
 		lineHeight: 1.4,
 	},
@@ -116,7 +135,7 @@ export const BaseTemplate: React.FC<BaseTemplateProps> = ({ letterData, children
 		<Document>
 			<Page size="LETTER" style={styles.page}>
 				<View style={styles.header}>
-					<Image style={styles.logo} src={PDF_ASSETS.PATRIA_LOGO} alt="Patria S.A. Logo" />
+					<Image style={styles.logo} src={PDF_ASSETS.PATRIA_LOGO} />
 					<Text style={styles.headerText}>Santa Cruz, {letterData.date}</Text>
 					<Text style={styles.referenceNumber}>{letterData.referenceNumber}</Text>
 				</View>
