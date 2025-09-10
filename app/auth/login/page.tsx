@@ -2,6 +2,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -34,6 +35,7 @@ const formSchema = z.object({
 });
 
 export default function MyForm() {
+	const [isLoading, setIsLoading] = useState(false);
 
 	const form = useForm<z.infer<typeof formSchema>>({
 		resolver: zodResolver(formSchema),
@@ -45,15 +47,20 @@ export default function MyForm() {
 	});
 
 	async function onSubmit(values: z.infer<typeof formSchema>) {
-		// crear el objeto FormData y agregar los campos
-		const formData = new FormData();
-		formData.append("email", values.email);
-		formData.append("password", values.password);
-		formData.append("otp", values.otp);
+		setIsLoading(true);
+		try {
+			// crear el objeto FormData y agregar los campos
+			const formData = new FormData();
+			formData.append("email", values.email);
+			formData.append("password", values.password);
+			formData.append("otp", values.otp);
 
-		// The login server action will handle the redirect
-		// No try-catch needed as redirect() in server actions throws by design
-		await login(formData);
+			// The login server action will handle the redirect
+			// No try-catch needed as redirect() in server actions throws by design
+			await login(formData);
+		} finally {
+			setIsLoading(false);
+		}
 	}
 
 	return (
@@ -121,7 +128,15 @@ export default function MyForm() {
 							</FormItem>
 						)}
 					/>
-					<Button type="submit">Iniciar sesión</Button>
+					<Button type="submit" disabled={isLoading}>
+						{isLoading && (
+							<svg className="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+								<circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+								<path className="opacity-75" fill="currentColor" d="m4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+							</svg>
+						)}
+						{isLoading ? "Verificando..." : "Iniciar sesión"}
+					</Button>
 				</form>
 			</Form>
 		</div>
