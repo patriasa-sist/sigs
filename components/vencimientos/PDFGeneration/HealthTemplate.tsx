@@ -106,7 +106,7 @@ export const HealthTemplate: React.FC<HealthTemplateProps> = ({ letterData }) =>
 									<Text style={healthStyles.headerText}>RAMO</Text>
 								</View>
 								<View style={[healthStyles.tableCol, { width: "20%" }]}>
-									<Text style={healthStyles.headerText}>PRIMA DE RENOVACIÓN MENSUAL</Text>
+									<Text style={healthStyles.headerText}>VALOR ASEGURADO</Text>
 								</View>
 							</View>
 
@@ -125,7 +125,7 @@ export const HealthTemplate: React.FC<HealthTemplateProps> = ({ letterData }) =>
 									<Text style={healthStyles.cellText}>{policy.branch}</Text>
 								</View>
 								<View style={[healthStyles.tableCol, { width: "20%" }]}>
-									<Text style={healthStyles.cellText}>{formatMonetaryValue(policy.manualFields?.renewalPremium, policy.manualFields?.renewalPremiumCurrency)}</Text>
+									<Text style={healthStyles.cellText}>{formatMonetaryValue(policy.manualFields?.insuredValue, policy.manualFields?.insuredValueCurrency)}</Text>
 								</View>
 							</View>
 						</View>

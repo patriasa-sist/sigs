@@ -1064,16 +1064,16 @@ function LetterCard({
 													</div>
 													<div className="space-y-2">
 														<NumericInputWithCurrency
-															label="Prima renovación:"
-															value={policy.manualFields?.renewalPremium}
+															label="Valor asegurado:"
+															value={policy.manualFields?.insuredValue}
 															currency={
-																policy.manualFields?.renewalPremiumCurrency || "$us."
+																policy.manualFields?.insuredValueCurrency || "Bs."
 															}
 															onValueChange={(v) =>
-																updatePolicy(index, "renewalPremium", v)
+																updatePolicy(index, "insuredValue", v)
 															}
 															onCurrencyChange={(c) =>
-																updatePolicy(index, "renewalPremiumCurrency", c)
+																updatePolicy(index, "insuredValueCurrency", c)
 															}
 															placeholder="0.00"
 															className="text-xs h-8"
@@ -1181,12 +1181,12 @@ function LetterCard({
 										<div className="text-xs space-y-1">
 											{letter.templateType === "salud" ? (
 												<>
-													{policy.manualFields?.renewalPremium !== undefined && (
+													{policy.manualFields?.insuredValue !== undefined && (
 														<div className="text-green-700 font-medium">
-															✓ Prima renovación:{" "}
+															✓ Valor asegurado:{" "}
 															{formatMonetaryValue(
-																policy.manualFields.renewalPremium,
-																policy.manualFields.renewalPremiumCurrency
+																policy.manualFields.insuredValue,
+																policy.manualFields.insuredValueCurrency
 															)}
 														</div>
 													)}

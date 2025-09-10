@@ -113,11 +113,14 @@ export function groupRecordsForLetters(records: ProcessedInsuranceRecord[]): Let
 					insuredMembers.splice(titularIndex, 1);
 				}
 				insuredMembers.unshift(titular);
+				// Use the insured value from the first record of this policy group
+				const insuredValue = mainRecord.valorAsegurado || 0;
 				manualFields = {
 					...manualFields,
 					insuredMembers: [...insuredMembers],
 					originalInsuredMembers: [...insuredMembers],
-					renewalPremiumCurrency: "$us.",
+					insuredValue: insuredValue,
+					insuredValueCurrency: "Bs.",
 				};
 			} else if (templateType === "automotor") {
 				const vehicles: VehicleForLetter[] = policyGroup.map((r, i) => ({
@@ -196,8 +199,8 @@ export function detectMissingData(letterData: Omit<LetterData, "needsReview" | "
 		const policyLabel = `Póliza ${index + 1} (${policy.policyNumber})`;
 
 		if (letterData.templateType === "salud") {
-			if (!policy.manualFields?.renewalPremium || policy.manualFields.renewalPremium <= 0) {
-				missing.push(`${policyLabel}: Prima de renovación`);
+			if (!policy.manualFields?.insuredValue || policy.manualFields.insuredValue <= 0) {
+				missing.push(`${policyLabel}: Valor asegurado`);
 			}
 		} else if (letterData.templateType === "automotor") {
 			if (!policy.manualFields?.premium || policy.manualFields.premium <= 0) {

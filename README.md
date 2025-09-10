@@ -1,10 +1,12 @@
 falta hacer que se detecte bien cuando se viene desde el email y te lleve directo a hacerte una contraseña, eso no funciona todavia
 
 TODO:
+[] borrar todo lo relacionado con prima del dashboard de datos cargados
 [] el ramo deberia poder modificarse desde un menu dropdown cuando se editan los datos de la carta, estos ramos deben ser cargados desde la base de datos
 [] que el titulo de la carta sea segun el ramo
 [] que la fecha sea de inicio y de fin
 [x] que solo se muestre valor asegurado final de la poliza
+[] cambiar prima de renovacion a valor asegurado en carta de salud
 [] en salud debe tener va
 [] que en asegurados de salud se pueda escoger y se muestre si es titular, conyugue o dependiente
 [] que tenga el descargo de valores actualzados

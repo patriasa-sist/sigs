@@ -44,8 +44,8 @@ export interface PolicyForLetter {
 		// Campos para Pólizas de Salud
 		insuredMembers?: string[];
 		originalInsuredMembers?: string[];
-		renewalPremium?: number;
-		renewalPremiumCurrency?: "Bs." | "$us.";
+		insuredValue?: number;
+		insuredValueCurrency?: "Bs." | "$us.";
 
 		// NUEVO: Campos para Pólizas Generales
 		insuredMatter?: string;
