@@ -21,6 +21,7 @@ import {
 	CreditCard,
 	ClipboardList,
 } from "lucide-react";
+import Link from "next/link";
 
 const Dashboard = () => {
 	const modules = [
@@ -215,7 +216,7 @@ const Dashboard = () => {
 										))}
 									</div>
 									<Button className="w-full mt-4" variant="default">
-										Acceder al Módulo
+										<Link href="vencimientos">Acceder al Módulo</Link>
 									</Button>
 								</CardContent>
 							</Card>
