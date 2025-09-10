@@ -5,6 +5,7 @@ import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import { ConditionalNavbar } from "@/components/layout/conditional-navbar";
 
 const defaultUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000";
 
@@ -35,6 +36,7 @@ export default function RootLayout({
 					enableSystem
 					disableTransitionOnChange
 				>
+					<ConditionalNavbar />
 					{children}
 					<Analytics />
 					<SpeedInsights />

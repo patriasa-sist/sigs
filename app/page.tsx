@@ -129,26 +129,6 @@ const Dashboard = () => {
 
 	return (
 		<div className="min-h-screen">
-			{/* Header */}
-			<div className="bg-white border-b border-gray-200">
-				<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-					<div className="flex justify-between items-center py-6">
-						<div className="flex items-center space-x-4">
-							<div className="bg-blue-600 text-white p-3 rounded-lg">
-								<Building2 className="h-8 w-8" />
-							</div>
-							<div>
-								<h1 className="text-2xl font-bold text-gray-900">PATRIA S.A.</h1>
-								<p className="text-sm text-gray-600">Sistema Integrado de Gestión de Seguros</p>
-							</div>
-						</div>
-						<Badge variant="secondary" className="px-3 py-1">
-							Dashboard Principal
-						</Badge>
-					</div>
-				</div>
-			</div>
-
 			<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 				{/* Welcome Section */}
 				<div className="mb-8">
