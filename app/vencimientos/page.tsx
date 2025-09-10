@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { FileSpreadsheet, BarChart3, Mail, Users, AlertTriangle } from "lucide-react";
+import { FileSpreadsheet, BarChart3, AlertTriangle } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import FileUpload from "@/components/vencimientos/FileUpload";

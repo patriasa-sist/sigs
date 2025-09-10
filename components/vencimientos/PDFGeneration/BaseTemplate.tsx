@@ -116,7 +116,7 @@ export const BaseTemplate: React.FC<BaseTemplateProps> = ({ letterData, children
 		<Document>
 			<Page size="LETTER" style={styles.page}>
 				<View style={styles.header}>
-					<Image style={styles.logo} src={PDF_ASSETS.PATRIA_LOGO} />
+					<Image style={styles.logo} src={PDF_ASSETS.PATRIA_LOGO} alt="Patria S.A. Logo" />
 					<Text style={styles.headerText}>Santa Cruz, {letterData.date}</Text>
 					<Text style={styles.referenceNumber}>{letterData.referenceNumber}</Text>
 				</View>

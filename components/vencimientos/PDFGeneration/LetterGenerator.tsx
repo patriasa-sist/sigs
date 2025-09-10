@@ -13,19 +13,16 @@ import {
 	Save,
 	RefreshCw,
 	Package,
-	Printer,
 	Mail,
 	Phone,
 	PlusCircle,
-	MessageSquare,
 	Trash2,
 } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ProcessedInsuranceRecord } from "@/types/insurance";
 import { LetterData, GeneratedLetter, PDFGenerationResult, PolicyForLetter, VehicleForLetter } from "@/types/pdf";
@@ -34,8 +31,6 @@ import {
 	validateRecordForPDF,
 	generateFileName,
 	formatUSD,
-	formatCurrency,
-	determineTemplateType,
 	detectMissingData,
 } from "@/utils/pdfutils";
 import { cleanPhoneNumber, createWhatsAppMessage } from "@/utils/whatsapp";
@@ -825,7 +820,7 @@ function LetterCard({
 	const updatePolicy = (
 		policyIndex: number,
 		field: keyof NonNullable<PolicyForLetter["manualFields"]>,
-		value: any
+		value: string | number | string[] | VehicleForLetter[]
 	) => {
 		const updatedPolicies = editedLetter.policies.map((policy, index) => {
 			if (index === policyIndex) {

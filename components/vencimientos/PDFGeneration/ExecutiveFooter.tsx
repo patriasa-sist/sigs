@@ -2,7 +2,6 @@
 import React from "react";
 import { View, Text, StyleSheet, Image } from "@react-pdf/renderer";
 import { findExecutiveByName, getDefaultExecutive } from "@/utils/executiveHelper";
-import { PDF_ASSETS } from "@/utils/pdfAssets";
 
 const footerStyles = StyleSheet.create({
 	signatureBlock: {

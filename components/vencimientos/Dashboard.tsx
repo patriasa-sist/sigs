@@ -8,17 +8,12 @@ import {
 	Filter,
 	Download,
 	Mail,
-	AlertTriangle,
-	Calendar,
-	Building2,
-	User,
 	FileText,
 	SortAsc,
 	SortDesc,
 	ChevronLeft,
 	ChevronRight,
 	Eye,
-	CheckSquare,
 	Package,
 	Zap,
 } from "lucide-react";
@@ -357,7 +352,7 @@ export default function Dashboard({ data, onBack, onUpdateData }: DashboardProps
 							<div className="text-green-800">
 								<div className="font-medium">
 									✅ {pdfGenerationResult.totalGenerated} cartas generadas exitosamente. Los registros
-									han sido marcados como "Enviado".
+									han sido marcados como &ldquo;Enviado&rdquo;.
 								</div>
 							</div>
 						) : (
