@@ -820,7 +820,7 @@ function LetterCard({
 	const updatePolicy = (
 		policyIndex: number,
 		field: keyof NonNullable<PolicyForLetter["manualFields"]>,
-		value: any
+		value: string | number | string[] | VehicleForLetter[]
 	) => {
 		const updatedPolicies = editedLetter.policies.map((policy, index) => {
 			if (index === policyIndex) {
@@ -829,7 +829,7 @@ function LetterCard({
 					[field]: value,
 				};
 				if (field === "insuredMembers") {
-					return { ...policy, insuredMembers: value, manualFields: updatedManualFields };
+					return { ...policy, insuredMembers: value as string[], manualFields: updatedManualFields };
 				}
 				return { ...policy, manualFields: updatedManualFields };
 			}
