@@ -208,7 +208,7 @@ export function detectMissingData(letterData: Omit<LetterData, "needsReview" | "
 			} else {
 				policy.manualFields.vehicles.forEach((vehicle, vIndex) => {
 					if (!vehicle.description) missing.push(`${policyLabel}, Vehículo ${vIndex + 1}: Falta descripción.`);
-					if (!vehicle.declaredValue || vehicle.declaredValue <= 0) missing.push(`${policyLabel}, Vehículo ${vIndex + 1}: Falta valor declarado.`);
+					if (!vehicle.insuredValue || vehicle.insuredValue <= 0) missing.push(`${policyLabel}, Vehículo ${vIndex + 1}: Falta valor asegurado.`);
 				});
 			}
 		} else {

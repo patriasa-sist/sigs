@@ -6,7 +6,6 @@ import { ProcessedInsuranceRecord } from "./insurance";
 export interface VehicleForLetter {
 	id: string; // ID único para el vehículo, útil para React keys
 	description: string;
-	declaredValue: number;
 	insuredValue: number;
 }
 

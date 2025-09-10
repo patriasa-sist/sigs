@@ -173,27 +173,21 @@ export const AutomotorTemplate: React.FC<AutomotorTemplateProps> = ({ letterData
 					{policy.manualFields?.vehicles && policy.manualFields.vehicles.length > 0 && (
 						<View style={automotorStyles.subTable}>
 							<View style={automotorStyles.subTableHeader}>
-								<View style={[automotorStyles.subTableColHeader, { width: "50%" }]}>
+								<View style={[automotorStyles.subTableColHeader, { width: "70%" }]}>
 									<Text style={automotorStyles.subHeaderText}>DETALLE DE VEHÍCULO</Text>
 								</View>
-								<View style={[automotorStyles.subTableColHeader, { width: "25%" }]}>
-									<Text style={automotorStyles.subHeaderText}>VALOR DECLARADO</Text>
-								</View>
 								<View
-									style={[automotorStyles.subTableColHeader, { width: "25%", borderRightWidth: 0 }]}
+									style={[automotorStyles.subTableColHeader, { width: "30%", borderRightWidth: 0 }]}
 								>
 									<Text style={automotorStyles.subHeaderText}>VALOR ASEGURADO</Text>
 								</View>
 							</View>
 							{policy.manualFields.vehicles.map((vehicle, vIndex) => (
 								<View key={vIndex} style={automotorStyles.subTableRow}>
-									<View style={[automotorStyles.subTableCell, { width: "50%", textAlign: "left" }]}>
+									<View style={[automotorStyles.subTableCell, { width: "70%", textAlign: "left" }]}>
 										<Text>{vehicle.description}</Text>
 									</View>
-									<View style={[automotorStyles.subTableCell, { width: "25%" }]}>
-										<Text>{formatUSD(vehicle.declaredValue)}</Text>
-									</View>
-									<View style={[automotorStyles.subTableCell, { width: "25%", borderRightWidth: 0 }]}>
+									<View style={[automotorStyles.subTableCell, { width: "30%", borderRightWidth: 0 }]}>
 										<Text>{formatUSD(vehicle.insuredValue)}</Text>
 									</View>
 								</View>

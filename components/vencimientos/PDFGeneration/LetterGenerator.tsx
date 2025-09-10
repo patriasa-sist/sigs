@@ -300,7 +300,6 @@ function VehicleEditor({ vehicles, onChange, label }: VehicleEditorProps) {
 			{
 				id: `new_vehicle_${Date.now()}`,
 				description: "",
-				declaredValue: 0,
 				insuredValue: 0,
 			},
 		]);
@@ -335,22 +334,13 @@ function VehicleEditor({ vehicles, onChange, label }: VehicleEditorProps) {
 							className="text-xs h-8"
 							placeholder="Descripción del vehículo (ej. Vagoneta Toyota TACOMA)"
 						/>
-						<div className="grid grid-cols-2 gap-2">
-							<NumericInput
-								label="Valor Declarado ($us.)"
-								value={vehicle.declaredValue}
-								onChange={(v) => handleVehicleChange(index, "declaredValue", v)}
-								className="text-xs h-8"
-								placeholder="0.00"
-							/>
-							<NumericInput
-								label="Valor Asegurado ($us.)"
-								value={vehicle.insuredValue}
-								onChange={(v) => handleVehicleChange(index, "insuredValue", v)}
-								className="text-xs h-8"
-								placeholder="0.00"
-							/>
-						</div>
+						<NumericInput
+							label="Valor Asegurado ($us.)"
+							value={vehicle.insuredValue}
+							onChange={(v) => handleVehicleChange(index, "insuredValue", v)}
+							className="text-xs h-8"
+							placeholder="0.00"
+						/>
 					</div>
 				))}
 				<Button type="button" size="sm" variant="outline" onClick={addVehicle} className="text-xs h-8 mt-2">
@@ -1228,8 +1218,7 @@ function LetterCard({
 													<ul className="list-disc list-inside pl-2">
 														{(policy.manualFields?.vehicles || []).map((v, i) => (
 															<li key={i}>
-																{v.description} - Declarado:{" "}
-																{formatUSD(v.declaredValue)} / Asegurado:{" "}
+																{v.description} - Asegurado:{" "}
 																{formatUSD(v.insuredValue)}
 															</li>
 														))}
