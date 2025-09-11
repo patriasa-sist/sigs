@@ -140,7 +140,7 @@ export const HealthTemplate: React.FC<HealthTemplateProps> = ({ letterData }) =>
 									<Text style={healthStyles.cellText}>{policy.company}</Text>
 								</View>
 								<View style={[healthStyles.tableCol, { width: "15%" }]}>
-									<Text style={healthStyles.cellText}>{policy.branch}</Text>
+									<Text style={healthStyles.cellText}>{policy.manualFields?.branch || policy.branch}</Text>
 								</View>
 								<View style={[healthStyles.tableCol, { width: "20%" }]}>
 									<Text style={healthStyles.cellText}>

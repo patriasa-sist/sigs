@@ -129,6 +129,47 @@ function NumericInput({ value, onChange, placeholder, className, label }: Numeri
 	);
 }
 
+// Componente para input de ramo editable con aviso de cambio
+interface EditableRamoInputProps {
+	value: string;
+	onValueChange: (value: string) => void;
+	label?: string;
+	placeholder?: string;
+	className?: string;
+	originalRamo?: string; // Original ramo from Excel/PUC mapping
+}
+
+function EditableRamoInput({
+	value,
+	onValueChange,
+	label,
+	placeholder,
+	className,
+	originalRamo,
+}: EditableRamoInputProps) {
+	// Check if ramo was changed from original Excel/PUC value
+	const ramoChanged = originalRamo && value !== originalRamo;
+
+	return (
+		<div>
+			{label && <label className="text-xs text-gray-600 block mb-1">{label}</label>}
+			<Input
+				type="text"
+				value={value}
+				onChange={(e) => onValueChange(e.target.value)}
+				placeholder={placeholder}
+				className={`${className} ${ramoChanged ? "border-yellow-400" : ""}`}
+			/>
+			{ramoChanged && (
+				<div className="mt-1 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs text-yellow-800 flex items-center">
+					<AlertTriangle className="h-3 w-3 mr-1 text-yellow-600" />
+					Ramo cambiado difiere del original: {originalRamo} → {value}
+				</div>
+			)}
+		</div>
+	);
+}
+
 // Componente para input numérico con selección de moneda
 interface NumericInputWithCurrencyProps {
 	value: number | undefined;
@@ -943,6 +984,12 @@ function LetterCard({
 					...policy.manualFields,
 					[field]: value,
 				};
+
+				// Special handling for branch field - store original value if not already set
+				if (field === "branch" && !policy.manualFields?.originalBranch) {
+					updatedManualFields.originalBranch = policy.branch;
+				}
+
 				if (field === "insuredMembers") {
 					return { ...policy, insuredMembers: value as string[], manualFields: updatedManualFields };
 				}
@@ -1167,7 +1214,15 @@ function LetterCard({
 									<div className="font-medium text-gray-900">{policy.company}</div>
 									<div className="text-gray-600">Póliza: {policy.policyNumber}</div>
 									<div className="text-gray-600">Vence: {policy.expiryDate}</div>
-									<div className="text-gray-600">Ramo: {policy.branch}</div>
+									<div className="text-gray-600">
+										Ramo: {policy.manualFields?.branch || policy.branch}
+										{policy.manualFields?.branch && policy.manualFields.originalBranch && 
+										 policy.manualFields.branch !== policy.manualFields.originalBranch && (
+											<span className="ml-1 text-yellow-600 text-xs">
+												(editado)
+											</span>
+										)}
+									</div>
 								</div>
 								<div>
 									{letter.templateType === "automotor" && (
@@ -1183,8 +1238,19 @@ function LetterCard({
 								</div>
 								<div className="space-y-2 md:col-span-3">
 									{isEditing ? (
-										<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-											{letter.templateType === "salud" ? (
+										<>
+											<div className="mb-4">
+												<EditableRamoInput
+													label="Ramo (editable):"
+													value={policy.manualFields?.branch || policy.branch}
+													originalRamo={policy.manualFields?.originalBranch || policy.branch}
+													onValueChange={(newBranch) => updatePolicy(index, "branch", newBranch)}
+													placeholder="Nombre del ramo de seguros"
+													className="text-xs h-8"
+												/>
+											</div>
+											<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+												{letter.templateType === "salud" ? (
 												<>
 													<div className="space-y-2">
 														<InsuredMembersWithTypeEditor
@@ -1330,7 +1396,8 @@ function LetterCard({
 													</div>
 												</>
 											)}
-										</div>
+											</div>
+										</>
 									) : (
 										<div className="text-xs space-y-1">
 											{letter.templateType === "salud" ? (

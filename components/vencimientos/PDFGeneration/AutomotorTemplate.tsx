@@ -151,7 +151,7 @@ export const AutomotorTemplate: React.FC<AutomotorTemplateProps> = ({ letterData
 							<Text style={automotorStyles.cellText}>{policy.company}</Text>
 						</View>
 						<View style={[automotorStyles.tableCol, { width: "20%" }]}>
-							<Text style={automotorStyles.cellText}>{policy.branch}</Text>
+							<Text style={automotorStyles.cellText}>{policy.manualFields?.branch || policy.branch}</Text>
 						</View>
 						<View style={[automotorStyles.tableCol, { width: "20%" }]}>
 							<Text style={automotorStyles.cellText}>

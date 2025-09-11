@@ -63,6 +63,10 @@ export interface PolicyForLetter {
 		insuredMatter?: string;
 		originalInsuredMatter?: string;
 
+		// NUEVO: Campos para Ramo editable
+		branch?: string; // Manually edited ramo name
+		originalBranch?: string; // Original ramo from Excel/PUC mapping
+
 		// Campos comunes
 		specificConditions?: string;
 		deductibles?: number;

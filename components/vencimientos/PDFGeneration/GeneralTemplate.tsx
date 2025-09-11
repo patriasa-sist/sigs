@@ -117,7 +117,7 @@ export const GeneralTemplate: React.FC<GeneralTemplateProps> = ({ letterData }) 
 								<Text style={generalStyles.cellText}>{policy.company}</Text>
 							</View>
 							<View style={[generalStyles.tableCol, { width: "30%" }]}>
-								<Text style={generalStyles.cellText}>{policy.branch}</Text>
+								<Text style={generalStyles.cellText}>{policy.manualFields?.branch || policy.branch}</Text>
 							</View>
 						</View>
 					</View>
