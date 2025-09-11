@@ -168,7 +168,7 @@ export const BaseTemplate: React.FC<BaseTemplateProps> = ({ letterData, children
 				<View>
 					<Text style={styles.subject}>
 						Ref.: AVISO DE VENCIMIENTO{" "}
-						{letterData.templateType === "salud" ? "POLIZA DE SEGURO SALUD" : "POLIZA DE SEGURO"}
+						{letterData.templateType === "salud" ? "POLIZA DE SEGURO" : "POLIZA DE SEGURO"}
 					</Text>
 				</View>
 

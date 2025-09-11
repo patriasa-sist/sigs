@@ -25,7 +25,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ProcessedInsuranceRecord, SortOptions, DashboardStats, InsuranceStatus } from "@/types/insurance";
-import { formatCurrency, formatDate, getUniqueValues } from "@/utils/excel";
+import { formatDate, getUniqueValues } from "@/utils/excel";
 import LetterGenerator from "@/components/vencimientos/PDFGeneration/LetterGenerator";
 import { PDFGenerationResult } from "@/types/pdf";
 

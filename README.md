@@ -1,10 +1,9 @@
 falta hacer que se detecte bien cuando se viene desde el email y te lleve directo a hacerte una contraseña, eso no funciona todavia
 
-TODO:
+TODO Principal:
 [x] borrar todo lo relacionado con prima del dashboard de datos cargados
-[] el ciasvp deber ser el dato que ingrese el ramo correcto en cada poliza y debe mostrarse en vez de la columna de prima en el dashboard
-[] el ramo deberia poder modificarse desde un menu dropdown cuando se editan los datos de la carta, estos ramos deben ser cargados desde la base de datos
-[] que el titulo de la carta sea segun el ramo
+[x] el ciasvp deber ser el dato que ingrese el ramo correcto en cada poliza y debe mostrarse en vez de la columna de prima en el dashboard
+[x] el ramo deberia poder modificarse para casos especiales
 [x] que la fecha sea de inicio y de fin en los datos de la tabla seguros
 [x] que se muestre valor asegurado solo al final de la poliza salud y automotor
 [x] cambiar prima de renovacion a valor asegurado en carta de salud
@@ -13,9 +12,8 @@ TODO:
 [x] que la carta tenga info de contacto
 [x] que la carta tenga firma de ejecutivo digitalizada sin sello y con pie de firma
 [x] que el sistema detecte la columna nueva de tipo Moneda y cambie su parametro en la pantalla de generacion de la carta
-
-funcion para leer datos de la tabla tipo_seguro y comparar con datos del excel a la hora de subirlo
-hacer que el nro de carta sea automatico segun el esquema: SCPSA-[executive glyph]-[serie from supabase 001 to 999]-[year]-[month]
+[x] el nro de carta sea automatico segun el esquema: SCPSA-[executive glyph]-[serie from supabase 001 to 999]-[year]-[month]
+[x] funcion para leer datos de la tabla tipo_seguro y comparar con datos del excel a la hora de subirlo
 
 TABLAS DE SEGUROS
 
