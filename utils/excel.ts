@@ -149,6 +149,25 @@ export function validateRecord(record: any, rowIndex: number): { isValid: boolea
 }
 
 /**
+ * Normalize currency type from Excel
+ */
+export function normalizeCurrencyType(value: any): "Bs." | "$us." | undefined {
+	if (!value) return undefined;
+	
+	const cleanValue = cleanString(value).toLowerCase();
+	
+	// Match common variations
+	if (cleanValue.includes("bs") || cleanValue.includes("boliviano") || cleanValue.includes("bob")) {
+		return "Bs.";
+	}
+	if (cleanValue.includes("us") || cleanValue.includes("dolar") || cleanValue.includes("dollar") || cleanValue.includes("usd")) {
+		return "$us.";
+	}
+	
+	return undefined;
+}
+
+/**
  * Mapea las columnas del Excel a nuestro tipo InsuranceRecord
  */
 export function mapExcelRowToRecord(row: any): InsuranceRecord {
@@ -177,6 +196,7 @@ export function mapExcelRowToRecord(row: any): InsuranceRecord {
 		avance: parseNumber(row["Avance"]),
 		cantidad: parseNumber(row["Cantidad"]),
 		observaciones: cleanString(row["Observaciones2"] || row["Observaciones"]),
+		tipoMoneda: cleanString(row["TIPO MONEDA"]),
 	};
 }
 

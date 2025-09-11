@@ -137,6 +137,7 @@ interface NumericInputWithCurrencyProps {
 	label?: string;
 	placeholder?: string;
 	className?: string;
+	originalCurrency?: "Bs." | "$us."; // Currency from Excel
 }
 
 function NumericInputWithCurrency({
@@ -147,6 +148,7 @@ function NumericInputWithCurrency({
 	label,
 	placeholder,
 	className,
+	originalCurrency,
 }: NumericInputWithCurrencyProps) {
 	// ... (sin cambios en este componente)
 	const [displayValue, setDisplayValue] = useState(value !== undefined && value !== null ? String(value) : "");
@@ -180,6 +182,9 @@ function NumericInputWithCurrency({
 		}
 	};
 
+	// Check if currency was changed from original Excel value
+	const currencyChanged = originalCurrency && currency !== originalCurrency;
+
 	return (
 		<div>
 			{label && <label className="text-xs text-gray-600 block mb-1">{label}</label>}
@@ -193,7 +198,7 @@ function NumericInputWithCurrency({
 					className={className}
 				/>
 				<Select value={currency} onValueChange={(val: "Bs." | "$us.") => onCurrencyChange(val)}>
-					<SelectTrigger className="w-20 h-8 text-xs">
+					<SelectTrigger className={`w-20 h-8 text-xs ${currencyChanged ? "border-yellow-400" : ""}`}>
 						<SelectValue />
 					</SelectTrigger>
 					<SelectContent>
@@ -202,6 +207,12 @@ function NumericInputWithCurrency({
 					</SelectContent>
 				</Select>
 			</div>
+			{currencyChanged && (
+				<div className="mt-1 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs text-yellow-800 flex items-center">
+					<AlertTriangle className="h-3 w-3 mr-1 text-yellow-600" />
+					Moneda cambiada difiere Excel: {originalCurrency} → {currency}
+				</div>
+			)}
 		</div>
 	);
 }
@@ -255,25 +266,25 @@ function InsuredMembersWithTypeEditor({ members, onChange, label }: InsuredMembe
 		const newMember: InsuredMemberWithType = {
 			id: `member_${Date.now()}`,
 			name: "",
-			beneficiaryType: "dependiente"
+			beneficiaryType: "dependiente",
 		};
 		onChange([...members, newMember]);
 	};
 
 	const removeMember = (id: string) => {
-		const newMembers = members.filter(member => member.id !== id);
+		const newMembers = members.filter((member) => member.id !== id);
 		onChange(newMembers);
 	};
 
 	// Validación de tipos de beneficiario
-	const titularCount = members.filter(m => m.beneficiaryType === "titular").length;
-	const conyugueCount = members.filter(m => m.beneficiaryType === "conyugue").length;
+	const titularCount = members.filter((m) => m.beneficiaryType === "titular").length;
+	const conyugueCount = members.filter((m) => m.beneficiaryType === "conyugue").length;
 
 	const getBeneficiaryTypeOptions = (currentType: BeneficiaryType) => {
 		const options: { value: BeneficiaryType; label: string; disabled?: boolean }[] = [
 			{ value: "titular", label: "Titular", disabled: titularCount >= 1 && currentType !== "titular" },
 			{ value: "conyugue", label: "Cónyuge", disabled: conyugueCount >= 1 && currentType !== "conyugue" },
-			{ value: "dependiente", label: "Dependiente" }
+			{ value: "dependiente", label: "Dependiente" },
 		];
 		return options;
 	};
@@ -305,11 +316,7 @@ function InsuredMembersWithTypeEditor({ members, onChange, label }: InsuredMembe
 							</SelectTrigger>
 							<SelectContent>
 								{getBeneficiaryTypeOptions(member.beneficiaryType).map((option) => (
-									<SelectItem 
-										key={option.value} 
-										value={option.value}
-										disabled={option.disabled}
-									>
+									<SelectItem key={option.value} value={option.value} disabled={option.disabled}>
 										{option.label}
 									</SelectItem>
 								))}
@@ -1127,6 +1134,9 @@ function LetterCard({
 															currency={
 																policy.manualFields?.insuredValueCurrency || "Bs."
 															}
+															originalCurrency={
+																policy.manualFields?.originalInsuredValueCurrency
+															}
 															onValueChange={(v) =>
 																updatePolicy(index, "insuredValue", v)
 															}
@@ -1155,6 +1165,9 @@ function LetterCard({
 															value={policy.manualFields?.insuredValue}
 															currency={
 																policy.manualFields?.insuredValueCurrency || "$us."
+															}
+															originalCurrency={
+																policy.manualFields?.originalInsuredValueCurrency
 															}
 															onValueChange={(v) =>
 																updatePolicy(index, "insuredValue", v)
@@ -1220,6 +1233,9 @@ function LetterCard({
 															value={policy.manualFields?.insuredValue}
 															currency={
 																policy.manualFields?.insuredValueCurrency || "Bs."
+															}
+															originalCurrency={
+																policy.manualFields?.originalInsuredValueCurrency
 															}
 															onValueChange={(v) =>
 																updatePolicy(index, "insuredValue", v)

@@ -2,6 +2,7 @@
 
 import { ProcessedInsuranceRecord } from "@/types/insurance";
 import { LetterData, PolicyForLetter, VehicleForLetter } from "@/types/pdf";
+import { normalizeCurrencyType } from "./excel";
 
 // Constantes para los textos de plantilla
 const HEALTH_CONDITIONS_TEMPLATE = `Le informamos que a partir del *01/05/2025*, se excluye la cobertura del certificado asistencia al viajero y las pólizas se emiten en moneda nacional (BS)`;
@@ -118,12 +119,15 @@ export function groupRecordsForLetters(records: ProcessedInsuranceRecord[]): Let
 				insuredMembers.unshift(titular);
 				// Use the insured value from the first record of this policy group
 				const insuredValue = mainRecord.valorAsegurado || 0;
+				// Auto-set currency from Excel or default to Bs.
+				const currencyFromExcel = normalizeCurrencyType(mainRecord.tipoMoneda);
 				manualFields = {
 					...manualFields,
 					insuredMembers: [...insuredMembers],
 					originalInsuredMembers: [...insuredMembers],
 					insuredValue: insuredValue,
-					insuredValueCurrency: "Bs.",
+					insuredValueCurrency: currencyFromExcel || "Bs.",
+					originalInsuredValueCurrency: currencyFromExcel || "Bs.",
 				};
 			} else if (templateType === "automotor") {
 				const vehicles: VehicleForLetter[] = policyGroup.map((r, i) => ({
@@ -133,12 +137,15 @@ export function groupRecordsForLetters(records: ProcessedInsuranceRecord[]): Let
 				}));
 				// Calculate total insured value from all vehicles
 				const totalInsuredValue = vehicles.reduce((sum, vehicle) => sum + vehicle.insuredValue, 0);
+				// Auto-set currency from Excel or default to $us. for automotor
+				const currencyFromExcel = normalizeCurrencyType(mainRecord.tipoMoneda);
 				manualFields = {
 					...manualFields,
 					vehicles: vehicles,
 					originalVehicles: JSON.parse(JSON.stringify(vehicles)),
 					insuredValue: totalInsuredValue,
-					insuredValueCurrency: "$us.",
+					insuredValueCurrency: currencyFromExcel || "$us.",
+					originalInsuredValueCurrency: currencyFromExcel || "$us.",
 				};
 			} else {
 				// 'general'
@@ -148,12 +155,15 @@ export function groupRecordsForLetters(records: ProcessedInsuranceRecord[]): Let
 					.join(", ");
 				// Use the insured value from the first record
 				const insuredValue = mainRecord.valorAsegurado || 0;
+				// Auto-set currency from Excel or default to Bs. for general
+				const currencyFromExcel = normalizeCurrencyType(mainRecord.tipoMoneda);
 				manualFields = {
 					...manualFields,
 					insuredMatter: insuredMatter,
 					originalInsuredMatter: insuredMatter,
 					insuredValue: insuredValue,
-					insuredValueCurrency: "Bs.",
+					insuredValueCurrency: currencyFromExcel || "Bs.",
+					originalInsuredValueCurrency: currencyFromExcel || "Bs.",
 				};
 			}
 			policies.push({ ...basePolicy, manualFields });

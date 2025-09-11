@@ -26,6 +26,7 @@ export interface InsuranceRecord {
 	avance?: number;
 	cantidad?: number;
 	observaciones?: string;
+	tipoMoneda?: string; // Nueva columna para tipo de moneda desde Excel
 }
 
 export interface ProcessedInsuranceRecord extends Omit<InsuranceRecord, "finDeVigencia" | "inicioDeVigencia"> {
