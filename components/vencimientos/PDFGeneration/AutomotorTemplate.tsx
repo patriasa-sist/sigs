@@ -123,7 +123,7 @@ export const AutomotorTemplate: React.FC<AutomotorTemplateProps> = ({ letterData
 			<View style={automotorStyles.policyTable}>
 				<View style={automotorStyles.tableRow}>
 					<View style={[automotorStyles.tableCol, { width: "15%" }]}>
-						<Text style={automotorStyles.headerText}>VENCIMIENTO</Text>
+						<Text style={automotorStyles.headerText}>VIGENCIA</Text>
 					</View>
 					<View style={[automotorStyles.tableCol, { width: "25%" }]}>
 						<Text style={automotorStyles.headerText}>No. DE PÓLIZA</Text>

@@ -1,5 +1,12 @@
 import * as ExcelJS from "exceljs";
-import { InsuranceRecord, ProcessedInsuranceRecord, ExcelUploadResult, InsuranceStatus, VALIDATION_RULES, SYSTEM_CONSTANTS } from "@/types/insurance";
+import {
+	InsuranceRecord,
+	ProcessedInsuranceRecord,
+	ExcelUploadResult,
+	InsuranceStatus,
+	VALIDATION_RULES,
+	SYSTEM_CONSTANTS,
+} from "@/types/insurance";
 
 /**
  * Convierte fecha serial de Excel a objeto Date - CORREGIDO
@@ -98,10 +105,14 @@ export function validateRecord(record: any, rowIndex: number): { isValid: boolea
 				case "string":
 					const strValue = cleanString(value);
 					if (rule.minLength && strValue.length < rule.minLength) {
-						errors.push(`Fila ${rowIndex}: "${rule.field}" debe tener al menos ${rule.minLength} caracteres`);
+						errors.push(
+							`Fila ${rowIndex}: "${rule.field}" debe tener al menos ${rule.minLength} caracteres`
+						);
 					}
 					if (rule.maxLength && strValue.length > rule.maxLength) {
-						errors.push(`Fila ${rowIndex}: "${rule.field}" no puede tener más de ${rule.maxLength} caracteres`);
+						errors.push(
+							`Fila ${rowIndex}: "${rule.field}" no puede tener más de ${rule.maxLength} caracteres`
+						);
 					}
 					break;
 
@@ -143,6 +154,7 @@ export function validateRecord(record: any, rowIndex: number): { isValid: boolea
 export function mapExcelRowToRecord(row: any): InsuranceRecord {
 	return {
 		nro: parseNumber(row["NRO."]),
+		inicioDeVigencia: row["INICIO DE VIGENCIA"],
 		finDeVigencia: row["FIN DE VIGENCIA"],
 		compania: cleanString(row["COMPAÑÍA"]) || "Sin especificar",
 		ramo: cleanString(row["RAMO"]) || "Sin especificar",
@@ -190,12 +202,38 @@ export function processRecord(record: InsuranceRecord, index: number): Processed
 		expiryDate = new Date(record.finDeVigencia);
 	}
 
+	// Process start date (inicioDeVigencia) if available
+	let startDate: Date | undefined;
+	if (record.inicioDeVigencia) {
+		if (typeof record.inicioDeVigencia === "number" || record.inicioDeVigencia instanceof Date) {
+			startDate = excelDateToJSDate(record.inicioDeVigencia);
+		} else if (typeof record.inicioDeVigencia === "string") {
+			startDate = new Date(record.inicioDeVigencia);
+			if (isNaN(startDate.getTime())) {
+				const parts = record.inicioDeVigencia.split("/");
+				if (parts.length === 3) {
+					const day = parseInt(parts[0]);
+					const month = parseInt(parts[1]) - 1;
+					const year = parseInt(parts[2]);
+					startDate = new Date(year, month, day);
+				}
+			}
+		} else {
+			startDate = new Date(record.inicioDeVigencia);
+		}
+		// If start date parsing failed, set to undefined
+		if (isNaN(startDate.getTime())) {
+			startDate = undefined;
+		}
+	}
+
 	const daysUntilExpiry = calculateDaysUntilExpiry(expiryDate);
 	const status = determineStatus(daysUntilExpiry);
 
 	return {
 		...record,
 		id: `record_${index}_${Date.now()}`,
+		inicioDeVigencia: startDate,
 		finDeVigencia: expiryDate,
 		daysUntilExpiry,
 		status,
@@ -211,7 +249,11 @@ export async function processExcelFile(file: File): Promise<ExcelUploadResult> {
 		if (file.size > SYSTEM_CONSTANTS.MAX_UPLOAD_SIZE) {
 			return {
 				success: false,
-				errors: [`El archivo es demasiado grande. Tamaño máximo: ${SYSTEM_CONSTANTS.MAX_UPLOAD_SIZE / 1024 / 1024}MB`],
+				errors: [
+					`El archivo es demasiado grande. Tamaño máximo: ${
+						SYSTEM_CONSTANTS.MAX_UPLOAD_SIZE / 1024 / 1024
+					}MB`,
+				],
 			};
 		}
 
@@ -219,7 +261,11 @@ export async function processExcelFile(file: File): Promise<ExcelUploadResult> {
 		if (!(SYSTEM_CONSTANTS.SUPPORTED_FILE_TYPES as readonly string[]).includes(fileExtension)) {
 			return {
 				success: false,
-				errors: [`Tipo de archivo no soportado. Tipos permitidos: ${SYSTEM_CONSTANTS.SUPPORTED_FILE_TYPES.join(", ")}`],
+				errors: [
+					`Tipo de archivo no soportado. Tipos permitidos: ${SYSTEM_CONSTANTS.SUPPORTED_FILE_TYPES.join(
+						", "
+					)}`,
+				],
 			};
 		}
 
@@ -252,7 +298,9 @@ export async function processExcelFile(file: File): Promise<ExcelUploadResult> {
 
 		const requiredHeaders = ["FIN DE VIGENCIA", "COMPAÑÍA", "NO. PÓLIZA", "ASEGURADO", "EJECUTIVO"];
 
-		const missingHeaders = requiredHeaders.filter((header) => !headers.some((h) => h && h.toUpperCase().includes(header.toUpperCase())));
+		const missingHeaders = requiredHeaders.filter(
+			(header) => !headers.some((h) => h && h.toUpperCase().includes(header.toUpperCase()))
+		);
 
 		if (missingHeaders.length > 0) {
 			return {
@@ -293,7 +341,11 @@ export async function processExcelFile(file: File): Promise<ExcelUploadResult> {
 				const processedRecord = processRecord(insuranceRecord, rowNumber - 2);
 				processedRecords.push(processedRecord);
 			} catch (error) {
-				errors.push(`Fila ${rowNumber}: Error al procesar - ${error instanceof Error ? error.message : "Error desconocido"}`);
+				errors.push(
+					`Fila ${rowNumber}: Error al procesar - ${
+						error instanceof Error ? error.message : "Error desconocido"
+					}`
+				);
 			}
 		}
 
@@ -331,7 +383,10 @@ export async function processExcelFile(file: File): Promise<ExcelUploadResult> {
 		console.error("Error procesando archivo Excel:", error);
 		return {
 			success: false,
-			errors: ["Error al procesar el archivo Excel", error instanceof Error ? error.message : "Error desconocido"],
+			errors: [
+				"Error al procesar el archivo Excel",
+				error instanceof Error ? error.message : "Error desconocido",
+			],
 		};
 	}
 }
@@ -356,7 +411,10 @@ export function getCriticalRecords(records: ProcessedInsuranceRecord[]): Process
 /**
  * Obtiene valores únicos de una propiedad para filtros
  */
-export function getUniqueValues<T extends keyof ProcessedInsuranceRecord>(records: ProcessedInsuranceRecord[], property: T): string[] {
+export function getUniqueValues<T extends keyof ProcessedInsuranceRecord>(
+	records: ProcessedInsuranceRecord[],
+	property: T
+): string[] {
 	const values = records
 		.map((record) => record[property])
 		.filter((value) => typeof value === "string" && value.trim() !== "" && value !== null && value !== undefined)
@@ -380,7 +438,7 @@ export function formatCurrency(amount: number): string {
  * Formatea fecha para mostrar
  */
 export function formatDate(date: Date): string {
-	return new Intl.DateTimeFormat("en-US", {
+	return new Intl.DateTimeFormat("es-BO", {
 		year: "numeric",
 		month: "2-digit",
 		day: "2-digit",

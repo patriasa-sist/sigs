@@ -3,6 +3,7 @@
 export interface InsuranceRecord {
 	id?: string;
 	nro?: number;
+	inicioDeVigencia?: Date | string;
 	finDeVigencia: Date | string;
 	compania: string;
 	ramo: string;
@@ -27,7 +28,8 @@ export interface InsuranceRecord {
 	observaciones?: string;
 }
 
-export interface ProcessedInsuranceRecord extends Omit<InsuranceRecord, "finDeVigencia"> {
+export interface ProcessedInsuranceRecord extends Omit<InsuranceRecord, "finDeVigencia" | "inicioDeVigencia"> {
+	inicioDeVigencia?: Date;
 	finDeVigencia: Date;
 	daysUntilExpiry: number;
 	status: InsuranceStatus;

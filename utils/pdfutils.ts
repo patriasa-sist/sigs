@@ -89,8 +89,15 @@ export function groupRecordsForLetters(records: ProcessedInsuranceRecord[]): Let
 
 		Object.values(policyGroups).forEach((policyGroup) => {
 			const mainRecord = policyGroup[0];
+			// Create date range string: "startDate - endDate" or just "endDate" if no start date
+			let dateRange = formatDate(new Date(mainRecord.finDeVigencia));
+			if (mainRecord.inicioDeVigencia) {
+				const startDateStr = formatDate(new Date(mainRecord.inicioDeVigencia));
+				dateRange = `${startDateStr} - ${dateRange}`;
+			}
+			
 			const basePolicy: Omit<PolicyForLetter, "manualFields"> = {
-				expiryDate: formatDate(new Date(mainRecord.finDeVigencia)),
+				expiryDate: dateRange,
 				policyNumber: mainRecord.noPoliza,
 				company: mainRecord.compania,
 				branch: mainRecord.ramo,
@@ -240,8 +247,8 @@ export function generateReferenceNumber(): string {
 export function formatDate(date: Date): string {
 	return new Intl.DateTimeFormat("es-BO", {
 		year: "numeric",
-		month: "long",
-		day: "numeric",
+		month: "2-digit",
+		day: "2-digit",
 	}).format(date);
 }
 

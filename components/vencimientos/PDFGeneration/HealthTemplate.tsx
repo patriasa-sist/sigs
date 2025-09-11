@@ -94,7 +94,7 @@ export const HealthTemplate: React.FC<HealthTemplateProps> = ({ letterData }) =>
 							{/* Table Header */}
 							<View style={healthStyles.tableRow}>
 								<View style={[healthStyles.tableCol, { width: "20%" }]}>
-									<Text style={healthStyles.headerText}>FECHA DE VENCIMIENTO</Text>
+									<Text style={healthStyles.headerText}>VIGENCIA</Text>
 								</View>
 								<View style={[healthStyles.tableCol, { width: "25%" }]}>
 									<Text style={healthStyles.headerText}>No. DE PÓLIZA</Text>

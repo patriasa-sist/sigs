@@ -93,7 +93,7 @@ export const GeneralTemplate: React.FC<GeneralTemplateProps> = ({ letterData }) 
 						{/* Fila de Cabecera */}
 						<View style={generalStyles.tableRow}>
 							<View style={[generalStyles.tableCol, { width: "20%" }]}>
-								<Text style={generalStyles.headerText}>VENCIMIENTO</Text>
+								<Text style={generalStyles.headerText}>VIGENCIA</Text>
 							</View>
 							<View style={[generalStyles.tableCol, { width: "25%" }]}>
 								<Text style={generalStyles.headerText}>No. DE PÓLIZA</Text>
