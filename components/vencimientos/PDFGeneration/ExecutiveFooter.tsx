@@ -59,6 +59,7 @@ export const ExecutiveFooter: React.FC<ExecutiveFooterProps> = ({ executiveName 
 	return (
 		<View style={footerStyles.signatureBlock}>
 			{/* Signature image positioned above the line */}
+			{/* eslint-disable-next-line jsx-a11y/alt-text */}
 			<Image style={footerStyles.signatureImage} src={executive.signature} />
 
 			{/* Signature line positioned directly under the signature */}

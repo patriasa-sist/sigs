@@ -46,7 +46,7 @@ const LetterPreview: React.FC<LetterPreviewProps> = ({ letterData, width = "100%
 				URL.revokeObjectURL(previewUrl);
 			}
 		};
-	}, [letterData]);
+	}, [letterData, previewUrl]);
 
 	return (
 		<div className="letter-preview-container" style={{ width, height, position: "relative" }}>

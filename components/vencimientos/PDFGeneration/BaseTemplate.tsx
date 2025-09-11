@@ -135,6 +135,7 @@ export const BaseTemplate: React.FC<BaseTemplateProps> = ({ letterData, children
 		<Document>
 			<Page size="LETTER" style={styles.page}>
 				<View style={styles.header}>
+					{/* eslint-disable-next-line jsx-a11y/alt-text */}
 					<Image style={styles.logo} src={PDF_ASSETS.PATRIA_LOGO} />
 					<Text style={styles.headerText}>Santa Cruz, {letterData.date}</Text>
 					<Text style={styles.referenceNumber}>{letterData.referenceNumber}</Text>
