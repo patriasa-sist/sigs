@@ -4,6 +4,7 @@ import { Document, Page, Text, View, StyleSheet, Image, Font } from "@react-pdf/
 import { LetterData } from "@/types/pdf";
 import { PDF_ASSETS } from "@/utils/pdfAssets";
 import { ExecutiveFooter } from "./ExecutiveFooter";
+import { findExecutiveByName, getDefaultExecutive } from "@/utils/executiveHelper";
 
 // Registrar fuentes - Cambria
 Font.register({
@@ -131,6 +132,9 @@ interface BaseTemplateProps {
 }
 
 export const BaseTemplate: React.FC<BaseTemplateProps> = ({ letterData, children }) => {
+	// Find executive data using the same logic as ExecutiveFooter
+	const executiveData = findExecutiveByName(letterData.executive) || getDefaultExecutive();
+
 	return (
 		<Document>
 			<Page size="LETTER" style={styles.page}>
@@ -181,6 +185,7 @@ export const BaseTemplate: React.FC<BaseTemplateProps> = ({ letterData, children
 
 					{children}
 
+					{/* revision of data pending */}
 					<Text style={styles.paragraph}>
 						Requerimos revisar los datos y el valor asegurado, esto para proceder si corresponde, con la
 						actualización o modificación de esto(s). Tenga a bien hacernos a conocer cualquier cambio que se
@@ -196,6 +201,7 @@ export const BaseTemplate: React.FC<BaseTemplateProps> = ({ letterData, children
 						</View>
 					)}
 
+					{/* special health insurance clausule */}
 					{letterData.templateType === "salud" && (
 						<Text style={styles.paragraph}>
 							Nos permitimos recordarle que los seguros de Salud o Enfermedad se pagan por adelantado, al
@@ -204,6 +210,7 @@ export const BaseTemplate: React.FC<BaseTemplateProps> = ({ letterData, children
 						</Text>
 					)}
 
+					{/* No renovation section */}
 					<Text style={styles.paragraph}>
 						Es importante informarle que{""}
 						{letterData.templateType !== "salud"
@@ -212,6 +219,17 @@ export const BaseTemplate: React.FC<BaseTemplateProps> = ({ letterData, children
 						NO RENOVACION, suspende toda cobertura de la póliza de seguro.
 					</Text>
 
+					{/* contact info section */}
+					<Text style={styles.paragraph}>
+						Comuníquese con su ejecutivo para recibir una atención preferencial:
+					</Text>
+					<Text style={styles.paragraph}>
+						<FormattedText
+							text={`*${executiveData.name}* - Tel: *${executiveData.telf}* - Email: *${executiveData.mail}*`}
+						/>
+					</Text>
+
+					{/* greetings section */}
 					<Text style={styles.paragraph}>
 						De esta manera quedamos a la espera de su respuesta y nos despedimos con la cordialidad de
 						siempre.

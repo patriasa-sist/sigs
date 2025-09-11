@@ -96,7 +96,7 @@ export const GeneralTemplate: React.FC<GeneralTemplateProps> = ({ letterData }) 
 								<Text style={generalStyles.headerText}>VIGENCIA</Text>
 							</View>
 							<View style={[generalStyles.tableCol, { width: "25%" }]}>
-								<Text style={generalStyles.headerText}>No. DE PÓLIZA</Text>
+								<Text style={generalStyles.headerText}>N° DE PÓLIZA</Text>
 							</View>
 							<View style={[generalStyles.tableCol, { width: "25%" }]}>
 								<Text style={generalStyles.headerText}>COMPAÑÍA</Text>
@@ -125,9 +125,23 @@ export const GeneralTemplate: React.FC<GeneralTemplateProps> = ({ letterData }) 
 					{/* Caja de Detalles */}
 					<View style={generalStyles.detailsBox}>
 						<Text style={generalStyles.detailsTitle}>DETALLE DE LA PÓLIZA</Text>
-						{policy.manualFields?.insuredMatter && <Text style={generalStyles.insuredMatterText}>• Materia Asegurada: {policy.manualFields.insuredMatter}</Text>}
-						<Text style={generalStyles.detailText}>• Valor Asegurado: {formatMonetaryValue(policy.manualFields?.insuredValue, policy.manualFields?.insuredValueCurrency)}</Text>
-						{policy.manualFields?.specificConditions && <Text style={generalStyles.detailText}>• Condiciones Específicas: {policy.manualFields.specificConditions}</Text>}
+						{policy.manualFields?.insuredMatter && (
+							<Text style={generalStyles.insuredMatterText}>
+								• Materia Asegurada: {policy.manualFields.insuredMatter}
+							</Text>
+						)}
+						<Text style={generalStyles.detailText}>
+							• Valor Asegurado:{" "}
+							{formatMonetaryValue(
+								policy.manualFields?.insuredValue,
+								policy.manualFields?.insuredValueCurrency
+							)}
+						</Text>
+						{policy.manualFields?.specificConditions && (
+							<Text style={generalStyles.detailText}>
+								• Condiciones Específicas: {policy.manualFields.specificConditions}
+							</Text>
+						)}
 					</View>
 				</View>
 			))}

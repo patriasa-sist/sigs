@@ -6,7 +6,7 @@ import { normalizeCurrencyType } from "./excel";
 
 // Constantes para los textos de plantilla
 const HEALTH_CONDITIONS_TEMPLATE = `Le informamos que a partir del *01/05/2025*, se excluye la cobertura del certificado asistencia al viajero y las pólizas se emiten en moneda nacional (BS)`;
-const AUTOMOTOR_CONDITIONS_TEMPLATE = `A partir del *01/12/2024* se aplica :\n-Deducible coaseguro: 10% del valor del siniestro mínimo Bs 1.000 aplicable para las coberturas de Daños Propios, Conmoción Civil, Huelgas, Daño Malicioso, Sabotaje, Vandalismo y Terrorismo.\n-Extraterritorialidad: PAGO DE EXTRA PRIMA DE BS 400 (CONTADO) SI ES SOLICITADO EN LA RENOVACION DE LA POLIZA, POSTERIOR A LA RENOVACION DE LA POLIZA, EXTRA PRIMA DE BS 500.-\n“ La suscripción de los seguros seguro es Bs y considerando que en los últimos meses se ha observado un incremento significativo en el valor de mercado de los bienes en general en nuestro país, solicitamos la revisión del valor asegurado de su vehículo. La finalidad de esta actualización es garantizar una protección correcta de su patrimonio y acorde al valor real actual de los bien asegurado, con el fin de evitar la aplicación de infraseguro en caso de siniestro, como se encuentra establecido en el Código de Comercio, Art.1056.”`;
+const AUTOMOTOR_CONDITIONS_TEMPLATE = ``;
 const GENERAL_CONDITIONS_TEMPLATE = ``;
 
 export const PDF_CONSTANTS = {
@@ -96,7 +96,7 @@ export function groupRecordsForLetters(records: ProcessedInsuranceRecord[]): Let
 				const startDateStr = formatDate(new Date(mainRecord.inicioDeVigencia));
 				dateRange = `${startDateStr} - ${dateRange}`;
 			}
-			
+
 			const basePolicy: Omit<PolicyForLetter, "manualFields"> = {
 				expiryDate: dateRange,
 				policyNumber: mainRecord.noPoliza,
@@ -110,7 +110,13 @@ export function groupRecordsForLetters(records: ProcessedInsuranceRecord[]): Let
 			};
 
 			if (templateType === "salud") {
-				const insuredMembers = [...new Set(policyGroup.map((r) => r.materiaAsegurada?.trim()).filter((name): name is string => !!name && name.toUpperCase() !== "TITULAR"))];
+				const insuredMembers = [
+					...new Set(
+						policyGroup
+							.map((r) => r.materiaAsegurada?.trim())
+							.filter((name): name is string => !!name && name.toUpperCase() !== "TITULAR")
+					),
+				];
 				const titular = mainRecord.asegurado.trim();
 				const titularIndex = insuredMembers.findIndex((m) => m.toUpperCase() === titular.toUpperCase());
 				if (titularIndex > -1) {
@@ -230,8 +236,10 @@ export function detectMissingData(letterData: Omit<LetterData, "needsReview" | "
 				missing.push(`${policyLabel}: No se encontraron vehículos.`);
 			} else {
 				policy.manualFields.vehicles.forEach((vehicle, vIndex) => {
-					if (!vehicle.description) missing.push(`${policyLabel}, Vehículo ${vIndex + 1}: Falta descripción.`);
-					if (!vehicle.insuredValue || vehicle.insuredValue <= 0) missing.push(`${policyLabel}, Vehículo ${vIndex + 1}: Falta valor asegurado.`);
+					if (!vehicle.description)
+						missing.push(`${policyLabel}, Vehículo ${vIndex + 1}: Falta descripción.`);
+					if (!vehicle.insuredValue || vehicle.insuredValue <= 0)
+						missing.push(`${policyLabel}, Vehículo ${vIndex + 1}: Falta valor asegurado.`);
 				});
 			}
 		} else {

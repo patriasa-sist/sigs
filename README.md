@@ -10,7 +10,7 @@ TODO:
 [x] cambiar prima de renovacion a valor asegurado en carta de salud
 [x] que en asegurados de salud se pueda escoger y se muestre si es titular, conyugue o dependiente
 [] que tenga el texto de descargo de valores actualizados
-[] que la carta tenga info de contacto
+[x] que la carta tenga info de contacto
 [x] que la carta tenga firma de ejecutivo digitalizada sin sello y con pie de firma
 [x] que el sistema detecte la columna nueva de tipo Moneda y cambie su parametro en la pantalla de generacion de la carta
 
