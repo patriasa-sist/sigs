@@ -41,6 +41,7 @@ import {
 	formatUSD,
 	detectMissingData,
 } from "@/utils/pdfutils";
+import { generateLetterReference } from "@/utils/letterReferences";
 import { cleanPhoneNumber, createWhatsAppMessage } from "@/utils/whatsapp";
 import { pdf } from "@react-pdf/renderer";
 import { HealthTemplate } from "./HealthTemplate";
@@ -421,27 +422,48 @@ export default function LetterGenerator({ selectedRecords, onClose, onGenerated 
 	const [previewLetter, setPreviewLetter] = useState<string | null>(null);
 	const [generationResult, setGenerationResult] = useState<PDFGenerationResult | null>(null);
 
-	const preparedLetters = useMemo(() => {
-		// ... (sin cambios en esta sección)
-		const validRecords: ProcessedInsuranceRecord[] = [];
-		const validationErrors: string[] = [];
+	const [preparedLetters, setPreparedLetters] = useState<{
+		letters: LetterData[];
+		validRecords: number;
+		totalRecords: number;
+		validationErrors: string[];
+	}>({
+		letters: [],
+		validRecords: 0,
+		totalRecords: 0,
+		validationErrors: [],
+	});
 
-		selectedRecords.forEach((record, index) => {
-			const validation = validateRecordForPDF(record);
-			if (validation.valid) {
-				validRecords.push(record);
-			} else {
-				validationErrors.push(`Registro ${index + 1} (${record.asegurado}): ${validation.errors.join(", ")}`);
-			}
-		});
+	// Process and validate records (reference numbers generated only during PDF creation)
+	useEffect(() => {
+		const processRecords = async () => {
+			const validRecords: ProcessedInsuranceRecord[] = [];
+			const validationErrors: string[] = [];
 
-		const groupedLetters = groupRecordsForLetters(validRecords);
-		return {
-			letters: groupedLetters,
-			validRecords: validRecords.length,
-			totalRecords: selectedRecords.length,
-			validationErrors,
+			selectedRecords.forEach((record, index) => {
+				const validation = validateRecordForPDF(record);
+				if (validation.valid) {
+					validRecords.push(record);
+				} else {
+					validationErrors.push(
+						`Registro ${index + 1} (${record.asegurado}): ${validation.errors.join(", ")}`
+					);
+				}
+			});
+
+			// Use synchronous method for letter preparation (no reference numbers yet)
+			const groupedLetters = groupRecordsForLetters(validRecords);
+			setPreparedLetters({
+				letters: groupedLetters,
+				validRecords: validRecords.length,
+				totalRecords: selectedRecords.length,
+				validationErrors,
+			});
 		};
+
+		if (selectedRecords.length > 0) {
+			processRecords();
+		}
 	}, [selectedRecords]);
 
 	useEffect(() => {
@@ -485,6 +507,44 @@ export default function LetterGenerator({ selectedRecords, onClose, onGenerated 
 	};
 
 	const generateSinglePDF = async (letterData: LetterData): Promise<Blob> => {
+		// Generate real reference number only when actually creating the PDF
+		// and only if it's still a placeholder (not manually edited)
+		let finalLetterData = letterData;
+		const isPlaceholder =
+			letterData.referenceNumber.includes("____") || letterData.referenceNumber.includes("ADM-00000");
+
+		if (isPlaceholder) {
+			try {
+				const realReferenceNumber = await generateLetterReference();
+				finalLetterData = {
+					...letterData,
+					referenceNumber: realReferenceNumber,
+				};
+			} catch (error) {
+				console.error("Error generating reference number:", error);
+				// Continue with placeholder if reference generation fails
+			}
+		}
+		// If reference number was manually edited, use it as-is (no DB generation)
+
+		let TemplateComponent;
+		switch (finalLetterData.templateType) {
+			case "salud":
+				TemplateComponent = HealthTemplate;
+				break;
+			case "automotor":
+				TemplateComponent = AutomotorTemplate;
+				break;
+			default:
+				TemplateComponent = GeneralTemplate;
+		}
+		const pdfBlob = await pdf(<TemplateComponent letterData={finalLetterData} />).toBlob();
+		return pdfBlob;
+	};
+
+	// Generate PDF for preview without touching the database
+	const generatePreviewPDF = async (letterData: LetterData): Promise<Blob> => {
+		// For preview, never generate real reference numbers - always use placeholder as-is
 		let TemplateComponent;
 		switch (letterData.templateType) {
 			case "salud":
@@ -500,13 +560,12 @@ export default function LetterGenerator({ selectedRecords, onClose, onGenerated 
 		return pdfBlob;
 	};
 
-	// ... (sin cambios en handlePreview, downloadBlob, handleDownloadSingle, handleDownloadAll, handleSendWhatsApp)
 	const handlePreview = async (letterId: string) => {
 		setPreviewLetter(letterId);
 		const letter = letters.find((l) => l.id === letterId);
 		if (letter) {
 			try {
-				const pdfBlob = await generateSinglePDF(letter);
+				const pdfBlob = await generatePreviewPDF(letter); // Use preview function instead
 				const pdfUrl = URL.createObjectURL(pdfBlob);
 				window.open(pdfUrl, "_blank");
 			} catch (error) {
@@ -576,10 +635,7 @@ export default function LetterGenerator({ selectedRecords, onClose, onGenerated 
 			const errors: string[] = [];
 
 			for (const letter of letters) {
-				if (letter.referenceNumber.includes("____")) {
-					errors.push(`Error: Número de referencia no válido para ${letter.client.name}.`);
-					continue;
-				}
+				// Note: We no longer validate reference numbers here since they're generated during PDF creation
 				try {
 					const pdfBlob = await generateSinglePDF(letter);
 					const fileName = generateFileName(letter.client.name, letter.templateType);
@@ -848,9 +904,10 @@ function LetterCard({
 	onUpdateLetterData,
 }: LetterCardProps) {
 	const [editedLetter, setEditedLetter] = useState<LetterData>(letter);
+	const [isReferenceManuallyEdited, setIsReferenceManuallyEdited] = useState(false);
 
 	const isReferenceValid = useMemo(
-		() => letter.referenceNumber && !letter.referenceNumber.includes("____"),
+		() => letter.referenceNumber && letter.referenceNumber.length > 0, // Any reference number is valid now
 		[letter.referenceNumber]
 	);
 
@@ -859,6 +916,12 @@ function LetterCard({
 	}, [letter]);
 
 	const handleFieldChange = <K extends keyof LetterData>(field: K, value: LetterData[K]) => {
+		// Track if reference number is manually edited
+		if (field === "referenceNumber" && typeof value === "string") {
+			const isPlaceholder = value.includes("____") || value.includes("ADM-00000");
+			setIsReferenceManuallyEdited(!isPlaceholder);
+		}
+
 		const updatedLetterData = { ...editedLetter, [field]: value };
 		setEditedLetter(updatedLetterData);
 		onUpdateLetterData(letter.id, { [field]: value });
@@ -951,8 +1014,17 @@ function LetterCard({
 											value={editedLetter.referenceNumber}
 											onChange={(e) => handleFieldChange("referenceNumber", e.target.value)}
 											className="text-sm h-8"
-											placeholder="SCPSA-____/2025"
+											placeholder="SCPSA-ADM-00000/2025-09"
 										/>
+										{isReferenceManuallyEdited && (
+											<div className="flex items-center mt-1 text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded border border-amber-200">
+												<AlertTriangle className="h-3 w-3 mr-1" />
+												<span>
+													Número manual - no se generará automáticamente desde la base de
+													datos
+												</span>
+											</div>
+										)}
 									</div>
 								) : (
 									<CardDescription>
@@ -1393,7 +1465,7 @@ function LetterCard({
 						<div className="flex items-center">
 							<CheckCircle className="h-4 w-4 text-green-600 mr-2" />
 							<span className="font-medium text-green-800">
-								Todos los datos están completos. Lista para generar.
+								Todos los datos necesarios están completos. Lista para generar.
 							</span>
 						</div>
 					</div>

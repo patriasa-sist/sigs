@@ -103,6 +103,15 @@ export interface PDFGenerationResult {
 
 export const excecutives = [
 	{
+		user: "patriasamaestro",
+		name: "Diego Gandarillas Ferrufino",
+		glyph: "DGF",
+		charge: "Ejecutivo de Cuentas",
+		telf: "69005037",
+		mail: "patriasamaestro@gmail.com",
+		signature: "/images/firma_carmen.png",
+	},
+	{
 		user: "Tamara",
 		name: "Tamara Torrez Dencker",
 		glyph: "TTD",

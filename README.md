@@ -1,7 +1,7 @@
 falta hacer que se detecte bien cuando se viene desde el email y te lleve directo a hacerte una contraseña, eso no funciona todavia
 
 TODO:
-[] borrar todo lo relacionado con prima del dashboard de datos cargados
+[x] borrar todo lo relacionado con prima del dashboard de datos cargados
 [] el ciasvp deber ser el dato que ingrese el ramo correcto en cada poliza y debe mostrarse en vez de la columna de prima en el dashboard
 [] el ramo deberia poder modificarse desde un menu dropdown cuando se editan los datos de la carta, estos ramos deben ser cargados desde la base de datos
 [] que el titulo de la carta sea segun el ramo

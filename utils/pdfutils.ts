@@ -3,6 +3,7 @@
 import { ProcessedInsuranceRecord } from "@/types/insurance";
 import { LetterData, PolicyForLetter, VehicleForLetter } from "@/types/pdf";
 import { normalizeCurrencyType } from "./excel";
+import { generateLetterReference } from "./letterReferences";
 
 // Constantes para los textos de plantilla
 const HEALTH_CONDITIONS_TEMPLATE = `Le informamos que a partir del *01/05/2025*, se excluye la cobertura del certificado asistencia al viajero y las pólizas se emiten en moneda nacional (BS)`;
@@ -205,10 +206,169 @@ export function groupRecordsForLetters(records: ProcessedInsuranceRecord[]): Let
 
 		return {
 			...letterDataBase,
-			needsReview: missingData.length > 0 || templateType === "automotor" || templateType === "general",
+			needsReview: missingData.length > 0, // Only flag for review if there's actually missing data
 			missingData,
 		};
 	});
+}
+
+/**
+ * Async version of groupRecordsForLetters that generates proper reference numbers
+ * Agrupa registros por cliente y tipo de template con números de referencia únicos.
+ */
+export async function groupRecordsForLettersWithReferences(records: ProcessedInsuranceRecord[]): Promise<LetterData[]> {
+	const groups: Record<string, ProcessedInsuranceRecord[]> = {};
+
+	records.forEach((record) => {
+		const templateType = determineTemplateType(record.ramo);
+		const key = `${record.asegurado.trim().toUpperCase()}_${templateType}`;
+		if (!groups[key]) {
+			groups[key] = [];
+		}
+		groups[key].push(record);
+	});
+
+	const letters: LetterData[] = [];
+
+	// Process each group sequentially to ensure unique reference numbers
+	for (const [key, groupRecords] of Object.entries(groups)) {
+		const firstRecord = groupRecords[0];
+		const templateType = determineTemplateType(firstRecord.ramo);
+		let policies: PolicyForLetter[] = [];
+		const sourceRecordIds = groupRecords.map((r) => r.id!).filter((id) => id);
+
+		const policyGroups: Record<string, ProcessedInsuranceRecord[]> = {};
+		groupRecords.forEach((record) => {
+			const policyKey = record.noPoliza.trim().toUpperCase();
+			if (!policyGroups[policyKey]) {
+				policyGroups[policyKey] = [];
+			}
+			policyGroups[policyKey].push(record);
+		});
+
+		Object.values(policyGroups).forEach((policyGroup) => {
+			const mainRecord = policyGroup[0];
+			// Create date range string: "startDate - endDate" or just "endDate" if no start date
+			let dateRange = formatDate(new Date(mainRecord.finDeVigencia));
+			if (mainRecord.inicioDeVigencia) {
+				const startDateStr = formatDate(new Date(mainRecord.inicioDeVigencia));
+				dateRange = `${startDateStr} - ${dateRange}`;
+			}
+
+			const basePolicy: Omit<PolicyForLetter, "manualFields"> = {
+				expiryDate: dateRange,
+				policyNumber: mainRecord.noPoliza,
+				company: mainRecord.compania,
+				branch: mainRecord.ramo,
+			};
+
+			let manualFields: PolicyForLetter["manualFields"] = {
+				deductiblesCurrency: "Bs.",
+				territorialityCurrency: "Bs.",
+			};
+
+			if (templateType === "salud") {
+				const insuredMembers = [
+					...new Set(
+						policyGroup
+							.map((r) => r.materiaAsegurada?.trim())
+							.filter((name): name is string => !!name && name.toUpperCase() !== "TITULAR")
+					),
+				];
+				const titular = mainRecord.asegurado.trim();
+				const titularIndex = insuredMembers.findIndex((m) => m.toUpperCase() === titular.toUpperCase());
+				if (titularIndex > -1) {
+					insuredMembers.splice(titularIndex, 1);
+				}
+				insuredMembers.unshift(titular);
+				// Use the insured value from the first record of this policy group
+				const insuredValue = mainRecord.valorAsegurado || 0;
+				// Auto-set currency from Excel or default to Bs.
+				const currencyFromExcel = normalizeCurrencyType(mainRecord.tipoMoneda);
+				manualFields = {
+					...manualFields,
+					insuredMembers: [...insuredMembers],
+					originalInsuredMembers: [...insuredMembers],
+					insuredValue: insuredValue,
+					insuredValueCurrency: currencyFromExcel || "Bs.",
+					originalInsuredValueCurrency: currencyFromExcel || "Bs.",
+				};
+			} else if (templateType === "automotor") {
+				const vehicles: VehicleForLetter[] = policyGroup.map((r, i) => ({
+					id: `vehicle_${r.id || i}`,
+					description: r.materiaAsegurada || "Vehículo sin descripción",
+					insuredValue: r.valorAsegurado || 0,
+				}));
+				// Calculate total insured value from all vehicles
+				const totalInsuredValue = vehicles.reduce((sum, vehicle) => sum + vehicle.insuredValue, 0);
+				// Auto-set currency from Excel or default to $us. for automotor
+				const currencyFromExcel = normalizeCurrencyType(mainRecord.tipoMoneda);
+				manualFields = {
+					...manualFields,
+					vehicles: vehicles,
+					originalVehicles: JSON.parse(JSON.stringify(vehicles)),
+					insuredValue: totalInsuredValue,
+					insuredValueCurrency: currencyFromExcel || "$us.",
+					originalInsuredValueCurrency: currencyFromExcel || "$us.",
+				};
+			} else {
+				// 'general'
+				const insuredMatter = policyGroup
+					.map((r) => r.materiaAsegurada)
+					.filter(Boolean)
+					.join(", ");
+				// Use the insured value from the first record
+				const insuredValue = mainRecord.valorAsegurado || 0;
+				// Auto-set currency from Excel or default to Bs. for general
+				const currencyFromExcel = normalizeCurrencyType(mainRecord.tipoMoneda);
+				manualFields = {
+					...manualFields,
+					insuredMatter: insuredMatter,
+					originalInsuredMatter: insuredMatter,
+					insuredValue: insuredValue,
+					insuredValueCurrency: currencyFromExcel || "Bs.",
+					originalInsuredValueCurrency: currencyFromExcel || "Bs.",
+				};
+			}
+			policies.push({ ...basePolicy, manualFields });
+		});
+
+		const letterDataBase = {
+			id: `letter_${Date.now()}_${Math.random()}`,
+			sourceRecordIds,
+			templateType,
+			referenceNumber: generateReferenceNumber(), // Use placeholder until final generation
+			date: formatDate(new Date()),
+			client: {
+				name: firstRecord.asegurado,
+				phone: firstRecord.telefono,
+				email: firstRecord.correoODireccion,
+				address: "",
+			},
+			policies,
+			executive: firstRecord.ejecutivo,
+			additionalConditions: (() => {
+				switch (templateType) {
+					case "salud":
+						return HEALTH_CONDITIONS_TEMPLATE;
+					case "automotor":
+						return AUTOMOTOR_CONDITIONS_TEMPLATE;
+					default:
+						return GENERAL_CONDITIONS_TEMPLATE;
+				}
+			})(),
+		};
+
+		const missingData = detectMissingData(letterDataBase);
+
+		letters.push({
+			...letterDataBase,
+			needsReview: missingData.length > 0, // Only flag for review if there's actually missing data
+			missingData,
+		});
+	}
+
+	return letters;
 }
 
 /**
@@ -217,9 +377,10 @@ export function groupRecordsForLetters(records: ProcessedInsuranceRecord[]): Let
 export function detectMissingData(letterData: Omit<LetterData, "needsReview" | "missingData">): string[] {
 	const missing: string[] = [];
 
-	if (letterData.referenceNumber.includes("____")) {
-		missing.push("Número de Referencia manual");
-	}
+	// Reference numbers are now generated automatically during PDF creation, so no validation needed
+	// if (letterData.referenceNumber.includes("____")) {
+	// 	missing.push("Número de Referencia manual");
+	// }
 
 	letterData.policies.forEach((policy, index) => {
 		const policyLabel = `Póliza ${index + 1} (${policy.policyNumber})`;
@@ -259,8 +420,12 @@ export function detectMissingData(letterData: Omit<LetterData, "needsReview" | "
 export function generateReferenceNumber(): string {
 	const now = new Date();
 	const year = now.getFullYear();
-	return `SCPSA-____/${year}`;
+	const month = (now.getMonth() + 1).toString().padStart(2, '0'); // Convert 0-11 to 01-12
+	return `SCPSA-ADM-00000/${year}-${month}`;
 }
+
+// DEPRECATED: Use generateLetterReference() from utils/letterReferences.ts instead
+// This function is kept for backward compatibility but should be replaced
 
 export function formatDate(date: Date): string {
 	return new Intl.DateTimeFormat("es-BO", {
