@@ -14,7 +14,7 @@ export interface InsuranceRecord {
 	cartera?: string;
 	materiaAsegurada?: string;
 	valorAsegurado: number;
-	prima: number;
+	prima?: number;
 	ejecutivo: string;
 	responsable?: string;
 	cartaAvisoVto?: string;
@@ -78,7 +78,6 @@ export interface DashboardStats {
 	expired: number;
 	sent: number;
 	totalValue: number;
-	averagePremium: number;
 }
 
 export interface EmailTemplate {
@@ -178,7 +177,6 @@ export const VALIDATION_RULES: ValidationRule[] = [
 	{ field: "noPoliza", required: true, type: "string", minLength: 3 },
 	{ field: "asegurado", required: true, type: "string", minLength: 3 },
 	{ field: "valorAsegurado", required: true, type: "number" },
-	{ field: "prima", required: true, type: "number" },
 	{ field: "ejecutivo", required: true, type: "string", minLength: 2 },
 ];
 

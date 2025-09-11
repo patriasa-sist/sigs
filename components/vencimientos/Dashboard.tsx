@@ -75,8 +75,6 @@ export default function Dashboard({ data, onBack, onUpdateData }: DashboardProps
 		const expired = filteredData.filter((r) => r.status === "expired").length;
 		const sent = filteredData.filter((r) => r.status === "sent").length;
 		const totalValue = filteredData.reduce((sum, r) => sum + (r.valorAsegurado || 0), 0);
-		const averagePremium = total > 0 ? filteredData.reduce((sum, r) => sum + (r.prima || 0), 0) / total : 0;
-
 		return {
 			total,
 			critical,
@@ -85,7 +83,6 @@ export default function Dashboard({ data, onBack, onUpdateData }: DashboardProps
 			expired,
 			sent,
 			totalValue,
-			averagePremium,
 		};
 	}, [filteredData]);
 
@@ -618,7 +615,6 @@ export default function Dashboard({ data, onBack, onUpdateData }: DashboardProps
 									</th>
 									<th className="text-left p-3 font-medium text-gray-900">Estado</th>
 									<th className="text-left p-3 font-medium text-gray-900">Ejecutivo</th>
-									<th className="text-left p-3 font-medium text-gray-900">Prima</th>
 									<th className="text-left p-3 font-medium text-gray-900">Acciones</th>
 								</tr>
 							</thead>
@@ -685,9 +681,6 @@ export default function Dashboard({ data, onBack, onUpdateData }: DashboardProps
 										<td className="p-3">{getStatusBadge(record.status)}</td>
 										<td className="p-3">
 											<div className="text-gray-900">{record.ejecutivo}</div>
-										</td>
-										<td className="p-3">
-											<div className="text-gray-900">{formatCurrency(record.prima || 0)}</div>
 										</td>
 										<td className="p-3">
 											<div className="flex space-x-1">
