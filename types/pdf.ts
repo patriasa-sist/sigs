@@ -38,8 +38,6 @@ export interface PolicyForLetter {
 		// Campos para Pólizas de Automotores
 		vehicles?: VehicleForLetter[];
 		originalVehicles?: VehicleForLetter[];
-		premium?: number;
-		premiumCurrency?: "Bs." | "$us.";
 
 		// Campos para Pólizas de Salud
 		insuredMembers?: string[];
@@ -57,7 +55,6 @@ export interface PolicyForLetter {
 		deductiblesCurrency?: "Bs." | "$us.";
 		territoriality?: number;
 		territorialityCurrency?: "Bs." | "$us.";
-		originalPremium?: number;
 		coinsurance?: string;
 	};
 }

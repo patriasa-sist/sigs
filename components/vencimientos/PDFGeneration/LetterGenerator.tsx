@@ -1033,10 +1033,6 @@ function LetterCard({
 									<div className="text-gray-600">Ramo: {policy.branch}</div>
 								</div>
 								<div>
-									<div className="text-gray-600">
-										Prima Original:{" "}
-										{formatMonetaryValue(policy.manualFields?.originalPremium, "Bs.")}
-									</div>
 									{letter.templateType === "automotor" && (
 										<div className="mt-1">
 											<div className="text-gray-600">Vehículos Originales:</div>
@@ -1094,11 +1090,11 @@ function LetterCard({
 													<div className="space-y-2">
 														<NumericInputWithCurrency
 															label="Valor Asegurado:"
-															value={policy.manualFields?.premium}
-															currency={policy.manualFields?.premiumCurrency || "Bs."}
-															onValueChange={(v) => updatePolicy(index, "premium", v)}
+															value={policy.manualFields?.insuredValue}
+															currency={policy.manualFields?.insuredValueCurrency || "$us."}
+															onValueChange={(v) => updatePolicy(index, "insuredValue", v)}
 															onCurrencyChange={(c) =>
-																updatePolicy(index, "premiumCurrency", c)
+																updatePolicy(index, "insuredValueCurrency", c)
 															}
 															placeholder="0.00"
 															className="text-xs h-8"
@@ -1155,11 +1151,11 @@ function LetterCard({
 													<div className="space-y-2">
 														<NumericInputWithCurrency
 															label="Valor Asegurado:"
-															value={policy.manualFields?.premium}
-															currency={policy.manualFields?.premiumCurrency || "Bs."}
-															onValueChange={(v) => updatePolicy(index, "premium", v)}
+															value={policy.manualFields?.insuredValue}
+															currency={policy.manualFields?.insuredValueCurrency || "Bs."}
+															onValueChange={(v) => updatePolicy(index, "insuredValue", v)}
 															onCurrencyChange={(c) =>
-																updatePolicy(index, "premiumCurrency", c)
+																updatePolicy(index, "insuredValueCurrency", c)
 															}
 															placeholder="0.00"
 															className="text-xs h-8"
@@ -1205,12 +1201,12 @@ function LetterCard({
 												</>
 											) : letter.templateType === "automotor" ? (
 												<>
-													{policy.manualFields?.premium !== undefined && (
+													{policy.manualFields?.insuredValue !== undefined && (
 														<div className="text-green-700 font-medium">
 															✓ Valor Asegurado:{" "}
 															{formatMonetaryValue(
-																policy.manualFields.premium,
-																policy.manualFields.premiumCurrency
+																policy.manualFields.insuredValue,
+																policy.manualFields.insuredValueCurrency
 															)}
 														</div>
 													)}
@@ -1250,12 +1246,12 @@ function LetterCard({
 											) : (
 												// General Template
 												<>
-													{policy.manualFields?.premium !== undefined && (
+													{policy.manualFields?.insuredValue !== undefined && (
 														<div className="text-green-700 font-medium">
 															✓ Valor Asegurado:{" "}
 															{formatMonetaryValue(
-																policy.manualFields.premium,
-																policy.manualFields.premiumCurrency
+																policy.manualFields.insuredValue,
+																policy.manualFields.insuredValueCurrency
 															)}
 														</div>
 													)}

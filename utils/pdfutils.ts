@@ -89,7 +89,6 @@ export function groupRecordsForLetters(records: ProcessedInsuranceRecord[]): Let
 
 		Object.values(policyGroups).forEach((policyGroup) => {
 			const mainRecord = policyGroup[0];
-			const totalPremium = policyGroup.reduce((sum, r) => sum + (r.prima || 0), 0);
 			const basePolicy: Omit<PolicyForLetter, "manualFields"> = {
 				expiryDate: formatDate(new Date(mainRecord.finDeVigencia)),
 				policyNumber: mainRecord.noPoliza,
@@ -98,9 +97,6 @@ export function groupRecordsForLetters(records: ProcessedInsuranceRecord[]): Let
 			};
 
 			let manualFields: PolicyForLetter["manualFields"] = {
-				originalPremium: totalPremium,
-				premium: totalPremium,
-				premiumCurrency: "Bs.",
 				deductiblesCurrency: "Bs.",
 				territorialityCurrency: "Bs.",
 			};
@@ -126,13 +122,16 @@ export function groupRecordsForLetters(records: ProcessedInsuranceRecord[]): Let
 				const vehicles: VehicleForLetter[] = policyGroup.map((r, i) => ({
 					id: `vehicle_${r.id || i}`,
 					description: r.materiaAsegurada || "Vehículo sin descripción",
-					declaredValue: 0,
 					insuredValue: r.valorAsegurado || 0,
 				}));
+				// Calculate total insured value from all vehicles
+				const totalInsuredValue = vehicles.reduce((sum, vehicle) => sum + vehicle.insuredValue, 0);
 				manualFields = {
 					...manualFields,
 					vehicles: vehicles,
 					originalVehicles: JSON.parse(JSON.stringify(vehicles)),
+					insuredValue: totalInsuredValue,
+					insuredValueCurrency: "$us.",
 				};
 			} else {
 				// 'general'
@@ -140,10 +139,14 @@ export function groupRecordsForLetters(records: ProcessedInsuranceRecord[]): Let
 					.map((r) => r.materiaAsegurada)
 					.filter(Boolean)
 					.join(", ");
+				// Use the insured value from the first record
+				const insuredValue = mainRecord.valorAsegurado || 0;
 				manualFields = {
 					...manualFields,
 					insuredMatter: insuredMatter,
 					originalInsuredMatter: insuredMatter,
+					insuredValue: insuredValue,
+					insuredValueCurrency: "Bs.",
 				};
 			}
 			policies.push({ ...basePolicy, manualFields });
@@ -203,7 +206,7 @@ export function detectMissingData(letterData: Omit<LetterData, "needsReview" | "
 				missing.push(`${policyLabel}: Valor asegurado`);
 			}
 		} else if (letterData.templateType === "automotor") {
-			if (!policy.manualFields?.premium || policy.manualFields.premium <= 0) {
+			if (!policy.manualFields?.insuredValue || policy.manualFields.insuredValue <= 0) {
 				missing.push(`${policyLabel}: Valor Asegurado`);
 			}
 			if (!policy.manualFields?.vehicles || policy.manualFields.vehicles.length === 0) {
@@ -216,7 +219,7 @@ export function detectMissingData(letterData: Omit<LetterData, "needsReview" | "
 			}
 		} else {
 			// General
-			if (!policy.manualFields?.premium || policy.manualFields.premium <= 0) {
+			if (!policy.manualFields?.insuredValue || policy.manualFields.insuredValue <= 0) {
 				missing.push(`${policyLabel}: Valor Asegurado`);
 			}
 			if (!policy.manualFields?.insuredMatter) {

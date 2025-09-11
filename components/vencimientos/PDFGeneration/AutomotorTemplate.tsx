@@ -156,8 +156,8 @@ export const AutomotorTemplate: React.FC<AutomotorTemplateProps> = ({ letterData
 						<View style={[automotorStyles.tableCol, { width: "20%" }]}>
 							<Text style={automotorStyles.cellText}>
 								{formatMonetaryValue(
-									policy.manualFields?.premium,
-									policy.manualFields?.premiumCurrency
+									policy.manualFields?.insuredValue,
+									policy.manualFields?.insuredValueCurrency
 								)}
 							</Text>
 						</View>
