@@ -37,7 +37,7 @@ const healthStyles = StyleSheet.create({
 		textAlign: "center",
 	},
 	policyNumberCellText: {
-		fontSize: 7,
+		fontSize: 8,
 		textAlign: "center",
 	},
 	aseguradosSection: {
@@ -104,7 +104,7 @@ export const HealthTemplate: React.FC<HealthTemplateProps> = ({ letterData }) =>
 				const membersWithType = policy.manualFields?.insuredMembersWithType || [];
 				const legacyMembers = policy.manualFields?.insuredMembers || policy.insuredMembers || [];
 				const hasTypedMembers = membersWithType.length > 0;
-				
+
 				return (
 					<View key={policyIndex} style={{ marginBottom: 15 }}>
 						{/* Policy Table */}
@@ -143,7 +143,12 @@ export const HealthTemplate: React.FC<HealthTemplateProps> = ({ letterData }) =>
 									<Text style={healthStyles.cellText}>{policy.branch}</Text>
 								</View>
 								<View style={[healthStyles.tableCol, { width: "20%" }]}>
-									<Text style={healthStyles.cellText}>{formatMonetaryValue(policy.manualFields?.insuredValue, policy.manualFields?.insuredValueCurrency)}</Text>
+									<Text style={healthStyles.cellText}>
+										{formatMonetaryValue(
+											policy.manualFields?.insuredValue,
+											policy.manualFields?.insuredValueCurrency
+										)}
+									</Text>
 								</View>
 							</View>
 						</View>
@@ -152,18 +157,18 @@ export const HealthTemplate: React.FC<HealthTemplateProps> = ({ letterData }) =>
 						{(hasTypedMembers || legacyMembers.length > 0) && (
 							<View style={healthStyles.aseguradosSection}>
 								<Text style={healthStyles.aseguradosTitle}>Asegurados:</Text>
-								{hasTypedMembers 
+								{hasTypedMembers
 									? membersWithType.map((member, memberIndex) => (
-										<Text key={memberIndex} style={healthStyles.aseguradoName}>
-											• {member.name.toUpperCase()} - {formatBeneficiaryType(member.beneficiaryType)}
-										</Text>
-									))
+											<Text key={memberIndex} style={healthStyles.aseguradoName}>
+												• {member.name.toUpperCase()} -{" "}
+												{formatBeneficiaryType(member.beneficiaryType)}
+											</Text>
+									  ))
 									: legacyMembers.map((member, memberIndex) => (
-										<Text key={memberIndex} style={healthStyles.aseguradoName}>
-											• {member.toUpperCase()}
-										</Text>
-									))
-								}
+											<Text key={memberIndex} style={healthStyles.aseguradoName}>
+												• {member.toUpperCase()}
+											</Text>
+									  ))}
 							</View>
 						)}
 					</View>

@@ -9,16 +9,16 @@ import { ExecutiveFooter } from "./ExecutiveFooter";
 Font.register({
 	family: "Cambria",
 	fonts: [
-		{ 
+		{
 			src: "https://db.onlinewebfonts.com/t/758d40d7ca52e3a9bff2655c7ab5703c.ttf",
 			fontWeight: "normal",
 		},
-		{ 
-			src: "https://db.onlinewebfonts.com/t/758d40d7ca52e3a9bff2655c7ab5703c.ttf",
+		{
+			src: "https://db.onlinewebfonts.com/t/cf8e4c5e25487a784eed74806c642da2.ttf",
 			fontWeight: "bold",
 		},
 		{
-			src: "https://db.onlinewebfonts.com/t/758d40d7ca52e3a9bff2655c7ab5703c.ttf",
+			src: "https://db.onlinewebfonts.com/t/60b4f056a5fc987393c8bbea75ca2c1a.ttf",
 			fontStyle: "italic",
 		},
 	],
@@ -44,7 +44,7 @@ const styles = StyleSheet.create({
 		padding: 30,
 		fontFamily: "Cambria",
 		fontSize: 10,
-		lineHeight: 1.4,
+		lineHeight: 1.2,
 	},
 	header: {
 		flexDirection: "column",
@@ -78,7 +78,7 @@ const styles = StyleSheet.create({
 		marginBottom: 5,
 	},
 	subject: {
-		fontSize: 11,
+		fontSize: 10,
 		fontWeight: "bold",
 		marginBottom: 10,
 		textAlign: "left",
@@ -100,7 +100,7 @@ const styles = StyleSheet.create({
 	},
 	additionalConditions: {
 		marginBottom: 10,
-		fontSize: 9,
+		fontSize: 10,
 		textAlign: "justify",
 	},
 });
@@ -182,8 +182,9 @@ export const BaseTemplate: React.FC<BaseTemplateProps> = ({ letterData, children
 					{children}
 
 					<Text style={styles.paragraph}>
-						Tenga a bien hacernos conocer cualquier cambio que desea realizar o en su defecto su
-						consentimiento para la renovación.
+						Requerimos revisar los datos y el valor asegurado, esto para proceder si corresponde, con la
+						actualización o modificación de esto(s). Tenga a bien hacernos a conocer cualquier cambio que se
+						haya producido o en su defecto su consentimiento para la renovación.
 					</Text>
 
 					{letterData.additionalConditions && (
@@ -204,7 +205,7 @@ export const BaseTemplate: React.FC<BaseTemplateProps> = ({ letterData, children
 					)}
 
 					<Text style={styles.paragraph}>
-						Es importante informarle que{" "}
+						Es importante informarle que{""}
 						{letterData.templateType !== "salud"
 							? ", en caso de tener primas pendientes no se podrá renovar hasta su regularización de estas, la"
 							: "la"}{" "}
@@ -212,7 +213,7 @@ export const BaseTemplate: React.FC<BaseTemplateProps> = ({ letterData, children
 					</Text>
 
 					<Text style={styles.paragraph}>
-						De esta manera quedamos a la espera de su respuesta, nos despedimos con la cordialidad de
+						De esta manera quedamos a la espera de su respuesta y nos despedimos con la cordialidad de
 						siempre.
 					</Text>
 				</View>

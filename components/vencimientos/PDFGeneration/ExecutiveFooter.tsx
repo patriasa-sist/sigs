@@ -22,7 +22,7 @@ const footerStyles = StyleSheet.create({
 		color: "#374151",
 	},
 	companyName: {
-		fontSize: 12,
+		fontSize: 11,
 		fontWeight: "bold",
 		textAlign: "center",
 		color: "#172554",
