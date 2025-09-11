@@ -155,17 +155,22 @@ export function validateRecord(record: any, rowIndex: number): { isValid: boolea
  */
 export function normalizeCurrencyType(value: any): "Bs." | "$us." | undefined {
 	if (!value) return undefined;
-	
+
 	const cleanValue = cleanString(value).toLowerCase();
-	
+
 	// Match common variations
 	if (cleanValue.includes("bs") || cleanValue.includes("boliviano") || cleanValue.includes("bob")) {
 		return "Bs.";
 	}
-	if (cleanValue.includes("us") || cleanValue.includes("dolar") || cleanValue.includes("dollar") || cleanValue.includes("usd")) {
+	if (
+		cleanValue.includes("us") ||
+		cleanValue.includes("dolar") ||
+		cleanValue.includes("dollar") ||
+		cleanValue.includes("usd")
+	) {
 		return "$us.";
 	}
-	
+
 	return undefined;
 }
 
@@ -182,7 +187,7 @@ export function mapExcelRowToRecord(row: any): InsuranceRecord {
 		puc: cleanString(row["PUC"]), // New PUC column
 		noPoliza: cleanString(row["NO. PÓLIZA"]) || "Sin número",
 		telefono: cleanString(row["TELEFONO"]),
-		correoODireccion: cleanString(row["CORREO/DIRECCION"]),
+		correoODireccion: cleanString(row["CORREO"]),
 		asegurado: cleanString(row["ASEGURADO"]) || "Sin nombre",
 		cartera: cleanString(row["CARTERA"]),
 		materiaAsegurada: cleanString(row["MATERIA ASEGURADA"]),
@@ -269,24 +274,20 @@ export function processRecord(record: InsuranceRecord, index: number): Processed
  * Enhanced version of processRecord that applies PUC mapping using cached ramo data
  */
 export function processRecordWithPUCMapping(
-	record: InsuranceRecord, 
-	index: number, 
+	record: InsuranceRecord,
+	index: number,
 	ramoMappingData: RamoMappingData[]
 ): ProcessedInsuranceRecord {
 	// First process the record normally (dates, status, etc.)
 	const processedRecord = processRecord(record, index);
 
 	// Apply PUC mapping to get the effective ramo name
-	const effectiveRamo = getEffectiveRamo(
-		record.puc,
-		record.ramoOverride,
-		ramoMappingData
-	);
+	const effectiveRamo = getEffectiveRamo(record.puc, record.ramoOverride, ramoMappingData);
 
 	// Return the processed record with the effective ramo name
 	return {
 		...processedRecord,
-		ramo: effectiveRamo
+		ramo: effectiveRamo,
 	};
 }
 
@@ -359,7 +360,7 @@ export async function processExcelFile(file: File): Promise<ExcelUploadResult> {
 		}
 
 		// Fetch ramo mapping data ONCE for this Excel processing session
-		console.log('Fetching ramo mapping data from database...');
+		console.log("Fetching ramo mapping data from database...");
 		const ramoMappingData = await fetchRamoMappingData();
 		console.log(`Loaded ${ramoMappingData.length} ramo mappings from database`);
 
