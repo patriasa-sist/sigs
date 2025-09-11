@@ -25,7 +25,15 @@ import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ProcessedInsuranceRecord } from "@/types/insurance";
-import { LetterData, GeneratedLetter, PDFGenerationResult, PolicyForLetter, VehicleForLetter } from "@/types/pdf";
+import {
+	LetterData,
+	GeneratedLetter,
+	PDFGenerationResult,
+	PolicyForLetter,
+	VehicleForLetter,
+	InsuredMemberWithType,
+	BeneficiaryType,
+} from "@/types/pdf";
 import {
 	groupRecordsForLetters,
 	validateRecordForPDF,
@@ -223,48 +231,95 @@ function ConditionsTextarea({ value, onChange, placeholder, label, rows = 3 }: C
 	);
 }
 
-// Componente para editar la lista de asegurados (Salud)
-interface InsuredMembersEditorProps {
-	members: string[];
-	onChange: (newMembers: string[]) => void;
+// Componente para editar la lista de asegurados (Salud) con tipos de beneficiario
+interface InsuredMembersWithTypeEditorProps {
+	members: InsuredMemberWithType[];
+	onChange: (newMembers: InsuredMemberWithType[]) => void;
 	label?: string;
 }
 
-function InsuredMembersEditor({ members, onChange, label }: InsuredMembersEditorProps) {
-	// ... (sin cambios en este componente)
-	const handleMemberChange = (index: number, value: string) => {
+function InsuredMembersWithTypeEditor({ members, onChange, label }: InsuredMembersWithTypeEditorProps) {
+	const handleMemberNameChange = (index: number, name: string) => {
 		const newMembers = [...members];
-		newMembers[index] = value;
+		newMembers[index] = { ...newMembers[index], name };
+		onChange(newMembers);
+	};
+
+	const handleMemberTypeChange = (index: number, beneficiaryType: BeneficiaryType) => {
+		const newMembers = [...members];
+		newMembers[index] = { ...newMembers[index], beneficiaryType };
 		onChange(newMembers);
 	};
 
 	const addMember = () => {
-		onChange([...members, ""]);
+		const newMember: InsuredMemberWithType = {
+			id: `member_${Date.now()}`,
+			name: "",
+			beneficiaryType: "dependiente"
+		};
+		onChange([...members, newMember]);
 	};
 
-	const removeMember = (index: number) => {
-		const newMembers = members.filter((_, i) => i !== index);
+	const removeMember = (id: string) => {
+		const newMembers = members.filter(member => member.id !== id);
 		onChange(newMembers);
+	};
+
+	// Validación de tipos de beneficiario
+	const titularCount = members.filter(m => m.beneficiaryType === "titular").length;
+	const conyugueCount = members.filter(m => m.beneficiaryType === "conyugue").length;
+
+	const getBeneficiaryTypeOptions = (currentType: BeneficiaryType) => {
+		const options: { value: BeneficiaryType; label: string; disabled?: boolean }[] = [
+			{ value: "titular", label: "Titular", disabled: titularCount >= 1 && currentType !== "titular" },
+			{ value: "conyugue", label: "Cónyuge", disabled: conyugueCount >= 1 && currentType !== "conyugue" },
+			{ value: "dependiente", label: "Dependiente" }
+		];
+		return options;
 	};
 
 	return (
 		<div>
 			{label && <label className="text-xs text-gray-600 block mb-1">{label}</label>}
+			{(titularCount > 1 || conyugueCount > 1) && (
+				<div className="mb-2 p-2 bg-red-50 border border-red-200 rounded text-xs text-red-700">
+					⚠️ Solo puede haber un titular y un cónyuge por póliza
+				</div>
+			)}
 			<div className="space-y-2">
 				{members.map((member, index) => (
-					<div key={index} className="flex items-center space-x-2">
+					<div key={member.id} className="flex items-center space-x-2">
 						<Input
 							type="text"
-							value={member}
-							onChange={(e) => handleMemberChange(index, e.target.value)}
+							value={member.name}
+							onChange={(e) => handleMemberNameChange(index, e.target.value)}
 							className="text-xs h-8 flex-grow"
-							placeholder={`Asegurado ${index + 1}`}
+							placeholder={`Nombre del asegurado`}
 						/>
+						<Select
+							value={member.beneficiaryType}
+							onValueChange={(value: BeneficiaryType) => handleMemberTypeChange(index, value)}
+						>
+							<SelectTrigger className="w-28 h-8 text-xs">
+								<SelectValue />
+							</SelectTrigger>
+							<SelectContent>
+								{getBeneficiaryTypeOptions(member.beneficiaryType).map((option) => (
+									<SelectItem 
+										key={option.value} 
+										value={option.value}
+										disabled={option.disabled}
+									>
+										{option.label}
+									</SelectItem>
+								))}
+							</SelectContent>
+						</Select>
 						<Button
 							type="button"
 							size="sm"
 							variant="destructive"
-							onClick={() => removeMember(index)}
+							onClick={() => removeMember(member.id)}
 							className="h-8 w-8 p-0 shrink-0"
 						>
 							<X className="h-4 w-4" />
@@ -810,7 +865,7 @@ function LetterCard({
 	const updatePolicy = (
 		policyIndex: number,
 		field: keyof NonNullable<PolicyForLetter["manualFields"]>,
-		value: string | number | string[] | VehicleForLetter[]
+		value: string | number | string[] | VehicleForLetter[] | InsuredMemberWithType[]
 	) => {
 		const updatedPolicies = editedLetter.policies.map((policy, index) => {
 			if (index === policyIndex) {
@@ -820,6 +875,9 @@ function LetterCard({
 				};
 				if (field === "insuredMembers") {
 					return { ...policy, insuredMembers: value as string[], manualFields: updatedManualFields };
+				}
+				if (field === "insuredMembersWithType") {
+					return { ...policy, manualFields: updatedManualFields };
 				}
 				return { ...policy, manualFields: updatedManualFields };
 			}
@@ -1050,11 +1108,15 @@ function LetterCard({
 											{letter.templateType === "salud" ? (
 												<>
 													<div className="space-y-2">
-														<InsuredMembersEditor
-															label="Asegurados (editable):"
-															members={policy.manualFields?.insuredMembers || []}
+														<InsuredMembersWithTypeEditor
+															label="Asegurados con tipo de beneficiario:"
+															members={policy.manualFields?.insuredMembersWithType || []}
 															onChange={(newMembers) =>
-																updatePolicy(index, "insuredMembers", newMembers)
+																updatePolicy(
+																	index,
+																	"insuredMembersWithType",
+																	newMembers
+																)
 															}
 														/>
 													</div>
@@ -1091,8 +1153,12 @@ function LetterCard({
 														<NumericInputWithCurrency
 															label="Valor Asegurado:"
 															value={policy.manualFields?.insuredValue}
-															currency={policy.manualFields?.insuredValueCurrency || "$us."}
-															onValueChange={(v) => updatePolicy(index, "insuredValue", v)}
+															currency={
+																policy.manualFields?.insuredValueCurrency || "$us."
+															}
+															onValueChange={(v) =>
+																updatePolicy(index, "insuredValue", v)
+															}
 															onCurrencyChange={(c) =>
 																updatePolicy(index, "insuredValueCurrency", c)
 															}
@@ -1152,8 +1218,12 @@ function LetterCard({
 														<NumericInputWithCurrency
 															label="Valor Asegurado:"
 															value={policy.manualFields?.insuredValue}
-															currency={policy.manualFields?.insuredValueCurrency || "Bs."}
-															onValueChange={(v) => updatePolicy(index, "insuredValue", v)}
+															currency={
+																policy.manualFields?.insuredValueCurrency || "Bs."
+															}
+															onValueChange={(v) =>
+																updatePolicy(index, "insuredValue", v)
+															}
 															onCurrencyChange={(c) =>
 																updatePolicy(index, "insuredValueCurrency", c)
 															}
@@ -1186,15 +1256,28 @@ function LetterCard({
 															)}
 														</div>
 													)}
-													{policy.insuredMembers && policy.insuredMembers.length > 0 && (
+													{((policy.manualFields?.insuredMembersWithType &&
+														policy.manualFields.insuredMembersWithType.length > 0) ||
+														(policy.insuredMembers &&
+															policy.insuredMembers.length > 0)) && (
 														<div>
 															<div className="text-green-700 font-medium">
 																✓ Asegurados:
 															</div>
 															<ul className="list-disc list-inside pl-2">
-																{policy.insuredMembers.map((member, i) => (
-																	<li key={i}>{member}</li>
-																))}
+																{policy.manualFields?.insuredMembersWithType &&
+																policy.manualFields.insuredMembersWithType.length > 0
+																	? policy.manualFields.insuredMembersWithType.map(
+																			(member, i) => (
+																				<li key={i}>
+																					{member.name} (
+																					{member.beneficiaryType})
+																				</li>
+																			)
+																	  )
+																	: policy.insuredMembers?.map((member, i) => (
+																			<li key={i}>{member}</li>
+																	  ))}
 															</ul>
 														</div>
 													)}
@@ -1214,8 +1297,7 @@ function LetterCard({
 													<ul className="list-disc list-inside pl-2">
 														{(policy.manualFields?.vehicles || []).map((v, i) => (
 															<li key={i}>
-																{v.description} - Asegurado:{" "}
-																{formatUSD(v.insuredValue)}
+																{v.description} - Asegurado: {formatUSD(v.insuredValue)}
 															</li>
 														))}
 													</ul>

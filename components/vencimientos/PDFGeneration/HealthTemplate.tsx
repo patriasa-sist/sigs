@@ -83,10 +83,28 @@ export const HealthTemplate: React.FC<HealthTemplateProps> = ({ letterData }) =>
 		return value.toString(); // Fallback
 	};
 
+	// Helper function to format beneficiary type
+	const formatBeneficiaryType = (type: string) => {
+		switch (type) {
+			case "titular":
+				return "TITULAR";
+			case "conyugue":
+				return "CÓNYUGE";
+			case "dependiente":
+				return "DEPENDIENTE";
+			default:
+				return type.toUpperCase();
+		}
+	};
+
 	return (
 		<BaseTemplate letterData={letterData}>
 			{letterData.policies.map((policy, policyIndex) => {
-				const membersToRender = policy.manualFields?.insuredMembers || policy.insuredMembers || [];
+				// Prioritize insuredMembersWithType over legacy insuredMembers
+				const membersWithType = policy.manualFields?.insuredMembersWithType || [];
+				const legacyMembers = policy.manualFields?.insuredMembers || policy.insuredMembers || [];
+				const hasTypedMembers = membersWithType.length > 0;
+				
 				return (
 					<View key={policyIndex} style={{ marginBottom: 15 }}>
 						{/* Policy Table */}
@@ -131,14 +149,21 @@ export const HealthTemplate: React.FC<HealthTemplateProps> = ({ letterData }) =>
 						</View>
 
 						{/* Insured Members List */}
-						{membersToRender.length > 0 && (
+						{(hasTypedMembers || legacyMembers.length > 0) && (
 							<View style={healthStyles.aseguradosSection}>
 								<Text style={healthStyles.aseguradosTitle}>Asegurados:</Text>
-								{membersToRender.map((member, memberIndex) => (
-									<Text key={memberIndex} style={healthStyles.aseguradoName}>
-										• {member.toUpperCase()}
-									</Text>
-								))}
+								{hasTypedMembers 
+									? membersWithType.map((member, memberIndex) => (
+										<Text key={memberIndex} style={healthStyles.aseguradoName}>
+											• {member.name.toUpperCase()} - {formatBeneficiaryType(member.beneficiaryType)}
+										</Text>
+									))
+									: legacyMembers.map((member, memberIndex) => (
+										<Text key={memberIndex} style={healthStyles.aseguradoName}>
+											• {member.toUpperCase()}
+										</Text>
+									))
+								}
 							</View>
 						)}
 					</View>

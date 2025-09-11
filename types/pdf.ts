@@ -9,6 +9,16 @@ export interface VehicleForLetter {
 	insuredValue: number;
 }
 
+// Tipos de beneficiarios para seguros de salud
+export type BeneficiaryType = "titular" | "conyugue" | "dependiente";
+
+// Interfaz para asegurado con tipo de beneficiario
+export interface InsuredMemberWithType {
+	id: string; // ID único para React keys
+	name: string;
+	beneficiaryType: BeneficiaryType;
+}
+
 export interface LetterData {
 	id: string;
 	sourceRecordIds: string[];
@@ -33,7 +43,8 @@ export interface PolicyForLetter {
 	policyNumber: string;
 	company: string;
 	branch: string;
-	insuredMembers?: string[]; // Para pólizas de salud
+	insuredMembers?: string[]; // Para pólizas de salud (legacy)
+	insuredMembersWithType?: InsuredMemberWithType[]; // Para pólizas de salud con tipos de beneficiario
 	manualFields?: {
 		// Campos para Pólizas de Automotores
 		vehicles?: VehicleForLetter[];
@@ -42,6 +53,8 @@ export interface PolicyForLetter {
 		// Campos para Pólizas de Salud
 		insuredMembers?: string[];
 		originalInsuredMembers?: string[];
+		insuredMembersWithType?: InsuredMemberWithType[];
+		originalInsuredMembersWithType?: InsuredMemberWithType[];
 		insuredValue?: number;
 		insuredValueCurrency?: "Bs." | "$us.";
 
