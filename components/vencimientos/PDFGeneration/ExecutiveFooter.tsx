@@ -63,7 +63,7 @@ export const ExecutiveFooter: React.FC<ExecutiveFooterProps> = ({ executiveName 
 			<Image style={footerStyles.signatureImage} src={executive.signature} />
 
 			{/* Signature line positioned directly under the signature */}
-			<View style={footerStyles.dividerLine} />
+			{/* <View style={footerStyles.dividerLine} /> */}
 
 			{/* Executive information */}
 			<Text style={footerStyles.executiveName}>{executive.name}</Text>
