@@ -6,7 +6,9 @@ import {
 	InsuranceStatus,
 	VALIDATION_RULES,
 	SYSTEM_CONSTANTS,
+	RamoMappingData,
 } from "@/types/insurance";
+import { fetchRamoMappingData, getEffectiveRamo } from "@/utils/pucMapping";
 
 /**
  * Convierte fecha serial de Excel a objeto Date - CORREGIDO
@@ -176,7 +178,8 @@ export function mapExcelRowToRecord(row: any): InsuranceRecord {
 		inicioDeVigencia: row["INICIO DE VIGENCIA"],
 		finDeVigencia: row["FIN DE VIGENCIA"],
 		compania: cleanString(row["COMPAÑÍA"]) || "Sin especificar",
-		ramo: cleanString(row["RAMO"]) || "Sin especificar",
+		ramo: "Sin especificar", // Will be set by PUC mapping
+		puc: cleanString(row["PUC"]), // New PUC column
 		noPoliza: cleanString(row["NO. PÓLIZA"]) || "Sin número",
 		telefono: cleanString(row["TELEFONO"]),
 		correoODireccion: cleanString(row["CORREO/DIRECCION"]),
@@ -197,6 +200,7 @@ export function mapExcelRowToRecord(row: any): InsuranceRecord {
 		cantidad: parseNumber(row["Cantidad"]),
 		observaciones: cleanString(row["Observaciones2"] || row["Observaciones"]),
 		tipoMoneda: cleanString(row["TIPO MONEDA"]),
+		ramoOverride: cleanString(row["RAMO OVERRIDE"]), // Optional manual override column
 	};
 }
 
@@ -258,6 +262,31 @@ export function processRecord(record: InsuranceRecord, index: number): Processed
 		daysUntilExpiry,
 		status,
 		selected: false,
+	};
+}
+
+/**
+ * Enhanced version of processRecord that applies PUC mapping using cached ramo data
+ */
+export function processRecordWithPUCMapping(
+	record: InsuranceRecord, 
+	index: number, 
+	ramoMappingData: RamoMappingData[]
+): ProcessedInsuranceRecord {
+	// First process the record normally (dates, status, etc.)
+	const processedRecord = processRecord(record, index);
+
+	// Apply PUC mapping to get the effective ramo name
+	const effectiveRamo = getEffectiveRamo(
+		record.puc,
+		record.ramoOverride,
+		ramoMappingData
+	);
+
+	// Return the processed record with the effective ramo name
+	return {
+		...processedRecord,
+		ramo: effectiveRamo
 	};
 }
 
@@ -329,6 +358,11 @@ export async function processExcelFile(file: File): Promise<ExcelUploadResult> {
 			};
 		}
 
+		// Fetch ramo mapping data ONCE for this Excel processing session
+		console.log('Fetching ramo mapping data from database...');
+		const ramoMappingData = await fetchRamoMappingData();
+		console.log(`Loaded ${ramoMappingData.length} ramo mappings from database`);
+
 		const processedRecords: ProcessedInsuranceRecord[] = [];
 		const errors: string[] = [];
 		const warnings: string[] = [];
@@ -358,7 +392,7 @@ export async function processExcelFile(file: File): Promise<ExcelUploadResult> {
 					errors.push(...validation.errors);
 					continue;
 				}
-				const processedRecord = processRecord(insuranceRecord, rowNumber - 2);
+				const processedRecord = processRecordWithPUCMapping(insuranceRecord, rowNumber - 2, ramoMappingData);
 				processedRecords.push(processedRecord);
 			} catch (error) {
 				errors.push(
@@ -398,6 +432,7 @@ export async function processExcelFile(file: File): Promise<ExcelUploadResult> {
 			warnings: warnings.length > 0 ? warnings : undefined,
 			totalRecords: worksheet.rowCount - 1,
 			validRecords: processedRecords.length,
+			ramoMappingData, // Include cached ramo mapping data for session use
 		};
 	} catch (error) {
 		console.error("Error procesando archivo Excel:", error);

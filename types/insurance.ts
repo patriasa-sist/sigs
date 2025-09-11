@@ -6,7 +6,8 @@ export interface InsuranceRecord {
 	inicioDeVigencia?: Date | string;
 	finDeVigencia: Date | string;
 	compania: string;
-	ramo: string;
+	ramo: string; // This will be populated by PUC mapping, not from Excel
+	puc?: string; // Producto Único de Código - 6 digits identifying insurance type
 	noPoliza: string;
 	telefono?: string;
 	correoODireccion?: string;
@@ -27,6 +28,7 @@ export interface InsuranceRecord {
 	cantidad?: number;
 	observaciones?: string;
 	tipoMoneda?: string; // Nueva columna para tipo de moneda desde Excel
+	ramoOverride?: string; // Manual override for ramo name when PUC mapping isn't suitable
 }
 
 export interface ProcessedInsuranceRecord extends Omit<InsuranceRecord, "finDeVigencia" | "inicioDeVigencia"> {
@@ -44,6 +46,15 @@ export type InsuranceStatus =
 	| "expired" // Ya venció
 	| "sent"; // Carta ya enviada
 
+export interface RamoMappingData {
+  id: number;
+  codigo: string;
+  nombre: string;
+  es_ramo_padre: boolean;
+  ramo_padre_id?: number;
+  activo: boolean;
+}
+
 export interface ExcelUploadResult {
 	success: boolean;
 	data?: ProcessedInsuranceRecord[];
@@ -51,6 +62,7 @@ export interface ExcelUploadResult {
 	warnings?: string[];
 	totalRecords?: number;
 	validRecords?: number;
+	ramoMappingData?: RamoMappingData[]; // Cached ramo mapping data for this session
 }
 
 export interface FilterOptions {
