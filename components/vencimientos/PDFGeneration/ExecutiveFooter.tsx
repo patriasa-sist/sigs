@@ -44,7 +44,7 @@ const footerStyles = StyleSheet.create({
 		width: 100,
 		height: 50,
 		objectFit: "contain",
-		marginBottom: -25, // Overlap slightly with the line
+		marginBottom: -15, // Overlap slightly with the line
 	},
 });
 
