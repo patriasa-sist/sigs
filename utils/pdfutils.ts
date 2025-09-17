@@ -134,6 +134,7 @@ export function groupRecordsForLetters(records: ProcessedInsuranceRecord[]): Let
 					originalInsuredMembers: [...insuredMembers],
 					insuredValue: insuredValue,
 					insuredValueCurrency: currencyFromExcel || "Bs.",
+					originalInsuredValue: insuredValue, // Store original value
 					originalInsuredValueCurrency: currencyFromExcel || "Bs.",
 				};
 			} else if (templateType === "automotor") {
@@ -159,6 +160,7 @@ export function groupRecordsForLetters(records: ProcessedInsuranceRecord[]): Let
 					originalVehicles: JSON.parse(JSON.stringify(vehicles)),
 					insuredValue: totalInsuredValue,
 					insuredValueCurrency: currencyFromExcel || "$us.",
+					originalInsuredValue: totalInsuredValue, // Store original total value
 					originalInsuredValueCurrency: currencyFromExcel || "$us.",
 				};
 			} else {
@@ -177,6 +179,7 @@ export function groupRecordsForLetters(records: ProcessedInsuranceRecord[]): Let
 					originalInsuredMatter: insuredMatter,
 					insuredValue: insuredValue,
 					insuredValueCurrency: currencyFromExcel || "Bs.",
+					originalInsuredValue: insuredValue, // Store original value
 					originalInsuredValueCurrency: currencyFromExcel || "Bs.",
 				};
 			}
@@ -298,6 +301,7 @@ export async function groupRecordsForLettersWithReferences(records: ProcessedIns
 					originalInsuredMembers: [...insuredMembers],
 					insuredValue: insuredValue,
 					insuredValueCurrency: currencyFromExcel || "Bs.",
+					originalInsuredValue: insuredValue, // Store original value
 					originalInsuredValueCurrency: currencyFromExcel || "Bs.",
 				};
 			} else if (templateType === "automotor") {
@@ -323,6 +327,7 @@ export async function groupRecordsForLettersWithReferences(records: ProcessedIns
 					originalVehicles: JSON.parse(JSON.stringify(vehicles)),
 					insuredValue: totalInsuredValue,
 					insuredValueCurrency: currencyFromExcel || "$us.",
+					originalInsuredValue: totalInsuredValue, // Store original total value
 					originalInsuredValueCurrency: currencyFromExcel || "$us.",
 				};
 			} else {
@@ -341,6 +346,7 @@ export async function groupRecordsForLettersWithReferences(records: ProcessedIns
 					originalInsuredMatter: insuredMatter,
 					insuredValue: insuredValue,
 					insuredValueCurrency: currencyFromExcel || "Bs.",
+					originalInsuredValue: insuredValue, // Store original value
 					originalInsuredValueCurrency: currencyFromExcel || "Bs.",
 				};
 			}

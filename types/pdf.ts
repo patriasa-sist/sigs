@@ -60,6 +60,7 @@ export interface PolicyForLetter {
 		originalInsuredMembersWithType?: InsuredMemberWithType[];
 		insuredValue?: number;
 		insuredValueCurrency?: "Bs." | "$us.";
+		originalInsuredValue?: number; // Original total value from Excel file
 		originalInsuredValueCurrency?: "Bs." | "$us."; // Currency from Excel file
 
 		// NUEVO: Campos para Pólizas Generales

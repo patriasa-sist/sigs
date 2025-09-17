@@ -174,6 +174,7 @@ interface NumericInputWithCurrencyProps {
 	placeholder?: string;
 	className?: string;
 	originalCurrency?: "Bs." | "$us."; // Currency from Excel
+	originalValue?: number; // Original value from Excel
 }
 
 function NumericInputWithCurrency({
@@ -185,6 +186,7 @@ function NumericInputWithCurrency({
 	placeholder,
 	className,
 	originalCurrency,
+	originalValue,
 }: NumericInputWithCurrencyProps) {
 	// ... (sin cambios en este componente)
 	const [displayValue, setDisplayValue] = useState(value !== undefined && value !== null ? String(value) : "");
@@ -220,6 +222,8 @@ function NumericInputWithCurrency({
 
 	// Check if currency was changed from original Excel value
 	const currencyChanged = originalCurrency && currency !== originalCurrency;
+	// Check if value was changed from original Excel value
+	const valueChanged = originalValue !== undefined && value !== originalValue;
 
 	return (
 		<div>
@@ -231,7 +235,7 @@ function NumericInputWithCurrency({
 					onChange={handleChange}
 					onBlur={handleBlur}
 					placeholder={placeholder}
-					className={className}
+					className={`${className} ${valueChanged ? "border-yellow-400" : ""}`}
 				/>
 				<Select value={currency} onValueChange={(val: "Bs." | "$us.") => onCurrencyChange(val)}>
 					<SelectTrigger className={`w-20 h-8 text-xs ${currencyChanged ? "border-yellow-400" : ""}`}>
@@ -243,6 +247,20 @@ function NumericInputWithCurrency({
 					</SelectContent>
 				</Select>
 			</div>
+			{/* Warning for changed value */}
+			{valueChanged && (
+				<div className="mt-1 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs text-yellow-800 flex items-center">
+					<AlertTriangle className="h-3 w-3 mr-1 text-yellow-600" />
+					Valor TOTAL cambiado difiere del original: {originalCurrency === "Bs."
+						? `Bs. ${originalValue.toLocaleString('es-BO', {minimumFractionDigits: 2})}`
+						: `$us. ${originalValue.toLocaleString('es-BO', {minimumFractionDigits: 2})}`
+					} → {currency === "Bs."
+						? `Bs. ${(value || 0).toLocaleString('es-BO', {minimumFractionDigits: 2})}`
+						: `$us. ${(value || 0).toLocaleString('es-BO', {minimumFractionDigits: 2})}`
+					}
+				</div>
+			)}
+			{/* Warning for changed currency */}
 			{currencyChanged && (
 				<div className="mt-1 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs text-yellow-800 flex items-center">
 					<AlertTriangle className="h-3 w-3 mr-1 text-yellow-600" />
@@ -1335,6 +1353,7 @@ function LetterCard({
 																currency={
 																	policy.manualFields?.insuredValueCurrency || "Bs."
 																}
+																originalValue={policy.manualFields?.originalInsuredValue}
 																originalCurrency={
 																	policy.manualFields?.originalInsuredValueCurrency
 																}
@@ -1367,6 +1386,7 @@ function LetterCard({
 																currency={
 																	policy.manualFields?.insuredValueCurrency || "$us."
 																}
+																originalValue={policy.manualFields?.originalInsuredValue}
 																originalCurrency={
 																	policy.manualFields?.originalInsuredValueCurrency
 																}
