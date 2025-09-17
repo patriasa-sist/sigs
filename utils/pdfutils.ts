@@ -141,6 +141,7 @@ export function groupRecordsForLetters(records: ProcessedInsuranceRecord[]): Let
 					id: `vehicle_${r.id || i}`,
 					description: r.materiaAsegurada || "Vehículo sin descripción",
 					insuredValue: r.valorAsegurado || 0,
+					currency: normalizeCurrencyType(r.tipoMoneda) || "$us.", // Default to USD for automotor
 				}));
 				// Calculate total insured value from all vehicles
 				const totalInsuredValue = vehicles.reduce((sum, vehicle) => sum + vehicle.insuredValue, 0);
@@ -298,6 +299,7 @@ export async function groupRecordsForLettersWithReferences(records: ProcessedIns
 					id: `vehicle_${r.id || i}`,
 					description: r.materiaAsegurada || "Vehículo sin descripción",
 					insuredValue: r.valorAsegurado || 0,
+					currency: normalizeCurrencyType(r.tipoMoneda) || "$us.", // Default to USD for automotor
 				}));
 				// Calculate total insured value from all vehicles
 				const totalInsuredValue = vehicles.reduce((sum, vehicle) => sum + vehicle.insuredValue, 0);

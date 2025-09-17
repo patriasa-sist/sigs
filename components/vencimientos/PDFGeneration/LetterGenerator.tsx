@@ -38,7 +38,6 @@ import {
 	groupRecordsForLetters,
 	validateRecordForPDF,
 	generateFileName,
-	formatUSD,
 	detectMissingData,
 } from "@/utils/pdfutils";
 import { generateLetterReference } from "@/utils/letterReferences";
@@ -392,7 +391,6 @@ interface VehicleEditorProps {
 }
 
 function VehicleEditor({ vehicles, onChange, label }: VehicleEditorProps) {
-	// ... (sin cambios en este componente)
 	const handleVehicleChange = (index: number, field: keyof Omit<VehicleForLetter, "id">, value: string | number) => {
 		const newVehicles = vehicles.map((v, i) => (i === index ? { ...v, [field]: value } : v));
 		onChange(newVehicles);
@@ -405,6 +403,7 @@ function VehicleEditor({ vehicles, onChange, label }: VehicleEditorProps) {
 				id: `new_vehicle_${Date.now()}`,
 				description: "",
 				insuredValue: 0,
+				currency: "$us.", // Default to USD for automotor
 			},
 		]);
 	};
@@ -438,13 +437,30 @@ function VehicleEditor({ vehicles, onChange, label }: VehicleEditorProps) {
 							className="text-xs h-8"
 							placeholder="Descripción del vehículo (ej. Vagoneta Toyota TACOMA)"
 						/>
-						<NumericInput
-							label="Valor Asegurado ($us.)"
-							value={vehicle.insuredValue}
-							onChange={(v) => handleVehicleChange(index, "insuredValue", v)}
-							className="text-xs h-8"
-							placeholder="0.00"
-						/>
+						<div className="flex items-center space-x-2">
+							<Input
+								type="text"
+								value={vehicle.insuredValue || ""}
+								onChange={(e) => {
+									const numValue = parseFloat(e.target.value) || 0;
+									handleVehicleChange(index, "insuredValue", numValue);
+								}}
+								className="text-xs h-8 flex-grow"
+								placeholder="0.00"
+							/>
+							<Select
+								value={vehicle.currency || "$us."}
+								onValueChange={(val: "Bs." | "$us.") => handleVehicleChange(index, "currency", val)}
+							>
+								<SelectTrigger className="w-20 h-8 text-xs">
+									<SelectValue />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="Bs.">Bs.</SelectItem>
+									<SelectItem value="$us.">$us.</SelectItem>
+								</SelectContent>
+							</Select>
+						</div>
 					</div>
 				))}
 				<Button type="button" size="sm" variant="outline" onClick={addVehicle} className="text-xs h-8 mt-2">
@@ -1448,7 +1464,7 @@ function LetterCard({
 													<ul className="list-disc list-inside pl-2">
 														{(policy.manualFields?.vehicles || []).map((v, i) => (
 															<li key={i}>
-																{v.description} - Asegurado: {formatUSD(v.insuredValue)}
+																{v.description} - Asegurado: {v.currency === "Bs." ? `Bs. ${v.insuredValue.toLocaleString('es-BO', {minimumFractionDigits: 2})}` : `$us. ${v.insuredValue.toLocaleString('es-BO', {minimumFractionDigits: 2})}`}
 															</li>
 														))}
 													</ul>

@@ -3,7 +3,6 @@ import React from "react";
 import { View, Text, StyleSheet } from "@react-pdf/renderer";
 import { BaseTemplate } from "./BaseTemplate";
 import { LetterData } from "@/types/pdf";
-import { formatUSD } from "@/utils/pdfutils";
 
 const automotorStyles = StyleSheet.create({
 	policyTable: {
@@ -188,7 +187,12 @@ export const AutomotorTemplate: React.FC<AutomotorTemplateProps> = ({ letterData
 										<Text>{vehicle.description}</Text>
 									</View>
 									<View style={[automotorStyles.subTableCell, { width: "30%", borderRightWidth: 0 }]}>
-										<Text>{formatUSD(vehicle.insuredValue)}</Text>
+										<Text>
+											{vehicle.currency === "Bs."
+												? `Bs. ${vehicle.insuredValue.toLocaleString('es-BO', {minimumFractionDigits: 2})}`
+												: `$us. ${vehicle.insuredValue.toLocaleString('es-BO', {minimumFractionDigits: 2})}`
+											}
+										</Text>
 									</View>
 								</View>
 							))}

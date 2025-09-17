@@ -7,6 +7,7 @@ export interface VehicleForLetter {
 	id: string; // ID único para el vehículo, útil para React keys
 	description: string;
 	insuredValue: number;
+	currency: "Bs." | "$us."; // Currency for this specific vehicle
 }
 
 // Tipos de beneficiarios para seguros de salud
