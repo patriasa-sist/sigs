@@ -34,12 +34,7 @@ import {
 	InsuredMemberWithType,
 	BeneficiaryType,
 } from "@/types/pdf";
-import {
-	groupRecordsForLetters,
-	validateRecordForPDF,
-	generateFileName,
-	detectMissingData,
-} from "@/utils/pdfutils";
+import { groupRecordsForLetters, validateRecordForPDF, generateFileName, detectMissingData } from "@/utils/pdfutils";
 import { generateLetterReference } from "@/utils/letterReferences";
 import { cleanPhoneNumber, createWhatsAppMessage } from "@/utils/whatsapp";
 import { pdf } from "@react-pdf/renderer";
@@ -404,6 +399,9 @@ function VehicleEditor({ vehicles, onChange, label }: VehicleEditorProps) {
 				description: "",
 				insuredValue: 0,
 				currency: "$us.", // Default to USD for automotor
+				// No original values for manually added vehicles
+				originalInsuredValue: undefined,
+				originalCurrency: undefined,
 			},
 		]);
 	};
@@ -437,29 +435,73 @@ function VehicleEditor({ vehicles, onChange, label }: VehicleEditorProps) {
 							className="text-xs h-8"
 							placeholder="Descripción del vehículo (ej. Vagoneta Toyota TACOMA)"
 						/>
-						<div className="flex items-center space-x-2">
-							<Input
-								type="text"
-								value={vehicle.insuredValue || ""}
-								onChange={(e) => {
-									const numValue = parseFloat(e.target.value) || 0;
-									handleVehicleChange(index, "insuredValue", numValue);
-								}}
-								className="text-xs h-8 flex-grow"
-								placeholder="0.00"
-							/>
-							<Select
-								value={vehicle.currency || "$us."}
-								onValueChange={(val: "Bs." | "$us.") => handleVehicleChange(index, "currency", val)}
-							>
-								<SelectTrigger className="w-20 h-8 text-xs">
-									<SelectValue />
-								</SelectTrigger>
-								<SelectContent>
-									<SelectItem value="Bs.">Bs.</SelectItem>
-									<SelectItem value="$us.">$us.</SelectItem>
-								</SelectContent>
-							</Select>
+						<div className="space-y-2">
+							<div className="flex items-center space-x-2">
+								<Input
+									type="text"
+									value={vehicle.insuredValue || ""}
+									onChange={(e) => {
+										const numValue = parseFloat(e.target.value) || 0;
+										handleVehicleChange(index, "insuredValue", numValue);
+									}}
+									className={`text-xs h-8 flex-grow ${
+										vehicle.originalInsuredValue !== undefined &&
+										vehicle.insuredValue !== vehicle.originalInsuredValue
+											? "border-yellow-400"
+											: ""
+									}`}
+									placeholder="0.00"
+								/>
+								<Select
+									value={vehicle.currency || "$us."}
+									onValueChange={(val: "Bs." | "$us.") => handleVehicleChange(index, "currency", val)}
+								>
+									<SelectTrigger
+										className={`w-20 h-8 text-xs ${
+											vehicle.originalCurrency && vehicle.currency !== vehicle.originalCurrency
+												? "border-yellow-400"
+												: ""
+										}`}
+									>
+										<SelectValue />
+									</SelectTrigger>
+									<SelectContent>
+										<SelectItem value="Bs.">Bs.</SelectItem>
+										<SelectItem value="$us.">$us.</SelectItem>
+									</SelectContent>
+								</Select>
+							</div>
+							{/* Warning for changed insured value */}
+							{vehicle.originalInsuredValue !== undefined &&
+								vehicle.insuredValue !== vehicle.originalInsuredValue && (
+									<div className="p-2 bg-yellow-50 border border-yellow-200 rounded text-xs text-yellow-800 flex items-center">
+										<AlertTriangle className="h-3 w-3 mr-1 text-yellow-600" />
+										Valor cambiado difiere del original:{" "}
+										{vehicle.originalCurrency === "Bs."
+											? `Bs. ${vehicle.originalInsuredValue.toLocaleString("es-BO", {
+													minimumFractionDigits: 2,
+											  })}`
+											: `$us. ${vehicle.originalInsuredValue.toLocaleString("es-BO", {
+													minimumFractionDigits: 2,
+											  })}`}{" "}
+										→{" "}
+										{vehicle.currency === "Bs."
+											? `Bs. ${vehicle.insuredValue.toLocaleString("es-BO", {
+													minimumFractionDigits: 2,
+											  })}`
+											: `$us. ${vehicle.insuredValue.toLocaleString("es-BO", {
+													minimumFractionDigits: 2,
+											  })}`}
+									</div>
+								)}
+							{/* Warning for changed currency */}
+							{vehicle.originalCurrency && vehicle.currency !== vehicle.originalCurrency && (
+								<div className="p-2 bg-yellow-50 border border-yellow-200 rounded text-xs text-yellow-800 flex items-center">
+									<AlertTriangle className="h-3 w-3 mr-1 text-yellow-600" />
+									Moneda cambiada difiere del original: {vehicle.originalCurrency} →{" "}
+									{vehicle.currency}
+								</div>
+							)}
 						</div>
 					</div>
 				))}
@@ -563,7 +605,9 @@ export default function LetterGenerator({ selectedRecords, onClose, onGenerated 
 		});
 	};
 
-	const generateSinglePDF = async (letterData: LetterData): Promise<{ pdfBlob: Blob; finalLetterData: LetterData }> => {
+	const generateSinglePDF = async (
+		letterData: LetterData
+	): Promise<{ pdfBlob: Blob; finalLetterData: LetterData }> => {
 		// Generate real reference number only when actually creating the PDF
 		// and only if it's still a placeholder (not manually edited)
 		let finalLetterData = letterData;
@@ -1232,12 +1276,11 @@ function LetterCard({
 									<div className="text-gray-600">Vence: {policy.expiryDate}</div>
 									<div className="text-gray-600">
 										Ramo: {policy.manualFields?.branch || policy.branch}
-										{policy.manualFields?.branch && policy.manualFields.originalBranch && 
-										 policy.manualFields.branch !== policy.manualFields.originalBranch && (
-											<span className="ml-1 text-yellow-600 text-xs">
-												(editado)
-											</span>
-										)}
+										{policy.manualFields?.branch &&
+											policy.manualFields.originalBranch &&
+											policy.manualFields.branch !== policy.manualFields.originalBranch && (
+												<span className="ml-1 text-yellow-600 text-xs">(editado)</span>
+											)}
 									</div>
 								</div>
 								<div>
@@ -1260,154 +1303,160 @@ function LetterCard({
 													label="Ramo (editable):"
 													value={policy.manualFields?.branch || policy.branch}
 													originalRamo={policy.manualFields?.originalBranch || policy.branch}
-													onValueChange={(newBranch) => updatePolicy(index, "branch", newBranch)}
+													onValueChange={(newBranch) =>
+														updatePolicy(index, "branch", newBranch)
+													}
 													placeholder="Nombre del ramo de seguros"
 													className="text-xs h-8"
 												/>
 											</div>
 											<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 												{letter.templateType === "salud" ? (
-												<>
-													<div className="space-y-2">
-														<InsuredMembersWithTypeEditor
-															label="Asegurados con tipo de beneficiario:"
-															members={policy.manualFields?.insuredMembersWithType || []}
-															onChange={(newMembers) =>
-																updatePolicy(
-																	index,
-																	"insuredMembersWithType",
-																	newMembers
-																)
-															}
-														/>
-													</div>
-													<div className="space-y-2">
-														<NumericInputWithCurrency
-															label="Valor asegurado:"
-															value={policy.manualFields?.insuredValue}
-															currency={
-																policy.manualFields?.insuredValueCurrency || "Bs."
-															}
-															originalCurrency={
-																policy.manualFields?.originalInsuredValueCurrency
-															}
-															onValueChange={(v) =>
-																updatePolicy(index, "insuredValue", v)
-															}
-															onCurrencyChange={(c) =>
-																updatePolicy(index, "insuredValueCurrency", c)
-															}
-															placeholder="0.00"
-															className="text-xs h-8"
-														/>
-													</div>
-												</>
-											) : letter.templateType === "automotor" ? (
-												<>
-													<div className="space-y-2">
-														<VehicleEditor
-															label="Vehículos Asegurados (editable):"
-															vehicles={policy.manualFields?.vehicles || []}
-															onChange={(newVehicles) =>
-																updatePolicyVehicles(index, newVehicles)
-															}
-														/>
-													</div>
-													<div className="space-y-2">
-														<NumericInputWithCurrency
-															label="Valor Asegurado:"
-															value={policy.manualFields?.insuredValue}
-															currency={
-																policy.manualFields?.insuredValueCurrency || "$us."
-															}
-															originalCurrency={
-																policy.manualFields?.originalInsuredValueCurrency
-															}
-															onValueChange={(v) =>
-																updatePolicy(index, "insuredValue", v)
-															}
-															onCurrencyChange={(c) =>
-																updatePolicy(index, "insuredValueCurrency", c)
-															}
-															placeholder="0.00"
-															className="text-xs h-8"
-														/>
-														<ConditionsTextarea
-															label="Deducibles:"
-															value={policy.manualFields?.deductibles || ""}
-															onChange={(v) => updatePolicy(index, "deductibles", v)}
-															placeholder="Ej: 10% del valor asegurado, mínimo Bs. 5,000"
-															rows={2}
-														/>
-														<NumericInputWithCurrency
-															label="Extraterritorialidad:"
-															value={policy.manualFields?.territoriality}
-															currency={
-																policy.manualFields?.territorialityCurrency || "Bs."
-															}
-															onValueChange={(v) =>
-																updatePolicy(index, "territoriality", v)
-															}
-															onCurrencyChange={(c) =>
-																updatePolicy(index, "territorialityCurrency", c)
-															}
-															placeholder="0.00"
-															className="text-xs h-8"
-														/>
-														<ConditionsTextarea
-															label="Condiciones específicas:"
-															value={policy.manualFields?.specificConditions || ""}
-															onChange={(v) =>
-																updatePolicy(index, "specificConditions", v)
-															}
-															placeholder="Condiciones adicionales..."
-															rows={2}
-														/>
-													</div>
-												</>
-											) : (
-												// General Template
-												<>
-													<div className="space-y-2">
-														<ConditionsTextarea
-															label="Materia Asegurada (editable):"
-															value={policy.manualFields?.insuredMatter || ""}
-															onChange={(v) => updatePolicy(index, "insuredMatter", v)}
-															placeholder="Detalle la materia asegurada..."
-															rows={2}
-														/>
-													</div>
-													<div className="space-y-2">
-														<NumericInputWithCurrency
-															label="Valor Asegurado:"
-															value={policy.manualFields?.insuredValue}
-															currency={
-																policy.manualFields?.insuredValueCurrency || "Bs."
-															}
-															originalCurrency={
-																policy.manualFields?.originalInsuredValueCurrency
-															}
-															onValueChange={(v) =>
-																updatePolicy(index, "insuredValue", v)
-															}
-															onCurrencyChange={(c) =>
-																updatePolicy(index, "insuredValueCurrency", c)
-															}
-															placeholder="0.00"
-															className="text-xs h-8"
-														/>
-														<ConditionsTextarea
-															label="Condiciones específicas:"
-															value={policy.manualFields?.specificConditions || ""}
-															onChange={(v) =>
-																updatePolicy(index, "specificConditions", v)
-															}
-															placeholder="Condiciones adicionales..."
-															rows={2}
-														/>
-													</div>
-												</>
-											)}
+													<>
+														<div className="space-y-2">
+															<InsuredMembersWithTypeEditor
+																label="Asegurados con tipo de beneficiario:"
+																members={
+																	policy.manualFields?.insuredMembersWithType || []
+																}
+																onChange={(newMembers) =>
+																	updatePolicy(
+																		index,
+																		"insuredMembersWithType",
+																		newMembers
+																	)
+																}
+															/>
+														</div>
+														<div className="space-y-2">
+															<NumericInputWithCurrency
+																label="Valor asegurado TOTAL:"
+																value={policy.manualFields?.insuredValue}
+																currency={
+																	policy.manualFields?.insuredValueCurrency || "Bs."
+																}
+																originalCurrency={
+																	policy.manualFields?.originalInsuredValueCurrency
+																}
+																onValueChange={(v) =>
+																	updatePolicy(index, "insuredValue", v)
+																}
+																onCurrencyChange={(c) =>
+																	updatePolicy(index, "insuredValueCurrency", c)
+																}
+																placeholder="0.00"
+																className="text-xs h-8"
+															/>
+														</div>
+													</>
+												) : letter.templateType === "automotor" ? (
+													<>
+														<div className="space-y-2">
+															<VehicleEditor
+																label="Vehículos Asegurados (editable):"
+																vehicles={policy.manualFields?.vehicles || []}
+																onChange={(newVehicles) =>
+																	updatePolicyVehicles(index, newVehicles)
+																}
+															/>
+														</div>
+														<div className="space-y-2">
+															<NumericInputWithCurrency
+																label="Valor Asegurado TOTAL:"
+																value={policy.manualFields?.insuredValue}
+																currency={
+																	policy.manualFields?.insuredValueCurrency || "$us."
+																}
+																originalCurrency={
+																	policy.manualFields?.originalInsuredValueCurrency
+																}
+																onValueChange={(v) =>
+																	updatePolicy(index, "insuredValue", v)
+																}
+																onCurrencyChange={(c) =>
+																	updatePolicy(index, "insuredValueCurrency", c)
+																}
+																placeholder="0.00"
+																className="text-xs h-8"
+															/>
+															<ConditionsTextarea
+																label="Deducibles:"
+																value={policy.manualFields?.deductibles || ""}
+																onChange={(v) => updatePolicy(index, "deductibles", v)}
+																placeholder="Ej: 10% del valor asegurado, mínimo Bs. 5,000"
+																rows={2}
+															/>
+															<NumericInputWithCurrency
+																label="Extraterritorialidad:"
+																value={policy.manualFields?.territoriality}
+																currency={
+																	policy.manualFields?.territorialityCurrency || "Bs."
+																}
+																onValueChange={(v) =>
+																	updatePolicy(index, "territoriality", v)
+																}
+																onCurrencyChange={(c) =>
+																	updatePolicy(index, "territorialityCurrency", c)
+																}
+																placeholder="0.00"
+																className="text-xs h-8"
+															/>
+															<ConditionsTextarea
+																label="Condiciones específicas:"
+																value={policy.manualFields?.specificConditions || ""}
+																onChange={(v) =>
+																	updatePolicy(index, "specificConditions", v)
+																}
+																placeholder="Condiciones adicionales..."
+																rows={2}
+															/>
+														</div>
+													</>
+												) : (
+													// General Template
+													<>
+														<div className="space-y-2">
+															<ConditionsTextarea
+																label="Materia Asegurada (editable):"
+																value={policy.manualFields?.insuredMatter || ""}
+																onChange={(v) =>
+																	updatePolicy(index, "insuredMatter", v)
+																}
+																placeholder="Detalle la materia asegurada..."
+																rows={2}
+															/>
+														</div>
+														<div className="space-y-2">
+															<NumericInputWithCurrency
+																label="Valor Asegurado TOTAL:"
+																value={policy.manualFields?.insuredValue}
+																currency={
+																	policy.manualFields?.insuredValueCurrency || "Bs."
+																}
+																originalCurrency={
+																	policy.manualFields?.originalInsuredValueCurrency
+																}
+																onValueChange={(v) =>
+																	updatePolicy(index, "insuredValue", v)
+																}
+																onCurrencyChange={(c) =>
+																	updatePolicy(index, "insuredValueCurrency", c)
+																}
+																placeholder="0.00"
+																className="text-xs h-8"
+															/>
+															<ConditionsTextarea
+																label="Condiciones específicas:"
+																value={policy.manualFields?.specificConditions || ""}
+																onChange={(v) =>
+																	updatePolicy(index, "specificConditions", v)
+																}
+																placeholder="Condiciones adicionales..."
+																rows={2}
+															/>
+														</div>
+													</>
+												)}
 											</div>
 										</>
 									) : (
@@ -1464,7 +1513,14 @@ function LetterCard({
 													<ul className="list-disc list-inside pl-2">
 														{(policy.manualFields?.vehicles || []).map((v, i) => (
 															<li key={i}>
-																{v.description} - Asegurado: {v.currency === "Bs." ? `Bs. ${v.insuredValue.toLocaleString('es-BO', {minimumFractionDigits: 2})}` : `$us. ${v.insuredValue.toLocaleString('es-BO', {minimumFractionDigits: 2})}`}
+																{v.description} - Asegurado:{" "}
+																{v.currency === "Bs."
+																	? `Bs. ${v.insuredValue.toLocaleString("es-BO", {
+																			minimumFractionDigits: 2,
+																	  })}`
+																	: `$us. ${v.insuredValue.toLocaleString("es-BO", {
+																			minimumFractionDigits: 2,
+																	  })}`}
 															</li>
 														))}
 													</ul>

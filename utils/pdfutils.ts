@@ -137,12 +137,18 @@ export function groupRecordsForLetters(records: ProcessedInsuranceRecord[]): Let
 					originalInsuredValueCurrency: currencyFromExcel || "Bs.",
 				};
 			} else if (templateType === "automotor") {
-				const vehicles: VehicleForLetter[] = policyGroup.map((r, i) => ({
-					id: `vehicle_${r.id || i}`,
-					description: r.materiaAsegurada || "Vehículo sin descripción",
-					insuredValue: r.valorAsegurado || 0,
-					currency: normalizeCurrencyType(r.tipoMoneda) || "$us.", // Default to USD for automotor
-				}));
+				const vehicles: VehicleForLetter[] = policyGroup.map((r, i) => {
+					const originalValue = r.valorAsegurado || 0;
+					const originalCurrency = normalizeCurrencyType(r.tipoMoneda) || "$us.";
+					return {
+						id: `vehicle_${r.id || i}`,
+						description: r.materiaAsegurada || "Vehículo sin descripción",
+						insuredValue: originalValue,
+						currency: originalCurrency,
+						originalInsuredValue: originalValue, // Store original value for comparison
+						originalCurrency: originalCurrency, // Store original currency for comparison
+					};
+				});
 				// Calculate total insured value from all vehicles
 				const totalInsuredValue = vehicles.reduce((sum, vehicle) => sum + vehicle.insuredValue, 0);
 				// Auto-set currency from Excel or default to $us. for automotor
@@ -295,12 +301,18 @@ export async function groupRecordsForLettersWithReferences(records: ProcessedIns
 					originalInsuredValueCurrency: currencyFromExcel || "Bs.",
 				};
 			} else if (templateType === "automotor") {
-				const vehicles: VehicleForLetter[] = policyGroup.map((r, i) => ({
-					id: `vehicle_${r.id || i}`,
-					description: r.materiaAsegurada || "Vehículo sin descripción",
-					insuredValue: r.valorAsegurado || 0,
-					currency: normalizeCurrencyType(r.tipoMoneda) || "$us.", // Default to USD for automotor
-				}));
+				const vehicles: VehicleForLetter[] = policyGroup.map((r, i) => {
+					const originalValue = r.valorAsegurado || 0;
+					const originalCurrency = normalizeCurrencyType(r.tipoMoneda) || "$us.";
+					return {
+						id: `vehicle_${r.id || i}`,
+						description: r.materiaAsegurada || "Vehículo sin descripción",
+						insuredValue: originalValue,
+						currency: originalCurrency,
+						originalInsuredValue: originalValue, // Store original value for comparison
+						originalCurrency: originalCurrency, // Store original currency for comparison
+					};
+				});
 				// Calculate total insured value from all vehicles
 				const totalInsuredValue = vehicles.reduce((sum, vehicle) => sum + vehicle.insuredValue, 0);
 				// Auto-set currency from Excel or default to $us. for automotor

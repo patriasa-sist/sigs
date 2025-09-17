@@ -8,6 +8,8 @@ export interface VehicleForLetter {
 	description: string;
 	insuredValue: number;
 	currency: "Bs." | "$us."; // Currency for this specific vehicle
+	originalInsuredValue?: number; // Original value from Excel data
+	originalCurrency?: "Bs." | "$us."; // Original currency from Excel data
 }
 
 // Tipos de beneficiarios para seguros de salud
