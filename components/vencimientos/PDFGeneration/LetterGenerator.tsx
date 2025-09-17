@@ -547,7 +547,7 @@ export default function LetterGenerator({ selectedRecords, onClose, onGenerated 
 		});
 	};
 
-	const generateSinglePDF = async (letterData: LetterData): Promise<Blob> => {
+	const generateSinglePDF = async (letterData: LetterData): Promise<{ pdfBlob: Blob; finalLetterData: LetterData }> => {
 		// Generate real reference number only when actually creating the PDF
 		// and only if it's still a placeholder (not manually edited)
 		let finalLetterData = letterData;
@@ -580,7 +580,7 @@ export default function LetterGenerator({ selectedRecords, onClose, onGenerated 
 				TemplateComponent = GeneralTemplate;
 		}
 		const pdfBlob = await pdf(<TemplateComponent letterData={finalLetterData} />).toBlob();
-		return pdfBlob;
+		return { pdfBlob, finalLetterData };
 	};
 
 	// Generate PDF for preview without touching the database
@@ -634,8 +634,8 @@ export default function LetterGenerator({ selectedRecords, onClose, onGenerated 
 
 		try {
 			setIsGenerating(true);
-			const pdfBlob = await generateSinglePDF(letter);
-			const fileName = generateFileName(letter);
+			const { pdfBlob, finalLetterData } = await generateSinglePDF(letter);
+			const fileName = generateFileName(finalLetterData);
 			downloadBlob(pdfBlob, fileName);
 
 			const result: PDFGenerationResult = {
@@ -678,8 +678,8 @@ export default function LetterGenerator({ selectedRecords, onClose, onGenerated 
 			for (const letter of letters) {
 				// Note: We no longer validate reference numbers here since they're generated during PDF creation
 				try {
-					const pdfBlob = await generateSinglePDF(letter);
-					const fileName = generateFileName(letter);
+					const { pdfBlob, finalLetterData } = await generateSinglePDF(letter);
+					const fileName = generateFileName(finalLetterData);
 
 					zip.file(fileName, pdfBlob);
 
@@ -732,8 +732,8 @@ export default function LetterGenerator({ selectedRecords, onClose, onGenerated 
 
 		try {
 			setIsGenerating(true);
-			const pdfBlob = await generateSinglePDF(letter);
-			const fileName = generateFileName(letter);
+			const { pdfBlob, finalLetterData } = await generateSinglePDF(letter);
+			const fileName = generateFileName(finalLetterData);
 			downloadBlob(pdfBlob, fileName);
 
 			const cleanedPhone = cleanPhoneNumber(letter.client.phone);
