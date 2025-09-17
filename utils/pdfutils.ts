@@ -453,7 +453,9 @@ export function generateFileName(letterData: LetterData): string {
 
 	// Extract letter reference from the reference number (e.g., "SCPSA-ADM-12345/2025-09" -> "12345")
 	const referenceMatch = letterData.referenceNumber.match(/ADM-(\d+)/);
-	const letterReference = referenceMatch ? referenceMatch[1] : "00000";
+	const letterReference = referenceMatch
+		? referenceMatch[1]
+		: letterData.referenceNumber.replace(/[^0-9]/g, "").substring(0, 5) || "00000";
 
 	// Get the primary branch from the first policy
 	const primaryBranch = letterData.policies[0]?.manualFields?.branch || letterData.policies[0]?.branch || "General";
