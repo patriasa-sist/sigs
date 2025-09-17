@@ -172,12 +172,12 @@ export function mapPUCToRamo(puc: string, ramoMappingData: RamoMappingData[]): s
 		return null;
 	}
 
-	console.log(`🔍 Mapping PUC ${puc} → code ${ramoCode}`);
+	// console.log(`🔍 Mapping PUC ${puc} → code ${ramoCode}`);
 
 	const matchedRamo = ramoMappingData.find((ramo) => ramo.codigo === ramoCode);
 
 	if (matchedRamo) {
-		console.log(`✅ Mapped ${puc} (${ramoCode}) → "${matchedRamo.nombre}"`);
+		// console.log(`✅ Mapped ${puc} (${ramoCode}) → "${matchedRamo.nombre}"`);
 		return matchedRamo.nombre;
 	}
 
@@ -203,11 +203,11 @@ export function mapPUCToRamo(puc: string, ramoMappingData: RamoMappingData[]): s
  * @returns Effective ramo name
  */
 export function getEffectiveRamo(puc?: string, ramoOverride?: string, ramoMappingData: RamoMappingData[] = []): string {
-	console.log(
+	/*console.log(
 		`🎯 Getting effective ramo for PUC: ${puc}, Override: ${ramoOverride || "none"}, MappingData: ${
 			ramoMappingData.length
 		} items`
-	);
+	);*/
 
 	// 1. Manual override has highest priority
 	if (ramoOverride && ramoOverride.trim()) {
@@ -219,7 +219,7 @@ export function getEffectiveRamo(puc?: string, ramoOverride?: string, ramoMappin
 	if (puc && ramoMappingData.length > 0) {
 		const mappedRamo = mapPUCToRamo(puc, ramoMappingData);
 		if (mappedRamo) {
-			console.log(`✅ Using PUC mapping: "${mappedRamo}"`);
+			// console.log(`✅ Using PUC mapping: "${mappedRamo}"`);
 			return mappedRamo;
 		}
 	} else if (!puc) {
