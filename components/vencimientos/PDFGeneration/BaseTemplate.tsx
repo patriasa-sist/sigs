@@ -1,10 +1,11 @@
 // components/PDFGeneration/BaseTemplate.tsx
 import React from "react";
-import { Document, Page, Text, View, StyleSheet, Image, Font } from "@react-pdf/renderer";
+import { Document, Page, Text, View, StyleSheet, Image, Font, Link } from "@react-pdf/renderer";
 import { LetterData } from "@/types/pdf";
 import { PDF_ASSETS } from "@/utils/pdfAssets";
 import { ExecutiveFooter } from "./ExecutiveFooter";
 import { findExecutiveByName, getDefaultExecutive } from "@/utils/executiveHelper";
+import { cleanPhoneNumber } from "@/utils/whatsapp";
 import { exec } from "child_process";
 
 // Registrar fuentes - Cambria
@@ -87,14 +88,14 @@ const styles = StyleSheet.create({
 		textDecoration: "underline",
 	},
 	greeting: {
-		marginBottom: 10,
+		marginBottom: 5,
 		fontSize: 10,
 	},
 	content: {
 		marginBottom: 1,
 	},
 	paragraph: {
-		marginBottom: 10,
+		marginBottom: 5,
 		textAlign: "justify",
 	},
 	signature: {
@@ -109,7 +110,14 @@ const styles = StyleSheet.create({
 		flexDirection: "row",
 		justifyContent: "space-around",
 		alignItems: "flex-start",
-		backgroundColor: "#c2d6fc",
+	},
+	conditionsContainer: {
+		borderStyle: "solid",
+		borderWidth: 1,
+		borderRadius: 5,
+		borderColor: "#facfcf",
+		backgroundColor: "#ffe8e8",
+		padding: 3,
 	},
 });
 
@@ -192,49 +200,57 @@ export const BaseTemplate: React.FC<BaseTemplateProps> = ({ letterData, children
 
 					{children}
 
-					{/* revision of data pending */}
-					{letterData.templateType != "salud" && (
+					<View style={styles.conditionsContainer}>
+						<Text style={styles.paragraph}>Nota:</Text>
+
+						{/* revision of data pending */}
+						{letterData.templateType != "salud" && (
+							<Text style={styles.paragraph}>
+								Recomendamos revisar los datos y el valor asegurado, esto para proceder si corresponde,
+								con la actualización o modificación de esto(s). Tenga a bien hacernos a conocer
+								cualquier cambio que se haya producido o en su defecto su consentimiento para la
+								renovación.
+							</Text>
+						)}
+						{/* adititional manual conditions */}
+						{letterData.additionalConditions && (
+							<View style={styles.additionalConditions}>
+								<FormattedText
+									text={
+										letterData.additionalConditions.charAt(0).toUpperCase() +
+										letterData.additionalConditions.slice(1)
+									}
+									// isItalic={letterData.templateType === "salud"}
+								/>
+							</View>
+						)}
+
+						{/* special health insurance clausule */}
+						{letterData.templateType === "salud" && (
+							<Text style={styles.paragraph}>
+								Nos permitimos recordarle que los seguros de Salud o Enfermedad se pagan por adelantado,
+								al inicio de la vigencia, sea mensual o anual.
+							</Text>
+						)}
+
+						{/* No renovation section */}
 						<Text style={styles.paragraph}>
-							Recomendamos revisar los datos y el valor asegurado, esto para proceder si corresponde, con
-							la actualización o modificación de esto(s). Tenga a bien hacernos a conocer cualquier cambio
-							que se haya producido o en su defecto su consentimiento para la renovación.
+							Es importante informarle que en caso de tener primas pendientes no se podrá renovar hasta su
+							regularización, la NO RENOVACION, suspende toda cobertura de la póliza de seguro.
 						</Text>
-					)}
-
-					{letterData.additionalConditions && (
-						<View style={styles.additionalConditions}>
-							<FormattedText
-								text={
-									letterData.additionalConditions.charAt(0).toUpperCase() +
-									letterData.additionalConditions.slice(1)
-								}
-								// isItalic={letterData.templateType === "salud"}
-							/>
-						</View>
-					)}
-
-					{/* special health insurance clausule */}
-					{letterData.templateType === "salud" && (
-						<Text style={styles.paragraph}>
-							Nos permitimos recordarle que los seguros de Salud o Enfermedad se pagan por adelantado, al
-							inicio de la vigencia, sea mensual o anual.
-						</Text>
-					)}
-
-					{/* No renovation section */}
-					<Text style={styles.paragraph}>
-						Es importante informarle que en caso de tener primas pendientes no se podrá renovar hasta su
-						regularización, la NO RENOVACION, suspende toda cobertura de la póliza de seguro.
-					</Text>
+					</View>
 
 					{/* contact info section */}
 					<Text style={styles.paragraph}>
 						Comuníquese con nosotros para recibir una atención personalizada:
 					</Text>
 					<Text style={styles.paragraph}>
-						<FormattedText
-							text={`*${executiveData.name}* - Tel: *${executiveData.telf}* - Email: *${executiveData.mail}*`}
-						/>
+						<FormattedText text={`*${executiveData.name}* - Tel: `} />
+						<Link src={`https://wa.me/${cleanPhoneNumber(executiveData.telf)}`}>
+							<Text style={{ fontWeight: "bold", color: "#255fd3" }}>{executiveData.telf}</Text>
+						</Link>
+						<Text> - Email: </Text>
+						<Text style={{ fontWeight: "bold", color: "#255fd3" }}>{executiveData.mail}</Text>
 					</Text>
 
 					{/* greetings section */}

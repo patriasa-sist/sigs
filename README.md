@@ -17,10 +17,10 @@ TODO Principal:
 
 TODO REVISION CARTAS:
 [x] quitar linea de firma de carta generada
-[] resaltar zona de notas escritas
+[x] resaltar zona de notas escritas
 [] cuando se actualicen valores de asegurados, que se actualice el valor asegurado total de la carta
 [] opción de selección Bs/Sus para valor asegurado del automovil
-[] en la carta debe estar fijo el mensaje de que su siguiente poliza se emitirá en bolivianos, excepto transporte y todoriesgo
+[xxx] en la carta debe estar fijo el mensaje de que su siguiente poliza se emitirá en bolivianos, excepto transporte y todoriesgo
 [] nombre de archivo cambiado segun nuevo formato: [serie from supabase 001 to 999]-vencPol-[Ramo]-[nombre asegurado].pdf
 [x] dos firmas en la carta (jefe 2da firma)
 [] extender campos de los filtros de selección en el dashboard de vencimientos
@@ -31,7 +31,7 @@ TODO REVISION CARTAS:
 [x] quitar letra italica de la carta de salud
 [x] cabecera modificar "señor", "señora" inconsistente por "señor/a" y "señores"(corporativo)
 [] AUTOMOTOR>deducible que se pueda poner texto no solo numeros
-[] convertir numero de telefono a link de whatsapp
+[x] convertir numero de telefono a link de whatsapp
 [x] ajustar automaticamente la 1er letra de las condiciones extra ingresadas a mayuscula
 
 NOTAS EXTRA:
