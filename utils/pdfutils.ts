@@ -445,7 +445,39 @@ export function formatDateShort(date: Date): string {
 		.replace(/\//g, "");
 }
 
-export function generateFileName(clientName: string, templateType: "salud" | "general" | "automotor"): string {
+export function generateFileName(letterData: LetterData): string {
+	// Extract year and month from the reference number (e.g., "SCPSA-ADM-12345/2025-09" -> year: "2025", month: "09")
+	const dateMatch = letterData.referenceNumber.match(/\/(\d{4})-(\d{2})/);
+	const year = dateMatch ? dateMatch[1] : new Date().getFullYear().toString();
+	const month = dateMatch ? dateMatch[2] : String(new Date().getMonth() + 1).padStart(2, "0");
+
+	// Extract letter reference from the reference number (e.g., "SCPSA-ADM-12345/2025-09" -> "12345")
+	const referenceMatch = letterData.referenceNumber.match(/ADM-(\d+)/);
+	const letterReference = referenceMatch
+		? referenceMatch[1]
+		: letterData.referenceNumber.replace(/[^0-9]/g, "") || "00000";
+
+	// Get the primary branch from the first policy
+	const primaryBranch = letterData.policies[0]?.manualFields?.branch || letterData.policies[0]?.branch || "General";
+	const cleanBranch = primaryBranch
+		.replace(/[^a-zA-ZÀ-ÿ\u00f1\u00d1\s]/g, "")
+		.trim()
+		.replace(/\s+/g, "_")
+		.toUpperCase();
+
+	// Clean client name
+	const cleanName = letterData.client.name
+		.replace(/[^a-zA-ZÀ-ÿ\u00f1\u00d1\s]/g, "")
+		.trim()
+		.replace(/\s+/g, "_")
+		.toUpperCase();
+
+	// New format: [year]_[month]_[letter reference]_vencPol_[Ramo]_[client name Uppercase].pdf
+	return `${year}_${month}_${letterReference}_vencPol_${cleanBranch}_${cleanName}.pdf`;
+}
+
+// Legacy function for backward compatibility - DEPRECATED
+export function generateFileNameLegacy(clientName: string, templateType: "salud" | "general" | "automotor"): string {
 	const today = new Date();
 	const dateStr = formatDateShort(today);
 

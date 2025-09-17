@@ -6,7 +6,6 @@ import { PDF_ASSETS } from "@/utils/pdfAssets";
 import { ExecutiveFooter } from "./ExecutiveFooter";
 import { findExecutiveByName, getDefaultExecutive } from "@/utils/executiveHelper";
 import { cleanPhoneNumber } from "@/utils/whatsapp";
-import { exec } from "child_process";
 
 // Registrar fuentes - Cambria
 Font.register({

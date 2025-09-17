@@ -635,7 +635,7 @@ export default function LetterGenerator({ selectedRecords, onClose, onGenerated 
 		try {
 			setIsGenerating(true);
 			const pdfBlob = await generateSinglePDF(letter);
-			const fileName = generateFileName(letter.client.name, letter.templateType);
+			const fileName = generateFileName(letter);
 			downloadBlob(pdfBlob, fileName);
 
 			const result: PDFGenerationResult = {
@@ -679,7 +679,7 @@ export default function LetterGenerator({ selectedRecords, onClose, onGenerated 
 				// Note: We no longer validate reference numbers here since they're generated during PDF creation
 				try {
 					const pdfBlob = await generateSinglePDF(letter);
-					const fileName = generateFileName(letter.client.name, letter.templateType);
+					const fileName = generateFileName(letter);
 
 					zip.file(fileName, pdfBlob);
 
@@ -733,7 +733,7 @@ export default function LetterGenerator({ selectedRecords, onClose, onGenerated 
 		try {
 			setIsGenerating(true);
 			const pdfBlob = await generateSinglePDF(letter);
-			const fileName = generateFileName(letter.client.name, letter.templateType);
+			const fileName = generateFileName(letter);
 			downloadBlob(pdfBlob, fileName);
 
 			const cleanedPhone = cleanPhoneNumber(letter.client.phone);
