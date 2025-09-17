@@ -67,6 +67,7 @@ interface LetterGeneratorProps {
 }
 
 // Componente para input numérico validado
+/*
 interface NumericInputProps {
 	value: number | string;
 	onChange: (value: number) => void;
@@ -122,7 +123,7 @@ function NumericInput({ value, onChange, placeholder, className, label }: Numeri
 		</div>
 	);
 }
-
+*/
 // Componente para input de ramo editable con aviso de cambio
 interface EditableRamoInputProps {
 	value: string;
@@ -251,13 +252,14 @@ function NumericInputWithCurrency({
 			{valueChanged && (
 				<div className="mt-1 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs text-yellow-800 flex items-center">
 					<AlertTriangle className="h-3 w-3 mr-1 text-yellow-600" />
-					Valor TOTAL cambiado difiere del original: {originalCurrency === "Bs."
-						? `Bs. ${originalValue.toLocaleString('es-BO', {minimumFractionDigits: 2})}`
-						: `$us. ${originalValue.toLocaleString('es-BO', {minimumFractionDigits: 2})}`
-					} → {currency === "Bs."
-						? `Bs. ${(value || 0).toLocaleString('es-BO', {minimumFractionDigits: 2})}`
-						: `$us. ${(value || 0).toLocaleString('es-BO', {minimumFractionDigits: 2})}`
-					}
+					Valor TOTAL cambiado difiere del original:{" "}
+					{originalCurrency === "Bs."
+						? `Bs. ${originalValue.toLocaleString("es-BO", { minimumFractionDigits: 2 })}`
+						: `$us. ${originalValue.toLocaleString("es-BO", { minimumFractionDigits: 2 })}`}{" "}
+					→{" "}
+					{currency === "Bs."
+						? `Bs. ${(value || 0).toLocaleString("es-BO", { minimumFractionDigits: 2 })}`
+						: `$us. ${(value || 0).toLocaleString("es-BO", { minimumFractionDigits: 2 })}`}
 				</div>
 			)}
 			{/* Warning for changed currency */}
@@ -1084,9 +1086,13 @@ function LetterCard({
 	const updatePolicyVehicles = (policyIndex: number, newVehicles: VehicleForLetter[]) => {
 		const updatedPolicies = editedLetter.policies.map((policy, index) => {
 			if (index === policyIndex) {
+				// Calculate new total insured value from all vehicles
+				const newTotalInsuredValue = newVehicles.reduce((sum, vehicle) => sum + (vehicle.insuredValue || 0), 0);
+
 				const updatedManualFields = {
 					...policy.manualFields,
 					vehicles: newVehicles,
+					insuredValue: newTotalInsuredValue,
 				};
 				return { ...policy, manualFields: updatedManualFields };
 			}
@@ -1353,7 +1359,9 @@ function LetterCard({
 																currency={
 																	policy.manualFields?.insuredValueCurrency || "Bs."
 																}
-																originalValue={policy.manualFields?.originalInsuredValue}
+																originalValue={
+																	policy.manualFields?.originalInsuredValue
+																}
 																originalCurrency={
 																	policy.manualFields?.originalInsuredValueCurrency
 																}
@@ -1386,7 +1394,9 @@ function LetterCard({
 																currency={
 																	policy.manualFields?.insuredValueCurrency || "$us."
 																}
-																originalValue={policy.manualFields?.originalInsuredValue}
+																originalValue={
+																	policy.manualFields?.originalInsuredValue
+																}
 																originalCurrency={
 																	policy.manualFields?.originalInsuredValueCurrency
 																}
