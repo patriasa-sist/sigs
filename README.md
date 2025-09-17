@@ -15,6 +15,41 @@ TODO Principal:
 [x] el nro de carta sea automatico segun el esquema: SCPSA-[executive glyph]-[serie from supabase 001 to 999]-[year]-[month]
 [x] funcion para leer datos de la tabla tipo_seguro y comparar con datos del excel a la hora de subirlo
 
+TODO REVISION CARTAS:
+[x] quitar linea de firma de carta generada
+[] resaltar zona de notas escritas
+[] cuando se actualicen valores de asegurados, que se actualice el valor asegurado total de la carta
+[] opción de selección Bs/Sus para valor asegurado del automovil
+[] en la carta debe estar fijo el mensaje de que su siguiente poliza se emitirá en bolivianos, excepto transporte y todoriesgo
+[] nombre de archivo cambiado segun nuevo formato: [serie from supabase 001 to 999]-vencPol-[Ramo]-[nombre asegurado].pdf
+[x] dos firmas en la carta (jefe 2da firma)
+[] extender campos de los filtros de selección en el dashboard de vencimientos
+[x] (gramatica) modificar preferencial por personalizada
+[x] (gramatica) Requerimos >> Recomendamos
+[x] (gramatica) de estas >> su regularizacion
+[x] (gramatica) con su ejecutivo >> con nosotros
+[x] quitar letra italica de la carta de salud
+[x] cabecera modificar "señor", "señora" inconsistente por "señor/a" y "señores"(corporativo)
+[] AUTOMOTOR>deducible que se pueda poner texto no solo numeros
+[] convertir numero de telefono a link de whatsapp
+[x] ajustar automaticamente la 1er letra de las condiciones extra ingresadas a mayuscula
+
+NOTAS EXTRA:
+
+-   SALUD:
+
+    1. Nos permitimos recordarle que los seguros de Salud o Enfermedad se pagan por adelantado, al
+       inicio de la vigencia, sea mensual o anual.
+       Le informamos que a partir del _01/05/2025_, se excluye la cobertura del certificado asistencia al viajero y las pólizas se emiten en moneda nacional (BS)
+
+-   AUTOMOTOR:
+    Debido al incremento generalizado en el valor de ciertos activos, es posible que tus bienes estén asegurados por montos inferiores a su valor actual. Esta situación podría afectar la indemnización en caso de siniestro.
+    Por ello, es fundamental revisar y actualizar los valores asegurados de tus pólizas, con el fin de garantizar una cobertura adecuada y efectiva ante cualquier eventualidad.
+
+DESCARGO DE NO RENOVACION:
+Es importante informarle que en caso de tener primas pendientes no se podrá renovar hasta su regularización,
+la NO RENOVACION, suspende toda cobertura de la póliza de seguro.
+
 TABLAS DE SEGUROS
 
 ```sql

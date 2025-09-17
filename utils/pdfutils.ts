@@ -7,8 +7,8 @@ import { generateLetterReference } from "./letterReferences";
 
 // Constantes para los textos de plantilla
 const HEALTH_CONDITIONS_TEMPLATE = `Le informamos que a partir del *01/05/2025*, se excluye la cobertura del certificado asistencia al viajero y las pólizas se emiten en moneda nacional (BS)`;
-const AUTOMOTOR_CONDITIONS_TEMPLATE = ``;
-const GENERAL_CONDITIONS_TEMPLATE = ``;
+const AUTOMOTOR_CONDITIONS_TEMPLATE = `Debido al incremento generalizado en el valor de ciertos activos, es posible que tus bienes estén asegurados por montos inferiores a su valor actual. Esta situación podría afectar la indemnización en caso de siniestro.\nPor ello, es fundamental revisar y actualizar los valores asegurados de tus pólizas, con el fin de garantizar una cobertura adecuada y efectiva ante cualquier eventualidad.`;
+const GENERAL_CONDITIONS_TEMPLATE = `Debido al incremento generalizado en el valor de ciertos activos, es posible que tus bienes estén asegurados por montos inferiores a su valor actual. Esta situación podría afectar la indemnización en caso de siniestro.\nPor ello, es fundamental revisar y actualizar los valores asegurados de tus pólizas, con el fin de garantizar una cobertura adecuada y efectiva ante cualquier eventualidad.`;
 
 export const PDF_CONSTANTS = {
 	TEMPLATES: {
@@ -420,7 +420,7 @@ export function detectMissingData(letterData: Omit<LetterData, "needsReview" | "
 export function generateReferenceNumber(): string {
 	const now = new Date();
 	const year = now.getFullYear();
-	const month = (now.getMonth() + 1).toString().padStart(2, '0'); // Convert 0-11 to 01-12
+	const month = (now.getMonth() + 1).toString().padStart(2, "0"); // Convert 0-11 to 01-12
 	return `SCPSA-ADM-00000/${year}-${month}`;
 }
 

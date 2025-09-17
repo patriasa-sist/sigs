@@ -5,6 +5,7 @@ import { LetterData } from "@/types/pdf";
 import { PDF_ASSETS } from "@/utils/pdfAssets";
 import { ExecutiveFooter } from "./ExecutiveFooter";
 import { findExecutiveByName, getDefaultExecutive } from "@/utils/executiveHelper";
+import { exec } from "child_process";
 
 // Registrar fuentes - Cambria
 Font.register({
@@ -104,6 +105,12 @@ const styles = StyleSheet.create({
 		fontSize: 10,
 		textAlign: "justify",
 	},
+	executiveFooter: {
+		flexDirection: "row",
+		justifyContent: "space-around",
+		alignItems: "flex-start",
+		backgroundColor: "#c2d6fc",
+	},
 });
 
 // Componente para parsear y renderizar texto con formato
@@ -150,8 +157,8 @@ export const BaseTemplate: React.FC<BaseTemplateProps> = ({ letterData, children
 						{letterData.client.name.includes("SRL") || letterData.client.name.includes("S.A.")
 							? "Señores"
 							: letterData.client.name.includes("BETTY")
-							? "Señora"
-							: "Señor"}
+							? "Señor/a"
+							: "Señor/a"}
 					</Text>
 					<Text style={styles.clientName}>{letterData.client.name.toUpperCase()}</Text>
 					{letterData.client.phone && (
@@ -186,17 +193,22 @@ export const BaseTemplate: React.FC<BaseTemplateProps> = ({ letterData, children
 					{children}
 
 					{/* revision of data pending */}
-					<Text style={styles.paragraph}>
-						Requerimos revisar los datos y el valor asegurado, esto para proceder si corresponde, con la
-						actualización o modificación de esto(s). Tenga a bien hacernos a conocer cualquier cambio que se
-						haya producido o en su defecto su consentimiento para la renovación.
-					</Text>
+					{letterData.templateType != "salud" && (
+						<Text style={styles.paragraph}>
+							Recomendamos revisar los datos y el valor asegurado, esto para proceder si corresponde, con
+							la actualización o modificación de esto(s). Tenga a bien hacernos a conocer cualquier cambio
+							que se haya producido o en su defecto su consentimiento para la renovación.
+						</Text>
+					)}
 
 					{letterData.additionalConditions && (
 						<View style={styles.additionalConditions}>
 							<FormattedText
-								text={letterData.additionalConditions}
-								isItalic={letterData.templateType === "salud"}
+								text={
+									letterData.additionalConditions.charAt(0).toUpperCase() +
+									letterData.additionalConditions.slice(1)
+								}
+								// isItalic={letterData.templateType === "salud"}
 							/>
 						</View>
 					)}
@@ -205,23 +217,19 @@ export const BaseTemplate: React.FC<BaseTemplateProps> = ({ letterData, children
 					{letterData.templateType === "salud" && (
 						<Text style={styles.paragraph}>
 							Nos permitimos recordarle que los seguros de Salud o Enfermedad se pagan por adelantado, al
-							inicio de la vigencia, sea mensual o anual. En caso de tener primas pendientes no se podrá
-							renovar.
+							inicio de la vigencia, sea mensual o anual.
 						</Text>
 					)}
 
 					{/* No renovation section */}
 					<Text style={styles.paragraph}>
-						Es importante informarle que{""}
-						{letterData.templateType !== "salud"
-							? ", en caso de tener primas pendientes no se podrá renovar hasta su regularización de estas, la"
-							: "la"}{" "}
-						NO RENOVACION, suspende toda cobertura de la póliza de seguro.
+						Es importante informarle que en caso de tener primas pendientes no se podrá renovar hasta su
+						regularización, la NO RENOVACION, suspende toda cobertura de la póliza de seguro.
 					</Text>
 
 					{/* contact info section */}
 					<Text style={styles.paragraph}>
-						Comuníquese con su ejecutivo para recibir una atención preferencial:
+						Comuníquese con nosotros para recibir una atención personalizada:
 					</Text>
 					<Text style={styles.paragraph}>
 						<FormattedText
@@ -241,7 +249,10 @@ export const BaseTemplate: React.FC<BaseTemplateProps> = ({ letterData, children
 				</View>
 
 				{/* Executive Footer with personalized signature */}
-				<ExecutiveFooter executiveName={letterData.executive} />
+				<View style={styles.executiveFooter} wrap={false}>
+					<ExecutiveFooter executiveName={letterData.executive} />
+					<ExecutiveFooter executiveName={"Ercilia"} />
+				</View>
 			</Page>
 		</Document>
 	);

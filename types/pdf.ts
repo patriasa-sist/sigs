@@ -110,7 +110,7 @@ export const excecutives = [
 		user: "patriasamaestro",
 		name: "Diego Gandarillas Ferrufino",
 		glyph: "DGF",
-		charge: "Ejecutivo de Cuentas",
+		charge: "Analista de sistemas",
 		telf: "69005037",
 		mail: "patriasamaestro@gmail.com",
 		signature: "/images/firma_carmen.png",

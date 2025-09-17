@@ -5,7 +5,7 @@ import { findExecutiveByName, getDefaultExecutive } from "@/utils/executiveHelpe
 
 const footerStyles = StyleSheet.create({
 	signatureBlock: {
-		marginTop: 30,
+		marginTop: 1,
 		alignItems: "center",
 	},
 	executiveName: {
