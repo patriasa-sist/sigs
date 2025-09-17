@@ -159,7 +159,12 @@ export function normalizeCurrencyType(value: any): "Bs." | "$us." | undefined {
 	const cleanValue = cleanString(value).toLowerCase();
 
 	// Match common variations
-	if (cleanValue.includes("bs") || cleanValue.includes("boliviano") || cleanValue.includes("bob")) {
+	if (
+		cleanValue.includes("bs") ||
+		cleanValue.includes("boliviano") ||
+		cleanValue.includes("bol") ||
+		cleanValue.includes("bob")
+	) {
 		return "Bs.";
 	}
 	if (
@@ -170,7 +175,7 @@ export function normalizeCurrencyType(value: any): "Bs." | "$us." | undefined {
 	) {
 		return "$us.";
 	}
-
+	console.log("Currency value from Excel:", value, "Normalized:", cleanValue);
 	return undefined;
 }
 

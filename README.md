@@ -18,8 +18,8 @@ TODO Principal:
 TODO REVISION CARTAS:
 [x] quitar linea de firma de carta generada
 [x] resaltar zona de notas escritas
-[] cuando se actualicen valores de asegurados, que se actualice el valor asegurado total de la carta
-[] opción de selección Bs/Sus para valor asegurado del automovil
+[x] cuando se actualicen valores de asegurados, que se actualice el valor asegurado total de la carta
+[x] opción de selección Bs/Sus para valor asegurado del automovil
 [xxx] en la carta debe estar fijo el mensaje de que su siguiente poliza se emitirá en bolivianos, excepto transporte y todoriesgo
 [x] nombre de archivo cambiado segun nuevo formato: [year]_[month]_[serie from supabase 001 to 999]_vencPol_[Ramo]\_[nombre asegurado].pdf
 [x] dos firmas en la carta (jefe 2da firma)
