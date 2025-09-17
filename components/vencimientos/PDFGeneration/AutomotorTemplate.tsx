@@ -195,13 +195,9 @@ export const AutomotorTemplate: React.FC<AutomotorTemplateProps> = ({ letterData
 						</View>
 					)}
 
-					{policy.manualFields?.deductibles !== undefined && (
+					{policy.manualFields?.deductibles && (
 						<Text style={automotorStyles.detailText}>
-							• Deducible coaseguro:{" "}
-							{formatMonetaryValue(
-								policy.manualFields.deductibles,
-								policy.manualFields.deductiblesCurrency
-							)}
+							• Deducible coaseguro: {policy.manualFields.deductibles}
 						</Text>
 					)}
 					{policy.manualFields?.territoriality !== undefined && (

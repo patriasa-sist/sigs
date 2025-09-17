@@ -1316,16 +1316,12 @@ function LetterCard({
 															placeholder="0.00"
 															className="text-xs h-8"
 														/>
-														<NumericInputWithCurrency
+														<ConditionsTextarea
 															label="Deducibles:"
-															value={policy.manualFields?.deductibles}
-															currency={policy.manualFields?.deductiblesCurrency || "Bs."}
-															onValueChange={(v) => updatePolicy(index, "deductibles", v)}
-															onCurrencyChange={(c) =>
-																updatePolicy(index, "deductiblesCurrency", c)
-															}
-															placeholder="0.00"
-															className="text-xs h-8"
+															value={policy.manualFields?.deductibles || ""}
+															onChange={(v) => updatePolicy(index, "deductibles", v)}
+															placeholder="Ej: 10% del valor asegurado, mínimo Bs. 5,000"
+															rows={2}
 														/>
 														<NumericInputWithCurrency
 															label="Extraterritorialidad:"
@@ -1456,13 +1452,9 @@ function LetterCard({
 															</li>
 														))}
 													</ul>
-													{policy.manualFields?.deductibles !== undefined && (
+													{policy.manualFields?.deductibles && (
 														<div className="text-green-700 font-medium">
-															✓ Deducibles:{" "}
-															{formatMonetaryValue(
-																policy.manualFields.deductibles,
-																policy.manualFields.deductiblesCurrency
-															)}
+															✓ Deducibles: {policy.manualFields.deductibles}
 														</div>
 													)}
 													{policy.manualFields?.territoriality !== undefined && (

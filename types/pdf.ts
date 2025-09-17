@@ -69,7 +69,7 @@ export interface PolicyForLetter {
 
 		// Campos comunes
 		specificConditions?: string;
-		deductibles?: number;
+		deductibles?: string;
 		deductiblesCurrency?: "Bs." | "$us.";
 		territoriality?: number;
 		territorialityCurrency?: "Bs." | "$us.";

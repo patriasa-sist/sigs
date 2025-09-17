@@ -30,7 +30,7 @@ TODO REVISION CARTAS:
 [x] (gramatica) con su ejecutivo >> con nosotros
 [x] quitar letra italica de la carta de salud
 [x] cabecera modificar "señor", "señora" inconsistente por "señor/a" y "señores"(corporativo)
-[] AUTOMOTOR>deducible que se pueda poner texto no solo numeros
+[x] AUTOMOTOR>deducible que se pueda poner texto no solo numeros
 [x] convertir numero de telefono a link de whatsapp
 [x] ajustar automaticamente la 1er letra de las condiciones extra ingresadas a mayuscula
 
