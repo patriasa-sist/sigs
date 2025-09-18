@@ -7,13 +7,11 @@ import {
 	Search,
 	Filter,
 	Download,
-	Mail,
 	FileText,
 	SortAsc,
 	SortDesc,
 	ChevronLeft,
 	ChevronRight,
-	Eye,
 	Package,
 	Zap,
 } from "lucide-react";
@@ -408,14 +406,14 @@ export default function Dashboard({ data, onBack, onUpdateData }: DashboardProps
 							<Filter className="h-5 w-5 mr-2" />
 							Filtros
 						</CardTitle>
-						<Button variant="ghost" onClick={clearFilters} className="text-sm">
+						<Button variant="ghost" onClick={clearFilters} className="px-10 py-4 shadow-sm">
 							Limpiar filtros
 						</Button>
 					</div>
 				</CardHeader>
 				<CardContent>
-					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-						<div className="space-y-2">
+					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+						<div className="space-y-2 lg:col-span-1">
 							<label className="text-sm font-medium">Buscar</label>
 							<div className="relative">
 								<Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
@@ -427,11 +425,11 @@ export default function Dashboard({ data, onBack, onUpdateData }: DashboardProps
 								/>
 							</div>
 						</div>
-						<div className="space-y-2">
+						<div className="space-y-2 lg:col-span-1">
 							<label className="text-sm font-medium">Ejecutivo</label>
 							<Select value={selectedEjecutivo} onValueChange={setSelectedEjecutivo}>
-								<SelectTrigger>
-									<SelectValue placeholder="Todos los ejecutivos" />
+								<SelectTrigger className="w-full">
+									<SelectValue placeholder="Ejecutivos" />
 								</SelectTrigger>
 								<SelectContent>
 									<SelectItem value="all-ejecutivos">Todos los ejecutivos</SelectItem>
@@ -447,10 +445,10 @@ export default function Dashboard({ data, onBack, onUpdateData }: DashboardProps
 								</SelectContent>
 							</Select>
 						</div>
-						<div className="space-y-2">
+						<div className="space-y-2 lg:col-span-2">
 							<label className="text-sm font-medium">Compañía</label>
 							<Select value={selectedCompania} onValueChange={setSelectedCompania}>
-								<SelectTrigger>
+								<SelectTrigger className="w-full">
 									<SelectValue placeholder="Todas las compañías" />
 								</SelectTrigger>
 								<SelectContent>
@@ -467,10 +465,10 @@ export default function Dashboard({ data, onBack, onUpdateData }: DashboardProps
 								</SelectContent>
 							</Select>
 						</div>
-						<div className="space-y-2">
+						<div className="space-y-2 lg:col-span-1">
 							<label className="text-sm font-medium">Ramo</label>
 							<Select value={selectedRamo} onValueChange={setSelectedRamo}>
-								<SelectTrigger>
+								<SelectTrigger className="w-full">
 									<SelectValue placeholder="Todos los ramos" />
 								</SelectTrigger>
 								<SelectContent>
@@ -487,7 +485,7 @@ export default function Dashboard({ data, onBack, onUpdateData }: DashboardProps
 								</SelectContent>
 							</Select>
 						</div>
-						<div className="space-y-2">
+						<div className="space-y-2 lg:col-span-1">
 							<label className="text-sm font-medium">Estado</label>
 							<Select
 								value={selectedStatus.length === 1 ? selectedStatus[0] : ""}
@@ -499,7 +497,7 @@ export default function Dashboard({ data, onBack, onUpdateData }: DashboardProps
 									}
 								}}
 							>
-								<SelectTrigger>
+								<SelectTrigger className="w-full">
 									<SelectValue placeholder="Todos los estados" />
 								</SelectTrigger>
 								<SelectContent>
@@ -527,7 +525,7 @@ export default function Dashboard({ data, onBack, onUpdateData }: DashboardProps
 							</CardDescription>
 						</div>
 						<div className="flex items-center space-x-2">
-							<Checkbox checked={isAllSelected} onCheckedChange={handleSelectAll} />
+							<Checkbox checked={isAllSelected} onCheckedChange={handleSelectAll} className="w-5 h-5" />
 							<span className="text-sm text-gray-600">Seleccionar Todo</span>
 						</div>
 					</div>
@@ -539,7 +537,11 @@ export default function Dashboard({ data, onBack, onUpdateData }: DashboardProps
 								<tr className="border-b border-gray-200">
 									<th className="text-left p-3 font-medium text-gray-900">
 										<div className="flex items-center space-x-2">
-											<Checkbox checked={isPageSelected} onCheckedChange={handleSelectPage} />
+											<Checkbox
+												checked={isPageSelected}
+												onCheckedChange={handleSelectPage}
+												className="w-5 h-5"
+											/>
 										</div>
 									</th>
 									<th className="text-left p-3 font-medium text-gray-900">
@@ -615,7 +617,6 @@ export default function Dashboard({ data, onBack, onUpdateData }: DashboardProps
 									</th>
 									<th className="text-left p-3 font-medium text-gray-900">Estado</th>
 									<th className="text-left p-3 font-medium text-gray-900">Ejecutivo</th>
-									<th className="text-left p-3 font-medium text-gray-900">Acciones</th>
 								</tr>
 							</thead>
 							<tbody>
@@ -633,6 +634,7 @@ export default function Dashboard({ data, onBack, onUpdateData }: DashboardProps
 												checked={selectedRecords.has(record.id!)}
 												onCheckedChange={() => handleSelectRecord(record.id!)}
 												disabled={record.status === "sent"}
+												className="w-5 h-5"
 											/>
 										</td>
 										<td className="p-3">
@@ -681,24 +683,6 @@ export default function Dashboard({ data, onBack, onUpdateData }: DashboardProps
 										<td className="p-3">{getStatusBadge(record.status)}</td>
 										<td className="p-3">
 											<div className="text-gray-900">{record.ejecutivo}</div>
-										</td>
-										<td className="p-3">
-											<div className="flex space-x-1">
-												<Button variant="ghost" size="sm">
-													<Eye className="h-4 w-4" />
-												</Button>
-												<Button
-													variant="ghost"
-													size="sm"
-													onClick={() => {
-														setSelectedRecords(new Set([record.id!]));
-														handleOpenLetterGenerator();
-													}}
-													disabled={record.status === "sent"}
-												>
-													<Mail className="h-4 w-4" />
-												</Button>
-											</div>
 										</td>
 									</tr>
 								))}
