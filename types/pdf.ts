@@ -117,7 +117,7 @@ export const excecutives = [
 		charge: "Analista de sistemas",
 		telf: "69005037",
 		mail: "patriasamaestro@gmail.com",
-		signature: "/images/firma_carmen.png",
+		signature: "/images/firma_diego.png",
 	},
 	{
 		user: "Tamara",
