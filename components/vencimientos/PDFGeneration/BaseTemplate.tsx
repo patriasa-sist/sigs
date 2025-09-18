@@ -54,6 +54,7 @@ const styles = StyleSheet.create({
 	},
 	logo: {
 		width: 150,
+		height: "auto",
 		marginBottom: 5,
 	},
 	headerText: {
@@ -199,7 +200,7 @@ export const BaseTemplate: React.FC<BaseTemplateProps> = ({ letterData, children
 
 					{children}
 
-					<View style={styles.conditionsContainer}>
+					<View style={styles.conditionsContainer} wrap={false}>
 						<Text style={styles.paragraph}>Nota:</Text>
 
 						{/* revision of data pending */}
@@ -239,18 +240,20 @@ export const BaseTemplate: React.FC<BaseTemplateProps> = ({ letterData, children
 						</Text>
 					</View>
 
-					{/* contact info section */}
-					<Text style={styles.paragraph}>
-						Comuníquese con nosotros para recibir una atención personalizada:
-					</Text>
-					<Text style={styles.paragraph}>
-						<FormattedText text={`*${executiveData.name}* - Tel: `} />
-						<Link src={`https://wa.me/${cleanPhoneNumber(executiveData.telf)}`}>
-							<Text style={{ fontWeight: "bold", color: "#255fd3" }}>{executiveData.telf}</Text>
-						</Link>
-						<Text> - Email: </Text>
-						<Text style={{ fontWeight: "bold", color: "#255fd3" }}>{executiveData.mail}</Text>
-					</Text>
+					<View wrap={false}>
+						{/* contact info section */}
+						<Text style={styles.paragraph}>
+							Comuníquese con nosotros para recibir una atención personalizada:
+						</Text>
+						<Text style={styles.paragraph}>
+							<FormattedText text={`*${executiveData.name}* - Tel: `} />
+							<Link src={`https://wa.me/${cleanPhoneNumber(executiveData.telf)}`}>
+								<Text style={{ fontWeight: "bold", color: "#255fd3" }}>{executiveData.telf}</Text>
+							</Link>
+							<Text> - Email: </Text>
+							<Text style={{ fontWeight: "bold", color: "#255fd3" }}>{executiveData.mail}</Text>
+						</Text>
+					</View>
 
 					{/* greetings section */}
 					<Text style={styles.paragraph}>
@@ -258,15 +261,16 @@ export const BaseTemplate: React.FC<BaseTemplateProps> = ({ letterData, children
 						siempre.
 					</Text>
 				</View>
+				<View wrap={false}>
+					<View style={styles.signature}>
+						<Text>Atentamente,</Text>
+					</View>
 
-				<View style={styles.signature}>
-					<Text>Atentamente,</Text>
-				</View>
-
-				{/* Executive Footer with personalized signature */}
-				<View style={styles.executiveFooter} wrap={false}>
-					<ExecutiveFooter executiveName={letterData.executive} />
-					<ExecutiveFooter executiveName={"Ercilia"} />
+					{/* Executive Footer with personalized signature */}
+					<View style={styles.executiveFooter}>
+						<ExecutiveFooter executiveName={letterData.executive} />
+						<ExecutiveFooter executiveName={"Ercilia"} />
+					</View>
 				</View>
 			</Page>
 		</Document>
