@@ -171,7 +171,10 @@ export const BaseTemplate: React.FC<BaseTemplateProps> = ({ letterData, children
 					<Text style={styles.clientName}>{letterData.client.name.toUpperCase()}</Text>
 					{letterData.client.phone && (
 						<Text style={styles.clientDetails}>
-							{letterData.client.name.includes("SRL") ? "Teléfono" : "Telf"}: {letterData.client.phone}
+							Telf:{" "}
+							<Link src={`https://wa.me/${cleanPhoneNumber(letterData.client.phone)}`}>
+								<Text style={{ color: "#000000" }}>{letterData.client.phone}</Text>
+							</Link>
 						</Text>
 					)}
 					{letterData.client.email && (

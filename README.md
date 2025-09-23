@@ -20,19 +20,24 @@ TODO REVISION CARTAS:
 [x] resaltar zona de notas escritas
 [x] cuando se actualicen valores de asegurados, que se actualice el valor asegurado total de la carta
 [x] opción de selección Bs/Sus para valor asegurado del automovil
-[xxx] en la carta debe estar fijo el mensaje de que su siguiente poliza se emitirá en bolivianos, excepto transporte y todoriesgo
 [x] nombre de archivo cambiado segun nuevo formato: [year]_[month]_[serie from supabase 001 to 999]_vencPol_[Ramo]\_[nombre asegurado].pdf
 [x] dos firmas en la carta (jefe 2da firma)
 [x] extender campos de los filtros de selección en el dashboard de vencimientos
+[x] quitar letra italica de la carta de salud
+[x] convertir numero de telefono a link de whatsapp
+[x] ajustar automaticamente la 1er letra de las condiciones extra ingresadas a mayuscula
+[x] cabecera modificar "señor", "señora" inconsistente por "señor/a" y "señores"(corporativo)
+[x] AUTOMOTOR>deducible que se pueda poner texto no solo numeros
 [x] (gramatica) modificar preferencial por personalizada
 [x] (gramatica) Requerimos >> Recomendamos
 [x] (gramatica) de estas >> su regularizacion
 [x] (gramatica) con su ejecutivo >> con nosotros
-[x] quitar letra italica de la carta de salud
-[x] cabecera modificar "señor", "señora" inconsistente por "señor/a" y "señores"(corporativo)
-[x] AUTOMOTOR>deducible que se pueda poner texto no solo numeros
-[x] convertir numero de telefono a link de whatsapp
-[x] ajustar automaticamente la 1er letra de las condiciones extra ingresadas a mayuscula
+[xxx] en la carta debe estar fijo el mensaje de que su siguiente poliza se emitirá en bolivianos, excepto transporte y todoriesgo
+
+[] 9112 es seguro de salud, tratarlo como tal
+[x] habilitar numero y correo del cliente como link
+[x] pasar excel con parametrizacion de ramos a Marco
+[] sin incremento de valor asegurado en AP 9112 agregar en el excel
 
 NOTAS EXTRA:
 
