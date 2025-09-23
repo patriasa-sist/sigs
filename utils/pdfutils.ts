@@ -404,9 +404,13 @@ export function detectMissingData(letterData: Omit<LetterData, "needsReview" | "
 	// 	missing.push("Número de Referencia manual");
 	// }
 
-	// Check for missing executive assignment
-	if (!letterData.executive || letterData.executive.trim() === "") {
-		missing.push("Ejecutivo asignado");
+	// Check for missing executive assignment - either missing from Excel or still not properly assigned
+	if (
+		!letterData.executive ||
+		letterData.executive.trim() === "" ||
+		letterData.executive.toLowerCase().includes("sin asignar")
+	) {
+		missing.push("Ejecutivo no asignado");
 	}
 
 	letterData.policies.forEach((policy, index) => {
@@ -443,7 +447,6 @@ export function detectMissingData(letterData: Omit<LetterData, "needsReview" | "
 
 	return [...new Set(missing)]; // Evitar duplicados
 }
-
 
 export function generateReferenceNumber(): string {
 	const now = new Date();

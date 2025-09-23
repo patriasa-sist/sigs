@@ -38,6 +38,8 @@ TODO REVISION CARTAS:
 [x] pasar excel con parametrizacion de ramos a Marco
 [x] 9112 es seguro de salud, tratarlo como tal
 [x] sin incremento de valor asegurado en AP 9112 agregar en el excel
+[x] agregar forma de modificar el ejecutivo
+[x] agregar advertencias cuando no existe ejecutivo o se ha cambiado
 
 NOTAS EXTRA:
 
