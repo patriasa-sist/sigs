@@ -402,6 +402,11 @@ export function detectMissingData(letterData: Omit<LetterData, "needsReview" | "
 	// 	missing.push("Número de Referencia manual");
 	// }
 
+	// Check for missing executive assignment
+	if (!letterData.executive || letterData.executive.trim() === "") {
+		missing.push("Ejecutivo asignado");
+	}
+
 	letterData.policies.forEach((policy, index) => {
 		const policyLabel = `Póliza ${index + 1} (${policy.policyNumber})`;
 
@@ -436,6 +441,7 @@ export function detectMissingData(letterData: Omit<LetterData, "needsReview" | "
 
 	return [...new Set(missing)]; // Evitar duplicados
 }
+
 
 export function generateReferenceNumber(): string {
 	const now = new Date();

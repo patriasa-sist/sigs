@@ -37,6 +37,8 @@ import {
 import { groupRecordsForLetters, validateRecordForPDF, generateFileName, detectMissingData } from "@/utils/pdfutils";
 import { generateLetterReference } from "@/utils/letterReferences";
 import { cleanPhoneNumber, createWhatsAppMessage } from "@/utils/whatsapp";
+import { getAllExecutives, findExecutiveByName, getDefaultExecutive } from "@/utils/executiveHelper";
+import { getCurrentUser } from "@/utils/auth/getCurrentUser";
 import { pdf } from "@react-pdf/renderer";
 import { HealthTemplate } from "./HealthTemplate";
 import { AutomotorTemplate } from "./AutomotorTemplate"; // Cambiado
@@ -530,6 +532,109 @@ function VehicleEditor({ vehicles, onChange, label }: VehicleEditorProps) {
 					Añadir Vehículo
 				</Button>
 			</div>
+		</div>
+	);
+}
+
+// Component for executive dropdown editor
+interface ExecutiveDropdownProps {
+	value: string;
+	onValueChange: (value: string) => void;
+	label?: string;
+	placeholder?: string;
+	className?: string;
+	originalExecutive?: string; // Original executive from Excel data
+}
+
+function ExecutiveDropdown({
+	value,
+	onValueChange,
+	label,
+	placeholder,
+	className,
+	originalExecutive,
+}: ExecutiveDropdownProps) {
+	const [currentUserExecutive, setCurrentUserExecutive] = useState<string | null>(null);
+	const executives = getAllExecutives();
+
+	// Get current user's executive on component mount
+	useEffect(() => {
+		const getCurrentUserExecutive = async () => {
+			try {
+				const user = await getCurrentUser();
+				if (user?.email) {
+					const emailLower = user.email.toLowerCase();
+
+					// Try to match executive by full email first
+					const foundByEmail = executives.find(exec => exec.mail.toLowerCase() === emailLower);
+					if (foundByEmail) {
+						setCurrentUserExecutive(foundByEmail.user);
+						return;
+					}
+
+					// Try to match by email prefix
+					const emailPrefix = user.email.split('@')[0]?.toLowerCase();
+					if (emailPrefix) {
+						const foundExecutive = findExecutiveByName(emailPrefix);
+						if (foundExecutive) {
+							setCurrentUserExecutive(foundExecutive.user);
+							return;
+						}
+					}
+				}
+			} catch (error) {
+				console.warn('Could not determine current user executive:', error);
+			}
+			// Fallback to default executive
+			setCurrentUserExecutive(getDefaultExecutive().user);
+		};
+
+		getCurrentUserExecutive();
+	}, [executives]);
+
+	// Check if executive was changed from original
+	const executiveChanged = originalExecutive && value !== originalExecutive;
+
+	// Find the current executive's full name for display
+	const currentExecutive = findExecutiveByName(value);
+	const currentExecutiveName = currentExecutive?.name || value;
+
+	// Sort executives to put current user first
+	const sortedExecutives = useMemo(() => {
+		if (!currentUserExecutive) return executives;
+
+		const currentUser = executives.find(exec => exec.user === currentUserExecutive);
+		const otherExecutives = executives.filter(exec => exec.user !== currentUserExecutive);
+
+		return currentUser ? [currentUser, ...otherExecutives] : executives;
+	}, [executives, currentUserExecutive]);
+
+	return (
+		<div>
+			{label && <label className="text-xs text-gray-600 block mb-1">{label}</label>}
+			<Select value={value} onValueChange={onValueChange}>
+				<SelectTrigger className={`${className} ${executiveChanged ? "border-yellow-400" : ""}`}>
+					<SelectValue placeholder={placeholder}>
+						{currentExecutiveName}
+					</SelectValue>
+				</SelectTrigger>
+				<SelectContent>
+					{sortedExecutives.map((executive, index) => (
+						<SelectItem key={executive.user} value={executive.user}>
+							{executive.name} ({executive.charge})
+							{index === 0 && currentUserExecutive === executive.user && (
+								<span className="ml-2 text-xs text-blue-600 font-medium">(Tú)</span>
+							)}
+						</SelectItem>
+					))}
+				</SelectContent>
+			</Select>
+			{executiveChanged && (
+				<div className="mt-1 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs text-yellow-800 flex items-center">
+					<AlertTriangle className="h-3 w-3 mr-1 text-yellow-600" />
+					Ejecutivo cambiado difiere del original: {originalExecutive} → {currentExecutiveName}
+				</div>
+			)}
 		</div>
 	);
 }
@@ -1277,15 +1382,27 @@ function LetterCard({
 				</div>
 
 				{isEditing && (
-					<div className="mb-4 p-3 bg-white rounded border">
-						<ConditionsTextarea
-							label="Condiciones Adicionales (editable):"
-							value={editedLetter.additionalConditions || ""}
-							onChange={(v) => handleFieldChange("additionalConditions", v)}
-							placeholder="Añade condiciones o notas aquí..."
-							rows={6}
-						/>
-					</div>
+					<>
+						<div className="mb-4 p-3 bg-white rounded border">
+							<ConditionsTextarea
+								label="Condiciones Adicionales (editable):"
+								value={editedLetter.additionalConditions || ""}
+								onChange={(v) => handleFieldChange("additionalConditions", v)}
+								placeholder="Añade condiciones o notas aquí..."
+								rows={6}
+							/>
+						</div>
+						<div className="mb-4 p-3 bg-white rounded border">
+							<ExecutiveDropdown
+								label="Ejecutivo asignado (editable):"
+								value={editedLetter.executive}
+								onValueChange={(v) => handleFieldChange("executive", v)}
+								originalExecutive={letter.executive}
+								className="text-sm h-8"
+								placeholder="Seleccionar ejecutivo..."
+							/>
+						</div>
+					</>
 				)}
 
 				{/* Policies */}
@@ -1633,7 +1750,10 @@ function LetterCard({
 				)}
 
 				<div className="mt-4 pt-3 border-t border-gray-200 text-sm text-gray-600">
-					<span className="font-medium">Ejecutivo:</span> {letter.executive}
+					<span className="font-medium">Ejecutivo:</span> {(() => {
+						const currentExecutive = findExecutiveByName(letter.executive);
+						return currentExecutive ? currentExecutive.name : letter.executive;
+					})()}
 				</div>
 			</CardContent>
 		</Card>
