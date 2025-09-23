@@ -1,7 +1,7 @@
 // components/PDFGeneration/LetterGenerator.tsx
 "use client";
 
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import {
 	FileText,
 	Download,
@@ -631,8 +631,35 @@ export default function LetterGenerator({ selectedRecords, onClose, onGenerated 
 	const [generationResult, setGenerationResult] = useState<PDFGenerationResult | null>(null);
 	const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
 
+	// Specific loading states to prevent race conditions
+	const [loadingOperations, setLoadingOperations] = useState<Set<string>>(new Set());
+
+	// AbortController ref for cleanup
+	const abortControllerRef = useRef<AbortController | null>(null);
+
+	// Helper functions for operation management
+	const startOperation = (operationId: string): boolean => {
+		if (loadingOperations.has(operationId)) {
+			return false; // Operation already in progress
+		}
+		setLoadingOperations(prev => new Set(prev).add(operationId));
+		return true;
+	};
+
+	const endOperation = (operationId: string) => {
+		setLoadingOperations(prev => {
+			const newSet = new Set(prev);
+			newSet.delete(operationId);
+			return newSet;
+		});
+	};
+
+	const isOperationLoading = (operationId: string) => loadingOperations.has(operationId);
+
 	// Fetch current user email once when component mounts
 	useEffect(() => {
+		let cancelled = false;
+
 		const fetchCurrentUser = async () => {
 			try {
 				const supabase = createClient();
@@ -641,13 +668,34 @@ export default function LetterGenerator({ selectedRecords, onClose, onGenerated 
 					error,
 				} = await supabase.auth.getUser();
 				if (error) throw error;
-				setCurrentUserEmail(user?.email || null);
+
+				// Only update state if component is still mounted
+				if (!cancelled) {
+					setCurrentUserEmail(user?.email || null);
+				}
 			} catch (error) {
-				console.warn("Could not fetch current user:", error);
+				// Only log error if component is still mounted
+				if (!cancelled) {
+					console.warn("Could not fetch current user:", error);
+				}
 			}
 		};
 
 		fetchCurrentUser();
+
+		// Cleanup function to prevent memory leaks
+		return () => {
+			cancelled = true;
+		};
+	}, []);
+
+	// Cleanup AbortController on unmount
+	useEffect(() => {
+		return () => {
+			if (abortControllerRef.current) {
+				abortControllerRef.current.abort();
+			}
+		};
 	}, []);
 
 	const [preparedLetters, setPreparedLetters] = useState<{
@@ -791,11 +839,29 @@ export default function LetterGenerator({ selectedRecords, onClose, onGenerated 
 	};
 
 	const handlePreview = async (letterId: string) => {
+		const operationId = `preview-${letterId}`;
+
+		// Prevent multiple previews for the same letter
+		if (!startOperation(operationId)) {
+			return;
+		}
+
 		setPreviewLetter(letterId);
 		const letter = letters.find((l) => l.id === letterId);
+
 		if (letter) {
 			try {
+				// Create AbortController for this operation
+				const abortController = new AbortController();
+				abortControllerRef.current = abortController;
+
 				const pdfBlob = await generatePreviewPDF(letter); // Use preview function instead
+
+				// Check if operation was aborted
+				if (abortController.signal.aborted) {
+					return;
+				}
+
 				const pdfUrl = URL.createObjectURL(pdfBlob);
 				window.open(pdfUrl, "_blank");
 			} catch (error) {
@@ -803,7 +869,9 @@ export default function LetterGenerator({ selectedRecords, onClose, onGenerated 
 				alert("Error al generar la vista previa");
 			}
 		}
+
 		setPreviewLetter(null);
+		endOperation(operationId);
 	};
 
 	const downloadBlob = (blob: Blob, fileName: string) => {
@@ -818,12 +886,33 @@ export default function LetterGenerator({ selectedRecords, onClose, onGenerated 
 	};
 
 	const handleDownloadSingle = async (letterId: string) => {
+		const operationId = `download-${letterId}`;
+
+		// Prevent multiple downloads for the same letter
+		if (!startOperation(operationId)) {
+			return;
+		}
+
 		const letter = letters.find((l) => l.id === letterId);
-		if (!letter) return;
+		if (!letter) {
+			endOperation(operationId);
+			return;
+		}
 
 		try {
 			setIsGenerating(true);
+
+			// Create AbortController for this operation
+			const abortController = new AbortController();
+			abortControllerRef.current = abortController;
+
 			const { pdfBlob, finalLetterData } = await generateSinglePDF(letter);
+
+			// Check if operation was aborted
+			if (abortController.signal.aborted) {
+				return;
+			}
+
 			const fileName = generateFileName(finalLetterData);
 			downloadBlob(pdfBlob, fileName);
 
@@ -854,6 +943,7 @@ export default function LetterGenerator({ selectedRecords, onClose, onGenerated 
 			alert("Error al generar el PDF");
 		} finally {
 			setIsGenerating(false);
+			endOperation(operationId);
 		}
 	};
 
@@ -916,12 +1006,33 @@ export default function LetterGenerator({ selectedRecords, onClose, onGenerated 
 	};
 
 	const handleSendWhatsApp = async (letterId: string) => {
+		const operationId = `whatsapp-${letterId}`;
+
+		// Prevent multiple WhatsApp operations for the same letter
+		if (!startOperation(operationId)) {
+			return;
+		}
+
 		const letter = letters.find((l) => l.id === letterId);
-		if (!letter || !letter.client.phone) return;
+		if (!letter || !letter.client.phone) {
+			endOperation(operationId);
+			return;
+		}
 
 		try {
 			setIsGenerating(true);
+
+			// Create AbortController for this operation
+			const abortController = new AbortController();
+			abortControllerRef.current = abortController;
+
 			const { pdfBlob, finalLetterData } = await generateSinglePDF(letter);
+
+			// Check if operation was aborted
+			if (abortController.signal.aborted) {
+				return;
+			}
+
 			const fileName = generateFileName(finalLetterData);
 			downloadBlob(pdfBlob, fileName);
 
@@ -958,6 +1069,7 @@ export default function LetterGenerator({ selectedRecords, onClose, onGenerated 
 			alert("Error al preparar el mensaje de WhatsApp.");
 		} finally {
 			setIsGenerating(false);
+			endOperation(operationId);
 		}
 	};
 
@@ -1064,6 +1176,7 @@ export default function LetterGenerator({ selectedRecords, onClose, onGenerated 
 						onWhatsApp={() => handleSendWhatsApp(letter.id)}
 						onUpdateLetterData={updateLetterData}
 						currentUserEmail={currentUserEmail}
+						isOperationLoading={isOperationLoading}
 					/>
 				))}
 			</div>
@@ -1120,6 +1233,7 @@ interface LetterCardProps {
 	onWhatsApp: () => void;
 	onUpdateLetterData: (letterId: string, updates: Partial<LetterData>) => void;
 	currentUserEmail?: string | null;
+	isOperationLoading: (operationId: string) => boolean;
 }
 
 function LetterCard({
@@ -1135,6 +1249,7 @@ function LetterCard({
 	onWhatsApp,
 	onUpdateLetterData,
 	currentUserEmail,
+	isOperationLoading,
 }: LetterCardProps) {
 	const [editedLetter, setEditedLetter] = useState<LetterData>(letter);
 	const [isReferenceManuallyEdited, setIsReferenceManuallyEdited] = useState(false);
@@ -1305,9 +1420,9 @@ function LetterCard({
 										size="sm"
 										variant="outline"
 										onClick={onPreview}
-										disabled={isGenerating || isPreviewing || !isReferenceValid}
+										disabled={isGenerating || isPreviewing || !isReferenceValid || isOperationLoading(`preview-${letter.id}`)}
 									>
-										{isPreviewing ? (
+										{isPreviewing || isOperationLoading(`preview-${letter.id}`) ? (
 											<RefreshCw className="h-4 w-4 animate-spin" />
 										) : (
 											<Eye className="h-4 w-4" />
@@ -1316,18 +1431,26 @@ function LetterCard({
 									<Button
 										size="sm"
 										onClick={onDownload}
-										disabled={isGenerating || !isReferenceValid}
+										disabled={isGenerating || !isReferenceValid || isOperationLoading(`download-${letter.id}`)}
 										className="patria-btn-primary"
 									>
-										<Download className="h-4 w-4" />
+										{isOperationLoading(`download-${letter.id}`) ? (
+											<RefreshCw className="h-4 w-4 animate-spin" />
+										) : (
+											<Download className="h-4 w-4" />
+										)}
 									</Button>
 									<Button
 										size="sm"
 										onClick={onWhatsApp}
-										disabled={isGenerating || !letter.client.phone || !isReferenceValid}
+										disabled={isGenerating || !letter.client.phone || !isReferenceValid || isOperationLoading(`whatsapp-${letter.id}`)}
 										className="bg-green-500 hover:bg-green-600 text-white"
 									>
-										<WhatsAppIcon />
+										{isOperationLoading(`whatsapp-${letter.id}`) ? (
+											<RefreshCw className="h-4 w-4 animate-spin" />
+										) : (
+											<WhatsAppIcon />
+										)}
 									</Button>
 								</>
 							) : (

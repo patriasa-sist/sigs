@@ -40,6 +40,7 @@ TODO REVISION CARTAS:
 [x] sin incremento de valor asegurado en AP 9112 agregar en el excel
 [x] agregar forma de modificar el ejecutivo
 [x] agregar advertencias cuando no existe ejecutivo o se ha cambiado
+[x] (performance) modificadas varias funciones que podian desbordar memoria, eliminados procesos paralelos
 
 NOTAS EXTRA:
 
