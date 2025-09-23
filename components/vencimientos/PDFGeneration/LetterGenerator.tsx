@@ -565,11 +565,11 @@ function ExecutiveDropdown({
 		const emailLower = currentUserEmail.toLowerCase();
 
 		// Try to match executive by full email first
-		const foundByEmail = executives.find(exec => exec.mail.toLowerCase() === emailLower);
+		const foundByEmail = executives.find((exec) => exec.mail.toLowerCase() === emailLower);
 		if (foundByEmail) return foundByEmail.user;
 
 		// Try to match by email prefix
-		const emailPrefix = currentUserEmail.split('@')[0]?.toLowerCase();
+		const emailPrefix = currentUserEmail.split("@")[0]?.toLowerCase();
 		if (emailPrefix) {
 			const foundExecutive = findExecutiveByName(emailPrefix);
 			if (foundExecutive) return foundExecutive.user;
@@ -589,8 +589,8 @@ function ExecutiveDropdown({
 	const sortedExecutives = useMemo(() => {
 		if (!currentUserExecutive) return executives;
 
-		const currentUser = executives.find(exec => exec.user === currentUserExecutive);
-		const otherExecutives = executives.filter(exec => exec.user !== currentUserExecutive);
+		const currentUser = executives.find((exec) => exec.user === currentUserExecutive);
+		const otherExecutives = executives.filter((exec) => exec.user !== currentUserExecutive);
 
 		return currentUser ? [currentUser, ...otherExecutives] : executives;
 	}, [executives, currentUserExecutive]);
@@ -600,9 +600,7 @@ function ExecutiveDropdown({
 			{label && <label className="text-xs text-gray-600 block mb-1">{label}</label>}
 			<Select value={value} onValueChange={onValueChange}>
 				<SelectTrigger className={`${className} ${executiveChanged ? "border-yellow-400" : ""}`}>
-					<SelectValue placeholder={placeholder}>
-						{currentExecutiveName}
-					</SelectValue>
+					<SelectValue placeholder={placeholder}>{currentExecutiveName}</SelectValue>
 				</SelectTrigger>
 				<SelectContent>
 					{sortedExecutives.map((executive, index) => (
@@ -638,11 +636,14 @@ export default function LetterGenerator({ selectedRecords, onClose, onGenerated 
 		const fetchCurrentUser = async () => {
 			try {
 				const supabase = createClient();
-				const { data: { user }, error } = await supabase.auth.getUser();
+				const {
+					data: { user },
+					error,
+				} = await supabase.auth.getUser();
 				if (error) throw error;
 				setCurrentUserEmail(user?.email || null);
 			} catch (error) {
-				console.warn('Could not fetch current user:', error);
+				console.warn("Could not fetch current user:", error);
 			}
 		};
 
@@ -1757,7 +1758,8 @@ function LetterCard({
 				)}
 
 				<div className="mt-4 pt-3 border-t border-gray-200 text-sm text-gray-600">
-					<span className="font-medium">Ejecutivo:</span> {(() => {
+					<span className="font-medium">Ejecutivo:</span>{" "}
+					{(() => {
 						const currentExecutive = findExecutiveByName(letter.executive);
 						return currentExecutive ? currentExecutive.name : letter.executive;
 					})()}
