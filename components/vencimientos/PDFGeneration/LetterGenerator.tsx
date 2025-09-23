@@ -37,8 +37,8 @@ import {
 import { groupRecordsForLetters, validateRecordForPDF, generateFileName, detectMissingData } from "@/utils/pdfutils";
 import { generateLetterReference } from "@/utils/letterReferences";
 import { cleanPhoneNumber, createWhatsAppMessage } from "@/utils/whatsapp";
-import { getAllExecutives, findExecutiveByName, getDefaultExecutive } from "@/utils/executiveHelper";
-import { getCurrentUser } from "@/utils/auth/getCurrentUser";
+import { getAllExecutives, findExecutiveByName } from "@/utils/executiveHelper";
+import { createClient } from "@/utils/supabase/client";
 import { pdf } from "@react-pdf/renderer";
 import { HealthTemplate } from "./HealthTemplate";
 import { AutomotorTemplate } from "./AutomotorTemplate"; // Cambiado
@@ -544,6 +544,7 @@ interface ExecutiveDropdownProps {
 	placeholder?: string;
 	className?: string;
 	originalExecutive?: string; // Original executive from Excel data
+	currentUserEmail?: string | null; // Current user's email to highlight their executive
 }
 
 function ExecutiveDropdown({
@@ -553,44 +554,29 @@ function ExecutiveDropdown({
 	placeholder,
 	className,
 	originalExecutive,
+	currentUserEmail,
 }: ExecutiveDropdownProps) {
-	const [currentUserExecutive, setCurrentUserExecutive] = useState<string | null>(null);
 	const executives = getAllExecutives();
 
-	// Get current user's executive on component mount
-	useEffect(() => {
-		const getCurrentUserExecutive = async () => {
-			try {
-				const user = await getCurrentUser();
-				if (user?.email) {
-					const emailLower = user.email.toLowerCase();
+	// Determine current user's executive from passed email
+	const currentUserExecutive = useMemo(() => {
+		if (!currentUserEmail) return null;
 
-					// Try to match executive by full email first
-					const foundByEmail = executives.find(exec => exec.mail.toLowerCase() === emailLower);
-					if (foundByEmail) {
-						setCurrentUserExecutive(foundByEmail.user);
-						return;
-					}
+		const emailLower = currentUserEmail.toLowerCase();
 
-					// Try to match by email prefix
-					const emailPrefix = user.email.split('@')[0]?.toLowerCase();
-					if (emailPrefix) {
-						const foundExecutive = findExecutiveByName(emailPrefix);
-						if (foundExecutive) {
-							setCurrentUserExecutive(foundExecutive.user);
-							return;
-						}
-					}
-				}
-			} catch (error) {
-				console.warn('Could not determine current user executive:', error);
-			}
-			// Fallback to default executive
-			setCurrentUserExecutive(getDefaultExecutive().user);
-		};
+		// Try to match executive by full email first
+		const foundByEmail = executives.find(exec => exec.mail.toLowerCase() === emailLower);
+		if (foundByEmail) return foundByEmail.user;
 
-		getCurrentUserExecutive();
-	}, [executives]);
+		// Try to match by email prefix
+		const emailPrefix = currentUserEmail.split('@')[0]?.toLowerCase();
+		if (emailPrefix) {
+			const foundExecutive = findExecutiveByName(emailPrefix);
+			if (foundExecutive) return foundExecutive.user;
+		}
+
+		return null;
+	}, [currentUserEmail, executives]);
 
 	// Check if executive was changed from original
 	const executiveChanged = originalExecutive && value !== originalExecutive;
@@ -645,6 +631,23 @@ export default function LetterGenerator({ selectedRecords, onClose, onGenerated 
 	const [editingLetter, setEditingLetter] = useState<string | null>(null);
 	const [previewLetter, setPreviewLetter] = useState<string | null>(null);
 	const [generationResult, setGenerationResult] = useState<PDFGenerationResult | null>(null);
+	const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
+
+	// Fetch current user email once when component mounts
+	useEffect(() => {
+		const fetchCurrentUser = async () => {
+			try {
+				const supabase = createClient();
+				const { data: { user }, error } = await supabase.auth.getUser();
+				if (error) throw error;
+				setCurrentUserEmail(user?.email || null);
+			} catch (error) {
+				console.warn('Could not fetch current user:', error);
+			}
+		};
+
+		fetchCurrentUser();
+	}, []);
 
 	const [preparedLetters, setPreparedLetters] = useState<{
 		letters: LetterData[];
@@ -1059,6 +1062,7 @@ export default function LetterGenerator({ selectedRecords, onClose, onGenerated 
 						onDownload={() => handleDownloadSingle(letter.id)}
 						onWhatsApp={() => handleSendWhatsApp(letter.id)}
 						onUpdateLetterData={updateLetterData}
+						currentUserEmail={currentUserEmail}
 					/>
 				))}
 			</div>
@@ -1114,6 +1118,7 @@ interface LetterCardProps {
 	onDownload: () => void;
 	onWhatsApp: () => void;
 	onUpdateLetterData: (letterId: string, updates: Partial<LetterData>) => void;
+	currentUserEmail?: string | null;
 }
 
 function LetterCard({
@@ -1128,6 +1133,7 @@ function LetterCard({
 	onDownload,
 	onWhatsApp,
 	onUpdateLetterData,
+	currentUserEmail,
 }: LetterCardProps) {
 	const [editedLetter, setEditedLetter] = useState<LetterData>(letter);
 	const [isReferenceManuallyEdited, setIsReferenceManuallyEdited] = useState(false);
@@ -1398,6 +1404,7 @@ function LetterCard({
 								value={editedLetter.executive}
 								onValueChange={(v) => handleFieldChange("executive", v)}
 								originalExecutive={letter.originalExecutive}
+								currentUserEmail={currentUserEmail}
 								className="text-sm h-8"
 								placeholder="Seleccionar ejecutivo..."
 							/>
