@@ -1,6 +1,7 @@
 // utils/whatsapp.ts - Utilidades para la integración con WhatsApp
 
 import { LetterData } from "@/types/pdf";
+import { findExecutiveByName, getDefaultExecutive } from "@/utils/executiveHelper";
 
 /**
  * Limpia y formatea un número de teléfono para usarlo con la API de WhatsApp.
@@ -32,11 +33,14 @@ export function cleanPhoneNumber(phone: string): string {
  */
 export function createWhatsAppMessage(letterData: LetterData): string {
 	const clientName = letterData.client.name;
-	const executiveName = letterData.executive;
+
+	// Use fallback mechanism similar to ExecutiveFooter component
+	const executive = findExecutiveByName(letterData.executive) || getDefaultExecutive();
+	const executiveName = executive.name;
 
 	const message = `Estimado(a) ${clientName},
 Le saluda ${executiveName} de Patria S.A. Corredores de Seguros.
-Le hacemos llegar un recordatorio sobre el próximo vencimiento de su póliza de seguro. 
+Le hacemos llegar un recordatorio sobre el próximo vencimiento de su póliza de seguro.
 
 Adjuntamos la carta formal para su referencia y quedamos a su disposición para cualquier consulta.
 Saludos cordiales.`;

@@ -18,39 +18,35 @@ export interface Executive {
  */
 export function findExecutiveByName(executiveName: string): Executive | null {
 	if (!executiveName) return null;
-	
+
 	// Normalize the search name (remove extra spaces, convert to lowercase)
 	const searchName = executiveName.trim().toLowerCase();
-	
+
 	// First try exact match with the 'user' field (short name)
-	const exactUserMatch = excecutives.find(exec => 
-		exec.user.toLowerCase() === searchName
-	);
+	const exactUserMatch = excecutives.find((exec) => exec.user.toLowerCase() === searchName);
 	if (exactUserMatch) return exactUserMatch;
-	
+
 	// Try exact match with full name
-	const exactNameMatch = excecutives.find(exec => 
-		exec.name.toLowerCase() === searchName
-	);
+	const exactNameMatch = excecutives.find((exec) => exec.name.toLowerCase() === searchName);
 	if (exactNameMatch) return exactNameMatch;
-	
+
 	// Try partial match with user field (for cases like "Tamara" matching "tamara")
-	const partialUserMatch = excecutives.find(exec => 
-		searchName.includes(exec.user.toLowerCase()) || exec.user.toLowerCase().includes(searchName)
+	const partialUserMatch = excecutives.find(
+		(exec) => searchName.includes(exec.user.toLowerCase()) || exec.user.toLowerCase().includes(searchName)
 	);
 	if (partialUserMatch) return partialUserMatch;
-	
+
 	// Try partial match with full name (for cases where only first name or last name is provided)
-	const partialNameMatch = excecutives.find(exec => {
+	const partialNameMatch = excecutives.find((exec) => {
 		const execNameLower = exec.name.toLowerCase();
-		const execNameParts = execNameLower.split(' ');
-		
+		const execNameParts = execNameLower.split(" ");
+
 		// Check if search name contains any part of the executive's name
-		return execNameParts.some(part => 
-			part.length > 2 && (searchName.includes(part) || part.includes(searchName))
+		return execNameParts.some(
+			(part) => part.length > 2 && (searchName.includes(part) || part.includes(searchName))
 		);
 	});
-	
+
 	return partialNameMatch || null;
 }
 
@@ -59,7 +55,7 @@ export function findExecutiveByName(executiveName: string): Executive | null {
  * @returns Default executive (first in the list)
  */
 export function getDefaultExecutive(): Executive {
-	return excecutives[0]; // Returns Tamara as default
+	return excecutives[0]; // Returns admin account as default
 }
 
 /**
