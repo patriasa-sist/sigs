@@ -34,10 +34,10 @@ TODO REVISION CARTAS:
 [x] (gramatica) con su ejecutivo >> con nosotros
 [xxx] en la carta debe estar fijo el mensaje de que su siguiente poliza se emitirá en bolivianos, excepto transporte y todoriesgo
 
-[] 9112 es seguro de salud, tratarlo como tal
 [x] habilitar numero y correo del cliente como link
 [x] pasar excel con parametrizacion de ramos a Marco
-[] sin incremento de valor asegurado en AP 9112 agregar en el excel
+[x] 9112 es seguro de salud, tratarlo como tal
+[x] sin incremento de valor asegurado en AP 9112 agregar en el excel
 
 NOTAS EXTRA:
 

@@ -48,7 +48,7 @@ export const PDF_CONSTANTS = {
  */
 export function determineTemplateType(ramo: string): "salud" | "automotor" | "general" {
 	const ramoLower = ramo.toLowerCase();
-	const saludKeywords = ["salud", "vida", "medic", "asistencia medica"];
+	const saludKeywords = ["accidentes", "salud", "enfermedad", "vida", "asistencia medica"];
 	if (saludKeywords.some((keyword) => ramoLower.includes(keyword))) {
 		return "salud";
 	}
