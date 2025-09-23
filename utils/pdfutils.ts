@@ -6,7 +6,7 @@ import { normalizeCurrencyType } from "./excel";
 import { generateLetterReference } from "./letterReferences";
 
 // Constantes para los textos de plantilla
-const HEALTH_CONDITIONS_TEMPLATE = `Le informamos que a partir del *01/05/2025*, se excluye la cobertura del certificado asistencia al viajero y las pólizas se emiten en moneda nacional (BS)`;
+const HEALTH_CONDITIONS_TEMPLATE = `Le informamos que a partir de su renovación, se excluye la cobertura del certificado asistencia al viajero y las pólizas se emiten en moneda nacional (BS)`;
 const AUTOMOTOR_CONDITIONS_TEMPLATE = `Debido al incremento generalizado en el valor de ciertos activos, es posible que tus bienes estén asegurados por montos inferiores a su valor actual. Esta situación podría afectar la indemnización en caso de siniestro.\nPor ello, es fundamental revisar y actualizar los valores asegurados de tus pólizas, con el fin de garantizar una cobertura adecuada y efectiva ante cualquier eventualidad.`;
 const GENERAL_CONDITIONS_TEMPLATE = `Debido al incremento generalizado en el valor de ciertos activos, es posible que tus bienes estén asegurados por montos inferiores a su valor actual. Esta situación podría afectar la indemnización en caso de siniestro.\nPor ello, es fundamental revisar y actualizar los valores asegurados de tus pólizas, con el fin de garantizar una cobertura adecuada y efectiva ante cualquier eventualidad.`;
 
@@ -124,6 +124,14 @@ export function groupRecordsForLetters(records: ProcessedInsuranceRecord[]): Let
 					insuredMembers.splice(titularIndex, 1);
 				}
 				insuredMembers.unshift(titular);
+
+				// Convert to InsuredMemberWithType format for the editor
+				const insuredMembersWithType = insuredMembers.map((name, index) => ({
+					id: `member_${Date.now()}_${index}`,
+					name: name,
+					beneficiaryType: index === 0 ? "titular" as const : "dependiente" as const,
+				}));
+
 				// Use the insured value from the first record of this policy group
 				const insuredValue = mainRecord.valorAsegurado || 0;
 				// Auto-set currency from Excel or default to Bs.
@@ -132,6 +140,7 @@ export function groupRecordsForLetters(records: ProcessedInsuranceRecord[]): Let
 					...manualFields,
 					insuredMembers: [...insuredMembers],
 					originalInsuredMembers: [...insuredMembers],
+					insuredMembersWithType: insuredMembersWithType,
 					insuredValue: insuredValue,
 					insuredValueCurrency: currencyFromExcel || "Bs.",
 					originalInsuredValue: insuredValue, // Store original value
@@ -292,6 +301,14 @@ export async function groupRecordsForLettersWithReferences(records: ProcessedIns
 					insuredMembers.splice(titularIndex, 1);
 				}
 				insuredMembers.unshift(titular);
+
+				// Convert to InsuredMemberWithType format for the editor
+				const insuredMembersWithType = insuredMembers.map((name, index) => ({
+					id: `member_${Date.now()}_${index}`,
+					name: name,
+					beneficiaryType: index === 0 ? "titular" as const : "dependiente" as const,
+				}));
+
 				// Use the insured value from the first record of this policy group
 				const insuredValue = mainRecord.valorAsegurado || 0;
 				// Auto-set currency from Excel or default to Bs.
@@ -300,6 +317,7 @@ export async function groupRecordsForLettersWithReferences(records: ProcessedIns
 					...manualFields,
 					insuredMembers: [...insuredMembers],
 					originalInsuredMembers: [...insuredMembers],
+					insuredMembersWithType: insuredMembersWithType,
 					insuredValue: insuredValue,
 					insuredValueCurrency: currencyFromExcel || "Bs.",
 					originalInsuredValue: insuredValue, // Store original value
