@@ -134,7 +134,7 @@ export const AutomotorTemplate: React.FC<AutomotorTemplateProps> = ({ letterData
 						<Text style={automotorStyles.headerText}>RAMO</Text>
 					</View>
 					<View style={[automotorStyles.tableCol, { width: "20%" }]}>
-						<Text style={automotorStyles.headerText}>VALOR ASEGURADO</Text>
+						<Text style={automotorStyles.headerText}>VALOR TOTAL</Text>
 					</View>
 				</View>
 
@@ -189,9 +189,12 @@ export const AutomotorTemplate: React.FC<AutomotorTemplateProps> = ({ letterData
 									<View style={[automotorStyles.subTableCell, { width: "30%", borderRightWidth: 0 }]}>
 										<Text>
 											{vehicle.currency === "Bs."
-												? `Bs. ${vehicle.insuredValue.toLocaleString('es-BO', {minimumFractionDigits: 2})}`
-												: `$us. ${vehicle.insuredValue.toLocaleString('es-BO', {minimumFractionDigits: 2})}`
-											}
+												? `Bs. ${vehicle.insuredValue.toLocaleString("es-BO", {
+														minimumFractionDigits: 2,
+												  })}`
+												: `$us. ${vehicle.insuredValue.toLocaleString("es-BO", {
+														minimumFractionDigits: 2,
+												  })}`}
 										</Text>
 									</View>
 								</View>
@@ -206,7 +209,7 @@ export const AutomotorTemplate: React.FC<AutomotorTemplateProps> = ({ letterData
 					)}
 					{policy.manualFields?.territoriality !== undefined && (
 						<Text style={automotorStyles.detailText}>
-							• Extraterritorialidad (opcional):{" "}
+							• Extraterritorialidad (opcional) tiene un costo de:{" "}
 							{formatMonetaryValue(
 								policy.manualFields.territoriality,
 								policy.manualFields.territorialityCurrency
