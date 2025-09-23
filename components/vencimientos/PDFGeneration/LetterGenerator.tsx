@@ -1397,7 +1397,7 @@ function LetterCard({
 								label="Ejecutivo asignado (editable):"
 								value={editedLetter.executive}
 								onValueChange={(v) => handleFieldChange("executive", v)}
-								originalExecutive={letter.executive}
+								originalExecutive={letter.originalExecutive}
 								className="text-sm h-8"
 								placeholder="Seleccionar ejecutivo..."
 							/>

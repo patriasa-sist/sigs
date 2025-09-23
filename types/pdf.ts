@@ -36,6 +36,7 @@ export interface LetterData {
 	};
 	policies: PolicyForLetter[];
 	executive: string;
+	originalExecutive?: string; // Original executive from Excel data
 	needsReview: boolean;
 	missingData: string[];
 	additionalConditions?: string;
