@@ -108,6 +108,9 @@ export function groupRecordsForLetters(records: ProcessedInsuranceRecord[]): Let
 			let manualFields: PolicyForLetter["manualFields"] = {
 				deductiblesCurrency: "Bs.",
 				territorialityCurrency: "Bs.",
+				originalBranch: mainRecord.ramo,
+				originalProducto: mainRecord.producto,
+				producto: mainRecord.producto,
 			};
 
 			if (templateType === "salud") {
@@ -285,6 +288,9 @@ export async function groupRecordsForLettersWithReferences(records: ProcessedIns
 			let manualFields: PolicyForLetter["manualFields"] = {
 				deductiblesCurrency: "Bs.",
 				territorialityCurrency: "Bs.",
+				originalBranch: mainRecord.ramo,
+				originalProducto: mainRecord.producto,
+				producto: mainRecord.producto,
 			};
 
 			if (templateType === "salud") {
@@ -589,4 +595,24 @@ export function formatUSD(amount: number): string {
 		maximumFractionDigits: 2,
 	}).format(amount);
 	return `$us. ${formattedNumber}`;
+}
+
+/**
+ * Formats the display of RAMO and PRODUCTO as "RAMO - PRODUCTO"
+ * If PRODUCTO is empty or undefined, returns just RAMO
+ */
+export function formatRamoProducto(ramo: string, producto?: string): string {
+	if (!ramo) return "Sin especificar";
+	if (!producto || producto.trim() === "") return ramo;
+	return `${ramo} - ${producto}`;
+}
+
+/**
+ * Formats the display of RAMO and PRODUCTO for PDF templates
+ * Uses manual fields if available, otherwise falls back to base values
+ */
+export function formatRamoProductoForPDF(policy: { branch: string; manualFields?: { branch?: string; producto?: string; originalBranch?: string } }): string {
+	const ramo = policy.manualFields?.branch || policy.branch;
+	const producto = policy.manualFields?.producto;
+	return formatRamoProducto(ramo, producto);
 }

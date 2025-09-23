@@ -3,6 +3,7 @@ import React from "react";
 import { View, Text, StyleSheet } from "@react-pdf/renderer";
 import { BaseTemplate } from "./BaseTemplate";
 import { LetterData } from "@/types/pdf";
+import { formatRamoProductoForPDF } from "@/utils/pdfutils";
 
 const automotorStyles = StyleSheet.create({
 	policyTable: {
@@ -150,7 +151,7 @@ export const AutomotorTemplate: React.FC<AutomotorTemplateProps> = ({ letterData
 							<Text style={automotorStyles.cellText}>{policy.company}</Text>
 						</View>
 						<View style={[automotorStyles.tableCol, { width: "20%" }]}>
-							<Text style={automotorStyles.cellText}>{policy.manualFields?.branch || policy.branch}</Text>
+							<Text style={automotorStyles.cellText}>{formatRamoProductoForPDF(policy)}</Text>
 						</View>
 						<View style={[automotorStyles.tableCol, { width: "20%" }]}>
 							<Text style={automotorStyles.cellText}>

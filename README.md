@@ -43,7 +43,8 @@ TODO REVISION CARTAS:
 [x] (performance) modificadas varias funciones que podian desbordar memoria, eliminados procesos paralelos
 
 [] modificar texto de cartas (pedir cartas Flavio)
-[] agregar columna de PRODUCTO a excel para agregar manualmente
+[x] agregar columna de PRODUCTO a excel para agregar manualmente
+[x] agregar seguridad de datos en caso de cambiar el producto manualmente
 [] codificar nombres de compañias segun codigo aps (pedir excel Flavio)
 [] detectar si es Alianza y seguro general para forzar la plantilla
 

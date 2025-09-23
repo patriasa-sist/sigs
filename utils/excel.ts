@@ -190,6 +190,7 @@ export function mapExcelRowToRecord(row: any): InsuranceRecord {
 		compania: cleanString(row["COMPAÑÍA"]) || "Sin especificar",
 		ramo: "Sin especificar", // Will be set by PUC mapping
 		puc: cleanString(row["PUC"]), // New PUC column
+		producto: cleanString(row["PRODUCTO"]), // Commercial name of the policy
 		noPoliza: cleanString(row["NO. PÓLIZA"]) || "Sin número",
 		telefono: cleanString(row["TELEFONO"]),
 		correoODireccion: cleanString(row["CORREO"]),

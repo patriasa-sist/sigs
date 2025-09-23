@@ -34,7 +34,7 @@ import {
 	InsuredMemberWithType,
 	BeneficiaryType,
 } from "@/types/pdf";
-import { groupRecordsForLetters, validateRecordForPDF, generateFileName, detectMissingData } from "@/utils/pdfutils";
+import { groupRecordsForLetters, validateRecordForPDF, generateFileName, detectMissingData, formatRamoProductoForPDF } from "@/utils/pdfutils";
 import { generateLetterReference } from "@/utils/letterReferences";
 import { cleanPhoneNumber, createWhatsAppMessage } from "@/utils/whatsapp";
 import { getAllExecutives, findExecutiveByName } from "@/utils/executiveHelper";
@@ -161,6 +161,47 @@ function EditableRamoInput({
 				<div className="mt-1 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs text-yellow-800 flex items-center">
 					<AlertTriangle className="h-3 w-3 mr-1 text-yellow-600" />
 					Ramo cambiado difiere del original: {originalRamo} → {value}
+				</div>
+			)}
+		</div>
+	);
+}
+
+// Componente para input de producto editable con aviso de cambio
+interface EditableProductoInputProps {
+	value: string;
+	onValueChange: (value: string) => void;
+	label?: string;
+	placeholder?: string;
+	className?: string;
+	originalProducto?: string; // Original producto from Excel
+}
+
+function EditableProductoInput({
+	value,
+	onValueChange,
+	label,
+	placeholder,
+	className,
+	originalProducto,
+}: EditableProductoInputProps) {
+	// Check if producto was changed from original Excel value
+	const productoChanged = originalProducto && value !== originalProducto;
+
+	return (
+		<div>
+			{label && <label className="text-xs text-gray-600 block mb-1">{label}</label>}
+			<Input
+				type="text"
+				value={value}
+				onChange={(e) => onValueChange(e.target.value)}
+				placeholder={placeholder}
+				className={`${className} ${productoChanged ? "border-yellow-400" : ""}`}
+			/>
+			{productoChanged && (
+				<div className="mt-1 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs text-yellow-800 flex items-center">
+					<AlertTriangle className="h-3 w-3 mr-1 text-yellow-600" />
+					Producto cambiado difiere del original: {originalProducto} → {value}
 				</div>
 			)}
 		</div>
@@ -1547,10 +1588,13 @@ function LetterCard({
 									<div className="text-gray-600">Póliza: {policy.policyNumber}</div>
 									<div className="text-gray-600">Vence: {policy.expiryDate}</div>
 									<div className="text-gray-600">
-										Ramo: {policy.manualFields?.branch || policy.branch}
-										{policy.manualFields?.branch &&
+										Ramo: {formatRamoProductoForPDF(policy)}
+										{((policy.manualFields?.branch &&
 											policy.manualFields.originalBranch &&
-											policy.manualFields.branch !== policy.manualFields.originalBranch && (
+											policy.manualFields.branch !== policy.manualFields.originalBranch) ||
+											(policy.manualFields?.producto &&
+											policy.manualFields.originalProducto &&
+											policy.manualFields.producto !== policy.manualFields.originalProducto)) && (
 												<span className="ml-1 text-yellow-600 text-xs">(editado)</span>
 											)}
 									</div>
@@ -1579,6 +1623,18 @@ function LetterCard({
 														updatePolicy(index, "branch", newBranch)
 													}
 													placeholder="Nombre del ramo de seguros"
+													className="text-xs h-8"
+												/>
+											</div>
+											<div className="mb-4">
+												<EditableProductoInput
+													label="Producto (editable):"
+													value={policy.manualFields?.producto || ""}
+													originalProducto={policy.manualFields?.originalProducto || ""}
+													onValueChange={(newProducto) =>
+														updatePolicy(index, "producto", newProducto)
+													}
+													placeholder="Nombre comercial del producto (ej: MundiSalud)"
 													className="text-xs h-8"
 												/>
 											</div>

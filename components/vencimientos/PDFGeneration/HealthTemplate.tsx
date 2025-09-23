@@ -3,6 +3,7 @@ import React from "react";
 import { View, Text, StyleSheet } from "@react-pdf/renderer";
 import { BaseTemplate } from "./BaseTemplate";
 import { LetterData } from "@/types/pdf";
+import { formatRamoProductoForPDF } from "@/utils/pdfutils";
 
 const healthStyles = StyleSheet.create({
 	policyTable: {
@@ -140,7 +141,7 @@ export const HealthTemplate: React.FC<HealthTemplateProps> = ({ letterData }) =>
 									<Text style={healthStyles.cellText}>{policy.company}</Text>
 								</View>
 								<View style={[healthStyles.tableCol, { width: "15%" }]}>
-									<Text style={healthStyles.cellText}>{policy.manualFields?.branch || policy.branch}</Text>
+									<Text style={healthStyles.cellText}>{formatRamoProductoForPDF(policy)}</Text>
 								</View>
 								<View style={[healthStyles.tableCol, { width: "20%" }]}>
 									<Text style={healthStyles.cellText}>

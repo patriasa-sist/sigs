@@ -3,6 +3,7 @@ import React from "react";
 import { View, Text, StyleSheet } from "@react-pdf/renderer";
 import { BaseTemplate } from "./BaseTemplate";
 import { LetterData } from "@/types/pdf";
+import { formatRamoProductoForPDF } from "@/utils/pdfutils";
 
 const generalStyles = StyleSheet.create({
 	policyTable: {
@@ -117,7 +118,7 @@ export const GeneralTemplate: React.FC<GeneralTemplateProps> = ({ letterData }) 
 								<Text style={generalStyles.cellText}>{policy.company}</Text>
 							</View>
 							<View style={[generalStyles.tableCol, { width: "30%" }]}>
-								<Text style={generalStyles.cellText}>{policy.manualFields?.branch || policy.branch}</Text>
+								<Text style={generalStyles.cellText}>{formatRamoProductoForPDF(policy)}</Text>
 							</View>
 						</View>
 					</View>

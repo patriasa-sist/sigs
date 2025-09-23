@@ -72,6 +72,10 @@ export interface PolicyForLetter {
 		branch?: string; // Manually edited ramo name
 		originalBranch?: string; // Original ramo from Excel/PUC mapping
 
+		// NUEVO: Campos para Producto editable
+		producto?: string; // Manually edited producto name
+		originalProducto?: string; // Original producto from Excel
+
 		// Campos comunes
 		specificConditions?: string;
 		deductibles?: string;

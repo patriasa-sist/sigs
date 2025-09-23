@@ -8,6 +8,7 @@ export interface InsuranceRecord {
 	compania: string;
 	ramo: string; // This will be populated by PUC mapping, not from Excel
 	puc?: string; // Producto Único de Código - 6 digits identifying insurance type
+	producto?: string; // Commercial name of the policy (e.g., "MundiSalud")
 	noPoliza: string;
 	telefono?: string;
 	correoODireccion?: string;
