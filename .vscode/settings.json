@@ -9,6 +9,7 @@
 		"error",
 		"unauthorized",
 		"webiste",
-		"vencimientos"
+		"vencimientos",
+		"reset-pass"
 	]
 }

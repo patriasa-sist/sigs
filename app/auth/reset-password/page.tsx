@@ -146,12 +146,11 @@ function ResetPasswordForm() {
 					<div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
 						<p className="font-medium">Sesión Expirada</p>
 						<p className="text-sm mt-1">
-							Tu enlace de restablecimiento de contraseña ha expirado. Por favor, solicita un nuevo enlace
-							desde la página de inicio de sesión.
+							Este enlace de restablecimiento de contraseña ha expirado y no podrá ser usado nuevamente.
 						</p>
 					</div>
 					<Button onClick={() => router.push("/auth/login")} className="w-full">
-						Ir al Inicio de Sesión
+						Redirigiendo a Login...
 					</Button>
 				</div>
 			</div>
@@ -253,7 +252,11 @@ function ResetPasswordForm() {
 
 export default function ResetPasswordPage() {
 	return (
-		<Suspense fallback={<div className="flex justify-center items-center h-screen">Cargando...</div>}>
+		<Suspense
+			fallback={
+				<div className="flex justify-center items-center h-screen">Cargando Recuperación de cuenta...</div>
+			}
+		>
 			<ResetPasswordForm />
 		</Suspense>
 	);
