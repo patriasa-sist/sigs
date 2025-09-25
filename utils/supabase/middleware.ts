@@ -8,7 +8,7 @@ const PROTECTED_ROUTES = {
 	"/auth/invite": "admin",
 } as const;
 
-const PUBLIC_ROUTES = ["/auth/login", "/auth/signup", "/auth/error", "/auth/confirm", "/unauthorized"] as const;
+const PUBLIC_ROUTES = ["/auth/login", "/auth/signup", "/auth/error", "/auth/confirm", "/auth/reset-password", "/unauthorized"] as const;
 
 export async function updateSession(request: NextRequest) {
 	let supabaseResponse = NextResponse.next({
