@@ -61,10 +61,8 @@ export async function updatePassword(formData: FormData) {
 
 		console.log("Password updated successfully for user:", data.user.id);
 
-		// Redirect to login with success message
-		redirect(
-			"/auth/login?message=Password%20updated%20successfully.%20Please%20log%20in%20with%20your%20new%20password."
-		);
+		// Return success instead of redirect
+		return { success: true, message: "Password updated successfully" };
 	} catch (error) {
 		console.error("Unexpected password update error:", error);
 		redirect("/auth/reset-password?error=An%20unexpected%20error%20occurred");

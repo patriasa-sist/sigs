@@ -43,6 +43,7 @@ function ResetPasswordForm() {
 	const [message, setMessage] = useState("");
 	const [error, setError] = useState("");
 	const [sessionValid, setSessionValid] = useState<boolean | null>(null);
+	const [passwordUpdated, setPasswordUpdated] = useState(false);
 	const searchParams = useSearchParams();
 	const router = useRouter();
 
@@ -119,9 +120,13 @@ function ResetPasswordForm() {
 			const formData = new FormData();
 			formData.append("password", values.password);
 
-			await updatePassword(formData);
-			// Si llegamos aquí sin redirect, algo salió mal
-			setError("Password update failed. Please try again.");
+			const result = await updatePassword(formData);
+
+			if (result?.success) {
+				setPasswordUpdated(true);
+			} else {
+				setError("Password update failed. Please try again.");
+			}
 		} catch {
 			setError("An unexpected error occurred. Please try again.");
 		} finally {
@@ -150,10 +155,27 @@ function ResetPasswordForm() {
 						<p className="font-medium">Sesión Expirada</p>
 						<p className="text-sm mt-1">
 							Este enlace de restablecimiento de contraseña ha expirado y no podrá ser usado nuevamente.
+							Solicite un nuevo enlace de restablecimiento de contraseña.
+						</p>
+					</div>
+				</div>
+			</div>
+		);
+	}
+
+	// Show success message if password was updated
+	if (passwordUpdated) {
+		return (
+			<div className="flex justify-center items-center h-screen">
+				<div className="max-w-md w-full mx-auto text-center">
+					<div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded mb-4">
+						<p className="font-medium">¡Contraseña Actualizada!</p>
+						<p className="text-sm mt-1">
+							La contraseña ha sido actualizada exitosamente. Ahora puedes iniciar sesión.
 						</p>
 					</div>
 					<Button onClick={() => router.push("/auth/login")} className="w-full">
-						Redirigiendo a Login...
+						Ir a Iniciar Sesión
 					</Button>
 				</div>
 			</div>
