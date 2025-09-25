@@ -48,6 +48,7 @@ function ResetPasswordForm() {
 
 	const form = useForm<z.infer<typeof formSchema>>({
 		resolver: zodResolver(formSchema),
+		mode: "onChange",
 		defaultValues: {
 			password: "",
 			confirmPassword: "",
@@ -119,6 +120,8 @@ function ResetPasswordForm() {
 			formData.append("password", values.password);
 
 			await updatePassword(formData);
+			// Si llegamos aquí sin redirect, algo salió mal
+			setError("Password update failed. Please try again.");
 		} catch {
 			setError("An unexpected error occurred. Please try again.");
 		} finally {
