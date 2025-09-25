@@ -22,7 +22,6 @@ import {
 	ClipboardList,
 } from "lucide-react";
 import Link from "next/link";
-import { signOut } from "@/app/auth/login/actions";
 
 const Dashboard = () => {
 	const modules = [
@@ -128,10 +127,6 @@ const Dashboard = () => {
 		},
 	];
 
-	const handleSignOut = async () => {
-		await signOut();
-	};
-
 	return (
 		<div className="min-h-screen">
 			<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -220,7 +215,6 @@ const Dashboard = () => {
 							</div>
 						</div>
 						<Badge variant="secondary">En línea</Badge>
-						<Button onClick={handleSignOut}>Cerrar Sesión</Button>
 					</div>
 				</div>
 			</div>
