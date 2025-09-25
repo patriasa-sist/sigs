@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { PasswordInput } from "@/components/ui/password-input";
 import { updatePassword } from "./actions";
+import { createClient } from "@/utils/supabase/client";
+import { useRouter } from "next/navigation";
 
 const formSchema = z.object({
 	password: z
@@ -40,7 +42,9 @@ function ResetPasswordForm() {
 	const [isLoading, setIsLoading] = useState(false);
 	const [message, setMessage] = useState("");
 	const [error, setError] = useState("");
+	const [sessionValid, setSessionValid] = useState<boolean | null>(null);
 	const searchParams = useSearchParams();
+	const router = useRouter();
 
 	const form = useForm<z.infer<typeof formSchema>>({
 		resolver: zodResolver(formSchema),
@@ -53,6 +57,8 @@ function ResetPasswordForm() {
 	useEffect(() => {
 		const errorParam = searchParams.get("error");
 		const messageParam = searchParams.get("message");
+		const tokenHash = searchParams.get("token_hash");
+		const type = searchParams.get("type");
 
 		if (errorParam) {
 			setError(decodeURIComponent(errorParam));
@@ -60,9 +66,50 @@ function ResetPasswordForm() {
 		if (messageParam) {
 			setMessage(decodeURIComponent(messageParam));
 		}
+
+		// Handle password recovery tokens from URL parameters
+		const handleRecoveryToken = async () => {
+			if (tokenHash && type === 'recovery') {
+				const supabase = createClient();
+
+				try {
+					console.log('Processing recovery token...');
+
+					// Verify the recovery token and establish session
+					const { error } = await supabase.auth.verifyOtp({
+						token_hash: tokenHash,
+						type: 'recovery'
+					});
+
+					if (error) {
+						console.error('Token verification error:', error.message);
+						setSessionValid(false);
+						setError('Invalid or expired reset link. Please request a new password reset.');
+					} else {
+						console.log('Recovery token verified successfully');
+						setSessionValid(true);
+					}
+				} catch (err) {
+					console.error('Token processing error:', err);
+					setSessionValid(false);
+					setError('Error processing reset link. Please try again.');
+				}
+			} else if (!tokenHash || type !== 'recovery') {
+				// No valid recovery token in URL
+				setSessionValid(false);
+				setError('Invalid reset link. Please use the link from your password reset email.');
+			}
+		};
+
+		handleRecoveryToken();
 	}, [searchParams]);
 
 	async function onSubmit(values: z.infer<typeof formSchema>) {
+		if (!sessionValid) {
+			setError("Session expired. Please use the password reset link from your email again.");
+			return;
+		}
+
 		setIsLoading(true);
 		setError("");
 		setMessage("");
@@ -77,6 +124,38 @@ function ResetPasswordForm() {
 		} finally {
 			setIsLoading(false);
 		}
+	}
+
+	// Show loading while checking session
+	if (sessionValid === null) {
+		return (
+			<div className="flex justify-center items-center h-screen">
+				<div className="text-center">
+					<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-4"></div>
+					<p>Verificando sesión...</p>
+				</div>
+			</div>
+		);
+	}
+
+	// Show error if session is invalid
+	if (sessionValid === false) {
+		return (
+			<div className="flex justify-center items-center h-screen">
+				<div className="max-w-md w-full mx-auto text-center">
+					<div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
+						<p className="font-medium">Sesión Expirada</p>
+						<p className="text-sm mt-1">
+							Tu enlace de restablecimiento de contraseña ha expirado.
+							Por favor, solicita un nuevo enlace desde la página de inicio de sesión.
+						</p>
+					</div>
+					<Button onClick={() => router.push('/auth/login')} className="w-full">
+						Ir al Inicio de Sesión
+					</Button>
+				</div>
+			</div>
+		);
 	}
 
 	return (

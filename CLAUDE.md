@@ -126,3 +126,4 @@ The vencimientos module (`/app/vencimientos/`) is a comprehensive insurance poli
 - ESLint configured with Next.js core web vitals and TypeScript rules
 - Theme provider configured for system/light/dark theme support with forced "clear" theme
 - Global navbar integrated into root layout with conditional rendering
+- always suggest the more reliable solution and follow the standard web practices, keep it simple and clean

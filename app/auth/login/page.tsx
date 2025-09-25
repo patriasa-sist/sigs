@@ -2,15 +2,13 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
 import { InputOTP, InputOTPGroup, InputOTPSeparator, InputOTPSlot } from "@/components/ui/input-otp";
 import { login } from "./actions";
-import { createClient } from "@/utils/supabase/client";
 
 const formSchema = z.object({
 	email: z.email().min(1, { message: "Email can not be empty." }),
@@ -38,8 +36,6 @@ const formSchema = z.object({
 
 export default function MyForm() {
 	const [isLoading, setIsLoading] = useState(false);
-	const [isProcessingRecovery, setIsProcessingRecovery] = useState(false);
-	const router = useRouter();
 
 	const form = useForm<z.infer<typeof formSchema>>({
 		resolver: zodResolver(formSchema),
@@ -49,46 +45,6 @@ export default function MyForm() {
 			otp: "",
 		},
 	});
-
-	// Handle password recovery tokens from URL hash
-	useEffect(() => {
-		const handleRecovery = async () => {
-			if (isProcessingRecovery) return;
-
-			const hashParams = new URLSearchParams(window.location.hash.substring(1));
-			const type = hashParams.get('type');
-			const accessToken = hashParams.get('access_token');
-			const refreshToken = hashParams.get('refresh_token');
-
-			if (type === 'recovery' && accessToken && refreshToken) {
-				setIsProcessingRecovery(true);
-
-				try {
-					const supabase = createClient();
-
-					// Set the session with the recovery tokens
-					const { error } = await supabase.auth.setSession({
-						access_token: accessToken,
-						refresh_token: refreshToken,
-					});
-
-					if (error) {
-						console.error('Recovery session error:', error);
-						router.push('/auth/error?error=' + encodeURIComponent(error.message));
-					} else {
-						// Clear the hash from URL and redirect to reset password page
-						window.history.replaceState(null, '', window.location.pathname);
-						router.push('/auth/reset-password');
-					}
-				} catch (error) {
-					console.error('Recovery processing error:', error);
-					router.push('/auth/error?error=Recovery%20processing%20failed');
-				}
-			}
-		};
-
-		handleRecovery();
-	}, [router, isProcessingRecovery]);
 
 	async function onSubmit(values: z.infer<typeof formSchema>) {
 		setIsLoading(true);
@@ -105,17 +61,6 @@ export default function MyForm() {
 		} finally {
 			setIsLoading(false);
 		}
-	}
-
-	if (isProcessingRecovery) {
-		return (
-			<div className="flex justify-center items-center h-screen">
-				<div className="text-center">
-					<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-4"></div>
-					<p>Procesando recuperación de contraseña...</p>
-				</div>
-			</div>
-		);
 	}
 
 	return (
