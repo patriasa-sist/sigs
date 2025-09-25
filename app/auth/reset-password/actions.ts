@@ -38,10 +38,12 @@ export async function updatePassword(formData: FormData) {
 
 		if (sessionError || !sessionData.session) {
 			console.error("Session error:", sessionError?.message || "No active session");
-			redirect("/auth/reset-password?error=Session%20expired.%20Please%20use%20the%20password%20reset%20link%20again.");
+			redirect(
+				"/auth/reset-password?error=Session%20expired.%20Please%20use%20the%20password%20reset%20link%20again."
+			);
 		}
 
-		console.log("Session found, updating password for user:", sessionData.session.user.id);
+		console.log("Sesion encontrada! actualizando contraseña de usuario:", sessionData.session.user.id);
 
 		// Update the user's password
 		const { data, error } = await supabase.auth.updateUser({
@@ -60,7 +62,9 @@ export async function updatePassword(formData: FormData) {
 		console.log("Password updated successfully for user:", data.user.id);
 
 		// Redirect to login with success message
-		redirect("/auth/login?message=Password%20updated%20successfully.%20Please%20log%20in%20with%20your%20new%20password.");
+		redirect(
+			"/auth/login?message=Password%20updated%20successfully.%20Please%20log%20in%20with%20your%20new%20password."
+		);
 	} catch (error) {
 		console.error("Unexpected password update error:", error);
 		redirect("/auth/reset-password?error=An%20unexpected%20error%20occurred");
