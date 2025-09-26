@@ -7,12 +7,14 @@ import { generateLetterReference } from "./letterReferences";
 
 // Constantes para los textos de plantilla
 const HEALTH_CONDITIONS_TEMPLATE = `Le informamos que, a partir de su renovación, todas las compañías aseguradoras han realizado ajustes a sus coberturas.`;
+const ACCIDENTES_CONDITIONS_TEMPLATE = ``; // No special conditions for accidentes personales
 const AUTOMOTOR_CONDITIONS_TEMPLATE = `Debido al incremento generalizado en el valor de ciertos activos, es posible que tus bienes estén asegurados por montos inferiores a su valor actual. Esta situación podría afectar la indemnización en caso de siniestro. \nCon el fin de evitar la aplicación de infraseguro que se encuentra establecido en el código de comercio Art. 1056 es fundamental revisar y actualizar los valores asegurados de tus pólizas para garantizar una cobertura adecuada y efectiva ante cualquier eventualidad.`;
 const GENERAL_CONDITIONS_TEMPLATE = ``;
 
 export const PDF_CONSTANTS = {
 	TEMPLATES: {
 		SALUD: "salud",
+		ACCIDENTES: "accidentes",
 		GENERAL: "general",
 		AUTOMOTOR: "automotor",
 	},
@@ -46,12 +48,21 @@ export const PDF_CONSTANTS = {
 /**
  * Determina qué template usar basado en el RAMO
  */
-export function determineTemplateType(ramo: string): "salud" | "automotor" | "general" {
+export function determineTemplateType(ramo: string): "salud" | "accidentes" | "automotor" | "general" {
 	const ramoLower = ramo.toLowerCase();
-	const saludKeywords = ["accidentes", "salud", "enfermedad", "vida", "asistencia medica"];
+
+	// Check for accidentes personales first (more specific)
+	const accidentesKeywords = ["accidentes personales"];
+	if (accidentesKeywords.some((keyword) => ramoLower.includes(keyword))) {
+		return "accidentes";
+	}
+
+	// Then check for other health-related keywords
+	const saludKeywords = ["salud", "enfermedad", "vida", "asistencia medica"];
 	if (saludKeywords.some((keyword) => ramoLower.includes(keyword))) {
 		return "salud";
 	}
+
 	const automotorKeywords = ["automotor", "aut"];
 	if (automotorKeywords.some((keyword) => ramoLower.includes(keyword))) {
 		return "automotor";
@@ -113,7 +124,7 @@ export function groupRecordsForLetters(records: ProcessedInsuranceRecord[]): Let
 				producto: mainRecord.producto,
 			};
 
-			if (templateType === "salud") {
+			if (templateType === "salud" || templateType === "accidentes") {
 				const insuredMembers = [
 					...new Set(
 						policyGroup
@@ -217,6 +228,8 @@ export function groupRecordsForLetters(records: ProcessedInsuranceRecord[]): Let
 				switch (templateType) {
 					case "salud":
 						return HEALTH_CONDITIONS_TEMPLATE;
+					case "accidentes":
+						return ACCIDENTES_CONDITIONS_TEMPLATE;
 					case "automotor":
 						return AUTOMOTOR_CONDITIONS_TEMPLATE;
 					default:
@@ -293,7 +306,7 @@ export async function groupRecordsForLettersWithReferences(records: ProcessedIns
 				producto: mainRecord.producto,
 			};
 
-			if (templateType === "salud") {
+			if (templateType === "salud" || templateType === "accidentes") {
 				const insuredMembers = [
 					...new Set(
 						policyGroup
@@ -397,6 +410,8 @@ export async function groupRecordsForLettersWithReferences(records: ProcessedIns
 				switch (templateType) {
 					case "salud":
 						return HEALTH_CONDITIONS_TEMPLATE;
+					case "accidentes":
+						return ACCIDENTES_CONDITIONS_TEMPLATE;
 					case "automotor":
 						return AUTOMOTOR_CONDITIONS_TEMPLATE;
 					default:
@@ -440,7 +455,7 @@ export function detectMissingData(letterData: Omit<LetterData, "needsReview" | "
 	letterData.policies.forEach((policy, index) => {
 		const policyLabel = `Póliza ${index + 1} (${policy.policyNumber})`;
 
-		if (letterData.templateType === "salud") {
+		if (letterData.templateType === "salud" || letterData.templateType === "accidentes") {
 			if (!policy.manualFields?.insuredValue || policy.manualFields.insuredValue <= 0) {
 				missing.push(`${policyLabel}: Valor asegurado`);
 			}

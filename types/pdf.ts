@@ -25,7 +25,7 @@ export interface InsuredMemberWithType {
 export interface LetterData {
 	id: string;
 	sourceRecordIds: string[];
-	templateType: "salud" | "general" | "automotor";
+	templateType: "salud" | "accidentes" | "general" | "automotor";
 	referenceNumber: string;
 	date: string;
 	client: {
@@ -99,7 +99,7 @@ export interface GeneratedLetter {
 	clientName: string;
 	clientPhone?: string;
 	clientEmail?: string;
-	templateType: "salud" | "general" | "automotor";
+	templateType: "salud" | "accidentes" | "general" | "automotor";
 	fileName: string;
 	pdfBlob?: Blob;
 	policyCount: number;

@@ -41,6 +41,7 @@ import { getAllExecutives, findExecutiveByName } from "@/utils/executiveHelper";
 import { createClient } from "@/utils/supabase/client";
 import { pdf } from "@react-pdf/renderer";
 import { HealthTemplate } from "./HealthTemplate";
+import { AccidentesTemplate } from "./AccidentesTemplate";
 import { AutomotorTemplate } from "./AutomotorTemplate"; // Cambiado
 import { GeneralTemplate } from "./GeneralTemplate"; // Nuevo
 import JSZip from "jszip";
@@ -441,6 +442,62 @@ function InsuredMembersWithTypeEditor({ members, onChange, label }: InsuredMembe
 	);
 }
 
+// Componente simplificado para editar asegurados en accidentes (solo nombres, sin tipos)
+interface SimpleInsuredMembersEditorProps {
+	members: string[];
+	onChange: (newMembers: string[]) => void;
+	label?: string;
+}
+
+function SimpleInsuredMembersEditor({ members, onChange, label }: SimpleInsuredMembersEditorProps) {
+	const handleMemberNameChange = (index: number, name: string) => {
+		const newMembers = [...members];
+		newMembers[index] = name;
+		onChange(newMembers);
+	};
+
+	const addMember = () => {
+		onChange([...members, ""]);
+	};
+
+	const removeMember = (index: number) => {
+		const newMembers = members.filter((_, i) => i !== index);
+		onChange(newMembers);
+	};
+
+	return (
+		<div>
+			{label && <label className="text-xs text-gray-600 block mb-1">{label}</label>}
+			<div className="space-y-2">
+				{members.map((member, index) => (
+					<div key={index} className="flex items-center space-x-2">
+						<Input
+							type="text"
+							value={member}
+							onChange={(e) => handleMemberNameChange(index, e.target.value)}
+							className="text-xs h-8 flex-grow"
+							placeholder={`Nombre del asegurado`}
+						/>
+						<Button
+							type="button"
+							size="sm"
+							variant="destructive"
+							onClick={() => removeMember(index)}
+							className="h-8 w-8 p-0 shrink-0"
+						>
+							<X className="h-4 w-4" />
+						</Button>
+					</div>
+				))}
+				<Button type="button" size="sm" variant="outline" onClick={addMember} className="text-xs h-8">
+					<PlusCircle className="h-4 w-4 mr-2" />
+					Añadir Asegurado
+				</Button>
+			</div>
+		</div>
+	);
+}
+
 // Componente para editar la lista de vehículos (Automotor)
 interface VehicleEditorProps {
 	vehicles: VehicleForLetter[];
@@ -791,6 +848,7 @@ export default function LetterGenerator({ selectedRecords, onClose, onGenerated 
 
 	const stats = useMemo(() => {
 		const saludCount = letters.filter((l) => l.templateType === "salud").length;
+		const accidentesCount = letters.filter((l) => l.templateType === "accidentes").length;
 		const automotorCount = letters.filter((l) => l.templateType === "automotor").length;
 		const generalCount = letters.filter((l) => l.templateType === "general").length;
 		const needReviewCount = letters.filter((l) => l.needsReview).length;
@@ -799,6 +857,7 @@ export default function LetterGenerator({ selectedRecords, onClose, onGenerated 
 		return {
 			totalLetters: letters.length,
 			saludCount,
+			accidentesCount,
 			automotorCount,
 			generalCount,
 			needReviewCount,
@@ -851,6 +910,9 @@ export default function LetterGenerator({ selectedRecords, onClose, onGenerated 
 			case "salud":
 				TemplateComponent = HealthTemplate;
 				break;
+			case "accidentes":
+				TemplateComponent = AccidentesTemplate;
+				break;
 			case "automotor":
 				TemplateComponent = AutomotorTemplate;
 				break;
@@ -868,6 +930,9 @@ export default function LetterGenerator({ selectedRecords, onClose, onGenerated 
 		switch (letterData.templateType) {
 			case "salud":
 				TemplateComponent = HealthTemplate;
+				break;
+			case "accidentes":
+				TemplateComponent = AccidentesTemplate;
 				break;
 			case "automotor":
 				TemplateComponent = AutomotorTemplate;
@@ -1148,7 +1213,7 @@ export default function LetterGenerator({ selectedRecords, onClose, onGenerated 
 				</div>
 			</div>
 
-			<div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+			<div className="grid grid-cols-2 md:grid-cols-5 gap-4">
 				<Card>
 					<CardContent className="p-4 text-center">
 						<div className="text-2xl font-bold text-patria-blue">{stats.totalLetters}</div>
@@ -1159,6 +1224,12 @@ export default function LetterGenerator({ selectedRecords, onClose, onGenerated 
 					<CardContent className="p-4 text-center">
 						<div className="text-2xl font-bold text-patria-green">{stats.saludCount}</div>
 						<div className="text-sm text-gray-600">Salud</div>
+					</CardContent>
+				</Card>
+				<Card>
+					<CardContent className="p-4 text-center">
+						<div className="text-2xl font-bold text-orange-600">{stats.accidentesCount}</div>
+						<div className="text-sm text-gray-600">Accidentes</div>
 					</CardContent>
 				</Card>
 				<Card>
@@ -1369,14 +1440,16 @@ function LetterCard({
 		handleFieldChange("policies", updatedPolicies);
 	};
 
-	const getTemplateIcon = (type: "salud" | "general" | "automotor") => {
+	const getTemplateIcon = (type: "salud" | "accidentes" | "general" | "automotor") => {
 		if (type === "salud") return "🏥";
+		if (type === "accidentes") return "⚡";
 		if (type === "automotor") return "🚗";
 		return "📄";
 	};
 
-	const getTemplateColor = (type: "salud" | "general" | "automotor") => {
+	const getTemplateColor = (type: "salud" | "accidentes" | "general" | "automotor") => {
 		if (type === "salud") return "border-green-200 bg-green-50";
+		if (type === "accidentes") return "border-orange-200 bg-orange-50";
 		if (type === "automotor") return "border-blue-200 bg-blue-50";
 		return "border-gray-200 bg-gray-50";
 	};
@@ -1448,7 +1521,7 @@ function LetterCard({
 								Completo
 							</Badge>
 						)}
-						<Badge variant={letter.templateType === "salud" ? "default" : "secondary"} className="text-xs">
+						<Badge variant={letter.templateType === "salud" || letter.templateType === "accidentes" ? "default" : "secondary"} className="text-xs">
 							{letter.templateType.toUpperCase()}
 						</Badge>
 						<div className="flex space-x-1">
@@ -1680,6 +1753,41 @@ function LetterCard({
 															/>
 														</div>
 													</>
+												) : letter.templateType === "accidentes" ? (
+													<>
+														<div className="space-y-2">
+															<SimpleInsuredMembersEditor
+																label="Asegurados:"
+																members={policy.manualFields?.insuredMembers || []}
+																onChange={(newMembers) =>
+																	updatePolicy(index, "insuredMembers", newMembers)
+																}
+															/>
+														</div>
+														<div className="space-y-2">
+															<NumericInputWithCurrency
+																label="Valor asegurado TOTAL:"
+																value={policy.manualFields?.insuredValue}
+																currency={
+																	policy.manualFields?.insuredValueCurrency || "Bs."
+																}
+																originalValue={
+																	policy.manualFields?.originalInsuredValue
+																}
+																originalCurrency={
+																	policy.manualFields?.originalInsuredValueCurrency
+																}
+																onValueChange={(v) =>
+																	updatePolicy(index, "insuredValue", v)
+																}
+																onCurrencyChange={(c) =>
+																	updatePolicy(index, "insuredValueCurrency", c)
+																}
+																placeholder="0.00"
+																className="text-xs h-8"
+															/>
+														</div>
+													</>
 												) : letter.templateType === "automotor" ? (
 													<>
 														<div className="space-y-2">
@@ -1828,6 +1936,31 @@ function LetterCard({
 																	: policy.insuredMembers?.map((member, i) => (
 																			<li key={i}>{member}</li>
 																	  ))}
+															</ul>
+														</div>
+													)}
+												</>
+											) : letter.templateType === "accidentes" ? (
+												<>
+													{policy.manualFields?.insuredValue !== undefined && (
+														<div className="text-green-700 font-medium">
+															✓ Valor asegurado:{" "}
+															{formatMonetaryValue(
+																policy.manualFields.insuredValue,
+																policy.manualFields.insuredValueCurrency
+															)}
+														</div>
+													)}
+													{policy.manualFields?.insuredMembers &&
+														policy.manualFields.insuredMembers.length > 0 && (
+														<div>
+															<div className="text-green-700 font-medium">
+																✓ Asegurados:
+															</div>
+															<ul className="list-disc list-inside pl-2">
+																{policy.manualFields.insuredMembers.map((member, i) => (
+																	<li key={i}>{member}</li>
+																))}
 															</ul>
 														</div>
 													)}
