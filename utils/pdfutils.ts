@@ -8,7 +8,7 @@ import { generateLetterReference } from "./letterReferences";
 // Constantes para los textos de plantilla
 const HEALTH_CONDITIONS_TEMPLATE = `Le informamos que, a partir de su renovación, todas las compañías aseguradoras han realizado ajustes a sus coberturas.`;
 const ACCIDENTES_CONDITIONS_TEMPLATE = ``; // No special conditions for accidentes personales
-const AUTOMOTOR_CONDITIONS_TEMPLATE = `Debido al incremento generalizado en el valor de ciertos activos, es posible que tus bienes estén asegurados por montos inferiores a su valor actual. Esta situación podría afectar la indemnización en caso de siniestro. \nCon el fin de evitar la aplicación de infraseguro que se encuentra establecido en el código de comercio Art. 1056 es fundamental revisar y actualizar los valores asegurados de tus pólizas para garantizar una cobertura adecuada y efectiva ante cualquier eventualidad.`;
+const AUTOMOTOR_CONDITIONS_TEMPLATE = `Debido al incremento generalizado en el valor de ciertos activos, es posible que tus bienes estén asegurados por montos inferiores a su valor actual. Esta situación podría afectar la indemnización en caso de siniestro. \nCon el fin de evitar la aplicación de infraseguro que se encuentra establecido en el código de comercio Art. 1056 es fundamental revisar y actualizar los valores asegurados de sus pólizas para garantizar una cobertura adecuada y efectiva ante cualquier eventualidad.`;
 const GENERAL_CONDITIONS_TEMPLATE = ``;
 
 export const PDF_CONSTANTS = {
@@ -52,13 +52,13 @@ export function determineTemplateType(ramo: string): "salud" | "accidentes" | "a
 	const ramoLower = ramo.toLowerCase();
 
 	// Check for accidentes personales first (more specific)
-	const accidentesKeywords = ["accidentes personales"];
+	const accidentesKeywords = ["accidentes personales", "vida"];
 	if (accidentesKeywords.some((keyword) => ramoLower.includes(keyword))) {
 		return "accidentes";
 	}
 
 	// Then check for other health-related keywords
-	const saludKeywords = ["salud", "enfermedad", "vida", "asistencia medica"];
+	const saludKeywords = ["salud", "enfermedad", "asistencia medica"];
 	if (saludKeywords.some((keyword) => ramoLower.includes(keyword))) {
 		return "salud";
 	}

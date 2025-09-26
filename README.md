@@ -42,13 +42,16 @@ TODO REVISION CARTAS:
 [x] agregar advertencias cuando no existe ejecutivo o se ha cambiado
 [x] (performance) modificadas varias funciones que podian desbordar memoria, eliminados procesos paralelos
 
-[] modificar texto de cartas (pedir cartas Flavio)
+[x] modificar texto de cartas (pedir cartas Flavio)
 [x] agregar columna de PRODUCTO a excel para agregar manualmente
 [x] agregar seguridad de datos en caso de cambiar el producto manualmente
 [] codificar nombres de compañias segun codigo aps (pedir excel Flavio)
 [] detectar si es Alianza y seguro general para forzar la plantilla
 
 [] codificar productos segun ultimos numeros de PUC
+
+[x] seguro accidentes personales con nueva plantilla basada en salud, vida incluido aqui
+[] seguro incendios nueva plantilla basada en general
 
 NOTAS EXTRA:
 
