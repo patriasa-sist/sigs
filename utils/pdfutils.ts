@@ -6,9 +6,9 @@ import { normalizeCurrencyType } from "./excel";
 import { generateLetterReference } from "./letterReferences";
 
 // Constantes para los textos de plantilla
-const HEALTH_CONDITIONS_TEMPLATE = `Le informamos que a partir de su renovación, se excluye la cobertura del certificado asistencia al viajero y las pólizas se emiten en moneda nacional (BS)`;
-const AUTOMOTOR_CONDITIONS_TEMPLATE = `Debido al incremento generalizado en el valor de ciertos activos, es posible que tus bienes estén asegurados por montos inferiores a su valor actual. Esta situación podría afectar la indemnización en caso de siniestro.\nPor ello, es fundamental revisar y actualizar los valores asegurados de tus pólizas, con el fin de garantizar una cobertura adecuada y efectiva ante cualquier eventualidad.`;
-const GENERAL_CONDITIONS_TEMPLATE = `Debido al incremento generalizado en el valor de ciertos activos, es posible que tus bienes estén asegurados por montos inferiores a su valor actual. Esta situación podría afectar la indemnización en caso de siniestro.\nPor ello, es fundamental revisar y actualizar los valores asegurados de tus pólizas, con el fin de garantizar una cobertura adecuada y efectiva ante cualquier eventualidad.`;
+const HEALTH_CONDITIONS_TEMPLATE = `Le informamos que, a partir de su renovación, todas las compañías aseguradoras han realizado ajustes a sus coberturas.`;
+const AUTOMOTOR_CONDITIONS_TEMPLATE = `Debido al incremento generalizado en el valor de ciertos activos, es posible que tus bienes estén asegurados por montos inferiores a su valor actual. Esta situación podría afectar la indemnización en caso de siniestro. \nCon el fin de evitar la aplicación de infraseguro que se encuentra establecido en el código de comercio Art. 1056 es fundamental revisar y actualizar los valores asegurados de tus pólizas para garantizar una cobertura adecuada y efectiva ante cualquier eventualidad.`;
+const GENERAL_CONDITIONS_TEMPLATE = ``;
 
 export const PDF_CONSTANTS = {
 	TEMPLATES: {
@@ -132,7 +132,7 @@ export function groupRecordsForLetters(records: ProcessedInsuranceRecord[]): Let
 				const insuredMembersWithType = insuredMembers.map((name, index) => ({
 					id: `member_${Date.now()}_${index}`,
 					name: name,
-					beneficiaryType: index === 0 ? "titular" as const : "dependiente" as const,
+					beneficiaryType: index === 0 ? ("titular" as const) : ("dependiente" as const),
 				}));
 
 				// Use the insured value from the first record of this policy group
@@ -312,7 +312,7 @@ export async function groupRecordsForLettersWithReferences(records: ProcessedIns
 				const insuredMembersWithType = insuredMembers.map((name, index) => ({
 					id: `member_${Date.now()}_${index}`,
 					name: name,
-					beneficiaryType: index === 0 ? "titular" as const : "dependiente" as const,
+					beneficiaryType: index === 0 ? ("titular" as const) : ("dependiente" as const),
 				}));
 
 				// Use the insured value from the first record of this policy group
@@ -611,7 +611,10 @@ export function formatRamoProducto(ramo: string, producto?: string): string {
  * Formats the display of RAMO and PRODUCTO for PDF templates
  * Uses manual fields if available, otherwise falls back to base values
  */
-export function formatRamoProductoForPDF(policy: { branch: string; manualFields?: { branch?: string; producto?: string; originalBranch?: string } }): string {
+export function formatRamoProductoForPDF(policy: {
+	branch: string;
+	manualFields?: { branch?: string; producto?: string; originalBranch?: string };
+}): string {
 	const ramo = policy.manualFields?.branch || policy.branch;
 	const producto = policy.manualFields?.producto;
 	return formatRamoProducto(ramo, producto);

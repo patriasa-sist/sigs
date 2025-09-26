@@ -98,11 +98,16 @@ const styles = StyleSheet.create({
 		marginBottom: 5,
 		textAlign: "justify",
 	},
+	comuParagraph: {
+		marginTop: 5,
+		marginBottom: 5,
+		textAlign: "justify",
+	},
 	signature: {
 		textAlign: "left",
 	},
 	additionalConditions: {
-		marginBottom: 10,
+		marginBottom: 5,
 		fontSize: 10,
 		textAlign: "justify",
 	},
@@ -204,16 +209,21 @@ export const BaseTemplate: React.FC<BaseTemplateProps> = ({ letterData, children
 					{children}
 
 					<View style={styles.conditionsContainer} wrap={false}>
-						<Text style={styles.paragraph}>Nota:</Text>
+						<Text style={styles.paragraph}>Nota importante:</Text>
 
 						{/* revision of data pending */}
-						{letterData.templateType != "salud" && (
-							<Text style={styles.paragraph}>
-								Recomendamos revisar los datos y el valor asegurado, esto para proceder si corresponde,
-								con la actualización o modificación de esto(s). Tenga a bien hacernos a conocer
-								cualquier cambio que se haya producido o en su defecto su consentimiento para la
-								renovación.
-							</Text>
+						{letterData.templateType === "automotor" && (
+							<>
+								<Text style={styles.paragraph}>
+									Recomendamos revisar los datos y el valor asegurado de cada unidad, esto para
+									proceder si corresponde, con la actualización o modificación de esto(s). Las pólizas
+									se emiten en moneda nacional (BS); Tenga a bien hacernos a conocer cualquier cambio
+									que se haya producido o en su defecto su consentimiento para la renovación.
+								</Text>
+								<Text style={styles.paragraph}>
+									Los valores asegurados actualizados deben ser proporcionado en moneda Nacional (BS)
+								</Text>
+							</>
 						)}
 						{/* adititional manual conditions */}
 						{letterData.additionalConditions && (
@@ -223,7 +233,6 @@ export const BaseTemplate: React.FC<BaseTemplateProps> = ({ letterData, children
 										letterData.additionalConditions.charAt(0).toUpperCase() +
 										letterData.additionalConditions.slice(1)
 									}
-									// isItalic={letterData.templateType === "salud"}
 								/>
 							</View>
 						)}
@@ -231,21 +240,22 @@ export const BaseTemplate: React.FC<BaseTemplateProps> = ({ letterData, children
 						{/* special health insurance clausule */}
 						{letterData.templateType === "salud" && (
 							<Text style={styles.paragraph}>
-								Nos permitimos recordarle que los seguros de Salud o Enfermedad se pagan por adelantado,
-								al inicio de la vigencia, sea mensual o anual.
+								Nos permitimos recordarles que los seguros de Salud o Enfermedad son bajo la modalidad
+								pago anticipado, se pagan por adelantado antes de cada fecha programada en su póliza de
+								seguro, sea mensual o anual.
 							</Text>
 						)}
 
 						{/* No renovation section */}
 						<Text style={styles.paragraph}>
-							Es importante informarle que en caso de tener primas pendientes no se podrá renovar hasta su
+							Es importante informarle que en caso de tener pagos pendientes no se podrá renovar hasta su
 							regularización, la NO RENOVACION, suspende toda cobertura de la póliza de seguro.
 						</Text>
 					</View>
 
 					<View wrap={false}>
 						{/* contact info section */}
-						<Text style={styles.paragraph}>
+						<Text style={styles.comuParagraph}>
 							Comuníquese con nosotros para recibir una atención personalizada:
 						</Text>
 						<Text style={styles.paragraph}>
