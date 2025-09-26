@@ -1,13 +1,14 @@
 // utils/pdfUtils.ts - Utilidades para generación de PDFs
 
 import { ProcessedInsuranceRecord } from "@/types/insurance";
-import { LetterData, PolicyForLetter, VehicleForLetter } from "@/types/pdf";
+import { LetterData, PolicyForLetter, VehicleForLetter, InsuredPlaceForLetter } from "@/types/pdf";
 import { normalizeCurrencyType } from "./excel";
 import { generateLetterReference } from "./letterReferences";
 
 // Constantes para los textos de plantilla
 const HEALTH_CONDITIONS_TEMPLATE = `Le informamos que, a partir de su renovación, todas las compañías aseguradoras han realizado ajustes a sus coberturas.`;
 const ACCIDENTES_CONDITIONS_TEMPLATE = ``; // No special conditions for accidentes personales
+const INCENDIOS_CONDITIONS_TEMPLATE = `Debido al incremento generalizado en el valor de ciertos activos, es posible que tus bienes estén asegurados por montos inferiores a su valor actual. Esta situación podría afectar la indemnización en caso de siniestro. \nCon el fin de evitar la aplicación de infraseguro que se encuentra establecido en el código de comercio Art. 1056 es fundamental revisar y actualizar los valores asegurados de sus pólizas para garantizar una cobertura adecuada y efectiva ante cualquier eventualidad.`;
 const AUTOMOTOR_CONDITIONS_TEMPLATE = `Debido al incremento generalizado en el valor de ciertos activos, es posible que tus bienes estén asegurados por montos inferiores a su valor actual. Esta situación podría afectar la indemnización en caso de siniestro. \nCon el fin de evitar la aplicación de infraseguro que se encuentra establecido en el código de comercio Art. 1056 es fundamental revisar y actualizar los valores asegurados de sus pólizas para garantizar una cobertura adecuada y efectiva ante cualquier eventualidad.`;
 const GENERAL_CONDITIONS_TEMPLATE = ``;
 
@@ -15,6 +16,7 @@ export const PDF_CONSTANTS = {
 	TEMPLATES: {
 		SALUD: "salud",
 		ACCIDENTES: "accidentes",
+		INCENDIOS: "incendios",
 		GENERAL: "general",
 		AUTOMOTOR: "automotor",
 	},
@@ -48,13 +50,19 @@ export const PDF_CONSTANTS = {
 /**
  * Determina qué template usar basado en el RAMO
  */
-export function determineTemplateType(ramo: string): "salud" | "accidentes" | "automotor" | "general" {
+export function determineTemplateType(ramo: string): "salud" | "accidentes" | "incendios" | "automotor" | "general" {
 	const ramoLower = ramo.toLowerCase();
 
 	// Check for accidentes personales first (more specific)
 	const accidentesKeywords = ["accidentes personales", "vida"];
 	if (accidentesKeywords.some((keyword) => ramoLower.includes(keyword))) {
 		return "accidentes";
+	}
+
+	// Check for incendios
+	const incendiosKeywords = ["incendios", "incendio"];
+	if (incendiosKeywords.some((keyword) => ramoLower.includes(keyword))) {
+		return "incendios";
 	}
 
 	// Then check for other health-related keywords
@@ -186,6 +194,39 @@ export function groupRecordsForLetters(records: ProcessedInsuranceRecord[]): Let
 					originalInsuredValue: totalInsuredValue, // Store original total value
 					originalInsuredValueCurrency: currencyFromExcel || "$us.",
 				};
+			} else if (templateType === "incendios") {
+				// For incendios, create insured places from the data
+				const places: InsuredPlaceForLetter[] = policyGroup.map((r, i) => {
+					const originalValue = r.valorAsegurado || 0;
+					const originalCurrency = normalizeCurrencyType(r.tipoMoneda) || "Bs.";
+					return {
+						id: `place_${r.id || i}`,
+						description: r.materiaAsegurada || "Item sin descripción",
+						insuredValue: originalValue,
+						currency: originalCurrency,
+						originalInsuredValue: originalValue,
+						originalCurrency: originalCurrency,
+					};
+				});
+
+				// Calculate total insured value from all places
+				const totalInsuredValue = places.reduce((sum, place) => sum + place.insuredValue, 0);
+				const currencyFromExcel = normalizeCurrencyType(mainRecord.tipoMoneda);
+
+				manualFields = {
+					...manualFields,
+					insuredPlaces: places,
+					originalInsuredPlaces: JSON.parse(JSON.stringify(places)),
+					insuredValue: totalInsuredValue,
+					insuredValueCurrency: currencyFromExcel || "Bs.",
+					originalInsuredValue: totalInsuredValue,
+					originalInsuredValueCurrency: currencyFromExcel || "Bs.",
+					// Extract risk location and activity from Excel data if available
+					riskLocation: "", // Will be manually filled
+					originalRiskLocation: "",
+					activity: "", // Will be manually filled
+					originalActivity: "",
+				};
 			} else {
 				// 'general'
 				const insuredMatter = policyGroup
@@ -230,6 +271,8 @@ export function groupRecordsForLetters(records: ProcessedInsuranceRecord[]): Let
 						return HEALTH_CONDITIONS_TEMPLATE;
 					case "accidentes":
 						return ACCIDENTES_CONDITIONS_TEMPLATE;
+					case "incendios":
+						return INCENDIOS_CONDITIONS_TEMPLATE;
 					case "automotor":
 						return AUTOMOTOR_CONDITIONS_TEMPLATE;
 					default:
@@ -368,6 +411,39 @@ export async function groupRecordsForLettersWithReferences(records: ProcessedIns
 					originalInsuredValue: totalInsuredValue, // Store original total value
 					originalInsuredValueCurrency: currencyFromExcel || "$us.",
 				};
+			} else if (templateType === "incendios") {
+				// For incendios, create insured places from the data
+				const places: InsuredPlaceForLetter[] = policyGroup.map((r, i) => {
+					const originalValue = r.valorAsegurado || 0;
+					const originalCurrency = normalizeCurrencyType(r.tipoMoneda) || "Bs.";
+					return {
+						id: `place_${r.id || i}`,
+						description: r.materiaAsegurada || "Item sin descripción",
+						insuredValue: originalValue,
+						currency: originalCurrency,
+						originalInsuredValue: originalValue,
+						originalCurrency: originalCurrency,
+					};
+				});
+
+				// Calculate total insured value from all places
+				const totalInsuredValue = places.reduce((sum, place) => sum + place.insuredValue, 0);
+				const currencyFromExcel = normalizeCurrencyType(mainRecord.tipoMoneda);
+
+				manualFields = {
+					...manualFields,
+					insuredPlaces: places,
+					originalInsuredPlaces: JSON.parse(JSON.stringify(places)),
+					insuredValue: totalInsuredValue,
+					insuredValueCurrency: currencyFromExcel || "Bs.",
+					originalInsuredValue: totalInsuredValue,
+					originalInsuredValueCurrency: currencyFromExcel || "Bs.",
+					// Extract risk location and activity from Excel data if available
+					riskLocation: "", // Will be manually filled
+					originalRiskLocation: "",
+					activity: "", // Will be manually filled
+					originalActivity: "",
+				};
 			} else {
 				// 'general'
 				const insuredMatter = policyGroup
@@ -412,6 +488,8 @@ export async function groupRecordsForLettersWithReferences(records: ProcessedIns
 						return HEALTH_CONDITIONS_TEMPLATE;
 					case "accidentes":
 						return ACCIDENTES_CONDITIONS_TEMPLATE;
+					case "incendios":
+						return INCENDIOS_CONDITIONS_TEMPLATE;
 					case "automotor":
 						return AUTOMOTOR_CONDITIONS_TEMPLATE;
 					default:
@@ -472,6 +550,25 @@ export function detectMissingData(letterData: Omit<LetterData, "needsReview" | "
 					if (!vehicle.insuredValue || vehicle.insuredValue <= 0)
 						missing.push(`${policyLabel}, Vehículo ${vIndex + 1}: Falta valor asegurado.`);
 				});
+			}
+		} else if (letterData.templateType === "incendios") {
+			if (!policy.manualFields?.insuredValue || policy.manualFields.insuredValue <= 0) {
+				missing.push(`${policyLabel}: Valor Asegurado`);
+			}
+			if (!policy.manualFields?.insuredPlaces || policy.manualFields.insuredPlaces.length === 0) {
+				missing.push(`${policyLabel}: No se encontraron items asegurados.`);
+			} else {
+				policy.manualFields.insuredPlaces.forEach((place, pIndex) => {
+					if (!place.description) missing.push(`${policyLabel}, Lugar ${pIndex + 1}: Falta descripción.`);
+					if (!place.insuredValue || place.insuredValue <= 0)
+						missing.push(`${policyLabel}, Lugar ${pIndex + 1}: Falta valor asegurado.`);
+				});
+			}
+			if (!policy.manualFields?.riskLocation) {
+				missing.push(`${policyLabel}: Ubicación de Riesgo`);
+			}
+			if (!policy.manualFields?.activity) {
+				missing.push(`${policyLabel}: Actividad`);
 			}
 		} else {
 			// General

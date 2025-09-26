@@ -12,6 +12,16 @@ export interface VehicleForLetter {
 	originalCurrency?: "Bs." | "$us."; // Original currency from Excel data
 }
 
+// Interfaz para items asegurados en incendios
+export interface InsuredPlaceForLetter {
+	id: string; // ID único para el lugar asegurado
+	description: string; // Descripción del lugar
+	insuredValue: number;
+	currency: "Bs." | "$us.";
+	originalInsuredValue?: number; // Original value from Excel data
+	originalCurrency?: "Bs." | "$us."; // Original currency from Excel data
+}
+
 // Tipos de beneficiarios para seguros de salud
 export type BeneficiaryType = "titular" | "conyugue" | "dependiente";
 
@@ -25,7 +35,7 @@ export interface InsuredMemberWithType {
 export interface LetterData {
 	id: string;
 	sourceRecordIds: string[];
-	templateType: "salud" | "accidentes" | "general" | "automotor";
+	templateType: "salud" | "accidentes" | "incendios" | "general" | "automotor";
 	referenceNumber: string;
 	date: string;
 	client: {
@@ -68,6 +78,14 @@ export interface PolicyForLetter {
 		insuredMatter?: string;
 		originalInsuredMatter?: string;
 
+		// NUEVO: Campos para Pólizas de Incendios
+		insuredPlaces?: InsuredPlaceForLetter[];
+		originalInsuredPlaces?: InsuredPlaceForLetter[];
+		riskLocation?: string; // Ubicación de riesgo
+		originalRiskLocation?: string;
+		activity?: string; // Actividad
+		originalActivity?: string;
+
 		// NUEVO: Campos para Ramo editable
 		branch?: string; // Manually edited ramo name
 		originalBranch?: string; // Original ramo from Excel/PUC mapping
@@ -99,7 +117,7 @@ export interface GeneratedLetter {
 	clientName: string;
 	clientPhone?: string;
 	clientEmail?: string;
-	templateType: "salud" | "accidentes" | "general" | "automotor";
+	templateType: "salud" | "accidentes" | "incendios" | "general" | "automotor";
 	fileName: string;
 	pdfBlob?: Blob;
 	policyCount: number;

@@ -215,13 +215,24 @@ export const BaseTemplate: React.FC<BaseTemplateProps> = ({ letterData, children
 						{letterData.templateType === "automotor" && (
 							<>
 								<Text style={styles.paragraph}>
-									Recomendamos revisar los datos y valores asegurados de cada item, esto para proceder
-									si corresponde, con la actualización o modificación de esto(s). Las pólizas se
-									emiten en moneda nacional (BS); Tenga a bien hacernos a conocer cualquier cambio que
-									se haya producido o en su defecto su consentimiento para la renovación.
+									Recomendamos revisar los datos y valores asegurados de cada unidad, esto para
+									proceder si corresponde, con la actualización o modificación de esto(s). Las pólizas
+									se emiten en moneda nacional (BS); Tenga a bien hacernos a conocer cualquier cambio
+									que se haya producido o en su defecto su consentimiento para la renovación.
 								</Text>
 								<Text style={styles.paragraph}>
 									Los valores asegurados actualizados deben ser proporcionado en moneda Nacional (BS)
+								</Text>
+							</>
+						)}
+						{/* revision of data pending Incendios */}
+						{letterData.templateType === "incendios" && (
+							<>
+								<Text style={styles.paragraph}>
+									Recomendamos revisar los datos y valores asegurados de cada item, esto para proceder
+									si corresponde, con la actualización o modificación de esto(s). Tenga a bien
+									hacernos a conocer cualquier cambio que se haya producido o en su defecto su
+									consentimiento para la renovación.
 								</Text>
 							</>
 						)}

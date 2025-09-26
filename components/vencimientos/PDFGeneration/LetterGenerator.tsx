@@ -31,10 +31,17 @@ import {
 	PDFGenerationResult,
 	PolicyForLetter,
 	VehicleForLetter,
+	InsuredPlaceForLetter,
 	InsuredMemberWithType,
 	BeneficiaryType,
 } from "@/types/pdf";
-import { groupRecordsForLetters, validateRecordForPDF, generateFileName, detectMissingData, formatRamoProductoForPDF } from "@/utils/pdfutils";
+import {
+	groupRecordsForLetters,
+	validateRecordForPDF,
+	generateFileName,
+	detectMissingData,
+	formatRamoProductoForPDF,
+} from "@/utils/pdfutils";
 import { generateLetterReference } from "@/utils/letterReferences";
 import { cleanPhoneNumber, createWhatsAppMessage } from "@/utils/whatsapp";
 import { getAllExecutives, findExecutiveByName } from "@/utils/executiveHelper";
@@ -42,6 +49,7 @@ import { createClient } from "@/utils/supabase/client";
 import { pdf } from "@react-pdf/renderer";
 import { HealthTemplate } from "./HealthTemplate";
 import { AccidentesTemplate } from "./AccidentesTemplate";
+import { IncendiosTemplate } from "./IncendiosTemplate";
 import { AutomotorTemplate } from "./AutomotorTemplate"; // Cambiado
 import { GeneralTemplate } from "./GeneralTemplate"; // Nuevo
 import JSZip from "jszip";
@@ -634,6 +642,135 @@ function VehicleEditor({ vehicles, onChange, label }: VehicleEditorProps) {
 	);
 }
 
+// Component for editing insured places (Incendios)
+interface InsuredPlacesEditorProps {
+	places: InsuredPlaceForLetter[];
+	onChange: (newPlaces: InsuredPlaceForLetter[]) => void;
+	label?: string;
+}
+
+function InsuredPlacesEditor({ places, onChange, label }: InsuredPlacesEditorProps) {
+	const handlePlaceDescriptionChange = (index: number, description: string) => {
+		const newPlaces = [...places];
+		newPlaces[index] = { ...newPlaces[index], description };
+		onChange(newPlaces);
+	};
+
+	const handlePlaceValueChange = (index: number, insuredValue: number) => {
+		const newPlaces = [...places];
+		newPlaces[index] = { ...newPlaces[index], insuredValue };
+		onChange(newPlaces);
+	};
+
+	const handlePlaceCurrencyChange = (index: number, currency: "Bs." | "$us.") => {
+		const newPlaces = [...places];
+		newPlaces[index] = { ...newPlaces[index], currency };
+		onChange(newPlaces);
+	};
+
+	const addPlace = () => {
+		const newPlace: InsuredPlaceForLetter = {
+			id: `place_${Date.now()}`,
+			description: "",
+			insuredValue: 0,
+			currency: "Bs.",
+		};
+		onChange([...places, newPlace]);
+	};
+
+	const removePlace = (id: string) => {
+		const newPlaces = places.filter((place) => place.id !== id);
+		onChange(newPlaces);
+	};
+
+	const formatMonetaryValue = (value: number | undefined, currency: "Bs." | "$us." | undefined) => {
+		if (value === undefined || value === null || isNaN(value)) return "No especificado";
+		const numberFormatter = new Intl.NumberFormat("es-BO", {
+			minimumFractionDigits: 2,
+			maximumFractionDigits: 2,
+		});
+		const formattedValue = numberFormatter.format(value);
+		if (currency === "Bs.") return `Bs. ${formattedValue}`;
+		if (currency === "$us.") return `$us. ${formattedValue}`;
+		return value.toString();
+	};
+
+	return (
+		<div>
+			{label && <label className="text-xs text-gray-600 block mb-1">{label}</label>}
+			<div className="space-y-2">
+				{places.map((place, index) => (
+					<div key={place.id} className="border border-gray-200 rounded-lg p-3 bg-gray-50">
+						<div className="flex items-center justify-between mb-2">
+							<span className="text-xs text-gray-500">Item {index + 1}</span>
+							<Button
+								type="button"
+								size="sm"
+								variant="destructive"
+								onClick={() => removePlace(place.id)}
+								className="h-6 w-6 p-0"
+							>
+								<X className="h-3 w-3" />
+							</Button>
+						</div>
+						<div className="space-y-2">
+							<Input
+								type="text"
+								value={place.description}
+								onChange={(e) => handlePlaceDescriptionChange(index, e.target.value)}
+								placeholder="Descripción del lugar asegurado"
+								className="text-xs h-8"
+							/>
+							<div className="flex items-center space-x-2">
+								<Input
+									type="number"
+									value={place.insuredValue || ""}
+									onChange={(e) => handlePlaceValueChange(index, Number(e.target.value))}
+									placeholder="0.00"
+									className="text-xs h-8 flex-grow"
+								/>
+								<Select
+									value={place.currency}
+									onValueChange={(value: "Bs." | "$us.") => handlePlaceCurrencyChange(index, value)}
+								>
+									<SelectTrigger className="w-20 h-8 text-xs">
+										<SelectValue />
+									</SelectTrigger>
+									<SelectContent>
+										<SelectItem value="Bs.">Bs.</SelectItem>
+										<SelectItem value="$us.">$us.</SelectItem>
+									</SelectContent>
+								</Select>
+							</div>
+							{/* Warning for changed insured value */}
+							{place.originalInsuredValue !== undefined &&
+								place.insuredValue !== place.originalInsuredValue && (
+									<div className="p-2 bg-yellow-50 border border-yellow-200 rounded text-xs text-yellow-800 flex items-center">
+										<AlertTriangle className="h-3 w-3 mr-1 text-yellow-600" />
+										Valor cambiado difiere del original:{" "}
+										{formatMonetaryValue(place.originalInsuredValue, place.originalCurrency)} →{" "}
+										{formatMonetaryValue(place.insuredValue, place.currency)}
+									</div>
+								)}
+							{/* Warning for changed currency */}
+							{place.originalCurrency && place.currency !== place.originalCurrency && (
+								<div className="p-2 bg-yellow-50 border border-yellow-200 rounded text-xs text-yellow-800 flex items-center">
+									<AlertTriangle className="h-3 w-3 mr-1 text-yellow-600" />
+									Moneda cambiada difiere del original: {place.originalCurrency} → {place.currency}
+								</div>
+							)}
+						</div>
+					</div>
+				))}
+				<Button type="button" size="sm" variant="outline" onClick={addPlace} className="text-xs h-8 mt-2">
+					<PlusCircle className="h-4 w-4 mr-2" />
+					Añadir Item Asegurado
+				</Button>
+			</div>
+		</div>
+	);
+}
+
 // Component for executive dropdown editor
 interface ExecutiveDropdownProps {
 	value: string;
@@ -740,12 +877,12 @@ export default function LetterGenerator({ selectedRecords, onClose, onGenerated 
 		if (loadingOperations.has(operationId)) {
 			return false; // Operation already in progress
 		}
-		setLoadingOperations(prev => new Set(prev).add(operationId));
+		setLoadingOperations((prev) => new Set(prev).add(operationId));
 		return true;
 	};
 
 	const endOperation = (operationId: string) => {
-		setLoadingOperations(prev => {
+		setLoadingOperations((prev) => {
 			const newSet = new Set(prev);
 			newSet.delete(operationId);
 			return newSet;
@@ -849,6 +986,7 @@ export default function LetterGenerator({ selectedRecords, onClose, onGenerated 
 	const stats = useMemo(() => {
 		const saludCount = letters.filter((l) => l.templateType === "salud").length;
 		const accidentesCount = letters.filter((l) => l.templateType === "accidentes").length;
+		const incendiosCount = letters.filter((l) => l.templateType === "incendios").length;
 		const automotorCount = letters.filter((l) => l.templateType === "automotor").length;
 		const generalCount = letters.filter((l) => l.templateType === "general").length;
 		const needReviewCount = letters.filter((l) => l.needsReview).length;
@@ -858,6 +996,7 @@ export default function LetterGenerator({ selectedRecords, onClose, onGenerated 
 			totalLetters: letters.length,
 			saludCount,
 			accidentesCount,
+			incendiosCount,
 			automotorCount,
 			generalCount,
 			needReviewCount,
@@ -913,6 +1052,9 @@ export default function LetterGenerator({ selectedRecords, onClose, onGenerated 
 			case "accidentes":
 				TemplateComponent = AccidentesTemplate;
 				break;
+			case "incendios":
+				TemplateComponent = IncendiosTemplate;
+				break;
 			case "automotor":
 				TemplateComponent = AutomotorTemplate;
 				break;
@@ -933,6 +1075,9 @@ export default function LetterGenerator({ selectedRecords, onClose, onGenerated 
 				break;
 			case "accidentes":
 				TemplateComponent = AccidentesTemplate;
+				break;
+			case "incendios":
+				TemplateComponent = IncendiosTemplate;
 				break;
 			case "automotor":
 				TemplateComponent = AutomotorTemplate;
@@ -1213,7 +1358,7 @@ export default function LetterGenerator({ selectedRecords, onClose, onGenerated 
 				</div>
 			</div>
 
-			<div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+			<div className="grid grid-cols-2 md:grid-cols-6 gap-4">
 				<Card>
 					<CardContent className="p-4 text-center">
 						<div className="text-2xl font-bold text-patria-blue">{stats.totalLetters}</div>
@@ -1230,6 +1375,12 @@ export default function LetterGenerator({ selectedRecords, onClose, onGenerated 
 					<CardContent className="p-4 text-center">
 						<div className="text-2xl font-bold text-orange-600">{stats.accidentesCount}</div>
 						<div className="text-sm text-gray-600">Accidentes</div>
+					</CardContent>
+				</Card>
+				<Card>
+					<CardContent className="p-4 text-center">
+						<div className="text-2xl font-bold text-red-500">{stats.incendiosCount}</div>
+						<div className="text-sm text-gray-600">Incendios</div>
 					</CardContent>
 				</Card>
 				<Card>
@@ -1440,16 +1591,37 @@ function LetterCard({
 		handleFieldChange("policies", updatedPolicies);
 	};
 
-	const getTemplateIcon = (type: "salud" | "accidentes" | "general" | "automotor") => {
+	// Helper function to update insured places for incendios policies
+	const updatePolicyInsuredPlaces = (policyIndex: number, newPlaces: InsuredPlaceForLetter[]) => {
+		const updatedPolicies = letter.policies.map((policy, index) => {
+			if (index === policyIndex) {
+				// Calculate new total insured value from all places
+				const newTotalInsuredValue = newPlaces.reduce((sum, place) => sum + (place.insuredValue || 0), 0);
+
+				const updatedManualFields = {
+					...policy.manualFields,
+					insuredPlaces: newPlaces,
+					insuredValue: newTotalInsuredValue,
+				};
+				return { ...policy, manualFields: updatedManualFields };
+			}
+			return policy;
+		});
+		handleFieldChange("policies", updatedPolicies);
+	};
+
+	const getTemplateIcon = (type: "salud" | "accidentes" | "incendios" | "general" | "automotor") => {
 		if (type === "salud") return "🏥";
 		if (type === "accidentes") return "⚡";
+		if (type === "incendios") return "🔥";
 		if (type === "automotor") return "🚗";
 		return "📄";
 	};
 
-	const getTemplateColor = (type: "salud" | "accidentes" | "general" | "automotor") => {
+	const getTemplateColor = (type: "salud" | "accidentes" | "incendios" | "general" | "automotor") => {
 		if (type === "salud") return "border-green-200 bg-green-50";
 		if (type === "accidentes") return "border-orange-200 bg-orange-50";
+		if (type === "incendios") return "border-red-200 bg-red-50";
 		if (type === "automotor") return "border-blue-200 bg-blue-50";
 		return "border-gray-200 bg-gray-50";
 	};
@@ -1521,7 +1693,14 @@ function LetterCard({
 								Completo
 							</Badge>
 						)}
-						<Badge variant={letter.templateType === "salud" || letter.templateType === "accidentes" ? "default" : "secondary"} className="text-xs">
+						<Badge
+							variant={
+								letter.templateType === "salud" || letter.templateType === "accidentes"
+									? "default"
+									: "secondary"
+							}
+							className="text-xs"
+						>
 							{letter.templateType.toUpperCase()}
 						</Badge>
 						<div className="flex space-x-1">
@@ -1534,7 +1713,12 @@ function LetterCard({
 										size="sm"
 										variant="outline"
 										onClick={onPreview}
-										disabled={isGenerating || isPreviewing || !isReferenceValid || isOperationLoading(`preview-${letter.id}`)}
+										disabled={
+											isGenerating ||
+											isPreviewing ||
+											!isReferenceValid ||
+											isOperationLoading(`preview-${letter.id}`)
+										}
 									>
 										{isPreviewing || isOperationLoading(`preview-${letter.id}`) ? (
 											<RefreshCw className="h-4 w-4 animate-spin" />
@@ -1545,7 +1729,11 @@ function LetterCard({
 									<Button
 										size="sm"
 										onClick={onDownload}
-										disabled={isGenerating || !isReferenceValid || isOperationLoading(`download-${letter.id}`)}
+										disabled={
+											isGenerating ||
+											!isReferenceValid ||
+											isOperationLoading(`download-${letter.id}`)
+										}
 										className="patria-btn-primary"
 									>
 										{isOperationLoading(`download-${letter.id}`) ? (
@@ -1557,7 +1745,12 @@ function LetterCard({
 									<Button
 										size="sm"
 										onClick={onWhatsApp}
-										disabled={isGenerating || !letter.client.phone || !isReferenceValid || isOperationLoading(`whatsapp-${letter.id}`)}
+										disabled={
+											isGenerating ||
+											!letter.client.phone ||
+											!isReferenceValid ||
+											isOperationLoading(`whatsapp-${letter.id}`)
+										}
 										className="bg-green-500 hover:bg-green-600 text-white"
 									>
 										{isOperationLoading(`whatsapp-${letter.id}`) ? (
@@ -1666,10 +1859,11 @@ function LetterCard({
 											policy.manualFields.originalBranch &&
 											policy.manualFields.branch !== policy.manualFields.originalBranch) ||
 											(policy.manualFields?.producto &&
-											policy.manualFields.originalProducto &&
-											policy.manualFields.producto !== policy.manualFields.originalProducto)) && (
-												<span className="ml-1 text-yellow-600 text-xs">(editado)</span>
-											)}
+												policy.manualFields.originalProducto &&
+												policy.manualFields.producto !==
+													policy.manualFields.originalProducto)) && (
+											<span className="ml-1 text-yellow-600 text-xs">(editado)</span>
+										)}
 									</div>
 								</div>
 								<div>
@@ -1854,6 +2048,73 @@ function LetterCard({
 															/>
 														</div>
 													</>
+												) : letter.templateType === "incendios" ? (
+													<>
+														<div className="space-y-2">
+															<ConditionsTextarea
+																label="Materia Asegurada:"
+																value={policy.manualFields?.insuredMatter || ""}
+																onChange={(v) =>
+																	updatePolicy(index, "insuredMatter", v)
+																}
+																placeholder="Detalle la materia asegurada..."
+																rows={2}
+															/>
+															<ConditionsTextarea
+																label="Ubicación de Riesgo:"
+																value={policy.manualFields?.riskLocation || ""}
+																onChange={(v) => updatePolicy(index, "riskLocation", v)}
+																placeholder="Av. Alemana N° 24"
+																rows={1}
+															/>
+															<ConditionsTextarea
+																label="Actividad:"
+																value={policy.manualFields?.activity || ""}
+																onChange={(v) => updatePolicy(index, "activity", v)}
+																placeholder="Construcción"
+																rows={1}
+															/>
+														</div>
+														<div className="space-y-2">
+															<InsuredPlacesEditor
+																label="Items Asegurados (editable):"
+																places={policy.manualFields?.insuredPlaces || []}
+																onChange={(newPlaces) =>
+																	updatePolicyInsuredPlaces(index, newPlaces)
+																}
+															/>
+															<NumericInputWithCurrency
+																label="Valor Asegurado TOTAL:"
+																value={policy.manualFields?.insuredValue}
+																currency={
+																	policy.manualFields?.insuredValueCurrency || "Bs."
+																}
+																originalValue={
+																	policy.manualFields?.originalInsuredValue
+																}
+																originalCurrency={
+																	policy.manualFields?.originalInsuredValueCurrency
+																}
+																onValueChange={(v) =>
+																	updatePolicy(index, "insuredValue", v)
+																}
+																onCurrencyChange={(c) =>
+																	updatePolicy(index, "insuredValueCurrency", c)
+																}
+																placeholder="0.00"
+																className="text-xs h-8"
+															/>
+															<ConditionsTextarea
+																label="Condiciones específicas:"
+																value={policy.manualFields?.specificConditions || ""}
+																onChange={(v) =>
+																	updatePolicy(index, "specificConditions", v)
+																}
+																placeholder="Condiciones adicionales..."
+																rows={2}
+															/>
+														</div>
+													</>
 												) : (
 													// General Template
 													<>
@@ -1953,17 +2214,19 @@ function LetterCard({
 													)}
 													{policy.manualFields?.insuredMembers &&
 														policy.manualFields.insuredMembers.length > 0 && (
-														<div>
-															<div className="text-green-700 font-medium">
-																✓ Asegurados:
+															<div>
+																<div className="text-green-700 font-medium">
+																	✓ Asegurados:
+																</div>
+																<ul className="list-disc list-inside pl-2">
+																	{policy.manualFields.insuredMembers.map(
+																		(member, i) => (
+																			<li key={i}>{member}</li>
+																		)
+																	)}
+																</ul>
 															</div>
-															<ul className="list-disc list-inside pl-2">
-																{policy.manualFields.insuredMembers.map((member, i) => (
-																	<li key={i}>{member}</li>
-																))}
-															</ul>
-														</div>
-													)}
+														)}
 												</>
 											) : letter.templateType === "automotor" ? (
 												<>
@@ -2005,6 +2268,59 @@ function LetterCard({
 															)}
 														</div>
 													)}
+													{policy.manualFields?.specificConditions && (
+														<div className="text-green-700 font-medium">
+															✓ Condiciones: {policy.manualFields.specificConditions}
+														</div>
+													)}
+												</>
+											) : letter.templateType === "incendios" ? (
+												<>
+													{policy.manualFields?.insuredValue !== undefined && (
+														<div className="text-green-700 font-medium">
+															✓ Valor Asegurado:{" "}
+															{formatMonetaryValue(
+																policy.manualFields.insuredValue,
+																policy.manualFields.insuredValueCurrency
+															)}
+														</div>
+													)}
+													{policy.manualFields?.insuredMatter && (
+														<div className="text-green-700 font-medium">
+															✓ Materia Asegurada: {policy.manualFields.insuredMatter}
+														</div>
+													)}
+													{policy.manualFields?.riskLocation && (
+														<div className="text-green-700 font-medium">
+															✓ Ubicación de Riesgo: {policy.manualFields.riskLocation}
+														</div>
+													)}
+													{policy.manualFields?.activity && (
+														<div className="text-green-700 font-medium">
+															✓ Actividad: {policy.manualFields.activity}
+														</div>
+													)}
+													{policy.manualFields?.insuredPlaces &&
+														policy.manualFields.insuredPlaces.length > 0 && (
+															<>
+																<div className="text-green-700 font-medium">
+																	✓ Items Asegurados:
+																</div>
+																<ul className="list-disc list-inside pl-2">
+																	{policy.manualFields.insuredPlaces.map(
+																		(place, i) => (
+																			<li key={i}>
+																				{place.description} -{" "}
+																				{formatMonetaryValue(
+																					place.insuredValue,
+																					place.currency
+																				)}
+																			</li>
+																		)
+																	)}
+																</ul>
+															</>
+														)}
 													{policy.manualFields?.specificConditions && (
 														<div className="text-green-700 font-medium">
 															✓ Condiciones: {policy.manualFields.specificConditions}
