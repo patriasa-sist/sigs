@@ -134,11 +134,11 @@ export async function fetchRamoMappingData(): Promise<RamoMappingData[]> {
 
 /**
  * Extract ramo code from PUC
- * PUC format: XXYYZZ where XX=master (91), YY=ramo (05), ZZ=product (47)
+ * PUC format: XXYYZZ or XXYYZZA where XX=master (91), YY=ramo (05), ZZ=product (47), A=optional variant
  * Returns the first 4 digits for database lookup
  *
- * @param puc - 6-digit PUC code (e.g., "910547")
- * @returns 4-digit ramo code (e.g., "9105") or null if invalid
+ * @param puc - 6 or 7-digit PUC code (e.g., "910547" or "9109205")
+ * @returns 4-digit ramo code (e.g., "9105" or "9109") or null if invalid
  */
 export function extractRamoCodeFromPUC(puc: string): string | null {
 	if (!puc || typeof puc !== "string") {
@@ -148,8 +148,8 @@ export function extractRamoCodeFromPUC(puc: string): string | null {
 	// Clean and validate PUC format
 	const cleanPuc = puc.replace(/\D/g, ""); // Remove non-digits
 
-	if (cleanPuc.length !== 6) {
-		console.warn(`Invalid PUC format: ${puc}. Expected 6 digits, got ${cleanPuc.length}`);
+	if (cleanPuc.length < 6 || cleanPuc.length > 7) {
+		console.warn(`Invalid PUC format: ${puc}. Expected 6-7 digits, got ${cleanPuc.length}`);
 		return null;
 	}
 
@@ -246,10 +246,10 @@ export function validatePUC(puc: string): { valid: boolean; message?: string } {
 
 	const cleanPuc = puc.replace(/\D/g, "");
 
-	if (cleanPuc.length !== 6) {
+	if (cleanPuc.length < 6 || cleanPuc.length > 7) {
 		return {
 			valid: false,
-			message: `PUC debe tener 6 dígitos. Recibido: ${cleanPuc.length} dígitos`,
+			message: `PUC debe tener 6-7 dígitos. Recibido: ${cleanPuc.length} dígitos`,
 		};
 	}
 
