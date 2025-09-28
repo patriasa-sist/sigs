@@ -45,13 +45,13 @@ TODO REVISION CARTAS:
 [x] modificar texto de cartas (pedir cartas Flavio)
 [x] agregar columna de PRODUCTO a excel para agregar manualmente
 [x] agregar seguridad de datos en caso de cambiar el producto manualmente
-[] codificar nombres de compañias segun codigo aps (pedir excel Flavio)
-[] detectar si es Alianza y seguro general para forzar la plantilla
-
-[] codificar productos segun ultimos numeros de PUC
 
 [x] seguro accidentes personales con nueva plantilla basada en salud, vida incluido aqui
-[] seguro incendios nueva plantilla basada en general
+[x] seguro incendios nueva plantilla basada en general
+[x] detectar si es Alianza y seguro general 9109 para forzar la plantilla de salud
+[] codificar nombres de compañias segun codigo aps (pedir excel Flavio)
+
+[] codificar productos segun ultimos numeros de PUC
 
 NOTAS EXTRA:
 

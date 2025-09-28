@@ -50,7 +50,21 @@ export const PDF_CONSTANTS = {
 /**
  * Determina qué template usar basado en el RAMO
  */
-export function determineTemplateType(ramo: string): "salud" | "accidentes" | "incendios" | "automotor" | "general" {
+export function determineTemplateType(
+	ramo: string,
+	puc?: string,
+	compania?: string
+): "salud" | "accidentes" | "incendios" | "automotor" | "general" {
+	// Clean PUC for comparison (remove dashes and other non-digits)
+	const cleanPuc = puc?.replace(/\D/g, "");
+
+	// Special case for PUC 9109205 + Alianza Seguros - should be treated as health
+	// Handle both formatted ("91-09-205") and clean ("9109205") versions
+	if (cleanPuc === "9109205" && compania?.toLowerCase().includes("alianza")) {
+		console.log(`✅ Applying special case: PUC 9109205 + Alianza → salud template`);
+		return "salud";
+	}
+
 	const ramoLower = ramo.toLowerCase();
 
 	// Check for accidentes personales first (more specific)
@@ -85,7 +99,7 @@ export function groupRecordsForLetters(records: ProcessedInsuranceRecord[]): Let
 	const groups: Record<string, ProcessedInsuranceRecord[]> = {};
 
 	records.forEach((record) => {
-		const templateType = determineTemplateType(record.ramo);
+		const templateType = determineTemplateType(record.ramo, record.puc, record.compania);
 		const key = `${record.asegurado.trim().toUpperCase()}_${templateType}`;
 		if (!groups[key]) {
 			groups[key] = [];
@@ -95,7 +109,7 @@ export function groupRecordsForLetters(records: ProcessedInsuranceRecord[]): Let
 
 	return Object.entries(groups).map(([key, groupRecords], index) => {
 		const firstRecord = groupRecords[0];
-		const templateType = determineTemplateType(firstRecord.ramo);
+		const templateType = determineTemplateType(firstRecord.ramo, firstRecord.puc, firstRecord.compania);
 		let policies: PolicyForLetter[] = [];
 		const sourceRecordIds = groupRecords.map((r) => r.id!).filter((id) => id);
 
@@ -299,7 +313,7 @@ export async function groupRecordsForLettersWithReferences(records: ProcessedIns
 	const groups: Record<string, ProcessedInsuranceRecord[]> = {};
 
 	records.forEach((record) => {
-		const templateType = determineTemplateType(record.ramo);
+		const templateType = determineTemplateType(record.ramo, record.puc, record.compania);
 		const key = `${record.asegurado.trim().toUpperCase()}_${templateType}`;
 		if (!groups[key]) {
 			groups[key] = [];
@@ -312,7 +326,7 @@ export async function groupRecordsForLettersWithReferences(records: ProcessedIns
 	// Process each group sequentially to ensure unique reference numbers
 	for (const [key, groupRecords] of Object.entries(groups)) {
 		const firstRecord = groupRecords[0];
-		const templateType = determineTemplateType(firstRecord.ramo);
+		const templateType = determineTemplateType(firstRecord.ramo, firstRecord.puc, firstRecord.compania);
 		let policies: PolicyForLetter[] = [];
 		const sourceRecordIds = groupRecords.map((r) => r.id!).filter((id) => id);
 
