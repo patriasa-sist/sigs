@@ -327,11 +327,6 @@ export default function Dashboard({ data, onBack, onUpdateData }: DashboardProps
 						<FileText className="h-4 w-4 mr-2" />
 						Generar Cartas ({selectedRecords.size})
 					</Button>
-
-					<Button variant="outline">
-						<Download className="h-4 w-4 mr-2" />
-						Exportar
-					</Button>
 				</div>
 			</div>
 
@@ -526,7 +521,7 @@ export default function Dashboard({ data, onBack, onUpdateData }: DashboardProps
 						</div>
 						<div className="flex items-center space-x-2">
 							<Checkbox checked={isAllSelected} onCheckedChange={handleSelectAll} className="w-5 h-5" />
-							<span className="text-sm text-gray-600">Seleccionar Todo</span>
+							<span className="text-sm text-gray-600">Seleccionar TODOS los registros</span>
 						</div>
 					</div>
 				</CardHeader>

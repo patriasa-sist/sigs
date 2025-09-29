@@ -100,33 +100,6 @@ const Dashboard = () => {
 		},
 	];
 
-	const quickActions = [
-		{
-			title: "Carga de Datos",
-			description: "Procesa archivos Excel con validación automática",
-			icon: Upload,
-			action: "Cargar Excel",
-		},
-		{
-			title: "Dashboard",
-			description: "Visualiza y filtra datos de manera intuitiva",
-			icon: Eye,
-			action: "Ver Dashboard",
-		},
-		{
-			title: "Envío Automático",
-			description: "Genera y envía cartas por email o descarga en ZIP",
-			icon: Mail,
-			action: "Configurar Envío",
-		},
-		{
-			title: "Seguimiento",
-			description: "Control completo del estado de las notificaciones",
-			icon: UserCheck,
-			action: "Ver Seguimiento",
-		},
-	];
-
 	return (
 		<div className="min-h-screen">
 			<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -134,31 +107,6 @@ const Dashboard = () => {
 				<div className="mb-8">
 					<h2 className="text-3xl font-bold text-gray-900 mb-2">Bienvenido al Sistema de Gestión</h2>
 					<p className="text-gray-600">Selecciona un módulo para acceder a las funcionalidades del sistema</p>
-				</div>
-
-				{/* Quick Actions */}
-				<div className="mb-8">
-					<h3 className="text-lg font-semibold text-gray-900 mb-4">Acciones Rápidas</h3>
-					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-						{quickActions.map((action, index) => (
-							<Card key={index} className="hover:shadow-md transition-shadow cursor-pointer">
-								<CardContent className="p-4">
-									<div className="flex items-center space-x-3">
-										<div className="bg-blue-100 p-2 rounded-lg">
-											<action.icon className="h-5 w-5 text-blue-600" />
-										</div>
-										<div>
-											<h4 className="font-medium text-sm text-gray-900">{action.title}</h4>
-											<p className="text-xs text-gray-600">{action.description}</p>
-										</div>
-									</div>
-									<Button size="sm" className="w-full mt-3" variant="outline">
-										{action.action}
-									</Button>
-								</CardContent>
-							</Card>
-						))}
-					</div>
 				</div>
 
 				{/* Main Modules */}

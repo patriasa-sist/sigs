@@ -1611,8 +1611,8 @@ function LetterCard({
 	};
 
 	const getTemplateIcon = (type: "salud" | "accidentes" | "incendios" | "general" | "automotor") => {
-		if (type === "salud") return "🏥";
-		if (type === "accidentes") return "⚡";
+		if (type === "salud") return "🩺";
+		if (type === "accidentes") return "🚑";
 		if (type === "incendios") return "🔥";
 		if (type === "automotor") return "🚗";
 		return "📄";
@@ -1706,11 +1706,11 @@ function LetterCard({
 						<div className="flex space-x-1">
 							{!isEditing ? (
 								<>
-									<Button size="sm" variant="outline" onClick={onEdit} disabled={isGenerating}>
+									<Button size="lg" variant="outline" onClick={onEdit} disabled={isGenerating}>
 										<Edit3 className="h-4 w-4" />
 									</Button>
 									<Button
-										size="sm"
+										size="lg"
 										variant="outline"
 										onClick={onPreview}
 										disabled={
@@ -1724,6 +1724,23 @@ function LetterCard({
 											<RefreshCw className="h-4 w-4 animate-spin" />
 										) : (
 											<Eye className="h-4 w-4" />
+										)}
+									</Button>
+									<Button
+										size="lg"
+										onClick={onWhatsApp}
+										disabled={
+											isGenerating ||
+											!letter.client.phone ||
+											!isReferenceValid ||
+											isOperationLoading(`whatsapp-${letter.id}`)
+										}
+										className="bg-green-500 hover:bg-green-600 text-white"
+									>
+										{isOperationLoading(`whatsapp-${letter.id}`) ? (
+											<RefreshCw className="h-4 w-4 animate-spin" />
+										) : (
+											<WhatsAppIcon />
 										)}
 									</Button>
 									<Button
@@ -1742,30 +1759,13 @@ function LetterCard({
 											<Download className="h-4 w-4" />
 										)}
 									</Button>
-									<Button
-										size="sm"
-										onClick={onWhatsApp}
-										disabled={
-											isGenerating ||
-											!letter.client.phone ||
-											!isReferenceValid ||
-											isOperationLoading(`whatsapp-${letter.id}`)
-										}
-										className="bg-green-500 hover:bg-green-600 text-white"
-									>
-										{isOperationLoading(`whatsapp-${letter.id}`) ? (
-											<RefreshCw className="h-4 w-4 animate-spin" />
-										) : (
-											<WhatsAppIcon />
-										)}
-									</Button>
 								</>
 							) : (
 								<>
-									<Button size="sm" onClick={onSaveEdit} className="patria-btn-primary">
+									<Button size="lg" onClick={onSaveEdit} className="patria-btn-primary">
 										<Save className="h-4 w-4" />
 									</Button>
-									<Button size="sm" variant="outline" onClick={onCancelEdit}>
+									<Button size="lg" variant="outline" onClick={onCancelEdit}>
 										<X className="h-4 w-4" />
 									</Button>
 								</>
