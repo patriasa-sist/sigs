@@ -112,44 +112,42 @@ const Dashboard = () => {
 					<h3 className="text-lg font-semibold text-gray-900 mb-4">Módulos del Sistema</h3>
 					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 						{modules.map((module) => (
-							<Link href="vencimientos">
-								<Card
-									key={module.id}
-									className={`${module.color} transition-all duration-200 cursor-pointer hover:shadow-lg`}
-								>
-									<CardHeader className="pb-4">
-										<div className="flex items-center space-x-3">
-											<div className="p-2 bg-white rounded-lg">
-												<module.icon className="h-6 w-6 text-gray-700" />
-											</div>
-											<div>
-												<CardTitle className="text-lg text-gray-900">{module.title}</CardTitle>
-												<CardDescription className="text-sm text-gray-600">
-													{module.description}
-												</CardDescription>
-											</div>
+							<Card
+								key={module.id}
+								className={`${module.color} transition-all duration-200 cursor-pointer hover:shadow-lg`}
+							>
+								<CardHeader className="pb-4">
+									<div className="flex items-center space-x-3">
+										<div className="p-2 bg-white rounded-lg">
+											<module.icon className="h-6 w-6 text-gray-700" />
 										</div>
-									</CardHeader>
-									<CardContent>
-										<div className="space-y-2">
-											{module.sections.map((section, sectionIndex) => (
-												<div
-													key={sectionIndex}
-													className="flex items-center space-x-2 p-2 rounded-md hover:bg-white/50 transition-colors"
-												>
-													<section.icon className="h-4 w-4 text-gray-600" />
-													<span className="text-sm text-gray-700">{section.name}</span>
-												</div>
-											))}
+										<div>
+											<CardTitle className="text-lg text-gray-900">{module.title}</CardTitle>
+											<CardDescription className="text-sm text-gray-600">
+												{module.description}
+											</CardDescription>
 										</div>
-										<Link href="vencimientos">
-											<Button className="w-full mt-4" variant="default">
-												Acceder al Módulo
-											</Button>
-										</Link>
-									</CardContent>
-								</Card>
-							</Link>
+									</div>
+								</CardHeader>
+								<CardContent>
+									<div className="space-y-2">
+										{module.sections.map((section, sectionIndex) => (
+											<div
+												key={sectionIndex}
+												className="flex items-center space-x-2 p-2 rounded-md hover:bg-white/50 transition-colors"
+											>
+												<section.icon className="h-4 w-4 text-gray-600" />
+												<span className="text-sm text-gray-700">{section.name}</span>
+											</div>
+										))}
+									</div>
+									<Link href="vencimientos">
+										<Button className="w-full mt-4" variant="default">
+											Acceder al Módulo
+										</Button>
+									</Link>
+								</CardContent>
+							</Card>
 						))}
 					</div>
 				</div>
