@@ -16,22 +16,22 @@ import { Loader2, AlertTriangle } from "lucide-react";
 
 const passwordSchema = z
 	.string()
-	.min(8, { message: "Minimum 8 characters required." })
-	.max(50, { message: "Maximum 50 characters allowed." })
-	.regex(/(?=.*[A-Z])/, { message: "At least one uppercase character required." })
-	.regex(/(?=.*[a-z])/, { message: "At least one lowercase character required." })
-	.regex(/(?=.*\d)/, { message: "At least one digit required." })
-	.regex(/[$&+,:;=?@#|'<>.^*()%!-]/, { message: "At least one special character required." });
+	.min(8, { message: "Minimo 8 caracteres requeridos." })
+	.max(50, { message: "Maximo 50 caracteres." })
+	.regex(/(?=.*[A-Z])/, { message: "Al menos una letra mayuscula." })
+	.regex(/(?=.*[a-z])/, { message: "Al menos una letra minuscula." })
+	.regex(/(?=.*\d)/, { message: "Al menos un numero." })
+	.regex(/[$&+,:;=?@#|'<>.^*()%!-]/, { message: "Al menos un caracter especial." });
 
 const formSchema = z
 	.object({
-		email: z.email("Invalid email format"),
+		email: z.email("Formato de correo invalido."),
 		password: passwordSchema,
 		confirmPassword: passwordSchema,
 	})
 	.refine(({ password, confirmPassword }) => password === confirmPassword, {
 		path: ["confirmPassword"],
-		message: "Passwords do not match.",
+		message: "Contraseñas no coinciden.",
 	});
 
 function SignUpContent() {
@@ -50,6 +50,7 @@ function SignUpContent() {
 
 	const form = useForm<z.infer<typeof formSchema>>({
 		resolver: zodResolver(formSchema),
+		mode: "onChange",
 		defaultValues: {
 			email: inviteEmail,
 			password: "",
@@ -303,14 +304,16 @@ function SignUpContent() {
 
 export default function SignUp() {
 	return (
-		<Suspense fallback={
-			<div className="flex justify-center items-center min-h-screen">
-				<div className="flex items-center space-x-2">
-					<Loader2 className="h-4 w-4 animate-spin" />
-					<span>Loading...</span>
+		<Suspense
+			fallback={
+				<div className="flex justify-center items-center min-h-screen">
+					<div className="flex items-center space-x-2">
+						<Loader2 className="h-4 w-4 animate-spin" />
+						<span>Loading...</span>
+					</div>
 				</div>
-			</div>
-		}>
+			}
+		>
 			<SignUpContent />
 		</Suspense>
 	);
