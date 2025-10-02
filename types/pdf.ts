@@ -205,4 +205,22 @@ export const excecutives = [
 		mail: "marco.eid@patria-sa.com",
 		signature: "/images/firma_marco.png",
 	},
+	{
+		user: "Roxana",
+		name: "Roxana Chavez Paz",
+		glyph: "RCP",
+		charge: "Directora Comercial",
+		telf: "78463787",
+		mail: "roxana.chavez@patria-sa.com",
+		signature: "/images/firma_roxana.png",
+	},
+	{
+		user: "Veronica",
+		name: "Veronica Martinez Cespedes",
+		glyph: "VMC",
+		charge: "Asesor Comercial",
+		telf: "68563888",
+		mail: "vmartinez@patria-sa.com",
+		signature: "/images/firma_veronica.png",
+	},
 ];
