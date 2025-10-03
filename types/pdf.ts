@@ -223,4 +223,13 @@ export const excecutives = [
 		mail: "vmartinez@patria-sa.com",
 		signature: "/images/firma_veronica.png",
 	},
+	{
+		user: "Alcides",
+		name: "Alcides APP APM",
+		glyph: "APM",
+		charge: "Asesor Comercial",
+		telf: "76000610",
+		mail: "asistente.comercial@patria-sa.com",
+		signature: "/images/firma_alcides.png",
+	},
 ];
