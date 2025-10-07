@@ -50,8 +50,8 @@ export default async function ManageUsersPage() {
 			{/* Header */}
 			<div className="flex items-center gap-4">
 				<div>
-					<h1 className="text-3xl font-bold text-gray-900">User Management</h1>
-					<p className="text-gray-600 mt-1">Manage user information</p>
+					<h1 className="text-3xl font-bold text-gray-900">Gestión de Usuarios</h1>
+					<p className="text-gray-600 mt-1">Administrar información de usuarios</p>
 				</div>
 			</div>
 
@@ -59,34 +59,34 @@ export default async function ManageUsersPage() {
 			<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 				<Card>
 					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-						<CardTitle className="text-sm font-medium">Total Users</CardTitle>
+						<CardTitle className="text-sm font-medium">Total de Usuarios</CardTitle>
 						<Users className="h-4 w-4 text-muted-foreground" />
 					</CardHeader>
 					<CardContent>
 						<div className="text-2xl font-bold">{totalUsers || 0}</div>
-						<p className="text-xs text-muted-foreground">All registered users</p>
+						<p className="text-xs text-muted-foreground">Todos los usuarios registrados</p>
 					</CardContent>
 				</Card>
 
 				<Card>
 					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-						<CardTitle className="text-sm font-medium">Administrators</CardTitle>
+						<CardTitle className="text-sm font-medium">Administradores</CardTitle>
 						<Shield className="h-4 w-4 text-muted-foreground" />
 					</CardHeader>
 					<CardContent>
 						<div className="text-2xl font-bold text-blue-600">{adminUsers || 0}</div>
-						<p className="text-xs text-muted-foreground">Admin users</p>
+						<p className="text-xs text-muted-foreground">Usuarios administradores</p>
 					</CardContent>
 				</Card>
 
 				<Card>
 					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-						<CardTitle className="text-sm font-medium">Regular Users</CardTitle>
+						<CardTitle className="text-sm font-medium">Usuarios Regulares</CardTitle>
 						<User className="h-4 w-4 text-muted-foreground" />
 					</CardHeader>
 					<CardContent>
 						<div className="text-2xl font-bold text-green-600">{regularUsers || 0}</div>
-						<p className="text-xs text-muted-foreground">Standard users</p>
+						<p className="text-xs text-muted-foreground">Usuarios estándar</p>
 					</CardContent>
 				</Card>
 			</div>
@@ -96,20 +96,20 @@ export default async function ManageUsersPage() {
 				<CardHeader>
 					<CardTitle className="flex items-center gap-2">
 						<Users className="h-5 w-5" />
-						All Users
+						Todos los Usuarios
 					</CardTitle>
-					<CardDescription>Complete list of registered users and their details</CardDescription>
+					<CardDescription>Lista completa de usuarios registrados y sus detalles</CardDescription>
 				</CardHeader>
 				<CardContent>
 					{users && users.length > 0 ? (
 						<Table>
 							<TableHeader>
 								<TableRow>
-									<TableHead>User</TableHead>
-									<TableHead>Role</TableHead>
-									<TableHead>Joined</TableHead>
-									<TableHead>Last Updated</TableHead>
-									<TableHead className="w-[70px]">Actions</TableHead>
+									<TableHead>Usuario</TableHead>
+									<TableHead>Rol</TableHead>
+									<TableHead>Registrado</TableHead>
+									<TableHead>Última Actualización</TableHead>
+									<TableHead className="w-[70px]">Acciones</TableHead>
 								</TableRow>
 							</TableHeader>
 							<TableBody>
@@ -162,9 +162,9 @@ export default async function ManageUsersPage() {
 													<DropdownMenuContent align="end">
 														<DropdownMenuItem>
 															<Mail className="h-4 w-4 mr-2" />
-															Send Message
+															Enviar Mensaje
 														</DropdownMenuItem>
-														<DropdownMenuItem>View Profile</DropdownMenuItem>
+														<DropdownMenuItem>Ver Perfil</DropdownMenuItem>
 														<DeleteUserDialog
 															user={{
 																id: user.id,
@@ -183,7 +183,7 @@ export default async function ManageUsersPage() {
 					) : (
 						<div className="text-center py-8">
 							<Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-							<p className="text-sm text-muted-foreground">No users found</p>
+							<p className="text-sm text-muted-foreground">No se encontraron usuarios</p>
 						</div>
 					)}
 				</CardContent>

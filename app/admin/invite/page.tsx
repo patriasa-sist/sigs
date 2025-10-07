@@ -48,8 +48,8 @@ export default function SignUp() {
 				console.error("Error al enviar el formulario:", error.message);
 				toast.error(error.message || "No se pudo enviar la invitación. Inténtalo de nuevo.");
 			} else {
-				console.error("An unknown error occurred:", error);
-				toast.error("An unknown error occurred. Please try again.");
+				console.error("Ocurrió un error desconocido:", error);
+				toast.error("Ocurrió un error desconocido. Por favor inténtalo de nuevo.");
 			}
 		}
 	}

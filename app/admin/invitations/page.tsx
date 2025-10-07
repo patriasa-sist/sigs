@@ -55,7 +55,7 @@ export default async function ManageInvitationsPage() {
 	const getStatusInfo = (invitation: { used_at: string | null; expires_at: string }) => {
 		if (invitation.used_at) {
 			return {
-				label: "Used",
+				label: "Usada",
 				variant: "secondary" as const,
 				icon: CheckCircle,
 				color: "text-green-600",
@@ -63,14 +63,14 @@ export default async function ManageInvitationsPage() {
 		}
 		if (new Date(invitation.expires_at) < new Date()) {
 			return {
-				label: "Expired",
+				label: "Expirada",
 				variant: "destructive" as const,
 				icon: XCircle,
 				color: "text-red-600",
 			};
 		}
 		return {
-			label: "Pending",
+			label: "Pendiente",
 			variant: "default" as const,
 			icon: Clock,
 			color: "text-blue-600",
@@ -82,8 +82,8 @@ export default async function ManageInvitationsPage() {
 			{/* Header */}
 			<div className="flex items-center gap-4">
 				<div>
-					<h1 className="text-3xl font-bold text-gray-900">Invitations Management</h1>
-					<p className="text-gray-600 mt-1">Manage invitation records</p>
+					<h1 className="text-3xl font-bold text-gray-900">Gestión de Invitaciones</h1>
+					<p className="text-gray-600 mt-1">Administrar registros de invitaciones</p>
 				</div>
 			</div>
 
@@ -91,45 +91,45 @@ export default async function ManageInvitationsPage() {
 			<div className="grid grid-cols-1 md:grid-cols-4 gap-4">
 				<Card>
 					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-						<CardTitle className="text-sm font-medium">Total Invitations</CardTitle>
+						<CardTitle className="text-sm font-medium">Total de Invitaciones</CardTitle>
 						<Mail className="h-4 w-4 text-muted-foreground" />
 					</CardHeader>
 					<CardContent>
 						<div className="text-2xl font-bold">{totalInvitations || 0}</div>
-						<p className="text-xs text-muted-foreground">All invitation records</p>
+						<p className="text-xs text-muted-foreground">Todos los registros de invitación</p>
 					</CardContent>
 				</Card>
 
 				<Card>
 					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-						<CardTitle className="text-sm font-medium">Used</CardTitle>
+						<CardTitle className="text-sm font-medium">Usadas</CardTitle>
 						<CheckCircle className="h-4 w-4 text-muted-foreground" />
 					</CardHeader>
 					<CardContent>
 						<div className="text-2xl font-bold text-green-600">{usedInvitations || 0}</div>
-						<p className="text-xs text-muted-foreground">Accepted invitations</p>
+						<p className="text-xs text-muted-foreground">Invitaciones aceptadas</p>
 					</CardContent>
 				</Card>
 
 				<Card>
 					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-						<CardTitle className="text-sm font-medium">Pending</CardTitle>
+						<CardTitle className="text-sm font-medium">Pendientes</CardTitle>
 						<Clock className="h-4 w-4 text-muted-foreground" />
 					</CardHeader>
 					<CardContent>
 						<div className="text-2xl font-bold text-blue-600">{pendingInvitations || 0}</div>
-						<p className="text-xs text-muted-foreground">Awaiting response</p>
+						<p className="text-xs text-muted-foreground">Esperando respuesta</p>
 					</CardContent>
 				</Card>
 
 				<Card>
 					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-						<CardTitle className="text-sm font-medium">Expired</CardTitle>
+						<CardTitle className="text-sm font-medium">Expiradas</CardTitle>
 						<XCircle className="h-4 w-4 text-muted-foreground" />
 					</CardHeader>
 					<CardContent>
 						<div className="text-2xl font-bold text-red-600">{expiredInvitations || 0}</div>
-						<p className="text-xs text-muted-foreground">Expired invitations</p>
+						<p className="text-xs text-muted-foreground">Invitaciones expiradas</p>
 					</CardContent>
 				</Card>
 			</div>
@@ -140,11 +140,11 @@ export default async function ManageInvitationsPage() {
 					<AlertCircle className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5" />
 					<div className="flex-1">
 						<h3 className="text-sm font-medium text-blue-900 dark:text-blue-100">
-							About Invitation Management
+							Acerca de la Gestión de Invitaciones
 						</h3>
 						<p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
-							Deleting an invitation will remove both the invitation record and the associated user
-							profile if the user hasn&apos;t completed their signup. This action cannot be undone.
+							Eliminar una invitación removerá tanto el registro de invitación como el perfil de usuario
+							asociado si el usuario no ha completado su registro. Esta acción no se puede deshacer.
 						</p>
 					</div>
 				</div>
@@ -155,9 +155,9 @@ export default async function ManageInvitationsPage() {
 				<CardHeader>
 					<CardTitle className="flex items-center gap-2">
 						<Mail className="h-5 w-5" />
-						All Invitations
+						Todas las Invitaciones
 					</CardTitle>
-					<CardDescription>Complete list of invitations and their status</CardDescription>
+					<CardDescription>Lista completa de invitaciones y su estado</CardDescription>
 				</CardHeader>
 				<CardContent>
 					{enrichedInvitations && enrichedInvitations.length > 0 ? (
@@ -165,11 +165,11 @@ export default async function ManageInvitationsPage() {
 							<TableHeader>
 								<TableRow>
 									<TableHead>Email</TableHead>
-									<TableHead>Role</TableHead>
-									<TableHead>Status</TableHead>
-									<TableHead>Created</TableHead>
-									<TableHead>Expires</TableHead>
-									<TableHead className="w-[70px]">Actions</TableHead>
+									<TableHead>Rol</TableHead>
+									<TableHead>Estado</TableHead>
+									<TableHead>Creado</TableHead>
+									<TableHead>Expira</TableHead>
+									<TableHead className="w-[70px]">Acciones</TableHead>
 								</TableRow>
 							</TableHeader>
 							<TableBody>
@@ -229,7 +229,7 @@ export default async function ManageInvitationsPage() {
 					) : (
 						<div className="text-center py-8">
 							<Mail className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-							<p className="text-sm text-muted-foreground">No invitations found</p>
+							<p className="text-sm text-muted-foreground">No se encontraron invitaciones</p>
 						</div>
 					)}
 				</CardContent>

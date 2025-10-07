@@ -24,11 +24,11 @@ export default async function AdminRolesPage() {
 				<div className="w-full">
 					<Card>
 						<CardHeader>
-							<CardTitle className="text-red-600">Error Loading Users</CardTitle>
+							<CardTitle className="text-red-600">Error al Cargar Usuarios</CardTitle>
 						</CardHeader>
 						<CardContent>
 							<p className="text-sm text-muted-foreground">
-								Failed to load user data. Please check your database connection and permissions.
+								No se pudo cargar los datos de usuario. Por favor verifica tu conexión a la base de datos y permisos.
 							</p>
 						</CardContent>
 					</Card>
@@ -48,12 +48,12 @@ export default async function AdminRolesPage() {
 			<div className="w-full">
 				<div className="flex items-center justify-between">
 					<div>
-						<h1 className="text-3xl font-bold text-gray-900">User Role Management</h1>
-						<p className="text-gray-600 mt-1">Manage user permissions and roles</p>
+						<h1 className="text-3xl font-bold text-gray-900">Gestión de Roles de Usuario</h1>
+						<p className="text-gray-600 mt-1">Administrar permisos y roles de usuarios</p>
 					</div>
 					<Badge variant="secondary" className="px-3 py-1">
 						<Shield className="w-4 h-4 mr-1" />
-						Admin Panel
+						Panel de Admin
 					</Badge>
 				</div>
 			</div>
@@ -62,34 +62,34 @@ export default async function AdminRolesPage() {
 			<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 				<Card>
 					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-						<CardTitle className="text-sm font-medium">Total Users</CardTitle>
+						<CardTitle className="text-sm font-medium">Total de Usuarios</CardTitle>
 						<Users className="h-4 w-4 text-muted-foreground" />
 					</CardHeader>
 					<CardContent>
 						<div className="text-2xl font-bold">{totalUsers}</div>
-						<p className="text-xs text-muted-foreground">Registered users</p>
+						<p className="text-xs text-muted-foreground">Usuarios registrados</p>
 					</CardContent>
 				</Card>
 
 				<Card>
 					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-						<CardTitle className="text-sm font-medium">Administrators</CardTitle>
+						<CardTitle className="text-sm font-medium">Administradores</CardTitle>
 						<Crown className="h-4 w-4 text-muted-foreground" />
 					</CardHeader>
 					<CardContent>
 						<div className="text-2xl font-bold text-orange-600">{adminCount}</div>
-						<p className="text-xs text-muted-foreground">Admin privileges</p>
+						<p className="text-xs text-muted-foreground">Privilegios de admin</p>
 					</CardContent>
 				</Card>
 
 				<Card>
 					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-						<CardTitle className="text-sm font-medium">Regular Users</CardTitle>
+						<CardTitle className="text-sm font-medium">Usuarios Regulares</CardTitle>
 						<UserCheck className="h-4 w-4 text-muted-foreground" />
 					</CardHeader>
 					<CardContent>
 						<div className="text-2xl font-bold text-blue-600">{regularUserCount}</div>
-						<p className="text-xs text-muted-foreground">Standard access</p>
+						<p className="text-xs text-muted-foreground">Acceso estándar</p>
 					</CardContent>
 				</Card>
 			</div>
@@ -97,8 +97,8 @@ export default async function AdminRolesPage() {
 			{/* Users Table */}
 			<Card>
 				<CardHeader>
-					<CardTitle>All Users</CardTitle>
-					<CardDescription>View and manage user roles. Changes take effect immediately.</CardDescription>
+					<CardTitle>Todos los Usuarios</CardTitle>
+					<CardDescription>Ver y administrar roles de usuario. Los cambios se aplican inmediatamente.</CardDescription>
 				</CardHeader>
 				<CardContent>
 					{users && users.length > 0 ? (
@@ -129,17 +129,17 @@ export default async function AdminRolesPage() {
 											</Badge>
 											{user.id === adminProfile.id && (
 												<Badge variant="outline" className="text-xs">
-													You
+													Tú
 												</Badge>
 											)}
 										</div>
 										<div className="flex items-center space-x-4 text-xs text-muted-foreground">
 											<div className="flex items-center space-x-1">
 												<Calendar className="w-3 h-3" />
-												<span>Joined: {new Date(user.created_at).toLocaleDateString()}</span>
+												<span>Registrado: {new Date(user.created_at).toLocaleDateString()}</span>
 											</div>
 											<div>
-												<span>Updated: {new Date(user.updated_at).toLocaleDateString()}</span>
+												<span>Actualizado: {new Date(user.updated_at).toLocaleDateString()}</span>
 											</div>
 										</div>
 									</div>
@@ -158,8 +158,8 @@ export default async function AdminRolesPage() {
 					) : (
 						<div className="text-center py-8">
 							<Users className="mx-auto h-12 w-12 text-muted-foreground" />
-							<h3 className="mt-2 text-sm font-semibold text-muted-foreground">No users found</h3>
-							<p className="mt-1 text-sm text-muted-foreground">There are no users in the system yet.</p>
+							<h3 className="mt-2 text-sm font-semibold text-muted-foreground">No se encontraron usuarios</h3>
+							<p className="mt-1 text-sm text-muted-foreground">Todavía no hay usuarios en el sistema.</p>
 						</div>
 					)}
 				</CardContent>
@@ -170,15 +170,15 @@ export default async function AdminRolesPage() {
 				<CardHeader>
 					<CardTitle className="text-yellow-800 text-sm flex items-center">
 						<Shield className="w-4 h-4 mr-2" />
-						Security Notice
+						Aviso de Seguridad
 					</CardTitle>
 				</CardHeader>
 				<CardContent>
 					<div className="text-sm text-yellow-700 space-y-2">
-						<p>• You cannot remove your own admin privileges to prevent system lockout</p>
-						<p>• All role changes are logged and audited automatically</p>
-						<p>• Database triggers prevent unauthorized role escalation attempts</p>
-						<p>• Changes take effect immediately across all user sessions</p>
+						<p>• No puedes remover tus propios privilegios de admin para prevenir bloqueo del sistema</p>
+						<p>• Todos los cambios de roles son registrados y auditados automáticamente</p>
+						<p>• Los triggers de base de datos previenen intentos de escalación no autorizados</p>
+						<p>• Los cambios se aplican inmediatamente en todas las sesiones de usuario</p>
 					</div>
 				</CardContent>
 			</Card>
