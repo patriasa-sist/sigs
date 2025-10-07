@@ -29,11 +29,10 @@ const Dashboard = () => {
 			description: "Gestión completa de clientes individuales y corporativos",
 			icon: Users,
 			color: "bg-blue-50 hover:bg-blue-100 border-blue-200",
+			link: "/vencimientos",
 			sections: [
-				{ name: "Perfil de cliente", icon: UserCheck },
+				{ name: "Gestor de clientes", icon: UserCheck },
 				{ name: "Gestor de Documentos", icon: FileText },
-				{ name: "Individuales", icon: Users },
-				{ name: "Corporativos", icon: Building2 },
 			],
 		},
 		{
@@ -42,9 +41,9 @@ const Dashboard = () => {
 			description: "Administración de pólizas individuales y corporativas",
 			icon: Shield,
 			color: "bg-green-50 hover:bg-green-100 border-green-200",
+			link: "/vencimientos",
 			sections: [
-				{ name: "Individuales", icon: Users },
-				{ name: "Corporativas", icon: Building2 },
+				{ name: "Gestor de pólizas", icon: Building2 },
 				{ name: "Anexos de pólizas", icon: FileText },
 			],
 		},
@@ -54,7 +53,8 @@ const Dashboard = () => {
 			description: "Control y seguimiento de vencimientos de pólizas",
 			icon: Calendar,
 			color: "bg-orange-50 hover:bg-orange-100 border-orange-200",
-			sections: [{ name: "Envío recordatorios", icon: Mail }],
+			link: "/vencimientos",
+			sections: [{ name: "Cartas de Vencimiento", icon: Mail }],
 		},
 		{
 			id: "gerencia",
@@ -62,11 +62,11 @@ const Dashboard = () => {
 			description: "Herramientas de análisis y gestión gerencial",
 			icon: BarChart3,
 			color: "bg-purple-50 hover:bg-purple-100 border-purple-200",
+			link: "/vencimientos",
 			sections: [
 				{ name: "Estadísticas Mensuales", icon: BarChart3 },
-				{ name: "Registro de Operaciones", icon: ClipboardList },
 				{ name: "Objetivos y Metas", icon: Target },
-				{ name: "Switch Maestro", icon: Settings },
+				{ name: "Historial de Operaciones", icon: ClipboardList },
 			],
 		},
 		{
@@ -75,6 +75,7 @@ const Dashboard = () => {
 			description: "Gestión y registro de siniestros",
 			icon: Wrench,
 			color: "bg-red-50 hover:bg-red-100 border-red-200",
+			link: "/vencimientos",
 			sections: [
 				{ name: "Registro Siniestros", icon: ClipboardList },
 				{ name: "Perfil de cliente", icon: UserCheck },
@@ -86,14 +87,13 @@ const Dashboard = () => {
 			description: "Configuración y administración del sistema",
 			icon: Settings,
 			color: "bg-gray-50 hover:bg-gray-100 border-gray-200",
+			link: "/admin",
 			sections: [
 				{ name: "Usuarios", icon: Users },
 				{ name: "Ramos", icon: BookOpen },
-				{ name: "Aseguradora", icon: Building2 },
+				{ name: "Aseguradoras", icon: Building2 },
 				{ name: "Cartera", icon: CreditCard },
 				{ name: "Reportes", icon: FileText },
-				{ name: "Documentos Usuarios", icon: FileText },
-				{ name: "Subramos", icon: BookOpen },
 			],
 		},
 	];
@@ -141,8 +141,8 @@ const Dashboard = () => {
 											</div>
 										))}
 									</div>
-									<Link href="vencimientos">
-										<Button className="w-full mt-4" variant="default">
+									<Link href={module.link}>
+										<Button className="w-full mt-4 cursor-pointer" variant="default">
 											Acceder al Módulo
 										</Button>
 									</Link>
