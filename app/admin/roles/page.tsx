@@ -40,7 +40,11 @@ export default async function AdminRolesPage() {
 	// Calculate statistics
 	const totalUsers = users?.length || 0;
 	const adminCount = users?.filter((user) => user.role === "admin").length || 0;
-	const regularUserCount = totalUsers - adminCount;
+	const usuarioCount = users?.filter((user) => user.role === "usuario").length || 0;
+	const agenteCount = users?.filter((user) => user.role === "agente").length || 0;
+	const comercialCount = users?.filter((user) => user.role === "comercial").length || 0;
+	const invitadoCount = users?.filter((user) => user.role === "invitado").length || 0;
+	const desactivadoCount = users?.filter((user) => user.role === "desactivado").length || 0;
 
 	return (
 		<div className="flex-1 w-full flex flex-col gap-8">
@@ -59,37 +63,74 @@ export default async function AdminRolesPage() {
 			</div>
 
 			{/* Statistics Cards */}
-			<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-				<Card>
-					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-						<CardTitle className="text-sm font-medium">Total de Usuarios</CardTitle>
-						<Users className="h-4 w-4 text-muted-foreground" />
+			<div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+				<Card className="bg-gradient-to-br from-purple-50 to-white">
+					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-4">
+						<CardTitle className="text-xs font-medium">Total</CardTitle>
+						<Users className="h-3 w-3 text-purple-600" />
 					</CardHeader>
-					<CardContent>
-						<div className="text-2xl font-bold">{totalUsers}</div>
-						<p className="text-xs text-muted-foreground">Usuarios registrados</p>
+					<CardContent className="pb-3">
+						<div className="text-xl font-bold text-purple-600">{totalUsers}</div>
 					</CardContent>
 				</Card>
 
-				<Card>
-					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-						<CardTitle className="text-sm font-medium">Administradores</CardTitle>
-						<Crown className="h-4 w-4 text-muted-foreground" />
+				<Card className="bg-gradient-to-br from-orange-50 to-white">
+					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-4">
+						<CardTitle className="text-xs font-medium">Admin</CardTitle>
+						<Crown className="h-3 w-3 text-orange-600" />
 					</CardHeader>
-					<CardContent>
-						<div className="text-2xl font-bold text-orange-600">{adminCount}</div>
-						<p className="text-xs text-muted-foreground">Privilegios de admin</p>
+					<CardContent className="pb-3">
+						<div className="text-xl font-bold text-orange-600">{adminCount}</div>
 					</CardContent>
 				</Card>
 
-				<Card>
-					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-						<CardTitle className="text-sm font-medium">Usuarios Regulares</CardTitle>
-						<UserCheck className="h-4 w-4 text-muted-foreground" />
+				<Card className="bg-gradient-to-br from-blue-50 to-white">
+					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-4">
+						<CardTitle className="text-xs font-medium">Usuario</CardTitle>
+						<UserCheck className="h-3 w-3 text-blue-600" />
 					</CardHeader>
-					<CardContent>
-						<div className="text-2xl font-bold text-blue-600">{regularUserCount}</div>
-						<p className="text-xs text-muted-foreground">Acceso estándar</p>
+					<CardContent className="pb-3">
+						<div className="text-xl font-bold text-blue-600">{usuarioCount}</div>
+					</CardContent>
+				</Card>
+
+				<Card className="bg-gradient-to-br from-green-50 to-white">
+					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-4">
+						<CardTitle className="text-xs font-medium">Agente</CardTitle>
+						<Shield className="h-3 w-3 text-green-600" />
+					</CardHeader>
+					<CardContent className="pb-3">
+						<div className="text-xl font-bold text-green-600">{agenteCount}</div>
+					</CardContent>
+				</Card>
+
+				<Card className="bg-gradient-to-br from-cyan-50 to-white">
+					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-4">
+						<CardTitle className="text-xs font-medium">Comercial</CardTitle>
+						<UserCheck className="h-3 w-3 text-cyan-600" />
+					</CardHeader>
+					<CardContent className="pb-3">
+						<div className="text-xl font-bold text-cyan-600">{comercialCount}</div>
+					</CardContent>
+				</Card>
+
+				<Card className="bg-gradient-to-br from-yellow-50 to-white">
+					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-4">
+						<CardTitle className="text-xs font-medium">Invitado</CardTitle>
+						<UserCheck className="h-3 w-3 text-yellow-600" />
+					</CardHeader>
+					<CardContent className="pb-3">
+						<div className="text-xl font-bold text-yellow-600">{invitadoCount}</div>
+					</CardContent>
+				</Card>
+
+				<Card className="bg-gradient-to-br from-gray-50 to-white">
+					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-4">
+						<CardTitle className="text-xs font-medium">Desactivado</CardTitle>
+						<UserCheck className="h-3 w-3 text-gray-600" />
+					</CardHeader>
+					<CardContent className="pb-3">
+						<div className="text-xl font-bold text-gray-600">{desactivadoCount}</div>
 					</CardContent>
 				</Card>
 			</div>
