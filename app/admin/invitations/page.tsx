@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DeleteInvitationDialog } from "@/components/admin/delete-invitation-dialog";
+import { InviteForm } from "@/components/admin/invite-form";
 
 export default async function ManageInvitationsPage() {
 	const supabase = await createClient();
@@ -30,27 +31,6 @@ export default async function ManageInvitationsPage() {
 		profile_role: emailToRole.get(inv.email) || null,
 	}));
 
-	// Get invitation statistics
-	const now = new Date().toISOString();
-	const [
-		{ count: totalInvitations },
-		{ count: usedInvitations },
-		{ count: pendingInvitations },
-		{ count: expiredInvitations },
-	] = await Promise.all([
-		supabase.from("invitations").select("*", { count: "exact", head: true }),
-		supabase.from("invitations").select("*", { count: "exact", head: true }).not("used_at", "is", null),
-		supabase
-			.from("invitations")
-			.select("*", { count: "exact", head: true })
-			.is("used_at", null)
-			.gt("expires_at", now),
-		supabase
-			.from("invitations")
-			.select("*", { count: "exact", head: true })
-			.is("used_at", null)
-			.lt("expires_at", now),
-	]);
 
 	const getStatusInfo = (invitation: { used_at: string | null; expires_at: string }) => {
 		if (invitation.used_at) {
@@ -87,52 +67,8 @@ export default async function ManageInvitationsPage() {
 				</div>
 			</div>
 
-			{/* Invitation Statistics */}
-			<div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-				<Card>
-					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-						<CardTitle className="text-sm font-medium">Total de Invitaciones</CardTitle>
-						<Mail className="h-4 w-4 text-muted-foreground" />
-					</CardHeader>
-					<CardContent>
-						<div className="text-2xl font-bold">{totalInvitations || 0}</div>
-						<p className="text-xs text-muted-foreground">Todos los registros de invitación</p>
-					</CardContent>
-				</Card>
-
-				<Card>
-					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-						<CardTitle className="text-sm font-medium">Usadas</CardTitle>
-						<CheckCircle className="h-4 w-4 text-muted-foreground" />
-					</CardHeader>
-					<CardContent>
-						<div className="text-2xl font-bold text-green-600">{usedInvitations || 0}</div>
-						<p className="text-xs text-muted-foreground">Invitaciones aceptadas</p>
-					</CardContent>
-				</Card>
-
-				<Card>
-					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-						<CardTitle className="text-sm font-medium">Pendientes</CardTitle>
-						<Clock className="h-4 w-4 text-muted-foreground" />
-					</CardHeader>
-					<CardContent>
-						<div className="text-2xl font-bold text-blue-600">{pendingInvitations || 0}</div>
-						<p className="text-xs text-muted-foreground">Esperando respuesta</p>
-					</CardContent>
-				</Card>
-
-				<Card>
-					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-						<CardTitle className="text-sm font-medium">Expiradas</CardTitle>
-						<XCircle className="h-4 w-4 text-muted-foreground" />
-					</CardHeader>
-					<CardContent>
-						<div className="text-2xl font-bold text-red-600">{expiredInvitations || 0}</div>
-						<p className="text-xs text-muted-foreground">Invitaciones expiradas</p>
-					</CardContent>
-				</Card>
-			</div>
+			{/* Invite Form */}
+			<InviteForm />
 
 			{/* Info Alert */}
 			<div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-4">

@@ -31,11 +31,6 @@ const navigationItems = [
 				href: "/admin/invitations",
 				icon: Mail,
 			},
-			{
-				title: "Enviar Invitación",
-				href: "/admin/invite",
-				icon: Mail,
-			},
 		],
 	},
 	{
