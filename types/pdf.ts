@@ -225,7 +225,7 @@ export const excecutives = [
 	},
 	{
 		user: "Alcides",
-		name: "Alcides APP APM",
+		name: "Alcides Gutiérrez Rodríguez",
 		glyph: "APM",
 		charge: "Asesor Comercial",
 		telf: "76000610",
