@@ -26,6 +26,7 @@ const passwordSchema = z
 const formSchema = z
 	.object({
 		email: z.email("Formato de correo invalido."),
+		fullName: z.string().min(2, "El nombre debe tener al menos 2 caracteres.").max(100, "El nombre es demasiado largo."),
 		password: passwordSchema,
 		confirmPassword: passwordSchema,
 	})
@@ -53,6 +54,7 @@ function SignUpContent() {
 		mode: "onChange",
 		defaultValues: {
 			email: inviteEmail,
+			fullName: "",
 			password: "",
 			confirmPassword: "",
 		},
@@ -65,7 +67,7 @@ function SignUpContent() {
 		// the password form. Otherwise we redirect to the login page.
 		const verifyInvitation = async () => {
 			if (!confirmationUrl || !emailParam) {
-				toast.error("Invalid invitation link");
+				toast.error("Enlace de invitación inválido");
 				router.push("/auth/login");
 				return;
 			}
@@ -78,7 +80,7 @@ function SignUpContent() {
 				const type = url.searchParams.get("type") || "invite";
 
 				if (!tokenHash) {
-					throw new Error("Missing token");
+					throw new Error("Token faltante");
 				}
 
 				// Call verifyOtp to exchange the invite token for a session. According
@@ -89,7 +91,7 @@ function SignUpContent() {
 				});
 				// If the invitation is invalid throw
 				if (error || !data?.user) {
-					throw error || new Error("Invalid or expired invitation token");
+					throw error || new Error("Token de invitación inválido o expirado");
 				}
 				// sets the email on the form
 				setInviteEmail(emailParam);
@@ -156,13 +158,27 @@ function SignUpContent() {
 		setIsSubmitting(true);
 		try {
 			const supabase = createClient();
-			// Update the user's password
-			const { error } = await supabase.auth.updateUser({
+
+			// Update the user's password and metadata
+			const { error, data } = await supabase.auth.updateUser({
 				password: values.password,
 			});
 			// Throw if there is an error updating the password
 			if (error) {
 				throw error;
+			}
+
+			// Update the profile with full_name
+			if (data?.user) {
+				const { error: profileError } = await supabase
+					.from("profiles")
+					.update({ full_name: values.fullName })
+					.eq("id", data.user.id);
+
+				if (profileError) {
+					console.error("Failed to update profile with full name:", profileError);
+					// Don't throw as password is already set
+				}
 			}
 
 			// Mark invitation as used in the custom invitations table
@@ -176,11 +192,11 @@ function SignUpContent() {
 				// Don't throw here as the user password is already set
 			}
 
-			toast.success("Password updated successfully. You can now log in.");
+			toast.success("Contraseña actualizada exitosamente. Ahora puedes iniciar sesión.");
 			router.push("/auth/login");
 		} catch (err: unknown) {
 			console.error("Failed to set password", err);
-			const errorMessage = err instanceof Error ? err.message : "Failed to set password. Please try again.";
+			const errorMessage = err instanceof Error ? err.message : "Error al establecer la contraseña. Inténtalo de nuevo.";
 			toast.error(errorMessage);
 		} finally {
 			setIsSubmitting(false);
@@ -193,7 +209,7 @@ function SignUpContent() {
 			<div className="flex justify-center items-center min-h-screen">
 				<div className="flex items-center space-x-2">
 					<Loader2 className="h-4 w-4 animate-spin" />
-					<span>Validating invitation...</span>
+					<span>Validando invitación...</span>
 				</div>
 			</div>
 		);
@@ -208,14 +224,14 @@ function SignUpContent() {
 						<div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-100">
 							<AlertTriangle className="h-6 w-6 text-red-600" />
 						</div>
-						<CardTitle>Invalid Invitation</CardTitle>
+						<CardTitle>Invitación Inválida</CardTitle>
 						<CardDescription>
-							This invitation link is invalid, expired, or has already been used.
+							Este enlace de invitación es inválido, ha expirado o ya ha sido utilizado.
 						</CardDescription>
 					</CardHeader>
 					<CardContent>
 						<Button onClick={() => router.push("/auth/login")} className="w-full">
-							Go to Login
+							Ir al Inicio de Sesión
 						</Button>
 					</CardContent>
 				</Card>
@@ -228,10 +244,10 @@ function SignUpContent() {
 		<div className="flex justify-center items-center min-h-screen p-4">
 			<Card className="w-full max-w-md">
 				<CardHeader>
-					<CardTitle className="text-2xl text-center">Complete Your Registration</CardTitle>
+					<CardTitle className="text-2xl text-center">Completa tu Registro</CardTitle>
 					<CardDescription className="text-center">
-						You&apos;ve been invited to join the system. Please set up your password to complete
-						registration.
+						Has sido invitado a unirte al sistema. Por favor configura tu contraseña para completar
+						el registro.
 					</CardDescription>
 				</CardHeader>
 				<CardContent>
@@ -242,11 +258,26 @@ function SignUpContent() {
 								name="email"
 								render={({ field }) => (
 									<FormItem>
-										<FormLabel>Email Address</FormLabel>
+										<FormLabel>Correo Electrónico</FormLabel>
 										<FormControl>
 											<Input type="email" disabled={true} {...field} className="bg-muted" />
 										</FormControl>
-										<FormDescription>This email was provided in your invitation</FormDescription>
+										<FormDescription>Este correo fue proporcionado en tu invitación</FormDescription>
+										<FormMessage />
+									</FormItem>
+								)}
+							/>
+
+							<FormField
+								control={form.control}
+								name="fullName"
+								render={({ field }) => (
+									<FormItem>
+										<FormLabel>Nombre Completo</FormLabel>
+										<FormControl>
+											<Input type="text" placeholder="Juan Pérez García" {...field} />
+										</FormControl>
+										<FormDescription>Ingresa tu nombre completo</FormDescription>
 										<FormMessage />
 									</FormItem>
 								)}
@@ -257,12 +288,12 @@ function SignUpContent() {
 								name="password"
 								render={({ field }) => (
 									<FormItem>
-										<FormLabel>Password</FormLabel>
+										<FormLabel>Contraseña</FormLabel>
 										<FormControl>
 											<PasswordInput autoComplete="new-password" {...field} />
 										</FormControl>
 										<FormDescription>
-											Create a strong password with at least 8 characters
+											Crea una contraseña segura con al menos 8 caracteres
 										</FormDescription>
 										<FormMessage />
 									</FormItem>
@@ -274,11 +305,11 @@ function SignUpContent() {
 								name="confirmPassword"
 								render={({ field }) => (
 									<FormItem>
-										<FormLabel>Confirm Password</FormLabel>
+										<FormLabel>Confirmar Contraseña</FormLabel>
 										<FormControl>
 											<PasswordInput autoComplete="new-password" {...field} />
 										</FormControl>
-										<FormDescription>Re-enter your password to confirm</FormDescription>
+										<FormDescription>Vuelve a ingresar tu contraseña para confirmar</FormDescription>
 										<FormMessage />
 									</FormItem>
 								)}
@@ -288,10 +319,10 @@ function SignUpContent() {
 								{isSubmitting ? (
 									<>
 										<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-										Setting Password...
+										Configurando Contraseña...
 									</>
 								) : (
-									"Complete Registration"
+									"Completar Registro"
 								)}
 							</Button>
 						</form>
@@ -309,7 +340,7 @@ export default function SignUp() {
 				<div className="flex justify-center items-center min-h-screen">
 					<div className="flex items-center space-x-2">
 						<Loader2 className="h-4 w-4 animate-spin" />
-						<span>Loading...</span>
+						<span>Cargando...</span>
 					</div>
 				</div>
 			}
