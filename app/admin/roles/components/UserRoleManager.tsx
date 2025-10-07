@@ -21,23 +21,23 @@ import {
 
 interface UserRoleManagerProps {
 	userId: string;
-	currentRole: "admin" | "user";
+	currentRole: "admin" | "usuario" | "agente" | "comercial" | "invitado" | "desactivado";
 	userEmail: string;
 	isCurrentUser: boolean;
 }
 
 export function UserRoleManager({ userId, currentRole, userEmail, isCurrentUser }: UserRoleManagerProps) {
 	const [isUpdating, setIsUpdating] = useState(false);
-	const [showConfirmation, setShowConfirmation] = useState<"admin" | "user" | null>(null);
+	const [showConfirmation, setShowConfirmation] = useState<"admin" | "usuario" | "agente" | "comercial" | "invitado" | "desactivado" | null>(null);
 
-	const handleRoleChange = async (newRole: "admin" | "user") => {
+	const handleRoleChange = async (newRole: "admin" | "usuario" | "agente" | "comercial" | "invitado" | "desactivado") => {
 		if (newRole === currentRole) {
 			toast.info("User already has this role");
 			return;
 		}
 
 		// Prevent self-demotion
-		if (isCurrentUser && currentRole === "admin" && newRole === "user") {
+		if (isCurrentUser && currentRole === "admin" && newRole !== "admin") {
 			toast.error("You cannot remove your own admin privileges");
 			return;
 		}
@@ -53,7 +53,15 @@ export function UserRoleManager({ userId, currentRole, userEmail, isCurrentUser 
 			const result = await updateUserRole(formData);
 
 			if (result.success) {
-				toast.success(`Successfully updated ${userEmail} to ${newRole === "admin" ? "Administrator" : "User"}`);
+				const roleLabels: Record<string, string> = {
+					admin: "Administrator",
+					usuario: "Usuario",
+					agente: "Agente",
+					comercial: "Comercial",
+					invitado: "Invitado",
+					desactivado: "Desactivado"
+				};
+				toast.success(`Successfully updated ${userEmail} to ${roleLabels[newRole] || newRole}`);
 			} else {
 				toast.error(result.error || "Failed to update user role");
 			}
@@ -65,20 +73,40 @@ export function UserRoleManager({ userId, currentRole, userEmail, isCurrentUser 
 		}
 	};
 
-	const getConfirmationMessage = (targetRole: "admin" | "user") => {
-		if (targetRole === "admin") {
-			return {
+	const getConfirmationMessage = (targetRole: "admin" | "usuario" | "agente" | "comercial" | "invitado" | "desactivado") => {
+		const messages: Record<string, { title: string; description: string; action: string }> = {
+			admin: {
 				title: "Grant Administrator Access?",
 				description: `This will give ${userEmail} full administrative privileges including the ability to manage other users, send invitations, and access all admin features.`,
 				action: "Grant Admin Access",
-			};
-		} else {
-			return {
-				title: "Remove Administrator Access?",
-				description: `This will revoke ${userEmail}'s administrative privileges. They will lose access to admin features and user management capabilities.`,
-				action: "Remove Admin Access",
-			};
-		}
+			},
+			usuario: {
+				title: "Change to Usuario Role?",
+				description: `This will change ${userEmail}'s role to Usuario. They will have standard user access.`,
+				action: "Change to Usuario",
+			},
+			agente: {
+				title: "Change to Agente Role?",
+				description: `This will change ${userEmail}'s role to Agente. They will have agent-level access.`,
+				action: "Change to Agente",
+			},
+			comercial: {
+				title: "Change to Comercial Role?",
+				description: `This will change ${userEmail}'s role to Comercial. They will have commercial-level access.`,
+				action: "Change to Comercial",
+			},
+			invitado: {
+				title: "Change to Invitado Role?",
+				description: `This will change ${userEmail}'s role to Invitado. They will have limited guest access.`,
+				action: "Change to Invitado",
+			},
+			desactivado: {
+				title: "Deactivate User?",
+				description: `This will deactivate ${userEmail}'s account. They will lose access to the system.`,
+				action: "Deactivate User",
+			},
+		};
+		return messages[targetRole] || messages.usuario;
 	};
 
 	return (
@@ -144,67 +172,59 @@ export function UserRoleManager({ userId, currentRole, userEmail, isCurrentUser 
 					</AlertDialogContent>
 				</AlertDialog>
 
-				{/* Make User Button */}
-				<AlertDialog
-					open={showConfirmation === "user"}
-					onOpenChange={(open) => !open && setShowConfirmation(null)}
-				>
-					<AlertDialogTrigger asChild>
-						<Button
-							variant={currentRole === "user" ? "default" : "outline"}
-							size="sm"
-							className="h-8 px-3"
-							disabled={
-								isUpdating || currentRole === "user" || (isCurrentUser && currentRole === "admin")
-							}
-							onClick={() => {
-								if (isCurrentUser && currentRole === "admin") {
-									toast.error("You cannot remove your own admin privileges");
-									return;
+				{/* Other Role Buttons */}
+				{(["usuario", "agente", "comercial", "invitado", "desactivado"] as const).map((role) => (
+					<AlertDialog
+						key={role}
+						open={showConfirmation === role}
+						onOpenChange={(open) => !open && setShowConfirmation(null)}
+					>
+						<AlertDialogTrigger asChild>
+							<Button
+								variant={currentRole === role ? "default" : "outline"}
+								size="sm"
+								className="h-8 px-3"
+								disabled={
+									isUpdating || currentRole === role || (isCurrentUser && currentRole === "admin")
 								}
-								setShowConfirmation("user");
-							}}
-						>
-							{isUpdating && currentRole !== "user" ? (
-								<Loader2 className="h-3 w-3 animate-spin mr-1" />
-							) : (
-								<UserCheck className="h-3 w-3 mr-1" />
-							)}
-							User
-						</Button>
-					</AlertDialogTrigger>
-					<AlertDialogContent>
-						<AlertDialogHeader>
-							<AlertDialogTitle className="flex items-center gap-2">
-								<UserCheck className="h-5 w-5 text-blue-500" />
-								{getConfirmationMessage("user").title}
-							</AlertDialogTitle>
-							<AlertDialogDescription>
-								{getConfirmationMessage("user").description}
-							</AlertDialogDescription>
-						</AlertDialogHeader>
-						<div className="space-y-4">
-							<div className="bg-blue-50 border border-blue-200 rounded-md p-3">
-								<div className="flex items-start gap-2">
-									<AlertTriangle className="h-4 w-4 text-blue-600 mt-0.5" />
-									<div className="text-sm text-blue-800">
-										<div className="font-medium">Important:</div>
-										<div>This action cannot be undone without administrator intervention.</div>
-									</div>
-								</div>
-							</div>
-						</div>
-						<AlertDialogFooter>
-							<AlertDialogCancel>Cancel</AlertDialogCancel>
-							<AlertDialogAction
-								onClick={() => handleRoleChange("user")}
-								className="bg-blue-600 hover:bg-blue-700"
+								onClick={() => {
+									if (isCurrentUser && currentRole === "admin") {
+										toast.error("You cannot remove your own admin privileges");
+										return;
+									}
+									setShowConfirmation(role);
+								}}
 							>
-								{getConfirmationMessage("user").action}
-							</AlertDialogAction>
-						</AlertDialogFooter>
-					</AlertDialogContent>
-				</AlertDialog>
+								{isUpdating && currentRole !== role ? (
+									<Loader2 className="h-3 w-3 animate-spin mr-1" />
+								) : (
+									<UserCheck className="h-3 w-3 mr-1" />
+								)}
+								{role.charAt(0).toUpperCase() + role.slice(1)}
+							</Button>
+						</AlertDialogTrigger>
+						<AlertDialogContent>
+							<AlertDialogHeader>
+								<AlertDialogTitle className="flex items-center gap-2">
+									<UserCheck className="h-5 w-5 text-blue-500" />
+									{getConfirmationMessage(role).title}
+								</AlertDialogTitle>
+								<AlertDialogDescription>
+									{getConfirmationMessage(role).description}
+								</AlertDialogDescription>
+							</AlertDialogHeader>
+							<AlertDialogFooter>
+								<AlertDialogCancel>Cancel</AlertDialogCancel>
+								<AlertDialogAction
+									onClick={() => handleRoleChange(role)}
+									className="bg-blue-600 hover:bg-blue-700"
+								>
+									{getConfirmationMessage(role).action}
+								</AlertDialogAction>
+							</AlertDialogFooter>
+						</AlertDialogContent>
+					</AlertDialog>
+				))}
 			</div>
 
 			{/* Self-indication */}

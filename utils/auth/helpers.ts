@@ -2,7 +2,7 @@ import { createClient } from "@/utils/supabase/server";
 import { createClient as createBrowserClient } from "@/utils/supabase/client";
 import { redirect } from "next/navigation";
 
-export type UserRole = "admin" | "user";
+export type UserRole = "admin" | "usuario" | "agente" | "comercial" | "invitado" | "desactivado";
 
 export interface UserProfile {
 	id: string;
@@ -73,7 +73,7 @@ export async function getDisplayProfile(): Promise<UserProfile> {
 	return profile || {
 		id: user.id,
 		email: user.email!,
-		role: "user" as const, // Default role, actual role verified by middleware for protected routes
+		role: "usuario" as const, // Default role, actual role verified by middleware for protected routes
 		created_at: user.created_at,
 		updated_at: user.updated_at || user.created_at,
 	};

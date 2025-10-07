@@ -6,9 +6,20 @@ import { NextResponse, type NextRequest } from "next/server";
 const PROTECTED_ROUTES = {
 	"/admin": "admin",
 	"/auth/invite": "admin",
+	// New role-based routes:
+	"/agentes": "agente",
+	"/vencimientos": ["usuario", "agente", "comercial"],
+	"/dashboard": ["usuario", "agente", "comercial"], // Multiple roles allowed
 } as const;
 
-const PUBLIC_ROUTES = ["/auth/login", "/auth/signup", "/auth/error", "/auth/confirm", "/auth/reset-password", "/unauthorized"] as const;
+const PUBLIC_ROUTES = [
+	"/auth/login",
+	"/auth/signup",
+	"/auth/error",
+	"/auth/confirm",
+	"/auth/reset-password",
+	"/unauthorized",
+] as const;
 
 export async function updateSession(request: NextRequest) {
 	let supabaseResponse = NextResponse.next({
@@ -56,13 +67,13 @@ export async function updateSession(request: NextRequest) {
 	// If user is authenticated, check role-based permissions
 	if (user) {
 		console.log("🔍 [Middleware] Authenticated user:", user.id, "accessing:", pathname);
-		
+
 		// Use admin client to get user profile with role (bypasses RLS policies)
 		const supabaseAdmin = createAdminClient(
 			process.env.NEXT_PUBLIC_SUPABASE_URL!,
 			process.env.SUPABASE_SERVICE_ROLE_KEY!
 		);
-		
+
 		const { data: profile, error } = await supabaseAdmin.from("profiles").select("role").eq("id", user.id).single();
 
 		if (error) {
@@ -78,14 +89,30 @@ export async function updateSession(request: NextRequest) {
 		const requiredRole = Object.entries(PROTECTED_ROUTES).find(([route]) => pathname.startsWith(route))?.[1];
 
 		if (requiredRole) {
-			console.log("🔒 [Middleware] Route requires role:", requiredRole, "| User has role:", profile?.role);
+			console.log("🔒🔒 [Middleware] Route requires role:", requiredRole, "| User has role:", profile?.role);
+
+			// Handle multiple roles (array)
+			if (Array.isArray(requiredRole)) {
+				if (!requiredRole.includes(profile?.role as string)) {
+					console.log("🚫 [Middleware] Access denied - user role not in allowed roles");
+					url.pathname = "/unauthorized";
+					return NextResponse.redirect(url);
+				}
+			}
+			// Handle single role (string)
+			else if (profile?.role !== requiredRole) {
+				console.log("🚫 [Middleware] Access denied - redirecting to /unauthorized");
+				url.pathname = "/unauthorized";
+				return NextResponse.redirect(url);
+			}
 		}
 
-		if (requiredRole && profile?.role !== requiredRole) {
-			console.log("🚫 [Middleware] Access denied - redirecting to /unauthorized");
-			url.pathname = "/unauthorized";
-			return NextResponse.redirect(url);
-		}
+		// Example: Block deactivated users from accessing any protected route (uncomment if needed)
+		// if (profile?.role === "desactivado" && !isPublicRoute) {
+		// 	console.log("🚫 [Middleware] Deactivated user trying to access protected route");
+		// 	url.pathname = "/unauthorized";
+		// 	return NextResponse.redirect(url);
+		// }
 
 		// Redirect authenticated users away from auth pages
 		if (pathname.startsWith("/auth/login") || pathname.startsWith("/auth/signup")) {

@@ -7,8 +7,8 @@ import { z } from "zod";
 
 const updateRoleSchema = z.object({
 	userId: z.uuid("Invalid user ID format"),
-	newRole: z.enum(["admin", "user"], {
-		message: "Role must be either 'admin' or 'user'",
+	newRole: z.enum(["admin", "usuario", "agente", "comercial", "invitado", "desactivado"], {
+		message: "Role must be one of: admin, usuario, agente, comercial, invitado, desactivado",
 	}),
 });
 
@@ -17,7 +17,7 @@ export async function updateUserRole(formData: FormData) {
 		// Validate input
 		const rawData = {
 			userId: formData.get("userId") as string,
-			newRole: formData.get("newRole") as "admin" | "user",
+			newRole: formData.get("newRole") as "admin" | "usuario" | "agente" | "comercial" | "invitado" | "desactivado",
 		};
 
 		const validation = updateRoleSchema.safeParse(rawData);
