@@ -147,7 +147,7 @@ export default async function AdminRolesPage() {
 									<div className="flex items-center space-x-2">
 										<UserRoleManager
 											userId={user.id}
-											currentRole={user.role as "admin" | "user"}
+											currentRole={user.role}
 											userEmail={user.email}
 											isCurrentUser={user.id === adminProfile.id}
 										/>

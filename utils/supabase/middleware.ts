@@ -5,7 +5,6 @@ import { NextResponse, type NextRequest } from "next/server";
 // Define protected routes and their required roles
 const PROTECTED_ROUTES = {
 	"/admin": "admin",
-	"/auth/invite": "admin",
 	// New role-based routes:
 	"/agentes": "agente",
 	"/vencimientos": ["usuario", "agente", "comercial"],

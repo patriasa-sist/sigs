@@ -1,18 +1,9 @@
 import { createClient } from "@/utils/supabase/server";
-import { ArrowLeft, Mail, Calendar, MoreHorizontal, AlertCircle, CheckCircle, XCircle, Clock } from "lucide-react";
+import { Mail, Calendar, AlertCircle, CheckCircle, XCircle, Clock } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import {
-	Table,
-	TableBody,
-	TableCell,
-	TableHead,
-	TableHeader,
-	TableRow,
-} from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DeleteInvitationDialog } from "@/components/admin/delete-invitation-dialog";
-import Link from "next/link";
 
 export default async function ManageInvitationsPage() {
 	const supabase = await createClient();
@@ -61,7 +52,7 @@ export default async function ManageInvitationsPage() {
 			.lt("expires_at", now),
 	]);
 
-	const getStatusInfo = (invitation: any) => {
+	const getStatusInfo = (invitation: { used_at: string | null; expires_at: string }) => {
 		if (invitation.used_at) {
 			return {
 				label: "Used",
@@ -90,15 +81,9 @@ export default async function ManageInvitationsPage() {
 		<div className="flex-1 w-full flex flex-col gap-6">
 			{/* Header */}
 			<div className="flex items-center gap-4">
-				<Button variant="ghost" size="sm" asChild>
-					<Link href="/admin">
-						<ArrowLeft className="h-4 w-4 mr-2" />
-						Back to Dashboard
-					</Link>
-				</Button>
-				<div className="flex-1">
-					<h1 className="text-2xl font-bold">Manage Invitations</h1>
-					<p className="text-muted-foreground">View and manage all invitation records</p>
+				<div>
+					<h1 className="text-3xl font-bold text-gray-900">Invitations Management</h1>
+					<p className="text-gray-600 mt-1">Manage invitation records</p>
 				</div>
 			</div>
 
@@ -159,7 +144,7 @@ export default async function ManageInvitationsPage() {
 						</h3>
 						<p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
 							Deleting an invitation will remove both the invitation record and the associated user
-							profile if the user hasn't completed their signup. This action cannot be undone.
+							profile if the user hasn&apos;t completed their signup. This action cannot be undone.
 						</p>
 					</div>
 				</div>

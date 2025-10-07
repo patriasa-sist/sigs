@@ -1,5 +1,5 @@
 import { createClient } from "@/utils/supabase/server";
-import { ArrowLeft, Users, Mail, Calendar, MoreHorizontal, Shield, User } from "lucide-react";
+import { Users, Mail, Calendar, MoreHorizontal, Shield, User } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,16 +10,8 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-	Table,
-	TableBody,
-	TableCell,
-	TableHead,
-	TableHeader,
-	TableRow,
-} from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DeleteUserDialog } from "@/components/ui/delete-user-dialog";
-import Link from "next/link";
 
 export default async function ManageUsersPage() {
 	const supabase = await createClient();
@@ -35,18 +27,14 @@ export default async function ManageUsersPage() {
 	}
 
 	// Get user statistics
-	const [
-		{ count: totalUsers },
-		{ count: adminUsers },
-		{ count: regularUsers },
-	] = await Promise.all([
+	const [{ count: totalUsers }, { count: adminUsers }, { count: regularUsers }] = await Promise.all([
 		supabase.from("profiles").select("*", { count: "exact", head: true }),
 		supabase.from("profiles").select("*", { count: "exact", head: true }).eq("role", "admin"),
 		supabase.from("profiles").select("*", { count: "exact", head: true }).eq("role", "user"),
 	]);
 
 	const getInitials = (email: string) => {
-		return email.split('@')[0].slice(0, 2).toUpperCase();
+		return email.split("@")[0].slice(0, 2).toUpperCase();
 	};
 
 	const getRoleBadgeVariant = (role: string) => {
@@ -61,15 +49,9 @@ export default async function ManageUsersPage() {
 		<div className="flex-1 w-full flex flex-col gap-6">
 			{/* Header */}
 			<div className="flex items-center gap-4">
-				<Button variant="ghost" size="sm" asChild>
-					<Link href="/admin">
-						<ArrowLeft className="h-4 w-4 mr-2" />
-						Back to Dashboard
-					</Link>
-				</Button>
-				<div className="flex-1">
-					<h1 className="text-2xl font-bold">Manage Users</h1>
-					<p className="text-muted-foreground">View and manage all registered users</p>
+				<div>
+					<h1 className="text-3xl font-bold text-gray-900">User Management</h1>
+					<p className="text-gray-600 mt-1">Manage user information</p>
 				</div>
 			</div>
 
@@ -116,9 +98,7 @@ export default async function ManageUsersPage() {
 						<Users className="h-5 w-5" />
 						All Users
 					</CardTitle>
-					<CardDescription>
-						Complete list of registered users and their details
-					</CardDescription>
+					<CardDescription>Complete list of registered users and their details</CardDescription>
 				</CardHeader>
 				<CardContent>
 					{users && users.length > 0 ? (
@@ -145,9 +125,7 @@ export default async function ManageUsersPage() {
 														</AvatarFallback>
 													</Avatar>
 													<div className="space-y-1">
-														<p className="text-sm font-medium leading-none">
-															{user.email}
-														</p>
+														<p className="text-sm font-medium leading-none">{user.email}</p>
 														<p className="text-xs text-muted-foreground">
 															ID: {user.id.slice(0, 8)}...
 														</p>
@@ -186,9 +164,7 @@ export default async function ManageUsersPage() {
 															<Mail className="h-4 w-4 mr-2" />
 															Send Message
 														</DropdownMenuItem>
-														<DropdownMenuItem>
-															View Profile
-														</DropdownMenuItem>
+														<DropdownMenuItem>View Profile</DropdownMenuItem>
 														<DeleteUserDialog
 															user={{
 																id: user.id,

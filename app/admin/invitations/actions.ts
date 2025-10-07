@@ -1,13 +1,10 @@
 "use server";
 
-import { createClient } from "@/utils/supabase/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { revalidatePath } from "next/cache";
 
 export async function deleteInvitationAndUser(invitationId: string, email: string) {
 	try {
-		const supabase = await createClient();
-
 		// Use admin client to bypass RLS for deletion
 		const supabaseAdmin = createAdminClient(
 			process.env.NEXT_PUBLIC_SUPABASE_URL!,
