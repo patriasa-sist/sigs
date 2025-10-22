@@ -5,15 +5,22 @@ import { Client, ClientSearchResult } from '@/types/client';
 import { generateMockClients, searchClients } from '@/utils/mockClients';
 import { SearchBar } from '@/components/clientes/SearchBar';
 import { ClientList } from '@/components/clientes/ClientList';
+import { ClientTable } from '@/components/clientes/ClientTable';
+import { ClientCard } from '@/components/clientes/ClientCard';
+import { ViewToggle, ViewMode } from '@/components/clientes/ViewToggle';
 import { Pagination } from '@/components/clientes/Pagination';
 import { Button } from '@/components/ui/button';
-import { UserPlus } from 'lucide-react';
+import { UserPlus, X } from 'lucide-react';
 
 export default function ClientesPage() {
   const [allClients, setAllClients] = useState<Client[]>([]);
   const [filteredClients, setFilteredClients] = useState<Client[] | ClientSearchResult[]>([]);
   const [isSearchMode, setIsSearchMode] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+
+  // View mode state
+  const [viewMode, setViewMode] = useState<ViewMode>('table');
+  const [selectedClient, setSelectedClient] = useState<Client | ClientSearchResult | null>(null);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -66,6 +73,14 @@ export default function ClientesPage() {
     alert('La funcionalidad de agregar cliente estará disponible próximamente.');
   };
 
+  const handleClientClick = (client: Client | ClientSearchResult) => {
+    setSelectedClient(client);
+  };
+
+  const handleCloseDetail = () => {
+    setSelectedClient(null);
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -87,30 +102,43 @@ export default function ClientesPage() {
         </p>
       </div>
 
-      {/* Search Bar */}
-      <div className="mb-8">
-        <SearchBar onSearch={handleSearch} />
+      {/* Search Bar and View Toggle */}
+      <div className="mb-8 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+        <div className="flex-1 w-full">
+          <SearchBar onSearch={handleSearch} />
+        </div>
+        <ViewToggle currentView={viewMode} onViewChange={setViewMode} />
       </div>
 
-      {/* Client List */}
+      {/* Results Info */}
+      {isSearchMode && filteredClients.length > 0 && (
+        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+          <p className="text-sm text-blue-700">
+            Resultados de búsqueda - {filteredClients.length}{' '}
+            {filteredClients.length === 1 ? 'cliente encontrado' : 'clientes encontrados'}
+          </p>
+        </div>
+      )}
+
+      {/* Client Display - Table or Cards */}
       <div className="mb-8">
-        {isSearchMode && filteredClients.length > 0 && (
-          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
-            <p className="text-sm text-blue-700">
-              Resultados de búsqueda - {filteredClients.length}{' '}
-              {filteredClients.length === 1 ? 'cliente encontrado' : 'clientes encontrados'}
-            </p>
-          </div>
+        {viewMode === 'table' ? (
+          <ClientTable
+            clients={paginatedClients}
+            searchMode={isSearchMode}
+            onClientClick={handleClientClick}
+          />
+        ) : (
+          <ClientList
+            clients={paginatedClients}
+            searchMode={isSearchMode}
+            emptyMessage={
+              isSearchMode
+                ? 'No se encontraron clientes que coincidan con tu búsqueda. Intenta con otros términos.'
+                : 'No hay clientes registrados en el sistema.'
+            }
+          />
         )}
-        <ClientList
-          clients={paginatedClients}
-          searchMode={isSearchMode}
-          emptyMessage={
-            isSearchMode
-              ? 'No se encontraron clientes que coincidan con tu búsqueda. Intenta con otros términos.'
-              : 'No hay clientes registrados en el sistema.'
-          }
-        />
 
         {/* Pagination */}
         {filteredClients.length > 0 && (
@@ -125,6 +153,28 @@ export default function ClientesPage() {
           </div>
         )}
       </div>
+
+      {/* Selected Client Detail (shown when clicking a table row) */}
+      {selectedClient && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between">
+              <h2 className="text-xl font-semibold">Detalles del Cliente</h2>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleCloseDetail}
+                className="rounded-full"
+              >
+                <X className="h-5 w-5" />
+              </Button>
+            </div>
+            <div className="p-6">
+              <ClientCard client={selectedClient} searchMode={isSearchMode} />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Floating Add Client Button */}
       <div className="fixed bottom-8 right-8">

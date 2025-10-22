@@ -46,6 +46,9 @@ export interface Client {
   carModel?: string;
   carYear?: number;
 
+  // Account Management
+  executiveInCharge?: string; // Executive/agent managing this client
+
   // Associated Policies
   policies: Policy[];
 

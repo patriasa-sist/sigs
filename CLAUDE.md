@@ -127,3 +127,4 @@ The vencimientos module (`/app/vencimientos/`) is a comprehensive insurance poli
 - Theme provider configured for system/light/dark theme support with forced "clear" theme
 - Global navbar integrated into root layout with conditional rendering
 - always suggest the more reliable solution and follow the standard web practices, keep it simple and clean
+- always when retrieving data and rendering on screen remember to take into account Initial load, Network transfer and Memory usage to keep a footprint on browser and Supabase bandwidth as low as possible for performance reasons
