@@ -29,7 +29,7 @@ const Dashboard = () => {
 			description: "Gestión completa de clientes individuales y corporativos",
 			icon: Users,
 			color: "bg-blue-50 hover:bg-blue-100 border-blue-200",
-			link: "/vencimientos",
+			link: "/clientes",
 			sections: [
 				{ name: "Gestor de clientes", icon: UserCheck },
 				{ name: "Gestor de Documentos", icon: FileText },
