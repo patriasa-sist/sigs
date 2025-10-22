@@ -37,15 +37,10 @@ export function ClientList({ clients, searchMode = false, emptyMessage }: Client
   }
 
   return (
-    <div className="space-y-4">
-      <div className="text-sm text-muted-foreground mb-4">
-        Mostrando {clients.length} {clients.length === 1 ? 'cliente' : 'clientes'}
-      </div>
-      <div className="grid gap-4 grid-cols-1 lg:grid-cols-2 xl:grid-cols-3">
-        {clients.map((client) => (
-          <ClientCard key={client.id} client={client} searchMode={searchMode} />
-        ))}
-      </div>
+    <div className="grid gap-4 grid-cols-1 lg:grid-cols-2 xl:grid-cols-3">
+      {clients.map((client) => (
+        <ClientCard key={client.id} client={client} searchMode={searchMode} />
+      ))}
     </div>
   );
 }

@@ -38,18 +38,18 @@ function generateMockPolicies(clientId: string, count: number): Policy[] {
 }
 
 /**
- * Generate mock client data (20 sample clients)
+ * Generate mock client data (75 sample clients for pagination testing)
  */
 export function generateMockClients(): Client[] {
-  const firstNames = ['Juan', 'María', 'Carlos', 'Ana', 'Pedro', 'Laura', 'José', 'Carmen', 'Luis', 'Isabel'];
-  const lastNames = ['García', 'Rodríguez', 'Martínez', 'López', 'González', 'Pérez', 'Sánchez', 'Ramírez', 'Torres', 'Flores'];
-  const carBrands = ['Toyota', 'Nissan', 'Honda', 'Hyundai', 'Kia', 'Mazda', 'Ford', 'Chevrolet'];
-  const carModels = ['Corolla', 'Sentra', 'Civic', 'Elantra', 'Rio', 'CX-5', 'Ranger', 'Spark'];
+  const firstNames = ['Juan', 'María', 'Carlos', 'Ana', 'Pedro', 'Laura', 'José', 'Carmen', 'Luis', 'Isabel', 'Roberto', 'Sofía', 'Diego', 'Elena', 'Miguel'];
+  const lastNames = ['García', 'Rodríguez', 'Martínez', 'López', 'González', 'Pérez', 'Sánchez', 'Ramírez', 'Torres', 'Flores', 'Vargas', 'Morales', 'Ortiz', 'Mendoza', 'Silva'];
+  const carBrands = ['Toyota', 'Nissan', 'Honda', 'Hyundai', 'Kia', 'Mazda', 'Ford', 'Chevrolet', 'Volkswagen', 'Suzuki'];
+  const carModels = ['Corolla', 'Sentra', 'Civic', 'Elantra', 'Rio', 'CX-5', 'Ranger', 'Spark', 'Gol', 'Alto'];
 
   const clients: Client[] = [];
   const now = new Date();
 
-  for (let i = 0; i < 20; i++) {
+  for (let i = 0; i < 75; i++) {
     const firstName = firstNames[Math.floor(Math.random() * firstNames.length)];
     const lastName = lastNames[Math.floor(Math.random() * lastNames.length)];
     const fullName = `${firstName} ${lastName}`;
@@ -63,10 +63,10 @@ export function generateMockClients(): Client[] {
 
     // Generate car matricula (license plate) for some clients
     const hasVehicle = Math.random() > 0.4;
-    const carMatricula = hasVehicle ? `${Math.floor(1000 + Math.random() * 9000)}${['HKL', 'ABC', 'XYZ', 'DEF', 'GHI'][Math.floor(Math.random() * 5)]}` : undefined;
+    const carMatricula = hasVehicle ? `${Math.floor(1000 + Math.random() * 9000)}${['HKL', 'ABC', 'XYZ', 'DEF', 'GHI', 'JKL', 'MNO', 'PQR'][Math.floor(Math.random() * 8)]}` : undefined;
 
     const createdAt = new Date(now);
-    createdAt.setDate(createdAt.getDate() - (20 - i)); // Last 20 days
+    createdAt.setDate(createdAt.getDate() - (75 - i)); // Last 75 days
 
     const client: Client = {
       id: `CLIENT-${String(i + 1).padStart(3, '0')}`,
