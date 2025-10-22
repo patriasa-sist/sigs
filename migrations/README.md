@@ -183,11 +183,127 @@ If you encounter issues:
 
 ## Next Steps After Migration
 
-1. Update TypeScript types to match new schema
-2. Create API routes for CRUD operations
-3. Update frontend to use real data instead of mocks
-4. Test with production-like data volumes
-5. Set up database backups/snapshots
+### Immediate (After Schema is Applied):
+1. **Update TypeScript types** to match new database schema
+2. **Create Supabase API routes** for CRUD operations
+   - Client creation (natural and juridic)
+   - Client search/listing
+   - Policy linking
+   - Legal representative management
+3. **Update frontend** to use real Supabase data instead of mocks
+4. **Test with production-like data volumes**
+5. **Set up database backups/snapshots** in Supabase Dashboard
+
+### Phase 2: Policy-Specific Data Tables (IMPORTANT!)
+Create separate tables for policy-type-specific data:
+
+#### Automotive Policies (`automotive_policy_details`):
+```sql
+CREATE TABLE automotive_policy_details (
+    policy_id uuid PRIMARY KEY REFERENCES policies(id) ON DELETE CASCADE,
+    vehiculo_matricula varchar(20) NOT NULL,
+    vehiculo_marca varchar(100),
+    vehiculo_modelo varchar(100),
+    vehiculo_anio integer,
+    vehiculo_color varchar(50),
+    numero_chasis varchar(100),
+    numero_motor varchar(100),
+    -- Images/documents
+    foto_frontal_url text,
+    foto_lateral_url text,
+    foto_trasera_url text,
+    cedula_identidad_url text,
+    created_at timestamptz DEFAULT now()
+);
+```
+
+#### Health Policies (`health_policy_details`):
+```sql
+CREATE TABLE health_policy_details (
+    policy_id uuid PRIMARY KEY REFERENCES policies(id) ON DELETE CASCADE,
+    beneficiarios jsonb, -- Array of beneficiary objects
+    foto_cliente_url text, -- Client photo
+    historial_medico_url text, -- Medical history document
+    tipo_cobertura varchar(100),
+    hospital_preferido varchar(200),
+    created_at timestamptz DEFAULT now()
+);
+```
+
+#### General/Life Policies (`general_policy_details`):
+```sql
+CREATE TABLE general_policy_details (
+    policy_id uuid PRIMARY KEY REFERENCES policies(id) ON DELETE CASCADE,
+    tipo_riesgo varchar(100),
+    suma_asegurada decimal(12, 2),
+    documentos_adicionales jsonb, -- Array of document URLs
+    created_at timestamptz DEFAULT now()
+);
+```
+
+### Phase 3: Data Migration & Integration
+1. **Migrate existing mock data** to real database
+2. **Create validation functions** for tier-based requirements
+   ```sql
+   -- Example: Function to validate natural client has required fields for tier
+   CREATE FUNCTION validate_natural_client_tier(client_id uuid)
+   RETURNS boolean AS $$...$$;
+   ```
+3. **Add client tier management**:
+   - Automatic tier calculation based on total premium
+   - Warning system when tier requirements not met
+4. **Implement file upload system** for policy documents/images
+   - Use Supabase Storage buckets
+   - Link to policy details tables
+
+### Phase 4: Advanced Features
+1. **Client dashboard** showing:
+   - Total premium across all policies
+   - Required tier vs current tier
+   - Missing data warnings
+2. **Compliance reporting**:
+   - Generate lists of clients missing required data
+   - Export for regulatory compliance
+3. **Search optimization**:
+   - Full-text search across all client data
+   - Policy-specific searches (e.g., search by matricula)
+4. **Audit trail**:
+   - Track all changes to client/policy data
+   - Who made changes and when
+
+### Phase 5: Production Readiness
+1. **Performance testing** with 10,000+ clients
+2. **Backup strategy**:
+   - Daily automated backups
+   - Point-in-time recovery enabled
+3. **Monitoring**:
+   - Set up alerts for failed queries
+   - Track slow queries
+4. **Documentation**:
+   - API documentation
+   - User manual for data entry
+   - Compliance checklist
+
+---
+
+## Important Design Notes
+
+### Why Vehicle Data Was Removed from Clients:
+- **Normalization**: A client can have multiple vehicles (multiple automotive policies)
+- **Flexibility**: Different policies need different data (health needs beneficiaries, automotive needs vehicle info)
+- **Compliance**: Policy-specific data requirements are tied to the policy, not the client
+- **Searchability**: Can still search by matricula through policy joins
+
+### Data Architecture Best Practices:
+1. **Client table** = Who is the client (person/company)
+2. **Policy table** = What insurance coverage they have
+3. **Policy details tables** = Type-specific requirements (vehicle, beneficiaries, etc.)
+
+This separation ensures:
+- ✅ No duplicate data
+- ✅ Clear data ownership
+- ✅ Easy to add new policy types
+- ✅ Compliance with data minimization principles
 
 ---
 
