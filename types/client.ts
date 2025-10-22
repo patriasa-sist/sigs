@@ -40,12 +40,6 @@ export interface Client {
   phone?: string;
   address?: string;
 
-  // Vehicle Information (for automotive policies)
-  carMatricula?: string; // License plate
-  carBrand?: string;
-  carModel?: string;
-  carYear?: number;
-
   // Account Management
   executiveInCharge?: string; // Executive/agent managing this client
 

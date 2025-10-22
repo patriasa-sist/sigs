@@ -28,7 +28,7 @@ export function SearchBar({ onSearch, placeholder }: SearchBarProps) {
       <div className="relative flex-1">
         <Input
           type="text"
-          placeholder={placeholder || '3456HKL/carnet/nit/poliza/NOMBRE'}
+          placeholder={placeholder || 'carnet/nit/poliza/NOMBRE/beneficiario'}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           onKeyPress={handleKeyPress}

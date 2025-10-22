@@ -75,19 +75,6 @@ export function generateMockClients(): Client[] {
 		"Mendoza",
 		"Silva",
 	];
-	const carBrands = [
-		"Toyota",
-		"Nissan",
-		"Honda",
-		"Hyundai",
-		"Kia",
-		"Mazda",
-		"Ford",
-		"Chevrolet",
-		"Volkswagen",
-		"Suzuki",
-	];
-	const carModels = ["Corolla", "Sentra", "Civic", "Elantra", "Rio", "CX-5", "Ranger", "Spark", "Gol", "Alto"];
 	const executives = [
 		"Carmen Ferrufino Howard",
 		"Flavio Colombo Vargas",
@@ -112,14 +99,6 @@ export function generateMockClients(): Client[] {
 		// Generate NIT (some clients may not have it)
 		const nit = Math.random() > 0.3 ? `${Math.floor(1000000 + Math.random() * 9000000)}` : undefined;
 
-		// Generate car matricula (license plate) for some clients
-		const hasVehicle = Math.random() > 0.4;
-		const carMatricula = hasVehicle
-			? `${Math.floor(1000 + Math.random() * 9000)}${
-					["HKL", "ABC", "XYZ", "DEF", "GHI", "JKL", "MNO", "PQR"][Math.floor(Math.random() * 8)]
-			  }`
-			: undefined;
-
 		const createdAt = new Date(now);
 		createdAt.setDate(createdAt.getDate() - (75 - i)); // Last 75 days
 
@@ -131,10 +110,6 @@ export function generateMockClients(): Client[] {
 			email: `${firstName.toLowerCase()}.${lastName.toLowerCase()}@email.com`,
 			phone: `${Math.floor(60000000 + Math.random() * 19999999)}`,
 			address: `Av. ${lastName} #${Math.floor(100 + Math.random() * 900)}`,
-			carMatricula,
-			carBrand: hasVehicle ? carBrands[Math.floor(Math.random() * carBrands.length)] : undefined,
-			carModel: hasVehicle ? carModels[Math.floor(Math.random() * carModels.length)] : undefined,
-			carYear: hasVehicle ? 2015 + Math.floor(Math.random() * 9) : undefined,
 			executiveInCharge: executives[Math.floor(Math.random() * executives.length)],
 			policies: generateMockPolicies(
 				`CLIENT-${String(i + 1).padStart(3, "0")}`,
@@ -185,11 +160,6 @@ export function searchClients(clients: Client[], query: string): ClientSearchRes
 
 			if (client.nit?.toLowerCase().includes(searchTerm)) {
 				matchedFields.push("nit");
-				relevanceScore += 10;
-			}
-
-			if (client.carMatricula?.toLowerCase().includes(searchTerm)) {
-				matchedFields.push("carMatricula");
 				relevanceScore += 10;
 			}
 

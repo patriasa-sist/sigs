@@ -4,7 +4,7 @@ import { Client, ClientSearchResult } from '@/types/client';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { User, Car, CreditCard, Phone, Mail, MapPin } from 'lucide-react';
+import { User, CreditCard, Phone, Mail } from 'lucide-react';
 
 interface ClientCardProps {
   client: Client | ClientSearchResult;
@@ -80,21 +80,6 @@ export function ClientCard({ client, searchMode = false }: ClientCardProps) {
             </div>
           )}
         </div>
-
-        {/* Vehicle Information */}
-        {client.carMatricula && (
-          <div className={`flex items-center gap-2 p-2 bg-muted rounded-md ${isFieldMatched('carMatricula') ? 'bg-yellow-200' : ''}`}>
-            <Car className="h-4 w-4 text-muted-foreground" />
-            <div className="flex gap-2 text-sm">
-              <span className="font-semibold">{client.carMatricula}</span>
-              {client.carBrand && client.carModel && (
-                <span className="text-muted-foreground">
-                  {client.carBrand} {client.carModel} {client.carYear ? `(${client.carYear})` : ''}
-                </span>
-              )}
-            </div>
-          </div>
-        )}
 
         {/* Policies Accordion */}
         <div className="pt-2">
