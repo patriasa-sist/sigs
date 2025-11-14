@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { Client, ClientSearchResult } from '@/types/client';
 import { generateMockClients, searchClients } from '@/utils/mockClients';
 import { SearchBar } from '@/components/clientes/SearchBar';
@@ -13,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { UserPlus, X } from 'lucide-react';
 
 export default function ClientesPage() {
+  const router = useRouter();
   const [allClients, setAllClients] = useState<Client[]>([]);
   const [filteredClients, setFilteredClients] = useState<Client[] | ClientSearchResult[]>([]);
   const [isSearchMode, setIsSearchMode] = useState(false);
@@ -69,8 +71,7 @@ export default function ClientesPage() {
   };
 
   const handleNewClient = () => {
-    // TODO: Implement when add/edit workflow is ready
-    alert('La funcionalidad de agregar cliente estará disponible próximamente.');
+    router.push('/clientes/nuevo');
   };
 
   const handleClientClick = (client: Client | ClientSearchResult) => {
@@ -184,7 +185,7 @@ export default function ClientesPage() {
           className="h-14 px-8 text-base font-semibold bg-pink-400 hover:bg-pink-500 text-white shadow-lg hover:shadow-xl transition-all"
         >
           <UserPlus className="mr-2 h-5 w-5" />
-          NUEVA POLIZA
+          NUEVO CLIENTE
         </Button>
       </div>
     </div>
