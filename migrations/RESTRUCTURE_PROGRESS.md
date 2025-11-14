@@ -423,3 +423,14 @@ Before deploying to production:
 8. Fixed Zod date validation error message format
 9. Reordered legalRepresentativeSchema before usage
 10. Fixed implicit any type in formNormalization.ts
+
+### Updates After Initial Validation ✅
+**Date:** 2025-11-14
+
+**Change:** Extension fields converted from dropdown to text input
+- ✅ Updated NaturalClientForm: extension_ci changed from Select to Input
+- ✅ Updated UnipersonalClientForm: extension_ci changed from Select to Input
+- ✅ Updated JuridicClientForm: legal representative extension changed from Select to Input
+- ✅ Removed CI_EXTENSIONS imports from all forms
+- **Reason:** Extension field is for document extensions (A, CC, etc.), not department codes
+- **Validation:** All lint and type checks passed after changes

@@ -10,7 +10,6 @@ import {
 	GENDER_OPTIONS,
 	INCOME_LEVELS,
 	INCOME_VALUES,
-	CI_EXTENSIONS,
 } from "@/types/clientForm";
 import { FormSection } from "./FormSection";
 import { Input } from "@/components/ui/input";
@@ -123,23 +122,12 @@ export function NaturalClientForm({ form, partnerForm, onFieldBlur }: NaturalCli
 
 					<div>
 						<Label htmlFor="extension_ci">Extensión CI</Label>
-						<Controller
-							name="extension_ci"
-							control={control}
-							render={({ field }) => (
-								<Select value={field.value} onValueChange={field.onChange}>
-									<SelectTrigger>
-										<SelectValue placeholder="Seleccionar" />
-									</SelectTrigger>
-									<SelectContent>
-										{CI_EXTENSIONS.map((ext) => (
-											<SelectItem key={ext} value={ext}>
-												{ext}
-											</SelectItem>
-										))}
-									</SelectContent>
-								</Select>
-							)}
+						<Input
+							id="extension_ci"
+							{...register("extension_ci")}
+							onBlur={onFieldBlur}
+							placeholder="Ej: A, CC, etc."
+							maxLength={10}
 						/>
 					</div>
 

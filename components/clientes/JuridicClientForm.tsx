@@ -1,7 +1,7 @@
 "use client";
 
 import { UseFormReturn, Controller, useFieldArray } from "react-hook-form";
-import { JuridicClientFormData, DOCUMENT_TYPES, COMPANY_TYPES, CI_EXTENSIONS } from "@/types/clientForm";
+import { JuridicClientFormData, DOCUMENT_TYPES, COMPANY_TYPES } from "@/types/clientForm";
 import { FormSection } from "./FormSection";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -323,23 +323,12 @@ export function JuridicClientForm({ form, onFieldBlur }: JuridicClientFormProps)
 
 								<div>
 									<Label htmlFor={`rep_${index}_extension`}>Extensión</Label>
-									<Controller
-										name={`legal_representatives.${index}.extension`}
-										control={control}
-										render={({ field }) => (
-											<Select value={field.value} onValueChange={field.onChange}>
-												<SelectTrigger>
-													<SelectValue placeholder="Seleccionar" />
-												</SelectTrigger>
-												<SelectContent>
-													{CI_EXTENSIONS.map((ext) => (
-														<SelectItem key={ext} value={ext}>
-															{ext}
-														</SelectItem>
-													))}
-												</SelectContent>
-											</Select>
-										)}
+									<Input
+										id={`rep_${index}_extension`}
+										{...register(`legal_representatives.${index}.extension`)}
+										onBlur={onFieldBlur}
+										placeholder="Ej: A, CC, etc."
+										maxLength={10}
 									/>
 								</div>
 
