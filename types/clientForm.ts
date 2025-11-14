@@ -1,185 +1,406 @@
 /**
  * Client Form Type Definitions and Validation Schemas
- * Used for adding/editing natural and juridic clients
+ * Updated: 2025-11-14 (Restructured)
+ * Used for adding/editing natural, unipersonal, and juridic clients
  */
 
-import { z } from "zod";
+import { z } from 'zod';
 
 // ============================================================================
 // ENUMS & CONSTANTS
 // ============================================================================
 
-export const CLIENT_TYPES = ["natural", "juridico"] as const;
+export const CLIENT_TYPES = ['natural', 'juridica', 'unipersonal'] as const;
 export type ClientType = (typeof CLIENT_TYPES)[number];
 
-export const DOCUMENT_TYPES = ["CI", "Pasaporte", "Otro"] as const;
+export const DOCUMENT_TYPES = ['ci', 'pasaporte'] as const;
 export type DocumentType = (typeof DOCUMENT_TYPES)[number];
 
-export const CIVIL_STATUS = [
-	"Soltero/a",
-	"Casado/a",
-	"Divorciado/a",
-	"Viudo/a",
-	"Unión Libre",
-] as const;
+export const CIVIL_STATUS = ['casado', 'soltero', 'divorciado', 'viudo'] as const;
 export type CivilStatus = (typeof CIVIL_STATUS)[number];
 
-export const GENDER_OPTIONS = ["Masculino", "Femenino", "Otro"] as const;
+export const GENDER_OPTIONS = ['masculino', 'femenino', 'otro'] as const;
 export type Gender = (typeof GENDER_OPTIONS)[number];
 
-export const INCOME_LEVELS = [
-	"Bajo",
-	"Medio-Bajo",
-	"Medio",
-	"Medio-Alto",
-	"Alto",
-] as const;
+export const INCOME_LEVELS = ['bajo', 'medio', 'alto'] as const;
 export type IncomeLevel = (typeof INCOME_LEVELS)[number];
 
-export const ACCOUNT_STATES = ["Activa", "Inactiva", "Suspendida"] as const;
-export type AccountState = (typeof ACCOUNT_STATES)[number];
+// Income level numeric values
+export const INCOME_VALUES: Record<IncomeLevel, number> = {
+  bajo: 2000,
+  medio: 5000,
+  alto: 10000,
+};
+
+export const COMPANY_TYPES = [
+  'SRL',
+  'SCO',
+  'SCS',
+  'SA',
+  'SCA',
+  'AAP',
+  'SEM',
+  'LIM',
+  'EPB',
+  'UNI',
+  'MIC',
+  'FUN',
+  'SCI',
+  'IED',
+  'ORR',
+] as const;
+export type CompanyType = (typeof COMPANY_TYPES)[number];
+
+export const CI_EXTENSIONS = ['LP', 'CB', 'SC', 'OR', 'PT', 'TJ', 'CH', 'BE', 'PD'] as const;
+export type CIExtension = (typeof CI_EXTENSIONS)[number];
+
+// ============================================================================
+// VALIDATION HELPERS
+// ============================================================================
+
+const phoneValidation = z
+  .string()
+  .min(5, 'Debe tener al menos 5 dígitos')
+  .regex(/^[0-9]+$/, 'Solo números permitidos');
+
+const emailValidation = z.string().email('Email inválido').min(1, 'Email es requerido');
+
+const documentValidation = z.string().min(6, 'Debe tener al menos 6 caracteres');
+
+const nitValidation = z
+  .string()
+  .min(7, 'Debe tener al menos 7 dígitos')
+  .regex(/^[0-9]+$/, 'Solo números permitidos');
+
+// ============================================================================
+// NATURAL CLIENT
+// ============================================================================
+
+// Section 1: Datos Personales
+export interface NaturalClientPersonalData {
+  primer_nombre: string;
+  segundo_nombre?: string;
+  primer_apellido: string;
+  segundo_apellido?: string;
+  tipo_documento: DocumentType;
+  numero_documento: string;
+  extension_ci?: string;
+  nacionalidad: string;
+  fecha_nacimiento: Date;
+  estado_civil: CivilStatus;
+}
+
+export const naturalClientPersonalSchema = z.object({
+  primer_nombre: z.string().min(1, 'Primer nombre es requerido'),
+  segundo_nombre: z.string().optional(),
+  primer_apellido: z.string().min(1, 'Primer apellido es requerido'),
+  segundo_apellido: z.string().optional(),
+  tipo_documento: z.enum(DOCUMENT_TYPES, {
+    required_error: 'Tipo de documento es requerido',
+  }),
+  numero_documento: documentValidation,
+  extension_ci: z.string().optional(),
+  nacionalidad: z.string().min(1, 'Nacionalidad es requerida'),
+  fecha_nacimiento: z.date({
+    required_error: 'Fecha de nacimiento es requerida',
+  }),
+  estado_civil: z.enum(CIVIL_STATUS, {
+    required_error: 'Estado civil es requerido',
+  }),
+});
+
+// Section 2: Información de Contacto
+export interface NaturalClientContactData {
+  direccion: string;
+  correo_electronico: string;
+  celular: string;
+}
+
+export const naturalClientContactSchema = z.object({
+  direccion: z.string().min(1, 'Dirección es requerida'),
+  correo_electronico: emailValidation,
+  celular: phoneValidation,
+});
+
+// Section 3: Otros Datos
+export interface NaturalClientOtherData {
+  profesion_oficio?: string;
+  actividad_economica?: string;
+  lugar_trabajo?: string;
+  pais_residencia?: string;
+  genero?: Gender;
+  nivel_ingresos?: number;
+  cargo?: string;
+  anio_ingreso?: Date;
+  nit?: string;
+  domicilio_comercial?: string;
+}
+
+export const naturalClientOtherSchema = z.object({
+  profesion_oficio: z.string().optional(),
+  actividad_economica: z.string().optional(),
+  lugar_trabajo: z.string().optional(),
+  pais_residencia: z.string().optional(),
+  genero: z.enum(GENDER_OPTIONS).optional(),
+  nivel_ingresos: z.number().positive().optional(),
+  cargo: z.string().optional(),
+  anio_ingreso: z.date().optional(),
+  nit: z
+    .string()
+    .min(7, 'NIT debe tener al menos 7 dígitos')
+    .regex(/^[0-9]+$/, 'Solo números permitidos')
+    .optional(),
+  domicilio_comercial: z.string().optional(),
+});
+
+// Combined Natural Client Form Data
+export interface NaturalClientFormData
+  extends NaturalClientPersonalData,
+    NaturalClientContactData,
+    NaturalClientOtherData {
+  executive_in_charge?: string;
+}
+
+export const naturalClientFormSchema = naturalClientPersonalSchema
+  .merge(naturalClientContactSchema)
+  .merge(naturalClientOtherSchema)
+  .extend({
+    executive_in_charge: z.string().optional(),
+  });
+
+// ============================================================================
+// CLIENT PARTNER (for married natural clients)
+// ============================================================================
+
+export interface ClientPartnerData {
+  id?: string;
+  client_id: string;
+  primer_nombre: string;
+  segundo_nombre?: string;
+  primer_apellido: string;
+  segundo_apellido?: string;
+  direccion: string;
+  celular: string;
+  correo_electronico: string;
+  profesion_oficio: string;
+  actividad_economica: string;
+  lugar_trabajo: string;
+}
+
+export const clientPartnerSchema = z.object({
+  id: z.string().optional(),
+  client_id: z.string(),
+  primer_nombre: z.string().min(1, 'Primer nombre es requerido'),
+  segundo_nombre: z.string().optional(),
+  primer_apellido: z.string().min(1, 'Primer apellido es requerido'),
+  segundo_apellido: z.string().optional(),
+  direccion: z.string().min(1, 'Dirección es requerida'),
+  celular: phoneValidation,
+  correo_electronico: emailValidation,
+  profesion_oficio: z.string().min(1, 'Profesión u oficio es requerido'),
+  actividad_economica: z.string().min(1, 'Actividad económica es requerida'),
+  lugar_trabajo: z.string().min(1, 'Lugar de trabajo es requerido'),
+});
+
+// ============================================================================
+// UNIPERSONAL CLIENT
+// ============================================================================
+
+// Extends natural client with commercial data
+
+// Section 4: Datos Comerciales
+export interface UnipersonalCommercialData {
+  razon_social: string;
+  nit: string;
+  matricula_comercio?: string;
+  domicilio_comercial: string;
+  telefono_comercial: string;
+  actividad_economica_comercial: string;
+  nivel_ingresos: number;
+  correo_electronico_comercial: string;
+}
+
+export const unipersonalCommercialSchema = z.object({
+  razon_social: z.string().min(1, 'Razón social es requerida'),
+  nit: nitValidation,
+  matricula_comercio: z.string().min(7, 'Debe tener al menos 7 caracteres').optional(),
+  domicilio_comercial: z.string().min(1, 'Domicilio comercial es requerido'),
+  telefono_comercial: phoneValidation,
+  actividad_economica_comercial: z.string().min(1, 'Actividad económica es requerida'),
+  nivel_ingresos: z.number().positive('Nivel de ingresos es requerido'),
+  correo_electronico_comercial: emailValidation,
+});
+
+// Section 5: Datos del Propietario
+export interface UnipersonalOwnerData {
+  nombre_propietario: string;
+  apellido_propietario: string;
+  documento_propietario: string;
+  extension_propietario?: string;
+  nacionalidad_propietario: string;
+}
+
+export const unipersonalOwnerSchema = z.object({
+  nombre_propietario: z.string().min(1, 'Nombre del propietario es requerido'),
+  apellido_propietario: z.string().min(1, 'Apellido del propietario es requerido'),
+  documento_propietario: z
+    .string()
+    .min(7, 'Debe tener al menos 7 dígitos')
+    .regex(/^[0-9]+$/, 'Solo números permitidos'),
+  extension_propietario: z.string().optional(),
+  nacionalidad_propietario: z.string().min(1, 'Nacionalidad es requerida'),
+});
+
+// Section 6: Representante Legal
+export interface UnipersonalRepresentativeData {
+  nombre_representante: string;
+  ci_representante: string;
+  extension_representante?: string;
+}
+
+export const unipersonalRepresentativeSchema = z.object({
+  nombre_representante: z.string().min(1, 'Nombre del representante es requerido'),
+  ci_representante: z
+    .string()
+    .min(7, 'Debe tener al menos 7 dígitos')
+    .regex(/^[0-9]+$/, 'Solo números permitidos'),
+  extension_representante: z.string().optional(),
+});
+
+// Combined Unipersonal Client Form Data
+export interface UnipersonalClientFormData
+  extends NaturalClientPersonalData,
+    NaturalClientContactData,
+    NaturalClientOtherData,
+    UnipersonalCommercialData,
+    UnipersonalOwnerData,
+    UnipersonalRepresentativeData {
+  executive_in_charge?: string;
+}
+
+export const unipersonalClientFormSchema = naturalClientPersonalSchema
+  .merge(naturalClientContactSchema)
+  .merge(naturalClientOtherSchema)
+  .merge(unipersonalCommercialSchema)
+  .merge(unipersonalOwnerSchema)
+  .merge(unipersonalRepresentativeSchema)
+  .extend({
+    executive_in_charge: z.string().optional(),
+  });
+
+// ============================================================================
+// JURIDIC CLIENT (Company)
+// ============================================================================
+
+// Section 1: Datos de la Empresa
+export interface JuridicClientCompanyData {
+  razon_social: string;
+  tipo_sociedad?: CompanyType;
+  tipo_documento: string; // Always "NIT"
+  nit: string;
+  matricula_comercio?: string;
+  pais_constitucion: string;
+  actividad_economica: string;
+}
+
+export const juridicClientCompanySchema = z.object({
+  razon_social: z.string().min(1, 'Razón social es requerida'),
+  tipo_sociedad: z.enum(COMPANY_TYPES).optional(),
+  tipo_documento: z.string().default('NIT'),
+  nit: nitValidation,
+  matricula_comercio: z.string().min(7, 'Debe tener al menos 7 caracteres').optional(),
+  pais_constitucion: z.string().min(1, 'País de constitución es requerido'),
+  actividad_economica: z.string().min(1, 'Actividad económica es requerida'),
+});
+
+// Section 2: Información de Contacto
+export interface JuridicClientContactData {
+  direccion_legal: string;
+  correo_electronico?: string;
+  telefono?: string;
+}
+
+export const juridicClientContactSchema = z.object({
+  direccion_legal: z.string().min(1, 'Dirección legal es requerida'),
+  correo_electronico: z.string().email('Email inválido').optional().or(z.literal('')),
+  telefono: z
+    .string()
+    .min(5, 'Debe tener al menos 5 dígitos')
+    .regex(/^[0-9]+$/, 'Solo números permitidos')
+    .optional()
+    .or(z.literal('')),
+});
+
+// Combined Juridic Client Form Data
+export interface JuridicClientFormData
+  extends JuridicClientCompanyData,
+    JuridicClientContactData {
+  executive_in_charge?: string;
+  legal_representatives: LegalRepresentativeData[];
+}
+
+export const juridicClientFormSchema = juridicClientCompanySchema
+  .merge(juridicClientContactSchema)
+  .extend({
+    executive_in_charge: z.string().optional(),
+    legal_representatives: z
+      .array(
+        z.object({
+          id: z.string().optional(),
+          primer_nombre: z.string().min(1, 'Primer nombre es requerido'),
+          segundo_nombre: z.string().optional(),
+          primer_apellido: z.string().min(1, 'Primer apellido es requerido'),
+          segundo_apellido: z.string().optional(),
+          tipo_documento: z.enum(DOCUMENT_TYPES, {
+            required_error: 'Tipo de documento es requerido',
+          }),
+          numero_documento: documentValidation,
+          extension: z.string().optional(),
+          is_primary: z.boolean().optional().default(true),
+          cargo: z.string().optional(),
+          telefono: z.string().optional(),
+          correo_electronico: z.string().email('Email inválido').optional().or(z.literal('')),
+        })
+      )
+      .min(1, 'Al menos un representante legal es requerido'),
+  });
 
 // ============================================================================
 // LEGAL REPRESENTATIVE (for Juridic Clients)
 // ============================================================================
 
 export interface LegalRepresentativeData {
-	id?: string; // For editing existing representatives
-	nombre_completo: string;
-	ci: string;
-	cargo: string;
-	telefono: string;
-	email: string;
+  id?: string;
+  juridic_client_id?: string;
+  primer_nombre: string;
+  segundo_nombre?: string;
+  primer_apellido: string;
+  segundo_apellido?: string;
+  tipo_documento: DocumentType;
+  numero_documento: string;
+  extension?: string;
+  is_primary?: boolean;
+  cargo?: string;
+  telefono?: string;
+  correo_electronico?: string;
 }
 
 export const legalRepresentativeSchema = z.object({
-	id: z.string().optional(),
-	nombre_completo: z.string().min(1, "Nombre completo es requerido"),
-	ci: z.string().min(1, "CI es requerido"),
-	cargo: z.string().min(1, "Cargo es requerido"),
-	telefono: z.string().min(1, "Teléfono es requerido"),
-	email: z.string().email("Email inválido").min(1, "Email es requerido"),
-});
-
-// ============================================================================
-// NATURAL CLIENT (Tier-based)
-// ============================================================================
-
-// Tier 1: Required for all natural clients (premium up to $1000)
-export interface NaturalClientTier1Data {
-	primer_nombre: string;
-	segundo_nombre?: string;
-	primer_apellido: string;
-	segundo_apellido?: string;
-	tipo_documento: DocumentType;
-	numero_documento: string;
-	nacionalidad: string;
-	fecha_nacimiento: Date;
-	direccion: string;
-	estado_civil: CivilStatus;
-	fecha_ingreso_sarlaft: Date;
-	executive_id: string;
-}
-
-export const naturalClientTier1Schema = z.object({
-	primer_nombre: z.string().min(1, "Primer nombre es requerido"),
-	segundo_nombre: z.string().optional(),
-	primer_apellido: z.string().min(1, "Primer apellido es requerido"),
-	segundo_apellido: z.string().optional(),
-	tipo_documento: z.enum(DOCUMENT_TYPES, {
-		required_error: "Tipo de documento es requerido",
-	}),
-	numero_documento: z.string().min(1, "Número de documento es requerido"),
-	nacionalidad: z.string().min(1, "Nacionalidad es requerida"),
-	fecha_nacimiento: z.date({
-		required_error: "Fecha de nacimiento es requerida",
-	}),
-	direccion: z.string().min(1, "Dirección es requerida"),
-	estado_civil: z.enum(CIVIL_STATUS, {
-		required_error: "Estado civil es requerido",
-	}),
-	fecha_ingreso_sarlaft: z.date({
-		required_error: "Fecha de ingreso (SARLAFT) es requerida",
-	}),
-	executive_id: z.string().min(1, "Ejecutivo es requerido"),
-});
-
-// Tier 2: Additional fields (premium $1001-$5000)
-export interface NaturalClientTier2Data {
-	telefono?: string;
-	actividad_economica?: string;
-	lugar_trabajo?: string;
-}
-
-export const naturalClientTier2Schema = z.object({
-	telefono: z.string().optional(),
-	actividad_economica: z.string().optional(),
-	lugar_trabajo: z.string().optional(),
-});
-
-// Tier 3: Additional fields (premium above $5000)
-export interface NaturalClientTier3Data {
-	email?: string;
-	pais?: string;
-	genero?: Gender;
-	nivel_ingresos?: IncomeLevel;
-	estado_cuenta?: AccountState;
-	saldo_promedio?: number;
-	monto_ingreso?: number;
-	monto_retiro?: number;
-}
-
-export const naturalClientTier3Schema = z.object({
-	email: z.string().email("Email inválido").optional().or(z.literal("")),
-	pais: z.string().optional(),
-	genero: z.enum(GENDER_OPTIONS).optional(),
-	nivel_ingresos: z.enum(INCOME_LEVELS).optional(),
-	estado_cuenta: z.enum(ACCOUNT_STATES).optional(),
-	saldo_promedio: z.coerce.number().positive().optional().or(z.literal(0)),
-	monto_ingreso: z.coerce.number().positive().optional().or(z.literal(0)),
-	monto_retiro: z.coerce.number().positive().optional().or(z.literal(0)),
-});
-
-// Combined Natural Client Form Data
-export interface NaturalClientFormData
-	extends NaturalClientTier1Data,
-		NaturalClientTier2Data,
-		NaturalClientTier3Data {}
-
-export const naturalClientFormSchema = naturalClientTier1Schema
-	.merge(naturalClientTier2Schema)
-	.merge(naturalClientTier3Schema);
-
-// ============================================================================
-// JURIDIC CLIENT (Company)
-// ============================================================================
-
-export interface JuridicClientFormData {
-	razon_social: string;
-	nit: string;
-	direccion: string;
-	telefono: string;
-	email: string;
-	fecha_constitucion: Date;
-	actividad_economica: string;
-	executive_id: string;
-	legal_representatives: LegalRepresentativeData[];
-}
-
-export const juridicClientFormSchema = z.object({
-	razon_social: z.string().min(1, "Razón social es requerida"),
-	nit: z.string().min(1, "NIT es requerido"),
-	direccion: z.string().min(1, "Dirección es requerida"),
-	telefono: z.string().min(1, "Teléfono es requerido"),
-	email: z.string().email("Email inválido").min(1, "Email es requerido"),
-	fecha_constitucion: z.date({
-		required_error: "Fecha de constitución es requerida",
-	}),
-	actividad_economica: z.string().min(1, "Actividad económica es requerida"),
-	executive_id: z.string().min(1, "Ejecutivo es requerido"),
-	legal_representatives: z
-		.array(legalRepresentativeSchema)
-		.min(1, "Al menos un representante legal es requerido"),
+  id: z.string().optional(),
+  juridic_client_id: z.string().optional(),
+  primer_nombre: z.string().min(1, 'Primer nombre es requerido'),
+  segundo_nombre: z.string().optional(),
+  primer_apellido: z.string().min(1, 'Primer apellido es requerido'),
+  segundo_apellido: z.string().optional(),
+  tipo_documento: z.enum(DOCUMENT_TYPES, {
+    required_error: 'Tipo de documento es requerido',
+  }),
+  numero_documento: documentValidation,
+  extension: z.string().optional(),
+  is_primary: z.boolean().optional().default(true),
+  cargo: z.string().optional(),
+  telefono: z.string().optional(),
+  correo_electronico: z.string().email('Email inválido').optional().or(z.literal('')),
 });
 
 // ============================================================================
@@ -187,17 +408,24 @@ export const juridicClientFormSchema = z.object({
 // ============================================================================
 
 export interface ClientFormState {
-	clientType: ClientType | null;
-	naturalData?: Partial<NaturalClientFormData>;
-	juridicData?: Partial<JuridicClientFormData>;
-	currentStep: number; // 1-4
-	completedSections: {
-		tier1?: boolean;
-		tier2?: boolean;
-		tier3?: boolean;
-		company?: boolean;
-		representatives?: boolean;
-	};
+  clientType: ClientType | null;
+  naturalData?: Partial<NaturalClientFormData>;
+  unipersonalData?: Partial<UnipersonalClientFormData>;
+  juridicData?: Partial<JuridicClientFormData>;
+  partnerData?: Partial<ClientPartnerData>; // When estado_civil = 'casado'
+  currentStep: number;
+  completedSections: {
+    personalData?: boolean;
+    contactInfo?: boolean;
+    otherData?: boolean;
+    partnerData?: boolean;
+    commercialData?: boolean;
+    ownerData?: boolean;
+    representativeData?: boolean;
+    companyData?: boolean;
+    legalReps?: boolean;
+    documents?: boolean;
+  };
 }
 
 // ============================================================================
@@ -205,9 +433,92 @@ export interface ClientFormState {
 // ============================================================================
 
 export interface Executive {
-	id: string;
-	full_name: string;
-	email: string;
+  id: string;
+  full_name: string;
+  email: string;
 }
 
-export type FormMode = "create" | "edit";
+export type FormMode = 'create' | 'edit';
+
+export interface FormSectionProps {
+  title: string;
+  description?: string;
+  children: React.ReactNode;
+  sectionNumber?: number;
+  totalSections?: number;
+}
+
+// ============================================================================
+// "SAME AS" CHECKBOX STATE
+// ============================================================================
+
+export interface SameAsState {
+  useSameAsDireccion?: boolean; // For domicilio_comercial
+  useSameAsEmail?: boolean; // For correo_electronico_comercial
+  useSameAsNombre?: boolean; // For nombre_propietario
+  useSameAsApellido?: boolean; // For apellido_propietario
+  useSameAsDocumento?: boolean; // For documento_propietario
+  useSameAsExtension?: boolean; // For extension_propietario
+  useSameAsNacionalidad?: boolean; // For nacionalidad_propietario
+  useSameAsPropietario?: boolean; // For representante legal (copy from propietario)
+}
+
+// ============================================================================
+// DATABASE PAYLOAD TYPES (for submission)
+// ============================================================================
+
+export interface ClientBasePayload {
+  client_type: ClientType;
+  executive_in_charge?: string;
+  status: 'active' | 'inactive' | 'suspended';
+  notes?: string;
+  created_by?: string;
+}
+
+export interface NaturalClientPayload extends NaturalClientFormData {
+  client_id: string;
+}
+
+export interface ClientPartnerPayload extends ClientPartnerData {
+  client_id: string;
+}
+
+export interface UnipersonalClientPayload {
+  natural_data: NaturalClientPayload;
+  unipersonal_data: {
+    client_id: string;
+    razon_social: string;
+    nit: string;
+    matricula_comercio?: string;
+    domicilio_comercial: string;
+    telefono_comercial: string;
+    actividad_economica_comercial: string;
+    nivel_ingresos: number;
+    correo_electronico_comercial: string;
+    nombre_propietario: string;
+    apellido_propietario: string;
+    documento_propietario: string;
+    extension_propietario?: string;
+    nacionalidad_propietario: string;
+    nombre_representante: string;
+    ci_representante: string;
+    extension_representante?: string;
+  };
+}
+
+export interface JuridicClientPayload {
+  company_data: {
+    client_id: string;
+    razon_social: string;
+    tipo_sociedad?: CompanyType;
+    tipo_documento: string;
+    nit: string;
+    matricula_comercio?: string;
+    pais_constitucion: string;
+    direccion_legal: string;
+    actividad_economica: string;
+    correo_electronico?: string;
+    telefono?: string;
+  };
+  legal_representatives: LegalRepresentativeData[];
+}
