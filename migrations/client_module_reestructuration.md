@@ -392,3 +392,40 @@ Ready for deployment - Only remaining work:
 3. Verify all 3 client types work end-to-end
 
 The restructure is production-ready with clean, type-safe code following shadcn/Zod best practices.
+
+Changes Made:
+
+UnipersonalClientForm.tsx:
+
+-   ✅ Added ClientPartnerData type import
+-   ✅ Updated props interface to accept optional partnerForm prop
+-   ✅ Added estado_civil watch to detect when "casado" is selected
+-   ✅ Added showPartnerSection boolean flag (true when estadoCivil === "casado")
+-   ✅ Added SECCIÓN 7: DATOS DEL CÓNYUGE that renders conditionally
+-   ✅ Implemented PartnerFields component with all required fields:
+    -   Primer Nombre, Segundo Nombre
+    -   Primer Apellido, Segundo Apellido
+    -   Dirección
+    -   Celular, Correo Electrónico
+    -   Profesión u Oficio, Actividad Económica
+    -   Lugar de Trabajo
+
+page.tsx (app/clientes/nuevo):
+
+-   ✅ Updated <UnipersonalClientForm> to receive partnerForm={partnerForm} prop
+-   ✅ Updated submitUnipersonalClient() to insert partner data into client_partners table when estado_civil === "casado"
+-   ✅ Applied normalizePartnerData() before database insertion
+
+Validation Results:
+
+✅ ESLint: No warnings or errors✅ TypeScript: All type checks passed✅ Production Build: Successful (6.0s)✅ Bundle Size: Optimized (254 kB)
+
+How It Works:
+
+1. When user selects "Casado" in Estado Civil field (Section 1)
+2. Partner section automatically appears as Section 7
+3. All partner fields are validated with Zod schema
+4. On form submission, partner data is normalized and saved to client_partners table
+5. Partner section is hidden if civil status changes to anything other than "Casado"
+
+The implementation matches the NaturalClientForm pattern, ensuring consistency across both client types.

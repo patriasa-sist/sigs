@@ -427,10 +427,21 @@ Before deploying to production:
 ### Updates After Initial Validation ✅
 **Date:** 2025-11-14
 
-**Change:** Extension fields converted from dropdown to text input
+**Change 1:** Extension fields converted from dropdown to text input
 - ✅ Updated NaturalClientForm: extension_ci changed from Select to Input
 - ✅ Updated UnipersonalClientForm: extension_ci changed from Select to Input
 - ✅ Updated JuridicClientForm: legal representative extension changed from Select to Input
 - ✅ Removed CI_EXTENSIONS imports from all forms
 - **Reason:** Extension field is for document extensions (A, CC, etc.), not department codes
 - **Validation:** All lint and type checks passed after changes
+
+**Change 2:** Added partner section to UnipersonalClientForm
+- ✅ Added ClientPartnerData import to UnipersonalClientForm
+- ✅ Updated UnipersonalClientFormProps to accept optional partnerForm prop
+- ✅ Added estado_civil watch and showPartnerSection logic
+- ✅ Added conditional SECCIÓN 7: DATOS DEL CÓNYUGE (renders when estado_civil = "casado")
+- ✅ Added PartnerFields component (identical to NaturalClientForm implementation)
+- ✅ Updated page.tsx to pass partnerForm prop to UnipersonalClientForm
+- ✅ Updated submitUnipersonalClient to insert partner data when estado_civil = "casado"
+- **Reason:** Bug fix - partner section was not showing for married unipersonal clients
+- **Validation:** All lint and type checks passed, build successful

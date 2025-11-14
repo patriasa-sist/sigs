@@ -4,6 +4,7 @@ import { useState } from "react";
 import { UseFormReturn, Controller } from "react-hook-form";
 import {
 	UnipersonalClientFormData,
+	ClientPartnerData,
 	DOCUMENT_TYPES,
 	CIVIL_STATUS,
 	GENDER_OPTIONS,
@@ -19,10 +20,11 @@ import { SameAsCheckbox } from "@/components/ui/same-as-checkbox";
 
 interface UnipersonalClientFormProps {
 	form: UseFormReturn<UnipersonalClientFormData>;
+	partnerForm?: UseFormReturn<ClientPartnerData>;
 	onFieldBlur?: () => void;
 }
 
-export function UnipersonalClientForm({ form, onFieldBlur }: UnipersonalClientFormProps) {
+export function UnipersonalClientForm({ form, partnerForm, onFieldBlur }: UnipersonalClientFormProps) {
 	const {
 		register,
 		control,
@@ -30,6 +32,10 @@ export function UnipersonalClientForm({ form, onFieldBlur }: UnipersonalClientFo
 		watch,
 		setValue,
 	} = form;
+
+	// Watch estado_civil to show/hide partner section
+	const estadoCivil = watch("estado_civil");
+	const showPartnerSection = estadoCivil === "casado";
 
 	// "Same As" checkbox states
 	const [useSameAsDireccion, setUseSameAsDireccion] = useState(false);
@@ -700,6 +706,130 @@ export function UnipersonalClientForm({ form, onFieldBlur }: UnipersonalClientFo
 					</div>
 				</div>
 			</FormSection>
+
+			{/* SECCIÓN 7: DATOS DEL CÓNYUGE (Conditional) */}
+			{showPartnerSection && partnerForm && (
+				<FormSection
+					title="Datos del Cónyuge"
+					description="Información del cónyuge (requerido para clientes casados)"
+				>
+					<PartnerFields form={partnerForm} onFieldBlur={onFieldBlur} />
+				</FormSection>
+			)}
+		</div>
+	);
+}
+
+// Partner fields component
+function PartnerFields({
+	form,
+	onFieldBlur,
+}: {
+	form: UseFormReturn<ClientPartnerData>;
+	onFieldBlur?: () => void;
+}) {
+	const {
+		register,
+		formState: { errors },
+	} = form;
+
+	return (
+		<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+			<div>
+				<Label htmlFor="partner_primer_nombre">
+					Primer Nombre <span className="text-red-500">*</span>
+				</Label>
+				<Input id="partner_primer_nombre" {...register("primer_nombre")} onBlur={onFieldBlur} />
+				{errors.primer_nombre && (
+					<p className="text-sm text-red-500 mt-1">{errors.primer_nombre.message}</p>
+				)}
+			</div>
+
+			<div>
+				<Label htmlFor="partner_segundo_nombre">Segundo Nombre</Label>
+				<Input id="partner_segundo_nombre" {...register("segundo_nombre")} onBlur={onFieldBlur} />
+			</div>
+
+			<div>
+				<Label htmlFor="partner_primer_apellido">
+					Primer Apellido <span className="text-red-500">*</span>
+				</Label>
+				<Input id="partner_primer_apellido" {...register("primer_apellido")} onBlur={onFieldBlur} />
+				{errors.primer_apellido && (
+					<p className="text-sm text-red-500 mt-1">{errors.primer_apellido.message}</p>
+				)}
+			</div>
+
+			<div>
+				<Label htmlFor="partner_segundo_apellido">Segundo Apellido</Label>
+				<Input id="partner_segundo_apellido" {...register("segundo_apellido")} onBlur={onFieldBlur} />
+			</div>
+
+			<div className="md:col-span-2">
+				<Label htmlFor="partner_direccion">
+					Dirección <span className="text-red-500">*</span>
+				</Label>
+				<Input id="partner_direccion" {...register("direccion")} onBlur={onFieldBlur} />
+				{errors.direccion && <p className="text-sm text-red-500 mt-1">{errors.direccion.message}</p>}
+			</div>
+
+			<div>
+				<Label htmlFor="partner_celular">
+					Celular <span className="text-red-500">*</span>
+				</Label>
+				<Input
+					id="partner_celular"
+					{...register("celular")}
+					onBlur={onFieldBlur}
+					placeholder="Solo números"
+				/>
+				{errors.celular && <p className="text-sm text-red-500 mt-1">{errors.celular.message}</p>}
+			</div>
+
+			<div>
+				<Label htmlFor="partner_correo_electronico">
+					Correo Electrónico <span className="text-red-500">*</span>
+				</Label>
+				<Input
+					id="partner_correo_electronico"
+					type="email"
+					{...register("correo_electronico")}
+					onBlur={onFieldBlur}
+				/>
+				{errors.correo_electronico && (
+					<p className="text-sm text-red-500 mt-1">{errors.correo_electronico.message}</p>
+				)}
+			</div>
+
+			<div>
+				<Label htmlFor="partner_profesion_oficio">
+					Profesión u Oficio <span className="text-red-500">*</span>
+				</Label>
+				<Input id="partner_profesion_oficio" {...register("profesion_oficio")} onBlur={onFieldBlur} />
+				{errors.profesion_oficio && (
+					<p className="text-sm text-red-500 mt-1">{errors.profesion_oficio.message}</p>
+				)}
+			</div>
+
+			<div>
+				<Label htmlFor="partner_actividad_economica">
+					Actividad Económica <span className="text-red-500">*</span>
+				</Label>
+				<Input id="partner_actividad_economica" {...register("actividad_economica")} onBlur={onFieldBlur} />
+				{errors.actividad_economica && (
+					<p className="text-sm text-red-500 mt-1">{errors.actividad_economica.message}</p>
+				)}
+			</div>
+
+			<div>
+				<Label htmlFor="partner_lugar_trabajo">
+					Lugar de Trabajo <span className="text-red-500">*</span>
+				</Label>
+				<Input id="partner_lugar_trabajo" {...register("lugar_trabajo")} onBlur={onFieldBlur} />
+				{errors.lugar_trabajo && (
+					<p className="text-sm text-red-500 mt-1">{errors.lugar_trabajo.message}</p>
+				)}
+			</div>
 		</div>
 	);
 }

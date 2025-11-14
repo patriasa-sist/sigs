@@ -324,6 +324,30 @@ export default function NuevoClientePage() {
 
 		if (unipersonalError) throw unipersonalError;
 
+		// 4. If married, insert partner data
+		if (normalized.estado_civil === "casado") {
+			const partnerData = partnerForm.getValues();
+			if (partnerData && partnerData.primer_nombre) {
+				const normalizedPartner = normalizePartnerData(partnerData);
+
+				const { error: partnerError } = await supabase.from("client_partners").insert({
+					client_id: client.id,
+					primer_nombre: normalizedPartner.primer_nombre,
+					segundo_nombre: normalizedPartner.segundo_nombre || null,
+					primer_apellido: normalizedPartner.primer_apellido,
+					segundo_apellido: normalizedPartner.segundo_apellido || null,
+					direccion: normalizedPartner.direccion,
+					celular: normalizedPartner.celular,
+					correo_electronico: normalizedPartner.correo_electronico,
+					profesion_oficio: normalizedPartner.profesion_oficio,
+					actividad_economica: normalizedPartner.actividad_economica,
+					lugar_trabajo: normalizedPartner.lugar_trabajo,
+				});
+
+				if (partnerError) throw partnerError;
+			}
+		}
+
 		return client.id;
 	};
 
@@ -485,7 +509,11 @@ export default function NuevoClientePage() {
 
 			{clientType === "unipersonal" && (
 				<div className="mt-6">
-					<UnipersonalClientForm form={unipersonalForm} onFieldBlur={handleAutoSave} />
+					<UnipersonalClientForm
+						form={unipersonalForm}
+						partnerForm={partnerForm}
+						onFieldBlur={handleAutoSave}
+					/>
 				</div>
 			)}
 
