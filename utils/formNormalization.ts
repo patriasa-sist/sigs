@@ -163,7 +163,7 @@ export function normalizeFormData<T extends Record<string, any>>(
 
     // Recursively normalize arrays
     if (Array.isArray(value)) {
-      normalized[key] = value.map((item) => {
+      normalized[key] = value.map((item: any) => {
         if (typeof item === 'object') {
           return normalizeFormData(item, fieldsToNormalize, emailFields, phoneFields);
         }

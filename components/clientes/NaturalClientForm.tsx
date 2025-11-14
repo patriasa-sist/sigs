@@ -1,134 +1,84 @@
 "use client";
 
+import { useState } from "react";
 import { UseFormReturn, Controller } from "react-hook-form";
 import {
 	NaturalClientFormData,
+	ClientPartnerData,
 	DOCUMENT_TYPES,
 	CIVIL_STATUS,
 	GENDER_OPTIONS,
 	INCOME_LEVELS,
-	ACCOUNT_STATES,
-	Executive,
+	INCOME_VALUES,
+	CI_EXTENSIONS,
 } from "@/types/clientForm";
 import { FormSection } from "./FormSection";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DatePicker } from "@/components/ui/date-picker";
+import { SameAsCheckbox } from "@/components/ui/same-as-checkbox";
 
 interface NaturalClientFormProps {
 	form: UseFormReturn<NaturalClientFormData>;
-	executives: Executive[];
+	partnerForm?: UseFormReturn<ClientPartnerData>;
 	onFieldBlur?: () => void;
 }
 
-export function NaturalClientForm({ form, executives, onFieldBlur }: NaturalClientFormProps) {
+export function NaturalClientForm({ form, partnerForm, onFieldBlur }: NaturalClientFormProps) {
 	const {
 		register,
 		control,
 		formState: { errors },
 		watch,
+		setValue,
 	} = form;
 
-	// Watch all tier 1 fields to determine completion
-	const tier1Fields = watch([
-		"primer_nombre",
-		"primer_apellido",
-		"tipo_documento",
-		"numero_documento",
-		"nacionalidad",
-		"fecha_nacimiento",
-		"direccion",
-		"estado_civil",
-		"fecha_ingreso_sarlaft",
-		"executive_id",
-	]);
+	// Watch estado_civil to show/hide partner section
+	const estadoCivil = watch("estado_civil");
+	const showPartnerSection = estadoCivil === "casado";
 
-	const tier1Complete =
-		tier1Fields.every((field) => field !== undefined && field !== "" && field !== null) &&
-		tier1Fields.length === 10;
-
-	// Watch tier 2 & 3 fields for completion
-	const tier2Fields = watch(["telefono", "actividad_economica", "lugar_trabajo"]);
-	const tier2HasData = tier2Fields.some((field) => field && field !== "");
-
-	const tier3Fields = watch([
-		"email",
-		"pais",
-		"genero",
-		"nivel_ingresos",
-		"estado_cuenta",
-		"saldo_promedio",
-		"monto_ingreso",
-		"monto_retiro",
-	]);
-	const tier3HasData = tier3Fields.some((field) => field && field !== "" && field !== 0);
+	// Watch for "same as" checkbox
+	const [useSameAsDireccion, setUseSameAsDireccion] = useState(false);
+	const direccion = watch("direccion");
 
 	return (
 		<div className="space-y-6">
-			{/* TIER 1: Required Basic Data */}
-			<FormSection
-				title="Datos Básicos (Tier 1)"
-				description="Información requerida para todos los clientes naturales"
-				required
-				completed={tier1Complete}
-			>
+			{/* SECCIÓN 1: DATOS PERSONALES */}
+			<FormSection title="Datos Personales" description="Información personal del cliente">
 				<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-					{/* Primer Nombre */}
+					{/* Nombres */}
 					<div>
 						<Label htmlFor="primer_nombre">
 							Primer Nombre <span className="text-red-500">*</span>
 						</Label>
-						<Input
-							id="primer_nombre"
-							{...register("primer_nombre")}
-							onBlur={onFieldBlur}
-							placeholder="Juan"
-						/>
+						<Input id="primer_nombre" {...register("primer_nombre")} onBlur={onFieldBlur} />
 						{errors.primer_nombre && (
 							<p className="text-sm text-red-500 mt-1">{errors.primer_nombre.message}</p>
 						)}
 					</div>
 
-					{/* Segundo Nombre */}
 					<div>
 						<Label htmlFor="segundo_nombre">Segundo Nombre</Label>
-						<Input
-							id="segundo_nombre"
-							{...register("segundo_nombre")}
-							onBlur={onFieldBlur}
-							placeholder="Carlos"
-						/>
+						<Input id="segundo_nombre" {...register("segundo_nombre")} onBlur={onFieldBlur} />
 					</div>
 
-					{/* Primer Apellido */}
 					<div>
 						<Label htmlFor="primer_apellido">
 							Primer Apellido <span className="text-red-500">*</span>
 						</Label>
-						<Input
-							id="primer_apellido"
-							{...register("primer_apellido")}
-							onBlur={onFieldBlur}
-							placeholder="Pérez"
-						/>
+						<Input id="primer_apellido" {...register("primer_apellido")} onBlur={onFieldBlur} />
 						{errors.primer_apellido && (
 							<p className="text-sm text-red-500 mt-1">{errors.primer_apellido.message}</p>
 						)}
 					</div>
 
-					{/* Segundo Apellido */}
 					<div>
 						<Label htmlFor="segundo_apellido">Segundo Apellido</Label>
-						<Input
-							id="segundo_apellido"
-							{...register("segundo_apellido")}
-							onBlur={onFieldBlur}
-							placeholder="García"
-						/>
+						<Input id="segundo_apellido" {...register("segundo_apellido")} onBlur={onFieldBlur} />
 					</div>
 
-					{/* Tipo de Documento */}
+					{/* Documento */}
 					<div>
 						<Label htmlFor="tipo_documento">
 							Tipo de Documento <span className="text-red-500">*</span>
@@ -137,20 +87,14 @@ export function NaturalClientForm({ form, executives, onFieldBlur }: NaturalClie
 							name="tipo_documento"
 							control={control}
 							render={({ field }) => (
-								<Select
-									value={field.value}
-									onValueChange={(value) => {
-										field.onChange(value);
-										onFieldBlur?.();
-									}}
-								>
+								<Select value={field.value} onValueChange={field.onChange}>
 									<SelectTrigger>
 										<SelectValue placeholder="Seleccionar" />
 									</SelectTrigger>
 									<SelectContent>
 										{DOCUMENT_TYPES.map((type) => (
 											<SelectItem key={type} value={type}>
-												{type}
+												{type.toUpperCase()}
 											</SelectItem>
 										))}
 									</SelectContent>
@@ -162,7 +106,6 @@ export function NaturalClientForm({ form, executives, onFieldBlur }: NaturalClie
 						)}
 					</div>
 
-					{/* Número de Documento */}
 					<div>
 						<Label htmlFor="numero_documento">
 							Número de Documento <span className="text-red-500">*</span>
@@ -171,14 +114,35 @@ export function NaturalClientForm({ form, executives, onFieldBlur }: NaturalClie
 							id="numero_documento"
 							{...register("numero_documento")}
 							onBlur={onFieldBlur}
-							placeholder="1234567"
+							placeholder="Min. 6 caracteres"
 						/>
 						{errors.numero_documento && (
 							<p className="text-sm text-red-500 mt-1">{errors.numero_documento.message}</p>
 						)}
 					</div>
 
-					{/* Nacionalidad */}
+					<div>
+						<Label htmlFor="extension_ci">Extensión CI</Label>
+						<Controller
+							name="extension_ci"
+							control={control}
+							render={({ field }) => (
+								<Select value={field.value} onValueChange={field.onChange}>
+									<SelectTrigger>
+										<SelectValue placeholder="Seleccionar" />
+									</SelectTrigger>
+									<SelectContent>
+										{CI_EXTENSIONS.map((ext) => (
+											<SelectItem key={ext} value={ext}>
+												{ext}
+											</SelectItem>
+										))}
+									</SelectContent>
+								</Select>
+							)}
+						/>
+					</div>
+
 					<div>
 						<Label htmlFor="nacionalidad">
 							Nacionalidad <span className="text-red-500">*</span>
@@ -187,14 +151,13 @@ export function NaturalClientForm({ form, executives, onFieldBlur }: NaturalClie
 							id="nacionalidad"
 							{...register("nacionalidad")}
 							onBlur={onFieldBlur}
-							placeholder="Boliviana"
+							defaultValue="Boliviana"
 						/>
 						{errors.nacionalidad && (
 							<p className="text-sm text-red-500 mt-1">{errors.nacionalidad.message}</p>
 						)}
 					</div>
 
-					{/* Fecha de Nacimiento */}
 					<div>
 						<Label htmlFor="fecha_nacimiento">
 							Fecha de Nacimiento <span className="text-red-500">*</span>
@@ -203,14 +166,7 @@ export function NaturalClientForm({ form, executives, onFieldBlur }: NaturalClie
 							name="fecha_nacimiento"
 							control={control}
 							render={({ field }) => (
-								<DatePicker
-									date={field.value}
-									onSelect={(date) => {
-										field.onChange(date);
-										onFieldBlur?.();
-									}}
-									placeholder="DD-MM-AAAA"
-								/>
+								<DatePicker date={field.value} onSelect={field.onChange} placeholder="DD-MM-AAAA" />
 							)}
 						/>
 						{errors.fecha_nacimiento && (
@@ -218,23 +174,6 @@ export function NaturalClientForm({ form, executives, onFieldBlur }: NaturalClie
 						)}
 					</div>
 
-					{/* Dirección */}
-					<div className="md:col-span-2">
-						<Label htmlFor="direccion">
-							Dirección <span className="text-red-500">*</span>
-						</Label>
-						<Input
-							id="direccion"
-							{...register("direccion")}
-							onBlur={onFieldBlur}
-							placeholder="Av. Principal #123"
-						/>
-						{errors.direccion && (
-							<p className="text-sm text-red-500 mt-1">{errors.direccion.message}</p>
-						)}
-					</div>
-
-					{/* Estado Civil */}
 					<div>
 						<Label htmlFor="estado_civil">
 							Estado Civil <span className="text-red-500">*</span>
@@ -243,20 +182,14 @@ export function NaturalClientForm({ form, executives, onFieldBlur }: NaturalClie
 							name="estado_civil"
 							control={control}
 							render={({ field }) => (
-								<Select
-									value={field.value}
-									onValueChange={(value) => {
-										field.onChange(value);
-										onFieldBlur?.();
-									}}
-								>
+								<Select value={field.value} onValueChange={field.onChange}>
 									<SelectTrigger>
 										<SelectValue placeholder="Seleccionar" />
 									</SelectTrigger>
 									<SelectContent>
 										{CIVIL_STATUS.map((status) => (
 											<SelectItem key={status} value={status}>
-												{status}
+												{status.charAt(0).toUpperCase() + status.slice(1)}
 											</SelectItem>
 										))}
 									</SelectContent>
@@ -267,158 +200,95 @@ export function NaturalClientForm({ form, executives, onFieldBlur }: NaturalClie
 							<p className="text-sm text-red-500 mt-1">{errors.estado_civil.message}</p>
 						)}
 					</div>
+				</div>
+			</FormSection>
 
-					{/* Fecha de Ingreso SARLAFT */}
-					<div>
-						<Label htmlFor="fecha_ingreso_sarlaft">
-							Fecha de Ingreso (SARLAFT) <span className="text-red-500">*</span>
+			{/* SECCIÓN 2: INFORMACIÓN DE CONTACTO */}
+			<FormSection title="Información de Contacto" description="Datos de contacto del cliente">
+				<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+					<div className="md:col-span-2">
+						<Label htmlFor="direccion">
+							Dirección <span className="text-red-500">*</span>
 						</Label>
-						<Controller
-							name="fecha_ingreso_sarlaft"
-							control={control}
-							render={({ field }) => (
-								<DatePicker
-									date={field.value}
-									onSelect={(date) => {
-										field.onChange(date);
-										onFieldBlur?.();
-									}}
-									placeholder="DD-MM-AAAA"
-								/>
-							)}
-						/>
-						{errors.fecha_ingreso_sarlaft && (
-							<p className="text-sm text-red-500 mt-1">{errors.fecha_ingreso_sarlaft.message}</p>
+						<Input id="direccion" {...register("direccion")} onBlur={onFieldBlur} />
+						{errors.direccion && (
+							<p className="text-sm text-red-500 mt-1">{errors.direccion.message}</p>
 						)}
 					</div>
 
-					{/* Ejecutivo a Cargo */}
-					<div className="md:col-span-2">
-						<Label htmlFor="executive_id">
-							Ejecutivo a Cargo <span className="text-red-500">*</span>
+					<div>
+						<Label htmlFor="correo_electronico">
+							Correo Electrónico <span className="text-red-500">*</span>
 						</Label>
-						<Controller
-							name="executive_id"
-							control={control}
-							render={({ field }) => (
-								<Select
-									value={field.value}
-									onValueChange={(value) => {
-										field.onChange(value);
-										onFieldBlur?.();
-									}}
-								>
-									<SelectTrigger>
-										<SelectValue placeholder="Seleccionar ejecutivo" />
-									</SelectTrigger>
-									<SelectContent>
-										{executives.map((exec) => (
-											<SelectItem key={exec.id} value={exec.id}>
-												{exec.full_name}
-											</SelectItem>
-										))}
-									</SelectContent>
-								</Select>
-							)}
+						<Input
+							id="correo_electronico"
+							type="email"
+							{...register("correo_electronico")}
+							onBlur={onFieldBlur}
+							placeholder="ejemplo@correo.com"
 						/>
-						{errors.executive_id && (
-							<p className="text-sm text-red-500 mt-1">{errors.executive_id.message}</p>
+						{errors.correo_electronico && (
+							<p className="text-sm text-red-500 mt-1">{errors.correo_electronico.message}</p>
 						)}
+					</div>
+
+					<div>
+						<Label htmlFor="celular">
+							Celular <span className="text-red-500">*</span>
+						</Label>
+						<Input
+							id="celular"
+							{...register("celular")}
+							onBlur={onFieldBlur}
+							placeholder="Solo números, min. 5 dígitos"
+						/>
+						{errors.celular && <p className="text-sm text-red-500 mt-1">{errors.celular.message}</p>}
 					</div>
 				</div>
 			</FormSection>
 
-			{/* TIER 2: Additional Data (Premium $1001-$5000) */}
-			<FormSection
-				title="Datos Adicionales (Tier 2)"
-				description="Requerido cuando el cliente tenga pólizas con prima total entre $1001-$5000"
-				required={false}
-				completed={tier2HasData}
-			>
-				<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-					{/* Teléfono */}
+			{/* SECCIÓN 3: OTROS DATOS */}
+			<FormSection title="Otros Datos" description="Información adicional (opcional)">
+				<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 					<div>
-						<Label htmlFor="telefono">Teléfono</Label>
-						<Input
-							id="telefono"
-							{...register("telefono")}
-							onBlur={onFieldBlur}
-							placeholder="70123456"
-						/>
+						<Label htmlFor="profesion_oficio">Profesión u Oficio</Label>
+						<Input id="profesion_oficio" {...register("profesion_oficio")} onBlur={onFieldBlur} />
 					</div>
 
-					{/* Actividad Económica */}
 					<div>
 						<Label htmlFor="actividad_economica">Actividad Económica</Label>
-						<Input
-							id="actividad_economica"
-							{...register("actividad_economica")}
-							onBlur={onFieldBlur}
-							placeholder="Comercio"
-						/>
+						<Input id="actividad_economica" {...register("actividad_economica")} onBlur={onFieldBlur} />
 					</div>
 
-					{/* Lugar de Trabajo */}
 					<div>
 						<Label htmlFor="lugar_trabajo">Lugar de Trabajo</Label>
+						<Input id="lugar_trabajo" {...register("lugar_trabajo")} onBlur={onFieldBlur} />
+					</div>
+
+					<div>
+						<Label htmlFor="pais_residencia">País de Residencia</Label>
 						<Input
-							id="lugar_trabajo"
-							{...register("lugar_trabajo")}
+							id="pais_residencia"
+							{...register("pais_residencia")}
 							onBlur={onFieldBlur}
-							placeholder="Empresa ABC"
+							defaultValue="Bolivia"
 						/>
 					</div>
-				</div>
-			</FormSection>
 
-			{/* TIER 3: Extended Data (Premium above $5000) */}
-			<FormSection
-				title="Datos Extendidos (Tier 3)"
-				description="Requerido cuando el cliente tenga pólizas con prima total superior a $5000"
-				required={false}
-				completed={tier3HasData}
-			>
-				<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-					{/* Email */}
-					<div>
-						<Label htmlFor="email">Email</Label>
-						<Input
-							id="email"
-							type="email"
-							{...register("email")}
-							onBlur={onFieldBlur}
-							placeholder="cliente@email.com"
-						/>
-						{errors.email && <p className="text-sm text-red-500 mt-1">{errors.email.message}</p>}
-					</div>
-
-					{/* País */}
-					<div>
-						<Label htmlFor="pais">País</Label>
-						<Input id="pais" {...register("pais")} onBlur={onFieldBlur} placeholder="Bolivia" />
-					</div>
-
-					{/* Género */}
 					<div>
 						<Label htmlFor="genero">Género</Label>
 						<Controller
 							name="genero"
 							control={control}
 							render={({ field }) => (
-								<Select
-									value={field.value}
-									onValueChange={(value) => {
-										field.onChange(value);
-										onFieldBlur?.();
-									}}
-								>
+								<Select value={field.value} onValueChange={field.onChange}>
 									<SelectTrigger>
 										<SelectValue placeholder="Seleccionar" />
 									</SelectTrigger>
 									<SelectContent>
 										{GENDER_OPTIONS.map((gender) => (
 											<SelectItem key={gender} value={gender}>
-												{gender}
+												{gender.charAt(0).toUpperCase() + gender.slice(1)}
 											</SelectItem>
 										))}
 									</SelectContent>
@@ -427,7 +297,6 @@ export function NaturalClientForm({ form, executives, onFieldBlur }: NaturalClie
 						/>
 					</div>
 
-					{/* Nivel de Ingresos */}
 					<div>
 						<Label htmlFor="nivel_ingresos">Nivel de Ingresos</Label>
 						<Controller
@@ -435,19 +304,17 @@ export function NaturalClientForm({ form, executives, onFieldBlur }: NaturalClie
 							control={control}
 							render={({ field }) => (
 								<Select
-									value={field.value}
-									onValueChange={(value) => {
-										field.onChange(value);
-										onFieldBlur?.();
-									}}
+									value={field.value?.toString()}
+									onValueChange={(value) => field.onChange(Number(value))}
 								>
 									<SelectTrigger>
 										<SelectValue placeholder="Seleccionar" />
 									</SelectTrigger>
 									<SelectContent>
 										{INCOME_LEVELS.map((level) => (
-											<SelectItem key={level} value={level}>
-												{level}
+											<SelectItem key={level} value={INCOME_VALUES[level].toString()}>
+												{level.charAt(0).toUpperCase() + level.slice(1)} ($
+												{INCOME_VALUES[level].toLocaleString()})
 											</SelectItem>
 										))}
 									</SelectContent>
@@ -456,72 +323,173 @@ export function NaturalClientForm({ form, executives, onFieldBlur }: NaturalClie
 						/>
 					</div>
 
-					{/* Estado de Cuenta */}
 					<div>
-						<Label htmlFor="estado_cuenta">Estado de Cuenta</Label>
+						<Label htmlFor="cargo">Cargo</Label>
+						<Input id="cargo" {...register("cargo")} onBlur={onFieldBlur} />
+					</div>
+
+					<div>
+						<Label htmlFor="anio_ingreso">Año de Ingreso</Label>
 						<Controller
-							name="estado_cuenta"
+							name="anio_ingreso"
 							control={control}
 							render={({ field }) => (
-								<Select
-									value={field.value}
-									onValueChange={(value) => {
-										field.onChange(value);
-										onFieldBlur?.();
-									}}
-								>
-									<SelectTrigger>
-										<SelectValue placeholder="Seleccionar" />
-									</SelectTrigger>
-									<SelectContent>
-										{ACCOUNT_STATES.map((state) => (
-											<SelectItem key={state} value={state}>
-												{state}
-											</SelectItem>
-										))}
-									</SelectContent>
-								</Select>
+								<DatePicker date={field.value} onSelect={field.onChange} placeholder="DD-MM-AAAA" />
 							)}
 						/>
 					</div>
 
-					{/* Saldo Promedio */}
 					<div>
-						<Label htmlFor="saldo_promedio">Saldo Promedio (Bs)</Label>
-						<Input
-							id="saldo_promedio"
-							type="number"
-							{...register("saldo_promedio", { valueAsNumber: true })}
-							onBlur={onFieldBlur}
-							placeholder="10000"
-						/>
+						<Label htmlFor="nit">NIT</Label>
+						<Input id="nit" {...register("nit")} onBlur={onFieldBlur} placeholder="Min. 7 dígitos" />
+						{errors.nit && <p className="text-sm text-red-500 mt-1">{errors.nit.message}</p>}
 					</div>
 
-					{/* Monto Ingreso */}
-					<div>
-						<Label htmlFor="monto_ingreso">Monto Ingreso (Bs)</Label>
+					<div className="md:col-span-2">
+						<Label htmlFor="domicilio_comercial">Domicilio Comercial</Label>
 						<Input
-							id="monto_ingreso"
-							type="number"
-							{...register("monto_ingreso", { valueAsNumber: true })}
+							id="domicilio_comercial"
+							{...register("domicilio_comercial")}
 							onBlur={onFieldBlur}
-							placeholder="5000"
+							disabled={useSameAsDireccion}
 						/>
-					</div>
-
-					{/* Monto Retiro */}
-					<div>
-						<Label htmlFor="monto_retiro">Monto Retiro (Bs)</Label>
-						<Input
-							id="monto_retiro"
-							type="number"
-							{...register("monto_retiro", { valueAsNumber: true })}
-							onBlur={onFieldBlur}
-							placeholder="3000"
-						/>
+						<div className="mt-2">
+							<SameAsCheckbox
+								id="same-as-direccion"
+								label="Mismo que dirección personal"
+								checked={useSameAsDireccion}
+								onCheckedChange={setUseSameAsDireccion}
+								sourceValue={direccion}
+								onCopyValue={(value) => setValue("domicilio_comercial", value as string)}
+							/>
+						</div>
 					</div>
 				</div>
 			</FormSection>
+
+			{/* SECCIÓN 4: DATOS DEL CÓNYUGE (Conditional) */}
+			{showPartnerSection && partnerForm && (
+				<FormSection
+					title="Datos del Cónyuge"
+					description="Información del cónyuge (requerido para clientes casados)"
+				>
+					<PartnerFields form={partnerForm} onFieldBlur={onFieldBlur} />
+				</FormSection>
+			)}
+		</div>
+	);
+}
+
+// Partner fields component
+function PartnerFields({
+	form,
+	onFieldBlur,
+}: {
+	form: UseFormReturn<ClientPartnerData>;
+	onFieldBlur?: () => void;
+}) {
+	const {
+		register,
+		formState: { errors },
+	} = form;
+
+	return (
+		<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+			<div>
+				<Label htmlFor="partner_primer_nombre">
+					Primer Nombre <span className="text-red-500">*</span>
+				</Label>
+				<Input id="partner_primer_nombre" {...register("primer_nombre")} onBlur={onFieldBlur} />
+				{errors.primer_nombre && (
+					<p className="text-sm text-red-500 mt-1">{errors.primer_nombre.message}</p>
+				)}
+			</div>
+
+			<div>
+				<Label htmlFor="partner_segundo_nombre">Segundo Nombre</Label>
+				<Input id="partner_segundo_nombre" {...register("segundo_nombre")} onBlur={onFieldBlur} />
+			</div>
+
+			<div>
+				<Label htmlFor="partner_primer_apellido">
+					Primer Apellido <span className="text-red-500">*</span>
+				</Label>
+				<Input id="partner_primer_apellido" {...register("primer_apellido")} onBlur={onFieldBlur} />
+				{errors.primer_apellido && (
+					<p className="text-sm text-red-500 mt-1">{errors.primer_apellido.message}</p>
+				)}
+			</div>
+
+			<div>
+				<Label htmlFor="partner_segundo_apellido">Segundo Apellido</Label>
+				<Input id="partner_segundo_apellido" {...register("segundo_apellido")} onBlur={onFieldBlur} />
+			</div>
+
+			<div className="md:col-span-2">
+				<Label htmlFor="partner_direccion">
+					Dirección <span className="text-red-500">*</span>
+				</Label>
+				<Input id="partner_direccion" {...register("direccion")} onBlur={onFieldBlur} />
+				{errors.direccion && <p className="text-sm text-red-500 mt-1">{errors.direccion.message}</p>}
+			</div>
+
+			<div>
+				<Label htmlFor="partner_celular">
+					Celular <span className="text-red-500">*</span>
+				</Label>
+				<Input
+					id="partner_celular"
+					{...register("celular")}
+					onBlur={onFieldBlur}
+					placeholder="Solo números"
+				/>
+				{errors.celular && <p className="text-sm text-red-500 mt-1">{errors.celular.message}</p>}
+			</div>
+
+			<div>
+				<Label htmlFor="partner_correo_electronico">
+					Correo Electrónico <span className="text-red-500">*</span>
+				</Label>
+				<Input
+					id="partner_correo_electronico"
+					type="email"
+					{...register("correo_electronico")}
+					onBlur={onFieldBlur}
+				/>
+				{errors.correo_electronico && (
+					<p className="text-sm text-red-500 mt-1">{errors.correo_electronico.message}</p>
+				)}
+			</div>
+
+			<div>
+				<Label htmlFor="partner_profesion_oficio">
+					Profesión u Oficio <span className="text-red-500">*</span>
+				</Label>
+				<Input id="partner_profesion_oficio" {...register("profesion_oficio")} onBlur={onFieldBlur} />
+				{errors.profesion_oficio && (
+					<p className="text-sm text-red-500 mt-1">{errors.profesion_oficio.message}</p>
+				)}
+			</div>
+
+			<div>
+				<Label htmlFor="partner_actividad_economica">
+					Actividad Económica <span className="text-red-500">*</span>
+				</Label>
+				<Input id="partner_actividad_economica" {...register("actividad_economica")} onBlur={onFieldBlur} />
+				{errors.actividad_economica && (
+					<p className="text-sm text-red-500 mt-1">{errors.actividad_economica.message}</p>
+				)}
+			</div>
+
+			<div>
+				<Label htmlFor="partner_lugar_trabajo">
+					Lugar de Trabajo <span className="text-red-500">*</span>
+				</Label>
+				<Input id="partner_lugar_trabajo" {...register("lugar_trabajo")} onBlur={onFieldBlur} />
+				{errors.lugar_trabajo && (
+					<p className="text-sm text-red-500 mt-1">{errors.lugar_trabajo.message}</p>
+				)}
+			</div>
 		</div>
 	);
 }

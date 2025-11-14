@@ -95,18 +95,12 @@ export const naturalClientPersonalSchema = z.object({
   segundo_nombre: z.string().optional(),
   primer_apellido: z.string().min(1, 'Primer apellido es requerido'),
   segundo_apellido: z.string().optional(),
-  tipo_documento: z.enum(DOCUMENT_TYPES, {
-    required_error: 'Tipo de documento es requerido',
-  }),
+  tipo_documento: z.enum(DOCUMENT_TYPES, { message: 'Tipo de documento es requerido' }),
   numero_documento: documentValidation,
   extension_ci: z.string().optional(),
   nacionalidad: z.string().min(1, 'Nacionalidad es requerida'),
-  fecha_nacimiento: z.date({
-    required_error: 'Fecha de nacimiento es requerida',
-  }),
-  estado_civil: z.enum(CIVIL_STATUS, {
-    required_error: 'Estado civil es requerido',
-  }),
+  fecha_nacimiento: z.date({ message: 'Fecha de nacimiento es requerida' }),
+  estado_civil: z.enum(CIVIL_STATUS, { message: 'Estado civil es requerido' }),
 });
 
 // Section 2: Información de Contacto
@@ -271,8 +265,8 @@ export const unipersonalRepresentativeSchema = z.object({
 export interface UnipersonalClientFormData
   extends NaturalClientPersonalData,
     NaturalClientContactData,
-    NaturalClientOtherData,
-    UnipersonalCommercialData,
+    Omit<NaturalClientOtherData, 'nit' | 'domicilio_comercial' | 'nivel_ingresos'>, // Exclude overlapping optional fields
+    UnipersonalCommercialData, // Use required fields from commercial
     UnipersonalOwnerData,
     UnipersonalRepresentativeData {
   executive_in_charge?: string;
@@ -280,8 +274,8 @@ export interface UnipersonalClientFormData
 
 export const unipersonalClientFormSchema = naturalClientPersonalSchema
   .merge(naturalClientContactSchema)
-  .merge(naturalClientOtherSchema)
-  .merge(unipersonalCommercialSchema)
+  .merge(naturalClientOtherSchema.omit({ nit: true, domicilio_comercial: true, nivel_ingresos: true })) // Remove overlapping optional fields
+  .merge(unipersonalCommercialSchema) // Use required fields from commercial
   .merge(unipersonalOwnerSchema)
   .merge(unipersonalRepresentativeSchema)
   .extend({
@@ -296,7 +290,7 @@ export const unipersonalClientFormSchema = naturalClientPersonalSchema
 export interface JuridicClientCompanyData {
   razon_social: string;
   tipo_sociedad?: CompanyType;
-  tipo_documento: string; // Always "NIT"
+  tipo_documento?: string; // Always "NIT", has default value
   nit: string;
   matricula_comercio?: string;
   pais_constitucion: string;
@@ -331,40 +325,6 @@ export const juridicClientContactSchema = z.object({
     .or(z.literal('')),
 });
 
-// Combined Juridic Client Form Data
-export interface JuridicClientFormData
-  extends JuridicClientCompanyData,
-    JuridicClientContactData {
-  executive_in_charge?: string;
-  legal_representatives: LegalRepresentativeData[];
-}
-
-export const juridicClientFormSchema = juridicClientCompanySchema
-  .merge(juridicClientContactSchema)
-  .extend({
-    executive_in_charge: z.string().optional(),
-    legal_representatives: z
-      .array(
-        z.object({
-          id: z.string().optional(),
-          primer_nombre: z.string().min(1, 'Primer nombre es requerido'),
-          segundo_nombre: z.string().optional(),
-          primer_apellido: z.string().min(1, 'Primer apellido es requerido'),
-          segundo_apellido: z.string().optional(),
-          tipo_documento: z.enum(DOCUMENT_TYPES, {
-            required_error: 'Tipo de documento es requerido',
-          }),
-          numero_documento: documentValidation,
-          extension: z.string().optional(),
-          is_primary: z.boolean().optional().default(true),
-          cargo: z.string().optional(),
-          telefono: z.string().optional(),
-          correo_electronico: z.string().email('Email inválido').optional().or(z.literal('')),
-        })
-      )
-      .min(1, 'Al menos un representante legal es requerido'),
-  });
-
 // ============================================================================
 // LEGAL REPRESENTATIVE (for Juridic Clients)
 // ============================================================================
@@ -392,9 +352,7 @@ export const legalRepresentativeSchema = z.object({
   segundo_nombre: z.string().optional(),
   primer_apellido: z.string().min(1, 'Primer apellido es requerido'),
   segundo_apellido: z.string().optional(),
-  tipo_documento: z.enum(DOCUMENT_TYPES, {
-    required_error: 'Tipo de documento es requerido',
-  }),
+  tipo_documento: z.enum(DOCUMENT_TYPES, { message: 'Tipo de documento es requerido' }),
   numero_documento: documentValidation,
   extension: z.string().optional(),
   is_primary: z.boolean().optional().default(true),
@@ -402,6 +360,23 @@ export const legalRepresentativeSchema = z.object({
   telefono: z.string().optional(),
   correo_electronico: z.string().email('Email inválido').optional().or(z.literal('')),
 });
+
+// Combined Juridic Client Form Data
+export interface JuridicClientFormData
+  extends JuridicClientCompanyData,
+    JuridicClientContactData {
+  executive_in_charge?: string;
+  legal_representatives: LegalRepresentativeData[];
+}
+
+export const juridicClientFormSchema = juridicClientCompanySchema
+  .merge(juridicClientContactSchema)
+  .extend({
+    executive_in_charge: z.string().optional(),
+    legal_representatives: z
+      .array(legalRepresentativeSchema.omit({ juridic_client_id: true }))
+      .min(1, 'Al menos un representante legal es requerido'),
+  });
 
 // ============================================================================
 // FORM STATE

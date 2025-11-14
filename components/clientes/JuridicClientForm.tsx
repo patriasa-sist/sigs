@@ -1,28 +1,24 @@
 "use client";
 
 import { UseFormReturn, Controller, useFieldArray } from "react-hook-form";
-import { JuridicClientFormData, Executive } from "@/types/clientForm";
+import { JuridicClientFormData, DOCUMENT_TYPES, COMPANY_TYPES, CI_EXTENSIONS } from "@/types/clientForm";
 import { FormSection } from "./FormSection";
-import { LegalRepresentativeFields } from "./LegalRepresentativeFields";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { DatePicker } from "@/components/ui/date-picker";
-import { Plus } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 
 interface JuridicClientFormProps {
 	form: UseFormReturn<JuridicClientFormData>;
-	executives: Executive[];
 	onFieldBlur?: () => void;
 }
 
-export function JuridicClientForm({ form, executives, onFieldBlur }: JuridicClientFormProps) {
+export function JuridicClientForm({ form, onFieldBlur }: JuridicClientFormProps) {
 	const {
 		register,
 		control,
 		formState: { errors },
-		watch,
 	} = form;
 
 	const { fields, append, remove } = useFieldArray({
@@ -30,47 +26,27 @@ export function JuridicClientForm({ form, executives, onFieldBlur }: JuridicClie
 		name: "legal_representatives",
 	});
 
-	// Watch company data fields to determine completion
-	const companyFields = watch([
-		"razon_social",
-		"nit",
-		"direccion",
-		"telefono",
-		"email",
-		"fecha_constitucion",
-		"actividad_economica",
-		"executive_id",
-	]);
-
-	const companyComplete =
-		companyFields.every((field) => field !== undefined && field !== "" && field !== null) &&
-		companyFields.length === 8;
-
-	// Watch representatives for completion
-	const representatives = watch("legal_representatives");
-	const representativesComplete = representatives && representatives.length > 0;
-
 	const handleAddRepresentative = () => {
 		append({
-			nombre_completo: "",
-			ci: "",
+			primer_nombre: "",
+			segundo_nombre: "",
+			primer_apellido: "",
+			segundo_apellido: "",
+			tipo_documento: "ci",
+			numero_documento: "",
+			extension: "",
+			is_primary: fields.length === 0, // First one is primary
 			cargo: "",
 			telefono: "",
-			email: "",
+			correo_electronico: "",
 		});
 	};
 
 	return (
 		<div className="space-y-6">
-			{/* Company Data Section */}
-			<FormSection
-				title="Datos de la Empresa"
-				description="Información requerida de la persona jurídica"
-				required
-				completed={companyComplete}
-			>
+			{/* SECCIÓN 1: DATOS DE LA EMPRESA */}
+			<FormSection title="Datos de la Empresa" description="Información de la persona jurídica">
 				<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-					{/* Razón Social */}
 					<div className="md:col-span-2">
 						<Label htmlFor="razon_social">
 							Razón Social <span className="text-red-500">*</span>
@@ -86,7 +62,31 @@ export function JuridicClientForm({ form, executives, onFieldBlur }: JuridicClie
 						)}
 					</div>
 
-					{/* NIT */}
+					<div>
+						<Label htmlFor="tipo_sociedad">Tipo de Sociedad</Label>
+						<Controller
+							name="tipo_sociedad"
+							control={control}
+							render={({ field }) => (
+								<Select value={field.value} onValueChange={field.onChange}>
+									<SelectTrigger>
+										<SelectValue placeholder="Seleccionar" />
+									</SelectTrigger>
+									<SelectContent>
+										{COMPANY_TYPES.map((type) => (
+											<SelectItem key={type} value={type}>
+												{type}
+											</SelectItem>
+										))}
+									</SelectContent>
+								</Select>
+							)}
+						/>
+						{errors.tipo_sociedad && (
+							<p className="text-sm text-red-500 mt-1">{errors.tipo_sociedad.message}</p>
+						)}
+					</div>
+
 					<div>
 						<Label htmlFor="nit">
 							NIT <span className="text-red-500">*</span>
@@ -95,83 +95,39 @@ export function JuridicClientForm({ form, executives, onFieldBlur }: JuridicClie
 							id="nit"
 							{...register("nit")}
 							onBlur={onFieldBlur}
-							placeholder="1234567890"
+							placeholder="Min. 7 dígitos"
 						/>
 						{errors.nit && <p className="text-sm text-red-500 mt-1">{errors.nit.message}</p>}
 					</div>
 
-					{/* Fecha de Constitución */}
 					<div>
-						<Label htmlFor="fecha_constitucion">
-							Fecha de Constitución <span className="text-red-500">*</span>
-						</Label>
-						<Controller
-							name="fecha_constitucion"
-							control={control}
-							render={({ field }) => (
-								<DatePicker
-									date={field.value}
-									onSelect={(date) => {
-										field.onChange(date);
-										onFieldBlur?.();
-									}}
-									placeholder="DD-MM-AAAA"
-								/>
-							)}
+						<Label htmlFor="matricula_comercio">Matrícula de Comercio</Label>
+						<Input
+							id="matricula_comercio"
+							{...register("matricula_comercio")}
+							onBlur={onFieldBlur}
+							placeholder="Min. 7 caracteres"
 						/>
-						{errors.fecha_constitucion && (
-							<p className="text-sm text-red-500 mt-1">{errors.fecha_constitucion.message}</p>
+						{errors.matricula_comercio && (
+							<p className="text-sm text-red-500 mt-1">{errors.matricula_comercio.message}</p>
 						)}
 					</div>
 
-					{/* Dirección */}
-					<div className="md:col-span-2">
-						<Label htmlFor="direccion">
-							Dirección <span className="text-red-500">*</span>
+					<div>
+						<Label htmlFor="pais_constitucion">
+							País de Constitución <span className="text-red-500">*</span>
 						</Label>
 						<Input
-							id="direccion"
-							{...register("direccion")}
+							id="pais_constitucion"
+							{...register("pais_constitucion")}
 							onBlur={onFieldBlur}
-							placeholder="Av. Principal #123, Zona Centro"
+							defaultValue="Bolivia"
 						/>
-						{errors.direccion && (
-							<p className="text-sm text-red-500 mt-1">{errors.direccion.message}</p>
+						{errors.pais_constitucion && (
+							<p className="text-sm text-red-500 mt-1">{errors.pais_constitucion.message}</p>
 						)}
 					</div>
 
-					{/* Teléfono */}
-					<div>
-						<Label htmlFor="telefono">
-							Teléfono <span className="text-red-500">*</span>
-						</Label>
-						<Input
-							id="telefono"
-							{...register("telefono")}
-							onBlur={onFieldBlur}
-							placeholder="2123456"
-						/>
-						{errors.telefono && (
-							<p className="text-sm text-red-500 mt-1">{errors.telefono.message}</p>
-						)}
-					</div>
-
-					{/* Email */}
-					<div>
-						<Label htmlFor="email">
-							Email <span className="text-red-500">*</span>
-						</Label>
-						<Input
-							id="email"
-							type="email"
-							{...register("email")}
-							onBlur={onFieldBlur}
-							placeholder="contacto@empresa.com"
-						/>
-						{errors.email && <p className="text-sm text-red-500 mt-1">{errors.email.message}</p>}
-					</div>
-
-					{/* Actividad Económica */}
 					<div className="md:col-span-2">
 						<Label htmlFor="actividad_economica">
 							Actividad Económica <span className="text-red-500">*</span>
@@ -186,68 +142,253 @@ export function JuridicClientForm({ form, executives, onFieldBlur }: JuridicClie
 							<p className="text-sm text-red-500 mt-1">{errors.actividad_economica.message}</p>
 						)}
 					</div>
+				</div>
+			</FormSection>
 
-					{/* Ejecutivo a Cargo */}
+			{/* SECCIÓN 2: INFORMACIÓN DE CONTACTO */}
+			<FormSection title="Información de Contacto" description="Datos de contacto de la empresa">
+				<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 					<div className="md:col-span-2">
-						<Label htmlFor="executive_id">
-							Ejecutivo a Cargo <span className="text-red-500">*</span>
+						<Label htmlFor="direccion_legal">
+							Dirección Legal <span className="text-red-500">*</span>
 						</Label>
-						<Controller
-							name="executive_id"
-							control={control}
-							render={({ field }) => (
-								<Select
-									value={field.value}
-									onValueChange={(value) => {
-										field.onChange(value);
-										onFieldBlur?.();
-									}}
-								>
-									<SelectTrigger>
-										<SelectValue placeholder="Seleccionar ejecutivo" />
-									</SelectTrigger>
-									<SelectContent>
-										{executives.map((exec) => (
-											<SelectItem key={exec.id} value={exec.id}>
-												{exec.full_name}
-											</SelectItem>
-										))}
-									</SelectContent>
-								</Select>
-							)}
+						<Input
+							id="direccion_legal"
+							{...register("direccion_legal")}
+							onBlur={onFieldBlur}
+							placeholder="Av. Principal #123, Zona Centro"
 						/>
-						{errors.executive_id && (
-							<p className="text-sm text-red-500 mt-1">{errors.executive_id.message}</p>
+						{errors.direccion_legal && (
+							<p className="text-sm text-red-500 mt-1">{errors.direccion_legal.message}</p>
 						)}
+					</div>
+
+					<div>
+						<Label htmlFor="correo_electronico">Correo Electrónico</Label>
+						<Input
+							id="correo_electronico"
+							type="email"
+							{...register("correo_electronico")}
+							onBlur={onFieldBlur}
+							placeholder="contacto@empresa.com"
+						/>
+						{errors.correo_electronico && (
+							<p className="text-sm text-red-500 mt-1">{errors.correo_electronico.message}</p>
+						)}
+					</div>
+
+					<div>
+						<Label htmlFor="telefono">Teléfono</Label>
+						<Input
+							id="telefono"
+							{...register("telefono")}
+							onBlur={onFieldBlur}
+							placeholder="Solo números, min. 5 dígitos"
+						/>
+						{errors.telefono && <p className="text-sm text-red-500 mt-1">{errors.telefono.message}</p>}
 					</div>
 				</div>
 			</FormSection>
 
-			{/* Legal Representatives Section */}
+			{/* SECCIÓN 3: REPRESENTANTES LEGALES */}
 			<FormSection
 				title="Representantes Legales"
-				description="Al menos un representante legal es requerido"
-				required
-				completed={representativesComplete}
+				description="Información de los representantes legales (mínimo 1 requerido)"
 			>
-				<div className="space-y-4">
+				<div className="space-y-6">
+					{fields.length === 0 && (
+						<p className="text-sm text-muted-foreground">
+							No hay representantes legales agregados. Haga clic en el botón de abajo para agregar uno.
+						</p>
+					)}
+
 					{fields.map((field, index) => (
-						<LegalRepresentativeFields
-							key={field.id}
-							form={form}
-							index={index}
-							canRemove={fields.length > 1}
-							onRemove={() => remove(index)}
-						/>
+						<div key={field.id} className="border rounded-lg p-4 space-y-4">
+							<div className="flex items-center justify-between mb-2">
+								<h4 className="font-medium">
+									Representante {index + 1}
+									{index === 0 && (
+										<span className="ml-2 text-xs text-muted-foreground">(Principal)</span>
+									)}
+								</h4>
+								{index > 0 && (
+									<Button
+										type="button"
+										variant="ghost"
+										size="sm"
+										onClick={() => remove(index)}
+										className="text-red-500 hover:text-red-700"
+									>
+										<Trash2 className="h-4 w-4" />
+									</Button>
+								)}
+							</div>
+
+							<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+								<div>
+									<Label htmlFor={`rep_${index}_primer_nombre`}>
+										Primer Nombre <span className="text-red-500">*</span>
+									</Label>
+									<Input
+										id={`rep_${index}_primer_nombre`}
+										{...register(`legal_representatives.${index}.primer_nombre`)}
+										onBlur={onFieldBlur}
+									/>
+									{errors.legal_representatives?.[index]?.primer_nombre && (
+										<p className="text-sm text-red-500 mt-1">
+											{errors.legal_representatives[index]?.primer_nombre?.message}
+										</p>
+									)}
+								</div>
+
+								<div>
+									<Label htmlFor={`rep_${index}_segundo_nombre`}>Segundo Nombre</Label>
+									<Input
+										id={`rep_${index}_segundo_nombre`}
+										{...register(`legal_representatives.${index}.segundo_nombre`)}
+										onBlur={onFieldBlur}
+									/>
+								</div>
+
+								<div>
+									<Label htmlFor={`rep_${index}_primer_apellido`}>
+										Primer Apellido <span className="text-red-500">*</span>
+									</Label>
+									<Input
+										id={`rep_${index}_primer_apellido`}
+										{...register(`legal_representatives.${index}.primer_apellido`)}
+										onBlur={onFieldBlur}
+									/>
+									{errors.legal_representatives?.[index]?.primer_apellido && (
+										<p className="text-sm text-red-500 mt-1">
+											{errors.legal_representatives[index]?.primer_apellido?.message}
+										</p>
+									)}
+								</div>
+
+								<div>
+									<Label htmlFor={`rep_${index}_segundo_apellido`}>Segundo Apellido</Label>
+									<Input
+										id={`rep_${index}_segundo_apellido`}
+										{...register(`legal_representatives.${index}.segundo_apellido`)}
+										onBlur={onFieldBlur}
+									/>
+								</div>
+
+								<div>
+									<Label htmlFor={`rep_${index}_tipo_documento`}>
+										Tipo de Documento <span className="text-red-500">*</span>
+									</Label>
+									<Controller
+										name={`legal_representatives.${index}.tipo_documento`}
+										control={control}
+										render={({ field }) => (
+											<Select value={field.value} onValueChange={field.onChange}>
+												<SelectTrigger>
+													<SelectValue placeholder="Seleccionar" />
+												</SelectTrigger>
+												<SelectContent>
+													{DOCUMENT_TYPES.map((type) => (
+														<SelectItem key={type} value={type}>
+															{type.toUpperCase()}
+														</SelectItem>
+													))}
+												</SelectContent>
+											</Select>
+										)}
+									/>
+									{errors.legal_representatives?.[index]?.tipo_documento && (
+										<p className="text-sm text-red-500 mt-1">
+											{errors.legal_representatives[index]?.tipo_documento?.message}
+										</p>
+									)}
+								</div>
+
+								<div>
+									<Label htmlFor={`rep_${index}_numero_documento`}>
+										Número de Documento <span className="text-red-500">*</span>
+									</Label>
+									<Input
+										id={`rep_${index}_numero_documento`}
+										{...register(`legal_representatives.${index}.numero_documento`)}
+										onBlur={onFieldBlur}
+										placeholder="Min. 6 caracteres"
+									/>
+									{errors.legal_representatives?.[index]?.numero_documento && (
+										<p className="text-sm text-red-500 mt-1">
+											{errors.legal_representatives[index]?.numero_documento?.message}
+										</p>
+									)}
+								</div>
+
+								<div>
+									<Label htmlFor={`rep_${index}_extension`}>Extensión</Label>
+									<Controller
+										name={`legal_representatives.${index}.extension`}
+										control={control}
+										render={({ field }) => (
+											<Select value={field.value} onValueChange={field.onChange}>
+												<SelectTrigger>
+													<SelectValue placeholder="Seleccionar" />
+												</SelectTrigger>
+												<SelectContent>
+													{CI_EXTENSIONS.map((ext) => (
+														<SelectItem key={ext} value={ext}>
+															{ext}
+														</SelectItem>
+													))}
+												</SelectContent>
+											</Select>
+										)}
+									/>
+								</div>
+
+								<div>
+									<Label htmlFor={`rep_${index}_cargo`}>Cargo</Label>
+									<Input
+										id={`rep_${index}_cargo`}
+										{...register(`legal_representatives.${index}.cargo`)}
+										onBlur={onFieldBlur}
+										placeholder="Gerente General"
+									/>
+								</div>
+
+								<div>
+									<Label htmlFor={`rep_${index}_telefono`}>Teléfono</Label>
+									<Input
+										id={`rep_${index}_telefono`}
+										{...register(`legal_representatives.${index}.telefono`)}
+										onBlur={onFieldBlur}
+										placeholder="Solo números"
+									/>
+								</div>
+
+								<div>
+									<Label htmlFor={`rep_${index}_correo_electronico`}>Correo Electrónico</Label>
+									<Input
+										id={`rep_${index}_correo_electronico`}
+										type="email"
+										{...register(`legal_representatives.${index}.correo_electronico`)}
+										onBlur={onFieldBlur}
+										placeholder="representante@empresa.com"
+									/>
+									{errors.legal_representatives?.[index]?.correo_electronico && (
+										<p className="text-sm text-red-500 mt-1">
+											{errors.legal_representatives[index]?.correo_electronico?.message}
+										</p>
+									)}
+								</div>
+							</div>
+						</div>
 					))}
 
-					<Button type="button" onClick={handleAddRepresentative} variant="outline" className="w-full">
+					<Button type="button" variant="outline" onClick={handleAddRepresentative} className="w-full">
 						<Plus className="h-4 w-4 mr-2" />
-						Agregar Otro Representante
+						Agregar Representante Legal
 					</Button>
 
 					{errors.legal_representatives?.root && (
-						<p className="text-sm text-red-500 mt-1">{errors.legal_representatives.root.message}</p>
+						<p className="text-sm text-red-500">{errors.legal_representatives.root.message}</p>
 					)}
 				</div>
 			</FormSection>
