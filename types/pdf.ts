@@ -232,4 +232,13 @@ export const excecutives = [
 		mail: "asistente.comercial@patria-sa.com",
 		signature: "/images/firma_alcides.png",
 	},
+	{
+		user: "Fabiola Ibarra",
+		name: "Mariel Fabiola Ibarra Flores",
+		glyph: "MFI",
+		charge: "Ejecutiva de Cuentas",
+		telf: "77602062",
+		mail: "comercial3@patria-sa.com",
+		signature: "/images/firma_fabiola.png",
+	},
 ];
