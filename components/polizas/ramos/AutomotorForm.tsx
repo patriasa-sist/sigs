@@ -28,8 +28,6 @@ export function AutomotorForm({ datos, onChange, onSiguiente, onAnterior }: Prop
 	const [tiposVehiculo, setTiposVehiculo] = useState<TipoVehiculo[]>([]);
 	const [marcas, setMarcas] = useState<MarcaVehiculo[]>([]);
 
-	const supabase = createClient();
-
 	// Cargar catálogos al montar el componente
 	useEffect(() => {
 		cargarCatalogos();
@@ -37,10 +35,20 @@ export function AutomotorForm({ datos, onChange, onSiguiente, onAnterior }: Prop
 
 	const cargarCatalogos = async () => {
 		try {
-			const [{ data: tiposData }, { data: marcasData }] = await Promise.all([
+			const supabase = createClient();
+
+			const [{ data: tiposData, error: errorTipos }, { data: marcasData, error: errorMarcas }] = await Promise.all([
 				supabase.from("tipos_vehiculo").select("*").eq("activo", true).order("nombre"),
 				supabase.from("marcas_vehiculo").select("*").eq("activo", true).order("nombre"),
 			]);
+
+			if (errorTipos) {
+				console.error("Error cargando tipos de vehículo:", errorTipos);
+			}
+
+			if (errorMarcas) {
+				console.error("Error cargando marcas:", errorMarcas);
+			}
 
 			setTiposVehiculo(tiposData || []);
 			setMarcas(marcasData || []);

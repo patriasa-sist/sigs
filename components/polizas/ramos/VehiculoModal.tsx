@@ -24,8 +24,8 @@ export function VehiculoModal({ vehiculo, onGuardar, onCancelar }: Props) {
 			franquicia: 0,
 			nro_chasis: "",
 			uso: "particular",
-			tipo_vehiculo_id: "",
-			marca_id: "",
+			tipo_vehiculo_id: undefined,
+			marca_id: undefined,
 			modelo: "",
 			ano: "",
 			color: "",
@@ -41,8 +41,6 @@ export function VehiculoModal({ vehiculo, onGuardar, onCancelar }: Props) {
 	const [cargando, setCargando] = useState(true);
 	const [errores, setErrores] = useState<Record<string, string>>({});
 
-	const supabase = createClient();
-
 	// Cargar catálogos
 	useEffect(() => {
 		cargarCatalogos();
@@ -50,10 +48,20 @@ export function VehiculoModal({ vehiculo, onGuardar, onCancelar }: Props) {
 
 	const cargarCatalogos = async () => {
 		try {
-			const [{ data: tiposData }, { data: marcasData }] = await Promise.all([
+			const supabase = createClient();
+
+			const [{ data: tiposData, error: errorTipos }, { data: marcasData, error: errorMarcas }] = await Promise.all([
 				supabase.from("tipos_vehiculo").select("*").eq("activo", true).order("nombre"),
 				supabase.from("marcas_vehiculo").select("*").eq("activo", true).order("nombre"),
 			]);
+
+			if (errorTipos) {
+				console.error("Error cargando tipos de vehículo:", errorTipos);
+			}
+
+			if (errorMarcas) {
+				console.error("Error cargando marcas:", errorMarcas);
+			}
 
 			setTiposVehiculo(tiposData || []);
 			setMarcas(marcasData || []);
@@ -219,7 +227,7 @@ export function VehiculoModal({ vehiculo, onGuardar, onCancelar }: Props) {
 						<div className="space-y-2">
 							<Label htmlFor="tipo_vehiculo">Tipo de Vehículo</Label>
 							<Select
-								value={formData.tipo_vehiculo_id}
+								value={formData.tipo_vehiculo_id || undefined}
 								onValueChange={(value) => handleChange("tipo_vehiculo_id", value)}
 							>
 								<SelectTrigger>
@@ -239,7 +247,7 @@ export function VehiculoModal({ vehiculo, onGuardar, onCancelar }: Props) {
 						<div className="space-y-2">
 							<Label htmlFor="marca">Marca</Label>
 							<Select
-								value={formData.marca_id}
+								value={formData.marca_id || undefined}
 								onValueChange={(value) => handleChange("marca_id", value)}
 							>
 								<SelectTrigger>

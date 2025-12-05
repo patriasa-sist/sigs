@@ -5,14 +5,15 @@ import { useRouter } from "next/navigation";
 import { FileText, X } from "lucide-react";
 import type { PolizaFormState, PasoFormulario } from "@/types/poliza";
 import { Button } from "@/components/ui/button";
+import { guardarPoliza } from "@/app/polizas/nueva/actions";
 
 // Steps
 import { BuscarAsegurado } from "./steps/BuscarAsegurado";
 import { DatosBasicos } from "./steps/DatosBasicos";
 import { DatosEspecificos } from "./steps/DatosEspecificos";
 import { ModalidadPago } from "./steps/ModalidadPago";
-// import { CargarDocumentos } from "./steps/CargarDocumentos";
-// import { Resumen } from "./steps/Resumen";
+import { CargarDocumentos } from "./steps/CargarDocumentos";
+import { Resumen } from "./steps/Resumen";
 
 export function NuevaPolizaForm() {
 	const router = useRouter();
@@ -63,6 +64,22 @@ export function NuevaPolizaForm() {
 			...prev,
 			paso_actual: paso,
 		}));
+	};
+
+	const handleGuardar = async () => {
+		try {
+			const resultado = await guardarPoliza(formState);
+
+			if (resultado.success) {
+				alert("Póliza guardada exitosamente!");
+				router.push("/polizas");
+			} else {
+				alert(`Error al guardar la póliza: ${resultado.error}`);
+			}
+		} catch (error) {
+			console.error("Error guardando póliza:", error);
+			alert("Error al guardar la póliza. Por favor intente nuevamente.");
+		}
 	};
 
 	// Renderizar pasos de forma acumulativa
@@ -129,7 +146,30 @@ export function NuevaPolizaForm() {
 				/>
 			)}
 
-			{/* Paso 5, 6... se agregarán aquí */}
+			{/* Paso 5: Cargar Documentos - Visible desde paso 5 */}
+			{formState.paso_actual >= 5 && (
+				<CargarDocumentos
+					documentos={formState.documentos}
+					onChange={(documentos) => {
+						setFormState((prev) => ({
+							...prev,
+							documentos,
+						}));
+					}}
+					onSiguiente={handleSiguientePaso}
+					onAnterior={handlePasoAnterior}
+				/>
+			)}
+
+			{/* Paso 6: Resumen - Visible en paso 6 */}
+			{formState.paso_actual === 6 && (
+				<Resumen
+					formState={formState}
+					onAnterior={handlePasoAnterior}
+					onEditarPaso={handleActualizarPaso}
+					onGuardar={handleGuardar}
+				/>
+			)}
 			</div>
 		);
 	};

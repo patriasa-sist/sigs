@@ -263,3 +263,165 @@ const buffer = await workbook.xlsx.writeBuffer();
 - Plate uniqueness within policy
 - All required fields validated before step progression
 - Optional field warnings (non-blocking) shown in summary
+
+### Step-by-Step Component Details
+
+#### Step 4: Modalidad de Pago
+- **Component**: `components/polizas/steps/ModalidadPago.tsx`
+- **Features**:
+  - Tabs for switching between "Contado" (cash) and "Crédito" (credit)
+  - Automatic calculations displayed: prima_neta (87%) and comisión (2%)
+  - **Editable installment amounts**: Users can manually adjust quota amounts for small corrections
+  - Manual edits are reset when changing prima_total, cuota_inicial, or cantidad_cuotas
+  - Interactive installment table with individual date pickers
+  - Real-time validation and error display
+  - Currency selector (Bs, USD, USDT, UFV)
+
+#### Step 5: Cargar Documentos
+- **Component**: `components/polizas/steps/CargarDocumentos.tsx`
+- **Features**:
+  - Drag & drop file upload (multiple files supported)
+  - File type validation (PDF, JPG, PNG, DOC, DOCX)
+  - File size validation (max 10MB per file)
+  - Document type categorization (8 predefined types + custom)
+  - Preview of uploaded files with size display
+  - Documents are optional but recommended
+  - Files stored in memory until final save
+
+#### Step 6: Resumen y Confirmación
+- **Component**: `components/polizas/steps/Resumen.tsx`
+- **Features**:
+  - Complete summary of all 6 steps
+  - Automatic warning generation:
+    - Payment dates in the past
+    - Missing optional vehicle fields
+    - No documents uploaded
+  - Edit buttons for each step (jump back to edit)
+  - Warning types: error (blocks save), warning (allows save with confirmation), info (informational)
+  - Final "Guardar Póliza" button with loading state
+  - Calls server action to persist to database
+
+### Server Actions
+
+#### Save Policy Action
+- **File**: `app/polizas/nueva/actions.ts`
+- **Function**: `guardarPoliza(formState: PolizaFormState)`
+- **Process**:
+  1. Validate authentication and required data
+  2. Insert main policy record to `polizas` table
+  3. Insert payment quotas to `polizas_pagos` table
+  4. Insert vehicle data to `polizas_automotor_vehiculos` table (if Automotor)
+  5. Upload documents to Supabase Storage bucket `polizas-documentos`
+  6. Register document metadata in `polizas_documentos` table
+  7. Revalidate `/polizas` path
+  8. Return success/error response
+
+#### Transaction Handling
+- No explicit transactions implemented (Supabase limitation in serverless)
+- Errors logged but don't rollback previous operations
+- Consider implementing cleanup logic for failed saves
+
+### Supabase Storage Configuration
+
+#### Bucket Creation
+- **Bucket name**: `polizas-documentos`
+- **Public**: Yes (for document access from system)
+- **Migration file**: `supabase/migrations/storage_polizas_documentos.sql`
+
+#### Storage Policies (RLS)
+- **Upload**: Authenticated users only
+- **Read**: Public access (documents visible to system users)
+- **Delete**: Only file owner can delete
+
+#### Creating the Bucket
+Execute from Supabase SQL Editor:
+```sql
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('polizas-documentos', 'polizas-documentos', true);
+```
+
+Or create via Supabase UI: Storage → New Bucket → Name: "polizas-documentos" → Public: ✓
+
+### Implementation Status
+✅ Database schema with audit trail
+✅ TypeScript types (30+ types with discriminated unions)
+✅ Validation utilities (9 functions)
+✅ Excel import/export with ExcelJS
+✅ Step 1: Search and select policyholder
+✅ Step 2: Basic policy data
+✅ Step 3: Insurance type router (Automotor fully implemented)
+✅ Step 4: Payment modality with editable installments
+✅ Step 5: Document upload
+✅ Step 6: Summary with warnings and confirmation
+✅ Server actions for database persistence
+✅ Storage bucket configuration instructions
+
+### File Structure
+```
+app/polizas/
+  nueva/
+    page.tsx              - Nueva póliza page wrapper
+    actions.ts            - Server actions for saving policy
+components/polizas/
+  NuevaPolizaForm.tsx     - Main orchestrator (form state management)
+  steps/
+    BuscarAsegurado.tsx   - Step 1: Search client
+    DatosBasicos.tsx      - Step 2: Basic data
+    DatosEspecificos.tsx  - Step 3: Router for insurance types
+    ModalidadPago.tsx     - Step 4: Payment modality
+    CargarDocumentos.tsx  - Step 5: Document upload
+    Resumen.tsx           - Step 6: Summary and save
+  ramos/
+    AutomotorForm.tsx     - Automotor-specific form
+    VehiculoModal.tsx     - Add/edit vehicle modal
+types/
+  poliza.ts               - TypeScript type definitions
+utils/
+  polizaValidation.ts     - Validation functions
+  vehiculoExcelImport.ts  - Excel import/export utilities
+supabase/migrations/
+  migration_polizas_system.sql           - Core tables and catalogs
+  migration_add_audit_fields.sql         - Audit trail setup
+  migration_historial_basico.sql         - Edit history tracking
+  fix_rls_usuarios_comerciales.sql       - RLS fix for user dropdown
+  storage_polizas_documentos.sql         - Storage bucket setup
+```
+
+### Document Soft Delete System
+
+#### Overview
+Documents implement a **soft delete** system where:
+- **Comercial users**: Can only mark documents as "descartado" (discarded)
+- **Admin users**: Can discard, restore, and permanently delete documents
+
+#### Database Schema
+- **Field**: `estado` in `polizas_documentos` table
+- **Values**: `'activo'` (default) or `'descartado'`
+- Documents with `estado = 'descartado'` are hidden from UI but remain in database and Storage
+
+#### Storage RLS Policies
+- Only users with `role = 'admin'` can physically DELETE files from Storage
+- Comercial users can only mark documents as discarded via database function
+
+#### Functions
+- `descartar_documento(documento_id)` - Mark as discarded (comercial + admin)
+- `restaurar_documento(documento_id)` - Restore to active (admin only)
+- `eliminar_documento_permanente(documento_id)` - Delete from DB and Storage (admin only)
+
+#### Server Actions
+- **File**: `app/polizas/documentos/actions.ts`
+- Functions: `descartarDocumento()`, `restaurarDocumento()`, `eliminarDocumentoPermanente()`
+- Query helpers: `obtenerDocumentosActivos()`, `obtenerTodosDocumentos()` (admin only)
+
+#### Documentation
+- Complete guide: `docs/SOFT_DELETE_DOCUMENTOS.md`
+- Migration: `supabase/migrations/storage_polizas_documentos.sql`
+
+### Known Issues & Future Improvements
+- Storage bucket must be created manually in Supabase
+- No transaction rollback on partial failures
+- Concurrent edit handling not implemented
+- Document upload happens during save (no progress indicator)
+- Consider adding scheduled job to clean old discarded documents (90+ days)
+- Consider adding policy edit functionality
+- Consider adding policy duplication/renewal functionality
