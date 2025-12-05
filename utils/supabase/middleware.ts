@@ -7,8 +7,8 @@ const PROTECTED_ROUTES = {
 	"/admin": "admin",
 	// New role-based routes:
 	"/agentes": "agente",
-	"/vencimientos": ["usuario", "agente", "comercial"],
-	"/dashboard": ["usuario", "agente", "comercial"], // Multiple roles allowed
+	"/vencimientos": ["usuario", "agente", "comercial", "admin"],
+	"/polizas": ["usuario", "agente", "comercial", "admin"],
 } as const;
 
 const PUBLIC_ROUTES = [
@@ -18,6 +18,7 @@ const PUBLIC_ROUTES = [
 	"/auth/confirm",
 	"/auth/reset-password",
 	"/unauthorized",
+	"/profile",
 ] as const;
 
 export async function updateSession(request: NextRequest) {

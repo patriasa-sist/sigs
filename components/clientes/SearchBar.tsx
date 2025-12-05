@@ -38,7 +38,7 @@ export function SearchBar({ onSearch, placeholder }: SearchBarProps) {
       </div>
       <Button
         onClick={handleSearch}
-        className="h-12 px-8 text-base font-semibold bg-pink-400 hover:bg-pink-500 text-white"
+        className="h-12 px-8 text-base font-semibold"
       >
         BUSCAR
       </Button>

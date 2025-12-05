@@ -18,6 +18,7 @@ import {
 	Globe,
 	CreditCard,
 	ClipboardList,
+	DollarSign,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -41,7 +42,7 @@ const Dashboard = () => {
 			description: "Administración de pólizas individuales y corporativas",
 			icon: Shield,
 			color: "bg-green-50 hover:bg-green-100 border-green-200",
-			link: "/vencimientos",
+			link: "/polizas",
 			sections: [
 				{ name: "Gestor de pólizas", icon: Building2 },
 				{ name: "Anexos de pólizas", icon: FileText },
@@ -93,6 +94,18 @@ const Dashboard = () => {
 				{ name: "Ramos", icon: BookOpen },
 				{ name: "Aseguradoras", icon: Building2 },
 				{ name: "Cartera", icon: CreditCard },
+				{ name: "Reportes", icon: FileText },
+			],
+		},
+		{
+			id: "cobranzas",
+			title: "Módulo Cobranzas",
+			description: "Gestión de cobranzas y pagos",
+			icon: DollarSign,
+			color: "bg-gray-50 hover:bg-gray-100 border-gray-200",
+			link: "/vencimientos",
+			sections: [
+				{ name: "Busqueda de pólizas", icon: Building2 },
 				{ name: "Reportes", icon: FileText },
 			],
 		},
