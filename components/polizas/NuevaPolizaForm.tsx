@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 // Steps
 import { BuscarAsegurado } from "./steps/BuscarAsegurado";
 import { DatosBasicos } from "./steps/DatosBasicos";
-// import { DatosEspecificos } from "./steps/DatosEspecificos";
+import { DatosEspecificos } from "./steps/DatosEspecificos";
 // import { ModalidadPago } from "./steps/ModalidadPago";
 // import { CargarDocumentos } from "./steps/CargarDocumentos";
 // import { Resumen } from "./steps/Resumen";
@@ -99,9 +99,9 @@ export function NuevaPolizaForm() {
 				)}
 
 				{/* Paso 3: Datos Específicos - Visible desde paso 3 */}
-				{/* {formState.paso_actual >= 3 && (
+				{formState.paso_actual >= 3 && formState.datos_basicos && (
 					<DatosEspecificos
-						ramo={formState.datos_basicos?.ramo || ""}
+						ramo={formState.datos_basicos.ramo}
 						datos={formState.datos_especificos}
 						onChange={(datos) => {
 							setFormState((prev) => ({
@@ -112,7 +112,7 @@ export function NuevaPolizaForm() {
 						onSiguiente={handleSiguientePaso}
 						onAnterior={handlePasoAnterior}
 					/>
-				)} */}
+				)}
 
 				{/* Paso 4, 5, 6... se agregarán aquí */}
 			</div>
