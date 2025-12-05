@@ -59,6 +59,7 @@ export async function guardarPoliza(formState: PolizaFormState) {
 
 		// 3. Insertar cuotas de pago
 		if (formState.modalidad_pago.tipo === "contado") {
+			console.log("Insertando pago contado para póliza:", poliza.id);
 			const { error: errorPago } = await supabase.from("polizas_pagos").insert({
 				poliza_id: poliza.id,
 				numero_cuota: 1,
@@ -69,37 +70,54 @@ export async function guardarPoliza(formState: PolizaFormState) {
 
 			if (errorPago) {
 				console.error("Error insertando pago contado:", errorPago);
-				// No hacemos rollback automático, se podría implementar
+				return { success: false, error: "Error al guardar el pago: " + errorPago.message };
 			}
 		} else {
 			// Insertar cuota inicial si existe
 			const cuotas: any[] = [];
 
+			console.log("Modalidad crédito - Cuota inicial:", formState.modalidad_pago.cuota_inicial);
+			console.log("Modalidad crédito - Número de cuotas:", formState.modalidad_pago.cuotas.length);
+
+			// Nota: numero_cuota debe ser > 0 debido al constraint numero_cuota_valido
+			// Si hay cuota inicial, será la cuota #1
+			let numeroCuotaActual = 1;
+
 			if (formState.modalidad_pago.cuota_inicial > 0) {
 				cuotas.push({
 					poliza_id: poliza.id,
-					numero_cuota: 0, // Cuota inicial
+					numero_cuota: numeroCuotaActual,
 					monto: formState.modalidad_pago.cuota_inicial,
 					fecha_vencimiento: formState.datos_basicos.inicio_vigencia,
 					estado: "pendiente",
+					observaciones: "Cuota inicial",
 				});
+				numeroCuotaActual++;
 			}
 
-			// Insertar cuotas restantes
+			// Insertar cuotas restantes (renumeradas)
 			formState.modalidad_pago.cuotas.forEach((cuota) => {
 				cuotas.push({
 					poliza_id: poliza.id,
-					numero_cuota: cuota.numero,
+					numero_cuota: numeroCuotaActual,
 					monto: cuota.monto,
 					fecha_vencimiento: cuota.fecha_vencimiento,
 					estado: "pendiente",
 				});
+				numeroCuotaActual++;
 			});
 
+			if (cuotas.length === 0) {
+				console.error("No hay cuotas para insertar en modalidad crédito");
+				return { success: false, error: "Debe definir al menos una cuota de pago" };
+			}
+
+			console.log("Insertando", cuotas.length, "cuotas para póliza:", poliza.id);
 			const { error: errorCuotas } = await supabase.from("polizas_pagos").insert(cuotas);
 
 			if (errorCuotas) {
 				console.error("Error insertando cuotas:", errorCuotas);
+				return { success: false, error: "Error al guardar las cuotas de pago: " + errorCuotas.message };
 			}
 		}
 

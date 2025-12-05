@@ -33,6 +33,7 @@ export type PolizaDetalle = PolizaListItem & {
 		fecha_vencimiento: string;
 		fecha_pago: string | null;
 		estado: string;
+		observaciones: string | null;
 	}>;
 	vehiculos?: Array<{
 		id: string;
@@ -249,7 +250,7 @@ export async function obtenerDetallePoliza(polizaId: string) {
 		// Obtener pagos
 		const { data: pagos } = await supabase
 			.from("polizas_pagos")
-			.select("id, numero_cuota, monto, fecha_vencimiento, fecha_pago, estado")
+			.select("id, numero_cuota, monto, fecha_vencimiento, fecha_pago, estado, observaciones")
 			.eq("poliza_id", polizaId)
 			.order("numero_cuota", { ascending: true });
 

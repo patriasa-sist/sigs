@@ -309,31 +309,37 @@ export default function PolizaDetallePage() {
 									</tr>
 								</thead>
 								<tbody className="divide-y">
-									{poliza.pagos.map((pago) => (
-										<tr key={pago.id} className="hover:bg-gray-50">
-											<td className="px-4 py-3 text-sm font-medium text-gray-900">
-												Cuota {pago.numero_cuota}
-											</td>
-											<td className="px-4 py-3 text-sm text-gray-900">{formatDate(pago.fecha_vencimiento)}</td>
-											<td className="px-4 py-3 text-sm font-semibold text-gray-900 text-right">
-												{formatCurrency(pago.monto, poliza.moneda)}
-											</td>
-											<td className="px-4 py-3 text-sm text-gray-600">
-												{pago.fecha_pago ? formatDate(pago.fecha_pago) : "-"}
-											</td>
-											<td className="px-4 py-3">
-												<div className="flex justify-center">
-													<span
-														className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getEstadoPagoStyle(
-															pago.estado
-														)}`}
-													>
-														{getEstadoPagoLabel(pago.estado)}
-													</span>
-												</div>
-											</td>
-										</tr>
-									))}
+									{poliza.pagos.map((pago, index) => {
+										// Detectar si es cuota inicial por observaciones o si es la primera y tiene monto diferente
+										const esCuotaInicial = pago.observaciones?.includes("inicial") || pago.observaciones?.includes("Inicial");
+										const etiquetaCuota = esCuotaInicial ? "Inicial" : `${pago.numero_cuota}`;
+
+										return (
+											<tr key={pago.id} className={`hover:bg-gray-50 ${esCuotaInicial ? 'bg-blue-50' : ''}`}>
+												<td className="px-4 py-3 text-sm font-medium text-gray-900">
+													Cuota {etiquetaCuota}
+												</td>
+												<td className="px-4 py-3 text-sm text-gray-900">{formatDate(pago.fecha_vencimiento)}</td>
+												<td className="px-4 py-3 text-sm font-semibold text-gray-900 text-right">
+													{formatCurrency(pago.monto, poliza.moneda)}
+												</td>
+												<td className="px-4 py-3 text-sm text-gray-600">
+													{pago.fecha_pago ? formatDate(pago.fecha_pago) : "-"}
+												</td>
+												<td className="px-4 py-3">
+													<div className="flex justify-center">
+														<span
+															className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getEstadoPagoStyle(
+																pago.estado
+															)}`}
+														>
+															{getEstadoPagoLabel(pago.estado)}
+														</span>
+													</div>
+												</td>
+											</tr>
+										);
+									})}
 								</tbody>
 							</table>
 						</div>
