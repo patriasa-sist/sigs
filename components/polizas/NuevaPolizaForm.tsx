@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { BuscarAsegurado } from "./steps/BuscarAsegurado";
 import { DatosBasicos } from "./steps/DatosBasicos";
 import { DatosEspecificos } from "./steps/DatosEspecificos";
-// import { ModalidadPago } from "./steps/ModalidadPago";
+import { ModalidadPago } from "./steps/ModalidadPago";
 // import { CargarDocumentos } from "./steps/CargarDocumentos";
 // import { Resumen } from "./steps/Resumen";
 
@@ -114,7 +114,22 @@ export function NuevaPolizaForm() {
 					/>
 				)}
 
-				{/* Paso 4, 5, 6... se agregarán aquí */}
+				{/* Paso 4: Modalidad de Pago - Visible desde paso 4 */}
+			{formState.paso_actual >= 4 && (
+				<ModalidadPago
+					datos={formState.modalidad_pago}
+					onChange={(datos) => {
+						setFormState((prev) => ({
+							...prev,
+							modalidad_pago: datos,
+						}));
+					}}
+					onSiguiente={handleSiguientePaso}
+					onAnterior={handlePasoAnterior}
+				/>
+			)}
+
+			{/* Paso 5, 6... se agregarán aquí */}
 			</div>
 		);
 	};
