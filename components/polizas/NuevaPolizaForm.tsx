@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 
 // Steps
 import { BuscarAsegurado } from "./steps/BuscarAsegurado";
-// import { DatosBasicos } from "./steps/DatosBasicos";
+import { DatosBasicos } from "./steps/DatosBasicos";
 // import { DatosEspecificos } from "./steps/DatosEspecificos";
 // import { ModalidadPago } from "./steps/ModalidadPago";
 // import { CargarDocumentos } from "./steps/CargarDocumentos";
@@ -65,11 +65,12 @@ export function NuevaPolizaForm() {
 		}));
 	};
 
-	// Renderizar paso actual
-	const renderPasoActual = () => {
-		switch (formState.paso_actual) {
-			case 1:
-				return (
+	// Renderizar pasos de forma acumulativa
+	const renderPasosAcumulativos = () => {
+		return (
+			<div className="space-y-6">
+				{/* Paso 1: Buscar Asegurado - Siempre visible */}
+				{formState.paso_actual >= 1 && (
 					<BuscarAsegurado
 						asegurado={formState.asegurado}
 						onAseguradoSeleccionado={(asegurado) => {
@@ -80,25 +81,42 @@ export function NuevaPolizaForm() {
 						}}
 						onSiguiente={handleSiguientePaso}
 					/>
-				);
-			// case 2:
-			// 	return (
-			// 		<DatosBasicos
-			// 			datos={formState.datos_basicos}
-			// 			onChange={(datos) => {
-			// 				setFormState((prev) => ({
-			// 					...prev,
-			// 					datos_basicos: datos,
-			// 				}));
-			// 			}}
-			// 			onSiguiente={handleSiguientePaso}
-			// 			onAnterior={handlePasoAnterior}
-			// 		/>
-			// 	);
-			// ... otros pasos
-			default:
-				return <div>Paso en construcción...</div>;
-		}
+				)}
+
+				{/* Paso 2: Datos Básicos - Visible desde paso 2 */}
+				{formState.paso_actual >= 2 && (
+					<DatosBasicos
+						datos={formState.datos_basicos}
+						onChange={(datos) => {
+							setFormState((prev) => ({
+								...prev,
+								datos_basicos: datos,
+							}));
+						}}
+						onSiguiente={handleSiguientePaso}
+						onAnterior={handlePasoAnterior}
+					/>
+				)}
+
+				{/* Paso 3: Datos Específicos - Visible desde paso 3 */}
+				{/* {formState.paso_actual >= 3 && (
+					<DatosEspecificos
+						ramo={formState.datos_basicos?.ramo || ""}
+						datos={formState.datos_especificos}
+						onChange={(datos) => {
+							setFormState((prev) => ({
+								...prev,
+								datos_especificos: datos,
+							}));
+						}}
+						onSiguiente={handleSiguientePaso}
+						onAnterior={handlePasoAnterior}
+					/>
+				)} */}
+
+				{/* Paso 4, 5, 6... se agregarán aquí */}
+			</div>
+		);
 	};
 
 	return (
@@ -172,12 +190,7 @@ export function NuevaPolizaForm() {
 			</div>
 
 			{/* Formulario con pasos verticales acumulativos */}
-			<div className="space-y-6">
-				{/* Paso 1: Buscar Asegurado */}
-				{formState.paso_actual >= 1 && renderPasoActual()}
-
-				{/* Los siguientes pasos se irán agregando aquí */}
-			</div>
+			{renderPasosAcumulativos()}
 		</div>
 	);
 }
