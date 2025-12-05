@@ -128,3 +128,138 @@ The vencimientos module (`/app/vencimientos/`) is a comprehensive insurance poli
 - Global navbar integrated into root layout with conditional rendering
 - always suggest the more reliable solution and follow the standard web practices, keep it simple and clean
 - always when retrieving data and rendering on screen remember to take into account Initial load, Network transfer and Memory usage to keep a footprint on browser and Supabase bandwidth as low as possible for performance reasons
+
+## Polizas Module (Insurance Policy Management System)
+
+### Module Overview
+The polizas module (`/app/polizas/`) is a comprehensive insurance policy registration and management system that handles the complete workflow from client search to policy creation with multiple insurance types (ramos).
+
+### Key Features
+- **Multi-step Form**: 6-step vertical accumulative form for policy creation
+- **Client Search**: Search and select existing clients (natural/juridic persons) as policyholders
+- **Multiple Insurance Types**: Support for different "ramos" (Automotor, Salud, Incendio, etc.) with specific fields
+- **Vehicle Management**: Multiple vehicles per policy for Automotor ramo (1:N relationship)
+- **Excel Import**: Bulk vehicle import from Excel files using ExcelJS
+- **Payment Modalities**: Support for cash (contado) and credit (credito) with automatic quota calculation
+- **Document Upload**: Attach multiple documents per policy with Supabase Storage integration
+- **Audit Trail**: Complete traceability with created_by, updated_by, and full edit history
+- **PDF Generation**: Summary PDF generation for review before saving
+
+### Database Architecture
+
+#### Core Tables
+- `polizas` - Main policy table with common fields for all insurance types
+- `polizas_pagos` - Payment quotas (installments) for each policy
+- `polizas_documentos` - Documents attached to policies
+- `polizas_automotor_vehiculos` - Vehicles for Automotor policies (1:N relationship)
+- `polizas_historial_ediciones` - Complete audit log of all policy changes
+
+#### Catalog Tables
+- `companias_aseguradoras` - Insurance companies (17 preconfigured)
+- `regionales` - Regional offices (9 departments of Bolivia)
+- `categorias` - Client categories (groups, associations)
+- `tipos_vehiculo` - Vehicle types (9 preconfigured)
+- `marcas_vehiculo` - Vehicle brands (11 preconfigured)
+
+#### Audit System
+- Automatic capture of `created_by` and `updated_by` via database triggers
+- `polizas_con_auditoria` view - Policies with user information
+- `polizas_historial_vista` view - Edit history with user names
+- Tracks: who created, who last edited, and complete change history
+
+### Component Architecture
+
+#### Policy Creation Flow (6 Steps)
+1. **Buscar Asegurado** - Search and select policyholder from existing clients
+2. **Datos Básicos** - Basic policy data (number, company, dates, responsible, etc.)
+3. **Datos Específicos** - Insurance type specific data (e.g., vehicles for Automotor)
+4. **Modalidad de Pago** - Payment modality (cash or credit with quotas)
+5. **Cargar Documentos** - Upload policy documents
+6. **Resumen** - Review all data with warnings before saving
+
+#### Flow Characteristics
+- **Vertical Accumulative**: All previous steps remain visible as you progress
+- **Editable**: Can modify previous steps and update without losing data
+- **Save on Completion**: Data only saved to database when user confirms in step 6
+- **Validation**: Real-time validation before allowing navigation to next step
+
+### Type System
+- `types/poliza.ts` - Complete TypeScript definitions for all policy-related types (30+ types)
+  - Catalog types, client types, form steps, payment modalities
+  - Discriminated unions for insurance type specific data
+  - Database types, validation types, Excel import types
+
+### Utilities
+- `utils/polizaValidation.ts` - Validation functions (9 functions)
+  - Basic data validation, vehicle validation, payment validation
+  - Date validation, unique plate checks
+  - Automatic calculations (prima_neta, comision, quotas)
+- `utils/vehiculoExcelImport.ts` - **ExcelJS-based** vehicle import
+  - Flexible column mapping (case-insensitive, accent-insensitive)
+  - Row-by-row validation with detailed error reporting
+  - Template generation for correct Excel format
+
+### Excel File Processing with ExcelJS
+**IMPORTANT**: This project uses **ExcelJS** (NOT xlsx or other libraries) for all Excel file operations.
+
+#### Installation
+```bash
+npm install exceljs
+```
+
+#### Usage Pattern
+```typescript
+import * as ExcelJS from 'exceljs';
+
+// Reading Excel files
+const workbook = new ExcelJS.Workbook();
+await workbook.xlsx.load(arrayBuffer);
+const worksheet = workbook.worksheets[0];
+
+// Iterating rows
+worksheet.eachRow((row, rowNumber) => {
+  const values = row.values; // Array of cell values
+});
+
+// Writing Excel files
+const workbook = new ExcelJS.Workbook();
+const worksheet = workbook.addWorksheet('Sheet1');
+worksheet.addRow(['Header1', 'Header2']);
+const buffer = await workbook.xlsx.writeBuffer();
+```
+
+#### ExcelJS Best Practices
+- Always use `new ExcelJS.Workbook()` for workbook creation
+- Use `workbook.xlsx.load(buffer)` for reading files in browser
+- Access cells via `row.getCell(index)` or `row.values[index]`
+- Cell indices start at 1 (not 0)
+- Use `worksheet.eachRow()` or `worksheet.getRow()` for iteration
+- Generate downloadable files with `workbook.xlsx.writeBuffer()`
+
+### Business Logic
+
+#### Payment Calculations
+- **Prima Neta**: `prima_total * 0.87` (13% discount)
+- **Comisión**: `prima_neta * 0.02` (2% commission)
+- Both calculated automatically via database GENERATED columns
+
+#### Credit Payment Distribution
+- Initial quota can be specified
+- Remaining amount distributed equally across installments
+- Recalculates automatically when initial quota or number of installments changes
+- Validates that sum of quotas equals total premium
+
+#### Vehicle Management (Automotor)
+- Multiple vehicles per policy (1:N relationship)
+- Each vehicle has required fields: placa, valor_asegurado, franquicia, nro_chasis, uso
+- Optional fields: tipo, marca, modelo, año, color, ejes, nro_motor, asientos, plaza
+- Plate must be unique within same policy
+- Support for bulk import via Excel (template available)
+
+### Data Validation Rules
+- End date must be after start date
+- Emission date cannot be after start date
+- Payment dates cannot be in the past (warning in summary)
+- Plate uniqueness within policy
+- All required fields validated before step progression
+- Optional field warnings (non-blocking) shown in summary
