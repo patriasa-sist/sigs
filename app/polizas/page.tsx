@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Policy, PolicySearchResult } from '@/types/policy';
 import { generateMockPolicies, searchPolicies } from '@/utils/mockPolicies';
 import { SearchBar } from '@/components/clientes/SearchBar';
@@ -13,6 +14,8 @@ import { Button } from '@/components/ui/button';
 import { FileText, Plus, X } from 'lucide-react';
 
 export default function PolizasPage() {
+  const router = useRouter();
+
   // State management
   const [allPolicies, setAllPolicies] = useState<Policy[]>([]);
   const [filteredPolicies, setFilteredPolicies] = useState<(Policy | PolicySearchResult)[]>([]);
@@ -65,10 +68,9 @@ export default function PolizasPage() {
     setViewMode(mode);
   };
 
-  // Handle new policy button (placeholder)
+  // Handle new policy button
   const handleNewPolicy = () => {
-    // TODO: Navigate to new policy form
-    alert('La funcionalidad de crear nueva póliza estará disponible próximamente');
+    router.push('/polizas/nueva');
   };
 
   // Handle policy click
