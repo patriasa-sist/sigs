@@ -37,7 +37,7 @@ export async function guardarPoliza(formState: PolizaFormState) {
 				client_id: formState.asegurado.id,
 				numero_poliza: formState.datos_basicos.numero_poliza,
 				compania_aseguradora_id: formState.datos_basicos.compania_aseguradora_id,
-				tipo_seguro: formState.datos_basicos.ramo,
+				ramo: formState.datos_basicos.ramo,
 				inicio_vigencia: formState.datos_basicos.inicio_vigencia,
 				fin_vigencia: formState.datos_basicos.fin_vigencia,
 				fecha_emision_compania: formState.datos_basicos.fecha_emision_compania,
