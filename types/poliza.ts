@@ -131,24 +131,141 @@ export type DatosAutomotor = {
 	vehiculos: VehiculoAutomotor[];
 };
 
-// --- OTROS RAMOS (Para futuro) ---
+// --- SALUD ---
+export type RolAseguradoSalud = "contratante" | "titular" | "conyugue" | "dependiente";
+
+export type AseguradoSalud = {
+	client_id: string;
+	client_name: string;
+	client_ci: string;
+	rol: RolAseguradoSalud;
+};
+
 export type DatosSalud = {
-	// TODO: Implementar cuando se defina el ramo Salud
-	beneficiarios?: string[];
-	cobertura?: string;
+	tipo_poliza: "individual" | "corporativo";
+	suma_asegurada: number;
+	regional_asegurado_id: string;
+	asegurados: AseguradoSalud[];
+};
+
+// --- INCENDIO Y ALIADOS ---
+export type BienAseguradoIncendio = {
+	direccion: string;
+	valor_declarado: number;
+	es_primer_riesgo: boolean;
+};
+
+export type AseguradoIncendio = {
+	client_id: string;
+	client_name: string;
+	client_ci: string;
 };
 
 export type DatosIncendio = {
-	// TODO: Implementar cuando se defina el ramo Incendio
-	direccion_inmueble?: string;
-	valor_inmueble?: number;
+	tipo_poliza: "individual" | "corporativo";
+	regional_asegurado_id: string;
+	valor_asegurado: number;
+	bienes: BienAseguradoIncendio[];
+	asegurados: AseguradoIncendio[];
+};
+
+// --- RESPONSABILIDAD CIVIL ---
+export type AseguradoResponsabilidadCivil = {
+	client_id: string;
+	client_name: string;
+	client_ci: string;
+};
+
+export type DatosResponsabilidadCivil = {
+	tipo_poliza: "individual" | "corporativo";
+	valor_asegurado: number;
+	moneda: "Bs" | "USD";
+	asegurados: AseguradoResponsabilidadCivil[];
+};
+
+// --- RIESGOS VARIOS MISCELÁNEOS ---
+export type AseguradoRiesgosVarios = {
+	client_id: string;
+	client_name: string;
+	client_ci: string;
+};
+
+export type DatosRiesgosVarios = {
+	convenio_1_infidelidad_empleados: number;
+	convenio_2_perdidas_dentro_local: number;
+	convenio_3_perdidas_fuera_local: number;
+	valor_total_asegurado: number;
+	moneda: "Bs" | "USD";
+	asegurados: AseguradoRiesgosVarios[];
+};
+
+// --- ACCIDENTES PERSONALES, VIDA, SEPELIO (CON NIVELES) ---
+export type CoberturasAccidentesPersonales = {
+	muerte_accidental: { habilitado: boolean; valor: number };
+	invalidez_total_parcial: { habilitado: boolean; valor: number };
+	gastos_medicos: { habilitado: boolean; valor: number };
+	sepelio: { habilitado: boolean; valor: number };
+};
+
+export type CoberturasVida = {
+	muerte: { habilitado: boolean; valor: number };
+	dima: { habilitado: boolean; valor: number };
+	sepelio: { habilitado: boolean; valor: number };
+	gastos_medicos: { habilitado: boolean; valor: number };
+	indm_enfermedades_graves: { habilitado: boolean; valor: number };
+};
+
+export type CoberturaSepelio = {
+	sepelio: { habilitado: boolean; valor: number };
+};
+
+export type NivelCobertura = {
+	id: string; // UUID generado en cliente
+	nombre: string; // "Nivel 1", "Nivel 2", etc.
+	coberturas: CoberturasAccidentesPersonales | CoberturasVida | CoberturaSepelio;
+};
+
+export type AseguradoConNivel = {
+	client_id: string;
+	client_name: string;
+	client_ci: string;
+	nivel_id: string; // Referencia al ID del nivel
+};
+
+export type DatosAccidentesPersonales = {
+	niveles: NivelCobertura[]; // Configurados en paso 2.1
+	tipo_poliza: "individual" | "corporativo";
+	regional_asegurado_id: string;
+	asegurados: AseguradoConNivel[];
+	producto?: string; // Opcional
+};
+
+export type DatosVida = {
+	niveles: NivelCobertura[]; // Configurados en paso 2.1
+	tipo_poliza: "individual" | "corporativo";
+	regional_asegurado_id: string;
+	asegurados: AseguradoConNivel[];
+	producto?: string; // Opcional
+};
+
+export type DatosSepelio = {
+	niveles: NivelCobertura[]; // Configurados en paso 2.1
+	tipo_poliza: "individual" | "corporativo";
+	regional_asegurado_id: string;
+	asegurados: AseguradoConNivel[];
+	producto?: string; // Opcional
 };
 
 // Tipo discriminado para datos específicos
 export type DatosEspecificosPoliza =
 	| { tipo_ramo: "Automotores"; datos: DatosAutomotor }
 	| { tipo_ramo: "Salud"; datos: DatosSalud }
-	| { tipo_ramo: "Incendio"; datos: DatosIncendio }
+	| { tipo_ramo: "Incendio y Aliados"; datos: DatosIncendio }
+	| { tipo_ramo: "Responsabilidad Civil"; datos: DatosResponsabilidadCivil }
+	| { tipo_ramo: "Riesgos Varios Misceláneos"; datos: DatosRiesgosVarios }
+	| { tipo_ramo: "Accidentes Personales"; datos: DatosAccidentesPersonales }
+	| { tipo_ramo: "Vida"; datos: DatosVida }
+	| { tipo_ramo: "Sepelio"; datos: DatosSepelio }
 	| { tipo_ramo: "Otro"; datos: Record<string, unknown> }; // Genérico para otros ramos
 
 // ============================================

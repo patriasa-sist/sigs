@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { FileText, X } from "lucide-react";
 import type { PolizaFormState, PasoFormulario } from "@/types/poliza";
 import { Button } from "@/components/ui/button";
 import { guardarPoliza } from "@/app/polizas/nueva/actions";
+import { createClient } from "@/utils/supabase/client";
 
 // Steps
 import { BuscarAsegurado } from "./steps/BuscarAsegurado";
@@ -17,6 +18,7 @@ import { Resumen } from "./steps/Resumen";
 
 export function NuevaPolizaForm() {
 	const router = useRouter();
+	const supabase = createClient();
 
 	// Estado global del formulario
 	const [formState, setFormState] = useState<PolizaFormState>({
@@ -29,6 +31,26 @@ export function NuevaPolizaForm() {
 		advertencias: [],
 		en_edicion: false,
 	});
+
+	// Catálogos
+	const [regionales, setRegionales] = useState<Array<{ id: string; nombre: string }>>([]);
+
+	// Cargar regionales al montar el componente
+	useEffect(() => {
+		const cargarRegionales = async () => {
+			const { data } = await supabase
+				.from("regionales")
+				.select("id, nombre")
+				.eq("activo", true)
+				.order("nombre");
+
+			if (data) {
+				setRegionales(data);
+			}
+		};
+
+		cargarRegionales();
+	}, []);
 
 	// Navegación
 	const handleCancelar = () => {
@@ -120,6 +142,7 @@ export function NuevaPolizaForm() {
 					<DatosEspecificos
 						ramo={formState.datos_basicos.ramo}
 						datos={formState.datos_especificos}
+					regionales={regionales}
 						onChange={(datos) => {
 							setFormState((prev) => ({
 								...prev,
