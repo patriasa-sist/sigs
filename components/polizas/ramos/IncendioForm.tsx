@@ -19,9 +19,7 @@ type Props = {
 };
 
 export function IncendioForm({ datos, regionales, onChange, onSiguiente, onAnterior }: Props) {
-	const [tipoPoliza, setTipoPoliza] = useState<"individual" | "corporativo">(
-		datos?.tipo_poliza || "individual"
-	);
+	const [tipoPoliza, setTipoPoliza] = useState<"individual" | "corporativo">(datos?.tipo_poliza || "individual");
 	const [valorAsegurado, setValorAsegurado] = useState<number>(datos?.valor_asegurado || 0);
 	const [regionalId, setRegionalId] = useState<string>(datos?.regional_asegurado_id || "");
 	const [bienes, setBienes] = useState<BienAseguradoIncendio[]>(datos?.bienes || []);
@@ -182,7 +180,10 @@ export function IncendioForm({ datos, regionales, onChange, onSiguiente, onAnter
 					<Label htmlFor="tipo_poliza">
 						Tipo de Póliza <span className="text-red-500">*</span>
 					</Label>
-					<Select value={tipoPoliza} onValueChange={(value: "individual" | "corporativo") => setTipoPoliza(value)}>
+					<Select
+						value={tipoPoliza}
+						onValueChange={(value: "individual" | "corporativo") => setTipoPoliza(value)}
+					>
 						<SelectTrigger>
 							<SelectValue />
 						</SelectTrigger>
@@ -250,7 +251,7 @@ export function IncendioForm({ datos, regionales, onChange, onSiguiente, onAnter
 				<div className="space-y-3">
 					<div className="flex items-center justify-between">
 						<Label>
-							Bienes Asegurados <span className="text-red-500">*</span>
+							Ubicación de los Bienes Asegurados <span className="text-red-500">*</span>
 						</Label>
 						<Button type="button" variant="outline" size="sm" onClick={() => abrirModalBien()}>
 							<Plus className="mr-2 h-4 w-4" />
@@ -281,7 +282,10 @@ export function IncendioForm({ datos, regionales, onChange, onSiguiente, onAnter
 												)}
 											</div>
 											<p className="text-sm text-gray-600">
-												Valor declarado: ${bien.valor_declarado.toLocaleString("es-BO", { minimumFractionDigits: 2 })}
+												Valor declarado: $
+												{bien.valor_declarado.toLocaleString("es-BO", {
+													minimumFractionDigits: 2,
+												})}
 											</p>
 										</div>
 										<div className="flex gap-2">
@@ -342,7 +346,10 @@ export function IncendioForm({ datos, regionales, onChange, onSiguiente, onAnter
 					) : (
 						<div className="border rounded-lg divide-y">
 							{asegurados.map((asegurado) => (
-								<div key={asegurado.client_id} className="p-4 flex items-center justify-between hover:bg-gray-50">
+								<div
+									key={asegurado.client_id}
+									className="p-4 flex items-center justify-between hover:bg-gray-50"
+								>
 									<div className="flex-1">
 										<p className="text-sm font-medium text-gray-900">{asegurado.client_name}</p>
 										<p className="text-xs text-gray-600">CI/NIT: {asegurado.client_ci}</p>
@@ -414,9 +421,7 @@ export function IncendioForm({ datos, regionales, onChange, onSiguiente, onAnter
 							<Button variant="outline" onClick={() => setMostrarModalBien(false)}>
 								Cancelar
 							</Button>
-							<Button onClick={guardarBien}>
-								{bienEditando !== null ? "Actualizar" : "Agregar"}
-							</Button>
+							<Button onClick={guardarBien}>{bienEditando !== null ? "Actualizar" : "Agregar"}</Button>
 						</div>
 					</div>
 				</div>
