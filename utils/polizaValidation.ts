@@ -71,7 +71,7 @@ export function validarDatosBasicos(datos: Partial<DatosBasicosPoliza>): Validat
 
 	// Validar responsable
 	if (!datos.responsable_id) {
-		errores.push({ campo: "responsable_id", mensaje: "Responsable es requerido" });
+		errores.push({ campo: "responsable_id", mensaje: "Ejecutivo comercial es requerido" });
 	}
 
 	// Validar regional
@@ -229,7 +229,9 @@ export function validarModalidadPago(pago: Partial<ModalidadPago>): ValidationRe
 			if (Math.abs(totalCalculado - totalEsperado) > 0.01) {
 				errores.push({
 					campo: "cuotas",
-					mensaje: `La suma de cuotas (${totalCalculado.toFixed(2)}) no coincide con prima total (${totalEsperado.toFixed(2)})`,
+					mensaje: `La suma de cuotas (${totalCalculado.toFixed(
+						2
+					)}) no coincide con prima total (${totalEsperado.toFixed(2)})`,
 				});
 			}
 		}
@@ -295,11 +297,7 @@ export function calcularPrimaNetaYComision(prima_total: number): { prima_neta: n
 /**
  * Calcula cuotas equitativas para crédito
  */
-export function calcularCuotasEquitativas(
-	prima_total: number,
-	cuota_inicial: number,
-	cantidad_cuotas: number
-): number {
+export function calcularCuotasEquitativas(prima_total: number, cuota_inicial: number, cantidad_cuotas: number): number {
 	const resto = prima_total - cuota_inicial;
 	const montoCuota = resto / cantidad_cuotas;
 

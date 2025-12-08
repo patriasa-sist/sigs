@@ -197,7 +197,9 @@ export default function PolizasPage() {
 										className="hover:bg-gray-50 cursor-pointer transition-colors"
 									>
 										<td className="px-4 py-4">
-											<span className="text-sm font-medium text-gray-900">{poliza.numero_poliza}</span>
+											<span className="text-sm font-medium text-gray-900">
+												{poliza.numero_poliza}
+											</span>
 										</td>
 
 										<td className="px-4 py-4">
@@ -231,7 +233,9 @@ export default function PolizasPage() {
 											<div className="text-sm font-medium text-gray-900">
 												{formatCurrency(poliza.prima_total, poliza.moneda)}
 											</div>
-											<div className="text-xs text-gray-500 capitalize">{poliza.modalidad_pago}</div>
+											<div className="text-xs text-gray-500 capitalize">
+												{poliza.modalidad_pago}
+											</div>
 										</td>
 
 										<td className="px-4 py-4">
@@ -255,7 +259,12 @@ export default function PolizasPage() {
 													stroke="currentColor"
 													viewBox="0 0 24 24"
 												>
-													<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+													<path
+														strokeLinecap="round"
+														strokeLinejoin="round"
+														strokeWidth={2}
+														d="M9 5l7 7-7 7"
+													/>
 												</svg>
 											</Button>
 										</td>
@@ -271,7 +280,8 @@ export default function PolizasPage() {
 			{totalPages > 1 && (
 				<div className="flex items-center justify-between">
 					<div className="text-sm text-gray-600">
-						Mostrando {startIndex + 1} - {Math.min(endIndex, filteredPolizas.length)} de {filteredPolizas.length}
+						Mostrando {startIndex + 1} - {Math.min(endIndex, filteredPolizas.length)} de{" "}
+						{filteredPolizas.length}
 					</div>
 					<div className="flex gap-2">
 						<Button
@@ -335,7 +345,9 @@ export default function PolizasPage() {
 							<div className="grid grid-cols-2 gap-6">
 								<div>
 									<label className="text-sm font-medium text-gray-600">Número de Póliza</label>
-									<p className="text-lg font-semibold text-gray-900 mt-1">{selectedPoliza.numero_poliza}</p>
+									<p className="text-lg font-semibold text-gray-900 mt-1">
+										{selectedPoliza.numero_poliza}
+									</p>
 								</div>
 								<div>
 									<label className="text-sm font-medium text-gray-600">Estado</label>
@@ -379,7 +391,7 @@ export default function PolizasPage() {
 									<p className="text-base text-gray-900 mt-1">{selectedPoliza.regional_nombre}</p>
 								</div>
 								<div>
-									<label className="text-sm font-medium text-gray-600">Responsable</label>
+									<label className="text-sm font-medium text-gray-600">Ejecutivo comercial</label>
 									<p className="text-base text-gray-900 mt-1">{selectedPoliza.responsable_nombre}</p>
 								</div>
 							</div>
@@ -403,7 +415,9 @@ export default function PolizasPage() {
 									<p className="text-lg font-semibold text-gray-900 mt-1">
 										{formatCurrency(selectedPoliza.prima_total, selectedPoliza.moneda)}
 									</p>
-									<p className="text-sm text-gray-600 capitalize">Modalidad: {selectedPoliza.modalidad_pago}</p>
+									<p className="text-sm text-gray-600 capitalize">
+										Modalidad: {selectedPoliza.modalidad_pago}
+									</p>
 								</div>
 							</div>
 

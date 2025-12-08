@@ -47,7 +47,7 @@ export async function guardarPoliza(formState: PolizaFormState) {
 				modalidad_pago: formState.modalidad_pago.tipo,
 				prima_total: formState.modalidad_pago.prima_total,
 				moneda: formState.modalidad_pago.moneda,
-				estado: "activa",
+				estado: "pendiente",
 			})
 			.select()
 			.single();

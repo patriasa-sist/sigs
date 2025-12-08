@@ -7,13 +7,7 @@ import { validarDatosBasicos } from "@/utils/polizaValidation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { createClient } from "@/utils/supabase/client";
 
 type Props = {
@@ -82,30 +76,19 @@ export function DatosBasicos({ datos, onChange, onSiguiente, onAnterior }: Props
 				usuariosResult,
 				{ data: tiposData },
 			] = await Promise.all([
-				supabase
-					.from("companias_aseguradoras")
-					.select("*")
-					.eq("activo", true)
-					.order("nombre"),
-				supabase
-					.from("regionales")
-					.select("*")
-					.eq("activo", true)
-					.order("nombre"),
-				supabase
-					.from("categorias")
-					.select("*")
-					.eq("activo", true)
-					.order("nombre"),
+				supabase.from("companias_aseguradoras").select("*").eq("activo", true).order("nombre"),
+				supabase.from("regionales").select("*").eq("activo", true).order("nombre"),
+				supabase.from("categorias").select("*").eq("activo", true).order("nombre"),
 				// Intentar usar la función RPC primero, si no existe, usar query directo
 				supabase.rpc("get_usuarios_comerciales").then(
 					(result) => result,
 					// Fallback a query directo si la función no existe
-					() => supabase
-						.from("profiles")
-						.select("id, full_name, role")
-						.in("role", ["comercial", "admin"])
-						.order("full_name")
+					() =>
+						supabase
+							.from("profiles")
+							.select("id, full_name, role")
+							.in("role", ["comercial", "admin"])
+							.order("full_name")
 				),
 				supabase
 					.from("tipos_seguros")
@@ -123,10 +106,13 @@ export function DatosBasicos({ datos, onChange, onSiguiente, onAnterior }: Props
 
 			console.log("Usuarios cargados:", usuariosData);
 			console.log("Total usuarios:", usuariosData?.length);
-			console.log("Usuarios por rol:", usuariosData?.reduce((acc, u) => {
-				acc[u.role] = (acc[u.role] || 0) + 1;
-				return acc;
-			}, {} as Record<string, number>));
+			console.log(
+				"Usuarios por rol:",
+				usuariosData?.reduce((acc, u) => {
+					acc[u.role] = (acc[u.role] || 0) + 1;
+					return acc;
+				}, {} as Record<string, number>)
+			);
 
 			setCompanias(companiasData || []);
 			setRegionales(regionalesData || []);
@@ -219,7 +205,8 @@ export function DatosBasicos({ datos, onChange, onSiguiente, onAnterior }: Props
 		alert("Datos actualizados correctamente");
 	};
 
-	const todosLosCamposCompletos = formData.numero_poliza &&
+	const todosLosCamposCompletos =
+		formData.numero_poliza &&
 		formData.compania_aseguradora_id &&
 		formData.ramo &&
 		formData.inicio_vigencia &&
@@ -246,12 +233,8 @@ export function DatosBasicos({ datos, onChange, onSiguiente, onAnterior }: Props
 		<div className="bg-white rounded-lg shadow-sm border p-6">
 			<div className="flex items-center justify-between mb-6">
 				<div>
-					<h2 className="text-xl font-semibold text-gray-900">
-						Paso 2: Datos Básicos de la Póliza
-					</h2>
-					<p className="text-sm text-gray-600 mt-1">
-						Complete la información general de la póliza
-					</p>
+					<h2 className="text-xl font-semibold text-gray-900">Paso 2: Datos Básicos de la Póliza</h2>
+					<p className="text-sm text-gray-600 mt-1">Complete la información general de la póliza</p>
 				</div>
 
 				{esCompleto && (
@@ -275,9 +258,7 @@ export function DatosBasicos({ datos, onChange, onSiguiente, onAnterior }: Props
 						placeholder="Ej: POL-2024-001"
 						className={errores.numero_poliza ? "border-red-500" : ""}
 					/>
-					{errores.numero_poliza && (
-						<p className="text-sm text-red-600">{errores.numero_poliza}</p>
-					)}
+					{errores.numero_poliza && <p className="text-sm text-red-600">{errores.numero_poliza}</p>}
 				</div>
 
 				{/* Compañía Aseguradora */}
@@ -310,10 +291,7 @@ export function DatosBasicos({ datos, onChange, onSiguiente, onAnterior }: Props
 					<Label htmlFor="ramo">
 						Ramo <span className="text-red-500">*</span>
 					</Label>
-					<Select
-						value={formData.ramo}
-						onValueChange={(value) => handleChange("ramo", value)}
-					>
+					<Select value={formData.ramo} onValueChange={(value) => handleChange("ramo", value)}>
 						<SelectTrigger className={errores.ramo ? "border-red-500" : ""}>
 							<SelectValue placeholder="Seleccione un ramo" />
 						</SelectTrigger>
@@ -326,15 +304,13 @@ export function DatosBasicos({ datos, onChange, onSiguiente, onAnterior }: Props
 							))}
 						</SelectContent>
 					</Select>
-					{errores.ramo && (
-						<p className="text-sm text-red-600">{errores.ramo}</p>
-					)}
+					{errores.ramo && <p className="text-sm text-red-600">{errores.ramo}</p>}
 				</div>
 
-				{/* Responsable */}
+				{/* Ejecutivo comercial */}
 				<div className="space-y-2">
 					<Label htmlFor="responsable">
-						Responsable <span className="text-red-500">*</span>
+						Ejecutivo comercial <span className="text-red-500">*</span>
 					</Label>
 					<Select
 						value={formData.responsable_id}
@@ -351,9 +327,7 @@ export function DatosBasicos({ datos, onChange, onSiguiente, onAnterior }: Props
 							))}
 						</SelectContent>
 					</Select>
-					{errores.responsable_id && (
-						<p className="text-sm text-red-600">{errores.responsable_id}</p>
-					)}
+					{errores.responsable_id && <p className="text-sm text-red-600">{errores.responsable_id}</p>}
 				</div>
 
 				{/* Fecha de Emisión */}
@@ -385,9 +359,7 @@ export function DatosBasicos({ datos, onChange, onSiguiente, onAnterior }: Props
 						onChange={(e) => handleChange("inicio_vigencia", e.target.value)}
 						className={errores.inicio_vigencia ? "border-red-500" : ""}
 					/>
-					{errores.inicio_vigencia && (
-						<p className="text-sm text-red-600">{errores.inicio_vigencia}</p>
-					)}
+					{errores.inicio_vigencia && <p className="text-sm text-red-600">{errores.inicio_vigencia}</p>}
 				</div>
 
 				{/* Fin de Vigencia */}
@@ -402,9 +374,7 @@ export function DatosBasicos({ datos, onChange, onSiguiente, onAnterior }: Props
 						onChange={(e) => handleChange("fin_vigencia", e.target.value)}
 						className={errores.fin_vigencia ? "border-red-500" : ""}
 					/>
-					{errores.fin_vigencia && (
-						<p className="text-sm text-red-600">{errores.fin_vigencia}</p>
-					)}
+					{errores.fin_vigencia && <p className="text-sm text-red-600">{errores.fin_vigencia}</p>}
 				</div>
 
 				{/* Regional */}
@@ -412,10 +382,7 @@ export function DatosBasicos({ datos, onChange, onSiguiente, onAnterior }: Props
 					<Label htmlFor="regional">
 						Regional Patria <span className="text-red-500">*</span>
 					</Label>
-					<Select
-						value={formData.regional_id}
-						onValueChange={(value) => handleChange("regional_id", value)}
-					>
+					<Select value={formData.regional_id} onValueChange={(value) => handleChange("regional_id", value)}>
 						<SelectTrigger className={errores.regional_id ? "border-red-500" : ""}>
 							<SelectValue placeholder="Seleccione una regional" />
 						</SelectTrigger>
@@ -427,9 +394,7 @@ export function DatosBasicos({ datos, onChange, onSiguiente, onAnterior }: Props
 							))}
 						</SelectContent>
 					</Select>
-					{errores.regional_id && (
-						<p className="text-sm text-red-600">{errores.regional_id}</p>
-					)}
+					{errores.regional_id && <p className="text-sm text-red-600">{errores.regional_id}</p>}
 				</div>
 
 				{/* Categoría */}
@@ -491,9 +456,7 @@ export function DatosBasicos({ datos, onChange, onSiguiente, onAnterior }: Props
 									))}
 								</SelectContent>
 							</Select>
-							{errores.categoria_id && (
-								<p className="text-sm text-red-600">{errores.categoria_id}</p>
-							)}
+							{errores.categoria_id && <p className="text-sm text-red-600">{errores.categoria_id}</p>}
 						</>
 					)}
 				</div>
@@ -513,10 +476,7 @@ export function DatosBasicos({ datos, onChange, onSiguiente, onAnterior }: Props
 						</Button>
 					)}
 
-					<Button
-						onClick={handleContinuar}
-						disabled={!todosLosCamposCompletos}
-					>
+					<Button onClick={handleContinuar} disabled={!todosLosCamposCompletos}>
 						Continuar con Datos Específicos
 						<ChevronRight className="ml-2 h-5 w-5" />
 					</Button>

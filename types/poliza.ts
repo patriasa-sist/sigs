@@ -382,7 +382,9 @@ export type PolizaDB = {
 	moneda: Moneda;
 	prima_neta: number; // Generado automáticamente
 	comision: number; // Generado automáticamente
-	estado: "activa" | "vencida" | "cancelada" | "renovada";
+	estado: "pendiente" | "activa" | "vencida" | "cancelada" | "renovada";
+	validado_por?: string; // Usuario gerente que validó la póliza
+	fecha_validacion?: string; // Fecha de validación gerencial
 	created_at: string;
 	updated_at: string;
 	created_by?: string;

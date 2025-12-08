@@ -114,12 +114,8 @@ export default function PolizaDetallePage() {
 	const totalPagos = poliza.pagos.length;
 	const pagosPagados = poliza.pagos.filter((p) => p.estado === "pagado").length;
 	const pagosPendientes = poliza.pagos.filter((p) => p.estado === "pendiente").length;
-	const montoPagado = poliza.pagos
-		.filter((p) => p.estado === "pagado")
-		.reduce((sum, p) => sum + p.monto, 0);
-	const montoPendiente = poliza.pagos
-		.filter((p) => p.estado !== "pagado")
-		.reduce((sum, p) => sum + p.monto, 0);
+	const montoPagado = poliza.pagos.filter((p) => p.estado === "pagado").reduce((sum, p) => sum + p.monto, 0);
+	const montoPendiente = poliza.pagos.filter((p) => p.estado !== "pagado").reduce((sum, p) => sum + p.monto, 0);
 
 	return (
 		<div className="container mx-auto px-4 py-8 max-w-7xl">
@@ -187,7 +183,7 @@ export default function PolizaDetallePage() {
 								<p className="text-base text-gray-900 mt-1">{poliza.regional_nombre}</p>
 							</div>
 							<div>
-								<label className="text-sm font-medium text-gray-600">Responsable</label>
+								<label className="text-sm font-medium text-gray-600">Ejecutivo comercial</label>
 								<p className="text-base text-gray-900 mt-1">{poliza.responsable_nombre}</p>
 							</div>
 						</div>
@@ -202,7 +198,9 @@ export default function PolizaDetallePage() {
 									<Calendar className="h-4 w-4" />
 									Fecha de Emisión
 								</label>
-								<p className="text-base text-gray-900 mt-1">{formatDate(poliza.fecha_emision_compania)}</p>
+								<p className="text-base text-gray-900 mt-1">
+									{formatDate(poliza.fecha_emision_compania)}
+								</p>
 							</div>
 							<div>
 								<label className="text-sm font-medium text-gray-600">Inicio de Vigencia</label>
@@ -228,14 +226,20 @@ export default function PolizaDetallePage() {
 										<div className="grid grid-cols-3 gap-4">
 											<div>
 												<label className="text-sm font-medium text-gray-600">Placa</label>
-												<p className="text-base font-semibold text-gray-900">{vehiculo.placa}</p>
+												<p className="text-base font-semibold text-gray-900">
+													{vehiculo.placa}
+												</p>
 											</div>
 											<div>
 												<label className="text-sm font-medium text-gray-600">Tipo</label>
-												<p className="text-base text-gray-900">{vehiculo.tipo_vehiculo || "-"}</p>
+												<p className="text-base text-gray-900">
+													{vehiculo.tipo_vehiculo || "-"}
+												</p>
 											</div>
 											<div>
-												<label className="text-sm font-medium text-gray-600">Marca/Modelo</label>
+												<label className="text-sm font-medium text-gray-600">
+													Marca/Modelo
+												</label>
 												<p className="text-base text-gray-900">
 													{vehiculo.marca || "-"} {vehiculo.modelo || ""}
 												</p>
@@ -245,7 +249,9 @@ export default function PolizaDetallePage() {
 												<p className="text-base text-gray-900">{vehiculo.ano || "-"}</p>
 											</div>
 											<div>
-												<label className="text-sm font-medium text-gray-600">Valor Asegurado</label>
+												<label className="text-sm font-medium text-gray-600">
+													Valor Asegurado
+												</label>
 												<p className="text-base font-semibold text-gray-900">
 													{formatCurrency(vehiculo.valor_asegurado, poliza.moneda)}
 												</p>
@@ -311,15 +317,22 @@ export default function PolizaDetallePage() {
 								<tbody className="divide-y">
 									{poliza.pagos.map((pago, index) => {
 										// Detectar si es cuota inicial por observaciones o si es la primera y tiene monto diferente
-										const esCuotaInicial = pago.observaciones?.includes("inicial") || pago.observaciones?.includes("Inicial");
+										const esCuotaInicial =
+											pago.observaciones?.includes("inicial") ||
+											pago.observaciones?.includes("Inicial");
 										const etiquetaCuota = esCuotaInicial ? "Inicial" : `${pago.numero_cuota}`;
 
 										return (
-											<tr key={pago.id} className={`hover:bg-gray-50 ${esCuotaInicial ? 'bg-blue-50' : ''}`}>
+											<tr
+												key={pago.id}
+												className={`hover:bg-gray-50 ${esCuotaInicial ? "bg-blue-50" : ""}`}
+											>
 												<td className="px-4 py-3 text-sm font-medium text-gray-900">
 													Cuota {etiquetaCuota}
 												</td>
-												<td className="px-4 py-3 text-sm text-gray-900">{formatDate(pago.fecha_vencimiento)}</td>
+												<td className="px-4 py-3 text-sm text-gray-900">
+													{formatDate(pago.fecha_vencimiento)}
+												</td>
 												<td className="px-4 py-3 text-sm font-semibold text-gray-900 text-right">
 													{formatCurrency(pago.monto, poliza.moneda)}
 												</td>
@@ -356,11 +369,16 @@ export default function PolizaDetallePage() {
 						) : (
 							<div className="space-y-2">
 								{poliza.documentos.map((doc) => (
-									<div key={doc.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50">
+									<div
+										key={doc.id}
+										className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50"
+									>
 										<div className="flex items-center gap-3">
 											<FileText className="h-5 w-5 text-gray-400" />
 											<div>
-												<p className="text-sm font-medium text-gray-900">{doc.nombre_archivo}</p>
+												<p className="text-sm font-medium text-gray-900">
+													{doc.nombre_archivo}
+												</p>
 												<p className="text-xs text-gray-600">
 													{doc.tipo_documento} - Subido el {formatDate(doc.uploaded_at)}
 												</p>
@@ -394,7 +412,9 @@ export default function PolizaDetallePage() {
 								<p className="text-2xl font-bold text-gray-900 mt-1">
 									{formatCurrency(poliza.prima_total, poliza.moneda)}
 								</p>
-								<p className="text-xs text-gray-600 capitalize mt-1">Modalidad: {poliza.modalidad_pago}</p>
+								<p className="text-xs text-gray-600 capitalize mt-1">
+									Modalidad: {poliza.modalidad_pago}
+								</p>
 							</div>
 							<div className="pt-4 border-t">
 								<label className="text-sm font-medium text-gray-600">Prima Neta</label>
