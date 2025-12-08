@@ -244,12 +244,27 @@ export function validarModalidadPago(pago: Partial<ModalidadPago>): ValidationRe
 			errores.push({ campo: "cantidad_cuotas", mensaje: "Cantidad de cuotas debe ser mayor a 0" });
 		}
 
+		if (pago.cantidad_cuotas && pago.cantidad_cuotas > POLIZA_RULES.CUOTAS_MAX) {
+			errores.push({ campo: "cantidad_cuotas", mensaje: `Máximo ${POLIZA_RULES.CUOTAS_MAX} cuotas permitidas` });
+		}
+
 		if (pago.cuota_inicial === undefined || pago.cuota_inicial === null || pago.cuota_inicial < 0) {
 			errores.push({ campo: "cuota_inicial", mensaje: "Cuota inicial debe ser mayor o igual a 0" });
 		}
 
+		if (!pago.fecha_inicio_cuotas) {
+			errores.push({ campo: "fecha_inicio_cuotas", mensaje: "Fecha de inicio de cuotas es requerida" });
+		}
+
+		if (!pago.periodo_pago || !POLIZA_RULES.PERIODOS_PAGO.includes(pago.periodo_pago as any)) {
+			errores.push({
+				campo: "periodo_pago",
+				mensaje: `Periodo de pago debe ser: ${POLIZA_RULES.PERIODOS_PAGO.join(", ")}`,
+			});
+		}
+
 		if (!pago.cuotas || pago.cuotas.length === 0) {
-			errores.push({ campo: "cuotas", mensaje: "Debe tener al menos una cuota" });
+			errores.push({ campo: "cuotas", mensaje: "Debe generar las cuotas primero" });
 		}
 
 		// Validar que las cuotas tengan fechas
@@ -289,20 +304,42 @@ export function validarModalidadPago(pago: Partial<ModalidadPago>): ValidationRe
 
 /**
  * Valida fechas de pago que no sean anteriores a la fecha actual
+ * NOTA: Esta validación está DESHABILITADA ya que las pólizas en curso
+ * pueden tener cuotas con fechas pasadas que necesitan ser registradas.
+ * Solo se valida contra fin de vigencia (ver validarFechasDentroVigencia)
  */
 export function validarFechasPago(pago: ModalidadPago): ValidationResult {
+	// Validación deshabilitada - permitir cualquier fecha
+	// Las pólizas en curso pueden tener cuotas vencidas que se están registrando
+	return {
+		valido: true,
+		errores: [],
+	};
+}
+
+/**
+ * Valida que las fechas de pago no excedan la vigencia de la póliza
+ * Esta es una validación de advertencia, no bloquea el guardado
+ */
+export function validarFechasDentroVigencia(
+	pago: ModalidadPago,
+	inicio_vigencia: string,
+	fin_vigencia: string
+): ValidationResult {
 	const errores: ValidationError[] = [];
-	const hoy = new Date();
-	hoy.setHours(0, 0, 0, 0);
+	const fechaInicio = new Date(inicio_vigencia);
+	const fechaFin = new Date(fin_vigencia);
+	fechaInicio.setHours(0, 0, 0, 0);
+	fechaFin.setHours(0, 0, 0, 0);
 
 	if (pago.tipo === "contado") {
 		const fechaPago = new Date(pago.fecha_pago_unico);
 		fechaPago.setHours(0, 0, 0, 0);
 
-		if (fechaPago < hoy) {
+		if (fechaPago > fechaFin) {
 			errores.push({
 				campo: "fecha_pago_unico",
-				mensaje: "Fecha de pago no puede ser anterior a hoy",
+				mensaje: "Fecha de pago excede el fin de vigencia de la póliza",
 			});
 		}
 	} else if (pago.tipo === "credito") {
@@ -310,10 +347,10 @@ export function validarFechasPago(pago: ModalidadPago): ValidationResult {
 			const fechaCuota = new Date(cuota.fecha_vencimiento);
 			fechaCuota.setHours(0, 0, 0, 0);
 
-			if (fechaCuota < hoy) {
+			if (fechaCuota > fechaFin) {
 				errores.push({
 					campo: `cuota_${index}_fecha`,
-					mensaje: `Cuota ${cuota.numero}: fecha no puede ser anterior a hoy`,
+					mensaje: `Cuota ${cuota.numero}: fecha excede el fin de vigencia`,
 				});
 			}
 		});

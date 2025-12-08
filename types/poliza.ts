@@ -278,9 +278,10 @@ export type DatosEspecificosPoliza =
 // ============================================
 
 export type Moneda = "Bs" | "USD" | "USDT" | "UFV";
+export type PeriodoPago = "mensual" | "trimestral" | "semestral";
 
 export type CuotaCredito = {
-	numero: number;
+	numero: number; // Número de cuota editable (permite cuotas no secuenciales)
 	monto: number;
 	fecha_vencimiento: string; // ISO date
 };
@@ -302,6 +303,8 @@ export type PagoCredito = {
 	moneda: Moneda;
 	cantidad_cuotas: number;
 	cuota_inicial: number;
+	fecha_inicio_cuotas: string; // ISO date - fecha desde donde se calculan las cuotas
+	periodo_pago: PeriodoPago; // mensual, trimestral, semestral
 	cuotas: CuotaCredito[];
 	// Campos calculados (solo para display)
 	prima_neta?: number;

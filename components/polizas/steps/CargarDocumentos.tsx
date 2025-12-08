@@ -18,12 +18,11 @@ type Props = {
 // Tipos de documentos sugeridos
 const TIPOS_DOCUMENTO = [
 	"Póliza firmada",
-	"CI del asegurado",
-	"NIT del asegurado",
-	"Certificado de propiedad",
-	"Comprobante de pago",
-	"Solicitud de seguro",
-	"Inspección técnica",
+	"Comprobante de envio de poliza (correo)",
+	"Plan de pago BROKER",
+	"plan de pago CLIENTE",
+	"Anexos",
+	"Condicionado general",
 	"Otro",
 ];
 
@@ -130,9 +129,7 @@ export function CargarDocumentos({ documentos, onChange, onSiguiente, onAnterior
 		<div className="bg-white rounded-lg shadow-sm border p-6">
 			<div className="flex items-center justify-between mb-6">
 				<div>
-					<h2 className="text-xl font-semibold text-gray-900">
-						Paso 5: Cargar Documentos
-					</h2>
+					<h2 className="text-xl font-semibold text-gray-900">Paso 5: Cargar Documentos</h2>
 					<p className="text-sm text-gray-600 mt-1">
 						Adjunte los documentos relacionados con la póliza (opcional)
 					</p>
@@ -188,9 +185,7 @@ export function CargarDocumentos({ documentos, onChange, onSiguiente, onAnterior
 						<p className="mb-2 text-sm text-gray-600">
 							<span className="font-semibold">Click para cargar</span> o arrastra archivos aquí
 						</p>
-						<p className="text-xs text-gray-500">
-							PDF, JPG, PNG, DOC, DOCX (máx. 10MB por archivo)
-						</p>
+						<p className="text-xs text-gray-500">PDF, JPG, PNG, DOC, DOCX (máx. 10MB por archivo)</p>
 					</div>
 					<input
 						id="file-upload"
@@ -227,15 +222,11 @@ export function CargarDocumentos({ documentos, onChange, onSiguiente, onAnterior
 				<div className="text-center py-12 border-2 border-dashed rounded-lg">
 					<FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
 					<p className="text-gray-600 mb-2">No hay documentos cargados</p>
-					<p className="text-sm text-gray-500">
-						Los documentos son opcionales pero recomendados
-					</p>
+					<p className="text-sm text-gray-500">Los documentos son opcionales pero recomendados</p>
 				</div>
 			) : (
 				<div className="space-y-3 mb-6">
-					<h4 className="text-sm font-semibold text-gray-900">
-						Documentos Cargados ({documentos.length})
-					</h4>
+					<h4 className="text-sm font-semibold text-gray-900">Documentos Cargados ({documentos.length})</h4>
 					<div className="space-y-2">
 						{documentos.map((doc, index) => (
 							<div
@@ -251,9 +242,7 @@ export function CargarDocumentos({ documentos, onChange, onSiguiente, onAnterior
 											{doc.nombre_archivo}
 										</p>
 										<div className="flex items-center gap-3 text-xs text-gray-500 mt-1">
-											<span className="font-medium text-blue-600">
-												{doc.tipo_documento}
-											</span>
+											<span className="font-medium text-blue-600">{doc.tipo_documento}</span>
 											{doc.tamano_bytes && (
 												<>
 													<span>•</span>
@@ -279,9 +268,7 @@ export function CargarDocumentos({ documentos, onChange, onSiguiente, onAnterior
 
 			{/* Información adicional */}
 			<div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-				<h4 className="text-sm font-semibold text-blue-900 mb-2">
-					Información sobre Documentos
-				</h4>
+				<h4 className="text-sm font-semibold text-blue-900 mb-2">Información sobre Documentos</h4>
 				<ul className="text-sm text-blue-800 space-y-1">
 					<li>• Los documentos se cargarán al servidor cuando guarde la póliza</li>
 					<li>• Puede agregar múltiples archivos del mismo tipo</li>

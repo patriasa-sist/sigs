@@ -158,6 +158,8 @@ export function NuevaPolizaForm() {
 			{formState.paso_actual >= 4 && (
 				<ModalidadPago
 					datos={formState.modalidad_pago}
+					inicioVigencia={formState.datos_basicos?.inicio_vigencia}
+					finVigencia={formState.datos_basicos?.fin_vigencia}
 					onChange={(datos) => {
 						setFormState((prev) => ({
 							...prev,

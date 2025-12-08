@@ -63,3 +63,59 @@ Orden: implementar todos los formularios con detalles provistos y dejar un mensa
 *   campos opcionales de Accidentes personales, tambien de polizas de Vida y tambien de polizas de Sepelio:
 
 -   Producto (texto)
+
+errores a solucionar:
+
+1. feedback a implementar en polizas automotor
+1. poliza automotor no se sube a la db
+1. no se cargan archivos a la db, algo parece estar mal
+1. cuales son los esquemas para la db en los seguros de salud, incendio, responsabilidad civil, riesgos varios miscelaneos, accidentes personales, vida y sepelio
+1. muchos errores de lint
+1. agregar seguridad RLS a la db
+1. optimizar querys de la db
+1. optimizar frontend de polizas
+
+-   trabajar en seccion de edicion de datos de polizas
+-   mejorar el modulo de creacion de clientes
+-   PR de refactorizacion de modulo de polizas para mover validaciones de campos a Zod y no hacerlo manual
+-   modulo cobranzas de polizas
+-   modulo de siniestros
+-   centralizacion de constantes de validacion en todos los modulos
+
+mejoraremos partes del flujo de creacion de las polizas nuevas en los siguientes aspectos paso por paso, te ire dando cada paso a mejorar gradualmente:
+Paso 2:
+[] no deberia ser posible la creacion de nuevas categorias desde este módulo, borrar toda logica de ello y recordar agregarlo en un futuro dentro del modulo de administracion del sistema
+[] cambiar el nombre del campo "categorias" por "Grupo de negocios"
+[] grupo de negocios debe ser opcional no obligatorio
+[] NUEVO campo "Grupo de produccion" dropdown con generales/personales
+[] la moneda a nivel de toda la poliza debe ser seleccionable desde este paso
+
+Paso 3 Automotor:
+[] NUEVO campo coaseguro tipo porcentaje de 0% a 100%
+[] Franquicia numero parametrizado 700, 1000, 1400 Bs
+[] NUEVO tipo de vehiculo "Semiremolque" y "Tracto Camion", quitar vehiculo Trailer
+[] extender marcas de vehiculos a
+[] año del vehiculo no debe aceptar caracteres solo numeros de años desde 1950 a 2050
+[] plaza ciruculacion dropdown 9 departamentos
+[] visualizacion de decimales con coma no punto
+
+Paso 4:
+[] fecha de pago no puede ser mayor a la vigencia, advertir pero no bloquear
+[] fecha de pago si puede ser el mismo dia que se inicia la vigencia, se esta detectando una falso error que indica "Fecha de pago no puede ser anterior a hoy" cuando se selecciona hoy como la fecha de pago al contado o pago inicial
+[] al escoger a credito se debe primero llenar la prima total, cantidad de cuotas, cuota inicial, NUEVO fecha inicial y NUEVO periodos de pago para cuotas (mensual, trimestral, semestral) con eso se presiona el NUEVO boton "generar cuotas" que genera la tabla de cuotas con las fechas correspondientes
+[] las cuotas van de 1 a N cuotas no es necesario marcar la 1ra como "Inicial" solo con el color se sobreentiende
+[] no mas de 12 cuotas desde el inicio de vigencia, quiza cambiar el input numerico por un slider de 1 a 12
+[] si no se ingresa cuota inicial al generar la tabla de cuotas se asume que esta poliza fue iniciada por otra compañia y se debe ser capaz de cambiar los numeros de cuota para reflejar que en el sistema se esta cargando desde por ejemplo la cuota 5 en adelante
+[] todos los campos de cuota y de fecha de cuota deben ser editables, actualmente la cuota inicial no lo es
+[] ninguna fecha de cuota excederan el fin de vigencia, advertir y no dejar pasar al siguiente paso
+[] al corregir los errores de este paso las advertencias no se borran
+
+Paso 5:
+[] se pueden cargar correos de outlook descargados .MSG .EML
+[] los documentos no se están guardando en la base de datos, revisar configuraciones de supabase y lógica de carga de archivos, los archivos no deberian exceder los 20Mb de tamaño
+
+"Director comercial" visualizacion a detalle
+NUEVO boton de impression de detalles
+
+INcencidos>
+ubicacion del bien

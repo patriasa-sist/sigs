@@ -47,26 +47,16 @@ export function BuscarAsegurado({ asegurado, onAseguradoSeleccionado, onSiguient
 			}
 
 			// Obtener detalles de clientes naturales y jurídicos
-			const clientesNaturalesIds = clientesBase
-				.filter((c) => c.client_type === "natural")
-				.map((c) => c.id);
+			const clientesNaturalesIds = clientesBase.filter((c) => c.client_type === "natural").map((c) => c.id);
 
-			const clientesJuridicosIds = clientesBase
-				.filter((c) => c.client_type === "juridica")
-				.map((c) => c.id);
+			const clientesJuridicosIds = clientesBase.filter((c) => c.client_type === "juridica").map((c) => c.id);
 
 			const [naturalesResult, juridicosResult] = await Promise.all([
 				clientesNaturalesIds.length > 0
-					? supabase
-							.from("natural_clients")
-							.select("*")
-							.in("client_id", clientesNaturalesIds)
+					? supabase.from("natural_clients").select("*").in("client_id", clientesNaturalesIds)
 					: { data: [], error: null },
 				clientesJuridicosIds.length > 0
-					? supabase
-							.from("juridic_clients")
-							.select("*")
-							.in("client_id", clientesJuridicosIds)
+					? supabase.from("juridic_clients").select("*").in("client_id", clientesJuridicosIds)
 					: { data: [], error: null },
 			]);
 
@@ -80,9 +70,7 @@ export function BuscarAsegurado({ asegurado, onAseguradoSeleccionado, onSiguient
 				let documento: string;
 
 				if (cliente.client_type === "natural") {
-					const natural = naturalesResult.data?.find(
-						(n) => n.client_id === cliente.id
-					);
+					const natural = naturalesResult.data?.find((n) => n.client_id === cliente.id);
 
 					if (!natural) {
 						// Fallback si no se encuentra el detalle
@@ -99,13 +87,15 @@ export function BuscarAsegurado({ asegurado, onAseguradoSeleccionado, onSiguient
 						documento = "N/A";
 					} else {
 						detalles = natural as ClienteNatural;
-						nombre_completo = `${natural.primer_nombre} ${natural.segundo_nombre || ""} ${natural.primer_apellido} ${natural.segundo_apellido || ""}`.trim();
-						documento = `${natural.numero_documento}${natural.extension_ci ? ` ${natural.extension_ci}` : ""}`;
+						nombre_completo = `${natural.primer_nombre} ${natural.segundo_nombre || ""} ${
+							natural.primer_apellido
+						} ${natural.segundo_apellido || ""}`.trim();
+						documento = `${natural.numero_documento}${
+							natural.extension_ci ? ` ${natural.extension_ci}` : ""
+						}`;
 					}
 				} else {
-					const juridico = juridicosResult.data?.find(
-						(j) => j.client_id === cliente.id
-					);
+					const juridico = juridicosResult.data?.find((j) => j.client_id === cliente.id);
 
 					if (!juridico) {
 						detalles = {
@@ -178,12 +168,8 @@ export function BuscarAsegurado({ asegurado, onAseguradoSeleccionado, onSiguient
 		<div className="bg-white rounded-lg shadow-sm border p-6">
 			<div className="flex items-center justify-between mb-6">
 				<div>
-					<h2 className="text-xl font-semibold text-gray-900">
-						Paso 1: Buscar Asegurado
-					</h2>
-					<p className="text-sm text-gray-600 mt-1">
-						Busque y seleccione el cliente asegurado
-					</p>
+					<h2 className="text-xl font-semibold text-gray-900">Paso 1: Buscar Asegurado</h2>
+					<p className="text-sm text-gray-600 mt-1">Busque y seleccione el cliente asegurado</p>
 				</div>
 
 				{asegurado && (
@@ -208,9 +194,7 @@ export function BuscarAsegurado({ asegurado, onAseguradoSeleccionado, onSiguient
 						/>
 					</div>
 
-					{error && (
-						<p className="text-sm text-red-600 mt-2">{error}</p>
-					)}
+					{error && <p className="text-sm text-red-600 mt-2">{error}</p>}
 				</div>
 			)}
 
@@ -250,11 +234,7 @@ export function BuscarAsegurado({ asegurado, onAseguradoSeleccionado, onSiguient
 							</div>
 						</div>
 
-						<Button
-							variant="outline"
-							size="sm"
-							onClick={() => onAseguradoSeleccionado(null!)}
-						>
+						<Button variant="outline" size="sm" onClick={() => onAseguradoSeleccionado(null!)}>
 							Cambiar
 						</Button>
 					</div>
@@ -272,7 +252,8 @@ export function BuscarAsegurado({ asegurado, onAseguradoSeleccionado, onSiguient
 					) : resultados.length > 0 ? (
 						<div className="space-y-2">
 							<p className="text-sm text-gray-600 mb-3">
-								{resultados.length} {resultados.length === 1 ? "resultado encontrado" : "resultados encontrados"}
+								{resultados.length}{" "}
+								{resultados.length === 1 ? "resultado encontrado" : "resultados encontrados"}
 							</p>
 
 							{resultados.map((cliente) => (
@@ -291,7 +272,9 @@ export function BuscarAsegurado({ asegurado, onAseguradoSeleccionado, onSiguient
 										<div className="flex-1">
 											<p className="font-medium">{cliente.nombre_completo}</p>
 											<p className="text-sm text-gray-600">
-												{cliente.client_type === "natural" ? "Persona Natural" : "Persona Jurídica"}
+												{cliente.client_type === "natural"
+													? "Persona Natural"
+													: "Persona Jurídica"}
 												{" · "}
 												{cliente.documento}
 											</p>
@@ -305,9 +288,7 @@ export function BuscarAsegurado({ asegurado, onAseguradoSeleccionado, onSiguient
 					) : (
 						<div className="text-center py-8 text-gray-500">
 							<p>No se encontraron clientes</p>
-							<p className="text-sm mt-1">
-								El cliente debe estar registrado previamente en el sistema
-							</p>
+							<p className="text-sm mt-1">El cliente debe estar registrado previamente en el sistema</p>
 						</div>
 					)}
 				</div>
@@ -315,11 +296,7 @@ export function BuscarAsegurado({ asegurado, onAseguradoSeleccionado, onSiguient
 
 			{/* Botón Siguiente */}
 			<div className="flex justify-end pt-4 border-t">
-				<Button
-					onClick={onSiguiente}
-					disabled={!puedeAvanzar}
-					size="lg"
-				>
+				<Button onClick={onSiguiente} disabled={!puedeAvanzar} size="lg cursor-pointer">
 					Continuar con Datos Básicos
 					<ChevronRight className="ml-2 h-5 w-5" />
 				</Button>

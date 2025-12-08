@@ -52,7 +52,10 @@ export const POLIZA_RULES = {
 
 	// Límites de cuotas
 	CUOTAS_MIN: 1,
-	CUOTAS_MAX: 24,
+	CUOTAS_MAX: 12, // Cambiado de 24 a 12
+
+	// Periodos de pago para crédito
+	PERIODOS_PAGO: ["mensual", "trimestral", "semestral"] as const,
 } as const;
 
 /**
@@ -79,13 +82,15 @@ export const DOCUMENTO_RULES = {
 		"image/png",
 		"application/msword",
 		"application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+		"application/vnd.ms-outlook", // .msg
+		"message/rfc822", // .eml
 	] as const,
 
 	// Extensiones permitidas
-	EXTENSIONES_PERMITIDAS: [".pdf", ".jpg", ".jpeg", ".png", ".doc", ".docx"] as const,
+	EXTENSIONES_PERMITIDAS: [".pdf", ".jpg", ".jpeg", ".png", ".doc", ".docx", ".msg", ".eml"] as const,
 
 	// Tamaño máximo por archivo (en bytes)
-	TAMANO_MAX_BYTES: 10 * 1024 * 1024, // 10 MB
+	TAMANO_MAX_BYTES: 20 * 1024 * 1024, // 20 MB (aumentado de 10 MB)
 
 	// Estados de documento
 	ESTADOS: ["activo", "descartado"] as const,
@@ -93,12 +98,11 @@ export const DOCUMENTO_RULES = {
 	// Tipos de documento
 	TIPOS_DOCUMENTO: [
 		"Póliza firmada",
-		"CI del asegurado",
-		"Licencia de conducir",
-		"RUAT",
-		"Factura de compra",
-		"Certificado de inspección",
-		"Formulario de solicitud",
+		"Comprobante de envio de poliza (correo)",
+		"Plan de pago BROKER",
+		"plan de pago CLIENTE",
+		"Anexos",
+		"Condicionado general",
 		"Otro",
 	] as const,
 } as const;
@@ -168,6 +172,7 @@ export const VALIDATION_MESSAGES = {
 export type GrupoProduccion = (typeof POLIZA_RULES.GRUPOS_PRODUCCION)[number];
 export type Moneda = (typeof POLIZA_RULES.MONEDAS)[number];
 export type EstadoPoliza = (typeof POLIZA_RULES.ESTADOS)[number];
+export type PeriodoPago = (typeof POLIZA_RULES.PERIODOS_PAGO)[number];
 export type TipoUsoVehiculo = (typeof VEHICULO_RULES.TIPOS_USO)[number];
 export type RolUsuario = (typeof USUARIO_RULES.ROLES)[number];
 export type TipoCliente = (typeof CLIENTE_RULES.TIPOS)[number];
