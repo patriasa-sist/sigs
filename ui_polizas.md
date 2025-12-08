@@ -81,6 +81,7 @@ errores a solucionar:
 -   modulo cobranzas de polizas
 -   modulo de siniestros
 -   centralizacion de constantes de validacion en todos los modulos
+-   optimizacion para eliminacion periodica de archivos "eliminados" de supabase cada 90 dias
 
 mejoraremos partes del flujo de creacion de las polizas nuevas en los siguientes aspectos paso por paso, te ire dando cada paso a mejorar gradualmente:
 Paso 2:
@@ -115,7 +116,7 @@ Paso 5:
 [] los documentos no se están guardando en la base de datos, revisar configuraciones de supabase y lógica de carga de archivos, los archivos no deberian exceder los 20Mb de tamaño
 
 "Director comercial" visualizacion a detalle
-NUEVO boton de impression de detalles
+NUEVO boton de impresion de detalles
 
-INcencidos>
+Incencidos>
 ubicacion del bien

@@ -436,7 +436,7 @@ export default function PolizasPage() {
 				<Button
 					onClick={handleNewPolicy}
 					size="lg"
-					className="h-14 px-8 text-base font-semibold shadow-lg hover:shadow-xl transition-all"
+					className="h-14 px-8 text-base font-semibold shadow-lg hover:shadow-xl transition-all cursor-pointer"
 				>
 					<Plus className="mr-2 h-5 w-5" />
 					NUEVA PÓLIZA

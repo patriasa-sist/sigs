@@ -296,7 +296,7 @@ export function BuscarAsegurado({ asegurado, onAseguradoSeleccionado, onSiguient
 
 			{/* Botón Siguiente */}
 			<div className="flex justify-end pt-4 border-t">
-				<Button onClick={onSiguiente} disabled={!puedeAvanzar} size="lg cursor-pointer">
+				<Button onClick={onSiguiente} disabled={!puedeAvanzar} size="lg" className="cursor-pointer">
 					Continuar con Datos Básicos
 					<ChevronRight className="ml-2 h-5 w-5" />
 				</Button>

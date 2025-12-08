@@ -15,7 +15,7 @@ type Props = {
 	onAnterior: () => void;
 };
 
-// Tipos de documentos sugeridos
+// Tipos de documentos sugeridos (usando las constantes del sistema)
 const TIPOS_DOCUMENTO = [
 	"Póliza firmada",
 	"Comprobante de envio de poliza (correo)",
@@ -24,7 +24,7 @@ const TIPOS_DOCUMENTO = [
 	"Anexos",
 	"Condicionado general",
 	"Otro",
-];
+] as const;
 
 export function CargarDocumentos({ documentos, onChange, onSiguiente, onAnterior }: Props) {
 	const [tipoSeleccionado, setTipoSeleccionado] = useState<string>(TIPOS_DOCUMENTO[0]);
@@ -40,14 +40,14 @@ export function CargarDocumentos({ documentos, onChange, onSiguiente, onAnterior
 
 		// Validar y procesar cada archivo
 		Array.from(archivos).forEach((file) => {
-			// Validar tamaño (máximo 10MB)
-			const MAX_SIZE = 10 * 1024 * 1024; // 10MB
+			// Validar tamaño (máximo 20MB)
+			const MAX_SIZE = 20 * 1024 * 1024; // 20MB
 			if (file.size > MAX_SIZE) {
-				nuevosErrores.push(`${file.name}: El archivo excede el tamaño máximo de 10MB`);
+				nuevosErrores.push(`${file.name}: El archivo excede el tamaño máximo de 20MB`);
 				return;
 			}
 
-			// Validar tipo de archivo
+			// Validar tipo de archivo (incluye .msg y .eml)
 			const tiposPermitidos = [
 				"application/pdf",
 				"image/jpeg",
@@ -55,10 +55,17 @@ export function CargarDocumentos({ documentos, onChange, onSiguiente, onAnterior
 				"image/png",
 				"application/msword",
 				"application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+				"application/vnd.ms-outlook", // .msg
+				"message/rfc822", // .eml
 			];
-			if (!tiposPermitidos.includes(file.type)) {
+
+			// Para .msg y .eml, el navegador puede no detectar el tipo correcto, validar por extensión
+			const extension = file.name.split('.').pop()?.toLowerCase();
+			const extensionesPermitidas = ['pdf', 'jpg', 'jpeg', 'png', 'doc', 'docx', 'msg', 'eml'];
+
+			if (!tiposPermitidos.includes(file.type) && !extensionesPermitidas.includes(extension || '')) {
 				nuevosErrores.push(
-					`${file.name}: Tipo de archivo no permitido. Solo se permiten PDF, JPG, PNG, DOC, DOCX`
+					`${file.name}: Tipo de archivo no permitido. Solo se permiten PDF, JPG, PNG, DOC, DOCX, MSG, EML`
 				);
 				return;
 			}
@@ -113,6 +120,7 @@ export function CargarDocumentos({ documentos, onChange, onSiguiente, onAnterior
 		if (ext === "pdf") return "📄";
 		if (["jpg", "jpeg", "png"].includes(ext || "")) return "🖼️";
 		if (["doc", "docx"].includes(ext || "")) return "📝";
+		if (["msg", "eml"].includes(ext || "")) return "📧";
 		return "📎";
 	};
 
@@ -185,7 +193,7 @@ export function CargarDocumentos({ documentos, onChange, onSiguiente, onAnterior
 						<p className="mb-2 text-sm text-gray-600">
 							<span className="font-semibold">Click para cargar</span> o arrastra archivos aquí
 						</p>
-						<p className="text-xs text-gray-500">PDF, JPG, PNG, DOC, DOCX (máx. 10MB por archivo)</p>
+						<p className="text-xs text-gray-500">PDF, JPG, PNG, DOC, DOCX, MSG, EML (máx. 20MB por archivo)</p>
 					</div>
 					<input
 						id="file-upload"
@@ -193,7 +201,7 @@ export function CargarDocumentos({ documentos, onChange, onSiguiente, onAnterior
 						className="hidden"
 						onChange={handleAgregarArchivo}
 						multiple
-						accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+						accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.msg,.eml"
 					/>
 				</label>
 			</div>
@@ -273,7 +281,8 @@ export function CargarDocumentos({ documentos, onChange, onSiguiente, onAnterior
 					<li>• Los documentos se cargarán al servidor cuando guarde la póliza</li>
 					<li>• Puede agregar múltiples archivos del mismo tipo</li>
 					<li>• Los documentos son opcionales pero ayudan a tener un registro completo</li>
-					<li>• Tamaño máximo por archivo: 10MB</li>
+					<li>• Tamaño máximo por archivo: 20MB</li>
+					<li>• Formatos soportados: PDF, imágenes, Word, correos de Outlook (.msg, .eml)</li>
 				</ul>
 			</div>
 

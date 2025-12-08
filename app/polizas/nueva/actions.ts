@@ -4,6 +4,27 @@ import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
 import type { PolizaFormState } from "@/types/poliza";
 
+/**
+ * Sanitiza un nombre de archivo para que sea compatible con Supabase Storage
+ * - Reemplaza espacios por guiones bajos
+ * - Elimina o reemplaza caracteres especiales
+ * - Normaliza caracteres acentuados
+ */
+function sanitizarNombreArchivo(nombreArchivo: string): string {
+	return nombreArchivo
+		// Normalizar caracteres acentuados (á -> a, ñ -> n, etc.)
+		.normalize('NFD')
+		.replace(/[\u0300-\u036f]/g, '')
+		// Reemplazar espacios por guiones bajos
+		.replace(/\s+/g, '_')
+		// Eliminar caracteres especiales excepto: letras, números, puntos, guiones y guiones bajos
+		.replace(/[^a-zA-Z0-9._-]/g, '')
+		// Reemplazar múltiples guiones bajos consecutivos por uno solo
+		.replace(/_+/g, '_')
+		// Convertir a minúsculas para consistencia
+		.toLowerCase();
+}
+
 export async function guardarPoliza(formState: PolizaFormState) {
 	const supabase = await createClient();
 
@@ -38,6 +59,7 @@ export async function guardarPoliza(formState: PolizaFormState) {
 				numero_poliza: formState.datos_basicos.numero_poliza,
 				compania_aseguradora_id: formState.datos_basicos.compania_aseguradora_id,
 				ramo: formState.datos_basicos.ramo,
+				grupo_produccion: formState.datos_basicos.grupo_produccion,
 				inicio_vigencia: formState.datos_basicos.inicio_vigencia,
 				fin_vigencia: formState.datos_basicos.fin_vigencia,
 				fecha_emision_compania: formState.datos_basicos.fecha_emision_compania,
@@ -152,27 +174,55 @@ export async function guardarPoliza(formState: PolizaFormState) {
 
 		// 5. Subir documentos a Supabase Storage y registrar en base de datos
 		if (formState.documentos.length > 0) {
+			console.log(`[DOCS] Procesando ${formState.documentos.length} documentos`);
+
 			for (const documento of formState.documentos) {
-				if (!documento.file) continue;
+				if (!documento.file) {
+					console.warn('[DOCS] Documento sin archivo, saltando:', documento.nombre_archivo);
+					continue;
+				}
+
+				console.log('[DOCS] Procesando documento:', {
+					nombre: documento.nombre_archivo,
+					tipo: documento.tipo_documento,
+					tamaño: documento.tamano_bytes,
+					fileType: documento.file.type
+				});
+
+				// Sanitizar el nombre del archivo
+				const nombreSanitizado = sanitizarNombreArchivo(documento.nombre_archivo);
 
 				// Generar nombre único para el archivo
 				const timestamp = Date.now();
-				const nombreArchivo = `${poliza.id}/${timestamp}-${documento.nombre_archivo}`;
+				const nombreArchivo = `${poliza.id}/${timestamp}-${nombreSanitizado}`;
+
+				console.log('[DOCS] Nombre original:', documento.nombre_archivo);
+				console.log('[DOCS] Nombre sanitizado:', nombreSanitizado);
 
 				// Subir a Storage
+				console.log('[DOCS] Subiendo a Storage:', nombreArchivo);
 				const { data: uploadData, error: uploadError } = await supabase.storage
 					.from("polizas-documentos")
 					.upload(nombreArchivo, documento.file);
 
 				if (uploadError) {
-					console.error("Error subiendo documento:", uploadError);
+					console.error("[DOCS] Error subiendo documento:", uploadError);
+					console.error("[DOCS] Detalles del error:", {
+						message: uploadError.message,
+						statusCode: uploadError.statusCode,
+						error: uploadError
+					});
 					continue; // Continuar con el siguiente documento
 				}
+
+				console.log('[DOCS] Documento subido exitosamente:', uploadData);
 
 				// Obtener URL pública
 				const {
 					data: { publicUrl },
 				} = supabase.storage.from("polizas-documentos").getPublicUrl(nombreArchivo);
+
+				console.log('[DOCS] URL pública generada:', publicUrl);
 
 				// Registrar en base de datos
 				const { error: errorDoc } = await supabase.from("polizas_documentos").insert({
@@ -185,9 +235,13 @@ export async function guardarPoliza(formState: PolizaFormState) {
 				});
 
 				if (errorDoc) {
-					console.error("Error registrando documento:", errorDoc);
+					console.error("[DOCS] Error registrando documento en BD:", errorDoc);
+				} else {
+					console.log('[DOCS] Documento registrado exitosamente en BD');
 				}
 			}
+
+			console.log('[DOCS] Procesamiento de documentos completado');
 		}
 
 		// 6. Revalidar la ruta de pólizas
