@@ -6,7 +6,7 @@ import { User } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Home, LogOut, User as UserIcon } from "lucide-react";
+import { Home, LogOut, User as UserIcon, FileText, CheckSquare } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { signOut } from "@/app/auth/login/actions";
@@ -36,7 +36,7 @@ export function Navbar() {
 						.select("*")
 						.eq("id", user.id)
 						.single();
-					
+
 					setProfile(profileData);
 				}
 			} catch (error) {
@@ -112,6 +112,23 @@ export function Navbar() {
 						</Button>
 					</Link>
 
+					<Link href="/polizas">
+						<Button variant="ghost" size="sm" className="flex items-center space-x-2">
+							<FileText className="h-4 w-4" />
+							<span>Pólizas</span>
+						</Button>
+					</Link>
+
+					{/* Mostrar Validación solo para admin y usuario */}
+					{(profile?.role === "admin" || profile?.role === "usuario") && (
+						<Link href="/gerencia/validacion">
+							<Button variant="ghost" size="sm" className="flex items-center space-x-2">
+								<CheckSquare className="h-4 w-4" />
+								<span>Validación</span>
+							</Button>
+						</Link>
+					)}
+
 					<DropdownMenu>
 						<DropdownMenuTrigger asChild>
 							<Button variant="ghost" className="relative h-8 w-8 rounded-full">
@@ -144,7 +161,7 @@ export function Navbar() {
 								</DropdownMenuItem>
 							</Link>
 							<DropdownMenuSeparator />
-							<DropdownMenuItem 
+							<DropdownMenuItem
 								className="cursor-pointer text-red-600 focus:text-red-600"
 								onClick={handleSignOut}
 							>

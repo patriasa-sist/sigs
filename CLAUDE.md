@@ -118,8 +118,13 @@ The vencimientos module (`/app/vencimientos/`) is a comprehensive insurance poli
 ### Navbar System
 - `components/ui/navbar.tsx` - Main navigation component with user authentication
 - `components/layout/conditional-navbar.tsx` - Wrapper that hides navbar on auth routes
-- Features: Logo display, user profile dropdown, dashboard link, sign out functionality
-- Responsive design with loading states and error handling
+- **Navigation Links**:
+  - Dashboard (Home icon) - Links to `/`
+  - Pólizas (FileText icon) - Links to `/polizas`
+  - Validación (CheckSquare icon) - Links to `/gerencia/validacion` (only visible for admin and usuario roles)
+- **Features**: Logo display, role-based navigation, user profile dropdown, sign out functionality
+- **Responsive design** with loading states and error handling
+- **Role-based visibility**: Validación link only appears for users with admin or usuario roles
 
 ### Development Notes
 - Path aliases configured with `@/*` pointing to root directory
@@ -425,3 +430,156 @@ Documents implement a **soft delete** system where:
 - Consider adding scheduled job to clean old discarded documents (90+ days)
 - Consider adding policy edit functionality
 - Consider adding policy duplication/renewal functionality
+
+## Gerencia Module (Management Validation System)
+
+### Module Overview
+The gerencia module (`/app/gerencia/`) provides managerial oversight and validation of insurance policies before they become active in the system. This implements a two-stage approval workflow where commercial users create policies in "pendiente" (pending) state, and managers validate them before activation.
+
+### Key Features
+- **Pending Policy Review**: View all policies awaiting validation
+- **Policy Validation**: Approve policies to change status from "pendiente" to "activa"
+- **Policy Rejection**: Reject policies (changes status to "cancelada")
+- **Detailed Preview**: Review complete policy information before approval
+- **Audit Trail**: Automatic tracking of who validated each policy and when
+- **Role-based Access**: Only admin and usuario roles can access validation
+
+### Database Schema Changes
+
+#### Required SQL Migration
+Execute this SQL in Supabase to enable the validation workflow:
+
+```sql
+-- Add 'pendiente' state to polizas table
+ALTER TABLE polizas
+DROP CONSTRAINT IF EXISTS polizas_estado_check;
+
+ALTER TABLE polizas
+ADD CONSTRAINT polizas_estado_check
+CHECK (estado = ANY (ARRAY[
+  'pendiente'::text,
+  'activa'::text,
+  'vencida'::text,
+  'cancelada'::text,
+  'renovada'::text
+]));
+
+-- Set default state to 'pendiente'
+ALTER TABLE polizas
+ALTER COLUMN estado SET DEFAULT 'pendiente'::text;
+
+-- Add validation audit fields
+ALTER TABLE polizas
+ADD COLUMN IF NOT EXISTS validado_por uuid REFERENCES profiles(id),
+ADD COLUMN IF NOT EXISTS fecha_validacion timestamptz;
+
+COMMENT ON COLUMN polizas.validado_por IS 'Manager who validated and activated the policy';
+COMMENT ON COLUMN polizas.fecha_validacion IS 'Date and time of management validation';
+```
+
+#### New Fields
+- `estado`: Now includes "pendiente" as default state for new policies
+- `validado_por`: UUID reference to profiles - tracks which manager validated the policy
+- `fecha_validacion`: Timestamp of when the policy was validated
+
+### Component Architecture
+
+#### Server Actions
+- **File**: `app/gerencia/validacion/actions.ts`
+- **Functions**:
+  - `obtenerPolizasPendientes()` - Fetches all pending policies with related data
+  - `validarPoliza(polizaId)` - Changes policy state to "activa" and records validator
+  - `rechazarPoliza(polizaId, motivo?)` - Changes policy state to "cancelada" with optional reason
+
+#### Pages
+- **File**: `app/gerencia/validacion/page.tsx`
+- Main validation page with authentication and role checks
+- Displays table of pending policies
+- Requires admin or usuario role
+
+#### Components
+- **File**: `components/gerencia/PolizasPendientesTable.tsx`
+- Interactive table with policy details
+- Actions: View details, Validate, Reject
+- Real-time updates after validation/rejection
+- Confirmation dialogs for all actions
+
+### Workflow
+
+#### 1. Policy Creation (Commercial Users)
+```
+User creates policy → Saved with estado='pendiente' → Not visible in active reports
+```
+
+#### 2. Management Validation
+```
+Manager accesses /gerencia/validacion → Reviews pending policies → Validates or Rejects
+```
+
+#### 3. After Validation
+```
+Validated: estado='activa', validado_por=manager_id, fecha_validacion=timestamp
+Rejected: estado='cancelada', optional rejection reason in history
+```
+
+### Data Flow
+1. Commercial user creates policy via `/polizas/nueva`
+2. Policy saved with `estado='pendiente'` (actions.ts:50)
+3. Manager navigates to `/gerencia/validacion`
+4. Manager reviews policy details
+5. Manager validates (activates) or rejects (cancels) policy
+6. System records validation metadata (who, when)
+7. Policy state changes trigger revalidation of routes
+
+### Business Rules
+- **Default State**: All new policies start as "pendiente"
+- **Validation Permission**: Only admin and usuario roles can validate
+- **Single Validation**: Once validated, policy cannot return to pending state
+- **Audit Trail**: All state changes logged in `polizas_historial_ediciones`
+- **Active Policies**: Only policies with `estado='activa'` appear in reports
+
+### Type System Updates
+- **File**: `types/poliza.ts:385-387`
+- Added "pendiente" to estado union type
+- Added optional fields: `validado_por`, `fecha_validacion`
+
+### UI Features
+- **Pending Count Badge**: Shows number of policies awaiting validation
+- **Color Coding**: Yellow badges for pending status
+- **Empty State**: Friendly message when no pending policies exist
+- **Inline Details**: View policy information without leaving the table
+- **Confirmation Dialogs**: Prevent accidental approvals/rejections
+
+### Security Considerations
+- Role-based access control (admin/usuario only)
+- Authentication check before loading page
+- Server-side validation of policy state before approval
+- Automatic redirection for unauthorized users
+
+### File Structure
+```
+app/gerencia/
+  validacion/
+    page.tsx              - Main validation page
+    actions.ts            - Server actions for validation
+components/gerencia/
+  PolizasPendientesTable.tsx  - Interactive table component
+types/
+  poliza.ts             - Updated with pendiente state
+```
+
+### Integration Points
+- **Policy Creation**: `app/polizas/nueva/actions.ts:50` - Creates with estado='pendiente'
+- **Profile System**: Uses profiles.role for authorization
+- **Audit System**: Integrates with polizas_historial_ediciones
+- **Navigation**: Accessible from navbar "Validación" link (visible only to admin/usuario roles)
+
+### Future Enhancements
+- Dashboard widget showing pending policy count
+- Email notifications to managers when policies await validation
+- Bulk validation for multiple policies
+- Rejection reason form with predefined options
+- Filter/search in pending policies table
+- Export pending policies list
+- Manager-specific validation quotas or assignments
+- Validation SLA tracking (time from creation to validation)
