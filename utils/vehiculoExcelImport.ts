@@ -3,6 +3,7 @@
 import * as ExcelJS from "exceljs";
 import type { VehiculoAutomotor, VehiculoExcelRow, ExcelImportResult } from "@/types/poliza";
 import { validarVehiculoAutomotor } from "./polizaValidation";
+import { VEHICULO_RULES } from "./validationConstants";
 
 /**
  * Nombres de columnas esperados en el Excel (case-insensitive)
@@ -13,6 +14,7 @@ const COLUMNAS_ESPERADAS = {
 	franquicia: ["franquicia", "deductible", "deducible"],
 	nro_chasis: ["nro chasis", "nro_chasis", "numero chasis", "chasis", "chassis"],
 	uso: ["uso", "use", "tipo uso"],
+	coaseguro: ["coaseguro", "co-seguro", "coinsurance", "porcentaje coaseguro"],
 	tipo_vehiculo: ["tipo vehiculo", "tipo_vehiculo", "tipo", "vehicle type"],
 	marca: ["marca", "brand"],
 	modelo: ["modelo", "model"],
@@ -120,6 +122,11 @@ function parsearFilaVehiculo(fila: unknown[], mapa: Record<string, number>): Par
 		}
 	}
 
+	// NUEVO: Coaseguro (obligatorio)
+	if (mapa.coaseguro !== undefined) {
+		vehiculo.coaseguro = convertirANumero(fila[mapa.coaseguro]) || 0;
+	}
+
 	// Campos opcionales
 	if (mapa.tipo_vehiculo !== undefined) {
 		vehiculo.tipo_vehiculo_id = convertirAString(fila[mapa.tipo_vehiculo]);
@@ -134,7 +141,8 @@ function parsearFilaVehiculo(fila: unknown[], mapa: Record<string, number>): Par
 	}
 
 	if (mapa.ano !== undefined) {
-		vehiculo.ano = convertirAString(fila[mapa.ano]);
+		const anoNum = convertirANumero(fila[mapa.ano]);
+		vehiculo.ano = anoNum !== undefined ? Math.floor(anoNum) : undefined;
 	}
 
 	if (mapa.color !== undefined) {
@@ -205,7 +213,7 @@ export async function importarVehiculosDesdeExcel(archivo: File): Promise<ExcelI
 		const mapa = mapearColumnas(headers);
 
 		// Validar que se mapearon las columnas obligatorias
-		const columnasObligatorias = ["placa", "valor_asegurado", "franquicia", "nro_chasis", "uso"];
+		const columnasObligatorias = ["placa", "valor_asegurado", "franquicia", "nro_chasis", "uso", "coaseguro"];
 		const columnasFaltantes = columnasObligatorias.filter((col) => mapa[col] === undefined);
 
 		if (columnasFaltantes.length > 0) {
@@ -289,6 +297,7 @@ export async function generarTemplateExcel(): Promise<void> {
 		"Franquicia",
 		"Nro Chasis",
 		"Uso",
+		"Coaseguro",
 		"Tipo Vehiculo",
 		"Marca",
 		"Modelo",
@@ -303,18 +312,19 @@ export async function generarTemplateExcel(): Promise<void> {
 	const ejemploFila = [
 		"ABC-123",
 		50000,
-		5000,
+		VEHICULO_RULES.FRANQUICIAS_DISPONIBLES[0], // 700 Bs
 		"CH123456789",
-		"particular",
+		VEHICULO_RULES.TIPOS_USO[1], // "particular"
+		VEHICULO_RULES.COASEGURO_MIN, // 0%
 		"Vagoneta",
 		"Toyota",
 		"Land Cruiser",
-		"2020",
+		2020,
 		"Blanco",
 		2,
 		"MOT987654",
 		5,
-		"La Paz",
+		VEHICULO_RULES.DEPARTAMENTOS_BOLIVIA[0], // "La Paz"
 	];
 
 	// Crear workbook con ExcelJS

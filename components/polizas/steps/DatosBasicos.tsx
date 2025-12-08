@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ChevronRight, ChevronLeft, CheckCircle2, Plus } from "lucide-react";
-import type { DatosBasicosPoliza, CompaniaAseguradora, Regional, Categoria } from "@/types/poliza";
+import { ChevronRight, ChevronLeft, CheckCircle2 } from "lucide-react";
+import type { DatosBasicosPoliza, CompaniaAseguradora, Regional, Categoria, GrupoProduccion, Moneda } from "@/types/poliza";
 import { validarDatosBasicos } from "@/utils/polizaValidation";
+import { POLIZA_RULES } from "@/utils/validationConstants";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -43,7 +44,9 @@ export function DatosBasicos({ datos, onChange, onSiguiente, onAnterior }: Props
 			fecha_emision_compania: "",
 			responsable_id: "",
 			regional_id: "",
-			categoria_id: "",
+			categoria_id: undefined,
+			grupo_produccion: "generales",
+			moneda: "Bs",
 		}
 	);
 
@@ -57,8 +60,6 @@ export function DatosBasicos({ datos, onChange, onSiguiente, onAnterior }: Props
 	// Estados
 	const [cargandoCatalogos, setCargandoCatalogos] = useState(true);
 	const [errores, setErrores] = useState<Record<string, string>>({});
-	const [mostrarNuevaCategoria, setMostrarNuevaCategoria] = useState(false);
-	const [nuevaCategoria, setNuevaCategoria] = useState("");
 
 	const supabase = createClient();
 
@@ -127,7 +128,7 @@ export function DatosBasicos({ datos, onChange, onSiguiente, onAnterior }: Props
 	};
 
 	// Manejar cambios en el formulario
-	const handleChange = (campo: keyof DatosBasicosPoliza, valor: string) => {
+	const handleChange = (campo: keyof DatosBasicosPoliza, valor: string | GrupoProduccion | Moneda | undefined) => {
 		const nuevosDatos = {
 			...formData,
 			[campo]: valor,
@@ -140,34 +141,6 @@ export function DatosBasicos({ datos, onChange, onSiguiente, onAnterior }: Props
 			const nuevosErrores = { ...errores };
 			delete nuevosErrores[campo];
 			setErrores(nuevosErrores);
-		}
-	};
-
-	// Agregar nueva categoría
-	const handleAgregarCategoria = async () => {
-		if (!nuevaCategoria.trim()) return;
-
-		try {
-			const { data, error } = await supabase
-				.from("categorias")
-				.insert({
-					nombre: nuevaCategoria.trim(),
-					activo: true,
-				})
-				.select()
-				.single();
-
-			if (error) throw error;
-
-			if (data) {
-				setCategorias([...categorias, data]);
-				handleChange("categoria_id", data.id);
-				setNuevaCategoria("");
-				setMostrarNuevaCategoria(false);
-			}
-		} catch (error) {
-			console.error("Error agregando categoría:", error);
-			alert("Error al agregar categoría");
 		}
 	};
 
@@ -214,7 +187,8 @@ export function DatosBasicos({ datos, onChange, onSiguiente, onAnterior }: Props
 		formData.fecha_emision_compania &&
 		formData.responsable_id &&
 		formData.regional_id &&
-		formData.categoria_id;
+		formData.grupo_produccion &&
+		formData.moneda;
 
 	const esCompleto = datos !== null;
 
@@ -397,68 +371,67 @@ export function DatosBasicos({ datos, onChange, onSiguiente, onAnterior }: Props
 					{errores.regional_id && <p className="text-sm text-red-600">{errores.regional_id}</p>}
 				</div>
 
-				{/* Categoría */}
+				{/* Grupo de negocios (antes Categoría) - AHORA OPCIONAL */}
 				<div className="space-y-2">
-					<div className="flex items-center justify-between">
-						<Label htmlFor="categoria">
-							Categoría <span className="text-red-500">*</span>
-						</Label>
-						<Button
-							variant="ghost"
-							size="sm"
-							onClick={() => setMostrarNuevaCategoria(!mostrarNuevaCategoria)}
-						>
-							<Plus className="h-4 w-4 mr-1" />
-							Nueva
-						</Button>
-					</div>
+					<Label htmlFor="categoria">Grupo de negocios</Label>
+					<Select
+						value={formData.categoria_id || ""}
+						onValueChange={(value) => handleChange("categoria_id", value || undefined)}
+					>
+						<SelectTrigger className={errores.categoria_id ? "border-red-500" : ""}>
+							<SelectValue placeholder="Seleccione un grupo (opcional)" />
+						</SelectTrigger>
+						<SelectContent>
+							{categorias.map((categoria) => (
+								<SelectItem key={categoria.id} value={categoria.id}>
+									{categoria.nombre}
+								</SelectItem>
+							))}
+						</SelectContent>
+					</Select>
+					{errores.categoria_id && <p className="text-sm text-red-600">{errores.categoria_id}</p>}
+				</div>
 
-					{mostrarNuevaCategoria ? (
-						<div className="flex gap-2">
-							<Input
-								value={nuevaCategoria}
-								onChange={(e) => setNuevaCategoria(e.target.value)}
-								placeholder="Nombre de la categoría"
-								onKeyPress={(e) => {
-									if (e.key === "Enter") {
-										handleAgregarCategoria();
-									}
-								}}
-							/>
-							<Button onClick={handleAgregarCategoria} size="sm">
-								Agregar
-							</Button>
-							<Button
-								variant="outline"
-								size="sm"
-								onClick={() => {
-									setMostrarNuevaCategoria(false);
-									setNuevaCategoria("");
-								}}
-							>
-								Cancelar
-							</Button>
-						</div>
-					) : (
-						<>
-							<Select
-								value={formData.categoria_id}
-								onValueChange={(value) => handleChange("categoria_id", value)}
-							>
-								<SelectTrigger className={errores.categoria_id ? "border-red-500" : ""}>
-									<SelectValue placeholder="Seleccione una categoría" />
-								</SelectTrigger>
-								<SelectContent>
-									{categorias.map((categoria) => (
-										<SelectItem key={categoria.id} value={categoria.id}>
-											{categoria.nombre}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
-							{errores.categoria_id && <p className="text-sm text-red-600">{errores.categoria_id}</p>}
-						</>
-					)}
+				{/* NUEVO: Grupo de producción (usa constantes centralizadas) */}
+				<div className="space-y-2">
+					<Label htmlFor="grupo_produccion">
+						Grupo de producción <span className="text-red-500">*</span>
+					</Label>
+					<Select
+						value={formData.grupo_produccion}
+						onValueChange={(value) => handleChange("grupo_produccion", value as GrupoProduccion)}
+					>
+						<SelectTrigger className={errores.grupo_produccion ? "border-red-500" : ""}>
+							<SelectValue />
+						</SelectTrigger>
+						<SelectContent>
+							{POLIZA_RULES.GRUPOS_PRODUCCION.map((grupo) => (
+								<SelectItem key={grupo} value={grupo}>
+									{grupo.charAt(0).toUpperCase() + grupo.slice(1)}
+								</SelectItem>
+							))}
+						</SelectContent>
+					</Select>
+					{errores.grupo_produccion && <p className="text-sm text-red-600">{errores.grupo_produccion}</p>}
+				</div>
+
+				{/* NUEVO: Moneda (usa constantes centralizadas) */}
+				<div className="space-y-2">
+					<Label htmlFor="moneda">
+						Moneda <span className="text-red-500">*</span>
+					</Label>
+					<Select value={formData.moneda} onValueChange={(value) => handleChange("moneda", value as Moneda)}>
+						<SelectTrigger className={errores.moneda ? "border-red-500" : ""}>
+							<SelectValue />
+						</SelectTrigger>
+						<SelectContent>
+							<SelectItem value="Bs">Bolivianos (Bs)</SelectItem>
+							<SelectItem value="USD">Dólares (USD)</SelectItem>
+							<SelectItem value="USDT">Tether (USDT)</SelectItem>
+							<SelectItem value="UFV">UFV</SelectItem>
+						</SelectContent>
+					</Select>
+					{errores.moneda && <p className="text-sm text-red-600">{errores.moneda}</p>}
 				</div>
 			</div>
 

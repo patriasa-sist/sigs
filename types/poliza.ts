@@ -90,6 +90,8 @@ export type AseguradoSeleccionado = ClienteBase & {
 // PASO 2: DATOS BÁSICOS DE LA PÓLIZA
 // ============================================
 
+export type GrupoProduccion = "generales" | "personales";
+
 export type DatosBasicosPoliza = {
 	numero_poliza: string;
 	compania_aseguradora_id: string;
@@ -99,7 +101,9 @@ export type DatosBasicosPoliza = {
 	fecha_emision_compania: string;
 	responsable_id: string; // ID del usuario comercial
 	regional_id: string;
-	categoria_id: string;
+	categoria_id?: string; // Ahora es opcional (grupo de negocios)
+	grupo_produccion: GrupoProduccion; // NUEVO: generales o personales
+	moneda: Moneda; // NUEVO: Moneda se define a nivel de póliza
 };
 
 // ============================================
@@ -115,11 +119,12 @@ export type VehiculoAutomotor = {
 	franquicia: number;
 	nro_chasis: string;
 	uso: "publico" | "particular";
+	coaseguro: number; // NUEVO: Porcentaje de coaseguro (0-100)
 	// Campos opcionales
 	tipo_vehiculo_id?: string;
 	marca_id?: string;
 	modelo?: string;
-	ano?: string;
+	ano?: number; // Cambiado de string a number
 	color?: string;
 	ejes?: number;
 	nro_motor?: string;
@@ -425,10 +430,11 @@ export type VehiculoAutomotorDB = {
 	franquicia: number;
 	nro_chasis: string;
 	uso: "publico" | "particular";
+	coaseguro: number; // NUEVO: Porcentaje de coaseguro (0-100)
 	tipo_vehiculo_id?: string;
 	marca_id?: string;
 	modelo?: string;
-	ano?: string;
+	ano?: number; // Cambiado de string a number
 	color?: string;
 	ejes?: number;
 	nro_motor?: string;
@@ -464,10 +470,11 @@ export type VehiculoExcelRow = {
 	franquicia: number | string;
 	nro_chasis: string;
 	uso: string; // Se validará contra "publico" | "particular"
+	coaseguro: number | string; // NUEVO: Porcentaje de coaseguro (0-100)
 	tipo_vehiculo?: string;
 	marca?: string;
 	modelo?: string;
-	ano?: string;
+	ano?: number | string; // Puede venir como número o string del Excel
 	color?: string;
 	ejes?: number | string;
 	nro_motor?: string;

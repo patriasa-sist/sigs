@@ -297,6 +297,9 @@ export function AutomotorForm({ datos, onChange, onSiguiente, onAnterior }: Prop
 									Uso
 								</th>
 								<th className="px-4 py-3 text-center text-xs font-medium text-gray-700 uppercase">
+									Coaseguro (%)
+								</th>
+								<th className="px-4 py-3 text-center text-xs font-medium text-gray-700 uppercase">
 									Acciones
 								</th>
 							</tr>
@@ -318,10 +321,10 @@ export function AutomotorForm({ datos, onChange, onSiguiente, onAnterior }: Prop
 										{vehiculo.ano || "-"}
 									</td>
 									<td className="px-4 py-3 text-sm text-gray-900 text-right">
-										{vehiculo.valor_asegurado.toLocaleString("es-BO")}
+										{vehiculo.valor_asegurado.toLocaleString("es-BO", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
 									</td>
 									<td className="px-4 py-3 text-sm text-gray-900 text-right">
-										{vehiculo.franquicia.toLocaleString("es-BO")}
+										{vehiculo.franquicia.toLocaleString("es-BO", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
 									</td>
 									<td className="px-4 py-3 text-center">
 										<span
@@ -333,6 +336,9 @@ export function AutomotorForm({ datos, onChange, onSiguiente, onAnterior }: Prop
 										>
 											{vehiculo.uso === "publico" ? "Público" : "Particular"}
 										</span>
+									</td>
+									<td className="px-4 py-3 text-center text-sm text-gray-900">
+										{vehiculo.coaseguro?.toLocaleString("es-BO", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%
 									</td>
 									<td className="px-4 py-3 text-center">
 										<div className="flex items-center justify-center gap-2">

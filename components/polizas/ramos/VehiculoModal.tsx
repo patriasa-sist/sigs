@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { X } from "lucide-react";
 import type { VehiculoAutomotor, TipoVehiculo, MarcaVehiculo } from "@/types/poliza";
 import { validarVehiculoAutomotor } from "@/utils/polizaValidation";
+import { VEHICULO_RULES } from "@/utils/validationConstants";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,13 +22,14 @@ export function VehiculoModal({ vehiculo, onGuardar, onCancelar }: Props) {
 		vehiculo || {
 			placa: "",
 			valor_asegurado: 0,
-			franquicia: 0,
+			franquicia: VEHICULO_RULES.FRANQUICIAS_DISPONIBLES[0], // Primer valor por defecto (700)
 			nro_chasis: "",
 			uso: "particular",
+			coaseguro: VEHICULO_RULES.COASEGURO_MIN, // 0% por defecto
 			tipo_vehiculo_id: undefined,
 			marca_id: undefined,
 			modelo: "",
-			ano: "",
+			ano: undefined,
 			color: "",
 			ejes: undefined,
 			nro_motor: "",
@@ -168,21 +170,26 @@ export function VehiculoModal({ vehiculo, onGuardar, onCancelar }: Props) {
 							)}
 						</div>
 
-						{/* Franquicia */}
+						{/* Franquicia (ahora parametrizada) */}
 						<div className="space-y-2">
 							<Label htmlFor="franquicia">
 								Franquicia (Bs) <span className="text-red-500">*</span>
 							</Label>
-							<Input
-								id="franquicia"
-								type="number"
-								min="0"
-								step="0.01"
-								value={formData.franquicia}
-								onChange={(e) => handleChange("franquicia", parseFloat(e.target.value) || 0)}
-								placeholder="5000"
-								className={errores.franquicia ? "border-red-500" : ""}
-							/>
+							<Select
+								value={formData.franquicia?.toString()}
+								onValueChange={(value) => handleChange("franquicia", parseInt(value))}
+							>
+								<SelectTrigger className={errores.franquicia ? "border-red-500" : ""}>
+									<SelectValue placeholder="Seleccione franquicia" />
+								</SelectTrigger>
+								<SelectContent>
+									{VEHICULO_RULES.FRANQUICIAS_DISPONIBLES.map((valor) => (
+										<SelectItem key={valor} value={valor.toString()}>
+											{valor.toLocaleString("es-BO")} Bs
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
 							{errores.franquicia && <p className="text-sm text-red-600">{errores.franquicia}</p>}
 						</div>
 
@@ -216,6 +223,25 @@ export function VehiculoModal({ vehiculo, onGuardar, onCancelar }: Props) {
 								</SelectContent>
 							</Select>
 							{errores.uso && <p className="text-sm text-red-600">{errores.uso}</p>}
+						</div>
+
+						{/* NUEVO: Coaseguro (usa constantes centralizadas) */}
+						<div className="space-y-2">
+							<Label htmlFor="coaseguro">
+								Coaseguro (%) <span className="text-red-500">*</span>
+							</Label>
+							<Input
+								id="coaseguro"
+								type="number"
+								min={VEHICULO_RULES.COASEGURO_MIN}
+								max={VEHICULO_RULES.COASEGURO_MAX}
+								step="0.01"
+								value={formData.coaseguro ?? ""}
+								onChange={(e) => handleChange("coaseguro", parseFloat(e.target.value) || 0)}
+								placeholder="0"
+								className={errores.coaseguro ? "border-red-500" : ""}
+							/>
+							{errores.coaseguro && <p className="text-sm text-red-600">{errores.coaseguro}</p>}
 						</div>
 
 						{/* CAMPOS OPCIONALES */}
@@ -274,16 +300,23 @@ export function VehiculoModal({ vehiculo, onGuardar, onCancelar }: Props) {
 							/>
 						</div>
 
-						{/* Año */}
+						{/* Año (usa constantes centralizadas) */}
 						<div className="space-y-2">
 							<Label htmlFor="ano">Año</Label>
 							<Input
 								id="ano"
-								value={formData.ano}
-								onChange={(e) => handleChange("ano", e.target.value)}
+								type="number"
+								min={VEHICULO_RULES.ANO_MIN}
+								max={VEHICULO_RULES.ANO_MAX}
+								value={formData.ano ?? ""}
+								onChange={(e) => {
+									const valor = e.target.value ? parseInt(e.target.value) : undefined;
+									handleChange("ano", valor);
+								}}
 								placeholder="2020"
-								maxLength={4}
+								className={errores.ano ? "border-red-500" : ""}
 							/>
+							{errores.ano && <p className="text-sm text-red-600">{errores.ano}</p>}
 						</div>
 
 						{/* Color */}
@@ -297,15 +330,24 @@ export function VehiculoModal({ vehiculo, onGuardar, onCancelar }: Props) {
 							/>
 						</div>
 
-						{/* Plaza de Circulación */}
+						{/* Plaza de Circulación (ahora dropdown) */}
 						<div className="space-y-2">
 							<Label htmlFor="plaza">Plaza de Circulación</Label>
-							<Input
-								id="plaza"
-								value={formData.plaza_circulacion}
-								onChange={(e) => handleChange("plaza_circulacion", e.target.value)}
-								placeholder="La Paz"
-							/>
+							<Select
+								value={formData.plaza_circulacion || ""}
+								onValueChange={(value) => handleChange("plaza_circulacion", value || undefined)}
+							>
+								<SelectTrigger>
+									<SelectValue placeholder="Seleccione departamento" />
+								</SelectTrigger>
+								<SelectContent>
+									{VEHICULO_RULES.DEPARTAMENTOS_BOLIVIA.map((depto) => (
+										<SelectItem key={depto} value={depto}>
+											{depto}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
 						</div>
 
 						{/* Número de Ejes */}

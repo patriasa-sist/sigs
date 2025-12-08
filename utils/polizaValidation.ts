@@ -8,6 +8,7 @@ import type {
 	ValidationResult,
 	DocumentoPoliza,
 } from "@/types/poliza";
+import { POLIZA_RULES, VEHICULO_RULES, PAGO_RULES, VALIDATION_MESSAGES } from "./validationConstants";
 
 /**
  * Valida los datos básicos de una póliza (Paso 2)
@@ -79,9 +80,24 @@ export function validarDatosBasicos(datos: Partial<DatosBasicosPoliza>): Validat
 		errores.push({ campo: "regional_id", mensaje: "Regional es requerida" });
 	}
 
-	// Validar categoría
-	if (!datos.categoria_id) {
-		errores.push({ campo: "categoria_id", mensaje: "Categoría es requerida" });
+	// Categoría (Grupo de negocios) ahora es OPCIONAL - no se valida
+
+	// Validar grupo de producción
+	if (!datos.grupo_produccion) {
+		errores.push({ campo: "grupo_produccion", mensaje: VALIDATION_MESSAGES.CAMPO_REQUERIDO });
+	} else if (!POLIZA_RULES.GRUPOS_PRODUCCION.includes(datos.grupo_produccion as any)) {
+		errores.push({
+			campo: "grupo_produccion",
+			mensaje: `Grupo de producción debe ser: ${POLIZA_RULES.GRUPOS_PRODUCCION.join(" o ")}`,
+		});
+	}
+
+	// Validar moneda
+	if (!datos.moneda || !POLIZA_RULES.MONEDAS.includes(datos.moneda as any)) {
+		errores.push({
+			campo: "moneda",
+			mensaje: `Moneda debe ser: ${POLIZA_RULES.MONEDAS.join(", ")}`,
+		});
 	}
 
 	return {
@@ -113,8 +129,21 @@ export function validarVehiculoAutomotor(vehiculo: Partial<VehiculoAutomotor>): 
 		errores.push({ campo: "nro_chasis", mensaje: "Número de chasis es requerido" });
 	}
 
-	if (!vehiculo.uso || (vehiculo.uso !== "publico" && vehiculo.uso !== "particular")) {
-		errores.push({ campo: "uso", mensaje: "Uso debe ser 'público' o 'particular'" });
+	if (!vehiculo.uso || !VEHICULO_RULES.TIPOS_USO.includes(vehiculo.uso as any)) {
+		errores.push({
+			campo: "uso",
+			mensaje: `Uso debe ser: ${VEHICULO_RULES.TIPOS_USO.join(" o ")}`,
+		});
+	}
+
+	// Validar coaseguro (obligatorio)
+	if (vehiculo.coaseguro === undefined || vehiculo.coaseguro === null) {
+		errores.push({ campo: "coaseguro", mensaje: VALIDATION_MESSAGES.CAMPO_REQUERIDO });
+	} else if (vehiculo.coaseguro < VEHICULO_RULES.COASEGURO_MIN || vehiculo.coaseguro > VEHICULO_RULES.COASEGURO_MAX) {
+		errores.push({
+			campo: "coaseguro",
+			mensaje: VALIDATION_MESSAGES.RANGO_INVALIDO(VEHICULO_RULES.COASEGURO_MIN, VEHICULO_RULES.COASEGURO_MAX),
+		});
 	}
 
 	// Validaciones opcionales
@@ -124,6 +153,18 @@ export function validarVehiculoAutomotor(vehiculo: Partial<VehiculoAutomotor>): 
 
 	if (vehiculo.nro_asientos !== undefined && vehiculo.nro_asientos !== null && vehiculo.nro_asientos <= 0) {
 		errores.push({ campo: "nro_asientos", mensaje: "Número de asientos debe ser mayor a 0" });
+	}
+
+	// Validar año (solo números entre constantes)
+	if (vehiculo.ano !== undefined && vehiculo.ano !== null) {
+		if (typeof vehiculo.ano !== "number" || !Number.isInteger(vehiculo.ano)) {
+			errores.push({ campo: "ano", mensaje: VALIDATION_MESSAGES.NUMERO_INVALIDO });
+		} else if (vehiculo.ano < VEHICULO_RULES.ANO_MIN || vehiculo.ano > VEHICULO_RULES.ANO_MAX) {
+			errores.push({
+				campo: "ano",
+				mensaje: VALIDATION_MESSAGES.RANGO_INVALIDO(VEHICULO_RULES.ANO_MIN, VEHICULO_RULES.ANO_MAX),
+			});
+		}
 	}
 
 	return {
@@ -175,8 +216,11 @@ export function validarModalidadPago(pago: Partial<ModalidadPago>): ValidationRe
 	}
 
 	// Validar moneda
-	if (!pago.moneda || !["Bs", "USD", "USDT", "UFV"].includes(pago.moneda)) {
-		errores.push({ campo: "moneda", mensaje: "Moneda inválida" });
+	if (!pago.moneda || !POLIZA_RULES.MONEDAS.includes(pago.moneda as any)) {
+		errores.push({
+			campo: "moneda",
+			mensaje: `Moneda debe ser: ${POLIZA_RULES.MONEDAS.join(", ")}`,
+		});
 	}
 
 	if (pago.tipo === "contado") {
@@ -282,11 +326,11 @@ export function validarFechasPago(pago: ModalidadPago): ValidationResult {
 }
 
 /**
- * Calcula prima neta y comisión
+ * Calcula prima neta y comisión usando constantes centralizadas
  */
 export function calcularPrimaNetaYComision(prima_total: number): { prima_neta: number; comision: number } {
-	const prima_neta = prima_total * 0.87;
-	const comision = prima_neta * 0.02;
+	const prima_neta = prima_total * PAGO_RULES.PORCENTAJE_PRIMA_NETA;
+	const comision = prima_neta * PAGO_RULES.PORCENTAJE_COMISION;
 
 	return {
 		prima_neta: Math.round(prima_neta * 100) / 100, // Redondear a 2 decimales
