@@ -57,17 +57,17 @@ export default function CuotasModal({ poliza, open, onClose, onSelectQuota }: Cu
 
 	return (
 		<Dialog open={open} onOpenChange={onClose}>
-			<DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+			<DialogContent className="!max-w-[95vw] sm:!max-w-[95vw] md:!max-w-[95vw] lg:!max-w-[95vw] w-full max-h-[90vh] overflow-y-auto">
 				<DialogHeader>
 					<DialogTitle className="text-xl">
 						Cuotas de Póliza {poliza.numero_poliza}
 					</DialogTitle>
-					<DialogDescription>
-						<div className="space-y-1">
-							<p><strong>Cliente:</strong> {poliza.client.nombre_completo}</p>
-							<p><strong>Compañía:</strong> {poliza.compania.nombre}</p>
-							<p><strong>Ramo:</strong> {poliza.ramo}</p>
-							<p><strong>Prima Total:</strong> {poliza.moneda} {formatCurrency(poliza.prima_total)}</p>
+					<DialogDescription asChild>
+						<div className="space-y-1 text-sm text-muted-foreground">
+							<div><span className="font-semibold">Cliente:</span> {poliza.client.nombre_completo}</div>
+							<div><span className="font-semibold">Compañía:</span> {poliza.compania.nombre}</div>
+							<div><span className="font-semibold">Ramo:</span> {poliza.ramo}</div>
+							<div><span className="font-semibold">Prima Total:</span> {poliza.moneda} {formatCurrency(poliza.prima_total)}</div>
 						</div>
 					</DialogDescription>
 				</DialogHeader>

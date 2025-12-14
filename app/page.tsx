@@ -103,7 +103,7 @@ const Dashboard = () => {
 			description: "Gestión de cobranzas y pagos",
 			icon: DollarSign,
 			color: "bg-gray-50 hover:bg-gray-100 border-gray-200",
-			link: "/vencimientos",
+			link: "/cobranzas",
 			sections: [
 				{ name: "Busqueda de pólizas", icon: Building2 },
 				{ name: "Reportes", icon: FileText },

@@ -183,12 +183,12 @@ export default function RegistrarPagoModal({ cuota, poliza, open, onClose, onSuc
 			<DialogContent className="max-w-2xl">
 				<DialogHeader>
 					<DialogTitle>Registrar Pago - Cuota #{cuota.numero_cuota}</DialogTitle>
-					<DialogDescription>
-						<div className="space-y-1">
-							<p><strong>Póliza:</strong> {poliza.numero_poliza}</p>
-							<p><strong>Cliente:</strong> {poliza.client.nombre_completo}</p>
-							<p><strong>Monto de la cuota:</strong> {poliza.moneda} {formatCurrency(cuota.monto)}</p>
-							<p><strong>Fecha vencimiento:</strong> {new Date(cuota.fecha_vencimiento).toLocaleDateString("es-BO")}</p>
+					<DialogDescription asChild>
+						<div className="space-y-1 text-sm text-muted-foreground">
+							<div><span className="font-semibold">Póliza:</span> {poliza.numero_poliza}</div>
+							<div><span className="font-semibold">Cliente:</span> {poliza.client.nombre_completo}</div>
+							<div><span className="font-semibold">Monto de la cuota:</span> {poliza.moneda} {formatCurrency(cuota.monto)}</div>
+							<div><span className="font-semibold">Fecha vencimiento:</span> {new Date(cuota.fecha_vencimiento).toLocaleDateString("es-BO")}</div>
 						</div>
 					</DialogDescription>
 				</DialogHeader>
