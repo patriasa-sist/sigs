@@ -70,10 +70,21 @@ errores a solucionar:
 1. poliza automotor no se sube a la db
 1. no se cargan archivos a la db, algo parece estar mal
 1. cuales son los esquemas para la db en los seguros de salud, incendio, responsabilidad civil, riesgos varios miscelaneos, accidentes personales, vida y sepelio
+1. modificar riesgos varios miscelaneos
 1. muchos errores de lint
 1. agregar seguridad RLS a la db
 1. optimizar querys de la db
 1. optimizar frontend de polizas
+
+el paso 3 para las siguientes polizas no es visible a pesar de que ya fue programado:
+Accidentes personales (general y personas)
+Defuncion o Sepelio
+Defuncion o Sepelio corto y largo plazo
+Vida en grupo corto plazo
+Vida individual corto y largo plazo
+
+en salud al buscar a los asegurados se deberia poder volver a seleccionar al mismo cliente que ya se agrego
+Aeronavegacion agregado?
 
 -   trabajar en seccion de edicion de datos de polizas
 -   mejorar el modulo de creacion de clientes
