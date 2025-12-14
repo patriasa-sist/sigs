@@ -140,13 +140,15 @@ export async function obtenerPolizasConPendientes(): Promise<ObtenerPolizasConPa
 
 			if (clientData) {
 				if (clientData.client_type === "natural") {
-					const natural = (clientData.natural_clients as any)?.[0];
+					// natural_clients es un objeto, no un array
+					const natural = clientData.natural_clients as any;
 					if (natural) {
 						nombreCompleto = `${natural.primer_nombre || ""} ${natural.segundo_nombre || ""} ${natural.primer_apellido || ""} ${natural.segundo_apellido || ""}`.trim();
 						documento = natural.numero_documento || "N/A";
 					}
 				} else {
-					const juridic = (clientData.juridic_clients as any)?.[0];
+					// juridic_clients es un objeto, no un array
+					const juridic = clientData.juridic_clients as any;
 					if (juridic) {
 						nombreCompleto = juridic.razon_social || "N/A";
 						documento = juridic.nit || "N/A";
@@ -587,13 +589,15 @@ export async function exportarReporte(filtros: ExportFilters): Promise<CobranzaS
 
 			if (clientData) {
 				if (clientData.client_type === "natural") {
-					const natural = clientData.natural_clients?.[0];
+					// natural_clients es un objeto, no un array
+					const natural = clientData.natural_clients;
 					if (natural) {
 						cliente = `${natural.primer_nombre} ${natural.primer_apellido}`;
 						ciNit = natural.numero_documento;
 					}
 				} else {
-					const juridic = clientData.juridic_clients?.[0];
+					// juridic_clients es un objeto, no un array
+					const juridic = clientData.juridic_clients;
 					if (juridic) {
 						cliente = juridic.razon_social;
 						ciNit = juridic.nit;
