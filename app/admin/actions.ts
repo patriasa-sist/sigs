@@ -4,11 +4,13 @@ import { createClient } from "@/utils/supabase/server";
 import { validateRoleChange } from "@/utils/auth/roleValidation";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import type { UserRole } from "@/utils/auth/helpers";
+import { VALID_ROLES } from "@/utils/auth/roles";
 
 const updateRoleSchema = z.object({
 	userId: z.uuid("Invalid user ID format"),
-	newRole: z.enum(["admin", "usuario", "agente", "comercial", "invitado", "desactivado"], {
-		message: "Role must be one of: admin, usuario, agente, comercial, invitado, desactivado",
+	newRole: z.enum(VALID_ROLES as readonly [UserRole, ...UserRole[]], {
+		message: `Role must be one of: ${VALID_ROLES.join(", ")}`,
 	}),
 });
 
@@ -17,7 +19,7 @@ export async function updateUserRole(formData: FormData) {
 		// Validate input
 		const rawData = {
 			userId: formData.get("userId") as string,
-			newRole: formData.get("newRole") as "admin" | "usuario" | "agente" | "comercial" | "invitado" | "desactivado",
+			newRole: formData.get("newRole") as UserRole,
 		};
 
 		const validation = updateRoleSchema.safeParse(rawData);

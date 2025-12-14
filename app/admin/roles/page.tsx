@@ -3,8 +3,9 @@ import { requireAdmin } from "@/utils/auth/helpers";
 import { createClient } from "@/utils/supabase/server";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Users, Shield, UserCheck, Crown, Calendar } from "lucide-react";
+import { Users, Shield, Crown, Calendar } from "lucide-react";
 import { UserRoleManager } from "@/app/admin/roles/components/UserRoleManager";
+import { VALID_ROLES, getRoleConfig, getRoleLabel } from "@/utils/auth/roles";
 
 export default async function AdminRolesPage() {
 	// Ensure user is admin
@@ -39,12 +40,11 @@ export default async function AdminRolesPage() {
 
 	// Calculate statistics
 	const totalUsers = users?.length || 0;
-	const adminCount = users?.filter((user) => user.role === "admin").length || 0;
-	const usuarioCount = users?.filter((user) => user.role === "usuario").length || 0;
-	const agenteCount = users?.filter((user) => user.role === "agente").length || 0;
-	const comercialCount = users?.filter((user) => user.role === "comercial").length || 0;
-	const invitadoCount = users?.filter((user) => user.role === "invitado").length || 0;
-	const desactivadoCount = users?.filter((user) => user.role === "desactivado").length || 0;
+	// Generate role counts dynamically
+	const roleCounts = VALID_ROLES.reduce((acc, role) => {
+		acc[role] = users?.filter((user) => user.role === role).length || 0;
+		return acc;
+	}, {} as Record<string, number>);
 
 	return (
 		<div className="flex-1 w-full flex flex-col gap-8">
@@ -63,7 +63,8 @@ export default async function AdminRolesPage() {
 			</div>
 
 			{/* Statistics Cards */}
-			<div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+			<div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
+				{/* Total Users Card */}
 				<Card className="bg-gradient-to-br from-purple-50 to-white">
 					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-4">
 						<CardTitle className="text-xs font-medium">Total</CardTitle>
@@ -74,65 +75,24 @@ export default async function AdminRolesPage() {
 					</CardContent>
 				</Card>
 
-				<Card className="bg-gradient-to-br from-orange-50 to-white">
-					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-4">
-						<CardTitle className="text-xs font-medium">Admin</CardTitle>
-						<Crown className="h-3 w-3 text-orange-600" />
-					</CardHeader>
-					<CardContent className="pb-3">
-						<div className="text-xl font-bold text-orange-600">{adminCount}</div>
-					</CardContent>
-				</Card>
-
-				<Card className="bg-gradient-to-br from-blue-50 to-white">
-					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-4">
-						<CardTitle className="text-xs font-medium">Usuario</CardTitle>
-						<UserCheck className="h-3 w-3 text-blue-600" />
-					</CardHeader>
-					<CardContent className="pb-3">
-						<div className="text-xl font-bold text-blue-600">{usuarioCount}</div>
-					</CardContent>
-				</Card>
-
-				<Card className="bg-gradient-to-br from-green-50 to-white">
-					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-4">
-						<CardTitle className="text-xs font-medium">Agente</CardTitle>
-						<Shield className="h-3 w-3 text-green-600" />
-					</CardHeader>
-					<CardContent className="pb-3">
-						<div className="text-xl font-bold text-green-600">{agenteCount}</div>
-					</CardContent>
-				</Card>
-
-				<Card className="bg-gradient-to-br from-cyan-50 to-white">
-					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-4">
-						<CardTitle className="text-xs font-medium">Comercial</CardTitle>
-						<UserCheck className="h-3 w-3 text-cyan-600" />
-					</CardHeader>
-					<CardContent className="pb-3">
-						<div className="text-xl font-bold text-cyan-600">{comercialCount}</div>
-					</CardContent>
-				</Card>
-
-				<Card className="bg-gradient-to-br from-yellow-50 to-white">
-					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-4">
-						<CardTitle className="text-xs font-medium">Invitado</CardTitle>
-						<UserCheck className="h-3 w-3 text-yellow-600" />
-					</CardHeader>
-					<CardContent className="pb-3">
-						<div className="text-xl font-bold text-yellow-600">{invitadoCount}</div>
-					</CardContent>
-				</Card>
-
-				<Card className="bg-gradient-to-br from-gray-50 to-white">
-					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-4">
-						<CardTitle className="text-xs font-medium">Desactivado</CardTitle>
-						<UserCheck className="h-3 w-3 text-gray-600" />
-					</CardHeader>
-					<CardContent className="pb-3">
-						<div className="text-xl font-bold text-gray-600">{desactivadoCount}</div>
-					</CardContent>
-				</Card>
+				{/* Dynamic Role Cards */}
+				{VALID_ROLES.map((role) => {
+					const config = getRoleConfig(role);
+					const Icon = config.icon;
+					return (
+						<Card key={role} className={`bg-gradient-to-br ${config.colorClasses.gradient}`}>
+							<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-4">
+								<CardTitle className="text-xs font-medium">{getRoleLabel(role)}</CardTitle>
+								<Icon className={`h-3 w-3 ${config.colorClasses.text}`} />
+							</CardHeader>
+							<CardContent className="pb-3">
+								<div className={`text-xl font-bold ${config.colorClasses.text}`}>
+									{roleCounts[role]}
+								</div>
+							</CardContent>
+						</Card>
+					);
+				})}
 			</div>
 
 			{/* Users Table */}
@@ -156,17 +116,16 @@ export default async function AdminRolesPage() {
 												variant={user.role === "admin" ? "default" : "secondary"}
 												className="text-xs"
 											>
-												{user.role === "admin" ? (
-													<>
-														<Crown className="w-3 h-3 mr-1" />
-														Admin
-													</>
-												) : (
-													<>
-														<UserCheck className="w-3 h-3 mr-1" />
-														User
-													</>
-												)}
+												{(() => {
+													const config = getRoleConfig(user.role);
+													const Icon = config.icon;
+													return (
+														<>
+															<Icon className="w-3 h-3 mr-1" />
+															{getRoleLabel(user.role)}
+														</>
+													);
+												})()}
 											</Badge>
 											{user.id === adminProfile.id && (
 												<Badge variant="outline" className="text-xs">
