@@ -131,3 +131,12 @@ NUEVO boton de impresion de detalles
 
 Incencidos>
 ubicacion del bien
+
+## Cobranzas
+
+crearemos el módulo de cobranza, este módulo solo tienen acceso las cuentas marcadas como cobranza y la visualización es similar a la de las pólizas, pero se centra en ser capaz de visualizar ques cuentas tienen cobranzas pendientes para cobrar y luego actualizar las cuotas como pagadas. Puede suceder que un cliente pague más o menos en su cuota pendiente y esto debe repercutir en la actualización de las demás cuotas pendientes. En otras palabras el agente de cobranza debe ser capaz de modificar las cuotas pendientes más no las cuotas ya pagadas.
+
+1. Cuotas Vencidas: Solo se pueden pagar dentro del mismo mes de vencimiento
+2. Roles: Solo "cobranza" y "admin" tienen acceso al módulo
+3. Excesos: Deben redistribuirse completamente antes de confirmar
+4. RLS: Las policies permiten SELECT/UPDATE solo a cobranza y admin

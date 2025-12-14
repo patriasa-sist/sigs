@@ -10,6 +10,7 @@ const PROTECTED_ROUTES = {
 	"/vencimientos": ["usuario", "agente", "comercial", "admin"],
 	"/clientes": ["usuario", "agente", "comercial", "admin"],
 	"/polizas": ["usuario", "agente", "comercial", "admin"],
+	"/cobranzas": ["cobranza", "admin"],
 } as const;
 
 const PUBLIC_ROUTES = [

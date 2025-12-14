@@ -2,7 +2,7 @@ import { createClient } from "@/utils/supabase/server";
 import { createClient as createBrowserClient } from "@/utils/supabase/client";
 import { redirect } from "next/navigation";
 
-export type UserRole = "admin" | "usuario" | "agente" | "comercial" | "invitado" | "desactivado";
+export type UserRole = "admin" | "usuario" | "agente" | "comercial" | "cobranza" | "invitado" | "desactivado";
 
 export interface UserProfile {
 	id: string;

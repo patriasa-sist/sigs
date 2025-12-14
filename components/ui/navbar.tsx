@@ -6,7 +6,7 @@ import { User } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Home, LogOut, User as UserIcon, FileText, CheckSquare } from "lucide-react";
+import { Home, LogOut, User as UserIcon, FileText, CheckSquare, DollarSign } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { signOut } from "@/app/auth/login/actions";
@@ -125,6 +125,16 @@ export function Navbar() {
 							<Button variant="ghost" size="sm" className="flex items-center space-x-2">
 								<CheckSquare className="h-4 w-4" />
 								<span>Validación</span>
+							</Button>
+						</Link>
+					)}
+
+					{/* Mostrar Cobranzas solo para cobranza y admin */}
+					{(profile?.role === "cobranza" || profile?.role === "admin") && (
+						<Link href="/cobranzas">
+							<Button variant="ghost" size="sm" className="flex items-center space-x-2">
+								<DollarSign className="h-4 w-4" />
+								<span>Cobranzas</span>
 							</Button>
 						</Link>
 					)}
