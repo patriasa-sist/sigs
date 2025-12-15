@@ -82,6 +82,24 @@ export type AseguradoDetalle = {
 	relacion?: string; // Titular, dependiente, etc.
 };
 
+export type CuotaPago = {
+	id: string;
+	numero_cuota: number;
+	monto: number;
+	fecha_vencimiento: string;
+	estado: "pendiente" | "pagada" | "vencida";
+	fecha_pago?: string;
+};
+
+export type DocumentoPoliza = {
+	id: string;
+	tipo_documento: string;
+	nombre_archivo: string;
+	archivo_url: string;
+	tamano_bytes?: number;
+	estado: "activo" | "descartado";
+};
+
 export type PolizaParaSiniestro = {
 	id: string;
 	numero_poliza: string;
@@ -111,9 +129,15 @@ export type PolizaParaSiniestro = {
 		nombre: string;
 	};
 
-	// Cuotas de pago (para visualizar estado de pagos)
+	// Cuotas de pago detalladas
+	cuotas?: CuotaPago[];
 	cuotas_pendientes?: number;
+	cuotas_pagadas?: number;
 	cuotas_total?: number;
+
+	// Documentos de la póliza
+	documentos?: DocumentoPoliza[];
+	total_documentos?: number;
 
 	// Asegurados específicos (vehículos para automotor, personas para otros ramos)
 	asegurados?: AseguradoDetalle[];

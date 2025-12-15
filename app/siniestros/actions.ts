@@ -735,6 +735,26 @@ export async function buscarPolizasActivas(query: string): Promise<BusquedaPoliz
 				.eq("id", pol.compania_aseguradora_id)
 				.single();
 
+			// Obtener cuotas de pago
+			const { data: cuotasRaw } = await supabase
+				.from("polizas_pagos")
+				.select("id, numero_cuota, monto, fecha_vencimiento, estado, fecha_pago")
+				.eq("poliza_id", pol.id)
+				.order("numero_cuota");
+
+			const cuotas = cuotasRaw || [];
+			const cuotasPagadas = cuotas.filter((c) => c.estado === "pagada").length;
+			const cuotasPendientes = cuotas.length - cuotasPagadas;
+
+			// Obtener documentos activos de la póliza
+			const { data: documentosRaw } = await supabase
+				.from("polizas_documentos")
+				.select("id, tipo_documento, nombre_archivo, archivo_url, tamano_bytes, estado")
+				.eq("poliza_id", pol.id)
+				.eq("estado", "activo");
+
+			const documentos = documentosRaw || [];
+
 			polizas.push({
 				id: pol.id,
 				numero_poliza: pol.numero_poliza,
@@ -757,6 +777,12 @@ export async function buscarPolizasActivas(query: string): Promise<BusquedaPoliz
 					id: compania?.id || "",
 					nombre: compania?.nombre || "N/A",
 				},
+				cuotas,
+				cuotas_pagadas: cuotasPagadas,
+				cuotas_pendientes: cuotasPendientes,
+				cuotas_total: cuotas.length,
+				documentos,
+				total_documentos: documentos.length,
 			});
 		}
 
