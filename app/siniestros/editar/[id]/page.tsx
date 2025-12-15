@@ -47,6 +47,9 @@ export default async function EditarSiniestroPage({ params }: PageProps) {
 
 	const { siniestro, coberturas, documentos, observaciones, historial } = result.data;
 
+	// Determinar si el usuario es admin
+	const esAdmin = profile.role === "admin";
+
 	return (
 		<div className="container mx-auto py-6 px-4">
 			<EditarSiniestroForm
@@ -55,6 +58,7 @@ export default async function EditarSiniestroPage({ params }: PageProps) {
 				documentos={documentos}
 				observaciones={observaciones}
 				historial={historial}
+				esAdmin={esAdmin}
 			/>
 		</div>
 	);

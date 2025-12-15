@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertTriangle, XCircle, Ban, CheckCircle, ArrowLeft } from "lucide-react";
 import ResumenReadonly from "./ResumenReadonly";
 import AgregarObservacion from "./AgregarObservacion";
+import AgregarDocumentos from "./AgregarDocumentos";
 import HistorialCronologico from "./HistorialCronologico";
 import type {
 	SiniestroVista,
@@ -23,6 +24,7 @@ interface EditarSiniestroFormProps {
 	documentos: DocumentoSiniestro[];
 	observaciones: ObservacionSiniestro[];
 	historial: HistorialSiniestro[];
+	esAdmin: boolean;
 }
 
 const ESTADO_CONFIG = {
@@ -54,6 +56,7 @@ export default function EditarSiniestroForm({
 	documentos,
 	observaciones,
 	historial,
+	esAdmin,
 }: EditarSiniestroFormProps) {
 	const [activeTab, setActiveTab] = useState("resumen");
 
@@ -96,7 +99,7 @@ export default function EditarSiniestroForm({
 					</div>
 
 					{/* Información adicional */}
-					<div className="pt-4 border-t grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+					<div className="pt-4 border-t grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
 						<div>
 							<p className="text-muted-foreground">Monto Reserva</p>
 							<p className="font-medium">
@@ -112,6 +115,10 @@ export default function EditarSiniestroForm({
 							<p className="font-medium">{siniestro.departamento_nombre}</p>
 						</div>
 						<div>
+							<p className="text-muted-foreground">Documentos</p>
+							<p className="font-medium">{documentos.length}</p>
+						</div>
+						<div>
 							<p className="text-muted-foreground">Observaciones</p>
 							<p className="font-medium">{observaciones.length}</p>
 						</div>
@@ -121,8 +128,16 @@ export default function EditarSiniestroForm({
 
 			{/* Tabs de Edición */}
 			<Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-				<TabsList className="grid w-full grid-cols-3">
+				<TabsList className="grid w-full grid-cols-4">
 					<TabsTrigger value="resumen">Resumen</TabsTrigger>
+					<TabsTrigger value="documentos">
+						Documentos
+						{documentos.length > 0 && (
+							<span className="ml-2 bg-primary/10 text-primary px-2 py-0.5 rounded-full text-xs">
+								{documentos.length}
+							</span>
+						)}
+					</TabsTrigger>
 					<TabsTrigger value="observaciones">
 						Observaciones
 						{observaciones.length > 0 && (
@@ -136,6 +151,15 @@ export default function EditarSiniestroForm({
 
 				<TabsContent value="resumen" className="mt-6">
 					<ResumenReadonly siniestro={siniestro} coberturas={coberturas} />
+				</TabsContent>
+
+				<TabsContent value="documentos" className="mt-6">
+					<AgregarDocumentos
+						siniestroId={siniestro.id}
+						documentosIniciales={documentos}
+						estadoSiniestro={siniestro.estado}
+						esAdmin={esAdmin}
+					/>
 				</TabsContent>
 
 				<TabsContent value="observaciones" className="mt-6">
