@@ -140,3 +140,213 @@ crearemos el módulo de cobranza, este módulo solo tienen acceso las cuentas ma
 2. Roles: Solo "cobranza" y "admin" tienen acceso al módulo
 3. Excesos: Deben redistribuirse completamente antes de confirmar
 4. RLS: Las policies permiten SELECT/UPDATE solo a cobranza y admin
+
+## clientes feedback
+
+sociedad con rubrica y detalle
+2do apellido obligatorio
+CEX NUEVO DOCUMENTO
+CONYUGUE OPCIONAL
+Bolivia residencia obligatorio
+obl profesion
+unipersonal nro telefono comercial
+agregar es el mismo
+documento seprec opcional unipersonal
+Información de Contacto-cobranza una o mas
+ACCIONISTAS o SOCIOS: nombre, carnet, porcentaje (puede existir sin accionistas)
+RENOVACION DE POLIZA EXIGE RENOVACION DE DOCUMENTOS
+carta de nombramiento todos clientes
+botón para ver detalles de la póliza
+visualización cliente>póliza agregar compañía
+ejecutivo visible
+agente visible
+paso extra para datos de facturacion
+
+NUEVO tipo de cliente llamado "asegurado" con datos minimos
+
+form extra accionista
+todos datos obligatorios en natural excepto salario
+
+POlizas
+Ci cambiar por vigencia fecha inicio-fecha fin
+visualización rapida>compañía
+anexos inclusion/exclusion visualizan dentro de la misma poliza
+
+Cobranza
+modificación de datos bloqueados bajo solicitud
+
+## polizas feedback
+
+8 12 25
+Paso 1
+NUEVO opción de seleccionar Asegurado adicional (opcional)
+
+paso 2
+"director comercial", recibe comisión, opcional, default Patria S.A., no excluyente.
+
+paso 3 automotor
+individual-corporativo
+franquicia numero input pasar a derecha
+NO TIENE DETALLES EXTRA DE PRODUCTO
+
+paso 3 AP
+Nivel agregar "prima de nivel" moneda, decimal
+NUEVO carga de excel masiva con Carnet|nivel
+Corporativo:: "+ Agregar Nominado por cargo" unico dato "Cargo"
+NO TIENE DETALLES EXTRA DE PRODUCTO
+
+Paso3 Sepelio
+NUEVO carga masiva
+largo plazo> solo individual
+quitar asegurados y adicionales
+NO TIENE DETALLES EXTRA DE PRODUCTO
+
+parte3 RC
+moneda eliminar
+asegurados eliminados
+NO TIENE DETALLES EXTRA DE PRODUCTO
+
+paso3 incendio
+Moneda es de toda la póliza
+quitar "(dirección personal)"
+En la creación de dirección se debe agregar "Items" como en los Niveles de AP
+la sumantoria de todos los items da Valor Declarado
+La sumatoria de todas las ubicaciones da Valor ASegurado TOTAL> Valor total en Riesgo
+NO TIENE DETALLES EXTRA DE PRODUCTO
+
+paso3 salud
+corporativo tiene niveles para cada titular
+corporativo mínimo 1 titular pueden haber mas
+corporativo cada titular puede anexar sus conyugue y dependientes y comparten el nivel
+NUEVO check para marcar la póliza con maternidad
+Salud Internacional>> (detectado mediante cod producto)
+NUEVO deducible numero
+
+paso3 Vida
+remover glosa Bs de niveles
+eliminar producto texto pasarlo a lista desplegable (mod gerencias)
+Vida obligatoriamente al contado forzar
+
+paso3 Riesgos Varios Miscelaneos
+quitar moneda de la seccion
+5 convenios
+Convenios checkbox para habilitar
+
+CONCRETAR:
+
+-   FIANZAS COD 92
+    BENEFICIARIO (TEXTO MAYUSCULAS)
+    OBJETO DEL CONTRATO (TEXTO)
+    VALOR DEL CONTRATO (NUM)
+    VALOR CAUCIONADO (NUM)
+    UBICACION DE LA OBRA (TEXTO)
+
+-   AERONAVEGACION // Naves y embarcaciones
+    ASEGURADO ADICIONAL (cliente completo)
+    DATOS OBJETO ASEGURADO
+-   MARCA
+-   MODELO
+-   AÑO
+-   SERIE
+-   USO privado/publico/recreaccion/
+-   MATRICULA
+-   NUMERO DE PASAJERO
+-   NUMERO TRIPULANTES
+    VALOR ASEGURADO:
+-   CASCO (numero)
+-   RESPONSBILIDAD CIVIL (numero)
+-   ACCIDENTES PERSONALES (desplegable de niveles AP, varios niveles)
+
+-   ROBO
+    Ubicación de riesgo
+    Items seleccionables con su monto
+    valor asegurado
+
+faltante>>
+
+-   RAMOS TECNICOS
+    Placa opcional
+    tipo de vehículo pasa a "tipo de equipo" (industrial)
+    marcas industriales
+    sin ejes ni asientos
+    NUEVO nro de serie opcional
+
+-   TRANSPORTE
+    Materia asegurada (texto largo)
+    tipo de embalaje (texto)
+    fecha embarque (fecha)
+    tipo transporte (terrestre, marítimo, arereo, ferreo, multimodal)
+    ciudad origen (texto)
+    país origen (parametrizado)
+    país destino (parametrizado)
+    ciudad destino (texto)
+    Valor asegurado (num)
+    factura (texto)
+    fecha factura (fecha)
+    Cobertura A, C checkbox
+    modalidad (selección: flotante, flat, un solo embarque, flat con prima minima deposito)
+
+Ramos generales:: NUEVO Subrrogacion texto y moneda por cada item cubierto
+
+-   automotor
+-   equipo móvil pesado (ramos técnicos)
+-   incendio y aliados
+
+TODAS LAS POLIZAS DEBEN SER LIGADAS AL TIPO DE CLIENTE INDIVIDUAL, UNI, JURID
+
+CLIENTES
+Carga masiva de "asegurado" nombre completo, carnet, fecha nacimiento, genero
+
+PARAMETRIZACIONES>
+[] cod y Nombre de compañías aseguradoras
+[] lista Grupo de Negocios
+[x] cuadro de valores 'rubro/items' para ubicación de incendio y aliados
+[] lista de cod y subramos/productos
+[] lista de productos por compañía
+[] lista de productos AP/vida
+[] tipos de uso de aeronaves
+
+## siniestros
+
+similar al modulo de cobranzas, ahora haremos el módulo de siniestros:
+
+1. tendra como pantalla principal un buscador general (de detalles de cliente y de polizas) o quiza un buscador para siniestros no estoy seguro qué mostrar en la pantalla principal de siniestros. Quiza solo los siniestros ya que las polizas se ven en el modulo de polizas y el cliente se ve en el modulo de clientes
+2. boton inferior derecho para "registrar un siniestro" que tiene los siguientes pasos:
+   paso 1: se selecciona la poliza siniestrada y se confirman los datos más importantes que son el cliente, el responsable de esa poliza, las cuotas y los asegurados dentro de dicha poliza (personas, autos, viviendas, etc, etc) para saber que ese es el cliente siniestrado
+   paso 2: se registran los detalles del siniestro como:
+
+-   fecha siniestro (fecha, obligatorio)
+-   fecha reporte (fecha, obligatorio)
+-   lugar del hecho (texto, obligatorio)
+-   departamento (selector departamento, obligatorio)
+-   monto de reseva (moneda 2 decimales, obligatorio)
+-   selector de moneda (Bs/USD)
+-   area de texto para la descripcion del siniestro (texto largo, obligatorio)
+-   contacto (uno o varios correos electronicos)
+    paso 3: se marcan las coberturas que se cubren en el siniestro
+-   se ingresa la cobertura como texto y se marca el checkbox de la cobertura
+    paso 4: carga de documentos opcionales con sus etiquetas
+-   fotografia VA
+-   fotografia RC
+-   formulario de denuncia
+-   licencia de conducir
+-   informe transito
+-   informe soat
+-   test alcoholemia
+-   franquicia y/o deducible
+-   proforma
+-   orden de compra/trabajo
+-   inspeccion
+-   liquidacion
+    una vez se llena todo se guarda el siniestro y queda etiquetado como "abierto"
+
+si yo entro al reporte y este está abierto tengo la posibilidad de visualizar los datos previos y agregar nuevos como:
+
+-   agregar nuevos archivos
+-   agregar nuevas observaciones del proceso del siniestro
+-   agregar fecha de llegada de repuestos necesarios para la reparacion
+-   actualizar el estado final del siniestro en 3 posibles conclusiones:
+    rechazado: se agrega una carta de rechazo (archivo obligatorio), se selecciona el motivo de rechazo de una lista parametrizada (Mora, incumplimiento, sin cobertura, no aplicable) y boton "cerrar reporte"
+    declinado: carta de respaldo (archivo obligatorio), seleccionar el motivo de una lista parametrizada (solicitud cliente, pagó otra poliza) y boton "cerrar reporte"
+    concluido: - seccion indemnizacion: archivo UIF y archivo PEP ambos obligatorios - monto reclamado y selector moneda Bs/USD - deducible y selector moneda Bs/USD - monto pagado y selector moneda Bs/USD - check para marcar si es un "pago comercial" - boton "cerrar reporte"
+    toda actualizacion que se haga en este modo edicion debe quedar registrada en el propio siniestro para saber quién subió x archivo o quién anotó Y observación, además de quién cambió el siniestro de estado o quién lo cerró, esto debe ser visualizado como una lista con la fecha, el autor y el cambio realizado

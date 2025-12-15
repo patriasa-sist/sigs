@@ -1,0 +1,465 @@
+// types/siniestro.ts - Sistema de Gestión de Siniestros
+
+// ============================================
+// TIPOS DE CATÁLOGOS Y ESTADOS
+// ============================================
+
+export type CoberturaCatalogo = {
+	id: string;
+	nombre: string;
+	descripcion?: string;
+	codigo_puc: string | null; // Código PUC del ramo (ej: "9105" para Automotores) - más robusto que nombre
+	ramo: string; // Nombre del ramo (ej: "Automotores") - para compatibilidad con sistema existente
+	es_custom: boolean;
+	activo: boolean;
+	created_at?: string;
+};
+
+export type MotivoRechazo = "Mora" | "Incumplimiento" | "Sin cobertura" | "No aplicable";
+export type MotivoDeclinacion = "Solicitud cliente" | "Pagó otra póliza";
+export type EstadoSiniestro = "abierto" | "rechazado" | "declinado" | "concluido";
+export type MotivoCierreTipo = "rechazo" | "declinacion" | "indemnizacion";
+export type Moneda = "Bs" | "USD" | "USDT" | "UFV";
+
+// ============================================
+// TIPOS PARA DOCUMENTOS
+// ============================================
+
+export const TIPOS_DOCUMENTO_SINIESTRO = [
+	"fotografía VA",
+	"fotografía RC",
+	"formulario de denuncia",
+	"licencia de conducir",
+	"informe tránsito",
+	"informe SOAT",
+	"test alcoholemia",
+	"franquicia y/o deducible",
+	"proforma",
+	"orden de compra/trabajo",
+	"inspección",
+	"liquidación",
+	"carta_rechazo",
+	"carta_respaldo",
+	"archivo_uif",
+	"archivo_pep",
+	"Otro",
+] as const;
+
+export type TipoDocumentoSiniestro = (typeof TIPOS_DOCUMENTO_SINIESTRO)[number];
+
+export type DocumentoSiniestro = {
+	id?: string; // Opcional para nuevos documentos
+	siniestro_id?: string;
+	tipo_documento: TipoDocumentoSiniestro;
+	nombre_archivo: string;
+	archivo_url?: string; // Solo presente en documentos ya guardados
+	file?: File; // Solo presente en nuevos documentos (antes de subir)
+	tamano_bytes?: number;
+	estado?: "activo" | "descartado";
+	uploaded_at?: string;
+	uploaded_by?: string;
+};
+
+export type DocumentoSiniestroConUsuario = DocumentoSiniestro & {
+	usuario_nombre?: string; // Nombre del usuario que subió
+};
+
+// ============================================
+// PASO 1: SELECCIÓN DE PÓLIZA
+// ============================================
+
+export type AseguradoDetalle = {
+	tipo: "vehiculo" | "persona";
+	// Para vehículos
+	placa?: string;
+	modelo?: string;
+	ano?: string;
+	marca?: string;
+	valor_asegurado?: number;
+	// Para personas
+	nombre?: string;
+	documento?: string;
+	relacion?: string; // Titular, dependiente, etc.
+};
+
+export type PolizaParaSiniestro = {
+	id: string;
+	numero_poliza: string;
+	ramo: string;
+	inicio_vigencia: string;
+	fin_vigencia: string;
+	prima_total: number;
+	moneda: string;
+
+	// Información del cliente
+	cliente: {
+		id: string;
+		nombre_completo: string;
+		documento: string;
+		tipo: "natural" | "juridica";
+	};
+
+	// Información del responsable
+	responsable: {
+		id: string;
+		full_name: string;
+	};
+
+	// Información de la compañía
+	compania: {
+		id: string;
+		nombre: string;
+	};
+
+	// Cuotas de pago (para visualizar estado de pagos)
+	cuotas_pendientes?: number;
+	cuotas_total?: number;
+
+	// Asegurados específicos (vehículos para automotor, personas para otros ramos)
+	asegurados?: AseguradoDetalle[];
+};
+
+// ============================================
+// PASO 2: DETALLES DEL SINIESTRO
+// ============================================
+
+export type DetallesSiniestro = {
+	fecha_siniestro: string; // ISO date string
+	fecha_reporte: string; // ISO date string
+	lugar_hecho: string;
+	departamento_id: string; // FK a regionales
+	monto_reserva: number;
+	moneda: Moneda;
+	descripcion: string;
+	contactos: string[]; // Array de emails
+};
+
+// ============================================
+// PASO 3: COBERTURAS
+// ============================================
+
+export type CoberturaSeleccionada = {
+	id: string; // ID de la cobertura del catálogo
+	nombre: string;
+	descripcion?: string;
+};
+
+export type CoberturasStep = {
+	coberturas_seleccionadas: CoberturaSeleccionada[];
+	// Permite agregar coberturas custom
+	nueva_cobertura?: {
+		nombre: string;
+		descripcion?: string;
+	};
+};
+
+// ============================================
+// PASO 4: DOCUMENTOS INICIALES
+// ============================================
+
+export type DocumentosIniciales = {
+	documentos: DocumentoSiniestro[];
+};
+
+// ============================================
+// FORMULARIO COMPLETO DE REGISTRO
+// ============================================
+
+export type RegistroSiniestroFormState = {
+	paso_actual: 1 | 2 | 3 | 4;
+	poliza_seleccionada: PolizaParaSiniestro | null;
+	detalles: DetallesSiniestro | null;
+	coberturas: CoberturasStep | null;
+	documentos_iniciales: DocumentoSiniestro[];
+	advertencias: string[];
+};
+
+// ============================================
+// EDICIÓN DE SINIESTRO ABIERTO
+// ============================================
+
+export type ObservacionSiniestro = {
+	id: string;
+	siniestro_id: string;
+	observacion: string;
+	created_at: string;
+	created_by?: string;
+	usuario_nombre?: string; // Nombre del usuario que creó la observación
+};
+
+export type EdicionSiniestroFormState = {
+	// Datos de solo lectura (readonly)
+	siniestro_id: string;
+	poliza: PolizaParaSiniestro;
+	detalles: DetallesSiniestro;
+	coberturas: CoberturaSeleccionada[];
+	documentos_existentes: DocumentoSiniestroConUsuario[];
+	observaciones_existentes: ObservacionSiniestro[];
+
+	// Datos editables
+	nuevos_documentos: DocumentoSiniestro[];
+	nueva_observacion: string;
+	fecha_llegada_repuestos?: string; // ISO date string
+
+	// Estado de cierre
+	tipo_cierre?: MotivoCierreTipo;
+	datos_cierre?: DatosCierreRechazo | DatosCierreDeclinacion | DatosCierreIndemnizacion;
+};
+
+// ============================================
+// TIPOS DE CIERRE (Discriminated Unions)
+// ============================================
+
+export type DatosCierreRechazo = {
+	tipo: "rechazo";
+	motivo_rechazo: MotivoRechazo;
+	carta_rechazo: DocumentoSiniestro; // Archivo obligatorio
+};
+
+export type DatosCierreDeclinacion = {
+	tipo: "declinacion";
+	motivo_declinacion: MotivoDeclinacion;
+	carta_respaldo: DocumentoSiniestro; // Archivo obligatorio
+};
+
+export type DatosCierreIndemnizacion = {
+	tipo: "indemnizacion";
+	archivo_uif: DocumentoSiniestro; // Archivo obligatorio
+	archivo_pep: DocumentoSiniestro; // Archivo obligatorio
+	monto_reclamado: number;
+	moneda_reclamado: Moneda;
+	deducible: number;
+	moneda_deducible: Moneda;
+	monto_pagado: number;
+	moneda_pagado: Moneda;
+	es_pago_comercial: boolean;
+};
+
+// ============================================
+// SINIESTRO COMPLETO (desde BD)
+// ============================================
+
+export type Siniestro = {
+	id: string;
+	poliza_id: string;
+
+	// Detalles
+	fecha_siniestro: string;
+	fecha_reporte: string;
+	lugar_hecho: string;
+	departamento_id: string;
+	monto_reserva: number;
+	moneda: Moneda;
+	descripcion: string;
+	contactos: string[];
+
+	// Estado
+	estado: EstadoSiniestro;
+	motivo_cierre_tipo?: MotivoCierreTipo;
+	fecha_cierre?: string;
+	cerrado_por?: string;
+
+	// Rechazo
+	motivo_rechazo?: MotivoRechazo;
+
+	// Declinación
+	motivo_declinacion?: MotivoDeclinacion;
+
+	// Indemnización
+	monto_reclamado?: number;
+	moneda_reclamado?: Moneda;
+	deducible?: number;
+	moneda_deducible?: Moneda;
+	monto_pagado?: number;
+	moneda_pagado?: Moneda;
+	es_pago_comercial?: boolean;
+
+	fecha_llegada_repuestos?: string;
+
+	// Auditoría
+	created_at: string;
+	updated_at: string;
+	created_by?: string;
+	updated_by?: string;
+};
+
+// ============================================
+// SINIESTRO VISTA (con datos relacionados)
+// ============================================
+
+export type SiniestroVista = Siniestro & {
+	// Datos de la póliza
+	numero_poliza: string;
+	ramo: string;
+	poliza_inicio_vigencia: string;
+	poliza_fin_vigencia: string;
+
+	// Datos del cliente
+	cliente_nombre: string;
+	cliente_documento: string;
+	cliente_tipo: "natural" | "juridica";
+
+	// Datos de compañía
+	compania_nombre: string;
+
+	// Datos de departamento
+	departamento_nombre: string;
+	departamento_codigo: string;
+
+	// Responsable de la póliza
+	responsable_nombre?: string;
+
+	// Auditoría
+	creado_por_nombre?: string;
+	fecha_creacion: string;
+
+	// Contadores
+	total_documentos: number;
+	total_observaciones: number;
+	total_coberturas: number;
+};
+
+// ============================================
+// TIPOS PARA LISTADO Y FILTROS
+// ============================================
+
+export type FiltrosSiniestros = {
+	searchTerm: string;
+	estado?: EstadoSiniestro | "todos";
+	departamento_id?: string;
+	fecha_desde?: string;
+	fecha_hasta?: string;
+	ramo?: string;
+};
+
+export type SiniestroListItem = {
+	id: string;
+	fecha_siniestro: string;
+	numero_poliza: string;
+	cliente_nombre: string;
+	cliente_documento: string;
+	departamento_nombre: string;
+	estado: EstadoSiniestro;
+	monto_reserva: number;
+	moneda: string;
+	ramo: string;
+	total_documentos: number;
+	lugar_hecho: string;
+	created_at: string;
+};
+
+// ============================================
+// ESTADÍSTICAS DEL DASHBOARD
+// ============================================
+
+export type SiniestrosStats = {
+	total_abiertos: number;
+	total_cerrados_mes: number;
+	monto_total_reservado: number; // En Bs (convertido)
+	promedio_dias_cierre: number;
+	siniestros_por_estado: {
+		abierto: number;
+		rechazado: number;
+		declinado: number;
+		concluido: number;
+	};
+	siniestros_por_ramo: Array<{
+		ramo: string;
+		cantidad: number;
+	}>;
+};
+
+// ============================================
+// HISTORIAL DE AUDITORÍA
+// ============================================
+
+export type HistorialSiniestro = {
+	id: string;
+	siniestro_id: string;
+	accion: string; // 'created', 'updated', 'documento_agregado', 'observacion_agregada', 'estado_cambiado', 'cerrado'
+	campo_modificado?: string;
+	valor_anterior?: string;
+	valor_nuevo?: string;
+	detalles?: any; // JSONB
+	created_at: string;
+	created_by?: string;
+	usuario_nombre?: string;
+};
+
+// ============================================
+// TIPOS PARA SERVER ACTIONS
+// ============================================
+
+export type ServerResponse<T> =
+	| {
+			success: true;
+			data: T;
+	  }
+	| {
+			success: false;
+			error: string;
+	  };
+
+export type GuardarSiniestroResponse = ServerResponse<{
+	siniestro_id: string;
+}>;
+
+export type ObtenerSiniestrosResponse = ServerResponse<{
+	siniestros: SiniestroVista[];
+	stats: SiniestrosStats;
+}>;
+
+export type ObtenerSiniestroDetalleResponse = ServerResponse<{
+	siniestro: SiniestroVista;
+	coberturas: CoberturaSeleccionada[];
+	documentos: DocumentoSiniestroConUsuario[];
+	observaciones: ObservacionSiniestro[];
+	historial: HistorialSiniestro[];
+}>;
+
+export type AgregarObservacionResponse = ServerResponse<{
+	observacion_id: string;
+}>;
+
+export type AgregarDocumentosResponse = ServerResponse<{
+	documentos_ids: string[];
+}>;
+
+export type CerrarSiniestroResponse = ServerResponse<{
+	siniestro_id: string;
+	estado_final: EstadoSiniestro;
+}>;
+
+// ============================================
+// VALIDACIONES
+// ============================================
+
+export type ValidacionSiniestro = {
+	valido: boolean;
+	errores: string[];
+	advertencias: string[];
+};
+
+// ============================================
+// BÚSQUEDA DE PÓLIZAS ACTIVAS
+// ============================================
+
+export type BusquedaPolizasResponse = ServerResponse<{
+	polizas: PolizaParaSiniestro[];
+}>;
+
+// ============================================
+// COBERTURAS POR RAMO
+// ============================================
+
+export type ObtenerCoberturasPorRamoResponse = ServerResponse<{
+	coberturas: CoberturaCatalogo[];
+}>;
+
+// ============================================
+// SOFT DELETE DE DOCUMENTOS
+// ============================================
+
+export type DescartarDocumentoResponse = ServerResponse<void>;
+export type RestaurarDocumentoResponse = ServerResponse<void>;
+export type EliminarDocumentoResponse = ServerResponse<void>;

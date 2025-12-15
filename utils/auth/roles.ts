@@ -9,7 +9,7 @@
  */
 
 import type { UserRole } from "./helpers";
-import { Crown, UserCheck, Shield, Users, UserX, Ban } from "lucide-react";
+import { Crown, UserCheck, Shield, Users, UserX, Ban, FileWarning } from "lucide-react";
 
 /**
  * Array de todos los roles válidos del sistema
@@ -21,6 +21,7 @@ export const VALID_ROLES: readonly UserRole[] = [
 	"agente",
 	"comercial",
 	"cobranza",
+	"siniestros",
 	"invitado",
 	"desactivado"
 ] as const;
@@ -35,6 +36,7 @@ export const ASSIGNABLE_ROLES: readonly UserRole[] = [
 	"agente",
 	"comercial",
 	"cobranza",
+	"siniestros",
 	"invitado",
 	"desactivado"
 ] as const;
@@ -48,7 +50,8 @@ export const OPERATIONAL_ROLES: readonly UserRole[] = [
 	"usuario",
 	"agente",
 	"comercial",
-	"cobranza"
+	"cobranza",
+	"siniestros"
 ] as const;
 
 /**
@@ -173,6 +176,30 @@ export const ROLE_CONFIG = {
 			canCreatePolicies: false,
 			canViewPayments: true,
 			canManagePayments: true,
+			canDeleteDocuments: false
+		}
+	},
+	siniestros: {
+		label: "Siniestros",
+		labelEs: "Siniestros",
+		description: "Claims management access for reporting and tracking insurance claims",
+		descriptionEs: "Acceso de gestión de siniestros para registro y seguimiento de reclamaciones",
+		color: "amber",
+		icon: FileWarning,
+		colorClasses: {
+			bg: "bg-amber-50",
+			text: "text-amber-600",
+			border: "border-amber-200",
+			gradient: "from-amber-50 to-white"
+		},
+		permissions: {
+			canManageUsers: false,
+			canManageRoles: false,
+			canSendInvitations: false,
+			canValidatePolicies: false,
+			canCreatePolicies: false,
+			canViewPayments: true,
+			canManagePayments: false,
 			canDeleteDocuments: false
 		}
 	},
