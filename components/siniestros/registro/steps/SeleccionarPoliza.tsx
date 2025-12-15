@@ -33,8 +33,8 @@ export default function SeleccionarPoliza({
 						<p className="font-medium mb-1">Instrucciones:</p>
 						<ul className="list-disc list-inside space-y-1 text-sm">
 							<li>Solo se pueden registrar siniestros en pólizas con estado &quot;activa&quot;</li>
-							<li>Busca por número de póliza para encontrar la correcta</li>
-							<li>Verifica que los datos del cliente y la vigencia sean correctos</li>
+							<li>Busca por número de póliza, CI, NIT, nombre o apellido del cliente</li>
+							<li>Verifica que los datos del cliente y la vigencia sean correctos antes de continuar</li>
 						</ul>
 					</div>
 				</div>

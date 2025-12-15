@@ -68,17 +68,22 @@ export default function BuscarPoliza({ onPolizaSelect, polizaSeleccionada }: Bus
 
 	return (
 		<div className="space-y-4">
-			<div className="relative">
-				<Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-				<Input
-					placeholder="Buscar póliza por número (ej: 12345)..."
-					value={query}
-					onChange={(e) => setQuery(e.target.value)}
-					className="pl-10"
-				/>
-				{loading && (
-					<Loader2 className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
-				)}
+			<div className="space-y-2">
+				<div className="relative">
+					<Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+					<Input
+						placeholder="Buscar por N° póliza, CI, NIT, nombre o apellido..."
+						value={query}
+						onChange={(e) => setQuery(e.target.value)}
+						className="pl-10"
+					/>
+					{loading && (
+						<Loader2 className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+					)}
+				</div>
+				<p className="text-xs text-muted-foreground px-1">
+					Puedes buscar por: número de póliza, CI del cliente, NIT, nombre, apellido o razón social
+				</p>
 			</div>
 
 			{error && (

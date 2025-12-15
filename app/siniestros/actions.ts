@@ -662,8 +662,34 @@ export async function buscarPolizasActivas(query: string): Promise<BusquedaPoliz
 	const supabase = await createClient();
 
 	try {
-		// Buscar pólizas activas que coincidan con el query
-		const { data: polizasRaw, error: polizasError } = await supabase
+		const clientIdsEncontrados: string[] = [];
+
+		// 1. Buscar en clientes naturales por CI, nombre o apellido
+		const { data: clientesNaturales } = await supabase
+			.from("natural_clients")
+			.select("client_id, numero_documento, primer_nombre, primer_apellido")
+			.or(
+				`numero_documento.ilike.%${query}%,primer_nombre.ilike.%${query}%,segundo_nombre.ilike.%${query}%,primer_apellido.ilike.%${query}%,segundo_apellido.ilike.%${query}%`
+			)
+			.limit(30);
+
+		if (clientesNaturales) {
+			clientIdsEncontrados.push(...clientesNaturales.map((c) => c.client_id));
+		}
+
+		// 2. Buscar en clientes jurídicos por NIT o razón social
+		const { data: clientesJuridicos } = await supabase
+			.from("juridic_clients")
+			.select("client_id, nit, razon_social")
+			.or(`nit.ilike.%${query}%,razon_social.ilike.%${query}%`)
+			.limit(30);
+
+		if (clientesJuridicos) {
+			clientIdsEncontrados.push(...clientesJuridicos.map((c) => c.client_id));
+		}
+
+		// 3. Buscar pólizas activas que coincidan con el query (número de póliza) O con los client_ids encontrados
+		let polizasQuery = supabase
 			.from("polizas")
 			.select(
 				`
@@ -679,9 +705,20 @@ export async function buscarPolizasActivas(query: string): Promise<BusquedaPoliz
         compania_aseguradora_id
       `
 			)
-			.eq("estado", "activa")
-			.or(`numero_poliza.ilike.%${query}%`)
-			.limit(20);
+			.eq("estado", "activa");
+
+		// Construir condición OR para búsqueda por número de póliza o client_id
+		if (clientIdsEncontrados.length > 0) {
+			// Buscar por número de póliza O por client_id en la lista de clientes encontrados
+			polizasQuery = polizasQuery.or(
+				`numero_poliza.ilike.%${query}%,client_id.in.(${clientIdsEncontrados.join(",")})`
+			);
+		} else {
+			// Solo buscar por número de póliza
+			polizasQuery = polizasQuery.ilike("numero_poliza", `%${query}%`);
+		}
+
+		const { data: polizasRaw, error: polizasError } = await polizasQuery.limit(20);
 
 		if (polizasError) throw polizasError;
 
