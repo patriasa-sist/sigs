@@ -175,6 +175,10 @@ export function AccidentesPersonalesForm({ datos, regionales, onChange, onSiguie
 		setAsegurados(asegurados.map((a) => (a.client_id === clientId ? { ...a, nivel_id: nivelId } : a)));
 	};
 
+	const cambiarCargo = (clientId: string, cargo: string) => {
+		setAsegurados(asegurados.map((a) => (a.client_id === clientId ? { ...a, cargo: cargo || undefined } : a)));
+	};
+
 	const eliminarAsegurado = (clientId: string) => {
 		setAsegurados(asegurados.filter((a) => a.client_id !== clientId));
 	};
@@ -253,8 +257,15 @@ export function AccidentesPersonalesForm({ datos, regionales, onChange, onSiguie
 								return (
 									<div key={nivel.id} className="flex items-center justify-between p-4 border rounded-lg">
 										<div className="flex-1">
-											<p className="font-medium text-gray-900">{nivel.nombre}</p>
-											<div className="text-sm text-gray-600 space-y-1">
+											<div className="flex items-center gap-3">
+												<p className="font-medium text-gray-900">{nivel.nombre}</p>
+												{nivel.prima_nivel && (
+													<span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
+														Prima: Bs {nivel.prima_nivel.toLocaleString()}
+													</span>
+												)}
+											</div>
+											<div className="text-sm text-gray-600 space-y-1 mt-2">
 												{cob.muerte_accidental.habilitado && <p>• Muerte Accidental: Bs {cob.muerte_accidental.valor.toLocaleString()}</p>}
 												{cob.invalidez_total_parcial.habilitado && <p>• Invalidez Total/Parcial: Bs {cob.invalidez_total_parcial.valor.toLocaleString()}</p>}
 												{cob.gastos_medicos.habilitado && <p>• Gastos Médicos: Bs {cob.gastos_medicos.valor.toLocaleString()}</p>}
@@ -292,16 +303,36 @@ export function AccidentesPersonalesForm({ datos, regionales, onChange, onSiguie
 						</h3>
 
 						<div className="space-y-4">
-							<div className="space-y-2">
-								<Label htmlFor="nombre_nivel">Nombre del nivel</Label>
-								<Input
-									id="nombre_nivel"
-									value={nivelEditando.nombre}
-									onChange={(e) =>
-										setNivelEditando({ ...nivelEditando, nombre: e.target.value })
-									}
-									placeholder="Ej: Nivel 1, Nivel Premium, etc."
-								/>
+							<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+								<div className="space-y-2">
+									<Label htmlFor="nombre_nivel">Nombre del nivel</Label>
+									<Input
+										id="nombre_nivel"
+										value={nivelEditando.nombre}
+										onChange={(e) =>
+											setNivelEditando({ ...nivelEditando, nombre: e.target.value })
+										}
+										placeholder="Ej: Nivel 1, Nivel Premium, etc."
+									/>
+								</div>
+
+								<div className="space-y-2">
+									<Label htmlFor="prima_nivel">
+										Prima del Nivel (Opcional)
+									</Label>
+									<Input
+										id="prima_nivel"
+										type="number"
+										min="0"
+										step="0.01"
+										value={nivelEditando.prima_nivel || ""}
+										onChange={(e) =>
+											setNivelEditando({ ...nivelEditando, prima_nivel: parseFloat(e.target.value) || undefined })
+										}
+										placeholder="0.00"
+									/>
+									<p className="text-xs text-gray-500">Prima específica para este nivel</p>
+								</div>
 							</div>
 
 							<div className="space-y-4 pt-4 border-t">
@@ -639,32 +670,50 @@ export function AccidentesPersonalesForm({ datos, regionales, onChange, onSiguie
 						{asegurados.map((asegurado) => {
 							const nivel = niveles.find((n) => n.id === asegurado.nivel_id);
 							return (
-								<div key={asegurado.client_id} className="flex items-center gap-4 p-4 border rounded-lg">
-									<Users className="h-5 w-5 text-gray-400 flex-shrink-0" />
-									<div className="flex-1">
-										<p className="font-medium text-gray-900">{asegurado.client_name}</p>
-										<p className="text-sm text-gray-600">CI: {asegurado.client_ci}</p>
-									</div>
-									<div className="flex items-center gap-2">
-										<Select
-											value={asegurado.nivel_id}
-											onValueChange={(value) => cambiarNivel(asegurado.client_id, value)}
-										>
-											<SelectTrigger className="w-[180px]">
-												<SelectValue placeholder="Nivel" />
-											</SelectTrigger>
-											<SelectContent>
-												{niveles.map((nivel) => (
-													<SelectItem key={nivel.id} value={nivel.id}>
-														{nivel.nombre}
-													</SelectItem>
-												))}
-											</SelectContent>
-										</Select>
+								<div key={asegurado.client_id} className="p-4 border rounded-lg">
+									<div className="flex items-start gap-4">
+										<Users className="h-5 w-5 text-gray-400 flex-shrink-0 mt-1" />
+										<div className="flex-1 space-y-3">
+											<div>
+												<p className="font-medium text-gray-900">{asegurado.client_name}</p>
+												<p className="text-sm text-gray-600">CI: {asegurado.client_ci}</p>
+											</div>
+											<div className={`grid gap-3 ${tipoPoliza === "corporativo" ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1"}`}>
+												<div className="space-y-1">
+													<Label className="text-xs text-gray-600">Nivel</Label>
+													<Select
+														value={asegurado.nivel_id}
+														onValueChange={(value) => cambiarNivel(asegurado.client_id, value)}
+													>
+														<SelectTrigger className="w-full">
+															<SelectValue placeholder="Nivel" />
+														</SelectTrigger>
+														<SelectContent>
+															{niveles.map((nivel) => (
+																<SelectItem key={nivel.id} value={nivel.id}>
+																	{nivel.nombre}
+																</SelectItem>
+															))}
+														</SelectContent>
+													</Select>
+												</div>
+												{tipoPoliza === "corporativo" && (
+													<div className="space-y-1">
+														<Label className="text-xs text-gray-600">Cargo (Opcional)</Label>
+														<Input
+															value={asegurado.cargo || ""}
+															onChange={(e) => cambiarCargo(asegurado.client_id, e.target.value)}
+															placeholder="Ej: Gerente, Operador, etc."
+														/>
+													</div>
+												)}
+											</div>
+										</div>
 										<Button
 											variant="ghost"
 											size="sm"
 											onClick={() => eliminarAsegurado(asegurado.client_id)}
+											className="mt-1"
 										>
 											<Trash2 className="h-4 w-4 text-red-600" />
 										</Button>

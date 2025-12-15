@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
 	ChevronRight,
 	ChevronLeft,
@@ -11,13 +11,14 @@ import {
 	AlertTriangle,
 	Settings,
 } from "lucide-react";
-import type { DatosVida, AseguradoConNivel, NivelCobertura, CoberturasVida } from "@/types/poliza";
+import type { DatosVida, AseguradoConNivel, NivelCobertura, CoberturasVida, ProductoVida } from "@/types/poliza";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { BuscadorClientes } from "../BuscadorClientes";
+import { createClient } from "@/utils/supabase/client";
 
 type Props = {
 	datos: DatosVida | null;
@@ -52,10 +53,34 @@ export function VidaForm({ datos, regionales, onChange, onSiguiente, onAnterior 
 		datos?.tipo_poliza || "individual"
 	);
 	const [regionalId, setRegionalId] = useState<string>(datos?.regional_asegurado_id || "");
+	const [productoId, setProductoId] = useState<string>(datos?.producto_id || "");
 	const [producto, setProducto] = useState<string>(datos?.producto || "");
 	const [asegurados, setAsegurados] = useState<AseguradoConNivel[]>(datos?.asegurados || []);
 	const [mostrarBuscador, setMostrarBuscador] = useState(false);
 	const [errores, setErrores] = useState<Record<string, string>>({});
+	const [productos, setProductos] = useState<ProductoVida[]>([]);
+	const [cargandoProductos, setCargandoProductos] = useState(true);
+
+	// Fetch productos_vida from Supabase
+	useEffect(() => {
+		const fetchProductos = async () => {
+			const supabase = createClient();
+			const { data, error } = await supabase
+				.from("productos_vida")
+				.select("*")
+				.eq("activo", true)
+				.order("nombre", { ascending: true });
+
+			if (error) {
+				console.error("Error fetching productos vida:", error);
+			} else if (data) {
+				setProductos(data);
+			}
+			setCargandoProductos(false);
+		};
+
+		fetchProductos();
+	}, []);
 
 	// ===== FUNCIONES PASO 2.1: NIVELES =====
 	const crearNuevoNivel = () => {
@@ -183,11 +208,28 @@ export function VidaForm({ datos, regionales, onChange, onSiguiente, onAnterior 
 		setAsegurados(asegurados.filter((a) => a.client_id !== clientId));
 	};
 
+	const handleProductoChange = (selectedProductoId: string) => {
+		setProductoId(selectedProductoId);
+		const productoSeleccionado = productos.find((p) => p.id === selectedProductoId);
+		if (productoSeleccionado) {
+			setProducto(productoSeleccionado.nombre);
+		}
+		// Clear error if exists
+		if (errores.producto) {
+			const { producto, ...rest } = errores;
+			setErrores(rest);
+		}
+	};
+
 	const handleContinuar = () => {
 		const nuevosErrores: Record<string, string> = {};
 
 		if (!regionalId) {
 			nuevosErrores.regional = "Debe seleccionar una regional";
+		}
+
+		if (!productoId || !producto) {
+			nuevosErrores.producto = "Debe seleccionar un producto";
 		}
 
 		if (asegurados.length === 0) {
@@ -211,7 +253,8 @@ export function VidaForm({ datos, regionales, onChange, onSiguiente, onAnterior 
 			tipo_poliza: tipoPoliza,
 			regional_asegurado_id: regionalId,
 			asegurados,
-			producto: producto || undefined,
+			producto,
+			producto_id: productoId,
 		};
 
 		onChange(datosVida);
@@ -627,15 +670,27 @@ export function VidaForm({ datos, regionales, onChange, onSiguiente, onAnterior 
 					{errores.regional && <p className="text-sm text-red-600">{errores.regional}</p>}
 				</div>
 
-				{/* Producto (Opcional) */}
+				{/* Producto (Obligatorio) */}
 				<div className="space-y-2 md:col-span-2">
-					<Label htmlFor="producto">Producto (Opcional)</Label>
-					<Input
-						id="producto"
-						value={producto}
-						onChange={(e) => setProducto(e.target.value)}
-						placeholder="Ej: Vida Plena, Vida Segura, etc."
-					/>
+					<Label htmlFor="producto">
+						Producto <span className="text-red-500">*</span>
+					</Label>
+					<Select value={productoId} onValueChange={handleProductoChange} disabled={cargandoProductos}>
+						<SelectTrigger className={errores.producto ? "border-red-500" : ""}>
+							<SelectValue placeholder={cargandoProductos ? "Cargando productos..." : "Seleccione un producto"} />
+						</SelectTrigger>
+						<SelectContent>
+							{productos.map((prod) => (
+								<SelectItem key={prod.id} value={prod.id}>
+									{prod.nombre}
+								</SelectItem>
+							))}
+						</SelectContent>
+					</Select>
+					{errores.producto && <p className="text-sm text-red-600">{errores.producto}</p>}
+					<p className="text-xs text-gray-500">
+						Pólizas de Vida solo permiten pago en contado (pago único)
+					</p>
 				</div>
 			</div>
 

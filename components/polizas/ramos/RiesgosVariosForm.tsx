@@ -2,11 +2,11 @@
 
 import { useState, useEffect } from "react";
 import { ChevronRight, ChevronLeft, CheckCircle2, Plus, Trash2, Users, AlertCircle } from "lucide-react";
-import type { DatosRiesgosVarios, AseguradoRiesgosVarios } from "@/types/poliza";
+import type { DatosRiesgosVarios, AseguradoRiesgosVarios, ConvenioRiesgosVarios } from "@/types/poliza";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { BuscadorClientes } from "../BuscadorClientes";
 
 type Props = {
@@ -17,20 +17,43 @@ type Props = {
 };
 
 export function RiesgosVariosForm({ datos, onChange, onSiguiente, onAnterior }: Props) {
-	const [convenio1, setConvenio1] = useState<number>(datos?.convenio_1_infidelidad_empleados || 0);
-	const [convenio2, setConvenio2] = useState<number>(datos?.convenio_2_perdidas_dentro_local || 0);
-	const [convenio3, setConvenio3] = useState<number>(datos?.convenio_3_perdidas_fuera_local || 0);
+	// Convertir datos antiguos (number) a nueva estructura (ConvenioRiesgosVarios)
+	const inicializarConvenio = (valor: any): ConvenioRiesgosVarios => {
+		if (typeof valor === 'object' && valor !== null && 'habilitado' in valor) {
+			return valor as ConvenioRiesgosVarios;
+		}
+		// Si es un número (datos antiguos), convertir a nueva estructura
+		const monto = typeof valor === 'number' ? valor : 0;
+		return { habilitado: monto > 0, monto };
+	};
+
+	const [convenio1, setConvenio1] = useState<ConvenioRiesgosVarios>(
+		inicializarConvenio(datos?.convenio_1_infidelidad_empleados)
+	);
+	const [convenio2, setConvenio2] = useState<ConvenioRiesgosVarios>(
+		inicializarConvenio(datos?.convenio_2_perdidas_dentro_local)
+	);
+	const [convenio3, setConvenio3] = useState<ConvenioRiesgosVarios>(
+		inicializarConvenio(datos?.convenio_3_perdidas_fuera_local)
+	);
+	const [convenio4, setConvenio4] = useState<ConvenioRiesgosVarios>(
+		inicializarConvenio(datos?.convenio_4_pendiente) || { habilitado: false, monto: 0 }
+	);
+	const [convenio5, setConvenio5] = useState<ConvenioRiesgosVarios>(
+		inicializarConvenio(datos?.convenio_5_pendiente) || { habilitado: false, monto: 0 }
+	);
 	const [valorTotal, setValorTotal] = useState<number>(datos?.valor_total_asegurado || 0);
-	const [moneda, setMoneda] = useState<"Bs" | "USD">(datos?.moneda || "Bs");
 	const [asegurados, setAsegurados] = useState<AseguradoRiesgosVarios[]>(datos?.asegurados || []);
 	const [mostrarBuscador, setMostrarBuscador] = useState(false);
 	const [errores, setErrores] = useState<Record<string, string>>({});
 
-	// Calcular valor total automáticamente
+	// Calcular valor total automáticamente (solo convenios habilitados)
 	useEffect(() => {
-		const total = convenio1 + convenio2 + convenio3;
+		const total = [convenio1, convenio2, convenio3, convenio4, convenio5]
+			.filter(c => c.habilitado)
+			.reduce((sum, c) => sum + c.monto, 0);
 		setValorTotal(total);
-	}, [convenio1, convenio2, convenio3]);
+	}, [convenio1, convenio2, convenio3, convenio4, convenio5]);
 
 	const agregarAsegurado = (cliente: { id: string; nombre: string; ci: string }) => {
 		if (asegurados.some((a) => a.client_id === cliente.id)) {
@@ -55,20 +78,23 @@ export function RiesgosVariosForm({ datos, onChange, onSiguiente, onAnterior }: 
 	const handleContinuar = () => {
 		const nuevosErrores: Record<string, string> = {};
 
-		if (convenio1 < 0) {
-			nuevosErrores.convenio1 = "El valor no puede ser negativo";
-		}
+		// Validar que convenios habilitados tengan monto > 0
+		const convenios = [
+			{ nombre: 'convenio1', convenio: convenio1 },
+			{ nombre: 'convenio2', convenio: convenio2 },
+			{ nombre: 'convenio3', convenio: convenio3 },
+			{ nombre: 'convenio4', convenio: convenio4 },
+			{ nombre: 'convenio5', convenio: convenio5 },
+		];
 
-		if (convenio2 < 0) {
-			nuevosErrores.convenio2 = "El valor no puede ser negativo";
-		}
-
-		if (convenio3 < 0) {
-			nuevosErrores.convenio3 = "El valor no puede ser negativo";
-		}
+		convenios.forEach(({ nombre, convenio }) => {
+			if (convenio.habilitado && convenio.monto <= 0) {
+				nuevosErrores[nombre] = "El convenio habilitado debe tener un monto mayor a 0";
+			}
+		});
 
 		if (valorTotal <= 0) {
-			nuevosErrores.valor_total = "El valor total debe ser mayor a 0. Configure al menos una cobertura.";
+			nuevosErrores.valor_total = "El valor total debe ser mayor a 0. Habilite al menos un convenio.";
 		}
 
 		if (asegurados.length === 0) {
@@ -84,8 +110,9 @@ export function RiesgosVariosForm({ datos, onChange, onSiguiente, onAnterior }: 
 			convenio_1_infidelidad_empleados: convenio1,
 			convenio_2_perdidas_dentro_local: convenio2,
 			convenio_3_perdidas_fuera_local: convenio3,
+			convenio_4_pendiente: convenio4,
+			convenio_5_pendiente: convenio5,
 			valor_total_asegurado: valorTotal,
-			moneda,
 			asegurados,
 		});
 
@@ -123,28 +150,17 @@ export function RiesgosVariosForm({ datos, onChange, onSiguiente, onAnterior }: 
 								<li>• <strong>Convenio 1:</strong> Infidelidad de empleados</li>
 								<li>• <strong>Convenio 2:</strong> Pérdidas dentro del local</li>
 								<li>• <strong>Convenio 3:</strong> Pérdidas fuera del local</li>
+								<li>• <strong>Convenio 4:</strong> Pendiente</li>
+								<li>• <strong>Convenio 5:</strong> Pendiente</li>
 							</ul>
 							<p className="mt-2 text-xs text-blue-700">
-								El valor total se calcula automáticamente sumando los 3 convenios.
+								Habilite los convenios necesarios. El valor total se calcula sumando solo los convenios habilitados.
+							</p>
+							<p className="mt-1 text-xs text-gray-600">
+								La moneda se toma de los datos básicos de la póliza (Paso 2).
 							</p>
 						</div>
 					</div>
-				</div>
-
-				{/* Moneda */}
-				<div className="space-y-2">
-					<Label htmlFor="moneda">
-						Moneda <span className="text-red-500">*</span>
-					</Label>
-					<Select value={moneda} onValueChange={(value: "Bs" | "USD") => setMoneda(value)}>
-						<SelectTrigger>
-							<SelectValue />
-						</SelectTrigger>
-						<SelectContent>
-							<SelectItem value="Bs">Bolivianos (Bs)</SelectItem>
-							<SelectItem value="USD">Dólares (USD)</SelectItem>
-						</SelectContent>
-					</Select>
 				</div>
 
 				{/* Coberturas */}
@@ -152,75 +168,188 @@ export function RiesgosVariosForm({ datos, onChange, onSiguiente, onAnterior }: 
 					<h3 className="text-sm font-semibold text-gray-900 uppercase">Coberturas</h3>
 
 					{/* Convenio 1 */}
-					<div className="space-y-2">
-						<Label htmlFor="convenio1">
-							Convenio 1: Infidelidad de Empleados
-						</Label>
-						<Input
-							id="convenio1"
-							type="number"
-							min="0"
-							step="0.01"
-							value={convenio1 || ""}
-							onChange={(e) => {
-								setConvenio1(parseFloat(e.target.value) || 0);
-								if (errores.convenio1) {
-									const { convenio1, ...rest } = errores;
-									setErrores(rest);
-								}
-							}}
-							placeholder="0.00"
-							className={errores.convenio1 ? "border-red-500" : ""}
-						/>
-						{errores.convenio1 && <p className="text-sm text-red-600">{errores.convenio1}</p>}
+					<div className="flex items-start gap-4 p-3 border rounded-lg bg-white">
+						<div className="flex items-center pt-2">
+							<Checkbox
+								id="conv1_habilitado"
+								checked={convenio1.habilitado}
+								onCheckedChange={(checked) => setConvenio1({ ...convenio1, habilitado: !!checked })}
+							/>
+						</div>
+						<div className="flex-1 space-y-2">
+							<Label htmlFor="convenio1" className="font-medium">
+								Convenio 1: Infidelidad de Empleados
+							</Label>
+							{convenio1.habilitado && (
+								<>
+									<Input
+										id="convenio1"
+										type="number"
+										min="0"
+										step="0.01"
+										value={convenio1.monto || ""}
+										onChange={(e) => {
+											setConvenio1({ ...convenio1, monto: parseFloat(e.target.value) || 0 });
+											if (errores.convenio1) {
+												const { convenio1, ...rest } = errores;
+												setErrores(rest);
+											}
+										}}
+										placeholder="0.00"
+										className={errores.convenio1 ? "border-red-500" : ""}
+									/>
+									{errores.convenio1 && <p className="text-sm text-red-600">{errores.convenio1}</p>}
+								</>
+							)}
+						</div>
 					</div>
 
 					{/* Convenio 2 */}
-					<div className="space-y-2">
-						<Label htmlFor="convenio2">
-							Convenio 2: Pérdidas Dentro del Local
-						</Label>
-						<Input
-							id="convenio2"
-							type="number"
-							min="0"
-							step="0.01"
-							value={convenio2 || ""}
-							onChange={(e) => {
-								setConvenio2(parseFloat(e.target.value) || 0);
-								if (errores.convenio2) {
-									const { convenio2, ...rest } = errores;
-									setErrores(rest);
-								}
-							}}
-							placeholder="0.00"
-							className={errores.convenio2 ? "border-red-500" : ""}
-						/>
-						{errores.convenio2 && <p className="text-sm text-red-600">{errores.convenio2}</p>}
+					<div className="flex items-start gap-4 p-3 border rounded-lg bg-white">
+						<div className="flex items-center pt-2">
+							<Checkbox
+								id="conv2_habilitado"
+								checked={convenio2.habilitado}
+								onCheckedChange={(checked) => setConvenio2({ ...convenio2, habilitado: !!checked })}
+							/>
+						</div>
+						<div className="flex-1 space-y-2">
+							<Label htmlFor="convenio2" className="font-medium">
+								Convenio 2: Pérdidas Dentro del Local
+							</Label>
+							{convenio2.habilitado && (
+								<>
+									<Input
+										id="convenio2"
+										type="number"
+										min="0"
+										step="0.01"
+										value={convenio2.monto || ""}
+										onChange={(e) => {
+											setConvenio2({ ...convenio2, monto: parseFloat(e.target.value) || 0 });
+											if (errores.convenio2) {
+												const { convenio2, ...rest } = errores;
+												setErrores(rest);
+											}
+										}}
+										placeholder="0.00"
+										className={errores.convenio2 ? "border-red-500" : ""}
+									/>
+									{errores.convenio2 && <p className="text-sm text-red-600">{errores.convenio2}</p>}
+								</>
+							)}
+						</div>
 					</div>
 
 					{/* Convenio 3 */}
-					<div className="space-y-2">
-						<Label htmlFor="convenio3">
-							Convenio 3: Pérdidas Fuera del Local
-						</Label>
-						<Input
-							id="convenio3"
-							type="number"
-							min="0"
-							step="0.01"
-							value={convenio3 || ""}
-							onChange={(e) => {
-								setConvenio3(parseFloat(e.target.value) || 0);
-								if (errores.convenio3) {
-									const { convenio3, ...rest } = errores;
-									setErrores(rest);
-								}
-							}}
-							placeholder="0.00"
-							className={errores.convenio3 ? "border-red-500" : ""}
-						/>
-						{errores.convenio3 && <p className="text-sm text-red-600">{errores.convenio3}</p>}
+					<div className="flex items-start gap-4 p-3 border rounded-lg bg-white">
+						<div className="flex items-center pt-2">
+							<Checkbox
+								id="conv3_habilitado"
+								checked={convenio3.habilitado}
+								onCheckedChange={(checked) => setConvenio3({ ...convenio3, habilitado: !!checked })}
+							/>
+						</div>
+						<div className="flex-1 space-y-2">
+							<Label htmlFor="convenio3" className="font-medium">
+								Convenio 3: Pérdidas Fuera del Local
+							</Label>
+							{convenio3.habilitado && (
+								<>
+									<Input
+										id="convenio3"
+										type="number"
+										min="0"
+										step="0.01"
+										value={convenio3.monto || ""}
+										onChange={(e) => {
+											setConvenio3({ ...convenio3, monto: parseFloat(e.target.value) || 0 });
+											if (errores.convenio3) {
+												const { convenio3, ...rest } = errores;
+												setErrores(rest);
+											}
+										}}
+										placeholder="0.00"
+										className={errores.convenio3 ? "border-red-500" : ""}
+									/>
+									{errores.convenio3 && <p className="text-sm text-red-600">{errores.convenio3}</p>}
+								</>
+							)}
+						</div>
+					</div>
+
+					{/* Convenio 4 - NUEVO */}
+					<div className="flex items-start gap-4 p-3 border rounded-lg bg-white">
+						<div className="flex items-center pt-2">
+							<Checkbox
+								id="conv4_habilitado"
+								checked={convenio4.habilitado}
+								onCheckedChange={(checked) => setConvenio4({ ...convenio4, habilitado: !!checked })}
+							/>
+						</div>
+						<div className="flex-1 space-y-2">
+							<Label htmlFor="convenio4" className="font-medium">
+								Convenio 4: Pendiente
+							</Label>
+							{convenio4.habilitado && (
+								<>
+									<Input
+										id="convenio4"
+										type="number"
+										min="0"
+										step="0.01"
+										value={convenio4.monto || ""}
+										onChange={(e) => {
+											setConvenio4({ ...convenio4, monto: parseFloat(e.target.value) || 0 });
+											if (errores.convenio4) {
+												const { convenio4, ...rest } = errores;
+												setErrores(rest);
+											}
+										}}
+										placeholder="0.00"
+										className={errores.convenio4 ? "border-red-500" : ""}
+									/>
+									{errores.convenio4 && <p className="text-sm text-red-600">{errores.convenio4}</p>}
+								</>
+							)}
+						</div>
+					</div>
+
+					{/* Convenio 5 - NUEVO */}
+					<div className="flex items-start gap-4 p-3 border rounded-lg bg-white">
+						<div className="flex items-center pt-2">
+							<Checkbox
+								id="conv5_habilitado"
+								checked={convenio5.habilitado}
+								onCheckedChange={(checked) => setConvenio5({ ...convenio5, habilitado: !!checked })}
+							/>
+						</div>
+						<div className="flex-1 space-y-2">
+							<Label htmlFor="convenio5" className="font-medium">
+								Convenio 5: Pendiente
+							</Label>
+							{convenio5.habilitado && (
+								<>
+									<Input
+										id="convenio5"
+										type="number"
+										min="0"
+										step="0.01"
+										value={convenio5.monto || ""}
+										onChange={(e) => {
+											setConvenio5({ ...convenio5, monto: parseFloat(e.target.value) || 0 });
+											if (errores.convenio5) {
+												const { convenio5, ...rest } = errores;
+												setErrores(rest);
+											}
+										}}
+										placeholder="0.00"
+										className={errores.convenio5 ? "border-red-500" : ""}
+									/>
+									{errores.convenio5 && <p className="text-sm text-red-600">{errores.convenio5}</p>}
+								</>
+							)}
+						</div>
 					</div>
 
 					{/* Valor Total (calculado) */}
@@ -229,7 +358,10 @@ export function RiesgosVariosForm({ datos, onChange, onSiguiente, onAnterior }: 
 							Valor Total Asegurado (Calculado)
 						</Label>
 						<p className="text-2xl font-bold text-gray-900 mt-2">
-							{valorTotal.toLocaleString("es-BO", { minimumFractionDigits: 2 })} {moneda}
+							{valorTotal.toLocaleString("es-BO", { minimumFractionDigits: 2 })}
+						</p>
+						<p className="text-xs text-gray-500 mt-1">
+							Suma de convenios habilitados
 						</p>
 						{errores.valor_total && <p className="text-sm text-red-600 mt-2">{errores.valor_total}</p>}
 					</div>

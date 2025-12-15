@@ -1,12 +1,22 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronRight, ChevronLeft, CheckCircle2, Plus, Trash2, Users, AlertTriangle } from "lucide-react";
-import type { DatosSalud, AseguradoSalud, RolAseguradoSalud } from "@/types/poliza";
+import {
+	ChevronRight,
+	ChevronLeft,
+	CheckCircle2,
+	Plus,
+	Trash2,
+	Users,
+	AlertTriangle,
+	Settings,
+} from "lucide-react";
+import type { DatosSalud, AseguradoSalud, NivelSalud } from "@/types/poliza";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { BuscadorClientes } from "../BuscadorClientes";
 
 type Props = {
@@ -17,76 +27,143 @@ type Props = {
 	onAnterior: () => void;
 };
 
+// Sub-paso interno: 2.1 o 3
+type SubPaso = "niveles" | "principal";
+
 export function SaludForm({ datos, regionales, onChange, onSiguiente, onAnterior }: Props) {
+	// Estado del sub-paso actual
+	const [subPaso, setSubPaso] = useState<SubPaso>(
+		datos?.niveles && datos.niveles.length > 0 ? "principal" : "niveles"
+	);
+
+	// ===== PASO 2.1: NIVELES DE COBERTURA =====
+	const [niveles, setNiveles] = useState<NivelSalud[]>(datos?.niveles || []);
+	const [nivelEditando, setNivelEditando] = useState<NivelSalud | null>(null);
+	const [nombreNivel, setNombreNivel] = useState("");
+	const [montoNivel, setMontoNivel] = useState<number>(0);
+
+	// ===== PASO 3: FORMULARIO PRINCIPAL =====
 	const [tipoPoliza, setTipoPoliza] = useState<"individual" | "corporativo">(
 		datos?.tipo_poliza || "individual"
 	);
-	const [sumaAsegurada, setSumaAsegurada] = useState<number>(datos?.suma_asegurada || 0);
 	const [regionalId, setRegionalId] = useState<string>(datos?.regional_asegurado_id || "");
+	const [tieneMaternidad, setTieneMaternidad] = useState<boolean>(datos?.tiene_maternidad || false);
 	const [asegurados, setAsegurados] = useState<AseguradoSalud[]>(datos?.asegurados || []);
 	const [mostrarBuscador, setMostrarBuscador] = useState(false);
 	const [errores, setErrores] = useState<Record<string, string>>({});
 
-	const agregarAsegurado = (cliente: { id: string; nombre: string; ci: string }) => {
-		// Verificar que no esté duplicado
-		if (asegurados.some((a) => a.client_id === cliente.id)) {
+	// ===== FUNCIONES PASO 2.1: NIVELES =====
+	const crearNuevoNivel = () => {
+		const numeroNivel = niveles.length + 1;
+		setNivelEditando({
+			id: crypto.randomUUID(),
+			nombre: `Nivel ${numeroNivel}`,
+			monto: 0,
+		});
+		setNombreNivel(`Nivel ${numeroNivel}`);
+		setMontoNivel(0);
+	};
+
+	const guardarNivel = () => {
+		if (!nivelEditando) return;
+
+		const nuevosErrores: Record<string, string> = {};
+
+		if (!nombreNivel || nombreNivel.trim() === "") {
+			nuevosErrores.nombre_nivel = "El nombre del nivel es obligatorio";
+		}
+
+		if (montoNivel <= 0) {
+			nuevosErrores.monto_nivel = "El monto debe ser mayor a 0";
+		}
+
+		if (Object.keys(nuevosErrores).length > 0) {
+			setErrores(nuevosErrores);
 			return;
 		}
 
-		// Por defecto agregar como dependiente
+		// Actualizar nivel
+		const nivelActualizado: NivelSalud = {
+			...nivelEditando,
+			nombre: nombreNivel,
+			monto: montoNivel,
+		};
+
+		// Agregar o actualizar nivel
+		const index = niveles.findIndex((n) => n.id === nivelEditando.id);
+		if (index >= 0) {
+			// Actualizar existente
+			const nuevosNiveles = [...niveles];
+			nuevosNiveles[index] = nivelActualizado;
+			setNiveles(nuevosNiveles);
+		} else {
+			// Agregar nuevo
+			setNiveles([...niveles, nivelActualizado]);
+		}
+
+		setNivelEditando(null);
+		setNombreNivel("");
+		setMontoNivel(0);
+		setErrores({});
+	};
+
+	const editarNivel = (nivel: NivelSalud) => {
+		setNivelEditando(nivel);
+		setNombreNivel(nivel.nombre);
+		setMontoNivel(nivel.monto);
+	};
+
+	const eliminarNivel = (id: string) => {
+		if (confirm("¿Está seguro de eliminar este nivel?")) {
+			setNiveles(niveles.filter((n) => n.id !== id));
+		}
+	};
+
+	const continuarAPrincipal = () => {
+		if (niveles.length === 0) {
+			setErrores({ general: "Debe crear al menos un nivel de cobertura" });
+			return;
+		}
+
+		setErrores({});
+		setSubPaso("principal");
+	};
+
+	// ===== FUNCIONES PASO 3: PRINCIPAL =====
+	const agregarAsegurado = (cliente: { id: string; nombre: string; ci: string }) => {
+		// Verificar que no esté duplicado
+		if (asegurados.some((a) => a.client_id === cliente.id)) {
+			alert("Este cliente ya fue agregado");
+			return;
+		}
+
+		// Agregar con el primer nivel disponible por defecto
 		setAsegurados([
 			...asegurados,
 			{
 				client_id: cliente.id,
 				client_name: cliente.nombre,
 				client_ci: cliente.ci,
-				rol: "dependiente",
+				nivel_id: niveles[0]?.id || "",
 			},
 		]);
 		setMostrarBuscador(false);
 	};
 
-	const cambiarRol = (clientId: string, nuevoRol: RolAseguradoSalud) => {
-		setAsegurados(
-			asegurados.map((a) => (a.client_id === clientId ? { ...a, rol: nuevoRol } : a))
-		);
+	const cambiarNivel = (clientId: string, nivelId: string) => {
+		setAsegurados(asegurados.map((a) => (a.client_id === clientId ? { ...a, nivel_id: nivelId } : a)));
+	};
+
+	const cambiarRol = (clientId: string, rol: "contratante" | "titular" | undefined) => {
+		setAsegurados(asegurados.map((a) => (a.client_id === clientId ? { ...a, rol } : a)));
 	};
 
 	const eliminarAsegurado = (clientId: string) => {
 		setAsegurados(asegurados.filter((a) => a.client_id !== clientId));
 	};
 
-	const validarRoles = (): string[] => {
-		const advertencias: string[] = [];
-		const contratantes = asegurados.filter((a) => a.rol === "contratante");
-		const titulares = asegurados.filter((a) => a.rol === "titular");
-		const conyuges = asegurados.filter((a) => a.rol === "conyugue");
-
-		if (contratantes.length === 0) {
-			advertencias.push("Debe haber al menos 1 contratante");
-		} else if (contratantes.length > 1) {
-			advertencias.push("Solo puede haber 1 contratante");
-		}
-
-		if (titulares.length === 0) {
-			advertencias.push("Debe haber al menos 1 titular");
-		} else if (titulares.length > 1) {
-			advertencias.push("Solo puede haber 1 titular");
-		}
-
-		if (conyuges.length > 1) {
-			advertencias.push("Solo puede haber 1 cónyuge");
-		}
-
-		return advertencias;
-	};
-
 	const handleContinuar = () => {
 		const nuevosErrores: Record<string, string> = {};
-
-		if (sumaAsegurada <= 0) {
-			nuevosErrores.suma_asegurada = "La suma asegurada debe ser mayor a 0";
-		}
 
 		if (!regionalId) {
 			nuevosErrores.regional = "Debe seleccionar una regional";
@@ -96,9 +173,10 @@ export function SaludForm({ datos, regionales, onChange, onSiguiente, onAnterior
 			nuevosErrores.asegurados = "Debe agregar al menos un asegurado";
 		}
 
-		const advertenciasRoles = validarRoles();
-		if (advertenciasRoles.length > 0) {
-			nuevosErrores.roles = advertenciasRoles.join(", ");
+		// Validar que todos los asegurados tengan un nivel asignado
+		const aseguradosSinNivel = asegurados.filter((a) => !a.nivel_id);
+		if (aseguradosSinNivel.length > 0) {
+			nuevosErrores.asegurados = "Todos los asegurados deben tener un nivel asignado";
 		}
 
 		if (Object.keys(nuevosErrores).length > 0) {
@@ -106,37 +184,217 @@ export function SaludForm({ datos, regionales, onChange, onSiguiente, onAnterior
 			return;
 		}
 
-		onChange({
+		// Guardar datos
+		const datosSalud: DatosSalud = {
+			niveles,
 			tipo_poliza: tipoPoliza,
-			suma_asegurada: sumaAsegurada,
 			regional_asegurado_id: regionalId,
+			tiene_maternidad: tieneMaternidad,
 			asegurados,
-		});
+		};
 
+		onChange(datosSalud);
 		onSiguiente();
 	};
 
-	const tieneDatos = sumaAsegurada > 0 && regionalId && asegurados.length > 0;
+	const volverANiveles = () => {
+		setSubPaso("niveles");
+	};
 
+	// ===== RENDERIZADO =====
+	const esCompleto = datos !== null;
+
+	// SUB-PASO 2.1: CONFIGURACIÓN DE NIVELES
+	if (subPaso === "niveles") {
+		return (
+			<div className="bg-white rounded-lg shadow-sm border p-6">
+				<div className="flex items-center justify-between mb-6">
+					<div>
+						<h2 className="text-xl font-semibold text-gray-900">
+							Paso 2.1: Configurar Niveles de Cobertura (Salud)
+						</h2>
+						<p className="text-sm text-gray-600 mt-1">
+							Defina los niveles de cobertura para las pólizas de salud
+						</p>
+					</div>
+
+					{niveles.length > 0 && (
+						<div className="flex items-center gap-2 text-green-600">
+							<CheckCircle2 className="h-5 w-5" />
+							<span className="text-sm font-medium">{niveles.length} nivel(es) creado(s)</span>
+						</div>
+					)}
+				</div>
+
+				{/* Lista de niveles creados */}
+				{niveles.length > 0 && (
+					<div className="mb-6">
+						<h3 className="text-sm font-medium text-gray-700 mb-3">Niveles creados:</h3>
+						<div className="space-y-2">
+							{niveles.map((nivel) => (
+								<div key={nivel.id} className="flex items-center justify-between p-4 border rounded-lg">
+									<div className="flex-1">
+										<p className="font-medium text-gray-900">{nivel.nombre}</p>
+										<p className="text-sm text-gray-600">Cobertura: Bs {nivel.monto.toLocaleString()}</p>
+									</div>
+									<div className="flex gap-2">
+										<Button
+											variant="outline"
+											size="sm"
+											onClick={() => editarNivel(nivel)}
+										>
+											Editar
+										</Button>
+										<Button
+											variant="ghost"
+											size="sm"
+											onClick={() => eliminarNivel(nivel.id)}
+										>
+											<Trash2 className="h-4 w-4" />
+										</Button>
+									</div>
+								</div>
+							))}
+						</div>
+					</div>
+				)}
+
+				{/* Formulario de nivel (crear/editar) */}
+				{nivelEditando && (
+					<div className="mb-6 p-6 border-2 border-primary rounded-lg bg-blue-50">
+						<h3 className="text-lg font-semibold text-gray-900 mb-4">
+							{niveles.some((n) => n.id === nivelEditando.id) ? "Editar" : "Crear"} Nivel
+						</h3>
+
+						<div className="space-y-4">
+							<div className="space-y-2">
+								<Label htmlFor="nombre_nivel">Nombre del nivel</Label>
+								<Input
+									id="nombre_nivel"
+									value={nombreNivel}
+									onChange={(e) => {
+										setNombreNivel(e.target.value);
+										if (errores.nombre_nivel) {
+											const { nombre_nivel, ...rest } = errores;
+											setErrores(rest);
+										}
+									}}
+									placeholder="Ej: Nivel 1, Nivel Básico, Nivel Premium, etc."
+									className={errores.nombre_nivel ? "border-red-500" : ""}
+								/>
+								{errores.nombre_nivel && <p className="text-sm text-red-600">{errores.nombre_nivel}</p>}
+							</div>
+
+							<div className="space-y-2">
+								<Label htmlFor="monto_nivel">Monto de Cobertura</Label>
+								<Input
+									id="monto_nivel"
+									type="number"
+									min="0"
+									step="0.01"
+									value={montoNivel || ""}
+									onChange={(e) => {
+										setMontoNivel(parseFloat(e.target.value) || 0);
+										if (errores.monto_nivel) {
+											const { monto_nivel, ...rest } = errores;
+											setErrores(rest);
+										}
+									}}
+									placeholder="0.00"
+									className={errores.monto_nivel ? "border-red-500" : ""}
+								/>
+								{errores.monto_nivel && <p className="text-sm text-red-600">{errores.monto_nivel}</p>}
+								<p className="text-xs text-gray-500">Monto máximo de cobertura para este nivel</p>
+							</div>
+
+							{errores.general && (
+								<div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded">
+									<AlertTriangle className="h-4 w-4 text-red-600" />
+									<p className="text-sm text-red-600">{errores.general}</p>
+								</div>
+							)}
+
+							<div className="flex justify-end gap-2">
+								<Button variant="outline" onClick={() => setNivelEditando(null)}>
+									Cancelar
+								</Button>
+								<Button onClick={guardarNivel}>Guardar Nivel</Button>
+							</div>
+						</div>
+					</div>
+				)}
+
+				{/* Botón crear nuevo nivel */}
+				{!nivelEditando && (
+					<Button onClick={crearNuevoNivel} variant="outline" className="w-full mb-6">
+						<Plus className="mr-2 h-4 w-4" />
+						Crear Nuevo Nivel
+					</Button>
+				)}
+
+				{errores.general && !nivelEditando && (
+					<div className="flex items-center gap-2 p-3 mb-4 bg-amber-50 border border-amber-200 rounded">
+						<AlertTriangle className="h-4 w-4 text-amber-600" />
+						<p className="text-sm text-amber-600">{errores.general}</p>
+					</div>
+				)}
+
+				{/* Botones de navegación */}
+				<div className="flex justify-between pt-6 border-t">
+					<Button variant="outline" onClick={onAnterior}>
+						<ChevronLeft className="mr-2 h-5 w-5" />
+						Anterior
+					</Button>
+
+					<Button onClick={continuarAPrincipal} disabled={niveles.length === 0}>
+						Continuar al Formulario Principal
+						<ChevronRight className="ml-2 h-5 w-5" />
+					</Button>
+				</div>
+			</div>
+		);
+	}
+
+	// SUB-PASO 3: FORMULARIO PRINCIPAL
 	return (
 		<div className="bg-white rounded-lg shadow-sm border p-6">
 			<div className="flex items-center justify-between mb-6">
 				<div>
-					<h2 className="text-xl font-semibold text-gray-900">
-						Paso 3: Datos Específicos - Salud
-					</h2>
-					<p className="text-sm text-gray-600 mt-1">Configure los detalles de la póliza de salud</p>
+					<h2 className="text-xl font-semibold text-gray-900">Paso 3: Datos Específicos - Salud</h2>
+					<p className="text-sm text-gray-600 mt-1">
+						Complete la información de los asegurados y sus niveles de cobertura
+					</p>
 				</div>
 
-				{tieneDatos && (
+				{esCompleto && (
 					<div className="flex items-center gap-2 text-green-600">
 						<CheckCircle2 className="h-5 w-5" />
-						<span className="text-sm font-medium">{asegurados.length} asegurado(s)</span>
+						<span className="text-sm font-medium">Completado</span>
 					</div>
 				)}
 			</div>
 
-			<div className="space-y-6">
+			{/* Botón para volver a editar niveles */}
+			<div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+				<div className="flex items-center justify-between">
+					<div className="flex items-center gap-2">
+						<Settings className="h-5 w-5 text-blue-600" />
+						<div>
+							<p className="text-sm font-medium text-gray-900">
+								{niveles.length} nivel(es) de cobertura configurado(s)
+							</p>
+							<p className="text-xs text-gray-600">
+								{niveles.map((n) => n.nombre).join(", ")}
+							</p>
+						</div>
+					</div>
+					<Button variant="outline" size="sm" onClick={volverANiveles}>
+						Editar Niveles
+					</Button>
+				</div>
+			</div>
+
+			<div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
 				{/* Tipo de Póliza */}
 				<div className="space-y-2">
 					<Label htmlFor="tipo_poliza">
@@ -153,45 +411,12 @@ export function SaludForm({ datos, regionales, onChange, onSiguiente, onAnterior
 					</Select>
 				</div>
 
-				{/* Suma Asegurada */}
-				<div className="space-y-2">
-					<Label htmlFor="suma_asegurada">
-						Suma Asegurada <span className="text-red-500">*</span>
-					</Label>
-					<Input
-						id="suma_asegurada"
-						type="number"
-						min="0"
-						step="0.01"
-						value={sumaAsegurada || ""}
-						onChange={(e) => {
-							setSumaAsegurada(parseFloat(e.target.value) || 0);
-							if (errores.suma_asegurada) {
-								const { suma_asegurada, ...rest } = errores;
-								setErrores(rest);
-							}
-						}}
-						placeholder="50000.00"
-						className={errores.suma_asegurada ? "border-red-500" : ""}
-					/>
-					{errores.suma_asegurada && <p className="text-sm text-red-600">{errores.suma_asegurada}</p>}
-				</div>
-
 				{/* Regional */}
 				<div className="space-y-2">
 					<Label htmlFor="regional">
 						Regional Asegurado <span className="text-red-500">*</span>
 					</Label>
-					<Select
-						value={regionalId}
-						onValueChange={(value) => {
-							setRegionalId(value);
-							if (errores.regional) {
-								const { regional, ...rest } = errores;
-								setErrores(rest);
-							}
-						}}
-					>
+					<Select value={regionalId} onValueChange={setRegionalId}>
 						<SelectTrigger className={errores.regional ? "border-red-500" : ""}>
 							<SelectValue placeholder="Seleccione una regional" />
 						</SelectTrigger>
@@ -206,111 +431,151 @@ export function SaludForm({ datos, regionales, onChange, onSiguiente, onAnterior
 					{errores.regional && <p className="text-sm text-red-600">{errores.regional}</p>}
 				</div>
 
-				{/* Validación de Roles */}
-				{validarRoles().length > 0 && asegurados.length > 0 && (
-					<div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex gap-3">
-						<AlertTriangle className="h-5 w-5 text-yellow-600 flex-shrink-0 mt-0.5" />
-						<div className="text-sm text-yellow-800">
-							<p className="font-medium mb-1">Advertencias sobre roles:</p>
-							<ul className="list-disc list-inside space-y-1">
-								{validarRoles().map((adv, i) => (
-									<li key={i}>{adv}</li>
-								))}
-							</ul>
-						</div>
-					</div>
-				)}
-
-				{/* Lista de Asegurados */}
-				<div className="space-y-3">
-					<div className="flex items-center justify-between">
-						<Label>
-							Asegurados <span className="text-red-500">*</span>
+				{/* Tiene Maternidad */}
+				<div className="space-y-2 md:col-span-2">
+					<div className="flex items-center space-x-2">
+						<Checkbox
+							id="tiene_maternidad"
+							checked={tieneMaternidad}
+							onCheckedChange={(checked) => setTieneMaternidad(!!checked)}
+						/>
+						<Label htmlFor="tiene_maternidad" className="cursor-pointer">
+							¿Incluye cobertura de maternidad?
 						</Label>
-						<Button type="button" variant="outline" size="sm" onClick={() => setMostrarBuscador(true)}>
-							<Plus className="mr-2 h-4 w-4" />
-							Agregar Asegurado
-						</Button>
 					</div>
-
-					{errores.asegurados && <p className="text-sm text-red-600">{errores.asegurados}</p>}
-					{errores.roles && <p className="text-sm text-red-600">{errores.roles}</p>}
-
-					{asegurados.length === 0 ? (
-						<div className="border-2 border-dashed rounded-lg p-8 text-center">
-							<Users className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-							<p className="text-sm text-gray-600">No hay asegurados agregados</p>
-							<p className="text-xs text-gray-500 mt-1">
-								Debe agregar al menos: 1 contratante y 1 titular
-							</p>
-						</div>
-					) : (
-						<div className="border rounded-lg divide-y">
-							{asegurados.map((asegurado) => (
-								<div key={asegurado.client_id} className="p-4 flex items-center gap-4">
-									<div className="flex-1">
-										<p className="text-sm font-medium text-gray-900">{asegurado.client_name}</p>
-										<p className="text-xs text-gray-600">CI/NIT: {asegurado.client_ci}</p>
-									</div>
-									<div className="w-48">
-										<Select
-											value={asegurado.rol}
-											onValueChange={(value: RolAseguradoSalud) =>
-												cambiarRol(asegurado.client_id, value)
-											}
-										>
-											<SelectTrigger size="sm">
-												<SelectValue />
-											</SelectTrigger>
-											<SelectContent>
-												<SelectItem value="contratante">Contratante</SelectItem>
-												<SelectItem value="titular">Titular</SelectItem>
-												<SelectItem value="conyugue">Cónyuge</SelectItem>
-												<SelectItem value="dependiente">Dependiente</SelectItem>
-											</SelectContent>
-										</Select>
-									</div>
-									<Button
-										type="button"
-										variant="ghost"
-										size="sm"
-										onClick={() => eliminarAsegurado(asegurado.client_id)}
-									>
-										<Trash2 className="h-4 w-4 text-red-600" />
-									</Button>
-								</div>
-							))}
-						</div>
-					)}
-				</div>
-
-				{/* Información de Roles */}
-				<div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-					<p className="text-sm text-blue-900 font-medium mb-2">Información sobre roles:</p>
-					<ul className="text-xs text-blue-800 space-y-1">
-						<li>• <strong>Contratante:</strong> Persona o empresa que contrata el seguro (solo 1)</li>
-						<li>• <strong>Titular:</strong> Persona principal asegurada (solo 1)</li>
-						<li>• <strong>Cónyuge:</strong> Pareja del titular (máximo 1)</li>
-						<li>• <strong>Dependiente:</strong> Personas a cargo (pueden ser varios)</li>
-					</ul>
+					<p className="text-xs text-gray-500 ml-6">
+						Marque esta casilla si la póliza incluye cobertura para maternidad
+					</p>
 				</div>
 			</div>
 
-			{/* Buscador de Clientes Modal */}
-			{mostrarBuscador && (
-				<BuscadorClientes
-					onSeleccionar={agregarAsegurado}
-					onCancelar={() => setMostrarBuscador(false)}
-					clientesExcluidos={asegurados.map((a) => a.client_id)}
-				/>
-			)}
+			{/* Asegurados */}
+			<div className="space-y-4 mb-6">
+				<div className="flex items-center justify-between">
+					<div>
+						<Label className="text-base">
+							Asegurados <span className="text-red-500">*</span>
+						</Label>
+						<p className="text-sm text-gray-600 mt-1">
+							Agregue los asegurados y asigne su nivel de cobertura
+						</p>
+					</div>
+					<Button onClick={() => setMostrarBuscador(true)} disabled={mostrarBuscador}>
+						<Plus className="mr-2 h-4 w-4" />
+						Agregar Asegurado
+					</Button>
+				</div>
+
+				{errores.asegurados && (
+					<div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded">
+						<AlertTriangle className="h-4 w-4 text-red-600" />
+						<p className="text-sm text-red-600">{errores.asegurados}</p>
+					</div>
+				)}
+
+				{/* Buscador de clientes */}
+				{mostrarBuscador && (
+					<div className="p-4 border-2 border-primary rounded-lg bg-blue-50">
+						<div className="flex items-center justify-between mb-4">
+							<h3 className="font-semibold text-gray-900">Buscar Cliente</h3>
+						</div>
+						<BuscadorClientes
+							onSeleccionar={agregarAsegurado}
+							onCancelar={() => setMostrarBuscador(false)}
+						/>
+					</div>
+				)}
+
+				{/* Lista de asegurados */}
+				{asegurados.length > 0 ? (
+					<div className="space-y-3">
+						{asegurados.map((asegurado) => {
+							const nivel = niveles.find((n) => n.id === asegurado.nivel_id);
+							return (
+								<div key={asegurado.client_id} className="p-4 border rounded-lg">
+									<div className="flex items-start gap-4">
+										<Users className="h-5 w-5 text-gray-400 flex-shrink-0 mt-1" />
+										<div className="flex-1 space-y-3">
+											<div>
+												<p className="font-medium text-gray-900">{asegurado.client_name}</p>
+												<p className="text-sm text-gray-600">CI: {asegurado.client_ci}</p>
+											</div>
+											<div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+												<div className="space-y-1">
+													<Label className="text-xs text-gray-600">Nivel de Cobertura</Label>
+													<Select
+														value={asegurado.nivel_id}
+														onValueChange={(value) => cambiarNivel(asegurado.client_id, value)}
+													>
+														<SelectTrigger className="w-full">
+															<SelectValue placeholder="Nivel" />
+														</SelectTrigger>
+														<SelectContent>
+															{niveles.map((nivel) => (
+																<SelectItem key={nivel.id} value={nivel.id}>
+																	{nivel.nombre}
+																</SelectItem>
+															))}
+														</SelectContent>
+													</Select>
+												</div>
+												<div className="space-y-1">
+													<Label className="text-xs text-gray-600">Rol (Opcional)</Label>
+													<Select
+														value={asegurado.rol || "ninguno"}
+														onValueChange={(value) => cambiarRol(asegurado.client_id, value === "ninguno" ? undefined : value as "contratante" | "titular")}
+													>
+														<SelectTrigger className="w-full">
+															<SelectValue placeholder="Sin rol específico" />
+														</SelectTrigger>
+														<SelectContent>
+															<SelectItem value="ninguno">Sin rol específico</SelectItem>
+															<SelectItem value="contratante">Contratante</SelectItem>
+															<SelectItem value="titular">Titular</SelectItem>
+														</SelectContent>
+													</Select>
+												</div>
+											</div>
+										</div>
+										<Button
+											variant="ghost"
+											size="sm"
+											onClick={() => eliminarAsegurado(asegurado.client_id)}
+											className="mt-1"
+										>
+											<Trash2 className="h-4 w-4 text-red-600" />
+										</Button>
+									</div>
+								</div>
+							);
+						})}
+					</div>
+				) : (
+					<div className="text-center py-8 border-2 border-dashed rounded-lg">
+						<Users className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+						<p className="text-gray-600">No hay asegurados agregados</p>
+						<p className="text-sm text-gray-500">Haga clic en &ldquo;Agregar Asegurado&rdquo; para comenzar</p>
+					</div>
+				)}
+			</div>
+
+			{/* Información sobre roles */}
+			<div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+				<p className="text-sm text-blue-900 font-medium mb-2">Información sobre roles:</p>
+				<ul className="text-xs text-blue-800 space-y-1">
+					<li>• <strong>Contratante:</strong> Persona o empresa que contrata el seguro (opcional)</li>
+					<li>• <strong>Titular:</strong> Persona principal asegurada (opcional)</li>
+					<li>• <strong>Sin rol:</strong> Otros asegurados sin rol específico</li>
+				</ul>
+			</div>
 
 			{/* Botones de navegación */}
-			<div className="flex justify-between pt-6 mt-6 border-t">
-				<Button variant="outline" onClick={onAnterior}>
+			<div className="flex justify-between pt-6 border-t">
+				<Button variant="outline" onClick={volverANiveles}>
 					<ChevronLeft className="mr-2 h-5 w-5" />
-					Anterior
+					Volver a Niveles
 				</Button>
+
 				<Button onClick={handleContinuar}>
 					Continuar
 					<ChevronRight className="ml-2 h-5 w-5" />
