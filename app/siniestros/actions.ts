@@ -307,46 +307,60 @@ export async function obtenerSiniestroDetalle(siniestroId: string): Promise<Obte
 		// Obtener observaciones
 		const { data: observacionesRaw, error: observacionesError } = await supabase
 			.from("siniestros_observaciones")
-			.select(
-				`
-        *,
-        usuario:profiles!siniestros_observaciones_created_by_fkey (
-          full_name
-        )
-      `
-			)
+			.select("*, created_by")
 			.eq("siniestro_id", siniestroId)
 			.order("created_at", { ascending: false });
 
 		if (observacionesError) throw observacionesError;
 
-		const observaciones =
-			observacionesRaw?.map((o: any) => ({
-				...o,
-				usuario_nombre: o.usuario?.full_name,
-			})) || [];
+		// Enriquecer con nombres de usuario
+		const observaciones = await Promise.all(
+			(observacionesRaw || []).map(async (o: any) => {
+				if (!o.created_by) {
+					return { ...o, usuario_nombre: "Sistema" };
+				}
+
+				const { data: usuario } = await supabase
+					.from("profiles")
+					.select("full_name")
+					.eq("id", o.created_by)
+					.single();
+
+				return {
+					...o,
+					usuario_nombre: usuario?.full_name || "Usuario",
+				};
+			})
+		);
 
 		// Obtener historial
 		const { data: historialRaw, error: historialError } = await supabase
 			.from("siniestros_historial")
-			.select(
-				`
-        *,
-        usuario:profiles!siniestros_historial_created_by_fkey (
-          full_name
-        )
-      `
-			)
+			.select("*, created_by")
 			.eq("siniestro_id", siniestroId)
 			.order("created_at", { ascending: false });
 
 		if (historialError) throw historialError;
 
-		const historial =
-			historialRaw?.map((h: any) => ({
-				...h,
-				usuario_nombre: h.usuario?.full_name,
-			})) || [];
+		// Enriquecer con nombres de usuario
+		const historial = await Promise.all(
+			(historialRaw || []).map(async (h: any) => {
+				if (!h.created_by) {
+					return { ...h, usuario_nombre: "Sistema" };
+				}
+
+				const { data: usuario } = await supabase
+					.from("profiles")
+					.select("full_name")
+					.eq("id", h.created_by)
+					.single();
+
+				return {
+					...h,
+					usuario_nombre: usuario?.full_name || "Sistema",
+				};
+			})
+		);
 
 		return {
 			success: true,

@@ -583,3 +583,4 @@ types/
 - Export pending policies list
 - Manager-specific validation quotas or assignments
 - Validation SLA tracking (time from creation to validation)
+- el usuario siempre ejecuta las migraciones de supabase manualmente, Claude no tiene permiso de escritura solo de lectura
