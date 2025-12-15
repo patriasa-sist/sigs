@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import type { SiniestroVista, SiniestrosStats, EstadoSiniestro } from "@/types/siniestro";
 import StatsCards from "./StatsCards";
 import SiniestrosTable from "./SiniestrosTable";
+import ExportarSiniestros from "./ExportarSiniestros";
 
 interface DashboardProps {
 	siniestrosIniciales: SiniestroVista[];
@@ -30,7 +31,20 @@ export default function Dashboard({ siniestrosIniciales, statsIniciales }: Dashb
 	// Filtros
 	const [searchTerm, setSearchTerm] = useState("");
 	const [estadoFiltro, setEstadoFiltro] = useState<EstadoSiniestro | "todos">("todos");
+	const [ramoFiltro, setRamoFiltro] = useState<string>("todos");
+	const [departamentoFiltro, setDepartamentoFiltro] = useState<string>("todos");
 	const [currentPage, setCurrentPage] = useState(1);
+
+	// Obtener opciones únicas para filtros
+	const ramosUnicos = useMemo(() => {
+		const ramos = Array.from(new Set(siniestros.map((s) => s.ramo))).sort();
+		return ramos;
+	}, [siniestros]);
+
+	const departamentosUnicos = useMemo(() => {
+		const departamentos = Array.from(new Set(siniestros.map((s) => s.departamento_nombre))).sort();
+		return departamentos;
+	}, [siniestros]);
 
 	// Filtrado con useMemo
 	const filteredData = useMemo(() => {
@@ -44,10 +58,12 @@ export default function Dashboard({ siniestrosIniciales, statsIniciales }: Dashb
 				siniestro.departamento_nombre.toLowerCase().includes(searchLower);
 
 			const matchesEstado = estadoFiltro === "todos" || siniestro.estado === estadoFiltro;
+			const matchesRamo = ramoFiltro === "todos" || siniestro.ramo === ramoFiltro;
+			const matchesDepartamento = departamentoFiltro === "todos" || siniestro.departamento_nombre === departamentoFiltro;
 
-			return matchesSearch && matchesEstado;
+			return matchesSearch && matchesEstado && matchesRamo && matchesDepartamento;
 		});
-	}, [siniestros, searchTerm, estadoFiltro]);
+	}, [siniestros, searchTerm, estadoFiltro, ramoFiltro, departamentoFiltro]);
 
 	const totalPages = Math.ceil(filteredData.length / ITEMS_PER_PAGE);
 
@@ -69,11 +85,22 @@ export default function Dashboard({ siniestrosIniciales, statsIniciales }: Dashb
 			{/* Filtros */}
 			<Card>
 				<CardHeader>
-					<CardTitle>Filtros</CardTitle>
+					<div className="flex items-center justify-between">
+						<CardTitle>Filtros</CardTitle>
+						<ExportarSiniestros
+							siniestros={filteredData}
+							filtrosActivos={{
+								searchTerm,
+								estadoFiltro,
+								ramoFiltro,
+								departamentoFiltro,
+							}}
+						/>
+					</div>
 				</CardHeader>
 				<CardContent>
-					<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-						<div className="relative">
+					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+						<div className="relative lg:col-span-2">
 							<Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
 							<Input
 								placeholder="Buscar por póliza, cliente, documento o lugar..."
@@ -100,6 +127,46 @@ export default function Dashboard({ siniestrosIniciales, statsIniciales }: Dashb
 								<SelectItem value="concluido">Concluido</SelectItem>
 							</SelectContent>
 						</Select>
+						<Select
+							value={ramoFiltro}
+							onValueChange={(val) => {
+								setRamoFiltro(val);
+								setCurrentPage(1);
+							}}
+						>
+							<SelectTrigger>
+								<SelectValue />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value="todos">Todos los ramos</SelectItem>
+								{ramosUnicos.map((ramo) => (
+									<SelectItem key={ramo} value={ramo}>
+										{ramo}
+									</SelectItem>
+								))}
+							</SelectContent>
+						</Select>
+					</div>
+					<div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
+						<Select
+							value={departamentoFiltro}
+							onValueChange={(val) => {
+								setDepartamentoFiltro(val);
+								setCurrentPage(1);
+							}}
+						>
+							<SelectTrigger>
+								<SelectValue />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value="todos">Todos los departamentos</SelectItem>
+								{departamentosUnicos.map((dpto) => (
+									<SelectItem key={dpto} value={dpto}>
+										{dpto}
+									</SelectItem>
+								))}
+							</SelectContent>
+						</Select>
 					</div>
 				</CardContent>
 			</Card>
@@ -114,6 +181,11 @@ export default function Dashboard({ siniestrosIniciales, statsIniciales }: Dashb
 							Mostrando{" "}
 							<span className="font-semibold text-primary">{filteredData.length}</span>{" "}
 							{filteredData.length === 1 ? "siniestro" : "siniestros"}
+							{siniestros.length !== filteredData.length && (
+								<span className="text-xs ml-2">
+									(de {siniestros.length} totales)
+								</span>
+							)}
 						</>
 					)}
 				</p>
