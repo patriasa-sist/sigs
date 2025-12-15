@@ -6,6 +6,8 @@ import type { DatosAutomotor, VehiculoAutomotor, TipoVehiculo, MarcaVehiculo } f
 import { validarPlacasUnicas } from "@/utils/polizaValidation";
 import { importarVehiculosDesdeExcel, generarTemplateExcel } from "@/utils/vehiculoExcelImport";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { VehiculoModal } from "./VehiculoModal";
 import { createClient } from "@/utils/supabase/client";
 
@@ -17,6 +19,7 @@ type Props = {
 };
 
 export function AutomotorForm({ datos, onChange, onSiguiente, onAnterior }: Props) {
+	const [tipoPoliza, setTipoPoliza] = useState<"individual" | "corporativo">(datos?.tipo_poliza || "individual");
 	const [vehiculos, setVehiculos] = useState<VehiculoAutomotor[]>(datos?.vehiculos || []);
 	const [modalAbierto, setModalAbierto] = useState(false);
 	const [vehiculoEditando, setVehiculoEditando] = useState<VehiculoAutomotor | null>(null);
@@ -92,7 +95,7 @@ export function AutomotorForm({ datos, onChange, onSiguiente, onAnterior }: Prop
 		}
 
 		setVehiculos(nuevosVehiculos);
-		onChange({ vehiculos: nuevosVehiculos });
+		onChange({ tipo_poliza: tipoPoliza, vehiculos: nuevosVehiculos });
 		setModalAbierto(false);
 		setVehiculoEditando(null);
 		setIndexEditando(null);
@@ -118,7 +121,7 @@ export function AutomotorForm({ datos, onChange, onSiguiente, onAnterior }: Prop
 		if (confirm("¿Está seguro de eliminar este vehículo?")) {
 			const nuevosVehiculos = vehiculos.filter((_, i) => i !== index);
 			setVehiculos(nuevosVehiculos);
-			onChange({ vehiculos: nuevosVehiculos });
+			onChange({ tipo_poliza: tipoPoliza, vehiculos: nuevosVehiculos });
 		}
 	};
 
@@ -146,7 +149,7 @@ export function AutomotorForm({ datos, onChange, onSiguiente, onAnterior }: Prop
 				}
 
 				setVehiculos(nuevosVehiculos);
-				onChange({ vehiculos: nuevosVehiculos });
+				onChange({ tipo_poliza: tipoPoliza, vehiculos: nuevosVehiculos });
 
 				// Mostrar errores si los hay (filas con problemas)
 				if (resultado.errores.length > 0) {
@@ -193,8 +196,14 @@ export function AutomotorForm({ datos, onChange, onSiguiente, onAnterior }: Prop
 			return;
 		}
 
-		onChange({ vehiculos });
+		onChange({ tipo_poliza: tipoPoliza, vehiculos });
 		onSiguiente();
+	};
+
+	// Handler para cambio de tipo de póliza
+	const handleTipoPolizaChange = (value: "individual" | "corporativo") => {
+		setTipoPoliza(value);
+		onChange({ tipo_poliza: value, vehiculos });
 	};
 
 	const tieneVehiculos = vehiculos.length > 0;
@@ -217,6 +226,25 @@ export function AutomotorForm({ datos, onChange, onSiguiente, onAnterior }: Prop
 						<span className="text-sm font-medium">{vehiculos.length} vehículo(s)</span>
 					</div>
 				)}
+			</div>
+
+			{/* Tipo de Póliza */}
+			<div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+				<Label htmlFor="tipo-poliza" className="block text-sm font-medium text-gray-700 mb-2">
+					Tipo de Póliza
+				</Label>
+				<Select value={tipoPoliza} onValueChange={handleTipoPolizaChange}>
+					<SelectTrigger id="tipo-poliza" className="w-full max-w-xs bg-white">
+						<SelectValue />
+					</SelectTrigger>
+					<SelectContent>
+						<SelectItem value="individual">Individual</SelectItem>
+						<SelectItem value="corporativo">Corporativo</SelectItem>
+					</SelectContent>
+				</Select>
+				<p className="text-xs text-gray-500 mt-1">
+					Seleccione si la póliza es para un cliente individual o corporativo
+				</p>
 			</div>
 
 			{/* Botones de acciones */}

@@ -133,31 +133,57 @@ export type VehiculoAutomotor = {
 };
 
 export type DatosAutomotor = {
+	tipo_poliza: "individual" | "corporativo"; // NUEVO: Tipo de póliza (individual o corporativo)
 	vehiculos: VehiculoAutomotor[];
 };
 
 // --- SALUD ---
-export type RolAseguradoSalud = "contratante" | "titular" | "conyugue" | "dependiente";
+// NUEVO: Nivel de cobertura para Salud (estructura simplificada)
+export type NivelSalud = {
+	id: string; // UUID generado en cliente
+	nombre: string; // "Nivel 1", "Nivel 2", etc.
+	monto: number; // Monto de cobertura del nivel
+};
+
+export type RolAseguradoSalud = "contratante" | "titular"; // MODIFICADO: Solo contratante y titular (opcional)
 
 export type AseguradoSalud = {
 	client_id: string;
 	client_name: string;
 	client_ci: string;
-	rol: RolAseguradoSalud;
+	nivel_id: string; // NUEVO: Referencia al NivelSalud
+	rol?: RolAseguradoSalud; // MODIFICADO: Ahora opcional, simplificado a contratante/titular
 };
 
 export type DatosSalud = {
+	niveles: NivelSalud[]; // NUEVO: Niveles de cobertura configurados
 	tipo_poliza: "individual" | "corporativo";
-	suma_asegurada: number;
 	regional_asegurado_id: string;
-	asegurados: AseguradoSalud[];
+	tiene_maternidad: boolean; // NUEVO: Indica si la póliza incluye cobertura de maternidad
+	asegurados: AseguradoSalud[]; // MODIFICADO: Ahora incluye nivel_id
+	// REMOVED: suma_asegurada (ahora está en niveles)
 };
 
 // --- INCENDIO Y ALIADOS ---
+// NUEVO: Items asegurables para cada ubicación
+export type ItemIncendio = {
+	nombre:
+		| "Edificaciones, instalaciones en general"
+		| "Activos fijos en general"
+		| "Equipos electronicos"
+		| "Maquinaria fija o equipos"
+		| "Existencias (mercaderia)"
+		| "Dinero y valores dentro del predio"
+		| "Vidrios y cristales";
+	monto: number; // Monto asegurado para este item
+};
+
 export type BienAseguradoIncendio = {
 	direccion: string;
-	valor_declarado: number;
+	items: ItemIncendio[]; // NUEVO: Items asegurados en esta ubicación
+	valor_total_declarado: number; // NUEVO: Suma de todos los items (calculado automáticamente)
 	es_primer_riesgo: boolean;
+	// REMOVED: valor_declarado (reemplazado por suma de items)
 };
 
 export type AseguradoIncendio = {
@@ -169,8 +195,8 @@ export type AseguradoIncendio = {
 export type DatosIncendio = {
 	tipo_poliza: "individual" | "corporativo";
 	regional_asegurado_id: string;
-	valor_asegurado: number;
-	bienes: BienAseguradoIncendio[];
+	valor_asegurado: number; // MODIFICADO: Ahora es la suma de todos los bienes' valor_total_declarado
+	bienes: BienAseguradoIncendio[]; // MODIFICADO: Ahora incluye items
 	asegurados: AseguradoIncendio[];
 };
 
@@ -184,11 +210,17 @@ export type AseguradoResponsabilidadCivil = {
 export type DatosResponsabilidadCivil = {
 	tipo_poliza: "individual" | "corporativo";
 	valor_asegurado: number;
-	moneda: "Bs" | "USD";
-	asegurados: AseguradoResponsabilidadCivil[];
+	// REMOVED: moneda (usa la moneda de toda la póliza definida en paso 2)
+	// REMOVED: asegurados (no es necesario para este ramo)
 };
 
 // --- RIESGOS VARIOS MISCELÁNEOS ---
+// NUEVO: Estructura para convenios con habilitación individual
+export type ConvenioRiesgosVarios = {
+	habilitado: boolean; // Si el convenio está habilitado
+	monto: number; // Monto asegurado (solo aplicable si habilitado)
+};
+
 export type AseguradoRiesgosVarios = {
 	client_id: string;
 	client_name: string;
@@ -196,12 +228,14 @@ export type AseguradoRiesgosVarios = {
 };
 
 export type DatosRiesgosVarios = {
-	convenio_1_infidelidad_empleados: number;
-	convenio_2_perdidas_dentro_local: number;
-	convenio_3_perdidas_fuera_local: number;
-	valor_total_asegurado: number;
-	moneda: "Bs" | "USD";
+	convenio_1_infidelidad_empleados: ConvenioRiesgosVarios; // MODIFICADO: Ahora es objeto con habilitado/monto
+	convenio_2_perdidas_dentro_local: ConvenioRiesgosVarios; // MODIFICADO: Ahora es objeto con habilitado/monto
+	convenio_3_perdidas_fuera_local: ConvenioRiesgosVarios; // MODIFICADO: Ahora es objeto con habilitado/monto
+	convenio_4_pendiente: ConvenioRiesgosVarios; // NUEVO: Convenio 4 (temporal: "pendiente")
+	convenio_5_pendiente: ConvenioRiesgosVarios; // NUEVO: Convenio 5 (temporal: "pendiente")
+	valor_total_asegurado: number; // MODIFICADO: Suma solo de convenios habilitados
 	asegurados: AseguradoRiesgosVarios[];
+	// REMOVED: moneda (usa la moneda de toda la póliza definida en paso 2)
 };
 
 // --- ACCIDENTES PERSONALES, VIDA, SEPELIO (CON NIVELES) ---
@@ -227,6 +261,7 @@ export type CoberturaSepelio = {
 export type NivelCobertura = {
 	id: string; // UUID generado en cliente
 	nombre: string; // "Nivel 1", "Nivel 2", etc.
+	prima_nivel?: number; // NUEVO: Prima del nivel (solo para Accidentes Personales)
 	coberturas: CoberturasAccidentesPersonales | CoberturasVida | CoberturaSepelio;
 };
 
@@ -235,6 +270,7 @@ export type AseguradoConNivel = {
 	client_name: string;
 	client_ci: string;
 	nivel_id: string; // Referencia al ID del nivel
+	cargo?: string; // NUEVO: Cargo/posición (Ej: "Gerente", "Operador") - solo para Accidentes Personales corporativo
 };
 
 export type DatosAccidentesPersonales = {
@@ -250,7 +286,8 @@ export type DatosVida = {
 	tipo_poliza: "individual" | "corporativo";
 	regional_asegurado_id: string;
 	asegurados: AseguradoConNivel[];
-	producto?: string; // Opcional
+	producto: string; // MODIFICADO: Ahora obligatorio (nombre del producto seleccionado)
+	producto_id?: string; // NUEVO: UUID referencia a productos_vida.id
 };
 
 export type DatosSepelio = {
@@ -492,4 +529,35 @@ export type ExcelImportResult = {
 		fila: number;
 		errores: string[];
 	}>;
+};
+
+// ============================================
+// TIPOS PARA EXCEL IMPORT (Sepelio)
+// ============================================
+
+export type SepelioExcelRow = {
+	ci: string; // CI del asegurado (debe existir en base de clientes)
+	nivel_nombre: string; // Nombre del nivel (debe coincidir con niveles configurados)
+};
+
+export type SepelioExcelImportResult = {
+	exito: boolean;
+	asegurados_validos: AseguradoConNivel[]; // Asegurados validados y listos para agregar
+	errores: Array<{
+		fila: number;
+		errores: string[]; // Lista de errores para esta fila
+	}>;
+};
+
+// ============================================
+// TIPOS PARA CATÁLOGO PRODUCTOS VIDA
+// ============================================
+
+export type ProductoVida = {
+	id: string; // UUID del producto
+	nombre: string; // Nombre del producto
+	descripcion?: string; // Descripción opcional
+	activo: boolean; // Estado del producto
+	created_at: string;
+	updated_at: string;
 };

@@ -333,7 +333,7 @@ export function VidaForm({ datos, regionales, onChange, onSiguiente, onAnterior 
 										<div className="flex-1">
 											<Input
 												type="number"
-												placeholder="Valor asegurado (Bs)"
+												placeholder="Valor asegurado"
 												value={coberturas.muerte.valor || ""}
 												onChange={(e) =>
 													setCoberturas({
@@ -371,7 +371,7 @@ export function VidaForm({ datos, regionales, onChange, onSiguiente, onAnterior 
 										<div className="flex-1">
 											<Input
 												type="number"
-												placeholder="Valor asegurado (Bs)"
+												placeholder="Valor asegurado"
 												value={coberturas.dima.valor || ""}
 												onChange={(e) =>
 													setCoberturas({
@@ -409,7 +409,7 @@ export function VidaForm({ datos, regionales, onChange, onSiguiente, onAnterior 
 										<div className="flex-1">
 											<Input
 												type="number"
-												placeholder="Valor asegurado (Bs)"
+												placeholder="Valor asegurado"
 												value={coberturas.sepelio.valor || ""}
 												onChange={(e) =>
 													setCoberturas({
@@ -447,7 +447,7 @@ export function VidaForm({ datos, regionales, onChange, onSiguiente, onAnterior 
 										<div className="flex-1">
 											<Input
 												type="number"
-												placeholder="Valor asegurado (Bs)"
+												placeholder="Valor asegurado"
 												value={coberturas.gastos_medicos.valor || ""}
 												onChange={(e) =>
 													setCoberturas({
@@ -485,7 +485,7 @@ export function VidaForm({ datos, regionales, onChange, onSiguiente, onAnterior 
 										<div className="flex-1">
 											<Input
 												type="number"
-												placeholder="Valor asegurado (Bs)"
+												placeholder="Valor asegurado"
 												value={coberturas.indm_enfermedades_graves.valor || ""}
 												onChange={(e) =>
 													setCoberturas({

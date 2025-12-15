@@ -132,7 +132,7 @@ NUEVO boton de impresion de detalles
 Incencidos>
 ubicacion del bien
 
-## Cobranzas
+## Cobranzas (listo)
 
 crearemos el módulo de cobranza, este módulo solo tienen acceso las cuentas marcadas como cobranza y la visualización es similar a la de las pólizas, pero se centra en ser capaz de visualizar ques cuentas tienen cobranzas pendientes para cobrar y luego actualizar las cuotas como pagadas. Puede suceder que un cliente pague más o menos en su cuota pendiente y esto debe repercutir en la actualización de las demás cuotas pendientes. En otras palabras el agente de cobranza debe ser capaz de modificar las cuotas pendientes más no las cuotas ya pagadas.
 
@@ -141,7 +141,7 @@ crearemos el módulo de cobranza, este módulo solo tienen acceso las cuentas ma
 3. Excesos: Deben redistribuirse completamente antes de confirmar
 4. RLS: Las policies permiten SELECT/UPDATE solo a cobranza y admin
 
-## clientes feedback
+## clientes feedback (Listo)
 
 sociedad con rubrica y detalle
 2do apellido obligatorio
@@ -178,86 +178,95 @@ modificación de datos bloqueados bajo solicitud
 ## polizas feedback
 
 8 12 25
-Paso 1
+Paso1
 NUEVO opción de seleccionar Asegurado adicional (opcional)
-
 paso 2
 "director comercial", recibe comisión, opcional, default Patria S.A., no excluyente.
-
-paso 3 automotor
-individual-corporativo
-franquicia numero input pasar a derecha
-NO TIENE DETALLES EXTRA DE PRODUCTO
-
-paso 3 AP
-Nivel agregar "prima de nivel" moneda, decimal
+paso 3 Accidentes personales
 NUEVO carga de excel masiva con Carnet|nivel
-Corporativo:: "+ Agregar Nominado por cargo" unico dato "Cargo"
-NO TIENE DETALLES EXTRA DE PRODUCTO
-
-Paso3 Sepelio
-NUEVO carga masiva
+paso 3 sepelio
 largo plazo> solo individual
 quitar asegurados y adicionales
-NO TIENE DETALLES EXTRA DE PRODUCTO
-
-parte3 RC
-moneda eliminar
-asegurados eliminados
-NO TIENE DETALLES EXTRA DE PRODUCTO
-
-paso3 incendio
-Moneda es de toda la póliza
-quitar "(dirección personal)"
-En la creación de dirección se debe agregar "Items" como en los Niveles de AP
-la sumantoria de todos los items da Valor Declarado
-La sumatoria de todas las ubicaciones da Valor ASegurado TOTAL> Valor total en Riesgo
-NO TIENE DETALLES EXTRA DE PRODUCTO
-
-paso3 salud
-corporativo tiene niveles para cada titular
-corporativo mínimo 1 titular pueden haber mas
-corporativo cada titular puede anexar sus conyugue y dependientes y comparten el nivel
-NUEVO check para marcar la póliza con maternidad
+paso 3 salud
 Salud Internacional>> (detectado mediante cod producto)
 NUEVO deducible numero
 
+este es el feedback de correcciones para el modulo de polizas que quiero que mejores esta indicado por el paso de registro y el ramo al que pertenece, toma cada punto como una mejora a implementar:
+paso 3 automotor
+NUEVO opcion de marcar individual-corporativo
+Nro chasis pasar a columna izquierda y franquicia cambiar a input y pasar a derecha
+
+paso 3 Accidentes personales
+NUEVO Nivel agregar "prima de nivel" que es un monto que engloba la suma de todo el nivel (input moneda, 2 decimales)
+NUEVO para Corporativo dar la opcion de agregar un dato "Cargo" que sea input para referenciar por ejemplo a un "Gerente" con Nivel 1 pero 3 "Operadores" con Nivel 2
+
+Paso3 Sepelio
+NUEVO carga masiva de asegurados leyendo su carnet y nombre de nivel (para que sea aceptado el carnet debe ser encontrado en la base de clientes y el nivel ya debe estar creado previamente)
+
+parte3 Responsabilidad civil
+Eliminar seleccion de moneda interna, usar moneda de toda la poliza
+eliminar seleccion de asegurados eso no va a ser necesario
+
+paso3 incendio
+Moneda es de toda la póliza, borrar eso que dice "Valor declarado (USD)" al agregar una ubicacion
+borrar texto "(dirección personal)" del check "marcar como PRIMER RIESGO"
+NUEVO En la creación de dirección se deben agregar "Items" como en los Niveles de AP, estos items son las siguientes caracteristicas de esta poliza:
+
+-   Edificaciones, instalaciones en general
+-   Activos fijos en general
+-   Equipos electronicos
+-   maquinaria fija o equipos
+-   existencias (mercaderia)
+-   Dinero y valores dentro del predio
+-   vidrios y cristales
+-   valor total declarado
+    la sumantoria de todos los items da "Valor total Declarado"
+    La sumatoria de todas las ubicaciones da "Valor Asegurado TOTAL"
+
+paso3 salud
+NUEVO en corporativo definir niveles con un monto para aplicar luego a cada asegurado
+cuando es corporativo se pueden definir niveles para cada asegurado aparte de su tipo de asegurado
+corporativo mínimo 1 titular pueden haber mas
+corporativo cada titular puede anexar sus conyugue y dependientes y comparten el nivel
+NUEVO check para marcar la póliza con maternidad
+
 paso3 Vida
-remover glosa Bs de niveles
-eliminar producto texto pasarlo a lista desplegable (mod gerencias)
-Vida obligatoriamente al contado forzar
+remover texto "Bs" de los niveles en el placeholder "valor asegurado Bs"
+eliminar input de producto texto pasarlo a lista desplegable con opciones parametrizadas "vida producto 1" y "Vida producto 2" que vienen de la base de datos
+Vida se paga obligatoriamente al contado
 
 paso3 Riesgos Varios Miscelaneos
-quitar moneda de la seccion
-5 convenios
-Convenios checkbox para habilitar
+quitar selector de moneda interna, se usa la de toda la poliza
+5 convenios no 3 (rellenar con titulo convenio4: pendiente y convenio5: pendiente por el momento)
+Convenios checkbox para habilitar o deshabilitar, cada uno con su monto
 
 CONCRETAR:
 
--   FIANZAS COD 92
+-   plantilla de FIANZAS es todo ramo que empieze con el codigo "92"
     BENEFICIARIO (TEXTO MAYUSCULAS)
     OBJETO DEL CONTRATO (TEXTO)
     VALOR DEL CONTRATO (NUM)
     VALOR CAUCIONADO (NUM)
     UBICACION DE LA OBRA (TEXTO)
 
--   AERONAVEGACION // Naves y embarcaciones
-    ASEGURADO ADICIONAL (cliente completo)
-    DATOS OBJETO ASEGURADO
--   MARCA
--   MODELO
--   AÑO
--   SERIE
--   USO privado/publico/recreaccion/
--   MATRICULA
--   NUMERO DE PASAJERO
--   NUMERO TRIPULANTES
-    VALOR ASEGURADO:
--   CASCO (numero)
--   RESPONSBILIDAD CIVIL (numero)
--   ACCIDENTES PERSONALES (desplegable de niveles AP, varios niveles)
+-   plantilla AERONAVEGACION // Naves y embarcaciones
+    ASEGURADO ADICIONAL (buscar cliente)
+    DATOS OBJETO ASEGURADO:
 
--   ROBO
+    -   MARCA
+    -   MODELO
+    -   AÑO
+    -   SERIE
+    -   USO privado/publico/recreaccion/
+    -   MATRICULA
+    -   NUMERO DE PASAJERO
+    -   NUMERO TRIPULANTES
+        VALOR ASEGURADO: (monto)
+    -   CASCO (texto)
+    -   RESPONSBILIDAD CIVIL (monto)
+    -   ACCIDENTES PERSONALES (desplegable de niveles AP, varios niveles)
+
+-   plantilla ROBO
     Ubicación de riesgo
     Items seleccionables con su monto
     valor asegurado
@@ -306,7 +315,7 @@ PARAMETRIZACIONES>
 [] lista de productos AP/vida
 [] tipos de uso de aeronaves
 
-## siniestros
+## siniestros (listo)
 
 similar al modulo de cobranzas, ahora haremos el módulo de siniestros:
 

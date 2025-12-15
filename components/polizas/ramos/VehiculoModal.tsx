@@ -22,7 +22,7 @@ export function VehiculoModal({ vehiculo, onGuardar, onCancelar }: Props) {
 		vehiculo || {
 			placa: "",
 			valor_asegurado: 0,
-			franquicia: VEHICULO_RULES.FRANQUICIAS_DISPONIBLES[0], // Primer valor por defecto (700)
+			franquicia: 0, // Ahora es input libre, no selector predefinido
 			nro_chasis: "",
 			uso: "particular",
 			coaseguro: VEHICULO_RULES.COASEGURO_MIN, // 0% por defecto
@@ -135,22 +135,24 @@ export function VehiculoModal({ vehiculo, onGuardar, onCancelar }: Props) {
 							<h3 className="text-sm font-semibold text-gray-900 mb-4">Campos Obligatorios</h3>
 						</div>
 
-						{/* Placa */}
+						{/* COLUMNA IZQUIERDA */}
+						{/* Número de Chasis - MOVIDO A PRIMERA POSICIÓN IZQUIERDA */}
 						<div className="space-y-2">
-							<Label htmlFor="placa">
-								Placa <span className="text-red-500">*</span>
+							<Label htmlFor="nro_chasis">
+								Nº de Chasis <span className="text-red-500">*</span>
 							</Label>
 							<Input
-								id="placa"
-								value={formData.placa}
-								onChange={(e) => handleChange("placa", e.target.value.toUpperCase())}
-								placeholder="Ej: ABC-123"
-								className={errores.placa ? "border-red-500" : ""}
+								id="nro_chasis"
+								value={formData.nro_chasis}
+								onChange={(e) => handleChange("nro_chasis", e.target.value.toUpperCase())}
+								placeholder="CH123456789"
+								className={errores.nro_chasis ? "border-red-500" : ""}
 							/>
-							{errores.placa && <p className="text-sm text-red-600">{errores.placa}</p>}
+							{errores.nro_chasis && <p className="text-sm text-red-600">{errores.nro_chasis}</p>}
 						</div>
 
-						{/* Valor Asegurado */}
+						{/* COLUMNA DERECHA */}
+						{/* Valor Asegurado - PRIMERA POSICIÓN DERECHA */}
 						<div className="space-y-2">
 							<Label htmlFor="valor_asegurado">
 								Valor Asegurado (Bs) <span className="text-red-500">*</span>
@@ -170,42 +172,39 @@ export function VehiculoModal({ vehiculo, onGuardar, onCancelar }: Props) {
 							)}
 						</div>
 
-						{/* Franquicia (ahora parametrizada) */}
+						{/* COLUMNA IZQUIERDA */}
+						{/* Placa - SEGUNDA POSICIÓN IZQUIERDA */}
+						<div className="space-y-2">
+							<Label htmlFor="placa">
+								Placa <span className="text-red-500">*</span>
+							</Label>
+							<Input
+								id="placa"
+								value={formData.placa}
+								onChange={(e) => handleChange("placa", e.target.value.toUpperCase())}
+								placeholder="Ej: ABC-123"
+								className={errores.placa ? "border-red-500" : ""}
+							/>
+							{errores.placa && <p className="text-sm text-red-600">{errores.placa}</p>}
+						</div>
+
+						{/* COLUMNA DERECHA */}
+						{/* Franquicia - CAMBIADO DE SELECT A INPUT, MOVIDO A DERECHA */}
 						<div className="space-y-2">
 							<Label htmlFor="franquicia">
 								Franquicia (Bs) <span className="text-red-500">*</span>
 							</Label>
-							<Select
-								value={formData.franquicia?.toString()}
-								onValueChange={(value) => handleChange("franquicia", parseInt(value))}
-							>
-								<SelectTrigger className={errores.franquicia ? "border-red-500" : ""}>
-									<SelectValue placeholder="Seleccione franquicia" />
-								</SelectTrigger>
-								<SelectContent>
-									{VEHICULO_RULES.FRANQUICIAS_DISPONIBLES.map((valor) => (
-										<SelectItem key={valor} value={valor.toString()}>
-											{valor.toLocaleString("es-BO")} Bs
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
-							{errores.franquicia && <p className="text-sm text-red-600">{errores.franquicia}</p>}
-						</div>
-
-						{/* Número de Chasis */}
-						<div className="space-y-2">
-							<Label htmlFor="nro_chasis">
-								Nº de Chasis <span className="text-red-500">*</span>
-							</Label>
 							<Input
-								id="nro_chasis"
-								value={formData.nro_chasis}
-								onChange={(e) => handleChange("nro_chasis", e.target.value.toUpperCase())}
-								placeholder="CH123456789"
-								className={errores.nro_chasis ? "border-red-500" : ""}
+								id="franquicia"
+								type="number"
+								min="0"
+								step="0.01"
+								value={formData.franquicia ?? ""}
+								onChange={(e) => handleChange("franquicia", parseFloat(e.target.value) || 0)}
+								placeholder="Ej: 700, 1000, 1400"
+								className={errores.franquicia ? "border-red-500" : ""}
 							/>
-							{errores.nro_chasis && <p className="text-sm text-red-600">{errores.nro_chasis}</p>}
+							{errores.franquicia && <p className="text-sm text-red-600">{errores.franquicia}</p>}
 						</div>
 
 						{/* Uso */}
