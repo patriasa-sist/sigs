@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Card, CardHeader } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AlertTriangle, XCircle, Ban, CheckCircle } from "lucide-react";
+import { AlertTriangle, XCircle, Ban, CheckCircle, ArrowLeft } from "lucide-react";
 import ResumenReadonly from "./ResumenReadonly";
 import AgregarObservacion from "./AgregarObservacion";
 import HistorialCronologico from "./HistorialCronologico";
@@ -60,6 +62,14 @@ export default function EditarSiniestroForm({
 
 	return (
 		<div className="space-y-6">
+			{/* Botón Volver */}
+			<Button variant="outline" size="sm" asChild>
+				<Link href="/siniestros">
+					<ArrowLeft className="h-4 w-4 mr-2" />
+					Volver a Siniestros
+				</Link>
+			</Button>
+
 			{/* Header */}
 			<Card>
 				<CardHeader className="space-y-4">

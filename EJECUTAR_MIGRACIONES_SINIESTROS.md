@@ -6,7 +6,10 @@
 ## Problema 2: Nombre de usuario muestra "Usuario" genérico
 **Causa**: No existían triggers de auditoría para capturar automáticamente `created_by` en observaciones e historial
 
-## Migraciones a Ejecutar
+## Problema 3: Historial no se actualiza al agregar observaciones
+**Causa**: La tabla `siniestros_historial` no tiene política RLS para INSERT, solo para SELECT
+
+## Migraciones a Ejecutar (en orden)
 
 ### 1. Actualizar Vista con campo updated_at
 **Archivo**: `supabase/migrations/20251215120000_fix_siniestros_vista_updated_at.sql`
@@ -41,6 +44,18 @@
   - `audit_siniestros_historial_trigger` en tabla `siniestros_historial`
   - `audit_siniestros_documentos_trigger` en tabla `siniestros_documentos`
 
+### 3. Agregar Política RLS para INSERT en Historial
+**Archivo**: `supabase/migrations/20251215140000_fix_rls_historial_insert.sql`
+
+**Pasos**:
+1. Ir a Supabase Dashboard → SQL Editor
+2. Abrir el archivo `supabase/migrations/20251215140000_fix_rls_historial_insert.sql`
+3. Copiar todo el contenido
+4. Pegar en el SQL Editor de Supabase
+5. Ejecutar (Run)
+
+**Resultado esperado**: Se crea la política RLS `"Usuarios autorizados pueden insertar en historial"` que permite a usuarios con roles siniestros, comercial o admin insertar registros en `siniestros_historial`.
+
 ## Verificación
 
 ### Verificar que la vista se actualizó correctamente:
@@ -60,10 +75,22 @@ FROM information_schema.triggers
 WHERE trigger_name LIKE 'audit_siniestros%';
 ```
 
-Deberías ver 3 triggers:
+Deberías ver 4 triggers:
+- `audit_siniestros_trigger` en `siniestros`
 - `audit_siniestros_observaciones_trigger` en `siniestros_observaciones`
 - `audit_siniestros_historial_trigger` en `siniestros_historial`
 - `audit_siniestros_documentos_trigger` en `siniestros_documentos`
+
+### Verificar que la política RLS se creó correctamente:
+```sql
+SELECT schemaname, tablename, policyname, cmd
+FROM pg_policies
+WHERE tablename = 'siniestros_historial';
+```
+
+Deberías ver 2 políticas:
+- `Usuarios autenticados pueden leer historial` (cmd: SELECT)
+- `Usuarios autorizados pueden insertar en historial` (cmd: INSERT)
 
 ## Prueba
 
@@ -78,12 +105,21 @@ Deberías ver 3 triggers:
    - Agregar una nueva observación
    - Verificar que muestra tu nombre completo (no "Usuario")
 
+3. **Probar que el historial se actualiza**:
+   - En el mismo siniestro, ir al Tab "Historial"
+   - Deberías ver las nuevas observaciones registradas con acción "Observación Agregada"
+   - Verificar que muestra tu nombre completo y la fecha/hora correcta
+
 ## Cambios en el Código
 
-También se modificó `app/siniestros/actions.ts`:
+### 1. `app/siniestros/actions.ts`:
 - El query de observaciones ahora obtiene `created_by` y hace un JOIN manual con `profiles`
 - El query de historial hace lo mismo
 - Esto asegura que se obtenga el nombre del usuario correctamente
+- **Agregada verificación de errores**: Ahora se captura y muestra en consola si falla el INSERT en historial
+
+### 2. `components/siniestros/edicion/EditarSiniestroForm.tsx`:
+- **Agregado botón "Volver a Siniestros"**: Ahora hay un botón arriba del formulario para regresar al listado de siniestros
 
 ## Notas Importantes
 

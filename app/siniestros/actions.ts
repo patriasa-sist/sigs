@@ -408,11 +408,16 @@ export async function agregarObservacion(
 		if (error) throw error;
 
 		// Registrar en historial
-		await supabase.from("siniestros_historial").insert({
+		const { error: historialError } = await supabase.from("siniestros_historial").insert({
 			siniestro_id: siniestroId,
 			accion: "observacion_agregada",
 			detalles: { observacion: observacion.substring(0, 100) }, // Solo primeros 100 caracteres
 		});
+
+		if (historialError) {
+			console.error("Error registrando en historial:", historialError);
+			// No fallar toda la operación si solo el historial falla
+		}
 
 		revalidatePath(`/siniestros/editar/${siniestroId}`);
 
