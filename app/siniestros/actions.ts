@@ -534,7 +534,7 @@ export async function cerrarSiniestro(
 	const supabase = await createClient();
 
 	try {
-		let updateData: any = {
+		const updateData: Record<string, unknown> = {
 			fecha_cierre: new Date().toISOString(),
 			cerrado_por: permiso.userId,
 		};

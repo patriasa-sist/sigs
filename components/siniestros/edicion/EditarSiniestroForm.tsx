@@ -10,6 +10,7 @@ import ResumenReadonly from "./ResumenReadonly";
 import AgregarObservacion from "./AgregarObservacion";
 import AgregarDocumentos from "./AgregarDocumentos";
 import HistorialCronologico from "./HistorialCronologico";
+import CerrarSiniestro from "./CerrarSiniestro";
 import type {
 	SiniestroVista,
 	CoberturaCatalogo,
@@ -95,6 +96,11 @@ export default function EditarSiniestroForm({
 								<EstadoIcon className="h-4 w-4" />
 								{estadoConfig.label}
 							</span>
+
+							{/* Botón Cerrar Siniestro - Solo si está abierto */}
+							{siniestro.estado === "abierto" && (
+								<CerrarSiniestro siniestroId={siniestro.id} numeroPoliza={siniestro.numero_poliza} />
+							)}
 						</div>
 					</div>
 
