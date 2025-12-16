@@ -260,6 +260,8 @@ export function Resumen({ formState, onAnterior, onEditarPaso, onGuardar }: Prop
 									</h3>
 									<CheckCircle className="h-4 w-4 text-green-600" />
 								</div>
+
+								{/* Automotores */}
 								{datos_especificos?.tipo_ramo === "Automotores" && (
 									<div className="text-sm text-gray-600">
 										<p className="font-medium">
@@ -277,6 +279,190 @@ export function Resumen({ formState, onAnterior, onEditarPaso, onGuardar }: Prop
 												</li>
 											)}
 										</ul>
+									</div>
+								)}
+
+								{/* Accidentes Personales */}
+								{datos_especificos?.tipo_ramo === "Accidentes Personales" && (
+									<div className="text-sm text-gray-600 space-y-2">
+										<div>
+											<span className="font-medium text-gray-700">Tipo:</span>{" "}
+											{datos_especificos.datos.tipo_poliza === "individual" ? "Individual" : "Corporativo"}
+										</div>
+										<div>
+											<p className="font-medium text-gray-700">Niveles de cobertura: {datos_especificos.datos.niveles.length}</p>
+											<ul className="mt-1 space-y-1">
+												{datos_especificos.datos.niveles.map((nivel, i) => (
+													<li key={i} className="ml-2">
+														• {nivel.nombre}
+														{nivel.prima_nivel && ` - Prima: ${nivel.prima_nivel.toLocaleString("es-BO")} Bs`}
+													</li>
+												))}
+											</ul>
+										</div>
+										<div>
+											<p className="font-medium text-gray-700">Asegurados: {datos_especificos.datos.asegurados.length}</p>
+										</div>
+									</div>
+								)}
+
+								{/* Vida */}
+								{datos_especificos?.tipo_ramo === "Vida" && (
+									<div className="text-sm text-gray-600 space-y-2">
+										<div>
+											<span className="font-medium text-gray-700">Producto:</span>{" "}
+											{datos_especificos.datos.producto}
+										</div>
+										<div>
+											<span className="font-medium text-gray-700">Suma Asegurada:</span>{" "}
+											{datos_especificos.datos.suma_asegurada.toLocaleString("es-BO")} Bs
+										</div>
+										<div className="text-blue-600 italic text-xs mt-2">
+											ℹ️ Pólizas de Vida solo permiten pago en contado
+										</div>
+									</div>
+								)}
+
+								{/* Salud */}
+								{datos_especificos?.tipo_ramo === "Salud" && (
+									<div className="text-sm text-gray-600 space-y-2">
+										<div>
+											<span className="font-medium text-gray-700">Tipo:</span>{" "}
+											{datos_especificos.datos.tipo_poliza === "individual" ? "Individual" : "Colectivo"}
+										</div>
+										{datos_especificos.datos.tiene_maternidad && (
+											<div className="text-green-600">
+												✓ Incluye cobertura de maternidad
+											</div>
+										)}
+										<div>
+											<p className="font-medium text-gray-700">Niveles: {datos_especificos.datos.niveles.length}</p>
+											<ul className="mt-1 space-y-1">
+												{datos_especificos.datos.niveles.map((nivel, i) => (
+													<li key={i} className="ml-2">
+														• {nivel.nombre} - {nivel.monto.toLocaleString("es-BO")} Bs
+													</li>
+												))}
+											</ul>
+										</div>
+										<div>
+											<p className="font-medium text-gray-700">Asegurados: {datos_especificos.datos.asegurados.length}</p>
+										</div>
+									</div>
+								)}
+
+								{/* Sepelio */}
+								{datos_especificos?.tipo_ramo === "Sepelio" && (
+									<div className="text-sm text-gray-600 space-y-2">
+										<div>
+											<span className="font-medium text-gray-700">Tipo:</span>{" "}
+											{datos_especificos.datos.tipo_poliza === "individual" ? "Individual" : "Colectivo"}
+										</div>
+										<div>
+											<p className="font-medium text-gray-700">Niveles de cobertura: {datos_especificos.datos.niveles.length}</p>
+											<ul className="mt-1 space-y-1">
+												{datos_especificos.datos.niveles.map((nivel, i) => (
+													<li key={i} className="ml-2">
+														• {nivel.nombre} - {nivel.monto_cobertura.toLocaleString("es-BO")} Bs
+													</li>
+												))}
+											</ul>
+										</div>
+										<div>
+											<p className="font-medium text-gray-700">Asegurados: {datos_especificos.datos.asegurados.length}</p>
+										</div>
+									</div>
+								)}
+
+								{/* Incendio */}
+								{datos_especificos?.tipo_ramo === "Incendio" && (
+									<div className="text-sm text-gray-600 space-y-2">
+										<div>
+											<p className="font-medium text-gray-700">Bienes asegurados: {datos_especificos.datos.bienes.length}</p>
+											<ul className="mt-2 space-y-2">
+												{datos_especificos.datos.bienes.slice(0, 2).map((bien, i) => (
+													<li key={i} className="ml-2 border-l-2 border-purple-300 pl-3">
+														<div className="font-medium text-gray-900">{bien.direccion}</div>
+														<div className="text-xs text-gray-500 mt-1">
+															Items asegurados: {bien.items.length}
+														</div>
+														<ul className="mt-1 space-y-0.5">
+															{bien.items.map((item, j) => (
+																<li key={j} className="text-xs">
+																	• {item.nombre}: {item.monto.toLocaleString("es-BO")} Bs
+																</li>
+															))}
+														</ul>
+														<div className="mt-1 text-sm font-medium text-purple-700">
+															Valor total: {bien.valor_total_declarado.toLocaleString("es-BO")} Bs
+														</div>
+													</li>
+												))}
+												{datos_especificos.datos.bienes.length > 2 && (
+													<li className="text-gray-500 italic ml-2">
+														...y {datos_especificos.datos.bienes.length - 2} bien(es) más
+													</li>
+												)}
+											</ul>
+										</div>
+										<div className="pt-2 border-t border-gray-200">
+											<span className="font-medium text-gray-900">Valor Total Asegurado:</span>{" "}
+											{datos_especificos.datos.valor_asegurado.toLocaleString("es-BO")} Bs
+										</div>
+									</div>
+								)}
+
+								{/* Riesgos Varios */}
+								{datos_especificos?.tipo_ramo === "Riesgos Varios" && (
+									<div className="text-sm text-gray-600 space-y-2">
+										<div>
+											<span className="font-medium text-gray-700">Suma Asegurada:</span>{" "}
+											{datos_especificos.datos.suma_asegurada.toLocaleString("es-BO")} Bs
+										</div>
+										{datos_especificos.datos.descripcion_riesgo && (
+											<div>
+												<span className="font-medium text-gray-700">Descripción del riesgo:</span>
+												<p className="mt-1 text-gray-600 italic">{datos_especificos.datos.descripcion_riesgo}</p>
+											</div>
+										)}
+									</div>
+								)}
+
+								{/* RC (Responsabilidad Civil) */}
+								{datos_especificos?.tipo_ramo === "RC" && (
+									<div className="text-sm text-gray-600 space-y-2">
+										<div>
+											<span className="font-medium text-gray-700">Límite de cobertura:</span>{" "}
+											{datos_especificos.datos.limite_cobertura.toLocaleString("es-BO")} Bs
+										</div>
+										{datos_especificos.datos.actividad_economica && (
+											<div>
+												<span className="font-medium text-gray-700">Actividad económica:</span>{" "}
+												{datos_especificos.datos.actividad_economica}
+											</div>
+										)}
+									</div>
+								)}
+
+								{/* TRC (Todo Riesgo Contratista) */}
+								{datos_especificos?.tipo_ramo === "TRC" && (
+									<div className="text-sm text-gray-600 space-y-2">
+										<div>
+											<span className="font-medium text-gray-700">Valor del proyecto:</span>{" "}
+											{datos_especificos.datos.valor_proyecto.toLocaleString("es-BO")} Bs
+										</div>
+										{datos_especificos.datos.descripcion_obra && (
+											<div>
+												<span className="font-medium text-gray-700">Descripción de la obra:</span>
+												<p className="mt-1 text-gray-600 italic">{datos_especificos.datos.descripcion_obra}</p>
+											</div>
+										)}
+										{datos_especificos.datos.ubicacion_obra && (
+											<div>
+												<span className="font-medium text-gray-700">Ubicación:</span>{" "}
+												{datos_especificos.datos.ubicacion_obra}
+											</div>
+										)}
 									</div>
 								)}
 							</div>

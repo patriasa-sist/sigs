@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import {
 	ChevronRight,
 	ChevronLeft,
@@ -10,14 +10,19 @@ import {
 	Users,
 	AlertTriangle,
 	Settings,
+	Upload,
+	Download,
+	FileSpreadsheet,
+	X,
 } from "lucide-react";
-import type { DatosSepelio, AseguradoConNivel, NivelCobertura, CoberturaSepelio } from "@/types/poliza";
+import type { DatosSepelio, AseguradoConNivel, NivelCobertura, CoberturaSepelio, SepelioExcelImportResult } from "@/types/poliza";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { BuscadorClientes } from "../BuscadorClientes";
+import { importarAseguradosDesdeExcel, generarPlantillaExcel } from "@/utils/sepelioExcelImport";
 
 type Props = {
 	datos: DatosSepelio | null;
@@ -53,6 +58,12 @@ export function SepelioForm({ datos, regionales, onChange, onSiguiente, onAnteri
 	const [asegurados, setAsegurados] = useState<AseguradoConNivel[]>(datos?.asegurados || []);
 	const [mostrarBuscador, setMostrarBuscador] = useState(false);
 	const [errores, setErrores] = useState<Record<string, string>>({});
+
+	// ===== EXCEL IMPORT =====
+	const fileInputRef = useRef<HTMLInputElement>(null);
+	const [importandoExcel, setImportandoExcel] = useState(false);
+	const [resultadoImport, setResultadoImport] = useState<SepelioExcelImportResult | null>(null);
+	const [mostrarResultadoImport, setMostrarResultadoImport] = useState(false);
 
 	// ===== FUNCIONES PASO 2.1: NIVELES =====
 	const crearNuevoNivel = () => {
@@ -160,6 +171,63 @@ export function SepelioForm({ datos, regionales, onChange, onSiguiente, onAnteri
 
 	const eliminarAsegurado = (clientId: string) => {
 		setAsegurados(asegurados.filter((a) => a.client_id !== clientId));
+	};
+
+	// ===== FUNCIONES EXCEL IMPORT =====
+	const handleDescargarPlantilla = async () => {
+		try {
+			const blob = await generarPlantillaExcel();
+			const url = URL.createObjectURL(blob);
+			const a = document.createElement("a");
+			a.href = url;
+			a.download = "plantilla_asegurados_sepelio.xlsx";
+			document.body.appendChild(a);
+			a.click();
+			document.body.removeChild(a);
+			URL.revokeObjectURL(url);
+		} catch (error) {
+			console.error("Error al generar plantilla:", error);
+			alert("Error al generar la plantilla");
+		}
+	};
+
+	const handleImportarExcel = async (event: React.ChangeEvent<HTMLInputElement>) => {
+		const file = event.target.files?.[0];
+		if (!file) return;
+
+		setImportandoExcel(true);
+		try {
+			const resultado = await importarAseguradosDesdeExcel(file, niveles);
+			setResultadoImport(resultado);
+			setMostrarResultadoImport(true);
+
+			// Si hay asegurados válidos, agregarlos
+			if (resultado.asegurados_validos.length > 0) {
+				// Filtrar duplicados (por client_id)
+				const idsExistentes = new Set(asegurados.map((a) => a.client_id));
+				const nuevosAsegurados = resultado.asegurados_validos.filter(
+					(a) => !idsExistentes.has(a.client_id)
+				);
+
+				if (nuevosAsegurados.length > 0) {
+					setAsegurados([...asegurados, ...nuevosAsegurados]);
+				}
+			}
+		} catch (error) {
+			console.error("Error al importar Excel:", error);
+			alert("Error al importar el archivo Excel");
+		} finally {
+			setImportandoExcel(false);
+			// Limpiar input para permitir reimportar el mismo archivo
+			if (fileInputRef.current) {
+				fileInputRef.current.value = "";
+			}
+		}
+	};
+
+	const cerrarModalResultado = () => {
+		setMostrarResultadoImport(false);
+		setResultadoImport(null);
 	};
 
 	const handleContinuar = () => {
@@ -473,10 +541,51 @@ export function SepelioForm({ datos, regionales, onChange, onSiguiente, onAnteri
 							Agregue los asegurados y asigne su nivel de cobertura
 						</p>
 					</div>
-					<Button onClick={() => setMostrarBuscador(true)} disabled={mostrarBuscador}>
-						<Plus className="mr-2 h-4 w-4" />
-						Agregar Asegurado
-					</Button>
+					<div className="flex gap-2">
+						<Button variant="outline" size="sm" onClick={handleDescargarPlantilla}>
+							<Download className="mr-2 h-4 w-4" />
+							Plantilla Excel
+						</Button>
+						<Button
+							variant="outline"
+							size="sm"
+							onClick={() => fileInputRef.current?.click()}
+							disabled={importandoExcel}
+						>
+							<Upload className="mr-2 h-4 w-4" />
+							{importandoExcel ? "Importando..." : "Importar Excel"}
+						</Button>
+						<Button onClick={() => setMostrarBuscador(true)} disabled={mostrarBuscador}>
+							<Plus className="mr-2 h-4 w-4" />
+							Agregar Individual
+						</Button>
+					</div>
+				</div>
+
+				{/* Input oculto para Excel */}
+				<input
+					ref={fileInputRef}
+					type="file"
+					accept=".xlsx,.xls"
+					onChange={handleImportarExcel}
+					className="hidden"
+				/>
+
+				{/* Info sobre importación Excel */}
+				<div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+					<div className="flex gap-3">
+						<FileSpreadsheet className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+						<div className="text-sm text-blue-900">
+							<p className="font-medium mb-1">Importación masiva desde Excel</p>
+							<ul className="space-y-1 text-xs">
+								<li>• Descargue la plantilla Excel con las columnas correctas</li>
+								<li>• Complete el CI del asegurado y el Nivel de cobertura</li>
+								<li>• El sistema validará que los CIs existan en la base de datos</li>
+								<li>• Los niveles deben coincidir exactamente con los configurados</li>
+								<li>• Los duplicados serán ignorados automáticamente</li>
+							</ul>
+						</div>
+					</div>
 				</div>
 
 				{errores.asegurados && (
@@ -547,6 +656,76 @@ export function SepelioForm({ datos, regionales, onChange, onSiguiente, onAnteri
 					</div>
 				)}
 			</div>
+
+			{/* Modal de resultado de importación */}
+			{mostrarResultadoImport && resultadoImport && (
+				<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+					<div className="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+						<div className="flex items-center justify-between mb-4">
+							<h3 className="text-lg font-semibold text-gray-900">
+								Resultado de Importación
+							</h3>
+							<Button variant="ghost" size="sm" onClick={cerrarModalResultado}>
+								<X className="h-4 w-4" />
+							</Button>
+						</div>
+
+						{/* Resumen */}
+						<div className="grid grid-cols-2 gap-4 mb-4">
+							<div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+								<p className="text-sm text-green-700 font-medium">Asegurados Importados</p>
+								<p className="text-2xl font-bold text-green-900">{resultadoImport.asegurados_validos.length}</p>
+							</div>
+							<div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+								<p className="text-sm text-red-700 font-medium">Errores</p>
+								<p className="text-2xl font-bold text-red-900">{resultadoImport.errores.length}</p>
+							</div>
+						</div>
+
+						{/* Lista de errores */}
+						{resultadoImport.errores.length > 0 && (
+							<div className="mb-4">
+								<h4 className="font-medium text-gray-900 mb-2">Errores encontrados:</h4>
+								<div className="space-y-2 max-h-64 overflow-y-auto">
+									{resultadoImport.errores.map((error, index) => (
+										<div key={index} className="p-3 bg-red-50 border border-red-200 rounded text-sm">
+											<p className="font-medium text-red-900">
+												Fila {error.fila}:
+											</p>
+											<ul className="list-disc list-inside text-red-700 mt-1">
+												{error.errores.map((err, i) => (
+													<li key={i}>{err}</li>
+												))}
+											</ul>
+										</div>
+									))}
+								</div>
+							</div>
+						)}
+
+						{/* Lista de asegurados importados */}
+						{resultadoImport.asegurados_validos.length > 0 && (
+							<div className="mb-4">
+								<h4 className="font-medium text-gray-900 mb-2">Asegurados importados exitosamente:</h4>
+								<div className="space-y-2 max-h-48 overflow-y-auto">
+									{resultadoImport.asegurados_validos.map((asegurado, index) => (
+										<div key={index} className="p-2 bg-green-50 border border-green-200 rounded text-sm">
+											<p className="font-medium text-green-900">{asegurado.client_name}</p>
+											<p className="text-green-700 text-xs">
+												CI: {asegurado.client_ci} • Nivel: {niveles.find(n => n.id === asegurado.nivel_id)?.nombre}
+											</p>
+										</div>
+									))}
+								</div>
+							</div>
+						)}
+
+						<div className="flex justify-end">
+							<Button onClick={cerrarModalResultado}>Cerrar</Button>
+						</div>
+					</div>
+				</div>
+			)}
 
 			{/* Botones de navegación */}
 			<div className="flex justify-between pt-6 border-t">

@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { ChevronRight, ChevronLeft, CheckCircle2, Plus, Trash2, Users, Home, Edit2 } from "lucide-react";
-import type { DatosIncendio, BienAseguradoIncendio, AseguradoIncendio } from "@/types/poliza";
+import { useState, useEffect } from "react";
+import { ChevronRight, ChevronLeft, CheckCircle2, Plus, Trash2, Users, Home, Edit2, AlertCircle } from "lucide-react";
+import type { DatosIncendio, BienAseguradoIncendio, AseguradoIncendio, ItemIncendio } from "@/types/poliza";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,9 +18,19 @@ type Props = {
 	onAnterior: () => void;
 };
 
+// Tipos de items predefinidos
+const ITEMS_DISPONIBLES: ItemIncendio["nombre"][] = [
+	"Edificaciones, instalaciones en general",
+	"Activos fijos en general",
+	"Equipos electronicos",
+	"Maquinaria fija o equipos",
+	"Existencias (mercaderia)",
+	"Dinero y valores dentro del predio",
+	"Vidrios y cristales",
+];
+
 export function IncendioForm({ datos, regionales, onChange, onSiguiente, onAnterior }: Props) {
 	const [tipoPoliza, setTipoPoliza] = useState<"individual" | "corporativo">(datos?.tipo_poliza || "individual");
-	const [valorAsegurado, setValorAsegurado] = useState<number>(datos?.valor_asegurado || 0);
 	const [regionalId, setRegionalId] = useState<string>(datos?.regional_asegurado_id || "");
 	const [bienes, setBienes] = useState<BienAseguradoIncendio[]>(datos?.bienes || []);
 	const [asegurados, setAsegurados] = useState<AseguradoIncendio[]>(datos?.asegurados || []);
@@ -29,26 +39,60 @@ export function IncendioForm({ datos, regionales, onChange, onSiguiente, onAnter
 	const [mostrarModalBien, setMostrarModalBien] = useState(false);
 	const [bienEditando, setBienEditando] = useState<number | null>(null);
 	const [direccionBien, setDireccionBien] = useState("");
-	const [valorDeclarado, setValorDeclarado] = useState<number>(0);
+	const [itemsBien, setItemsBien] = useState<ItemIncendio[]>([]);
+	const [valorTotalDeclarado, setValorTotalDeclarado] = useState<number>(0);
 	const [esPrimerRiesgo, setEsPrimerRiesgo] = useState(false);
 
 	const [mostrarBuscador, setMostrarBuscador] = useState(false);
 	const [errores, setErrores] = useState<Record<string, string>>({});
+
+	// Calcular valor total cuando cambian los items
+	useEffect(() => {
+		const total = itemsBien.reduce((sum, item) => sum + item.monto, 0);
+		setValorTotalDeclarado(total);
+	}, [itemsBien]);
+
+	// Calcular valor asegurado total (suma de todos los bienes)
+	const valorAseguradoTotal = bienes.reduce((sum, bien) => sum + bien.valor_total_declarado, 0);
 
 	const abrirModalBien = (index?: number) => {
 		if (index !== undefined) {
 			const bien = bienes[index];
 			setBienEditando(index);
 			setDireccionBien(bien.direccion);
-			setValorDeclarado(bien.valor_declarado);
+			setItemsBien(bien.items);
+			setValorTotalDeclarado(bien.valor_total_declarado);
 			setEsPrimerRiesgo(bien.es_primer_riesgo);
 		} else {
 			setBienEditando(null);
 			setDireccionBien("");
-			setValorDeclarado(0);
+			setItemsBien([]);
+			setValorTotalDeclarado(0);
 			setEsPrimerRiesgo(false);
 		}
 		setMostrarModalBien(true);
+	};
+
+	const agregarItem = (nombreItem: ItemIncendio["nombre"]) => {
+		// Verificar si ya existe
+		const yaExiste = itemsBien.some((item) => item.nombre === nombreItem);
+		if (yaExiste) {
+			return;
+		}
+
+		setItemsBien([...itemsBien, { nombre: nombreItem, monto: 0 }]);
+	};
+
+	const actualizarMontoItem = (nombreItem: ItemIncendio["nombre"], nuevoMonto: number) => {
+		setItemsBien(
+			itemsBien.map((item) =>
+				item.nombre === nombreItem ? { ...item, monto: nuevoMonto } : item
+			)
+		);
+	};
+
+	const eliminarItem = (nombreItem: ItemIncendio["nombre"]) => {
+		setItemsBien(itemsBien.filter((item) => item.nombre !== nombreItem));
 	};
 
 	const guardarBien = () => {
@@ -56,14 +100,19 @@ export function IncendioForm({ datos, regionales, onChange, onSiguiente, onAnter
 			alert("Debe ingresar una dirección");
 			return;
 		}
-		if (valorDeclarado <= 0) {
-			alert("El valor declarado debe ser mayor a 0");
+		if (itemsBien.length === 0) {
+			alert("Debe agregar al menos un item asegurado");
+			return;
+		}
+		if (valorTotalDeclarado <= 0) {
+			alert("El valor total declarado debe ser mayor a 0");
 			return;
 		}
 
 		const nuevoBien: BienAseguradoIncendio = {
 			direccion: direccionBien,
-			valor_declarado: valorDeclarado,
+			items: itemsBien,
+			valor_total_declarado: valorTotalDeclarado,
 			es_primer_riesgo: esPrimerRiesgo,
 		};
 
@@ -85,7 +134,9 @@ export function IncendioForm({ datos, regionales, onChange, onSiguiente, onAnter
 	};
 
 	const eliminarBien = (index: number) => {
-		setBienes(bienes.filter((_, i) => i !== index));
+		if (confirm("¿Está seguro de eliminar este bien?")) {
+			setBienes(bienes.filter((_, i) => i !== index));
+		}
 	};
 
 	const marcarPrimerRiesgo = (index: number) => {
@@ -120,10 +171,6 @@ export function IncendioForm({ datos, regionales, onChange, onSiguiente, onAnter
 	const handleContinuar = () => {
 		const nuevosErrores: Record<string, string> = {};
 
-		if (valorAsegurado <= 0) {
-			nuevosErrores.valor_asegurado = "El valor asegurado debe ser mayor a 0";
-		}
-
 		if (!regionalId) {
 			nuevosErrores.regional = "Debe seleccionar una regional";
 		}
@@ -144,7 +191,7 @@ export function IncendioForm({ datos, regionales, onChange, onSiguiente, onAnter
 		onChange({
 			tipo_poliza: tipoPoliza,
 			regional_asegurado_id: regionalId,
-			valor_asegurado: valorAsegurado,
+			valor_asegurado: valorAseguradoTotal,
 			bienes,
 			asegurados,
 		});
@@ -152,7 +199,7 @@ export function IncendioForm({ datos, regionales, onChange, onSiguiente, onAnter
 		onSiguiente();
 	};
 
-	const tieneDatos = valorAsegurado > 0 && regionalId && bienes.length > 0 && asegurados.length > 0;
+	const tieneDatos = valorAseguradoTotal > 0 && regionalId && bienes.length > 0 && asegurados.length > 0;
 
 	return (
 		<div className="bg-white rounded-lg shadow-sm border p-6">
@@ -199,16 +246,7 @@ export function IncendioForm({ datos, regionales, onChange, onSiguiente, onAnter
 					<Label htmlFor="regional">
 						Regional Asegurado <span className="text-red-500">*</span>
 					</Label>
-					<Select
-						value={regionalId}
-						onValueChange={(value) => {
-							setRegionalId(value);
-							if (errores.regional) {
-								const { regional, ...rest } = errores;
-								setErrores(rest);
-							}
-						}}
-					>
+					<Select value={regionalId} onValueChange={setRegionalId}>
 						<SelectTrigger className={errores.regional ? "border-red-500" : ""}>
 							<SelectValue placeholder="Seleccione una regional" />
 						</SelectTrigger>
@@ -223,37 +261,38 @@ export function IncendioForm({ datos, regionales, onChange, onSiguiente, onAnter
 					{errores.regional && <p className="text-sm text-red-600">{errores.regional}</p>}
 				</div>
 
-				{/* Valor Asegurado Total */}
-				<div className="space-y-2">
-					<Label htmlFor="valor_asegurado">
-						Valor Asegurado Total <span className="text-red-500">*</span>
-					</Label>
-					<Input
-						id="valor_asegurado"
-						type="number"
-						min="0"
-						step="0.01"
-						value={valorAsegurado || ""}
-						onChange={(e) => {
-							setValorAsegurado(parseFloat(e.target.value) || 0);
-							if (errores.valor_asegurado) {
-								const { valor_asegurado, ...rest } = errores;
-								setErrores(rest);
-							}
-						}}
-						placeholder="200000.00"
-						className={errores.valor_asegurado ? "border-red-500" : ""}
-					/>
-					{errores.valor_asegurado && <p className="text-sm text-red-600">{errores.valor_asegurado}</p>}
+				{/* Valor Total Asegurado (Calculado) */}
+				<div className="bg-gray-50 border rounded-lg p-4">
+					<Label className="text-base font-semibold">Valor Total Asegurado (Calculado)</Label>
+					<p className="text-2xl font-bold text-gray-900 mt-2">
+						Bs {valorAseguradoTotal.toLocaleString("es-BO", { minimumFractionDigits: 2 })}
+					</p>
+					<p className="text-xs text-gray-500 mt-1">Suma de todos los bienes declarados</p>
 				</div>
 
-				{/* Bienes Asegurados */}
+				{/* Info sobre items */}
+				<div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+					<div className="flex gap-3">
+						<AlertCircle className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+						<div className="text-sm text-blue-900">
+							<p className="font-medium mb-2">Sistema de Items por Ubicación:</p>
+							<ul className="space-y-1 text-xs">
+								<li>• Cada bien asegurado puede tener múltiples items con montos individuales</li>
+								<li>• Items disponibles: edificaciones, activos fijos, equipos, maquinaria, existencias, dinero y valores, vidrios</li>
+								<li>• El valor total se calcula automáticamente sumando todos los items</li>
+								<li>• Puede marcar un bien como "primer riesgo" si corresponde</li>
+							</ul>
+						</div>
+					</div>
+				</div>
+
+				{/* Lista de Bienes */}
 				<div className="space-y-3">
 					<div className="flex items-center justify-between">
-						<Label>
-							Ubicación de los Bienes Asegurados <span className="text-red-500">*</span>
+						<Label className="text-base">
+							Bienes Asegurados <span className="text-red-500">*</span>
 						</Label>
-						<Button type="button" variant="outline" size="sm" onClick={() => abrirModalBien()}>
+						<Button onClick={() => abrirModalBien()} size="sm">
 							<Plus className="mr-2 h-4 w-4" />
 							Agregar Bien
 						</Button>
@@ -271,52 +310,35 @@ export function IncendioForm({ datos, regionales, onChange, onSiguiente, onAnter
 						<div className="border rounded-lg divide-y">
 							{bienes.map((bien, index) => (
 								<div key={index} className="p-4">
-									<div className="flex items-start justify-between gap-4">
+									<div className="flex items-start justify-between mb-2">
 										<div className="flex-1">
-											<div className="flex items-center gap-2 mb-2">
-												<p className="text-sm font-medium text-gray-900">{bien.direccion}</p>
-												{bien.es_primer_riesgo && (
-													<span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
-														PRIMER RIESGO
-													</span>
-												)}
-											</div>
+											<p className="font-medium text-gray-900">{bien.direccion}</p>
 											<p className="text-sm text-gray-600">
-												Valor declarado: $
-												{bien.valor_declarado.toLocaleString("es-BO", {
-													minimumFractionDigits: 2,
-												})}
+												Valor Total: Bs {bien.valor_total_declarado.toLocaleString("es-BO", { minimumFractionDigits: 2 })}
 											</p>
+											{bien.es_primer_riesgo && (
+												<span className="inline-block mt-1 px-2 py-1 bg-purple-100 text-purple-700 text-xs font-medium rounded">
+													Primer Riesgo
+												</span>
+											)}
 										</div>
 										<div className="flex gap-2">
-											{!bien.es_primer_riesgo && (
-												<Button
-													type="button"
-													variant="outline"
-													size="sm"
-													onClick={() => marcarPrimerRiesgo(index)}
-													title="Marcar como primer riesgo"
-												>
-													Marcar Principal
-												</Button>
-											)}
-											<Button
-												type="button"
-												variant="ghost"
-												size="sm"
-												onClick={() => abrirModalBien(index)}
-											>
+											<Button variant="outline" size="sm" onClick={() => abrirModalBien(index)}>
 												<Edit2 className="h-4 w-4" />
 											</Button>
-											<Button
-												type="button"
-												variant="ghost"
-												size="sm"
-												onClick={() => eliminarBien(index)}
-											>
+											<Button variant="ghost" size="sm" onClick={() => eliminarBien(index)}>
 												<Trash2 className="h-4 w-4 text-red-600" />
 											</Button>
 										</div>
+									</div>
+									<div className="mt-3 space-y-1 text-xs text-gray-600">
+										<p className="font-medium">Items:</p>
+										{bien.items.map((item, i) => (
+											<div key={i} className="flex justify-between pl-4">
+												<span>• {item.nombre}</span>
+												<span>Bs {item.monto.toLocaleString()}</span>
+											</div>
+										))}
 									</div>
 								</div>
 							))}
@@ -342,14 +364,12 @@ export function IncendioForm({ datos, regionales, onChange, onSiguiente, onAnter
 						<div className="border-2 border-dashed rounded-lg p-8 text-center">
 							<Users className="h-12 w-12 text-gray-400 mx-auto mb-3" />
 							<p className="text-sm text-gray-600">No hay asegurados agregados</p>
+							<p className="text-xs text-gray-500 mt-1">Haga clic en "Agregar Asegurado" para comenzar</p>
 						</div>
 					) : (
 						<div className="border rounded-lg divide-y">
 							{asegurados.map((asegurado) => (
-								<div
-									key={asegurado.client_id}
-									className="p-4 flex items-center justify-between hover:bg-gray-50"
-								>
+								<div key={asegurado.client_id} className="p-4 flex items-center justify-between hover:bg-gray-50">
 									<div className="flex-1">
 										<p className="text-sm font-medium text-gray-900">{asegurado.client_name}</p>
 										<p className="text-xs text-gray-600">CI/NIT: {asegurado.client_ci}</p>
@@ -369,50 +389,98 @@ export function IncendioForm({ datos, regionales, onChange, onSiguiente, onAnter
 				</div>
 			</div>
 
-			{/* Modal para agregar/editar bien */}
+			{/* Modal de Bien */}
 			{mostrarModalBien && (
-				<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-					<div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
-						<h3 className="text-lg font-semibold mb-4">
-							{bienEditando !== null ? "Editar Bien" : "Agregar Bien"}
+				<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+					<div className="bg-white rounded-lg p-6 max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+						<h3 className="text-lg font-semibold text-gray-900 mb-4">
+							{bienEditando !== null ? "Editar" : "Agregar"} Bien Asegurado
 						</h3>
 
 						<div className="space-y-4">
+							{/* Dirección */}
 							<div className="space-y-2">
 								<Label htmlFor="direccion_bien">
-									Dirección del Bien <span className="text-red-500">*</span>
+									Dirección/Ubicación <span className="text-red-500">*</span>
 								</Label>
 								<Input
 									id="direccion_bien"
 									value={direccionBien}
 									onChange={(e) => setDireccionBien(e.target.value)}
-									placeholder="Av. Principal #123, Zona Centro"
+									placeholder="Ej: Av. Ejemplo #123, La Paz"
 								/>
 							</div>
 
-							<div className="space-y-2">
-								<Label htmlFor="valor_declarado">
-									Valor Declarado (USD) <span className="text-red-500">*</span>
-								</Label>
-								<Input
-									id="valor_declarado"
-									type="number"
-									min="0"
-									step="0.01"
-									value={valorDeclarado || ""}
-									onChange={(e) => setValorDeclarado(parseFloat(e.target.value) || 0)}
-									placeholder="50000.00"
-								/>
+							{/* Items Asegurables */}
+							<div className="space-y-3">
+								<Label className="text-base">Items Asegurables</Label>
+
+								{/* Selector de items */}
+								<div className="flex gap-2 flex-wrap">
+									{ITEMS_DISPONIBLES.filter(nombre => !itemsBien.some(item => item.nombre === nombre)).map((nombreItem) => (
+										<Button
+											key={nombreItem}
+											type="button"
+											variant="outline"
+											size="sm"
+											onClick={() => agregarItem(nombreItem)}
+										>
+											<Plus className="mr-1 h-3 w-3" />
+											{nombreItem}
+										</Button>
+									))}
+								</div>
+
+								{/* Items agregados */}
+								{itemsBien.length > 0 && (
+									<div className="space-y-2 mt-3">
+										{itemsBien.map((item) => (
+											<div key={item.nombre} className="flex items-center gap-2 p-3 border rounded-lg">
+												<div className="flex-1">
+													<Label className="text-sm font-medium">{item.nombre}</Label>
+													<Input
+														type="number"
+														min="0"
+														step="0.01"
+														value={item.monto || ""}
+														onChange={(e) =>
+															actualizarMontoItem(item.nombre, parseFloat(e.target.value) || 0)
+														}
+														placeholder="0.00"
+														className="mt-1"
+													/>
+												</div>
+												<Button
+													type="button"
+													variant="ghost"
+													size="sm"
+													onClick={() => eliminarItem(item.nombre)}
+												>
+													<Trash2 className="h-4 w-4 text-red-600" />
+												</Button>
+											</div>
+										))}
+									</div>
+								)}
 							</div>
 
-							<div className="flex items-center gap-2">
+							{/* Valor Total Declarado (Calculado) */}
+							<div className="bg-gray-50 border rounded-lg p-3">
+								<Label className="text-sm font-medium">Valor Total Declarado (Calculado)</Label>
+								<p className="text-xl font-bold text-gray-900 mt-1">
+									Bs {valorTotalDeclarado.toLocaleString("es-BO", { minimumFractionDigits: 2 })}
+								</p>
+							</div>
+
+							{/* Primer Riesgo */}
+							<div className="flex items-center space-x-2">
 								<Checkbox
-									id="primer_riesgo"
+									id="es_primer_riesgo"
 									checked={esPrimerRiesgo}
-									onCheckedChange={(checked) => setEsPrimerRiesgo(checked as boolean)}
+									onCheckedChange={(checked) => setEsPrimerRiesgo(!!checked)}
 								/>
-								<Label htmlFor="primer_riesgo" className="cursor-pointer">
-									Marcar como PRIMER RIESGO (dirección principal)
+								<Label htmlFor="es_primer_riesgo" className="cursor-pointer">
+									¿Es Primer Riesgo?
 								</Label>
 							</div>
 						</div>
@@ -421,7 +489,7 @@ export function IncendioForm({ datos, regionales, onChange, onSiguiente, onAnter
 							<Button variant="outline" onClick={() => setMostrarModalBien(false)}>
 								Cancelar
 							</Button>
-							<Button onClick={guardarBien}>{bienEditando !== null ? "Actualizar" : "Agregar"}</Button>
+							<Button onClick={guardarBien}>Guardar</Button>
 						</div>
 					</div>
 				</div>

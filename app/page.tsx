@@ -76,7 +76,7 @@ const Dashboard = () => {
 			description: "Gestión y registro de siniestros",
 			icon: Wrench,
 			color: "bg-red-50 hover:bg-red-100 border-red-200",
-			link: "/vencimientos",
+			link: "/siniestros",
 			sections: [
 				{ name: "Registro Siniestros", icon: ClipboardList },
 				{ name: "Perfil de cliente", icon: UserCheck },
