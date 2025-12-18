@@ -6,9 +6,10 @@ import { PaymentSchedule } from './PaymentSchedule';
 
 interface PolicyCardProps {
   policy: Policy | PolicySearchResult;
+  onClick?: () => void;
 }
 
-export function PolicyCard({ policy }: PolicyCardProps) {
+export function PolicyCard({ policy, onClick }: PolicyCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const isSearchResult = 'matchedFields' in policy;
   const paymentStats = getPaymentStats(policy);
@@ -54,9 +55,10 @@ export function PolicyCard({ policy }: PolicyCardProps) {
 
   return (
     <div
+      onClick={onClick}
       className={`bg-white rounded-lg border p-5 hover:shadow-lg transition-shadow ${
         isSearchResult ? 'ring-2 ring-primary/20' : ''
-      }`}
+      } ${onClick ? 'cursor-pointer' : ''}`}
     >
       {/* Header */}
       <div className="flex items-start justify-between mb-4">
@@ -171,7 +173,10 @@ export function PolicyCard({ policy }: PolicyCardProps) {
 
       {/* Expandable Payment Schedule */}
       <button
-        onClick={() => setIsExpanded(!isExpanded)}
+        onClick={(e) => {
+          e.stopPropagation();
+          setIsExpanded(!isExpanded);
+        }}
         className="w-full flex items-center justify-between p-3 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
       >
         <span className="text-sm font-medium text-gray-700">

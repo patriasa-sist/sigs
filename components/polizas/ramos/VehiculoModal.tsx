@@ -74,7 +74,7 @@ export function VehiculoModal({ vehiculo, onGuardar, onCancelar }: Props) {
 		}
 	};
 
-	const handleChange = (campo: keyof VehiculoAutomotor, valor: string | number) => {
+	const handleChange = (campo: keyof VehiculoAutomotor, valor: string | number | undefined) => {
 		setFormData((prev) => ({
 			...prev,
 			[campo]: valor,

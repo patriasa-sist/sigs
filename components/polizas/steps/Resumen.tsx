@@ -2,14 +2,14 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { ChevronLeft, Save, AlertTriangle, CheckCircle, Edit, User, FileText, Car, CreditCard, File, Info } from "lucide-react";
-import type { PolizaFormState, AdvertenciaPoliza } from "@/types/poliza";
+import type { PolizaFormState, AdvertenciaPoliza, PasoFormulario } from "@/types/poliza";
 import { validarFechasPago } from "@/utils/polizaValidation";
 import { Button } from "@/components/ui/button";
 
 type Props = {
 	formState: PolizaFormState;
 	onAnterior: () => void;
-	onEditarPaso: (paso: number) => void;
+	onEditarPaso: (paso: PasoFormulario) => void;
 	onGuardar: () => Promise<void>;
 };
 

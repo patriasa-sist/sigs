@@ -27,7 +27,9 @@ type PolizaPendiente = {
 	numero_poliza: string;
 	ramo: string;
 	prima_total: number;
+	prima_neta: number;
 	moneda: string;
+	modalidad_pago: string;
 	inicio_vigencia: string;
 	fin_vigencia: string;
 	created_at: string;
@@ -40,11 +42,16 @@ type PolizaPendiente = {
 	created_by_user?: {
 		full_name?: string;
 	} | null;
+	regional?: {
+		nombre?: string;
+	} | null;
 	client?: {
 		client_type: string;
 		natural_clients?: Array<{
 			primer_nombre?: string;
+			segundo_nombre?: string;
 			primer_apellido?: string;
+			segundo_apellido?: string;
 			numero_documento?: string;
 		}> | null;
 		juridic_clients?: Array<{
