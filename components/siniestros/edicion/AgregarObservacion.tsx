@@ -124,7 +124,7 @@ export default function AgregarObservacion({
 						<div className="space-y-3">
 							{observaciones.map((obs, index) => (
 								<div
-									key={obs.id}
+									key={obs.id || `obs-${index}`}
 									className={`p-4 rounded-lg border ${
 										index === 0
 											? "bg-blue-50/50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800"

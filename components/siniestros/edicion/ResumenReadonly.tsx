@@ -119,9 +119,9 @@ export default function ResumenReadonly({ siniestro, coberturas }: ResumenReadon
 						<div className="pt-2 border-t">
 							<p className="text-sm text-muted-foreground mb-1">Contactos</p>
 							<div className="flex flex-wrap gap-2">
-								{siniestro.contactos.map((contacto, idx) => (
+								{siniestro.contactos.filter(c => c).map((contacto, idx) => (
 									<span
-										key={idx}
+										key={`contacto-${idx}-${contacto}`}
 										className="text-xs bg-secondary px-2 py-1 rounded"
 									>
 										{contacto}
@@ -146,9 +146,9 @@ export default function ResumenReadonly({ siniestro, coberturas }: ResumenReadon
 						<p className="text-sm text-muted-foreground">No se registraron coberturas</p>
 					) : (
 						<div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-							{coberturas.map((cobertura) => (
+							{coberturas.map((cobertura, idx) => (
 								<div
-									key={cobertura.id}
+									key={cobertura.id || `cobertura-${idx}`}
 									className="bg-secondary/30 rounded-lg p-3"
 								>
 									<p className="font-medium text-sm">{cobertura.nombre}</p>

@@ -246,8 +246,8 @@ export default function AgregarDocumentos({
 						</div>
 					) : (
 						<div className="space-y-2">
-							{documentosActivos.map((doc) => (
-								<Card key={doc.id} className="overflow-hidden">
+							{documentosActivos.map((doc, idx) => (
+								<Card key={doc.id || `doc-${idx}`} className="overflow-hidden">
 									<CardContent className="p-4">
 										<div className="flex items-start gap-4">
 											{/* Icono del archivo */}

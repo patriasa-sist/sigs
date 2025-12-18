@@ -46,7 +46,7 @@ export default function HistorialCronologico({ historial }: HistorialCronologico
 						<div className="absolute left-[11px] top-2 bottom-2 w-0.5 bg-border" />
 
 						{historial.map((item, index) => (
-							<div key={item.id} className="relative pl-8">
+							<div key={item.id || `historial-${index}`} className="relative pl-8">
 								{/* Timeline dot */}
 								<div className="absolute left-0 top-1.5 z-10 bg-background p-1">
 									{ACCION_ICONS[item.accion as keyof typeof ACCION_ICONS] || (
