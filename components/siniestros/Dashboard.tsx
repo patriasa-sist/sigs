@@ -33,6 +33,8 @@ export default function Dashboard({ siniestrosIniciales, statsIniciales }: Dashb
 	const [estadoFiltro, setEstadoFiltro] = useState<EstadoSiniestro | "todos">("todos");
 	const [ramoFiltro, setRamoFiltro] = useState<string>("todos");
 	const [departamentoFiltro, setDepartamentoFiltro] = useState<string>("todos");
+	const [responsableFiltro, setResponsableFiltro] = useState<string>("todos");
+	const [companiaFiltro, setCompaniaFiltro] = useState<string>("todos");
 	const [currentPage, setCurrentPage] = useState(1);
 
 	// Obtener opciones únicas para filtros
@@ -46,6 +48,22 @@ export default function Dashboard({ siniestrosIniciales, statsIniciales }: Dashb
 		return departamentos;
 	}, [siniestros]);
 
+	const responsablesUnicos = useMemo(() => {
+		const responsables = Array.from(
+			new Set(
+				siniestros
+					.map((s) => s.responsable_nombre)
+					.filter((r): r is string => r !== undefined && r !== null)
+			)
+		).sort();
+		return responsables;
+	}, [siniestros]);
+
+	const companiasUnicas = useMemo(() => {
+		const companias = Array.from(new Set(siniestros.map((s) => s.compania_nombre))).sort();
+		return companias;
+	}, [siniestros]);
+
 	// Filtrado con useMemo
 	const filteredData = useMemo(() => {
 		return siniestros.filter((siniestro) => {
@@ -55,15 +73,20 @@ export default function Dashboard({ siniestrosIniciales, statsIniciales }: Dashb
 				siniestro.cliente_nombre.toLowerCase().includes(searchLower) ||
 				siniestro.cliente_documento.toLowerCase().includes(searchLower) ||
 				siniestro.lugar_hecho.toLowerCase().includes(searchLower) ||
-				siniestro.departamento_nombre.toLowerCase().includes(searchLower);
+				siniestro.departamento_nombre.toLowerCase().includes(searchLower) ||
+				(siniestro.codigo_siniestro && siniestro.codigo_siniestro.toLowerCase().includes(searchLower)) ||
+				(siniestro.responsable_nombre && siniestro.responsable_nombre.toLowerCase().includes(searchLower)) ||
+				siniestro.compania_nombre.toLowerCase().includes(searchLower);
 
 			const matchesEstado = estadoFiltro === "todos" || siniestro.estado === estadoFiltro;
 			const matchesRamo = ramoFiltro === "todos" || siniestro.ramo === ramoFiltro;
 			const matchesDepartamento = departamentoFiltro === "todos" || siniestro.departamento_nombre === departamentoFiltro;
+			const matchesResponsable = responsableFiltro === "todos" || siniestro.responsable_nombre === responsableFiltro;
+			const matchesCompania = companiaFiltro === "todos" || siniestro.compania_nombre === companiaFiltro;
 
-			return matchesSearch && matchesEstado && matchesRamo && matchesDepartamento;
+			return matchesSearch && matchesEstado && matchesRamo && matchesDepartamento && matchesResponsable && matchesCompania;
 		});
-	}, [siniestros, searchTerm, estadoFiltro, ramoFiltro, departamentoFiltro]);
+	}, [siniestros, searchTerm, estadoFiltro, ramoFiltro, departamentoFiltro, responsableFiltro, companiaFiltro]);
 
 	const totalPages = Math.ceil(filteredData.length / ITEMS_PER_PAGE);
 
@@ -147,7 +170,7 @@ export default function Dashboard({ siniestrosIniciales, statsIniciales }: Dashb
 							</SelectContent>
 						</Select>
 					</div>
-					<div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
+					<div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
 						<Select
 							value={departamentoFiltro}
 							onValueChange={(val) => {
@@ -163,6 +186,46 @@ export default function Dashboard({ siniestrosIniciales, statsIniciales }: Dashb
 								{departamentosUnicos.map((dpto) => (
 									<SelectItem key={dpto} value={dpto}>
 										{dpto}
+									</SelectItem>
+								))}
+							</SelectContent>
+						</Select>
+
+						<Select
+							value={responsableFiltro}
+							onValueChange={(val) => {
+								setResponsableFiltro(val);
+								setCurrentPage(1);
+							}}
+						>
+							<SelectTrigger>
+								<SelectValue />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value="todos">Todos los responsables</SelectItem>
+								{responsablesUnicos.map((resp) => (
+									<SelectItem key={resp} value={resp}>
+										{resp}
+									</SelectItem>
+								))}
+							</SelectContent>
+						</Select>
+
+						<Select
+							value={companiaFiltro}
+							onValueChange={(val) => {
+								setCompaniaFiltro(val);
+								setCurrentPage(1);
+							}}
+						>
+							<SelectTrigger>
+								<SelectValue />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value="todos">Todas las compañías</SelectItem>
+								{companiasUnicas.map((comp) => (
+									<SelectItem key={comp} value={comp}>
+										{comp}
 									</SelectItem>
 								))}
 							</SelectContent>

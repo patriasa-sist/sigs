@@ -143,6 +143,7 @@ export async function guardarSiniestro(formState: RegistroSiniestroFormState): P
 				moneda: formState.detalles.moneda,
 				descripcion: formState.detalles.descripcion,
 				contactos: formState.detalles.contactos,
+				responsable_id: formState.detalles.responsable_id || null, // Si no se especifica, el trigger asignará created_by
 				estado: "abierto",
 			})
 			.select()
@@ -818,6 +819,8 @@ export async function buscarPolizasActivas(query: string): Promise<BusquedaPoliz
 
 			let nombreCliente = "N/A";
 			let documentoCliente = "N/A";
+			let celularCliente: string | undefined;
+			let correoCliente: string | undefined;
 
 			if (cliente.client_type === "natural") {
 				const { data: natural } = await supabase
@@ -829,6 +832,8 @@ export async function buscarPolizasActivas(query: string): Promise<BusquedaPoliz
 				if (natural) {
 					nombreCliente = `${natural.primer_nombre} ${natural.segundo_nombre || ""} ${natural.primer_apellido} ${natural.segundo_apellido || ""}`.trim();
 					documentoCliente = natural.numero_documento;
+					celularCliente = natural.celular || undefined;
+					correoCliente = natural.correo_electronico || undefined;
 				}
 			} else {
 				const { data: juridico } = await supabase
@@ -840,6 +845,8 @@ export async function buscarPolizasActivas(query: string): Promise<BusquedaPoliz
 				if (juridico) {
 					nombreCliente = juridico.razon_social;
 					documentoCliente = juridico.nit;
+					correoCliente = juridico.correo_electronico || undefined;
+					// Clientes jurídicos no tienen celular directo
 				}
 			}
 
@@ -857,10 +864,10 @@ export async function buscarPolizasActivas(query: string): Promise<BusquedaPoliz
 				.eq("id", pol.compania_aseguradora_id)
 				.single();
 
-			// Obtener cuotas de pago
+			// Obtener cuotas de pago con prórrogas
 			const { data: cuotasRaw } = await supabase
 				.from("polizas_pagos")
-				.select("id, numero_cuota, monto, fecha_vencimiento, estado, fecha_pago")
+				.select("id, numero_cuota, monto, fecha_vencimiento, estado, fecha_pago, fecha_vencimiento_original, prorrogas_historial, observaciones")
 				.eq("poliza_id", pol.id)
 				.order("numero_cuota");
 
@@ -890,6 +897,8 @@ export async function buscarPolizasActivas(query: string): Promise<BusquedaPoliz
 					nombre_completo: nombreCliente,
 					documento: documentoCliente,
 					tipo: cliente.client_type,
+					celular: celularCliente,
+					correo_electronico: correoCliente,
 				},
 				responsable: {
 					id: responsable?.id || "",

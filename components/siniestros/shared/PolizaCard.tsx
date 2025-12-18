@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileText, X, User, Building, Calendar, DollarSign, File, CheckCircle, Clock, XCircle } from "lucide-react";
+import { FileText, X, User, Building, Calendar, DollarSign, File, CheckCircle, Clock, XCircle, Phone, Mail, AlertTriangle } from "lucide-react";
 import DocumentosPolizaModal from "./DocumentosPolizaModal";
 import type { PolizaParaSiniestro } from "@/types/siniestro";
 
@@ -54,12 +54,33 @@ export default function PolizaCard({ poliza, onDeselect, showDeselectButton = tr
 					<div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t">
 						<div className="flex gap-2">
 							<User className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-0.5" />
-							<div>
+							<div className="space-y-1">
 								<p className="text-sm text-muted-foreground">Cliente</p>
 								<p className="font-medium">{poliza.cliente.nombre_completo}</p>
 								<p className="text-sm text-muted-foreground">
 									{poliza.cliente.tipo === "natural" ? "CI" : "NIT"}: {poliza.cliente.documento}
 								</p>
+								{/* Datos de contacto clickeables */}
+								{poliza.cliente.celular && (
+									<a
+										href={`https://wa.me/591${poliza.cliente.celular.replace(/\D/g, "")}`}
+										target="_blank"
+										rel="noopener noreferrer"
+										className="flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 hover:underline"
+									>
+										<Phone className="h-3 w-3" />
+										{poliza.cliente.celular}
+									</a>
+								)}
+								{poliza.cliente.correo_electronico && (
+									<a
+										href={`mailto:${poliza.cliente.correo_electronico}`}
+										className="flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 hover:underline"
+									>
+										<Mail className="h-3 w-3" />
+										{poliza.cliente.correo_electronico}
+									</a>
+								)}
 							</div>
 						</div>
 
@@ -198,31 +219,45 @@ export default function PolizaCard({ poliza, onDeselect, showDeselectButton = tr
 							{poliza.cuotas && poliza.cuotas.length > 0 && (
 								<div className="space-y-1 mt-2">
 									<p className="text-xs text-muted-foreground mb-1">Últimas cuotas:</p>
-									{poliza.cuotas.slice(0, 3).map((cuota) => (
-										<div
-											key={cuota.id}
-											className="flex items-center justify-between text-xs p-2 bg-secondary/20 rounded"
-										>
-											<div className="flex items-center gap-2">
-												{cuota.estado === "pagada" ? (
-													<CheckCircle className="h-3 w-3 text-green-500" />
-												) : cuota.estado === "vencida" ? (
-													<XCircle className="h-3 w-3 text-red-500" />
-												) : (
-													<Clock className="h-3 w-3 text-amber-500" />
-												)}
-												<span>Cuota {cuota.numero_cuota}</span>
+									{poliza.cuotas.slice(0, 3).map((cuota) => {
+										const tieneProrrogas = cuota.prorrogas_historial && cuota.prorrogas_historial.length > 0;
+										return (
+											<div
+												key={cuota.id}
+												className="flex items-center justify-between text-xs p-2 bg-secondary/20 rounded"
+											>
+												<div className="flex items-center gap-2">
+													{cuota.estado === "pagada" ? (
+														<CheckCircle className="h-3 w-3 text-green-500" />
+													) : cuota.estado === "vencida" ? (
+														<XCircle className="h-3 w-3 text-red-500" />
+													) : (
+														<Clock className="h-3 w-3 text-amber-500" />
+													)}
+													<span>Cuota {cuota.numero_cuota}</span>
+													{tieneProrrogas && (
+														<span className="flex items-center gap-0.5 text-amber-600 dark:text-amber-400" title={`${cuota.prorrogas_historial?.length} prórroga(s) aplicada(s)`}>
+															<AlertTriangle className="h-3 w-3" />
+															<span className="text-[10px]">{cuota.prorrogas_historial?.length}</span>
+														</span>
+													)}
+												</div>
+												<div className="text-right">
+													<p className="font-medium">
+														{poliza.moneda} {cuota.monto.toLocaleString("es-BO", { minimumFractionDigits: 2 })}
+													</p>
+													<p className="text-muted-foreground">
+														{new Date(cuota.fecha_vencimiento).toLocaleDateString("es-BO")}
+													</p>
+													{tieneProrrogas && cuota.fecha_vencimiento_original && (
+														<p className="text-[10px] text-amber-600 dark:text-amber-400">
+															Original: {new Date(cuota.fecha_vencimiento_original).toLocaleDateString("es-BO")}
+														</p>
+													)}
+												</div>
 											</div>
-											<div className="text-right">
-												<p className="font-medium">
-													{poliza.moneda} {cuota.monto.toLocaleString("es-BO", { minimumFractionDigits: 2 })}
-												</p>
-												<p className="text-muted-foreground">
-													{new Date(cuota.fecha_vencimiento).toLocaleDateString("es-BO")}
-												</p>
-											</div>
-										</div>
-									))}
+										);
+									})}
 									{poliza.cuotas.length > 3 && (
 										<p className="text-xs text-muted-foreground text-center">
 											+{poliza.cuotas.length - 3} cuotas más

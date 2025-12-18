@@ -82,13 +82,25 @@ export type AseguradoDetalle = {
 	relacion?: string; // Titular, dependiente, etc.
 };
 
+export type ProrrogaCuota = {
+	fecha_anterior: string;
+	fecha_nueva: string;
+	dias_prorroga: number;
+	motivo?: string;
+	otorgado_por?: string;
+	fecha_otorgamiento: string;
+};
+
 export type CuotaPago = {
 	id: string;
 	numero_cuota: number;
 	monto: number;
 	fecha_vencimiento: string;
-	estado: "pendiente" | "pagada" | "vencida";
+	estado: "pendiente" | "pagada" | "vencida" | "parcial";
 	fecha_pago?: string;
+	fecha_vencimiento_original?: string; // Fecha original antes de prórrogas
+	prorrogas_historial?: ProrrogaCuota[]; // Array de prórrogas aplicadas
+	observaciones?: string;
 };
 
 export type DocumentoPoliza = {
@@ -115,6 +127,8 @@ export type PolizaParaSiniestro = {
 		nombre_completo: string;
 		documento: string;
 		tipo: "natural" | "juridica";
+		celular?: string; // Para contacto directo
+		correo_electronico?: string; // Para contacto directo
 	};
 
 	// Información del responsable
@@ -156,6 +170,7 @@ export type DetallesSiniestro = {
 	moneda: Moneda;
 	descripcion: string;
 	contactos: string[]; // Array de emails
+	responsable_id?: string; // FK a profiles - responsable del siniestro
 };
 
 // ============================================
@@ -266,6 +281,7 @@ export type DatosCierreIndemnizacion = {
 export type Siniestro = {
 	id: string;
 	poliza_id: string;
+	codigo_siniestro?: string; // Código correlativo AÑO-00001 (generado automáticamente)
 
 	// Detalles
 	fecha_siniestro: string;
@@ -305,6 +321,7 @@ export type Siniestro = {
 	updated_at: string;
 	created_by?: string;
 	updated_by?: string;
+	responsable_id?: string; // Responsable del siniestro (puede ser diferente de created_by)
 };
 
 // ============================================
@@ -325,16 +342,22 @@ export type SiniestroVista = Siniestro & {
 
 	// Datos de compañía
 	compania_nombre: string;
+	compania_id: string;
 
 	// Datos de departamento
 	departamento_nombre: string;
 	departamento_codigo: string;
 
-	// Responsable de la póliza
+	// Responsable de la póliza (comercial)
+	poliza_responsable_nombre?: string;
+
+	// Responsable del siniestro (NUEVO - usuario asignado al caso)
 	responsable_nombre?: string;
+	responsable_email?: string;
 
 	// Auditoría
 	creado_por_nombre?: string;
+	cerrado_por_nombre?: string;
 	fecha_creacion: string;
 
 	// Contadores
@@ -354,19 +377,24 @@ export type FiltrosSiniestros = {
 	fecha_desde?: string;
 	fecha_hasta?: string;
 	ramo?: string;
+	responsable_id?: string; // Filtro por responsable del siniestro
+	compania_id?: string; // Filtro por compañía aseguradora
 };
 
 export type SiniestroListItem = {
 	id: string;
+	codigo_siniestro?: string;
 	fecha_siniestro: string;
 	numero_poliza: string;
 	cliente_nombre: string;
 	cliente_documento: string;
 	departamento_nombre: string;
+	responsable_nombre?: string; // Responsable del siniestro
 	estado: EstadoSiniestro;
 	monto_reserva: number;
 	moneda: string;
 	ramo: string;
+	compania_nombre: string;
 	total_documentos: number;
 	lugar_hecho: string;
 	created_at: string;

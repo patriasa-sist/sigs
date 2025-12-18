@@ -28,10 +28,19 @@ type Regional = {
 	codigo: string;
 };
 
+type UsuarioResponsable = {
+	id: string;
+	full_name: string;
+	email: string;
+	role: string;
+};
+
 const MONEDAS: Moneda[] = ["Bs", "USD", "USDT", "UFV"];
 
 export default function DetallesSiniestroStep({ detalles, onDetallesChange }: DetallesSiniestroProps) {
 	const [regionales, setRegionales] = useState<Regional[]>([]);
+	const [responsables, setResponsables] = useState<UsuarioResponsable[]>([]);
+	const [usuarioActualId, setUsuarioActualId] = useState<string | null>(null);
 	const [nuevoContacto, setNuevoContacto] = useState("");
 	const [errores, setErrores] = useState<Record<string, string>>({});
 
@@ -48,6 +57,37 @@ export default function DetallesSiniestroStep({ detalles, onDetallesChange }: De
 
 		cargarRegionales();
 	}, []);
+
+	// Cargar usuarios responsables (siniestros, admin, comercial) y usuario actual
+	useEffect(() => {
+		async function cargarResponsables() {
+			const supabase = createClient();
+
+			// Obtener usuario actual
+			const { data: { user } } = await supabase.auth.getUser();
+			if (user) {
+				setUsuarioActualId(user.id);
+
+				// Si no hay responsable asignado todavía, asignar al usuario actual
+				if (!detalles?.responsable_id) {
+					handleFieldChange("responsable_id", user.id);
+				}
+			}
+
+			// Obtener usuarios con roles permitidos
+			const { data } = await supabase
+				.from("profiles")
+				.select("id, full_name, email, role")
+				.in("role", ["siniestros", "admin", "comercial"])
+				.order("full_name");
+
+			if (data) {
+				setResponsables(data);
+			}
+		}
+
+		cargarResponsables();
+	}, []); // eslint-disable-line react-hooks/exhaustive-deps
 
 	const handleFieldChange = (field: keyof DetallesSiniestro, value: string | number | string[]) => {
 		const nuevosDetalles = {
@@ -219,6 +259,31 @@ export default function DetallesSiniestroStep({ detalles, onDetallesChange }: De
 						</Select>
 						{errores.moneda && <p className="text-sm text-destructive">{errores.moneda}</p>}
 					</div>
+				</div>
+
+				{/* Responsable del Siniestro */}
+				<div className="space-y-2">
+					<Label htmlFor="responsable">
+						Responsable del Siniestro
+					</Label>
+					<Select
+						value={detalles?.responsable_id || usuarioActualId || ""}
+						onValueChange={(value) => handleFieldChange("responsable_id", value)}
+					>
+						<SelectTrigger id="responsable">
+							<SelectValue placeholder="Selecciona un responsable" />
+						</SelectTrigger>
+						<SelectContent>
+							{responsables.map((resp) => (
+								<SelectItem key={resp.id} value={resp.id}>
+									{resp.full_name} {resp.id === usuarioActualId && "(Tú)"}
+								</SelectItem>
+							))}
+						</SelectContent>
+					</Select>
+					<p className="text-xs text-muted-foreground">
+						Usuario encargado de gestionar este siniestro. Por defecto eres tú, pero puedes cambiarlo.
+					</p>
 				</div>
 
 				{/* Descripción */}

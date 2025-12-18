@@ -74,11 +74,11 @@ export default function SiniestrosTable({ siniestros }: SiniestrosTableProps) {
 					<table className="w-full border-collapse">
 						<thead>
 							<tr className="bg-gray-50 dark:bg-gray-800 border-b">
+								<th className="text-left p-3 text-sm font-semibold">Código</th>
 								<th className="text-left p-3 text-sm font-semibold">Fecha</th>
 								<th className="text-left p-3 text-sm font-semibold">Póliza</th>
 								<th className="text-left p-3 text-sm font-semibold">Cliente</th>
-								<th className="text-left p-3 text-sm font-semibold">Lugar</th>
-								<th className="text-left p-3 text-sm font-semibold">Depto.</th>
+								<th className="text-left p-3 text-sm font-semibold">Responsable</th>
 								<th className="text-right p-3 text-sm font-semibold">Reserva</th>
 								<th className="text-center p-3 text-sm font-semibold">Estado</th>
 								<th className="text-center p-3 text-sm font-semibold">Acciones</th>
@@ -92,6 +92,11 @@ export default function SiniestrosTable({ siniestros }: SiniestrosTableProps) {
 										index % 2 === 0 ? "bg-white dark:bg-gray-900" : "bg-gray-50/50 dark:bg-gray-800/50"
 									}`}
 								>
+									<td className="p-3 text-sm">
+										<div className="font-mono text-xs font-medium text-primary">
+											{siniestro.codigo_siniestro || "N/A"}
+										</div>
+									</td>
 									<td className="p-3 text-sm">
 										<div>
 											<div className="font-medium">
@@ -117,12 +122,9 @@ export default function SiniestrosTable({ siniestros }: SiniestrosTableProps) {
 										</div>
 									</td>
 									<td className="p-3 text-sm">
-										<div className="max-w-xs truncate" title={siniestro.lugar_hecho}>
-											{siniestro.lugar_hecho}
+										<div className="text-xs">
+											{siniestro.responsable_nombre || "Sin asignar"}
 										</div>
-									</td>
-									<td className="p-3 text-sm">
-										<div className="text-xs">{siniestro.departamento_nombre}</div>
 									</td>
 									<td className="p-3 text-sm text-right">
 										<div>
