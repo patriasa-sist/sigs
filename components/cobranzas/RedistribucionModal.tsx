@@ -169,7 +169,7 @@ export default function RedistribucionModal({ excessData, open, onClose, onSucce
 					{/* Auto-distribuir button */}
 					<div className="flex justify-between items-center">
 						<p className="text-sm text-muted-foreground">
-							Selecciona las cuotas y usa "Auto-distribuir" o ingresa manualmente los montos
+							Selecciona las cuotas y usa &quot;Auto-distribuir&quot; o ingresa manualmente los montos
 						</p>
 						<Button
 							type="button"

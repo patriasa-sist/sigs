@@ -21,7 +21,7 @@ export async function descartarDocumentoSiniestro(documentoId: string, siniestro
 		}
 
 		// Llamar a la función de base de datos que verifica permisos
-		const { data, error } = await supabase.rpc("descartar_documento_siniestro", {
+		const { error } = await supabase.rpc("descartar_documento_siniestro", {
 			documento_id: documentoId,
 		});
 
@@ -60,7 +60,7 @@ export async function restaurarDocumentoSiniestro(documentoId: string, siniestro
 		}
 
 		// Llamar a la función de base de datos que verifica permisos
-		const { data, error } = await supabase.rpc("restaurar_documento_siniestro", {
+		const { error } = await supabase.rpc("restaurar_documento_siniestro", {
 			documento_id: documentoId,
 		});
 
@@ -103,7 +103,7 @@ export async function eliminarDocumentoSiniestroPermanente(
 		}
 
 		// Llamar a la función de base de datos que verifica permisos y elimina de BD
-		const { data, error } = await supabase.rpc("eliminar_documento_siniestro_permanente", {
+		const { error } = await supabase.rpc("eliminar_documento_siniestro_permanente", {
 			documento_id: documentoId,
 		});
 
@@ -165,7 +165,16 @@ export async function obtenerDocumentosActivos(siniestroId: string) {
 
 		// Enriquecer con nombres de usuario
 		const documentosEnriquecidos = await Promise.all(
-			(documentos || []).map(async (doc: any) => {
+			(documentos || []).map(async (doc: {
+			id: string;
+			siniestro_id: string;
+			tipo_documento: string;
+			nombre_archivo: string;
+			archivo_url: string;
+			estado: string;
+			uploaded_at: string;
+			uploaded_by: string | null;
+		}) => {
 				if (!doc.uploaded_by) {
 					return { ...doc, usuario_nombre: "Sistema" };
 				}
@@ -226,7 +235,16 @@ export async function obtenerTodosDocumentos(siniestroId: string) {
 
 		// Enriquecer con nombres de usuario
 		const documentosEnriquecidos = await Promise.all(
-			(documentos || []).map(async (doc: any) => {
+			(documentos || []).map(async (doc: {
+			id: string;
+			siniestro_id: string;
+			tipo_documento: string;
+			nombre_archivo: string;
+			archivo_url: string;
+			estado: string;
+			uploaded_at: string;
+			uploaded_by: string | null;
+		}) => {
 				if (!doc.uploaded_by) {
 					return { ...doc, usuario_nombre: "Sistema" };
 				}

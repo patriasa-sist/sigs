@@ -41,7 +41,7 @@ export default function BuscarPoliza({ onPolizaSelect, polizaSeleccionada }: Bus
 					setError(result.error);
 					setResultados([]);
 				}
-			} catch (err) {
+			} catch {
 				setError("Error al buscar pólizas");
 				setResultados([]);
 			} finally {

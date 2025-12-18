@@ -22,7 +22,37 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle, XCircle, Eye } from "lucide-react";
 
-type PolizaPendiente = any; // Usar tipo genérico por ahora
+type PolizaPendiente = {
+	id: string;
+	numero_poliza: string;
+	ramo: string;
+	prima_total: number;
+	moneda: string;
+	inicio_vigencia: string;
+	fin_vigencia: string;
+	created_at: string;
+	compania?: {
+		nombre?: string;
+	} | null;
+	responsable?: {
+		full_name?: string;
+	} | null;
+	created_by_user?: {
+		full_name?: string;
+	} | null;
+	client?: {
+		client_type: string;
+		natural_clients?: Array<{
+			primer_nombre?: string;
+			primer_apellido?: string;
+			numero_documento?: string;
+		}> | null;
+		juridic_clients?: Array<{
+			razon_social?: string;
+			nit?: string;
+		}> | null;
+	} | null;
+};
 
 interface Props {
 	polizas: PolizaPendiente[];

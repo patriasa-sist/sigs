@@ -47,7 +47,7 @@ export default function CoberturaSelector({
 				} else {
 					setError(result.error);
 				}
-			} catch (err) {
+			} catch {
 				setError("Error al cargar coberturas");
 			} finally {
 				setLoading(false);

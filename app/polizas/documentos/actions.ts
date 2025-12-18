@@ -21,7 +21,7 @@ export async function descartarDocumento(documentoId: string) {
 		}
 
 		// Llamar a la función de base de datos que verifica permisos
-		const { data, error } = await supabase.rpc("descartar_documento", {
+		const { error } = await supabase.rpc("descartar_documento", {
 			documento_id: documentoId,
 		});
 
@@ -59,7 +59,7 @@ export async function restaurarDocumento(documentoId: string) {
 		}
 
 		// Llamar a la función de base de datos que verifica permisos
-		const { data, error } = await supabase.rpc("restaurar_documento", {
+		const { error } = await supabase.rpc("restaurar_documento", {
 			documento_id: documentoId,
 		});
 
@@ -106,7 +106,7 @@ export async function eliminarDocumentoPermanente(documentoId: string, archivoUr
 		}
 
 		// Llamar a la función de base de datos que elimina el registro (verifica permisos)
-		const { data, error: errorDB } = await supabase.rpc("eliminar_documento_permanente", {
+		const { error: errorDB } = await supabase.rpc("eliminar_documento_permanente", {
 			documento_id: documentoId,
 		});
 

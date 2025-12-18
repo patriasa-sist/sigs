@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Search, User, Building2, CheckCircle2, ChevronRight } from "lucide-react";
-import type { AseguradoSeleccionado, ClienteBase, ClienteNatural, ClienteJuridico } from "@/types/poliza";
+import type { AseguradoSeleccionado, ClienteNatural, ClienteJuridico } from "@/types/poliza";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { createClient } from "@/utils/supabase/client";

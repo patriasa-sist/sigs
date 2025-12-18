@@ -3,7 +3,7 @@ import { requireAdmin } from "@/utils/auth/helpers";
 import { createClient } from "@/utils/supabase/server";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Users, Shield, Crown, Calendar } from "lucide-react";
+import { Users, Shield, Calendar } from "lucide-react";
 import { UserRoleManager } from "@/app/admin/roles/components/UserRoleManager";
 import { VALID_ROLES, getRoleConfig, getRoleLabel } from "@/utils/auth/roles";
 

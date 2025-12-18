@@ -9,7 +9,6 @@ import type {
 	GuardarSiniestroResponse,
 	ObtenerSiniestrosResponse,
 	ObtenerSiniestroDetalleResponse,
-	SiniestroVista,
 	SiniestrosStats,
 	DatosCierreRechazo,
 	DatosCierreDeclinacion,
@@ -275,7 +274,13 @@ export async function obtenerSiniestroDetalle(siniestroId: string): Promise<Obte
 		if (coberturasError) throw coberturasError;
 
 		const coberturas =
-			coberturasRaw?.map((c: any) => ({
+			coberturasRaw?.map((c: {
+				coberturas_catalogo: {
+					id: string;
+					nombre: string;
+					descripcion?: string;
+				};
+			}) => ({
 				id: c.coberturas_catalogo.id,
 				nombre: c.coberturas_catalogo.nombre,
 				descripcion: c.coberturas_catalogo.descripcion,
@@ -299,7 +304,17 @@ export async function obtenerSiniestroDetalle(siniestroId: string): Promise<Obte
 		if (documentosError) throw documentosError;
 
 		const documentos =
-			documentosRaw?.map((d: any) => ({
+			documentosRaw?.map((d: {
+				id: string;
+				siniestro_id: string;
+				tipo_documento: string;
+				nombre_archivo: string;
+				archivo_url: string;
+				estado: string;
+				uploaded_at: string;
+				uploaded_by: string | null;
+				usuario?: { full_name?: string } | null;
+			}) => ({
 				...d,
 				usuario_nombre: d.usuario?.full_name,
 			})) || [];
@@ -315,7 +330,13 @@ export async function obtenerSiniestroDetalle(siniestroId: string): Promise<Obte
 
 		// Enriquecer con nombres de usuario
 		const observaciones = await Promise.all(
-			(observacionesRaw || []).map(async (o: any) => {
+			(observacionesRaw || []).map(async (o: {
+				id: string;
+				siniestro_id: string;
+				observacion: string;
+				created_at: string;
+				created_by: string | null;
+			}) => {
 				if (!o.created_by) {
 					return { ...o, usuario_nombre: "Sistema" };
 				}
@@ -344,7 +365,15 @@ export async function obtenerSiniestroDetalle(siniestroId: string): Promise<Obte
 
 		// Enriquecer con nombres de usuario
 		const historial = await Promise.all(
-			(historialRaw || []).map(async (h: any) => {
+			(historialRaw || []).map(async (h: {
+			id: string;
+			siniestro_id: string;
+			estado_anterior: string | null;
+			estado_nuevo: string;
+			cambio_descripcion: string;
+			created_at: string;
+			created_by: string | null;
+		}) => {
 				if (!h.created_by) {
 					return { ...h, usuario_nombre: "Sistema" };
 				}

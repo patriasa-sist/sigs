@@ -141,14 +141,14 @@ export async function obtenerPolizasConPendientes(): Promise<ObtenerPolizasConPa
 			if (clientData) {
 				if (clientData.client_type === "natural") {
 					// natural_clients es un objeto, no un array
-					const natural = clientData.natural_clients as any;
+					const natural = clientData.natural_clients as { primer_nombre?: string; segundo_nombre?: string; primer_apellido?: string; segundo_apellido?: string; numero_documento?: string } | null;
 					if (natural) {
 						nombreCompleto = `${natural.primer_nombre || ""} ${natural.segundo_nombre || ""} ${natural.primer_apellido || ""} ${natural.segundo_apellido || ""}`.trim();
 						documento = natural.numero_documento || "N/A";
 					}
 				} else {
 					// juridic_clients es un objeto, no un array
-					const juridic = clientData.juridic_clients as any;
+					const juridic = clientData.juridic_clients as { razon_social?: string; nit?: string } | null;
 					if (juridic) {
 						nombreCompleto = juridic.razon_social || "N/A";
 						documento = juridic.nit || "N/A";
@@ -161,24 +161,24 @@ export async function obtenerPolizasConPendientes(): Promise<ObtenerPolizasConPa
 				numero_poliza: poliza.numero_poliza,
 				ramo: poliza.ramo,
 				prima_total: poliza.prima_total,
-				moneda: poliza.moneda as any,
-				estado: poliza.estado as any,
+				moneda: poliza.moneda as Moneda,
+				estado: poliza.estado as "pendiente" | "activa" | "vencida" | "cancelada" | "renovada",
 				inicio_vigencia: poliza.inicio_vigencia,
 				fin_vigencia: poliza.fin_vigencia,
-				modalidad_pago: poliza.modalidad_pago as any,
+				modalidad_pago: poliza.modalidad_pago as "contado" | "credito",
 				client: {
 					id: clientData.id,
-					client_type: clientData.client_type as any,
+					client_type: clientData.client_type as "natural" | "juridica",
 					nombre_completo: nombreCompleto,
 					documento: documento,
 				},
 				compania: {
-					id: (poliza.compania as any)?.id || "",
-					nombre: (poliza.compania as any)?.nombre || "N/A",
+					id: (poliza.compania as { id?: string; nombre?: string } | null)?.id || "",
+					nombre: (poliza.compania as { id?: string; nombre?: string } | null)?.nombre || "N/A",
 				},
 				responsable: {
-					id: (poliza.responsable as any)?.id || "",
-					full_name: (poliza.responsable as any)?.full_name || "N/A",
+					id: (poliza.responsable as { id?: string; full_name?: string } | null)?.id || "",
+					full_name: (poliza.responsable as { id?: string; full_name?: string } | null)?.full_name || "N/A",
 				},
 				cuotas: cuotas || [],
 				total_pagado: totalPagado,
@@ -580,7 +580,27 @@ export async function exportarReporte(filtros: ExportFilters): Promise<CobranzaS
 		}
 
 		// Transform to export rows
-		const exportRows: ExportRow[] = (pagos || []).map((pago: any) => {
+		const exportRows: ExportRow[] = (pagos || []).map((pago: {
+			id: string;
+			numero_cuota: number;
+			monto: number;
+			fecha_vencimiento: string;
+			fecha_pago: string | null;
+			estado: EstadoPago;
+			observaciones: string | null;
+			poliza: {
+				numero_poliza: string;
+				ramo: string;
+				moneda: string;
+				client: {
+					id: string;
+					client_type: string;
+					natural_clients?: { primer_nombre?: string; primer_apellido?: string; numero_documento?: string } | null;
+					juridic_clients?: { razon_social?: string; nit?: string } | null;
+				} | null;
+				compania?: { nombre?: string } | null;
+			} | null;
+		}) => {
 			const poliza = pago.poliza;
 			const clientData = poliza?.client;
 

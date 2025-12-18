@@ -112,7 +112,7 @@ export default function RegistrarSiniestroForm() {
 			} else {
 				setErrores([result.error]);
 			}
-		} catch (error) {
+		} catch {
 			setErrores(["Error inesperado al guardar el siniestro"]);
 		} finally {
 			setGuardando(false);

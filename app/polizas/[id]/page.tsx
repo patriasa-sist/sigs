@@ -15,9 +15,7 @@ import {
 	Car,
 	FileDown,
 	CreditCard,
-	CheckCircle2,
 	XCircle,
-	Clock,
 } from "lucide-react";
 import { formatCurrency, formatDate } from "@/utils/formatters";
 
@@ -315,7 +313,7 @@ export default function PolizaDetallePage() {
 									</tr>
 								</thead>
 								<tbody className="divide-y">
-									{poliza.pagos.map((pago, index) => {
+									{poliza.pagos.map((pago) => {
 										// Detectar si es cuota inicial por observaciones o si es la primera y tiene monto diferente
 										const esCuotaInicial =
 											pago.observaciones?.includes("inicial") ||

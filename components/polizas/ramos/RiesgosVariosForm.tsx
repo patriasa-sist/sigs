@@ -18,7 +18,7 @@ type Props = {
 
 export function RiesgosVariosForm({ datos, onChange, onSiguiente, onAnterior }: Props) {
 	// Convertir datos antiguos (number) a nueva estructura (ConvenioRiesgosVarios)
-	const inicializarConvenio = (valor: any): ConvenioRiesgosVarios => {
+	const inicializarConvenio = (valor: unknown): ConvenioRiesgosVarios => {
 		if (typeof valor === 'object' && valor !== null && 'habilitado' in valor) {
 			return valor as ConvenioRiesgosVarios;
 		}
@@ -385,7 +385,7 @@ export function RiesgosVariosForm({ datos, onChange, onSiguiente, onAnterior }: 
 						<div className="border-2 border-dashed rounded-lg p-8 text-center">
 							<Users className="h-12 w-12 text-gray-400 mx-auto mb-3" />
 							<p className="text-sm text-gray-600">No hay asegurados agregados</p>
-							<p className="text-xs text-gray-500 mt-1">Haga clic en "Agregar Asegurado" para comenzar</p>
+							<p className="text-xs text-gray-500 mt-1">Haga clic en &quot;Agregar Asegurado&quot; para comenzar</p>
 						</div>
 					) : (
 						<div className="border rounded-lg divide-y">

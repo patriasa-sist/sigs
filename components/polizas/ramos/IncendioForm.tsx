@@ -280,7 +280,7 @@ export function IncendioForm({ datos, regionales, onChange, onSiguiente, onAnter
 								<li>• Cada bien asegurado puede tener múltiples items con montos individuales</li>
 								<li>• Items disponibles: edificaciones, activos fijos, equipos, maquinaria, existencias, dinero y valores, vidrios</li>
 								<li>• El valor total se calcula automáticamente sumando todos los items</li>
-								<li>• Puede marcar un bien como "primer riesgo" si corresponde</li>
+								<li>• Puede marcar un bien como &quot;primer riesgo&quot; si corresponde</li>
 							</ul>
 						</div>
 					</div>
@@ -304,7 +304,7 @@ export function IncendioForm({ datos, regionales, onChange, onSiguiente, onAnter
 						<div className="border-2 border-dashed rounded-lg p-8 text-center">
 							<Home className="h-12 w-12 text-gray-400 mx-auto mb-3" />
 							<p className="text-sm text-gray-600">No hay bienes asegurados</p>
-							<p className="text-xs text-gray-500 mt-1">Haga clic en "Agregar Bien" para comenzar</p>
+							<p className="text-xs text-gray-500 mt-1">Haga clic en &quot;Agregar Bien&quot; para comenzar</p>
 						</div>
 					) : (
 						<div className="border rounded-lg divide-y">
@@ -364,7 +364,7 @@ export function IncendioForm({ datos, regionales, onChange, onSiguiente, onAnter
 						<div className="border-2 border-dashed rounded-lg p-8 text-center">
 							<Users className="h-12 w-12 text-gray-400 mx-auto mb-3" />
 							<p className="text-sm text-gray-600">No hay asegurados agregados</p>
-							<p className="text-xs text-gray-500 mt-1">Haga clic en "Agregar Asegurado" para comenzar</p>
+							<p className="text-xs text-gray-500 mt-1">Haga clic en &quot;Agregar Asegurado&quot; para comenzar</p>
 						</div>
 					) : (
 						<div className="border rounded-lg divide-y">

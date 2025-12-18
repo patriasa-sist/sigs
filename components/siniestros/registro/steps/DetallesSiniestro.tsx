@@ -49,7 +49,7 @@ export default function DetallesSiniestroStep({ detalles, onDetallesChange }: De
 		cargarRegionales();
 	}, []);
 
-	const handleFieldChange = (field: keyof DetallesSiniestro, value: any) => {
+	const handleFieldChange = (field: keyof DetallesSiniestro, value: string | number | string[]) => {
 		const nuevosDetalles = {
 			...detalles,
 			[field]: value,

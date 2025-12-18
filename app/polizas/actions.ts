@@ -156,15 +156,15 @@ export async function obtenerPolizas() {
 					client_id: poliza.client_id,
 					client_name,
 					client_ci,
-					compania_nombre: (poliza.companias_aseguradoras as any)?.nombre || "-",
+					compania_nombre: (poliza.companias_aseguradoras as { nombre?: string } | null)?.nombre || "-",
 					inicio_vigencia: poliza.inicio_vigencia,
 					fin_vigencia: poliza.fin_vigencia,
 					prima_total: poliza.prima_total,
 					moneda: poliza.moneda,
 					estado: poliza.estado,
 					modalidad_pago: poliza.modalidad_pago,
-					responsable_nombre: (poliza.profiles as any)?.full_name || "-",
-					regional_nombre: (poliza.regionales as any)?.nombre || "-",
+					responsable_nombre: (poliza.profiles as { full_name?: string } | null)?.full_name || "-",
+					regional_nombre: (poliza.regionales as { nombre?: string } | null)?.nombre || "-",
 					created_at: poliza.created_at,
 				};
 			}) || [];
@@ -255,7 +255,16 @@ export async function obtenerDetallePoliza(polizaId: string) {
 			.order("numero_cuota", { ascending: true });
 
 		// Obtener vehículos si es ramo automotor
-		let vehiculos: any[] = [];
+		let vehiculos: Array<{
+			id: string;
+			placa: string;
+			valor_asegurado: number;
+			franquicia: number;
+			tipo_vehiculo: string | null;
+			marca: string | null;
+			modelo: string | null;
+			ano: number | null;
+		}> = [];
 		if (poliza.ramo.toLowerCase().includes("automotor")) {
 			const { data: vehiculosData } = await supabase
 				.from("polizas_automotor_vehiculos")
@@ -279,8 +288,8 @@ export async function obtenerDetallePoliza(polizaId: string) {
 					placa: v.placa,
 					valor_asegurado: v.valor_asegurado,
 					franquicia: v.franquicia,
-					tipo_vehiculo: (v.tipos_vehiculo as any)?.nombre || null,
-					marca: (v.marcas_vehiculo as any)?.nombre || null,
+					tipo_vehiculo: (v.tipos_vehiculo as { nombre?: string } | null)?.nombre || null,
+					marca: (v.marcas_vehiculo as { nombre?: string } | null)?.nombre || null,
 					modelo: v.modelo,
 					ano: v.ano,
 				})) || [];
@@ -301,7 +310,7 @@ export async function obtenerDetallePoliza(polizaId: string) {
 			client_id: poliza.client_id,
 			client_name,
 			client_ci,
-			compania_nombre: (poliza.companias_aseguradoras as any)?.nombre || "-",
+			compania_nombre: (poliza.companias_aseguradoras as { nombre?: string } | null)?.nombre || "-",
 			inicio_vigencia: poliza.inicio_vigencia,
 			fin_vigencia: poliza.fin_vigencia,
 			fecha_emision_compania: poliza.fecha_emision_compania,
@@ -311,9 +320,9 @@ export async function obtenerDetallePoliza(polizaId: string) {
 			moneda: poliza.moneda,
 			estado: poliza.estado,
 			modalidad_pago: poliza.modalidad_pago,
-			responsable_nombre: (poliza.profiles as any)?.full_name || "-",
-			regional_nombre: (poliza.regionales as any)?.nombre || "-",
-			categoria_nombre: (poliza.categorias as any)?.nombre || "-",
+			responsable_nombre: (poliza.profiles as { full_name?: string } | null)?.full_name || "-",
+			regional_nombre: (poliza.regionales as { nombre?: string } | null)?.nombre || "-",
+			categoria_nombre: (poliza.categorias as { nombre?: string } | null)?.nombre || "-",
 			created_at: poliza.created_at,
 			pagos: pagos || [],
 			vehiculos: vehiculos.length > 0 ? vehiculos : undefined,
@@ -428,15 +437,15 @@ export async function buscarPolizas(query: string) {
 				client_id: poliza.client_id,
 				client_name,
 				client_ci,
-				compania_nombre: (poliza.companias_aseguradoras as any)?.nombre || "-",
+				compania_nombre: (poliza.companias_aseguradoras as { nombre?: string } | null)?.nombre || "-",
 				inicio_vigencia: poliza.inicio_vigencia,
 				fin_vigencia: poliza.fin_vigencia,
 				prima_total: poliza.prima_total,
 				moneda: poliza.moneda,
 				estado: poliza.estado,
 				modalidad_pago: poliza.modalidad_pago,
-				responsable_nombre: (poliza.profiles as any)?.full_name || "-",
-				regional_nombre: (poliza.regionales as any)?.nombre || "-",
+				responsable_nombre: (poliza.profiles as { full_name?: string } | null)?.full_name || "-",
+				regional_nombre: (poliza.regionales as { nombre?: string } | null)?.nombre || "-",
 				created_at: poliza.created_at,
 			};
 		});

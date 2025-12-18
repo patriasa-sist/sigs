@@ -89,7 +89,7 @@ export default function DocumentUploader({
 	const getFileIcon = (filename: string) => {
 		const ext = filename.split(".").pop()?.toLowerCase();
 		if (["jpg", "jpeg", "png"].includes(ext || "")) {
-			return <Image className="h-5 w-5 text-blue-500" />;
+			return <Image className="h-5 w-5 text-blue-500" alt="" />;
 		}
 		if (ext === "pdf") {
 			return <FileText className="h-5 w-5 text-red-500" />;
