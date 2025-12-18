@@ -104,7 +104,7 @@ export function DatosBasicos({ datos, onChange, onSiguiente, onAnterior }: Props
 			console.log("Total usuarios:", usuariosData?.length);
 			console.log(
 				"Usuarios por rol:",
-				usuariosData?.reduce((acc, u) => {
+				usuariosData?.reduce((acc: Record<string, number>, u: Usuario) => {
 					acc[u.role] = (acc[u.role] || 0) + 1;
 					return acc;
 				}, {} as Record<string, number>)

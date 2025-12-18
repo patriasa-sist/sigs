@@ -29,7 +29,7 @@ export default function DocumentosPolizaModal({
 	const getFileIcon = (filename: string) => {
 		const ext = filename.split(".").pop()?.toLowerCase();
 		if (["jpg", "jpeg", "png"].includes(ext || "")) {
-			return <Image className="h-6 w-6 text-blue-500" alt="" />;
+			return <Image className="h-6 w-6 text-blue-500" />;
 		}
 		if (ext === "pdf") {
 			return <FileText className="h-6 w-6 text-red-500" />;
