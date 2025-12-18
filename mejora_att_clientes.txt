@@ -30,15 +30,14 @@ desarollar junto a estos cambios también las modificaciones necesarias a supaba
 
 trabajaremos en las mejoras solicitadas en el modulo de siniestros:
 
-1. crear y guardar un codigo correlativo basado en año-00001 cantidad de siniestros de 1 a 99999
-2. SINIESTROS tiene que ver todas las cuotas de la polizas y si tienen prorrogas activas
+1. crear y guardar un codigo correlativo basado en año-00001 cantidad de siniestros de 1 a 99999 para referenciar cada reporte
+2. SINIESTROS tiene que ver todas las cuotas de la polizas y si tienen prorrogas
 3. agregar filtros correctos al lado del buscador como ser [responsable, compañia, ramo, estado]
 4. paso2 en detalles:
-
 -   agregar responsable del siniestro, por defecto la persona que crea el reporte de siniestros pero puede ser cambiado a cualquier usuario con rol siniestros
--   puede ser editado posteriormente
+-   este responsable puede ser cambiado posteriormente y debe quedar registrado en el log
 
-5. quitar departamento y poner responsable en visualizacion
+5. quitar departamento y poner responsable en visualizacion de tabla 
 6. Numero y correo del cliente en detalles de poliza asociada (clickeables)
 7. exite un ERROR al cargar nuevos documentos: "onAgregarDocumento is not a function" confirmar que no sea un error de logica
 

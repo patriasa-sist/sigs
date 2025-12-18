@@ -697,14 +697,14 @@ export async function obtenerDetallePolizaParaCuotas(
 			.select(
 				`
 				*,
-				client:clients!inner(
+				client:clients!client_id(
 					id,
 					client_type,
-					natural_clients(primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, numero_documento, telefono, correo, celular),
-					juridic_clients(razon_social, nit, telefono_principal, correo_principal)
+					natural_clients(primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, numero_documento, celular, correo_electronico),
+					juridic_clients(razon_social, nit, telefono, correo_electronico)
 				),
-				compania:companias_aseguradoras(id, nombre),
-				responsable:profiles!polizas_responsable_id_fkey(id, full_name),
+				compania:companias_aseguradoras!compania_aseguradora_id(id, nombre),
+				responsable:profiles!responsable_id(id, full_name),
 				cuotas:polizas_pagos(*)
 			`
 			)
@@ -712,8 +712,16 @@ export async function obtenerDetallePolizaParaCuotas(
 			.single();
 
 		if (polizaError || !poliza) {
+			console.error("Error fetching poliza:", polizaError);
 			return { success: false, error: "Póliza no encontrada" };
 		}
+
+		// DEBUG: Log the raw data from Supabase
+		console.log("=== DEBUG: Poliza data from Supabase ===");
+		console.log("Client:", JSON.stringify(poliza.client, null, 2));
+		console.log("Client type:", poliza.client?.client_type);
+		console.log("Natural clients:", poliza.client?.natural_clients);
+		console.log("Juridic clients:", poliza.client?.juridic_clients);
 
 		// Extract contact info based on client type
 		let contacto: ContactoCliente = {
@@ -723,21 +731,23 @@ export async function obtenerDetallePolizaParaCuotas(
 		};
 
 		if (poliza.client.client_type === "natural") {
-			const natural = poliza.client.natural_clients?.[0];
+			// natural_clients is an object, not an array
+			const natural = poliza.client.natural_clients;
 			if (natural) {
 				contacto = {
-					telefono: natural.telefono || null,
-					correo: natural.correo || null,
+					telefono: null, // natural_clients doesn't have telefono field
+					correo: natural.correo_electronico || null,
 					celular: natural.celular || null,
 				};
 			}
 		} else {
-			const juridic = poliza.client.juridic_clients?.[0];
+			// juridic_clients is an object, not an array
+			const juridic = poliza.client.juridic_clients;
 			if (juridic) {
 				contacto = {
-					telefono: juridic.telefono_principal || null,
-					correo: juridic.correo_principal || null,
-					celular: null, // Juridic clients don't have celular yet
+					telefono: juridic.telefono || null,
+					correo: juridic.correo_electronico || null,
+					celular: null, // Juridic clients don't have celular
 				};
 			}
 		}
@@ -847,12 +857,20 @@ export async function obtenerDetallePolizaParaCuotas(
 				client_type: poliza.client.client_type,
 				nombre_completo:
 					poliza.client.client_type === "natural"
-						? `${poliza.client.natural_clients?.[0]?.primer_nombre || ""} ${poliza.client.natural_clients?.[0]?.primer_apellido || ""}`.trim()
-						: poliza.client.juridic_clients?.[0]?.razon_social || "N/A",
+						? [
+							poliza.client.natural_clients?.primer_nombre,
+							poliza.client.natural_clients?.segundo_nombre,
+							poliza.client.natural_clients?.primer_apellido,
+							poliza.client.natural_clients?.segundo_apellido,
+					  ]
+							.filter(Boolean)
+							.join(" ")
+							.trim() || "N/A"
+						: poliza.client.juridic_clients?.razon_social || "N/A",
 				documento:
 					poliza.client.client_type === "natural"
-						? poliza.client.natural_clients?.[0]?.numero_documento || "N/A"
-						: poliza.client.juridic_clients?.[0]?.nit || "N/A",
+						? poliza.client.natural_clients?.numero_documento || "N/A"
+						: poliza.client.juridic_clients?.nit || "N/A",
 			},
 			compania: {
 				id: poliza.compania.id,
