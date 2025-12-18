@@ -22,6 +22,7 @@ import { obtenerDetallePolizaParaCuotas, prepararDatosAvisoMora } from "@/app/co
 import { enviarRecordatorioWhatsApp, enviarRecordatorioEmail, formatearFecha, formatearMonto } from "@/utils/cobranza";
 import { generarURLWhatsApp } from "@/utils/whatsapp";
 import RegistrarProrrogaModal from "./RegistrarProrrogaModal";
+import { toast } from "sonner";
 
 interface CuotasModalProps {
 	poliza: PolizaConPagos | null;
@@ -141,6 +142,9 @@ export default function CuotasModal({ poliza, open, onClose, onSelectQuota }: Cu
 	const handleProrrogaSuccess = () => {
 		setProrrogaModalOpen(false);
 		setSelectedCuotaProrroga(null);
+		toast.success("Prórroga registrada exitosamente", {
+			description: "La fecha de vencimiento ha sido actualizada"
+		});
 		loadExtendedData(); // Reload data
 	};
 
@@ -219,8 +223,15 @@ export default function CuotasModal({ poliza, open, onClose, onSelectQuota }: Cu
 									Información de Contacto
 								</h3>
 								<div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+									{/* Client Name */}
+									<div className="flex items-center gap-2 col-span-full">
+										<Users className="h-4 w-4 text-muted-foreground" />
+										<span className="font-medium">Cliente:</span>
+										<span>{polizaExtendida.client.nombre_completo}</span>
+									</div>
+
 									{/* Phone */}
-									{(polizaExtendida.contacto.celular || polizaExtendida.contacto.telefono) && (
+									{(polizaExtendida.contacto.celular || polizaExtendida.contacto.telefono) ? (
 										<div className="flex items-center gap-2">
 											<Phone className="h-4 w-4 text-muted-foreground" />
 											<span className="font-medium">Teléfono:</span>
@@ -240,10 +251,16 @@ export default function CuotasModal({ poliza, open, onClose, onSelectQuota }: Cu
 												{polizaExtendida.contacto.celular || polizaExtendida.contacto.telefono}
 											</Button>
 										</div>
+									) : (
+										<div className="flex items-center gap-2 text-muted-foreground">
+											<Phone className="h-4 w-4" />
+											<span className="font-medium">Teléfono:</span>
+											<span>No disponible</span>
+										</div>
 									)}
 
 									{/* Email */}
-									{polizaExtendida.contacto.correo && (
+									{polizaExtendida.contacto.correo ? (
 										<div className="flex items-center gap-2">
 											<Mail className="h-4 w-4 text-muted-foreground" />
 											<span className="font-medium">Correo:</span>
@@ -253,6 +270,12 @@ export default function CuotasModal({ poliza, open, onClose, onSelectQuota }: Cu
 											>
 												{polizaExtendida.contacto.correo}
 											</a>
+										</div>
+									) : (
+										<div className="flex items-center gap-2 text-muted-foreground">
+											<Mail className="h-4 w-4" />
+											<span className="font-medium">Correo:</span>
+											<span>No disponible</span>
 										</div>
 									)}
 
@@ -420,7 +443,21 @@ export default function CuotasModal({ poliza, open, onClose, onSelectQuota }: Cu
 											<td className="p-3 text-sm font-medium">
 												{poliza.moneda} {formatCurrency(cuota.monto)}
 											</td>
-											<td className="p-3 text-sm">{formatearFecha(cuota.fecha_vencimiento, "corto")}</td>
+											<td className="p-3 text-sm">
+												<div className="flex flex-col gap-1">
+													<span>{formatearFecha(cuota.fecha_vencimiento, "corto")}</span>
+													{cuota.fecha_vencimiento_original && (
+														<div className="flex items-center gap-1">
+															<Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-xs">
+																Prorrogada
+															</Badge>
+															<span className="text-xs text-muted-foreground">
+																(Original: {formatearFecha(cuota.fecha_vencimiento_original, "corto")})
+															</span>
+														</div>
+													)}
+												</div>
+											</td>
 											<td className="p-3 text-sm">
 												{cuota.fecha_pago ? formatearFecha(cuota.fecha_pago, "corto") : "-"}
 											</td>
