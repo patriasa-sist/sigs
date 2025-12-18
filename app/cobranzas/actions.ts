@@ -14,7 +14,26 @@ import type {
 	ExportRow,
 	CobranzaServerResponse,
 	CuotaPago,
+	Moneda,
+	EstadoPago,
 } from "@/types/cobranza";
+
+// Helper types for Supabase query results
+type ClientQueryResult = {
+	id: string;
+	client_type: "natural" | "juridica";
+	natural_clients: Array<{
+		primer_nombre?: string;
+		segundo_nombre?: string;
+		primer_apellido?: string;
+		segundo_apellido?: string;
+		numero_documento?: string;
+	}>;
+	juridic_clients: Array<{
+		razon_social?: string;
+		nit?: string;
+	}>;
+} | null;
 
 /**
  * Helper function to verify that the user has cobranza or admin role
@@ -134,21 +153,21 @@ export async function obtenerPolizasConPendientes(): Promise<ObtenerPolizasConPa
 			const cuotasVencidas = cuotas?.filter((c) => c.estado === "vencido").length || 0;
 
 			// Format client name
-			const clientData = poliza.client;
+			const clientData = poliza.client as unknown as ClientQueryResult;
 			let nombreCompleto = "N/A";
 			let documento = "N/A";
 
 			if (clientData) {
 				if (clientData.client_type === "natural") {
-					// natural_clients es un objeto, no un array
-					const natural = clientData.natural_clients as { primer_nombre?: string; segundo_nombre?: string; primer_apellido?: string; segundo_apellido?: string; numero_documento?: string } | null;
+					// natural_clients is an array from Supabase query - get first element
+					const natural = clientData.natural_clients[0];
 					if (natural) {
 						nombreCompleto = `${natural.primer_nombre || ""} ${natural.segundo_nombre || ""} ${natural.primer_apellido || ""} ${natural.segundo_apellido || ""}`.trim();
 						documento = natural.numero_documento || "N/A";
 					}
 				} else {
-					// juridic_clients es un objeto, no un array
-					const juridic = clientData.juridic_clients as { razon_social?: string; nit?: string } | null;
+					// juridic_clients is an array from Supabase query - get first element
+					const juridic = clientData.juridic_clients[0];
 					if (juridic) {
 						nombreCompleto = juridic.razon_social || "N/A";
 						documento = juridic.nit || "N/A";
@@ -167,8 +186,8 @@ export async function obtenerPolizasConPendientes(): Promise<ObtenerPolizasConPa
 				fin_vigencia: poliza.fin_vigencia,
 				modalidad_pago: poliza.modalidad_pago as "contado" | "credito",
 				client: {
-					id: clientData.id,
-					client_type: clientData.client_type as "natural" | "juridica",
+					id: clientData?.id || "",
+					client_type: (clientData?.client_type as "natural" | "juridica") || "natural",
 					nombre_completo: nombreCompleto,
 					documento: documento,
 				},
@@ -592,12 +611,7 @@ export async function exportarReporte(filtros: ExportFilters): Promise<CobranzaS
 				numero_poliza: string;
 				ramo: string;
 				moneda: string;
-				client: {
-					id: string;
-					client_type: string;
-					natural_clients?: { primer_nombre?: string; primer_apellido?: string; numero_documento?: string } | null;
-					juridic_clients?: { razon_social?: string; nit?: string } | null;
-				} | null;
+				client: ClientQueryResult;
 				compania?: { nombre?: string } | null;
 			} | null;
 		}) => {
@@ -609,18 +623,18 @@ export async function exportarReporte(filtros: ExportFilters): Promise<CobranzaS
 
 			if (clientData) {
 				if (clientData.client_type === "natural") {
-					// natural_clients es un objeto, no un array
-					const natural = clientData.natural_clients;
+					// natural_clients is an array from Supabase query - get first element
+					const natural = clientData.natural_clients[0];
 					if (natural) {
-						cliente = `${natural.primer_nombre} ${natural.primer_apellido}`;
-						ciNit = natural.numero_documento;
+						cliente = `${natural.primer_nombre || ""} ${natural.primer_apellido || ""}`.trim();
+						ciNit = natural.numero_documento || "N/A";
 					}
 				} else {
-					// juridic_clients es un objeto, no un array
-					const juridic = clientData.juridic_clients;
+					// juridic_clients is an array from Supabase query - get first element
+					const juridic = clientData.juridic_clients[0];
 					if (juridic) {
-						cliente = juridic.razon_social;
-						ciNit = juridic.nit;
+						cliente = juridic.razon_social || "N/A";
+						ciNit = juridic.nit || "N/A";
 					}
 				}
 			}
@@ -639,7 +653,7 @@ export async function exportarReporte(filtros: ExportFilters): Promise<CobranzaS
 				ramo: poliza?.ramo || "N/A",
 				numero_cuota: pago.numero_cuota,
 				monto_cuota: pago.monto,
-				moneda: poliza?.moneda || "Bs",
+				moneda: (poliza?.moneda as Moneda) || "Bs",
 				fecha_vencimiento: pago.fecha_vencimiento,
 				fecha_pago: pago.fecha_pago,
 				estado: pago.estado,

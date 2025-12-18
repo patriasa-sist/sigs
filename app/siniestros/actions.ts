@@ -20,6 +20,7 @@ import type {
 	ObtenerCoberturasPorRamoResponse,
 	AgregarDocumentosResponse,
 	DocumentoSiniestro,
+	TipoDocumentoSiniestro,
 } from "@/types/siniestro";
 
 /**
@@ -265,7 +266,11 @@ export async function obtenerSiniestroDetalle(siniestroId: string): Promise<Obte
         coberturas_catalogo (
           id,
           nombre,
-          descripcion
+          descripcion,
+          codigo_puc,
+          ramo,
+          es_custom,
+          activo
         )
       `
 			)
@@ -275,16 +280,27 @@ export async function obtenerSiniestroDetalle(siniestroId: string): Promise<Obte
 
 		const coberturas =
 			coberturasRaw?.map((c: {
-				coberturas_catalogo: {
+				coberturas_catalogo: Array<{
 					id: string;
 					nombre: string;
 					descripcion?: string;
+				codigo_puc: string;
+				ramo: string;
+				es_custom: boolean;
+				activo: boolean;
+				}>;
+			}) => {
+				const catalogo = c.coberturas_catalogo[0];
+				return {
+					id: catalogo?.id || "",
+					nombre: catalogo?.nombre || "",
+					descripcion: catalogo?.descripcion,
+				codigo_puc: catalogo?.codigo_puc || "",
+				ramo: catalogo?.ramo || "",
+				es_custom: catalogo?.es_custom || false,
+				activo: catalogo?.activo || false,
 				};
-			}) => ({
-				id: c.coberturas_catalogo.id,
-				nombre: c.coberturas_catalogo.nombre,
-				descripcion: c.coberturas_catalogo.descripcion,
-			})) || [];
+			}) || [];
 
 		// Obtener documentos activos
 		const { data: documentosRaw, error: documentosError } = await supabase
@@ -313,11 +329,21 @@ export async function obtenerSiniestroDetalle(siniestroId: string): Promise<Obte
 				estado: string;
 				uploaded_at: string;
 				uploaded_by: string | null;
-				usuario?: { full_name?: string } | null;
-			}) => ({
-				...d,
-				usuario_nombre: d.usuario?.full_name,
-			})) || [];
+				usuario?: Array<{ full_name?: string }> | null;
+			}) => {
+				const usuarioNombre = Array.isArray(d.usuario) && d.usuario.length > 0 ? d.usuario[0]?.full_name : undefined;
+				return {
+					id: d.id,
+					siniestro_id: d.siniestro_id,
+					tipo_documento: d.tipo_documento as TipoDocumentoSiniestro,
+					nombre_archivo: d.nombre_archivo,
+					archivo_url: d.archivo_url,
+					estado: d.estado as "activo" | "descartado",
+					uploaded_at: d.uploaded_at,
+					uploaded_by: d.uploaded_by ?? undefined,
+					usuario_nombre: usuarioNombre,
+				};
+			}) || [];
 
 		// Obtener observaciones
 		const { data: observacionesRaw, error: observacionesError } = await supabase
@@ -338,7 +364,11 @@ export async function obtenerSiniestroDetalle(siniestroId: string): Promise<Obte
 				created_by: string | null;
 			}) => {
 				if (!o.created_by) {
-					return { ...o, usuario_nombre: "Sistema" };
+					return {
+					...o,
+					created_by: undefined,
+					usuario_nombre: "Sistema"
+				};
 				}
 
 				const { data: usuario } = await supabase
@@ -349,6 +379,7 @@ export async function obtenerSiniestroDetalle(siniestroId: string): Promise<Obte
 
 				return {
 					...o,
+					created_by: o.created_by ?? undefined,
 					usuario_nombre: usuario?.full_name || "Usuario",
 				};
 			})
@@ -368,6 +399,7 @@ export async function obtenerSiniestroDetalle(siniestroId: string): Promise<Obte
 			(historialRaw || []).map(async (h: {
 			id: string;
 			siniestro_id: string;
+			accion: string;
 			estado_anterior: string | null;
 			estado_nuevo: string;
 			cambio_descripcion: string;
@@ -375,7 +407,11 @@ export async function obtenerSiniestroDetalle(siniestroId: string): Promise<Obte
 			created_by: string | null;
 		}) => {
 				if (!h.created_by) {
-					return { ...h, usuario_nombre: "Sistema" };
+					return {
+					...h,
+					created_by: undefined,
+					usuario_nombre: "Sistema"
+				};
 				}
 
 				const { data: usuario } = await supabase
@@ -386,6 +422,7 @@ export async function obtenerSiniestroDetalle(siniestroId: string): Promise<Obte
 
 				return {
 					...h,
+					created_by: h.created_by ?? undefined,
 					usuario_nombre: usuario?.full_name || "Sistema",
 				};
 			})
@@ -686,7 +723,7 @@ export async function cerrarSiniestro(
 			success: true,
 			data: {
 				siniestro_id: siniestroId,
-				estado_final: updateData.estado,
+				estado_final: updateData.estado as "rechazado" | "declinado" | "concluido",
 			},
 		};
 	} catch (error) {

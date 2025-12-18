@@ -291,7 +291,7 @@ export async function obtenerDetallePoliza(polizaId: string) {
 					tipo_vehiculo: (v.tipos_vehiculo as { nombre?: string } | null)?.nombre || null,
 					marca: (v.marcas_vehiculo as { nombre?: string } | null)?.nombre || null,
 					modelo: v.modelo,
-					ano: v.ano,
+					ano: v.ano?.toString() || null,
 				})) || [];
 		}
 
@@ -325,7 +325,7 @@ export async function obtenerDetallePoliza(polizaId: string) {
 			categoria_nombre: (poliza.categorias as { nombre?: string } | null)?.nombre || "-",
 			created_at: poliza.created_at,
 			pagos: pagos || [],
-			vehiculos: vehiculos.length > 0 ? vehiculos : undefined,
+			vehiculos: vehiculos.length > 0 ? (vehiculos as PolizaDetalle["vehiculos"]) : undefined,
 			documentos: documentos || [],
 		};
 

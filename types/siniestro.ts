@@ -435,7 +435,7 @@ export type ObtenerSiniestrosResponse = ServerResponse<{
 
 export type ObtenerSiniestroDetalleResponse = ServerResponse<{
 	siniestro: SiniestroVista;
-	coberturas: CoberturaSeleccionada[];
+	coberturas: CoberturaCatalogo[];
 	documentos: DocumentoSiniestroConUsuario[];
 	observaciones: ObservacionSiniestro[];
 	historial: HistorialSiniestro[];
