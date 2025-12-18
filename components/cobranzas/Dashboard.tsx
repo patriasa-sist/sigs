@@ -4,13 +4,13 @@ import { useState, useMemo, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ChevronLeft, ChevronRight, Search } from "lucide-react";
+import { ChevronLeft, ChevronRight, Search, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import StatsCards from "./StatsCards";
 import CuotasModal from "./CuotasModal";
 import RegistrarPagoModal from "./RegistrarPagoModal";
 import RedistribucionModal from "./RedistribucionModal";
 import ExportarReporte from "./ExportarReporte";
-import type { PolizaConPagos, CobranzaStats, CuotaPago, ExcessPaymentDistribution } from "@/types/cobranza";
+import type { PolizaConPagos, CobranzaStats, CuotaPago, ExcessPaymentDistribution, SortFieldEnhanced } from "@/types/cobranza";
 
 interface DashboardProps {
 	polizasIniciales: PolizaConPagos[];
@@ -27,6 +27,10 @@ export default function Dashboard({ polizasIniciales, statsIniciales }: Dashboar
 	// State for filters
 	const [searchTerm, setSearchTerm] = useState("");
 	const [currentPage, setCurrentPage] = useState(1);
+
+	// MEJORA #5 & #6: Sorting state
+	const [sortField, setSortField] = useState<SortFieldEnhanced | null>(null);
+	const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
 
 	// State for modals
 	const [selectedPoliza, setSelectedPoliza] = useState<PolizaConPagos | null>(null);
@@ -47,9 +51,22 @@ export default function Dashboard({ polizasIniciales, statsIniciales }: Dashboar
 		}).format(amount);
 	};
 
-	// Filter and pagination logic
+	// MEJORA #5 & #6: Handle column sorting
+	const handleSort = (field: SortFieldEnhanced) => {
+		if (sortField === field) {
+			// Toggle direction
+			setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+		} else {
+			// New field
+			setSortField(field);
+			setSortDirection("asc");
+		}
+		setCurrentPage(1); // Reset to first page
+	};
+
+	// Filter and sort logic
 	const filteredData = useMemo(() => {
-		return polizas.filter((poliza) => {
+		let filtered = polizas.filter((poliza) => {
 			const searchLower = searchTerm.toLowerCase();
 			const matchesSearch =
 				poliza.numero_poliza.toLowerCase().includes(searchLower) ||
@@ -59,7 +76,70 @@ export default function Dashboard({ polizasIniciales, statsIniciales }: Dashboar
 
 			return matchesSearch;
 		});
-	}, [polizas, searchTerm]);
+
+		// Apply sorting if active
+		if (sortField) {
+			filtered = [...filtered].sort((a, b) => {
+				let valueA: any;
+				let valueB: any;
+
+				switch (sortField) {
+					case "numero_poliza":
+						valueA = a.numero_poliza.toLowerCase();
+						valueB = b.numero_poliza.toLowerCase();
+						break;
+					case "cliente":
+						valueA = a.client.nombre_completo.toLowerCase();
+						valueB = b.client.nombre_completo.toLowerCase();
+						break;
+					case "compania":
+						valueA = a.compania.nombre.toLowerCase();
+						valueB = b.compania.nombre.toLowerCase();
+						break;
+					case "fecha_vencimiento":
+						// Find earliest unpaid quota
+						const cuotasNoPagadasA = a.cuotas.filter(c => c.estado !== "pagado");
+						const cuotasNoPagadasB = b.cuotas.filter(c => c.estado !== "pagado");
+						valueA = cuotasNoPagadasA.length > 0
+							? Math.min(...cuotasNoPagadasA.map(c => new Date(c.fecha_vencimiento).getTime()))
+							: Infinity;
+						valueB = cuotasNoPagadasB.length > 0
+							? Math.min(...cuotasNoPagadasB.map(c => new Date(c.fecha_vencimiento).getTime()))
+							: Infinity;
+						break;
+					case "monto_pendiente":
+						valueA = a.total_pendiente;
+						valueB = b.total_pendiente;
+						break;
+					case "cuotas_vencidas":
+						valueA = a.cuotas_vencidas;
+						valueB = b.cuotas_vencidas;
+						break;
+					case "cuotas_pendientes":
+						valueA = a.cuotas_pendientes;
+						valueB = b.cuotas_pendientes;
+						break;
+					case "prima_total":
+						valueA = a.prima_total;
+						valueB = b.prima_total;
+						break;
+					case "inicio_vigencia":
+						valueA = new Date(a.inicio_vigencia).getTime();
+						valueB = new Date(b.inicio_vigencia).getTime();
+						break;
+					default:
+						return 0;
+				}
+
+				// Compare values
+				if (valueA < valueB) return sortDirection === "asc" ? -1 : 1;
+				if (valueA > valueB) return sortDirection === "asc" ? 1 : -1;
+				return 0;
+			});
+		}
+
+		return filtered;
+	}, [polizas, searchTerm, sortField, sortDirection]);
 
 	const totalPages = Math.ceil(filteredData.length / ITEMS_PER_PAGE);
 
@@ -150,13 +230,124 @@ export default function Dashboard({ polizasIniciales, statsIniciales }: Dashboar
 								<table className="w-full">
 									<thead className="bg-muted/50">
 										<tr>
-											<th className="p-3 text-left text-sm font-medium">N° Póliza</th>
-											<th className="p-3 text-left text-sm font-medium">Cliente</th>
+											{/* Sortable: N° Póliza */}
+											<th className="p-3 text-left text-sm font-medium">
+												<button
+													onClick={() => handleSort("numero_poliza")}
+													className="flex items-center gap-1 hover:text-primary transition-colors"
+												>
+													N° Póliza
+													{sortField === "numero_poliza" ? (
+														sortDirection === "asc" ? (
+															<ArrowUp className="h-4 w-4" />
+														) : (
+															<ArrowDown className="h-4 w-4" />
+														)
+													) : (
+														<ArrowUpDown className="h-4 w-4 opacity-50" />
+													)}
+												</button>
+											</th>
+
+											{/* Sortable: Cliente */}
+											<th className="p-3 text-left text-sm font-medium">
+												<button
+													onClick={() => handleSort("cliente")}
+													className="flex items-center gap-1 hover:text-primary transition-colors"
+												>
+													Cliente
+													{sortField === "cliente" ? (
+														sortDirection === "asc" ? (
+															<ArrowUp className="h-4 w-4" />
+														) : (
+															<ArrowDown className="h-4 w-4" />
+														)
+													) : (
+														<ArrowUpDown className="h-4 w-4 opacity-50" />
+													)}
+												</button>
+											</th>
+
+											{/* Non-sortable: CI/NIT */}
 											<th className="p-3 text-left text-sm font-medium">CI/NIT</th>
-											<th className="p-3 text-left text-sm font-medium">Compañía</th>
-											<th className="p-3 text-left text-sm font-medium">Cuotas Pendientes</th>
-											<th className="p-3 text-left text-sm font-medium">Cuotas Vencidas</th>
-											<th className="p-3 text-left text-sm font-medium">Total Pendiente</th>
+
+											{/* Sortable: Compañía */}
+											<th className="p-3 text-left text-sm font-medium">
+												<button
+													onClick={() => handleSort("compania")}
+													className="flex items-center gap-1 hover:text-primary transition-colors"
+												>
+													Compañía
+													{sortField === "compania" ? (
+														sortDirection === "asc" ? (
+															<ArrowUp className="h-4 w-4" />
+														) : (
+															<ArrowDown className="h-4 w-4" />
+														)
+													) : (
+														<ArrowUpDown className="h-4 w-4 opacity-50" />
+													)}
+												</button>
+											</th>
+
+											{/* Sortable: Cuotas Pendientes */}
+											<th className="p-3 text-left text-sm font-medium">
+												<button
+													onClick={() => handleSort("cuotas_pendientes")}
+													className="flex items-center gap-1 hover:text-primary transition-colors"
+												>
+													C. Pendientes
+													{sortField === "cuotas_pendientes" ? (
+														sortDirection === "asc" ? (
+															<ArrowUp className="h-4 w-4" />
+														) : (
+															<ArrowDown className="h-4 w-4" />
+														)
+													) : (
+														<ArrowUpDown className="h-4 w-4 opacity-50" />
+													)}
+												</button>
+											</th>
+
+											{/* Sortable: Cuotas Vencidas */}
+											<th className="p-3 text-left text-sm font-medium">
+												<button
+													onClick={() => handleSort("cuotas_vencidas")}
+													className="flex items-center gap-1 hover:text-primary transition-colors"
+												>
+													C. Vencidas
+													{sortField === "cuotas_vencidas" ? (
+														sortDirection === "asc" ? (
+															<ArrowUp className="h-4 w-4" />
+														) : (
+															<ArrowDown className="h-4 w-4" />
+														)
+													) : (
+														<ArrowUpDown className="h-4 w-4 opacity-50" />
+													)}
+												</button>
+											</th>
+
+											{/* Sortable: Total Pendiente */}
+											<th className="p-3 text-left text-sm font-medium">
+												<button
+													onClick={() => handleSort("monto_pendiente")}
+													className="flex items-center gap-1 hover:text-primary transition-colors"
+												>
+													Total Pendiente
+													{sortField === "monto_pendiente" ? (
+														sortDirection === "asc" ? (
+															<ArrowUp className="h-4 w-4" />
+														) : (
+															<ArrowDown className="h-4 w-4" />
+														)
+													) : (
+														<ArrowUpDown className="h-4 w-4 opacity-50" />
+													)}
+												</button>
+											</th>
+
+											{/* Non-sortable: Acciones */}
 											<th className="p-3 text-left text-sm font-medium">Acciones</th>
 										</tr>
 									</thead>

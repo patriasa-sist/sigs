@@ -1,9 +1,27 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import type { PolizaConPagos, CuotaPago } from "@/types/cobranza";
+import { Separator } from "@/components/ui/separator";
+import {
+	Phone,
+	Mail,
+	MessageCircle,
+	Car,
+	Users,
+	MapPin,
+	Calendar,
+	Clock,
+	FileWarning,
+	Send
+} from "lucide-react";
+import type { PolizaConPagos, CuotaPago, PolizaConPagosExtendida } from "@/types/cobranza";
+import { obtenerDetallePolizaParaCuotas, prepararDatosAvisoMora } from "@/app/cobranzas/actions";
+import { enviarRecordatorioWhatsApp, enviarRecordatorioEmail, formatearFecha, formatearMonto } from "@/utils/cobranza";
+import { generarURLWhatsApp } from "@/utils/whatsapp";
+import RegistrarProrrogaModal from "./RegistrarProrrogaModal";
 
 interface CuotasModalProps {
 	poliza: PolizaConPagos | null;
@@ -13,20 +31,120 @@ interface CuotasModalProps {
 }
 
 /**
- * Modal que muestra todas las cuotas de una póliza
- * Permite seleccionar una cuota para registrar pago
+ * MEJORAS #3, #4, #7, #8: Modal mejorado de cuotas con:
+ * - Información de contacto del cliente (teléfono, correo)
+ * - Datos específicos según el ramo (placas, asegurados, ubicaciones)
+ * - Botones de recordatorio por WhatsApp y Email
+ * - Botón "Registrar Prórroga"
+ * - Botón "Generar Aviso de Mora" (si 3+ cuotas vencidas)
  */
 export default function CuotasModal({ poliza, open, onClose, onSelectQuota }: CuotasModalProps) {
-	if (!poliza) return null;
+	const [polizaExtendida, setPolizaExtendida] = useState<PolizaConPagosExtendida | null>(null);
+	const [loading, setLoading] = useState(false);
+	const [error, setError] = useState<string | null>(null);
 
-	const formatDate = (dateString: string | null) => {
-		if (!dateString) return "-";
-		return new Date(dateString).toLocaleDateString("es-BO", {
-			day: "2-digit",
-			month: "2-digit",
-			year: "numeric",
-		});
+	// Modal states
+	const [selectedCuotaProrroga, setSelectedCuotaProrroga] = useState<CuotaPago | null>(null);
+	const [prorrogaModalOpen, setProrrogaModalOpen] = useState(false);
+	const [generatingPDF, setGeneratingPDF] = useState(false);
+
+	useEffect(() => {
+		if (open && poliza) {
+			loadExtendedData();
+		}
+	}, [open, poliza]);
+
+	const loadExtendedData = async () => {
+		if (!poliza) return;
+
+		setLoading(true);
+		setError(null);
+
+		try {
+			const response = await obtenerDetallePolizaParaCuotas(poliza.id);
+
+			if (response.success && response.data) {
+				setPolizaExtendida(response.data);
+			} else {
+				setError(response.error || "Error al cargar datos");
+			}
+		} catch (err) {
+			console.error("Error loading extended data:", err);
+			setError("Error al cargar información extendida");
+		} finally {
+			setLoading(false);
+		}
 	};
+
+	const handleGenerarAvisoMora = async () => {
+		if (!poliza) return;
+
+		setGeneratingPDF(true);
+		setError(null);
+
+		try {
+			const response = await prepararDatosAvisoMora(poliza.id);
+
+			if (response.success && response.data) {
+				// Generate PDF and open WhatsApp
+				const avisoData = response.data;
+
+				// TODO: Generate PDF using AvisoMoraTemplate
+				// For now, open WhatsApp with message
+				const mensaje = `Estimado/a cliente, se ha generado un aviso de mora para su póliza ${poliza.numero_poliza}. Tiene ${avisoData.cuotas_vencidas.length} cuotas vencidas por un total de ${formatearMonto(avisoData.total_adeudado, poliza.moneda)}. Por favor, regularice su situación a la brevedad.`;
+
+				const telefono = polizaExtendida?.contacto?.celular || polizaExtendida?.contacto?.telefono;
+				if (telefono) {
+					const url = generarURLWhatsApp(telefono, mensaje);
+					window.open(url, "_blank");
+				} else {
+					alert("No se encontró número de teléfono para este cliente");
+				}
+			} else {
+				setError(response.error || "Error al preparar aviso de mora");
+			}
+		} catch (err) {
+			console.error("Error generating aviso de mora:", err);
+			setError("Error al generar aviso de mora");
+		} finally {
+			setGeneratingPDF(false);
+		}
+	};
+
+	const handleWhatsAppReminder = (cuota: CuotaPago) => {
+		if (!polizaExtendida) return;
+
+		enviarRecordatorioWhatsApp(
+			cuota,
+			polizaExtendida,
+			polizaExtendida.contacto,
+			polizaExtendida.client.nombre_completo
+		);
+	};
+
+	const handleEmailReminder = (cuota: CuotaPago) => {
+		if (!polizaExtendida) return;
+
+		enviarRecordatorioEmail(
+			cuota,
+			polizaExtendida,
+			polizaExtendida.contacto,
+			polizaExtendida.client.nombre_completo
+		);
+	};
+
+	const handleOpenProrroga = (cuota: CuotaPago) => {
+		setSelectedCuotaProrroga(cuota);
+		setProrrogaModalOpen(true);
+	};
+
+	const handleProrrogaSuccess = () => {
+		setProrrogaModalOpen(false);
+		setSelectedCuotaProrroga(null);
+		loadExtendedData(); // Reload data
+	};
+
+	if (!poliza) return null;
 
 	const formatCurrency = (amount: number) => {
 		return new Intl.NumberFormat("es-BO", {
@@ -55,84 +173,343 @@ export default function CuotasModal({ poliza, open, onClose, onSelectQuota }: Cu
 		return estado === "pendiente" || estado === "vencido" || estado === "parcial";
 	};
 
+	const puedeProrroga = (estado: string) => {
+		return estado === "pendiente" || estado === "vencido" || estado === "parcial";
+	};
+
+	const cuotasVencidas = poliza.cuotas?.filter(c => c.estado === "vencido" || c.estado === "parcial").length || 0;
+	const puedeGenerarAvisoMora = cuotasVencidas >= 3;
+
 	return (
-		<Dialog open={open} onOpenChange={onClose}>
-			<DialogContent className="!max-w-[95vw] sm:!max-w-[95vw] md:!max-w-[95vw] lg:!max-w-[95vw] w-full max-h-[90vh] overflow-y-auto">
-				<DialogHeader>
-					<DialogTitle className="text-xl">
-						Cuotas de Póliza {poliza.numero_poliza}
-					</DialogTitle>
-					<DialogDescription asChild>
-						<div className="space-y-1 text-sm text-muted-foreground">
-							<div><span className="font-semibold">Cliente:</span> {poliza.client.nombre_completo}</div>
-							<div><span className="font-semibold">Compañía:</span> {poliza.compania.nombre}</div>
-							<div><span className="font-semibold">Ramo:</span> {poliza.ramo}</div>
-							<div><span className="font-semibold">Prima Total:</span> {poliza.moneda} {formatCurrency(poliza.prima_total)}</div>
-						</div>
-					</DialogDescription>
-				</DialogHeader>
+		<>
+			<Dialog open={open} onOpenChange={onClose}>
+				<DialogContent className="!max-w-[95vw] sm:!max-w-[95vw] md:!max-w-[95vw] lg:!max-w-[95vw] w-full max-h-[90vh] overflow-y-auto">
+					<DialogHeader>
+						<DialogTitle className="text-xl">
+							Cuotas de Póliza {poliza.numero_poliza}
+						</DialogTitle>
+						<DialogDescription asChild>
+							<div className="space-y-1 text-sm text-muted-foreground">
+								<div><span className="font-semibold">Cliente:</span> {poliza.client.nombre_completo}</div>
+								<div><span className="font-semibold">Compañía:</span> {poliza.compania.nombre}</div>
+								<div><span className="font-semibold">Ramo:</span> {poliza.ramo}</div>
+								<div><span className="font-semibold">Prima Total:</span> {poliza.moneda} {formatCurrency(poliza.prima_total)}</div>
+							</div>
+						</DialogDescription>
+					</DialogHeader>
 
-				<div className="mt-4">
-					<div className="rounded-md border">
-						<table className="w-full">
-							<thead className="bg-muted/50">
-								<tr>
-									<th className="p-3 text-left text-sm font-medium">N° Cuota</th>
-									<th className="p-3 text-left text-sm font-medium">Monto</th>
-									<th className="p-3 text-left text-sm font-medium">F. Vencimiento</th>
-									<th className="p-3 text-left text-sm font-medium">F. Pago</th>
-									<th className="p-3 text-left text-sm font-medium">Estado</th>
-									<th className="p-3 text-left text-sm font-medium">Acciones</th>
-								</tr>
-							</thead>
-							<tbody>
-								{poliza.cuotas.map((cuota, index) => (
-									<tr
-										key={cuota.id}
-										className={index % 2 === 0 ? "bg-background" : "bg-muted/30"}
-									>
-										<td className="p-3 text-sm">{cuota.numero_cuota}</td>
-										<td className="p-3 text-sm font-medium">
-											{poliza.moneda} {formatCurrency(cuota.monto)}
-										</td>
-										<td className="p-3 text-sm">{formatDate(cuota.fecha_vencimiento)}</td>
-										<td className="p-3 text-sm">{formatDate(cuota.fecha_pago)}</td>
-										<td className="p-3 text-sm">{getEstadoBadge(cuota.estado)}</td>
-										<td className="p-3 text-sm">
-											{puedeRegistrarPago(cuota.estado) ? (
-												<Button
-													size="sm"
-													variant="default"
-													onClick={() => {
-														onSelectQuota(cuota);
-														onClose();
-													}}
-												>
-													Registrar Pago
-												</Button>
-											) : (
-												<span className="text-muted-foreground">-</span>
-											)}
-										</td>
-									</tr>
-								))}
-							</tbody>
-						</table>
-					</div>
-
-					{poliza.cuotas.length === 0 && (
-						<div className="text-center py-8 text-muted-foreground">
-							No hay cuotas registradas para esta póliza
+					{loading && (
+						<div className="text-center py-4 text-muted-foreground">
+							Cargando información...
 						</div>
 					)}
-				</div>
 
-				<div className="mt-4 flex justify-end">
-					<Button variant="outline" onClick={onClose}>
-						Cerrar
-					</Button>
-				</div>
-			</DialogContent>
-		</Dialog>
+					{error && (
+						<div className="rounded-md bg-red-50 p-3 text-sm text-red-700 border border-red-200">
+							{error}
+						</div>
+					)}
+
+					{!loading && polizaExtendida && (
+						<>
+							{/* MEJORA #3: Contact Information Section */}
+							<div className="rounded-md border p-4 bg-muted/30">
+								<h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
+									<Users className="h-4 w-4" />
+									Información de Contacto
+								</h3>
+								<div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+									{/* Phone */}
+									{(polizaExtendida.contacto.celular || polizaExtendida.contacto.telefono) && (
+										<div className="flex items-center gap-2">
+											<Phone className="h-4 w-4 text-muted-foreground" />
+											<span className="font-medium">Teléfono:</span>
+											<Button
+												variant="link"
+												size="sm"
+												className="h-auto p-0 text-blue-600"
+												onClick={() => {
+													const tel = polizaExtendida.contacto.celular || polizaExtendida.contacto.telefono;
+													if (tel) {
+														const url = generarURLWhatsApp(tel, "");
+														window.open(url, "_blank");
+													}
+												}}
+											>
+												<MessageCircle className="h-3 w-3 mr-1" />
+												{polizaExtendida.contacto.celular || polizaExtendida.contacto.telefono}
+											</Button>
+										</div>
+									)}
+
+									{/* Email */}
+									{polizaExtendida.contacto.correo && (
+										<div className="flex items-center gap-2">
+											<Mail className="h-4 w-4 text-muted-foreground" />
+											<span className="font-medium">Correo:</span>
+											<a
+												href={`mailto:${polizaExtendida.contacto.correo}`}
+												className="text-blue-600 hover:underline"
+											>
+												{polizaExtendida.contacto.correo}
+											</a>
+										</div>
+									)}
+
+									{/* Vigencia dates */}
+									<div className="flex items-center gap-2">
+										<Calendar className="h-4 w-4 text-muted-foreground" />
+										<span className="font-medium">Inicio vigencia:</span>
+										<span>{formatearFecha(polizaExtendida.inicio_vigencia, "corto")}</span>
+									</div>
+
+									<div className="flex items-center gap-2">
+										<Clock className="h-4 w-4 text-muted-foreground" />
+										<span className="font-medium">Fin vigencia:</span>
+										<span>{formatearFecha(polizaExtendida.fin_vigencia, "corto")}</span>
+									</div>
+								</div>
+							</div>
+
+							{/* MEJORA #3: Ramo-Specific Data Section */}
+							{polizaExtendida.datos_ramo && (
+								<div className="rounded-md border p-4 bg-muted/30">
+									{polizaExtendida.datos_ramo.tipo === "automotor" && (
+										<>
+											<h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
+												<Car className="h-4 w-4" />
+												Vehículos Asegurados ({polizaExtendida.datos_ramo.vehiculos.length})
+											</h3>
+											<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+												{polizaExtendida.datos_ramo.vehiculos.map((vehiculo) => (
+													<div key={vehiculo.id} className="border rounded-md p-3 bg-background">
+														<div className="font-semibold text-blue-600">{vehiculo.placa}</div>
+														<div className="text-sm text-muted-foreground">
+															{vehiculo.marca} {vehiculo.modelo} {vehiculo.ano}
+														</div>
+														<div className="text-xs text-muted-foreground mt-1">
+															{polizaExtendida.moneda} {formatCurrency(vehiculo.valor_asegurado)}
+														</div>
+													</div>
+												))}
+											</div>
+										</>
+									)}
+
+									{(polizaExtendida.datos_ramo.tipo === "salud" ||
+									  polizaExtendida.datos_ramo.tipo === "vida" ||
+									  polizaExtendida.datos_ramo.tipo === "ap" ||
+									  polizaExtendida.datos_ramo.tipo === "sepelio") && (
+										<>
+											<h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
+												<Users className="h-4 w-4" />
+												Asegurados ({polizaExtendida.datos_ramo.asegurados.length})
+											</h3>
+											{polizaExtendida.datos_ramo.asegurados.length > 0 ? (
+												<div className="space-y-2">
+													{polizaExtendida.datos_ramo.asegurados.map((asegurado, idx) => (
+														<div key={idx} className="text-sm border-l-2 border-blue-500 pl-3">
+															<div className="font-medium">{asegurado.client_name}</div>
+															<div className="text-muted-foreground">CI: {asegurado.client_ci}</div>
+															{asegurado.nivel_nombre && (
+																<div className="text-xs text-muted-foreground">
+																	Nivel: {asegurado.nivel_nombre}
+																</div>
+															)}
+															{asegurado.cargo && (
+																<div className="text-xs text-muted-foreground">
+																	Cargo: {asegurado.cargo}
+																</div>
+															)}
+														</div>
+													))}
+												</div>
+											) : (
+												<p className="text-sm text-muted-foreground">
+													No hay asegurados registrados (datos en proceso de migración)
+												</p>
+											)}
+											{polizaExtendida.datos_ramo.producto && (
+												<div className="mt-2 text-sm">
+													<span className="font-medium">Producto:</span> {polizaExtendida.datos_ramo.producto}
+												</div>
+											)}
+										</>
+									)}
+
+									{polizaExtendida.datos_ramo.tipo === "incendio" && (
+										<>
+											<h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
+												<MapPin className="h-4 w-4" />
+												Ubicaciones Aseguradas
+											</h3>
+											{polizaExtendida.datos_ramo.ubicaciones.length > 0 ? (
+												<div className="space-y-2">
+													{polizaExtendida.datos_ramo.ubicaciones.map((ubicacion, idx) => (
+														<div key={idx} className="text-sm flex items-start gap-2">
+															<MapPin className="h-4 w-4 text-blue-500 mt-0.5" />
+															<span>{ubicacion}</span>
+														</div>
+													))}
+												</div>
+											) : (
+												<p className="text-sm text-muted-foreground">
+													No hay ubicaciones registradas (datos en proceso de migración)
+												</p>
+											)}
+										</>
+									)}
+
+									{polizaExtendida.datos_ramo.tipo === "otros" && (
+										<div className="text-sm text-muted-foreground">
+											{polizaExtendida.datos_ramo.descripcion}
+										</div>
+									)}
+								</div>
+							)}
+
+							<Separator />
+
+							{/* MEJORA #4: Aviso de Mora Button */}
+							{puedeGenerarAvisoMora && (
+								<div className="rounded-md border-2 border-red-200 bg-red-50 p-3">
+									<div className="flex items-center justify-between">
+										<div className="flex items-center gap-2 text-red-700">
+											<FileWarning className="h-5 w-5" />
+											<div>
+												<div className="font-semibold">Mora Detectada</div>
+												<div className="text-sm">
+													Esta póliza tiene {cuotasVencidas} cuotas vencidas
+												</div>
+											</div>
+										</div>
+										<Button
+											variant="destructive"
+											onClick={handleGenerarAvisoMora}
+											disabled={generatingPDF}
+										>
+											{generatingPDF ? "Generando..." : "Generar Aviso de Mora"}
+										</Button>
+									</div>
+								</div>
+							)}
+						</>
+					)}
+
+					{/* Quotas Table */}
+					<div className="mt-4">
+						<div className="rounded-md border">
+							<table className="w-full">
+								<thead className="bg-muted/50">
+									<tr>
+										<th className="p-3 text-left text-sm font-medium">N° Cuota</th>
+										<th className="p-3 text-left text-sm font-medium">Monto</th>
+										<th className="p-3 text-left text-sm font-medium">F. Vencimiento</th>
+										<th className="p-3 text-left text-sm font-medium">F. Pago</th>
+										<th className="p-3 text-left text-sm font-medium">Estado</th>
+										<th className="p-3 text-left text-sm font-medium">Acciones</th>
+									</tr>
+								</thead>
+								<tbody>
+									{poliza.cuotas.map((cuota, index) => (
+										<tr
+											key={cuota.id}
+											className={index % 2 === 0 ? "bg-background" : "bg-muted/30"}
+										>
+											<td className="p-3 text-sm">{cuota.numero_cuota}</td>
+											<td className="p-3 text-sm font-medium">
+												{poliza.moneda} {formatCurrency(cuota.monto)}
+											</td>
+											<td className="p-3 text-sm">{formatearFecha(cuota.fecha_vencimiento, "corto")}</td>
+											<td className="p-3 text-sm">
+												{cuota.fecha_pago ? formatearFecha(cuota.fecha_pago, "corto") : "-"}
+											</td>
+											<td className="p-3 text-sm">{getEstadoBadge(cuota.estado)}</td>
+											<td className="p-3 text-sm">
+												<div className="flex items-center gap-2 flex-wrap">
+													{/* Registrar Pago */}
+													{puedeRegistrarPago(cuota.estado) && (
+														<Button
+															size="sm"
+															variant="default"
+															onClick={() => {
+																onSelectQuota(cuota);
+																onClose();
+															}}
+														>
+															Registrar Pago
+														</Button>
+													)}
+
+													{/* MEJORA #8: Registrar Prórroga */}
+													{puedeProrroga(cuota.estado) && (
+														<Button
+															size="sm"
+															variant="outline"
+															onClick={() => handleOpenProrroga(cuota)}
+														>
+															Prórroga
+														</Button>
+													)}
+
+													{/* MEJORA #7: WhatsApp Reminder */}
+													{polizaExtendida && (polizaExtendida.contacto.celular || polizaExtendida.contacto.telefono) && (
+														<Button
+															size="sm"
+															variant="ghost"
+															onClick={() => handleWhatsAppReminder(cuota)}
+															title="Enviar recordatorio por WhatsApp"
+														>
+															<MessageCircle className="h-4 w-4 text-green-600" />
+														</Button>
+													)}
+
+													{/* MEJORA #7: Email Reminder */}
+													{polizaExtendida && polizaExtendida.contacto.correo && (
+														<Button
+															size="sm"
+															variant="ghost"
+															onClick={() => handleEmailReminder(cuota)}
+															title="Enviar recordatorio por Email"
+														>
+															<Send className="h-4 w-4 text-blue-600" />
+														</Button>
+													)}
+
+													{cuota.estado === "pagado" && (
+														<span className="text-muted-foreground">-</span>
+													)}
+												</div>
+											</td>
+										</tr>
+									))}
+								</tbody>
+							</table>
+						</div>
+
+						{poliza.cuotas.length === 0 && (
+							<div className="text-center py-8 text-muted-foreground">
+								No hay cuotas registradas para esta póliza
+							</div>
+						)}
+					</div>
+
+					<div className="mt-4 flex justify-end">
+						<Button variant="outline" onClick={onClose}>
+							Cerrar
+						</Button>
+					</div>
+				</DialogContent>
+			</Dialog>
+
+			{/* MEJORA #8: Prórroga Modal */}
+			<RegistrarProrrogaModal
+				cuota={selectedCuotaProrroga}
+				poliza={poliza}
+				open={prorrogaModalOpen}
+				onClose={() => setProrrogaModalOpen(false)}
+				onSuccess={handleProrrogaSuccess}
+			/>
+		</>
 	);
 }
