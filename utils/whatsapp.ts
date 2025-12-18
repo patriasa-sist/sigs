@@ -47,3 +47,15 @@ Saludos cordiales.`;
 
 	return encodeURIComponent(message);
 }
+
+/**
+ * Genera la URL completa de WhatsApp Web con número y mensaje.
+ * @param phoneNumber - El número de teléfono del destinatario.
+ * @param message - El mensaje a enviar (será codificado automáticamente).
+ * @returns La URL completa para abrir WhatsApp Web.
+ */
+export function generarURLWhatsApp(phoneNumber: string, message: string): string {
+	const cleanedNumber = cleanPhoneNumber(phoneNumber);
+	const encodedMessage = encodeURIComponent(message);
+	return `https://wa.me/${cleanedNumber}?text=${encodedMessage}`;
+}

@@ -1,7 +1,7 @@
 // utils/cobranza.ts - Utility functions for Cobranzas module
 
 import type { CuotaPago, PolizaConPagos, ContactoCliente, Moneda } from "@/types/cobranza";
-import { limpiarNumeroTelefono } from "./whatsapp";
+import { cleanPhoneNumber } from "./whatsapp";
 
 /**
  * MEJORA #7: Genera mensaje cordial de recordatorio de pago para WhatsApp o Email
@@ -63,7 +63,7 @@ export function enviarRecordatorioWhatsApp(
 	}
 
 	// Clean phone number
-	const numeroLimpio = limpiarNumeroTelefono(numeroTelefono);
+	const numeroLimpio = cleanPhoneNumber(numeroTelefono);
 
 	// Generate message
 	const mensaje = generarMensajeRecordatorio(cuota, poliza, clienteNombre);

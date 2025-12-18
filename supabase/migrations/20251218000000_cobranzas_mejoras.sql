@@ -51,12 +51,25 @@ COMMENT ON COLUMN polizas_pagos.prorrogas_historial IS 'Array JSONB con historia
 -- 3. STORAGE BUCKET PARA COMPROBANTES
 -- =============================================
 
--- Insertar bucket (si no existe)
-INSERT INTO storage.buckets (id, name, public)
-VALUES ('pagos-comprobantes', 'pagos-comprobantes', true)
-ON CONFLICT (id) DO NOTHING;
+-- IMPORTANTE: El bucket NO se puede crear desde SQL por restricciones de permisos.
+-- Debes crear el bucket MANUALMENTE desde la UI de Supabase:
+--
+-- PASOS:
+-- 1. Ir a: Storage → "Create a new bucket"
+-- 2. Bucket name: pagos-comprobantes
+-- 3. Public bucket: ✅ MARCAR (necesario para RLS)
+-- 4. File size limit: 10485760 (10MB)
+-- 5. Allowed MIME types: image/jpeg, image/jpg, image/png, image/webp, application/pdf
+-- 6. Click "Create bucket"
+--
+-- Verificar que el bucket existe:
+-- SELECT * FROM storage.buckets WHERE id = 'pagos-comprobantes';
+-- (Debe retornar 1 fila con public = true)
 
-COMMENT ON TABLE storage.buckets IS 'Bucket público para comprobantes de pago con acceso controlado por RLS';
+-- Las siguientes líneas están comentadas porque requieren permisos de superusuario:
+-- INSERT INTO storage.buckets (id, name, public)
+-- VALUES ('pagos-comprobantes', 'pagos-comprobantes', true)
+-- ON CONFLICT (id) DO NOTHING;
 
 -- =============================================
 -- 4. RLS POLICIES PARA TABLA COMPROBANTES
