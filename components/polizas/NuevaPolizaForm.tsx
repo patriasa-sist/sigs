@@ -18,7 +18,6 @@ import { Resumen } from "./steps/Resumen";
 
 export function NuevaPolizaForm() {
 	const router = useRouter();
-	const supabase = createClient();
 
 	// Estado global del formulario
 	const [formState, setFormState] = useState<PolizaFormState>({
@@ -38,6 +37,7 @@ export function NuevaPolizaForm() {
 	// Cargar regionales al montar el componente
 	useEffect(() => {
 		const cargarRegionales = async () => {
+			const supabase = createClient();
 			const { data } = await supabase
 				.from("regionales")
 				.select("id, nombre")

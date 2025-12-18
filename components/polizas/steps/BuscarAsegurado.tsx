@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Search, User, Building2, CheckCircle2, ChevronRight } from "lucide-react";
 import type { AseguradoSeleccionado, ClienteNatural, ClienteJuridico } from "@/types/poliza";
 import { Button } from "@/components/ui/button";
@@ -19,10 +19,8 @@ export function BuscarAsegurado({ asegurado, onAseguradoSeleccionado, onSiguient
 	const [cargando, setCargando] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
-	const supabase = createClient();
-
 	// Buscar clientes
-	const buscarClientes = async (query: string) => {
+	const buscarClientes = useCallback(async (query: string) => {
 		if (!query.trim()) {
 			setResultados([]);
 			return;
@@ -32,6 +30,7 @@ export function BuscarAsegurado({ asegurado, onAseguradoSeleccionado, onSiguient
 		setError(null);
 
 		try {
+			const supabase = createClient();
 			// Buscar clientes base
 			const { data: clientesBase, error: errorBase } = await supabase
 				.from("clients")
@@ -143,7 +142,7 @@ export function BuscarAsegurado({ asegurado, onAseguradoSeleccionado, onSiguient
 		} finally {
 			setCargando(false);
 		}
-	};
+	}, []);
 
 	// Debounce search
 	useEffect(() => {
@@ -156,7 +155,7 @@ export function BuscarAsegurado({ asegurado, onAseguradoSeleccionado, onSiguient
 		}, 300);
 
 		return () => clearTimeout(timer);
-	}, [busqueda]);
+	}, [busqueda, buscarClientes]);
 
 	const handleSeleccionar = (cliente: AseguradoSeleccionado) => {
 		onAseguradoSeleccionado(cliente);

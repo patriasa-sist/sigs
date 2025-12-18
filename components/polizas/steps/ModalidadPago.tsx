@@ -273,7 +273,8 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, onChange, on
 								onChange={(e) => {
 									const valor = parseFloat(e.target.value) || 0;
 									setCuotaUnica(valor);
-									const { cuota_unica, ...rest } = errores;
+									// eslint-disable-next-line @typescript-eslint/no-unused-vars
+									const { cuota_unica: _removed, ...rest } = errores;
 									setErrores(rest);
 								}}
 								placeholder="5000.00"
@@ -295,8 +296,10 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, onChange, on
 								value={fechaPagoUnico}
 								onChange={(e) => {
 									setFechaPagoUnico(e.target.value);
-									const { fecha_pago_unico, ...restErrores } = errores;
-									const { fecha_pago_unico: _adv, ...restAdv } = advertencias;
+									// eslint-disable-next-line @typescript-eslint/no-unused-vars
+									const { fecha_pago_unico: _removedErr, ...restErrores } = errores;
+									// eslint-disable-next-line @typescript-eslint/no-unused-vars
+									const { fecha_pago_unico: _removedAdv, ...restAdv } = advertencias;
 									setErrores(restErrores);
 									setAdvertencias(restAdv);
 								}}
@@ -377,7 +380,8 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, onChange, on
 								onChange={(e) => {
 									const valor = parseFloat(e.target.value) || 0;
 									setPrimaTotal(valor);
-									const { prima_total, ...rest } = errores;
+									// eslint-disable-next-line @typescript-eslint/no-unused-vars
+									const { prima_total: _removed, ...rest } = errores;
 									setErrores(rest);
 									setCuotasGeneradas(false); // Reset cuotas al cambiar prima
 								}}
@@ -424,7 +428,8 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, onChange, on
 								onChange={(e) => {
 									const valor = parseFloat(e.target.value) || 0;
 									setCuotaInicial(Math.max(0, Math.min(primaTotal, valor)));
-									const { cuota_inicial, ...rest } = errores;
+									// eslint-disable-next-line @typescript-eslint/no-unused-vars
+									const { cuota_inicial: _removed, ...rest } = errores;
 									setErrores(rest);
 									setCuotasGeneradas(false);
 								}}
@@ -448,7 +453,8 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, onChange, on
 								value={fechaInicioCuotas}
 								onChange={(e) => {
 									setFechaInicioCuotas(e.target.value);
-									const { fecha_inicio_cuotas, ...rest } = errores;
+									// eslint-disable-next-line @typescript-eslint/no-unused-vars
+									const { fecha_inicio_cuotas: _removed, ...rest } = errores;
 									setErrores(rest);
 									setCuotasGeneradas(false);
 								}}

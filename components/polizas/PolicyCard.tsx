@@ -6,10 +6,9 @@ import { PaymentSchedule } from './PaymentSchedule';
 
 interface PolicyCardProps {
   policy: Policy | PolicySearchResult;
-  onClick?: () => void;
 }
 
-export function PolicyCard({ policy, onClick }: PolicyCardProps) {
+export function PolicyCard({ policy }: PolicyCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const isSearchResult = 'matchedFields' in policy;
   const paymentStats = getPaymentStats(policy);

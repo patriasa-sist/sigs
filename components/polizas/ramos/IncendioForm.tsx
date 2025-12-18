@@ -139,15 +139,6 @@ export function IncendioForm({ datos, regionales, onChange, onSiguiente, onAnter
 		}
 	};
 
-	const marcarPrimerRiesgo = (index: number) => {
-		setBienes(
-			bienes.map((bien, i) => ({
-				...bien,
-				es_primer_riesgo: i === index,
-			}))
-		);
-	};
-
 	const agregarAsegurado = (cliente: { id: string; nombre: string; ci: string }) => {
 		if (asegurados.some((a) => a.client_id === cliente.id)) {
 			return;

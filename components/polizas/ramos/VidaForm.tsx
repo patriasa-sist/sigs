@@ -216,7 +216,8 @@ export function VidaForm({ datos, regionales, onChange, onSiguiente, onAnterior 
 		}
 		// Clear error if exists
 		if (errores.producto) {
-			const { producto, ...rest } = errores;
+			// eslint-disable-next-line @typescript-eslint/no-unused-vars
+			const { producto: _removed, ...rest } = errores;
 			setErrores(rest);
 		}
 	};
@@ -734,9 +735,7 @@ export function VidaForm({ datos, regionales, onChange, onSiguiente, onAnterior 
 				{/* Lista de asegurados */}
 				{asegurados.length > 0 ? (
 					<div className="space-y-3">
-						{asegurados.map((asegurado) => {
-							const nivel = niveles.find((n) => n.id === asegurado.nivel_id);
-							return (
+						{asegurados.map((asegurado) => (
 								<div key={asegurado.client_id} className="flex items-center gap-4 p-4 border rounded-lg">
 									<Users className="h-5 w-5 text-gray-400 flex-shrink-0" />
 									<div className="flex-1">
@@ -768,8 +767,7 @@ export function VidaForm({ datos, regionales, onChange, onSiguiente, onAnterior 
 										</Button>
 									</div>
 								</div>
-							);
-						})}
+						))}
 					</div>
 				) : (
 					<div className="text-center py-8 border-2 border-dashed rounded-lg">

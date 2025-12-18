@@ -667,9 +667,7 @@ export function AccidentesPersonalesForm({ datos, regionales, onChange, onSiguie
 				{/* Lista de asegurados */}
 				{asegurados.length > 0 ? (
 					<div className="space-y-3">
-						{asegurados.map((asegurado) => {
-							const nivel = niveles.find((n) => n.id === asegurado.nivel_id);
-							return (
+						{asegurados.map((asegurado) => (
 								<div key={asegurado.client_id} className="p-4 border rounded-lg">
 									<div className="flex items-start gap-4">
 										<Users className="h-5 w-5 text-gray-400 flex-shrink-0 mt-1" />
@@ -719,8 +717,7 @@ export function AccidentesPersonalesForm({ datos, regionales, onChange, onSiguie
 										</Button>
 									</div>
 								</div>
-							);
-						})}
+						))}
 					</div>
 				) : (
 					<div className="text-center py-8 border-2 border-dashed rounded-lg">

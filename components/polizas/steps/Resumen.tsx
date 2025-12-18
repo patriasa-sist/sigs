@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { ChevronLeft, Save, AlertTriangle, CheckCircle, Edit, User, FileText, Car, CreditCard, File, Info } from "lucide-react";
 import type { PolizaFormState, AdvertenciaPoliza } from "@/types/poliza";
 import { validarFechasPago } from "@/utils/polizaValidation";
@@ -17,12 +17,7 @@ export function Resumen({ formState, onAnterior, onEditarPaso, onGuardar }: Prop
 	const [advertencias, setAdvertencias] = useState<AdvertenciaPoliza[]>([]);
 	const [guardando, setGuardando] = useState(false);
 
-	// Generar advertencias al cargar
-	useEffect(() => {
-		generarAdvertencias();
-	}, [formState]);
-
-	const generarAdvertencias = () => {
+	const generarAdvertencias = useCallback(() => {
 		const nuevasAdvertencias: AdvertenciaPoliza[] = [];
 
 		// Validar fechas de pago
@@ -70,7 +65,12 @@ export function Resumen({ formState, onAnterior, onEditarPaso, onGuardar }: Prop
 		}
 
 		setAdvertencias(nuevasAdvertencias);
-	};
+	}, [formState]);
+
+	// Generar advertencias al cargar
+	useEffect(() => {
+		generarAdvertencias();
+	}, [generarAdvertencias]);
 
 	const handleGuardar = async () => {
 		if (guardando) return;

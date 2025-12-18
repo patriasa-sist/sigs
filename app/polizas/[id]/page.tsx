@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { obtenerDetallePoliza, type PolizaDetalle } from "../actions";
 import { Button } from "@/components/ui/button";
@@ -28,11 +28,7 @@ export default function PolizaDetallePage() {
 	const [isLoading, setIsLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 
-	useEffect(() => {
-		cargarDetalle();
-	}, [polizaId]);
-
-	const cargarDetalle = async () => {
+	const cargarDetalle = useCallback(async () => {
 		setIsLoading(true);
 		setError(null);
 		const resultado = await obtenerDetallePoliza(polizaId);
@@ -42,7 +38,11 @@ export default function PolizaDetallePage() {
 			setError(resultado.error || "Error al cargar la póliza");
 		}
 		setIsLoading(false);
-	};
+	}, [polizaId]);
+
+	useEffect(() => {
+		cargarDetalle();
+	}, [cargarDetalle]);
 
 	const getEstadoStyle = (estado: string) => {
 		const styles = {

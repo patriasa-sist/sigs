@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,20 +32,7 @@ export default function RegistrarPagoModal({ cuota, poliza, open, onClose, onSuc
 	const [mensajeValidacion, setMensajeValidacion] = useState<string>("");
 	const [tipoValidacion, setTipoValidacion] = useState<"error" | "warning" | "info">("info");
 
-	useEffect(() => {
-		// Reset form when modal opens
-		if (open && cuota) {
-			setMontoPagado(cuota.monto.toString());
-			setFechaPago(new Date().toISOString().split("T")[0]);
-			setObservaciones("");
-			setError(null);
-
-			// Validate if overdue quota can be paid
-			validarCuotaVencida();
-		}
-	}, [open, cuota]);
-
-	const validarCuotaVencida = () => {
+	const validarCuotaVencida = useCallback(() => {
 		if (!cuota) return;
 
 		if (cuota.estado === "vencido") {
@@ -74,7 +61,20 @@ export default function RegistrarPagoModal({ cuota, poliza, open, onClose, onSuc
 			setPuedePayar(true);
 			setMensajeValidacion("");
 		}
-	};
+	}, [cuota]);
+
+	useEffect(() => {
+		// Reset form when modal opens
+		if (open && cuota) {
+			setMontoPagado(cuota.monto.toString());
+			setFechaPago(new Date().toISOString().split("T")[0]);
+			setObservaciones("");
+			setError(null);
+
+			// Validate if overdue quota can be paid
+			validarCuotaVencida();
+		}
+	}, [open, cuota, validarCuotaVencida]);
 
 	const formatCurrency = (amount: number) => {
 		return new Intl.NumberFormat("es-BO", {

@@ -275,7 +275,8 @@ export function SaludForm({ datos, regionales, onChange, onSiguiente, onAnterior
 									onChange={(e) => {
 										setNombreNivel(e.target.value);
 										if (errores.nombre_nivel) {
-											const { nombre_nivel, ...rest } = errores;
+											// eslint-disable-next-line @typescript-eslint/no-unused-vars
+											const { nombre_nivel: _removed, ...rest } = errores;
 											setErrores(rest);
 										}
 									}}
@@ -296,7 +297,8 @@ export function SaludForm({ datos, regionales, onChange, onSiguiente, onAnterior
 									onChange={(e) => {
 										setMontoNivel(parseFloat(e.target.value) || 0);
 										if (errores.monto_nivel) {
-											const { monto_nivel, ...rest } = errores;
+											// eslint-disable-next-line @typescript-eslint/no-unused-vars
+											const { monto_nivel: _removed, ...rest } = errores;
 											setErrores(rest);
 										}
 									}}
@@ -489,9 +491,7 @@ export function SaludForm({ datos, regionales, onChange, onSiguiente, onAnterior
 				{/* Lista de asegurados */}
 				{asegurados.length > 0 ? (
 					<div className="space-y-3">
-						{asegurados.map((asegurado) => {
-							const nivel = niveles.find((n) => n.id === asegurado.nivel_id);
-							return (
+						{asegurados.map((asegurado) => (
 								<div key={asegurado.client_id} className="p-4 border rounded-lg">
 									<div className="flex items-start gap-4">
 										<Users className="h-5 w-5 text-gray-400 flex-shrink-0 mt-1" />
@@ -547,8 +547,7 @@ export function SaludForm({ datos, regionales, onChange, onSiguiente, onAnterior
 										</Button>
 									</div>
 								</div>
-							);
-						})}
+						))}
 					</div>
 				) : (
 					<div className="text-center py-8 border-2 border-dashed rounded-lg">

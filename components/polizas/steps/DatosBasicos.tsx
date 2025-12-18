@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { ChevronRight, ChevronLeft, CheckCircle2 } from "lucide-react";
 import type { DatosBasicosPoliza, CompaniaAseguradora, Regional, Categoria, GrupoProduccion, Moneda } from "@/types/poliza";
 import { validarDatosBasicos } from "@/utils/polizaValidation";
@@ -61,15 +61,10 @@ export function DatosBasicos({ datos, onChange, onSiguiente, onAnterior }: Props
 	const [cargandoCatalogos, setCargandoCatalogos] = useState(true);
 	const [errores, setErrores] = useState<Record<string, string>>({});
 
-	const supabase = createClient();
-
 	// Cargar catálogos
-	useEffect(() => {
-		cargarCatalogos();
-	}, []);
-
-	const cargarCatalogos = async () => {
+	const cargarCatalogos = useCallback(async () => {
 		try {
+			const supabase = createClient();
 			const [
 				{ data: companiasData },
 				{ data: regionalesData },
@@ -125,7 +120,11 @@ export function DatosBasicos({ datos, onChange, onSiguiente, onAnterior }: Props
 		} finally {
 			setCargandoCatalogos(false);
 		}
-	};
+	}, []);
+
+	useEffect(() => {
+		cargarCatalogos();
+	}, [cargarCatalogos]);
 
 	// Manejar cambios en el formulario
 	const handleChange = (campo: keyof DatosBasicosPoliza, valor: string | GrupoProduccion | Moneda | undefined) => {

@@ -96,7 +96,8 @@ export function ResponsabilidadCivilForm({ datos, onChange, onSiguiente, onAnter
 						onChange={(e) => {
 							setValorAsegurado(parseFloat(e.target.value) || 0);
 							if (errores.valor_asegurado) {
-								const { valor_asegurado, ...rest } = errores;
+								// eslint-disable-next-line @typescript-eslint/no-unused-vars
+								const { valor_asegurado: _removed, ...rest } = errores;
 								setErrores(rest);
 							}
 						}}

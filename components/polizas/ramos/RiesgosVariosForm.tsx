@@ -191,7 +191,8 @@ export function RiesgosVariosForm({ datos, onChange, onSiguiente, onAnterior }: 
 										onChange={(e) => {
 											setConvenio1({ ...convenio1, monto: parseFloat(e.target.value) || 0 });
 											if (errores.convenio1) {
-												const { convenio1, ...rest } = errores;
+												// eslint-disable-next-line @typescript-eslint/no-unused-vars
+												const { convenio1: _removed, ...rest } = errores;
 												setErrores(rest);
 											}
 										}}
@@ -228,7 +229,8 @@ export function RiesgosVariosForm({ datos, onChange, onSiguiente, onAnterior }: 
 										onChange={(e) => {
 											setConvenio2({ ...convenio2, monto: parseFloat(e.target.value) || 0 });
 											if (errores.convenio2) {
-												const { convenio2, ...rest } = errores;
+												// eslint-disable-next-line @typescript-eslint/no-unused-vars
+												const { convenio2: _removed, ...rest } = errores;
 												setErrores(rest);
 											}
 										}}
@@ -265,7 +267,8 @@ export function RiesgosVariosForm({ datos, onChange, onSiguiente, onAnterior }: 
 										onChange={(e) => {
 											setConvenio3({ ...convenio3, monto: parseFloat(e.target.value) || 0 });
 											if (errores.convenio3) {
-												const { convenio3, ...rest } = errores;
+												// eslint-disable-next-line @typescript-eslint/no-unused-vars
+												const { convenio3: _removed, ...rest } = errores;
 												setErrores(rest);
 											}
 										}}
@@ -302,7 +305,8 @@ export function RiesgosVariosForm({ datos, onChange, onSiguiente, onAnterior }: 
 										onChange={(e) => {
 											setConvenio4({ ...convenio4, monto: parseFloat(e.target.value) || 0 });
 											if (errores.convenio4) {
-												const { convenio4, ...rest } = errores;
+												// eslint-disable-next-line @typescript-eslint/no-unused-vars
+												const { convenio4: _removed, ...rest } = errores;
 												setErrores(rest);
 											}
 										}}
@@ -339,7 +343,8 @@ export function RiesgosVariosForm({ datos, onChange, onSiguiente, onAnterior }: 
 										onChange={(e) => {
 											setConvenio5({ ...convenio5, monto: parseFloat(e.target.value) || 0 });
 											if (errores.convenio5) {
-												const { convenio5, ...rest } = errores;
+												// eslint-disable-next-line @typescript-eslint/no-unused-vars
+												const { convenio5: _removed, ...rest } = errores;
 												setErrores(rest);
 											}
 										}}
