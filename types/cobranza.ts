@@ -271,3 +271,240 @@ export type ExportarReporteResponse = CobranzaServerResponse<ExportRow[]>;
  * Respuesta de obtenerEstadisticas()
  */
 export type ObtenerEstadisticasResponse = CobranzaServerResponse<CobranzaStats>;
+
+// ============================================
+// FILE UPLOAD & COMPROBANTES TYPES
+// ============================================
+
+/**
+ * Tipo de comprobante de pago
+ */
+export type TipoComprobante = "factura" | "recibo" | "comprobante_deposito" | "otro";
+
+/**
+ * Comprobante de pago adjunto a una cuota
+ * Representa un registro de la tabla polizas_pagos_comprobantes
+ */
+export type Comprobante = {
+	id: string;
+	pago_id: string;
+	nombre_archivo: string;
+	archivo_url: string;
+	tamano_bytes: number;
+	tipo_archivo: TipoComprobante;
+	estado: "activo" | "descartado";
+	uploaded_at: string;
+	uploaded_by: string | null;
+	created_at: string;
+	updated_at: string;
+};
+
+/**
+ * Datos para subir un comprobante de pago
+ */
+export type SubirComprobanteData = {
+	pago_id: string;
+	file: File;
+	tipo_archivo: TipoComprobante;
+};
+
+// ============================================
+// PRÓRROGA TYPES
+// ============================================
+
+/**
+ * Registro individual de prórroga en el historial
+ * Almacenado en el array JSONB prorrogas_historial
+ */
+export type ProrrogaHistorial = {
+	fecha_anterior: string; // ISO date string
+	fecha_nueva: string; // ISO date string
+	fecha_registro: string; // ISO timestamp
+	usuario_id: string;
+	usuario_nombre: string;
+	motivo: string | null;
+	dias_extension: number;
+};
+
+/**
+ * Datos para registrar una prórroga
+ */
+export type RegistroProrroga = {
+	cuota_id: string;
+	nueva_fecha: string; // ISO date string
+	motivo?: string;
+};
+
+// ============================================
+// CLIENT CONTACT & RAMO-SPECIFIC DATA TYPES
+// ============================================
+
+/**
+ * Información de contacto del cliente
+ * Obtenida de natural_clients o juridic_clients
+ */
+export type ContactoCliente = {
+	telefono: string | null;
+	correo: string | null;
+	celular: string | null;
+};
+
+/**
+ * Vehículo de póliza Automotor
+ */
+export type VehiculoAutomotor = {
+	id: string;
+	placa: string;
+	tipo_vehiculo?: string;
+	marca?: string;
+	modelo?: string;
+	ano?: number;
+	color?: string;
+	valor_asegurado: number;
+};
+
+/**
+ * Asegurado en pólizas de Salud, Vida, AP, Sepelio
+ */
+export type AseguradoPoliza = {
+	id?: string;
+	client_id: string;
+	client_name: string;
+	client_ci: string;
+	nivel_nombre?: string;
+	cargo?: string;
+};
+
+/**
+ * Datos específicos según el tipo de ramo (discriminated union)
+ */
+export type DatosEspecificosRamo =
+	| {
+			tipo: "automotor";
+			vehiculos: VehiculoAutomotor[];
+	  }
+	| {
+			tipo: "salud" | "vida" | "ap" | "sepelio";
+			asegurados: AseguradoPoliza[];
+			producto?: string; // Para Vida
+	  }
+	| {
+			tipo: "incendio";
+			ubicaciones: string[]; // Array de direcciones
+	  }
+	| {
+			tipo: "otros";
+			descripcion: string;
+	  };
+
+/**
+ * Póliza con información extendida para visualización de cuotas
+ * Incluye contacto del cliente y datos específicos del ramo
+ */
+export type PolizaConPagosExtendida = PolizaConPagos & {
+	contacto: ContactoCliente;
+	datos_ramo: DatosEspecificosRamo;
+};
+
+// ============================================
+// AVISO DE MORA TYPES
+// ============================================
+
+/**
+ * Cuota vencida con cálculo de días de mora
+ */
+export type CuotaVencidaConMora = CuotaPago & {
+	dias_mora: number;
+};
+
+/**
+ * Datos completos para generar PDF de aviso de mora
+ */
+export type AvisoMoraData = {
+	poliza: PolizaConPagos;
+	cliente: ContactoCliente;
+	cuotas_vencidas: CuotaVencidaConMora[];
+	total_adeudado: number;
+	fecha_generacion: string; // ISO date string
+	numero_referencia: string; // Auto-generado formato: AM-YYYYMMDD-XXXXX
+};
+
+// ============================================
+// ENHANCED SORTING & FILTERING TYPES
+// ============================================
+
+/**
+ * Campos disponibles para ordenamiento (extendido)
+ * Incluye todos los campos ordenables del dashboard
+ */
+export type SortFieldEnhanced =
+	| "numero_poliza"
+	| "cliente"
+	| "compania"
+	| "fecha_vencimiento"
+	| "monto_pendiente"
+	| "cuotas_vencidas"
+	| "cuotas_pendientes"
+	| "prima_total"
+	| "inicio_vigencia";
+
+/**
+ * Opciones de ordenamiento mejoradas
+ */
+export type SortOptionsEnhanced = {
+	field: SortFieldEnhanced;
+	direction: "asc" | "desc";
+};
+
+// ============================================
+// SERVER ACTION RESPONSE TYPES (EXTENDED)
+// ============================================
+
+/**
+ * Respuesta de obtenerDetallePolizaParaCuotas()
+ */
+export type ObtenerDetallePolizaResponse = CobranzaServerResponse<PolizaConPagosExtendida>;
+
+/**
+ * Respuesta de subirComprobantePago()
+ */
+export type SubirComprobanteResponse = CobranzaServerResponse<{
+	comprobante_id: string;
+	archivo_url: string;
+}>;
+
+/**
+ * Respuesta de registrarPago() actualizada
+ * Ahora incluye información del comprobante si fue subido
+ */
+export type RegistrarPagoResponseExtendida = CobranzaServerResponse<{
+	cuotas_actualizadas: string[];
+	tipo_pago: TipoPago;
+	exceso_generado?: number;
+	comprobante?: {
+		id: string;
+		url: string;
+	};
+}>;
+
+/**
+ * Respuesta de registrarProrroga()
+ */
+export type RegistrarProrrogaResponse = CobranzaServerResponse<{
+	prorroga: ProrrogaHistorial;
+	nueva_fecha_vencimiento: string;
+	total_prorrogas: number;
+}>;
+
+/**
+ * Respuesta de prepararDatosAvisoMora()
+ */
+export type PrepararAvisoMoraResponse = CobranzaServerResponse<AvisoMoraData>;
+
+/**
+ * Respuesta de descartarComprobante()
+ */
+export type DescartarComprobanteResponse = CobranzaServerResponse<{
+	comprobante_id: string;
+	descartado: boolean;
+}>;

@@ -28,7 +28,7 @@ desarollar junto a estos cambios también las modificaciones necesarias a supaba
 
 --------------= SINIESTROS REUNION 15-12-2025 =--------------
 
-mejoras solicitadas en el modulo de siniestros:
+trabajaremos en las mejoras solicitadas en el modulo de siniestros:
 
 1. crear y guardar un codigo correlativo basado en año-00001 cantidad de siniestros de 1 a 99999
 2. SINIESTROS tiene que ver todas las cuotas de la polizas y si tienen prorrogas activas
@@ -41,3 +41,8 @@ mejoras solicitadas en el modulo de siniestros:
 5. quitar departamento y poner responsable en visualizacion
 6. Numero y correo del cliente en detalles de poliza asociada (clickeables)
 7. exite un ERROR al cargar nuevos documentos: "onAgregarDocumento is not a function" confirmar que no sea un error de logica
+
+desarollar junto a estos cambios también las modificaciones necesarias a supabase para su correcto funcionamiento, no ejecutar cambios directamente en supabase sino preparar un archivo sql
+si necesitas informacion sobre como esta configurado supabase usa el MCP instalado
+
+create a document solely dedicated to document the supabase DB I am using, detail the tables, relations, RLS and include the first example data of each table to understand how the db is structured and for your reference in future iterations over the code

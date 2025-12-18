@@ -16,6 +16,20 @@ import type {
 	CuotaPago,
 	Moneda,
 	EstadoPago,
+	// New types for improvements
+	PolizaConPagosExtendida,
+	ContactoCliente,
+	DatosEspecificosRamo,
+	VehiculoAutomotor,
+	AseguradoPoliza,
+	TipoComprobante,
+	ObtenerDetallePolizaResponse,
+	SubirComprobanteResponse,
+	RegistroProrroga,
+	RegistrarProrrogaResponse,
+	AvisoMoraData,
+	CuotaVencidaConMora,
+	PrepararAvisoMoraResponse,
 } from "@/types/cobranza";
 
 // Helper types for Supabase query results
@@ -287,25 +301,7 @@ export async function registrarPago(registro: RegistroPago): Promise<RegistrarPa
 			return { success: false, error: "Esta cuota ya está marcada como pagada" };
 		}
 
-		// **VALIDACIÓN DE MES PARA CUOTAS VENCIDAS**
-		if (cuota.estado === "vencido") {
-			const fechaVencimiento = new Date(cuota.fecha_vencimiento);
-			const fechaActual = new Date();
-
-			const mesVencimiento = fechaVencimiento.getMonth();
-			const anioVencimiento = fechaVencimiento.getFullYear();
-
-			const mesActual = fechaActual.getMonth();
-			const anioActual = fechaActual.getFullYear();
-
-			if (mesVencimiento !== mesActual || anioVencimiento !== anioActual) {
-				const mesNombre = fechaVencimiento.toLocaleDateString("es-BO", { month: "long", year: "numeric" });
-				return {
-					success: false,
-					error: `No se puede registrar pago fuera del mes de vencimiento. Esta cuota venció en ${mesNombre}`,
-				};
-			}
-		}
+		// MEJORA #2: Restricción mensual eliminada - Las cuotas vencidas ahora pueden pagarse en cualquier momento
 
 		const montoCuota = cuota.monto;
 		const montoPagado = registro.monto_pagado;
