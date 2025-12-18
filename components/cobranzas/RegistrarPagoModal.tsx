@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,9 +8,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle, CheckCircle, DollarSign } from "lucide-react";
-import { registrarPago, obtenerCuotasPendientesPorPoliza } from "@/app/cobranzas/actions";
-import type { CuotaPago, PolizaConPagos, ExcessPaymentDistribution } from "@/types/cobranza";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { AlertCircle, CheckCircle, DollarSign, Upload, FileText, X } from "lucide-react";
+import { registrarPago, obtenerCuotasPendientesPorPoliza, subirComprobantePago } from "@/app/cobranzas/actions";
+import type { CuotaPago, PolizaConPagos, ExcessPaymentDistribution, TipoComprobante } from "@/types/cobranza";
+import { validarTamanoArchivo, validarTipoArchivo, formatearTamanoArchivo } from "@/utils/cobranza";
 
 interface RegistrarPagoModalProps {
 	cuota: CuotaPago | null;
@@ -27,41 +29,10 @@ export default function RegistrarPagoModal({ cuota, poliza, open, onClose, onSuc
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
-	// Validation states
-	const [puedePayar, setPuedePayar] = useState(true);
-	const [mensajeValidacion, setMensajeValidacion] = useState<string>("");
-	const [tipoValidacion, setTipoValidacion] = useState<"error" | "warning" | "info">("info");
-
-	const validarCuotaVencida = useCallback(() => {
-		if (!cuota) return;
-
-		if (cuota.estado === "vencido") {
-			const fechaVenc = new Date(cuota.fecha_vencimiento);
-			const hoy = new Date();
-
-			const mesVenc = fechaVenc.getMonth();
-			const anioVenc = fechaVenc.getFullYear();
-
-			const mesActual = hoy.getMonth();
-			const anioActual = hoy.getFullYear();
-
-			const mismoMes = mesVenc === mesActual && anioVenc === anioActual;
-
-			if (mismoMes) {
-				setPuedePayar(true);
-				setMensajeValidacion("Esta cuota está vencida pero puede pagarse hasta fin de mes");
-				setTipoValidacion("warning");
-			} else {
-				setPuedePayar(false);
-				const mesNombre = fechaVenc.toLocaleDateString("es-BO", { month: "long", year: "numeric" });
-				setMensajeValidacion(`No se puede pagar. Esta cuota venció en ${mesNombre}`);
-				setTipoValidacion("error");
-			}
-		} else {
-			setPuedePayar(true);
-			setMensajeValidacion("");
-		}
-	}, [cuota]);
+	// MEJORA #1: File upload states
+	const [selectedFile, setSelectedFile] = useState<File | null>(null);
+	const [tipoComprobante, setTipoComprobante] = useState<TipoComprobante>("factura");
+	const [fileError, setFileError] = useState<string | null>(null);
 
 	useEffect(() => {
 		// Reset form when modal opens
@@ -70,11 +41,11 @@ export default function RegistrarPagoModal({ cuota, poliza, open, onClose, onSuc
 			setFechaPago(new Date().toISOString().split("T")[0]);
 			setObservaciones("");
 			setError(null);
-
-			// Validate if overdue quota can be paid
-			validarCuotaVencida();
+			setSelectedFile(null);
+			setTipoComprobante("factura");
+			setFileError(null);
 		}
-	}, [open, cuota, validarCuotaVencida]);
+	}, [open, cuota]);
 
 	const formatCurrency = (amount: number) => {
 		return new Intl.NumberFormat("es-BO", {
@@ -109,11 +80,44 @@ export default function RegistrarPagoModal({ cuota, poliza, open, onClose, onSuc
 		return Math.max(0, cuota.monto - monto);
 	};
 
+	// MEJORA #1: Handle file selection
+	const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+		const file = e.target.files?.[0];
+		setFileError(null);
+
+		if (!file) {
+			setSelectedFile(null);
+			return;
+		}
+
+		// Validate file size
+		const sizeValidation = validarTamanoArchivo(file);
+		if (!sizeValidation.valid) {
+			setFileError(sizeValidation.error || "Error de validación");
+			setSelectedFile(null);
+			return;
+		}
+
+		// Validate file type
+		const typeValidation = validarTipoArchivo(file);
+		if (!typeValidation.valid) {
+			setFileError(typeValidation.error || "Error de validación");
+			setSelectedFile(null);
+			return;
+		}
+
+		setSelectedFile(file);
+	};
+
+	const handleRemoveFile = () => {
+		setSelectedFile(null);
+		setFileError(null);
+	};
+
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
 
 		if (!cuota || !poliza) return;
-		if (!puedePayar) return;
 
 		const monto = parseFloat(montoPagado);
 		if (isNaN(monto) || monto <= 0) {
@@ -121,10 +125,17 @@ export default function RegistrarPagoModal({ cuota, poliza, open, onClose, onSuc
 			return;
 		}
 
+		// MEJORA #1: Validate file is required
+		if (!selectedFile) {
+			setError("Debe adjuntar un comprobante de pago (obligatorio)");
+			return;
+		}
+
 		setLoading(true);
 		setError(null);
 
 		try {
+			// First, register the payment
 			const result = await registrarPago({
 				cuota_id: cuota.id,
 				monto_pagado: monto,
@@ -133,6 +144,18 @@ export default function RegistrarPagoModal({ cuota, poliza, open, onClose, onSuc
 			});
 
 			if (result.success && result.data) {
+				// MEJORA #1: Upload comprobante after successful payment
+				const formData = new FormData();
+				formData.append("file", selectedFile);
+				formData.append("tipo_archivo", tipoComprobante);
+
+				const uploadResult = await subirComprobantePago(cuota.id, formData);
+
+				if (!uploadResult.success) {
+					console.error("Warning: Failed to upload comprobante:", uploadResult.error);
+					// Don't fail the whole operation, just log the error
+				}
+
 				// Si hay exceso, preparar datos para redistribución
 				if (result.data.tipo_pago === "exceso" && result.data.exceso_generado) {
 					// Obtener cuotas pendientes de la misma póliza
@@ -144,7 +167,7 @@ export default function RegistrarPagoModal({ cuota, poliza, open, onClose, onSuc
 							poliza_id: poliza.id,
 							cuota_origen_id: cuota.id,
 							monto_exceso: result.data.exceso_generado,
-							distribuciones: cuotasPendientesResult.data.map(c => ({
+							distribuciones: cuotasPendientesResult.data.map((c) => ({
 								cuota_id: c.id,
 								numero_cuota: c.numero_cuota,
 								monto_original: c.monto,
@@ -193,18 +216,6 @@ export default function RegistrarPagoModal({ cuota, poliza, open, onClose, onSuc
 					</DialogDescription>
 				</DialogHeader>
 
-				{/* Validación de cuota vencida */}
-				{mensajeValidacion && (
-					<Alert variant={tipoValidacion === "error" ? "destructive" : "default"}>
-						<AlertCircle className="h-4 w-4" />
-						<AlertDescription>
-							{tipoValidacion === "error" && "❌ "}
-							{tipoValidacion === "warning" && "⚠️ "}
-							{mensajeValidacion}
-						</AlertDescription>
-					</Alert>
-				)}
-
 				<form onSubmit={handleSubmit} className="space-y-4">
 					{/* Monto Pagado */}
 					<div className="space-y-2">
@@ -217,7 +228,6 @@ export default function RegistrarPagoModal({ cuota, poliza, open, onClose, onSuc
 							value={montoPagado}
 							onChange={(e) => setMontoPagado(e.target.value)}
 							required
-							disabled={!puedePayar}
 						/>
 					</div>
 
@@ -230,7 +240,6 @@ export default function RegistrarPagoModal({ cuota, poliza, open, onClose, onSuc
 							value={fechaPago}
 							onChange={(e) => setFechaPago(e.target.value)}
 							required
-							disabled={!puedePayar}
 						/>
 					</div>
 
@@ -243,8 +252,74 @@ export default function RegistrarPagoModal({ cuota, poliza, open, onClose, onSuc
 							onChange={(e) => setObservaciones(e.target.value)}
 							rows={3}
 							placeholder="Notas adicionales sobre el pago..."
-							disabled={!puedePayar}
 						/>
+					</div>
+
+					{/* MEJORA #1: Comprobante Upload */}
+					<div className="space-y-2">
+						<Label htmlFor="comprobante">Comprobante de Pago *</Label>
+						<div className="space-y-2">
+							{/* Tipo de comprobante */}
+							<Select value={tipoComprobante} onValueChange={(value) => setTipoComprobante(value as TipoComprobante)}>
+								<SelectTrigger>
+									<SelectValue placeholder="Seleccione tipo de comprobante" />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="factura">Factura</SelectItem>
+									<SelectItem value="recibo">Recibo</SelectItem>
+									<SelectItem value="comprobante_deposito">Comprobante de Depósito</SelectItem>
+									<SelectItem value="otro">Otro</SelectItem>
+								</SelectContent>
+							</Select>
+
+							{/* File input */}
+							{!selectedFile ? (
+								<div className="border-2 border-dashed rounded-lg p-4 hover:border-primary transition-colors">
+									<label htmlFor="file-upload" className="cursor-pointer flex flex-col items-center">
+										<Upload className="h-8 w-8 text-muted-foreground mb-2" />
+										<span className="text-sm text-muted-foreground">
+											Click para seleccionar archivo
+										</span>
+										<span className="text-xs text-muted-foreground mt-1">
+											JPG, PNG, WebP o PDF (máx. 10MB)
+										</span>
+										<input
+											id="file-upload"
+											type="file"
+											className="hidden"
+											accept="image/jpeg,image/jpg,image/png,image/webp,application/pdf"
+											onChange={handleFileChange}
+										/>
+									</label>
+								</div>
+							) : (
+								<div className="border rounded-lg p-3 bg-muted/30">
+									<div className="flex items-center justify-between">
+										<div className="flex items-center gap-2">
+											<FileText className="h-5 w-5 text-blue-500" />
+											<div>
+												<p className="text-sm font-medium">{selectedFile.name}</p>
+												<p className="text-xs text-muted-foreground">
+													{formatearTamanoArchivo(selectedFile.size)}
+												</p>
+											</div>
+										</div>
+										<Button
+											type="button"
+											variant="ghost"
+											size="sm"
+											onClick={handleRemoveFile}
+										>
+											<X className="h-4 w-4" />
+										</Button>
+									</div>
+								</div>
+							)}
+
+							{fileError && (
+								<p className="text-sm text-red-600">{fileError}</p>
+							)}
+						</div>
 					</div>
 
 					{/* Indicador de tipo de pago */}
@@ -303,7 +378,7 @@ export default function RegistrarPagoModal({ cuota, poliza, open, onClose, onSuc
 						<Button type="button" variant="outline" onClick={onClose} disabled={loading}>
 							Cancelar
 						</Button>
-						<Button type="submit" disabled={loading || !puedePayar}>
+						<Button type="submit" disabled={loading || !selectedFile}>
 							{loading ? "Registrando..." : "Confirmar Pago"}
 						</Button>
 					</div>

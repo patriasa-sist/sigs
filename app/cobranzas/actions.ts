@@ -668,3 +668,470 @@ export async function exportarReporte(filtros: ExportFilters): Promise<CobranzaS
 		};
 	}
 }
+
+// =============================================
+// NEW SERVER ACTIONS - COBRANZAS IMPROVEMENTS
+// =============================================
+
+/**
+ * MEJORA #3: Obtener detalle extendido de póliza para visualización de cuotas
+ * Incluye: contacto del cliente y datos específicos según el ramo
+ */
+export async function obtenerDetallePolizaParaCuotas(
+	polizaId: string
+): Promise<ObtenerDetallePolizaResponse> {
+	try {
+		const supabase = await createClient();
+
+		// Get authenticated user
+		const {
+			data: { user },
+		} = await supabase.auth.getUser();
+		if (!user) {
+			return { success: false, error: "No autenticado" };
+		}
+
+		// Query policy with all related data
+		const { data: poliza, error: polizaError } = await supabase
+			.from("polizas")
+			.select(
+				`
+				*,
+				client:clients!inner(
+					id,
+					client_type,
+					natural_clients(primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, numero_documento, telefono, correo, celular),
+					juridic_clients(razon_social, nit, telefono_principal, correo_principal)
+				),
+				compania:companias_aseguradoras(id, nombre),
+				responsable:profiles!polizas_responsable_id_fkey(id, full_name),
+				cuotas:polizas_pagos(*)
+			`
+			)
+			.eq("id", polizaId)
+			.single();
+
+		if (polizaError || !poliza) {
+			return { success: false, error: "Póliza no encontrada" };
+		}
+
+		// Extract contact info based on client type
+		let contacto: ContactoCliente = {
+			telefono: null,
+			correo: null,
+			celular: null,
+		};
+
+		if (poliza.client.client_type === "natural") {
+			const natural = poliza.client.natural_clients?.[0];
+			if (natural) {
+				contacto = {
+					telefono: natural.telefono || null,
+					correo: natural.correo || null,
+					celular: natural.celular || null,
+				};
+			}
+		} else {
+			const juridic = poliza.client.juridic_clients?.[0];
+			if (juridic) {
+				contacto = {
+					telefono: juridic.telefono_principal || null,
+					correo: juridic.correo_principal || null,
+					celular: null, // Juridic clients don't have celular yet
+				};
+			}
+		}
+
+		// Get ramo-specific data
+		let datos_ramo: DatosEspecificosRamo;
+
+		switch (poliza.ramo.toLowerCase()) {
+			case "automotor":
+			case "automotores": {
+				// Query vehicles from separate table
+				const { data: vehiculos, error: vehiculosError } = await supabase
+					.from("polizas_automotor_vehiculos")
+					.select(
+						`
+						id,
+						placa,
+						valor_asegurado,
+						tipo_vehiculo:tipos_vehiculo(nombre),
+						marca:marcas_vehiculo(nombre),
+						modelo,
+						ano,
+						color
+					`
+					)
+					.eq("poliza_id", polizaId);
+
+				if (vehiculosError) {
+					console.error("Error fetching vehiculos:", vehiculosError);
+				}
+
+				const vehiculosFormateados: VehiculoAutomotor[] =
+					vehiculos?.map((v) => ({
+						id: v.id,
+						placa: v.placa,
+						tipo_vehiculo: v.tipo_vehiculo?.nombre,
+						marca: v.marca?.nombre,
+						modelo: v.modelo,
+						ano: v.ano,
+						color: v.color,
+						valor_asegurado: v.valor_asegurado,
+					})) || [];
+
+				datos_ramo = {
+					tipo: "automotor",
+					vehiculos: vehiculosFormateados,
+				};
+				break;
+			}
+
+			case "salud":
+			case "vida":
+			case "ap":
+			case "accidentes personales":
+			case "sepelio": {
+				// For now, return placeholder - these would need their own table queries
+				// TODO: Implement queries for polizas_salud, polizas_vida, etc.
+				datos_ramo = {
+					tipo: "salud", // Normalize type
+					asegurados: [],
+					producto: poliza.ramo,
+				};
+				break;
+			}
+
+			case "incendio":
+			case "incendio y aliados": {
+				// TODO: Implement query for polizas_incendio table
+				datos_ramo = {
+					tipo: "incendio",
+					ubicaciones: [],
+				};
+				break;
+			}
+
+			default:
+				datos_ramo = {
+					tipo: "otros",
+					descripcion: poliza.ramo,
+				};
+		}
+
+		// Calculate totals
+		const cuotas = poliza.cuotas || [];
+		const total_pagado = cuotas
+			.filter((c) => c.estado === "pagado")
+			.reduce((sum, c) => sum + c.monto, 0);
+		const total_pendiente = cuotas
+			.filter((c) => c.estado !== "pagado")
+			.reduce((sum, c) => sum + c.monto, 0);
+		const cuotas_pendientes = cuotas.filter((c) => c.estado === "pendiente").length;
+		const cuotas_vencidas = cuotas.filter((c) => c.estado === "vencido").length;
+
+		// Build extended policy object
+		const polizaExtendida: PolizaConPagosExtendida = {
+			id: poliza.id,
+			numero_poliza: poliza.numero_poliza,
+			ramo: poliza.ramo,
+			prima_total: poliza.prima_total,
+			moneda: poliza.moneda as Moneda,
+			estado: poliza.estado,
+			inicio_vigencia: poliza.inicio_vigencia,
+			fin_vigencia: poliza.fin_vigencia,
+			modalidad_pago: poliza.modalidad_pago,
+			client: {
+				id: poliza.client.id,
+				client_type: poliza.client.client_type,
+				nombre_completo:
+					poliza.client.client_type === "natural"
+						? `${poliza.client.natural_clients?.[0]?.primer_nombre || ""} ${poliza.client.natural_clients?.[0]?.primer_apellido || ""}`.trim()
+						: poliza.client.juridic_clients?.[0]?.razon_social || "N/A",
+				documento:
+					poliza.client.client_type === "natural"
+						? poliza.client.natural_clients?.[0]?.numero_documento || "N/A"
+						: poliza.client.juridic_clients?.[0]?.nit || "N/A",
+			},
+			compania: {
+				id: poliza.compania.id,
+				nombre: poliza.compania.nombre,
+			},
+			responsable: {
+				id: poliza.responsable.id,
+				full_name: poliza.responsable.full_name,
+			},
+			cuotas: cuotas as CuotaPago[],
+			total_pagado,
+			total_pendiente,
+			cuotas_pendientes,
+			cuotas_vencidas,
+			contacto,
+			datos_ramo,
+		};
+
+		return { success: true, data: polizaExtendida };
+	} catch (error) {
+		console.error("Error obtaining policy details:", error);
+		return {
+			success: false,
+			error: error instanceof Error ? error.message : "Error desconocido",
+		};
+	}
+}
+
+/**
+ * MEJORA #1: Subir comprobante de pago a Supabase Storage
+ */
+export async function subirComprobantePago(
+	pagoId: string,
+	fileData: FormData
+): Promise<SubirComprobanteResponse> {
+	try {
+		const supabase = await createClient();
+
+		// Get authenticated user
+		const {
+			data: { user },
+		} = await supabase.auth.getUser();
+		if (!user) {
+			return { success: false, error: "No autenticado" };
+		}
+
+		// Extract file and tipo from FormData
+		const file = fileData.get("file") as File;
+		const tipoArchivo = fileData.get("tipo_archivo") as TipoComprobante;
+
+		if (!file) {
+			return { success: false, error: "No se proporcionó archivo" };
+		}
+
+		// Validate file size (max 10MB)
+		const MAX_SIZE = 10 * 1024 * 1024; // 10MB in bytes
+		if (file.size > MAX_SIZE) {
+			return { success: false, error: "El archivo excede el tamaño máximo de 10MB" };
+		}
+
+		// Validate file type
+		const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp", "application/pdf"];
+		if (!allowedTypes.includes(file.type)) {
+			return {
+				success: false,
+				error: "Tipo de archivo no permitido. Use JPG, PNG, WebP o PDF",
+			};
+		}
+
+		// Generate unique filename with user folder
+		const fileExt = file.name.split(".").pop();
+		const fileName = `${user.id}/${pagoId}_${Date.now()}.${fileExt}`;
+
+		// Upload to Supabase Storage
+		const { data: uploadData, error: uploadError } = await supabase.storage
+			.from("pagos-comprobantes")
+			.upload(fileName, file, {
+				contentType: file.type,
+				upsert: false,
+			});
+
+		if (uploadError) {
+			console.error("Error uploading file:", uploadError);
+			return { success: false, error: `Error al subir archivo: ${uploadError.message}` };
+		}
+
+		// Get public URL
+		const {
+			data: { publicUrl },
+		} = supabase.storage.from("pagos-comprobantes").getPublicUrl(uploadData.path);
+
+		// Create record in database
+		const { data: comprobante, error: dbError } = await supabase
+			.from("polizas_pagos_comprobantes")
+			.insert({
+				pago_id: pagoId,
+				nombre_archivo: file.name,
+				archivo_url: publicUrl,
+				tamano_bytes: file.size,
+				tipo_archivo: tipoArchivo,
+				uploaded_by: user.id,
+			})
+			.select()
+			.single();
+
+		if (dbError) {
+			console.error("Error creating comprobante record:", dbError);
+			// Try to delete uploaded file if DB insert fails
+			await supabase.storage.from("pagos-comprobantes").remove([uploadData.path]);
+			return { success: false, error: `Error al registrar comprobante: ${dbError.message}` };
+		}
+
+		return {
+			success: true,
+			data: {
+				comprobante_id: comprobante.id,
+				archivo_url: publicUrl,
+			},
+		};
+	} catch (error) {
+		console.error("Error in subirComprobantePago:", error);
+		return {
+			success: false,
+			error: error instanceof Error ? error.message : "Error desconocido",
+		};
+	}
+}
+
+/**
+ * MEJORA #8: Registrar prórroga de cuota
+ * Llama a la función de base de datos que maneja todo el historial
+ */
+export async function registrarProrroga(registro: RegistroProrroga): Promise<RegistrarProrrogaResponse> {
+	try {
+		const supabase = await createClient();
+
+		// Get authenticated user
+		const {
+			data: { user },
+		} = await supabase.auth.getUser();
+		if (!user) {
+			return { success: false, error: "No autenticado" };
+		}
+
+		// Validate inputs
+		if (!registro.cuota_id || !registro.nueva_fecha) {
+			return { success: false, error: "Datos incompletos para registrar prórroga" };
+		}
+
+		// Validate that nueva_fecha is in the future
+		const nuevaFecha = new Date(registro.nueva_fecha);
+		const hoy = new Date();
+		hoy.setHours(0, 0, 0, 0);
+
+		if (nuevaFecha <= hoy) {
+			return { success: false, error: "La nueva fecha debe ser futura" };
+		}
+
+		// Call database function
+		const { data, error } = await supabase.rpc("registrar_prorroga_cuota", {
+			p_cuota_id: registro.cuota_id,
+			p_nueva_fecha: registro.nueva_fecha,
+			p_usuario_id: user.id,
+			p_motivo: registro.motivo || null,
+		});
+
+		if (error) {
+			console.error("Error calling registrar_prorroga_cuota:", error);
+			return { success: false, error: error.message };
+		}
+
+		// Get updated quota to count total prorrogas
+		const { data: cuotaActualizada, error: cuotaError } = await supabase
+			.from("polizas_pagos")
+			.select("prorrogas_historial, fecha_vencimiento")
+			.eq("id", registro.cuota_id)
+			.single();
+
+		if (cuotaError) {
+			console.error("Error fetching updated quota:", cuotaError);
+		}
+
+		const totalProrrogas = Array.isArray(cuotaActualizada?.prorrogas_historial)
+			? cuotaActualizada.prorrogas_historial.length
+			: 0;
+
+		// Revalidate cobranzas page
+		revalidatePath("/cobranzas");
+
+		return {
+			success: true,
+			data: {
+				prorroga: data,
+				nueva_fecha_vencimiento: registro.nueva_fecha,
+				total_prorrogas: totalProrrogas,
+			},
+		};
+	} catch (error) {
+		console.error("Error registering prórroga:", error);
+		return {
+			success: false,
+			error: error instanceof Error ? error.message : "Error desconocido",
+		};
+	}
+}
+
+/**
+ * MEJORA #4: Preparar datos para generar PDF de aviso de mora
+ * Requiere al menos 3 cuotas vencidas
+ */
+export async function prepararDatosAvisoMora(polizaId: string): Promise<PrepararAvisoMoraResponse> {
+	try {
+		const supabase = await createClient();
+
+		// Get authenticated user
+		const {
+			data: { user },
+		} = await supabase.auth.getUser();
+		if (!user) {
+			return { success: false, error: "No autenticado" };
+		}
+
+		// Get extended policy details (reuse function)
+		const polizaResponse = await obtenerDetallePolizaParaCuotas(polizaId);
+		if (!polizaResponse.success || !polizaResponse.data) {
+			return { success: false, error: polizaResponse.error || "Error al obtener datos de póliza" };
+		}
+
+		const poliza = polizaResponse.data;
+
+		// Filter overdue quotas
+		const cuotasVencidas = poliza.cuotas.filter((c) => c.estado === "vencido" || c.estado === "parcial");
+
+		// Validate minimum 3 overdue quotas
+		if (cuotasVencidas.length < 3) {
+			return {
+				success: false,
+				error: `Se requieren al menos 3 cuotas vencidas. Esta póliza tiene ${cuotasVencidas.length}`,
+			};
+		}
+
+		// Calculate days overdue for each quota
+		const hoy = new Date();
+		const cuotasConMora: CuotaVencidaConMora[] = cuotasVencidas.map((cuota) => {
+			const fechaVencimiento = new Date(cuota.fecha_vencimiento);
+			const diasMora = Math.max(
+				0,
+				Math.floor((hoy.getTime() - fechaVencimiento.getTime()) / (1000 * 60 * 60 * 24))
+			);
+
+			return {
+				...cuota,
+				dias_mora: diasMora,
+			};
+		});
+
+		// Calculate total owed
+		const totalAdeudado = cuotasConMora.reduce((sum, c) => sum + c.monto, 0);
+
+		// Generate reference number: AM-YYYYMMDD-{poliza_number}
+		const fechaStr = hoy.toISOString().split("T")[0].replace(/-/g, "");
+		const numeroReferencia = `AM-${fechaStr}-${poliza.numero_poliza}`;
+
+		// Build aviso de mora data
+		const avisoMoraData: AvisoMoraData = {
+			poliza: poliza,
+			cliente: poliza.contacto,
+			cuotas_vencidas: cuotasConMora,
+			total_adeudado: totalAdeudado,
+			fecha_generacion: hoy.toISOString(),
+			numero_referencia: numeroReferencia,
+		};
+
+		return { success: true, data: avisoMoraData };
+	} catch (error) {
+		console.error("Error preparing aviso de mora data:", error);
+		return {
+			success: false,
+			error: error instanceof Error ? error.message : "Error desconocido",
+		};
+	}
+}
