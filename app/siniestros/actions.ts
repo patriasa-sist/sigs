@@ -281,25 +281,25 @@ export async function obtenerSiniestroDetalle(siniestroId: string): Promise<Obte
 
 		const coberturas =
 			coberturasRaw?.map((c: {
-				coberturas_catalogo: Array<{
+				coberturas_catalogo: {
 					id: string;
 					nombre: string;
 					descripcion?: string;
-				codigo_puc: string;
-				ramo: string;
-				es_custom: boolean;
-				activo: boolean;
-				}>;
+					codigo_puc: string;
+					ramo: string;
+					es_custom: boolean;
+					activo: boolean;
+				} | null;
 			}) => {
-				const catalogo = c.coberturas_catalogo[0];
+				const catalogo = c.coberturas_catalogo;
 				return {
 					id: catalogo?.id || "",
 					nombre: catalogo?.nombre || "",
 					descripcion: catalogo?.descripcion,
-				codigo_puc: catalogo?.codigo_puc || "",
-				ramo: catalogo?.ramo || "",
-				es_custom: catalogo?.es_custom || false,
-				activo: catalogo?.activo || false,
+					codigo_puc: catalogo?.codigo_puc || "",
+					ramo: catalogo?.ramo || "",
+					es_custom: catalogo?.es_custom || false,
+					activo: catalogo?.activo || false,
 				};
 			}) || [];
 
