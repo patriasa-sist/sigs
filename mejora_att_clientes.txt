@@ -9,7 +9,7 @@ COMERCIAL en MOD comercial tiene la capacidad de editar cuotas no pagadas
 
 --------------= COBRANZAS REUNION 15-12-2025 =--------------
 
-mejoras solicitadas para el modulo de cobranzas:
+trabajaremos en las mejoras solicitadas para el modulo de cobranzas:
 
 1. adjuntar comprobante o factura (archivo) al pago, 1 archivo obligatorio por cuota pagada
 2. quitar restriccion mensual para cuotas vencidas, se pueden pagar en cualquier momento
@@ -23,6 +23,8 @@ mejoras solicitadas para el modulo de cobranzas:
 6. permitir ordenar por cada campo de la tabla como en la visualizacion de vencimientos
 7. boton para avisar por WhatsApp de su cuota al cliente (y boton de correo tambien) que tengan un mensaje cordial y generico "Estimado/a cliente xxxx, nos comunicamos con usted para recordarle ..."
 8. al lado de registrar pago "registrar prorroga" con selector de fecha de prorroga
+
+desarollar junto a estos cambios también las modificaciones necesarias a supabase para su correcto funcionamiento, no ejecutar cambios directamente en supabase sino preparar un archivo sql
 
 --------------= SINIESTROS REUNION 15-12-2025 =--------------
 
