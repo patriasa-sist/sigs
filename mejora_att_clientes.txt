@@ -1,0 +1,41 @@
+--------------= SIN ESPECIFICAR REUNION 15-12-2025 =--------------
+estados:
+Pagado> pagado
+Parcial> pago redistribuido
+Pendiente> pagos futuros
+mora/Vencido> pagos pasados
+
+COMERCIAL en MOD comercial tiene la capacidad de editar cuotas no pagadas
+
+--------------= COBRANZAS REUNION 15-12-2025 =--------------
+
+mejoras solicitadas para el modulo de cobranzas:
+
+1. adjuntar comprobante o factura (archivo) al pago, 1 archivo obligatorio por cuota pagada
+2. quitar restriccion mensual para cuotas vencidas, se pueden pagar en cualquier momento
+3. en la visualizacion de datos de cliente por su cuota se debe mostrar telefono (clickeable hacia whatsapp), correo(clickeable hacia correo), inicio de vigencia, fin de vigencia
+   3.1. para polizas de automotor> placa
+   3.2. para polizas de salud,AP,vida> asegurados
+   3.3. mostrar ubicaciones en ramos que lo contengan (revisar cuales ramos contienen ubicaciones aparte)
+
+4. boton "generar aviso de mora" en la visualizacion de cuotas para polizas que tengas mas de 3 cuotas vencidas, este boton genera un PDF con el aviso de mora y lo envia a WhatsApp
+5. tener la capacidad en la tabla de cuotas de ordenar por fecha de vencimiento, nombre o compañia
+6. permitir ordenar por cada campo de la tabla como en la visualizacion de vencimientos
+7. boton para avisar por WhatsApp de su cuota al cliente (y boton de correo tambien) que tengan un mensaje cordial y generico "Estimado/a cliente xxxx, nos comunicamos con usted para recordarle ..."
+8. al lado de registrar pago "registrar prorroga" con selector de fecha de prorroga
+
+--------------= SINIESTROS REUNION 15-12-2025 =--------------
+
+mejoras solicitadas en el modulo de siniestros:
+
+1. crear y guardar un codigo correlativo basado en año-00001 cantidad de siniestros de 1 a 99999
+2. SINIESTROS tiene que ver todas las cuotas de la polizas y si tienen prorrogas activas
+3. agregar filtros correctos al lado del buscador como ser [responsable, compañia, ramo, estado]
+4. paso2 en detalles:
+
+-   agregar responsable del siniestro, por defecto la persona que crea el reporte de siniestros pero puede ser cambiado a cualquier usuario con rol siniestros
+-   puede ser editado posteriormente
+
+5. quitar departamento y poner responsable en visualizacion
+6. Numero y correo del cliente en detalles de poliza asociada (clickeables)
+7. exite un ERROR al cargar nuevos documentos: "onAgregarDocumento is not a function" confirmar que no sea un error de logica
