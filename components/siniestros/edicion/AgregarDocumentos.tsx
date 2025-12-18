@@ -11,12 +11,12 @@ import {
 	restaurarDocumentoSiniestro,
 	eliminarDocumentoSiniestroPermanente,
 } from "@/app/siniestros/documentos/actions";
-import type { DocumentoSiniestro } from "@/types/siniestro";
+import type { DocumentoSiniestro, DocumentoSiniestroConUsuario } from "@/types/siniestro";
 import { toast } from "sonner";
 
 interface AgregarDocumentosProps {
 	siniestroId: string;
-	documentosIniciales: DocumentoSiniestro[];
+	documentosIniciales: DocumentoSiniestroConUsuario[];
 	estadoSiniestro: string;
 	esAdmin: boolean;
 }
@@ -28,12 +28,16 @@ export default function AgregarDocumentos({
 	esAdmin,
 }: AgregarDocumentosProps) {
 	const [documentos, setDocumentos] = useState<DocumentoSiniestro[]>([]);
-	const [documentosActivos, setDocumentosActivos] = useState<DocumentoSiniestro[]>(documentosIniciales);
+	const [documentosActivos, setDocumentosActivos] = useState<DocumentoSiniestroConUsuario[]>(documentosIniciales);
 	const [uploading, setUploading] = useState(false);
 	const [operationLoading, setOperationLoading] = useState<string | null>(null);
 
-	const handleDocumentosChange = useCallback((docs: DocumentoSiniestro[]) => {
-		setDocumentos(docs);
+	const handleAgregarDocumento = useCallback((doc: DocumentoSiniestro) => {
+		setDocumentos(prev => [...prev, doc]);
+	}, []);
+
+	const handleEliminarDocumento = useCallback((index: number) => {
+		setDocumentos(prev => prev.filter((_, i) => i !== index));
 	}, []);
 
 	const handleUpload = useCallback(async () => {
@@ -189,7 +193,11 @@ export default function AgregarDocumentos({
 						</CardTitle>
 					</CardHeader>
 					<CardContent className="space-y-4">
-						<DocumentUploader documentos={documentos} onDocumentosChange={handleDocumentosChange} />
+						<DocumentUploader
+						documentos={documentos}
+						onAgregarDocumento={handleAgregarDocumento}
+						onEliminarDocumento={handleEliminarDocumento}
+					/>
 
 						{documentos.length > 0 && (
 							<div className="flex justify-end gap-2 pt-2 border-t">

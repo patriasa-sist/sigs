@@ -1,8 +1,27 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { ChevronLeft, Save, AlertTriangle, CheckCircle, Edit, User, FileText, Car, CreditCard, File, Info } from "lucide-react";
-import type { PolizaFormState, AdvertenciaPoliza, PasoFormulario } from "@/types/poliza";
+import {
+	ChevronLeft,
+	Save,
+	AlertTriangle,
+	CheckCircle,
+	Edit,
+	User,
+	FileText,
+	Car,
+	CreditCard,
+	File,
+	Info,
+} from "lucide-react";
+import type {
+	PolizaFormState,
+	AdvertenciaPoliza,
+	PasoFormulario,
+	DatosIncendio,
+	DatosRiesgosVarios,
+	DatosResponsabilidadCivil,
+} from "@/types/poliza";
 import { validarFechasPago } from "@/utils/polizaValidation";
 import { Button } from "@/components/ui/button";
 
@@ -78,9 +97,7 @@ export function Resumen({ formState, onAnterior, onEditarPaso, onGuardar }: Prop
 		// Confirmar si hay warnings
 		const tieneWarnings = advertencias.some((a) => a.tipo === "warning");
 		if (tieneWarnings) {
-			const confirmar = confirm(
-				"Hay advertencias sobre la póliza. ¿Está seguro de continuar con el guardado?"
-			);
+			const confirmar = confirm("Hay advertencias sobre la póliza. ¿Está seguro de continuar con el guardado?");
 			if (!confirmar) return;
 		}
 
@@ -103,12 +120,8 @@ export function Resumen({ formState, onAnterior, onEditarPaso, onGuardar }: Prop
 		<div className="bg-white rounded-lg shadow-sm border p-6">
 			<div className="flex items-center justify-between mb-6">
 				<div>
-					<h2 className="text-xl font-semibold text-gray-900">
-						Paso 6: Resumen y Confirmación
-					</h2>
-					<p className="text-sm text-gray-600 mt-1">
-						Revise toda la información antes de guardar la póliza
-					</p>
+					<h2 className="text-xl font-semibold text-gray-900">Paso 6: Resumen y Confirmación</h2>
+					<p className="text-sm text-gray-600 mt-1">Revise toda la información antes de guardar la póliza</p>
 				</div>
 			</div>
 
@@ -138,9 +151,7 @@ export function Resumen({ formState, onAnterior, onEditarPaso, onGuardar }: Prop
 							<div className="flex gap-2">
 								<AlertTriangle className="h-5 w-5 text-yellow-600 flex-shrink-0 mt-0.5" />
 								<div className="flex-1">
-									<h4 className="text-sm font-semibold text-yellow-800 mb-2">
-										Advertencias:
-									</h4>
+									<h4 className="text-sm font-semibold text-yellow-800 mb-2">Advertencias:</h4>
 									<ul className="text-sm text-yellow-700 space-y-1">
 										{warnings.map((adv, i) => (
 											<li key={i}>• {adv.mensaje}</li>
@@ -156,9 +167,7 @@ export function Resumen({ formState, onAnterior, onEditarPaso, onGuardar }: Prop
 							<div className="flex gap-2">
 								<Info className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
 								<div className="flex-1">
-									<h4 className="text-sm font-semibold text-blue-800 mb-2">
-										Información:
-									</h4>
+									<h4 className="text-sm font-semibold text-blue-800 mb-2">Información:</h4>
 									<ul className="text-sm text-blue-700 space-y-1">
 										{infos.map((adv, i) => (
 											<li key={i}>• {adv.mensaje}</li>
@@ -188,16 +197,17 @@ export function Resumen({ formState, onAnterior, onEditarPaso, onGuardar }: Prop
 									<div className="text-sm text-gray-600 space-y-1">
 										<p className="font-medium text-gray-900">{asegurado.nombre_completo}</p>
 										<p>Documento: {asegurado.documento}</p>
-										<p>Tipo: {asegurado.client_type === "natural" ? "Persona Natural" : "Persona Jurídica"}</p>
+										<p>
+											Tipo:{" "}
+											{asegurado.client_type === "natural"
+												? "Persona Natural"
+												: "Persona Jurídica"}
+										</p>
 									</div>
 								)}
 							</div>
 						</div>
-						<Button
-							variant="ghost"
-							size="sm"
-							onClick={() => onEditarPaso(1)}
-						>
+						<Button variant="ghost" size="sm" onClick={() => onEditarPaso(1)}>
 							<Edit className="h-4 w-4" />
 						</Button>
 					</div>
@@ -218,10 +228,12 @@ export function Resumen({ formState, onAnterior, onEditarPaso, onGuardar }: Prop
 								{datos_basicos && (
 									<div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2 text-sm text-gray-600">
 										<div>
-											<span className="font-medium text-gray-700">Nº Póliza:</span> {datos_basicos.numero_poliza}
+											<span className="font-medium text-gray-700">Nº Póliza:</span>{" "}
+											{datos_basicos.numero_poliza}
 										</div>
 										<div>
-											<span className="font-medium text-gray-700">Ramo:</span> {datos_basicos.ramo}
+											<span className="font-medium text-gray-700">Ramo:</span>{" "}
+											{datos_basicos.ramo}
 										</div>
 										<div>
 											<span className="font-medium text-gray-700">Vigencia:</span>{" "}
@@ -236,11 +248,7 @@ export function Resumen({ formState, onAnterior, onEditarPaso, onGuardar }: Prop
 								)}
 							</div>
 						</div>
-						<Button
-							variant="ghost"
-							size="sm"
-							onClick={() => onEditarPaso(2)}
-						>
+						<Button variant="ghost" size="sm" onClick={() => onEditarPaso(2)}>
 							<Edit className="h-4 w-4" />
 						</Button>
 					</div>
@@ -287,21 +295,28 @@ export function Resumen({ formState, onAnterior, onEditarPaso, onGuardar }: Prop
 									<div className="text-sm text-gray-600 space-y-2">
 										<div>
 											<span className="font-medium text-gray-700">Tipo:</span>{" "}
-											{datos_especificos.datos.tipo_poliza === "individual" ? "Individual" : "Corporativo"}
+											{datos_especificos.datos.tipo_poliza === "individual"
+												? "Individual"
+												: "Corporativo"}
 										</div>
 										<div>
-											<p className="font-medium text-gray-700">Niveles de cobertura: {datos_especificos.datos.niveles.length}</p>
+											<p className="font-medium text-gray-700">
+												Niveles de cobertura: {datos_especificos.datos.niveles.length}
+											</p>
 											<ul className="mt-1 space-y-1">
 												{datos_especificos.datos.niveles.map((nivel, i) => (
 													<li key={i} className="ml-2">
 														• {nivel.nombre}
-														{nivel.prima_nivel && ` - Prima: ${nivel.prima_nivel.toLocaleString("es-BO")} Bs`}
+														{nivel.prima_nivel &&
+															` - Prima: ${nivel.prima_nivel.toLocaleString("es-BO")} Bs`}
 													</li>
 												))}
 											</ul>
 										</div>
 										<div>
-											<p className="font-medium text-gray-700">Asegurados: {datos_especificos.datos.asegurados.length}</p>
+											<p className="font-medium text-gray-700">
+												Asegurados: {datos_especificos.datos.asegurados.length}
+											</p>
 										</div>
 									</div>
 								)}
@@ -315,7 +330,7 @@ export function Resumen({ formState, onAnterior, onEditarPaso, onGuardar }: Prop
 										</div>
 										<div>
 											<span className="font-medium text-gray-700">Suma Asegurada:</span>{" "}
-											{datos_especificos.datos.suma_asegurada.toLocaleString("es-BO")} Bs
+											{datos_especificos.datos.niveles.length} nivel(es)
 										</div>
 										<div className="text-blue-600 italic text-xs mt-2">
 											ℹ️ Pólizas de Vida solo permiten pago en contado
@@ -328,15 +343,17 @@ export function Resumen({ formState, onAnterior, onEditarPaso, onGuardar }: Prop
 									<div className="text-sm text-gray-600 space-y-2">
 										<div>
 											<span className="font-medium text-gray-700">Tipo:</span>{" "}
-											{datos_especificos.datos.tipo_poliza === "individual" ? "Individual" : "Colectivo"}
+											{datos_especificos.datos.tipo_poliza === "individual"
+												? "Individual"
+												: "Colectivo"}
 										</div>
 										{datos_especificos.datos.tiene_maternidad && (
-											<div className="text-green-600">
-												✓ Incluye cobertura de maternidad
-											</div>
+											<div className="text-green-600">✓ Incluye cobertura de maternidad</div>
 										)}
 										<div>
-											<p className="font-medium text-gray-700">Niveles: {datos_especificos.datos.niveles.length}</p>
+											<p className="font-medium text-gray-700">
+												Niveles: {datos_especificos.datos.niveles.length}
+											</p>
 											<ul className="mt-1 space-y-1">
 												{datos_especificos.datos.niveles.map((nivel, i) => (
 													<li key={i} className="ml-2">
@@ -346,7 +363,9 @@ export function Resumen({ formState, onAnterior, onEditarPaso, onGuardar }: Prop
 											</ul>
 										</div>
 										<div>
-											<p className="font-medium text-gray-700">Asegurados: {datos_especificos.datos.asegurados.length}</p>
+											<p className="font-medium text-gray-700">
+												Asegurados: {datos_especificos.datos.asegurados.length}
+											</p>
 										</div>
 									</div>
 								)}
@@ -356,122 +375,115 @@ export function Resumen({ formState, onAnterior, onEditarPaso, onGuardar }: Prop
 									<div className="text-sm text-gray-600 space-y-2">
 										<div>
 											<span className="font-medium text-gray-700">Tipo:</span>{" "}
-											{datos_especificos.datos.tipo_poliza === "individual" ? "Individual" : "Colectivo"}
+											{datos_especificos.datos.tipo_poliza === "individual"
+												? "Individual"
+												: "Colectivo"}
 										</div>
 										<div>
-											<p className="font-medium text-gray-700">Niveles de cobertura: {datos_especificos.datos.niveles.length}</p>
+											<p className="font-medium text-gray-700">
+												Niveles de cobertura: {datos_especificos.datos.niveles.length}
+											</p>
 											<ul className="mt-1 space-y-1">
 												{datos_especificos.datos.niveles.map((nivel, i) => (
 													<li key={i} className="ml-2">
-														• {nivel.nombre} - {nivel.monto_cobertura.toLocaleString("es-BO")} Bs
+														• {nivel.nombre}
+														{nivel.prima_nivel
+															? ` - ${nivel.prima_nivel.toLocaleString("es-BO")} Bs`
+															: ""}
 													</li>
 												))}
 											</ul>
 										</div>
 										<div>
-											<p className="font-medium text-gray-700">Asegurados: {datos_especificos.datos.asegurados.length}</p>
+											<p className="font-medium text-gray-700">
+												Asegurados: {datos_especificos.datos.asegurados.length}
+											</p>
 										</div>
 									</div>
 								)}
 
 								{/* Incendio */}
-								{datos_especificos?.tipo_ramo === "Incendio" && (
+								{datos_especificos?.tipo_ramo === "Incendio y Aliados" && (
 									<div className="text-sm text-gray-600 space-y-2">
 										<div>
-											<p className="font-medium text-gray-700">Bienes asegurados: {datos_especificos.datos.bienes.length}</p>
+											<p className="font-medium text-gray-700">
+												Bienes asegurados:{" "}
+												{(datos_especificos.datos as DatosIncendio).bienes.length}
+											</p>
 											<ul className="mt-2 space-y-2">
-												{datos_especificos.datos.bienes.slice(0, 2).map((bien, i) => (
-													<li key={i} className="ml-2 border-l-2 border-purple-300 pl-3">
-														<div className="font-medium text-gray-900">{bien.direccion}</div>
-														<div className="text-xs text-gray-500 mt-1">
-															Items asegurados: {bien.items.length}
-														</div>
-														<ul className="mt-1 space-y-0.5">
-															{bien.items.map((item, j) => (
-																<li key={j} className="text-xs">
-																	• {item.nombre}: {item.monto.toLocaleString("es-BO")} Bs
-																</li>
-															))}
-														</ul>
-														<div className="mt-1 text-sm font-medium text-purple-700">
-															Valor total: {bien.valor_total_declarado.toLocaleString("es-BO")} Bs
-														</div>
-													</li>
-												))}
-												{datos_especificos.datos.bienes.length > 2 && (
+												{(datos_especificos.datos as DatosIncendio).bienes
+													.slice(0, 2)
+													.map((bien, i) => (
+														<li key={i} className="ml-2 border-l-2 border-purple-300 pl-3">
+															<div className="font-medium text-gray-900">
+																{bien.direccion}
+															</div>
+															<div className="text-xs text-gray-500 mt-1">
+																Items asegurados: {bien.items.length}
+															</div>
+															<ul className="mt-1 space-y-0.5">
+																{bien.items.map((item, j) => (
+																	<li key={j} className="text-xs">
+																		• {item.nombre}:{" "}
+																		{item.monto.toLocaleString("es-BO")} Bs
+																	</li>
+																))}
+															</ul>
+															<div className="mt-1 text-sm font-medium text-purple-700">
+																Valor total:{" "}
+																{bien.valor_total_declarado.toLocaleString("es-BO")} Bs
+															</div>
+														</li>
+													))}
+												{(datos_especificos.datos as DatosIncendio).bienes.length > 2 && (
 													<li className="text-gray-500 italic ml-2">
-														...y {datos_especificos.datos.bienes.length - 2} bien(es) más
+														...y{" "}
+														{(datos_especificos.datos as DatosIncendio).bienes.length - 2}{" "}
+														bien(es) más
 													</li>
 												)}
 											</ul>
 										</div>
 										<div className="pt-2 border-t border-gray-200">
 											<span className="font-medium text-gray-900">Valor Total Asegurado:</span>{" "}
-											{datos_especificos.datos.valor_asegurado.toLocaleString("es-BO")} Bs
+											{(datos_especificos.datos as DatosIncendio).valor_asegurado.toLocaleString(
+												"es-BO"
+											)}{" "}
+											Bs
 										</div>
 									</div>
 								)}
 
 								{/* Riesgos Varios */}
-								{datos_especificos?.tipo_ramo === "Riesgos Varios" && (
+								{datos_especificos?.tipo_ramo === "Riesgos Varios Misceláneos" && (
 									<div className="text-sm text-gray-600 space-y-2">
 										<div>
-											<span className="font-medium text-gray-700">Suma Asegurada:</span>{" "}
-											{datos_especificos.datos.suma_asegurada.toLocaleString("es-BO")} Bs
+											<span className="font-medium text-gray-700">Valor Total Asegurado:</span>{" "}
+											{(datos_especificos.datos as DatosRiesgosVarios).valor_total_asegurado.toLocaleString("es-BO")} Bs
 										</div>
-										{datos_especificos.datos.descripcion_riesgo && (
-											<div>
-												<span className="font-medium text-gray-700">Descripción del riesgo:</span>
-												<p className="mt-1 text-gray-600 italic">{datos_especificos.datos.descripcion_riesgo}</p>
-											</div>
-										)}
+										<div>
+											<span className="font-medium text-gray-700">Asegurados:</span>{" "}
+											{(datos_especificos.datos as DatosRiesgosVarios).asegurados.length} asegurado(s)
+										</div>
 									</div>
 								)}
 
 								{/* RC (Responsabilidad Civil) */}
-								{datos_especificos?.tipo_ramo === "RC" && (
+								{datos_especificos?.tipo_ramo === "Responsabilidad Civil" && (
 									<div className="text-sm text-gray-600 space-y-2">
 										<div>
-											<span className="font-medium text-gray-700">Límite de cobertura:</span>{" "}
-											{datos_especificos.datos.limite_cobertura.toLocaleString("es-BO")} Bs
+											<span className="font-medium text-gray-700">Tipo de Póliza:</span>{" "}
+											{(datos_especificos.datos as DatosResponsabilidadCivil).tipo_poliza === "individual" ? "Individual" : "Corporativo"}
 										</div>
-										{datos_especificos.datos.actividad_economica && (
-											<div>
-												<span className="font-medium text-gray-700">Actividad económica:</span>{" "}
-												{datos_especificos.datos.actividad_economica}
-											</div>
-										)}
-									</div>
-								)}
-
-								{/* TRC (Todo Riesgo Contratista) */}
-								{datos_especificos?.tipo_ramo === "TRC" && (
-									<div className="text-sm text-gray-600 space-y-2">
 										<div>
-											<span className="font-medium text-gray-700">Valor del proyecto:</span>{" "}
-											{datos_especificos.datos.valor_proyecto.toLocaleString("es-BO")} Bs
+											<span className="font-medium text-gray-700">Valor Asegurado:</span>{" "}
+											{(datos_especificos.datos as DatosResponsabilidadCivil).valor_asegurado.toLocaleString("es-BO")} Bs
 										</div>
-										{datos_especificos.datos.descripcion_obra && (
-											<div>
-												<span className="font-medium text-gray-700">Descripción de la obra:</span>
-												<p className="mt-1 text-gray-600 italic">{datos_especificos.datos.descripcion_obra}</p>
-											</div>
-										)}
-										{datos_especificos.datos.ubicacion_obra && (
-											<div>
-												<span className="font-medium text-gray-700">Ubicación:</span>{" "}
-												{datos_especificos.datos.ubicacion_obra}
-											</div>
-										)}
 									</div>
 								)}
 							</div>
 						</div>
-						<Button
-							variant="ghost"
-							size="sm"
-							onClick={() => onEditarPaso(3)}
-						>
+						<Button variant="ghost" size="sm" onClick={() => onEditarPaso(3)}>
 							<Edit className="h-4 w-4" />
 						</Button>
 					</div>
@@ -503,7 +515,8 @@ export function Resumen({ formState, onAnterior, onEditarPaso, onGuardar }: Prop
 											<>
 												<p>
 													<span className="font-medium text-gray-700">Cuota Inicial:</span>{" "}
-													{modalidad_pago.cuota_inicial.toLocaleString("es-BO")} {modalidad_pago.moneda}
+													{modalidad_pago.cuota_inicial.toLocaleString("es-BO")}{" "}
+													{modalidad_pago.moneda}
 												</p>
 												<p>
 													<span className="font-medium text-gray-700">Cuotas:</span>{" "}
@@ -514,18 +527,15 @@ export function Resumen({ formState, onAnterior, onEditarPaso, onGuardar }: Prop
 										{modalidad_pago.prima_neta && (
 											<p className="text-blue-600">
 												<span className="font-medium">Prima Neta:</span>{" "}
-												{modalidad_pago.prima_neta.toLocaleString("es-BO")} {modalidad_pago.moneda}
+												{modalidad_pago.prima_neta.toLocaleString("es-BO")}{" "}
+												{modalidad_pago.moneda}
 											</p>
 										)}
 									</div>
 								)}
 							</div>
 						</div>
-						<Button
-							variant="ghost"
-							size="sm"
-							onClick={() => onEditarPaso(4)}
-						>
+						<Button variant="ghost" size="sm" onClick={() => onEditarPaso(4)}>
 							<Edit className="h-4 w-4" />
 						</Button>
 					</div>
@@ -550,7 +560,9 @@ export function Resumen({ formState, onAnterior, onEditarPaso, onGuardar }: Prop
 								<div className="text-sm text-gray-600">
 									{documentos.length > 0 ? (
 										<>
-											<p className="font-medium mb-2">{documentos.length} documento(s) cargado(s)</p>
+											<p className="font-medium mb-2">
+												{documentos.length} documento(s) cargado(s)
+											</p>
 											<ul className="space-y-1">
 												{documentos.slice(0, 3).map((doc, i) => (
 													<li key={i}>• {doc.nombre_archivo}</li>
@@ -568,11 +580,7 @@ export function Resumen({ formState, onAnterior, onEditarPaso, onGuardar }: Prop
 								</div>
 							</div>
 						</div>
-						<Button
-							variant="ghost"
-							size="sm"
-							onClick={() => onEditarPaso(5)}
-						>
+						<Button variant="ghost" size="sm" onClick={() => onEditarPaso(5)}>
 							<Edit className="h-4 w-4" />
 						</Button>
 					</div>
