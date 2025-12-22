@@ -263,9 +263,9 @@ export async function obtenerSiniestroDetalle(siniestroId: string): Promise<Obte
 	const supabase = await createClient();
 
 	try {
-		// Obtener siniestro desde vista
+		// Obtener siniestro desde vista con estado actual
 		const { data: siniestro, error: siniestroError } = await supabase
-			.from("siniestros_vista")
+			.from("siniestros_con_estado_actual")
 			.select("*")
 			.eq("id", siniestroId)
 			.single();

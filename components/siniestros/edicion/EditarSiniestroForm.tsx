@@ -17,7 +17,7 @@ import DetallePolizaSiniestro from "./DetallePolizaSiniestro";
 import SeccionEstados from "./SeccionEstados";
 import DocumentosPorTipo from "./DocumentosPorTipo";
 import type {
-	SiniestroVista,
+	SiniestroVistaConEstado,
 	CoberturaCatalogo,
 	DocumentoSiniestro,
 	ObservacionSiniestro,
@@ -25,7 +25,7 @@ import type {
 } from "@/types/siniestro";
 
 interface EditarSiniestroFormProps {
-	siniestro: SiniestroVista;
+	siniestro: SiniestroVistaConEstado;
 	coberturas: CoberturaCatalogo[];
 	documentos: DocumentoSiniestro[];
 	observaciones: ObservacionSiniestro[];
@@ -101,11 +101,18 @@ export default function EditarSiniestroForm({
 							</div>
 						</div>
 
-						<div className="flex items-center gap-2">
+						<div className="flex items-center gap-2 flex-wrap justify-end">
 							<span className={`px-3 py-1.5 rounded-full text-sm font-medium flex items-center gap-2 ${estadoConfig.className}`}>
 								<EstadoIcon className="h-4 w-4" />
 								{estadoConfig.label}
 							</span>
+
+							{/* Badge de Estado de Seguimiento */}
+							{siniestro.estado_actual_nombre && (
+								<span className="px-3 py-1.5 rounded-full text-sm font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+									{siniestro.estado_actual_nombre}
+								</span>
+							)}
 
 							{/* Botón Cerrar Siniestro - Solo si está abierto */}
 							{siniestro.estado === "abierto" && (
