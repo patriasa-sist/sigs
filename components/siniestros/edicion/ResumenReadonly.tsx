@@ -26,16 +26,6 @@ export default function ResumenReadonly({ siniestro, coberturas }: ResumenReadon
 						<div className="flex gap-2">
 							<Calendar className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-0.5" />
 							<div>
-								<p className="text-sm text-muted-foreground">Fecha del Siniestro</p>
-								<p className="font-medium">
-									{new Date(siniestro.fecha_siniestro).toLocaleDateString("es-BO")}
-								</p>
-							</div>
-						</div>
-
-						<div className="flex gap-2">
-							<Calendar className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-0.5" />
-							<div>
 								<p className="text-sm text-muted-foreground">Fecha de Reporte</p>
 								<p className="font-medium">
 									{new Date(siniestro.fecha_reporte).toLocaleDateString("es-BO")}
@@ -46,21 +36,6 @@ export default function ResumenReadonly({ siniestro, coberturas }: ResumenReadon
 						<div>
 							<p className="text-sm text-muted-foreground">Lugar del Hecho</p>
 							<p className="font-medium">{siniestro.lugar_hecho}</p>
-						</div>
-
-						<div>
-							<p className="text-sm text-muted-foreground">Departamento</p>
-							<p className="font-medium">{siniestro.departamento_nombre}</p>
-						</div>
-
-						<div className="flex gap-2">
-							<DollarSign className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-0.5" />
-							<div>
-								<p className="text-sm text-muted-foreground">Monto de Reserva</p>
-								<p className="font-medium text-lg">
-									{siniestro.moneda} {siniestro.monto_reserva.toLocaleString("es-BO", { minimumFractionDigits: 2 })}
-								</p>
-							</div>
 						</div>
 					</div>
 

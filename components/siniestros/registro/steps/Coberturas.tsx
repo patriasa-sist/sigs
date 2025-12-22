@@ -1,6 +1,9 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { AlertCircle } from "lucide-react";
 import CoberturaSelector from "@/components/siniestros/shared/CoberturaSelector";
 import type { CoberturasStep, CoberturaSeleccionada } from "@/types/siniestro";
@@ -11,7 +14,20 @@ interface CoberturasProps {
 	onCoberturasChange: (coberturas: CoberturasStep) => void;
 }
 
+// ID especial para la cobertura de Gestión comercial
+const GESTION_COMERCIAL_ID = "gestion-comercial-special";
+
 export default function CoberturasStepComponent({ ramo, coberturas, onCoberturasChange }: CoberturasProps) {
+	const [gestionComercialSeleccionada, setGestionComercialSeleccionada] = useState(false);
+
+	// Inicializar estado si Gestión comercial ya está seleccionada
+	useEffect(() => {
+		const yaSeleccionada = coberturas?.coberturas_seleccionadas?.some(
+			(c) => c.id === GESTION_COMERCIAL_ID
+		);
+		setGestionComercialSeleccionada(yaSeleccionada || false);
+	}, [coberturas?.coberturas_seleccionadas]);
+
 	const handleCoberturaToggle = (cobertura: CoberturaSeleccionada, selected: boolean) => {
 		const coberturasActuales = coberturas?.coberturas_seleccionadas || [];
 
@@ -44,6 +60,32 @@ export default function CoberturasStepComponent({ ramo, coberturas, onCoberturas
 		}
 	};
 
+	const handleGestionComercialToggle = (checked: boolean) => {
+		setGestionComercialSeleccionada(checked);
+
+		const coberturasActuales = coberturas?.coberturas_seleccionadas || [];
+
+		if (checked) {
+			// Agregar Gestión comercial
+			const gestionComercial: CoberturaSeleccionada = {
+				id: GESTION_COMERCIAL_ID,
+				nombre: "Gestión comercial",
+				descripcion: "Cobertura especial aplicable a todos los ramos",
+			};
+			onCoberturasChange({
+				...coberturas,
+				coberturas_seleccionadas: [...coberturasActuales, gestionComercial],
+			} as CoberturasStep);
+		} else {
+			// Quitar Gestión comercial
+			const nuevasCoberturas = coberturasActuales.filter((c) => c.id !== GESTION_COMERCIAL_ID);
+			onCoberturasChange({
+				...coberturas,
+				coberturas_seleccionadas: nuevasCoberturas,
+			} as CoberturasStep);
+		}
+	};
+
 	return (
 		<Card>
 			<CardHeader>
@@ -65,7 +107,31 @@ export default function CoberturasStepComponent({ ramo, coberturas, onCoberturas
 					</div>
 				</div>
 
-				{/* Selector de coberturas */}
+				{/* Cobertura especial: Gestión comercial */}
+				<Card className="border-2 border-dashed border-primary/30 bg-primary/5">
+					<CardContent className="p-4">
+						<div className="flex items-start gap-3">
+							<Checkbox
+								id="cobertura-gestion-comercial"
+								checked={gestionComercialSeleccionada}
+								onCheckedChange={(checked) => handleGestionComercialToggle(checked as boolean)}
+							/>
+							<div className="flex-1">
+								<Label
+									htmlFor="cobertura-gestion-comercial"
+									className="font-medium cursor-pointer text-base"
+								>
+									Gestión comercial
+								</Label>
+								<p className="text-xs text-muted-foreground mt-1">
+									Cobertura especial aplicable a todos los ramos
+								</p>
+							</div>
+						</div>
+					</CardContent>
+				</Card>
+
+				{/* Selector de coberturas del ramo */}
 				<CoberturaSelector
 					ramo={ramo}
 					coberturasSeleccionadas={coberturas?.coberturas_seleccionadas || []}

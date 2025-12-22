@@ -3,13 +3,23 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Clock, ExternalLink, Loader2 } from "lucide-react";
+import { Clock, ExternalLink, Circle, Edit, FileText, MessageSquare, XCircle, CheckCircle } from "lucide-react";
 import type { HistorialSiniestro } from "@/types/siniestro";
 
 interface UltimoCambioSiniestroProps {
 	historial: HistorialSiniestro[];
 	onVerHistorialCompleto?: () => void;
 }
+
+const ACCION_LABELS: Record<string, string> = {
+	created: "Siniestro Creado",
+	updated: "Siniestro Actualizado",
+	documento_agregado: "Documento Agregado",
+	observacion_agregada: "Observación Agregada",
+	cambio_estado: "Estado de Seguimiento Cambiado",
+	estado_cambiado: "Estado Cambiado",
+	cerrado: "Siniestro Cerrado",
+};
 
 export default function UltimoCambioSiniestro({ historial, onVerHistorialCompleto }: UltimoCambioSiniestroProps) {
 	const [ultimoCambio, setUltimoCambio] = useState<HistorialSiniestro | null>(null);
@@ -35,7 +45,20 @@ export default function UltimoCambioSiniestro({ historial, onVerHistorialComplet
 			</CardHeader>
 			<CardContent className="space-y-3">
 				<div>
-					<p className="font-medium text-sm">{ultimoCambio.accion}</p>
+					<p className="font-medium text-sm">
+						{ACCION_LABELS[ultimoCambio.accion] || ultimoCambio.accion}
+					</p>
+
+					{/* Mostrar valor_nuevo para cambio_estado */}
+					{ultimoCambio.accion === "cambio_estado" && ultimoCambio.valor_nuevo && (
+						<p className="text-sm mt-1">
+							Estado cambiado a:{" "}
+							<span className="font-medium text-blue-600 dark:text-blue-400">
+								{ultimoCambio.valor_nuevo}
+							</span>
+						</p>
+					)}
+
 					<p className="text-xs text-muted-foreground mt-1">
 						Por: {ultimoCambio.usuario_nombre || "Sistema"} •{" "}
 						{new Date(ultimoCambio.created_at).toLocaleDateString("es-BO")} a las{" "}
@@ -46,7 +69,8 @@ export default function UltimoCambioSiniestro({ historial, onVerHistorialComplet
 					</p>
 				</div>
 
-				{ultimoCambio.detalles && typeof ultimoCambio.detalles === "object" && (
+				{/* Mostrar detalles solo si NO es cambio_estado (ya mostramos valor_nuevo arriba) */}
+				{ultimoCambio.accion !== "cambio_estado" && ultimoCambio.detalles && typeof ultimoCambio.detalles === "object" && (
 					<div className="text-xs bg-white dark:bg-gray-900 rounded-md p-2 border">
 						{Object.entries(ultimoCambio.detalles).map(([key, value]) => (
 							<div key={key} className="text-muted-foreground">

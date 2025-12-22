@@ -15,12 +15,16 @@ interface PolizaCardProps {
 
 export default function PolizaCard({ poliza, onDeselect, showDeselectButton = true }: PolizaCardProps) {
 	const [showDocumentosModal, setShowDocumentosModal] = useState(false);
+	const [showAllCuotas, setShowAllCuotas] = useState(false);
 
 	// Calcular porcentaje de cuotas pagadas
 	const porcentajePagado =
 		poliza.cuotas_total && poliza.cuotas_total > 0
 			? Math.round(((poliza.cuotas_pagadas || 0) / poliza.cuotas_total) * 100)
 			: 0;
+
+	// Contar cuotas vencidas
+	const cuotasVencidas = poliza.cuotas?.filter(c => c.estado === "vencida").length || 0;
 
 	return (
 		<>
@@ -170,6 +174,19 @@ export default function PolizaCard({ poliza, onDeselect, showDeselectButton = tr
 								</span>
 							</div>
 
+							{/* Alerta si hay cuotas vencidas */}
+							{cuotasVencidas > 0 && (
+								<div className="flex items-start gap-2 text-sm bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
+									<AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+									<div className="text-red-900 dark:text-red-100">
+										<p className="font-medium">Cliente con pagos atrasados</p>
+										<p className="text-xs mt-1">
+											{cuotasVencidas} cuota{cuotasVencidas > 1 ? "s" : ""} vencida{cuotasVencidas > 1 ? "s" : ""}. Considerar esta información antes de registrar el siniestro.
+										</p>
+									</div>
+								</div>
+							)}
+
 							{/* Barra de progreso */}
 							<div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
 								<div
@@ -215,52 +232,90 @@ export default function PolizaCard({ poliza, onDeselect, showDeselectButton = tr
 								</div>
 							</div>
 
-							{/* Mostrar primeras 3 cuotas si están disponibles */}
+							{/* Todas las cuotas */}
 							{poliza.cuotas && poliza.cuotas.length > 0 && (
-								<div className="space-y-1 mt-2">
-									<p className="text-xs text-muted-foreground mb-1">Últimas cuotas:</p>
-									{poliza.cuotas.slice(0, 3).map((cuota) => {
-										const tieneProrrogas = cuota.prorrogas_historial && cuota.prorrogas_historial.length > 0;
-										return (
-											<div
-												key={cuota.id}
-												className="flex items-center justify-between text-xs p-2 bg-secondary/20 rounded"
+								<div className="space-y-2">
+									<div className="flex items-center justify-between">
+										<p className="text-xs text-muted-foreground">
+											{showAllCuotas ? "Todas las cuotas:" : "Últimas cuotas:"}
+										</p>
+										{poliza.cuotas.length > 3 && (
+											<Button
+												variant="ghost"
+												size="sm"
+												onClick={() => setShowAllCuotas(!showAllCuotas)}
+												className="h-6 text-xs px-2"
 											>
-												<div className="flex items-center gap-2">
-													{cuota.estado === "pagada" ? (
-														<CheckCircle className="h-3 w-3 text-green-500" />
-													) : cuota.estado === "vencida" ? (
-														<XCircle className="h-3 w-3 text-red-500" />
-													) : (
-														<Clock className="h-3 w-3 text-amber-500" />
-													)}
-													<span>Cuota {cuota.numero_cuota}</span>
-													{tieneProrrogas && (
-														<span className="flex items-center gap-0.5 text-amber-600 dark:text-amber-400" title={`${cuota.prorrogas_historial?.length} prórroga(s) aplicada(s)`}>
-															<AlertTriangle className="h-3 w-3" />
-															<span className="text-[10px]">{cuota.prorrogas_historial?.length}</span>
+												{showAllCuotas ? "Ver menos" : `Ver todas (${poliza.cuotas.length})`}
+											</Button>
+										)}
+									</div>
+
+									{/* Lista de cuotas con scroll */}
+									<div className={`space-y-1 ${showAllCuotas ? "max-h-96 overflow-y-auto" : ""}`}>
+										{(showAllCuotas ? poliza.cuotas : poliza.cuotas.slice(0, 3)).map((cuota) => {
+											const tieneProrrogas = cuota.prorrogas_historial && cuota.prorrogas_historial.length > 0;
+											const esVencida = cuota.estado === "vencida";
+											const esPagada = cuota.estado === "pagada";
+
+											return (
+												<div
+													key={cuota.id}
+													className={`flex items-center justify-between text-xs p-2 rounded border ${
+														esVencida
+															? "bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800"
+															: esPagada
+																? "bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800"
+																: "bg-secondary/20 border-secondary"
+													}`}
+												>
+													<div className="flex items-center gap-2">
+														{esPagada ? (
+															<CheckCircle className="h-3 w-3 text-green-600 dark:text-green-400" />
+														) : esVencida ? (
+															<XCircle className="h-3 w-3 text-red-600 dark:text-red-400" />
+														) : (
+															<Clock className="h-3 w-3 text-amber-600 dark:text-amber-400" />
+														)}
+														<span className={esVencida ? "font-medium" : ""}>
+															Cuota {cuota.numero_cuota}
 														</span>
-													)}
-												</div>
-												<div className="text-right">
-													<p className="font-medium">
-														{poliza.moneda} {cuota.monto.toLocaleString("es-BO", { minimumFractionDigits: 2 })}
-													</p>
-													<p className="text-muted-foreground">
-														{new Date(cuota.fecha_vencimiento).toLocaleDateString("es-BO")}
-													</p>
-													{tieneProrrogas && cuota.fecha_vencimiento_original && (
-														<p className="text-[10px] text-amber-600 dark:text-amber-400">
-															Original: {new Date(cuota.fecha_vencimiento_original).toLocaleDateString("es-BO")}
+														{tieneProrrogas && (
+															<span
+																className="flex items-center gap-0.5 text-amber-600 dark:text-amber-400"
+																title={`${cuota.prorrogas_historial?.length} prórroga(s) aplicada(s)`}
+															>
+																<AlertTriangle className="h-3 w-3" />
+																<span className="text-[10px]">{cuota.prorrogas_historial?.length}</span>
+															</span>
+														)}
+														{esVencida && (
+															<span className="text-[10px] bg-red-200 dark:bg-red-900 text-red-800 dark:text-red-200 px-1 py-0.5 rounded">
+																VENCIDA
+															</span>
+														)}
+													</div>
+													<div className="text-right">
+														<p className="font-medium">
+															{poliza.moneda} {cuota.monto.toLocaleString("es-BO", { minimumFractionDigits: 2 })}
 														</p>
-													)}
+														<p className={`text-muted-foreground ${esVencida ? "font-medium text-red-600 dark:text-red-400" : ""}`}>
+															{new Date(cuota.fecha_vencimiento).toLocaleDateString("es-BO")}
+														</p>
+														{tieneProrrogas && cuota.fecha_vencimiento_original && (
+															<p className="text-[10px] text-amber-600 dark:text-amber-400">
+																Original: {new Date(cuota.fecha_vencimiento_original).toLocaleDateString("es-BO")}
+															</p>
+														)}
+													</div>
 												</div>
-											</div>
-										);
-									})}
-									{poliza.cuotas.length > 3 && (
-										<p className="text-xs text-muted-foreground text-center">
-											+{poliza.cuotas.length - 3} cuotas más
+											);
+										})}
+									</div>
+
+									{!showAllCuotas && poliza.cuotas.length > 3 && (
+										<p className="text-xs text-muted-foreground text-center italic">
+											+{poliza.cuotas.length - 3} cuotas más (haz clic en "Ver todas" arriba)
 										</p>
 									)}
 								</div>

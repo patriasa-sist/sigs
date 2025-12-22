@@ -5,13 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { AlertCircle, Plus, X } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
@@ -69,7 +63,9 @@ export default function DetallesSiniestroStep({ detalles, onDetallesChange }: De
 			const supabase = createClient();
 
 			// Obtener usuario actual
-			const { data: { user } } = await supabase.auth.getUser();
+			const {
+				data: { user },
+			} = await supabase.auth.getUser();
 			if (user) {
 				setUsuarioActualId(user.id);
 
@@ -191,7 +187,7 @@ export default function DetallesSiniestroStep({ detalles, onDetallesChange }: De
 
 					<div className="space-y-2">
 						<Label htmlFor="fecha_reporte">
-							Fecha Reporte Siniestro <span className="text-destructive">*</span>
+							Fecha Reporte PATRIA <span className="text-destructive">*</span>
 						</Label>
 						<Input
 							id="fecha_reporte"
@@ -204,9 +200,7 @@ export default function DetallesSiniestroStep({ detalles, onDetallesChange }: De
 							max={today}
 							className={errores.fecha_reporte ? "border-destructive" : ""}
 						/>
-						{errores.fecha_reporte && (
-							<p className="text-sm text-destructive">{errores.fecha_reporte}</p>
-						)}
+						{errores.fecha_reporte && <p className="text-sm text-destructive">{errores.fecha_reporte}</p>}
 						{advertenciaFechaReporte && (
 							<div className="flex items-start gap-2 text-sm bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-2">
 								<AlertCircle className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
@@ -284,7 +278,10 @@ export default function DetallesSiniestroStep({ detalles, onDetallesChange }: De
 							value={detalles?.departamento_id || ""}
 							onValueChange={(value) => handleFieldChange("departamento_id", value)}
 						>
-							<SelectTrigger id="departamento" className={errores.departamento_id ? "border-destructive" : ""}>
+							<SelectTrigger
+								id="departamento"
+								className={errores.departamento_id ? "border-destructive" : ""}
+							>
 								<SelectValue placeholder="Selecciona un departamento" />
 							</SelectTrigger>
 							<SelectContent>
@@ -295,7 +292,9 @@ export default function DetallesSiniestroStep({ detalles, onDetallesChange }: De
 								))}
 							</SelectContent>
 						</Select>
-						{errores.departamento_id && <p className="text-sm text-destructive">{errores.departamento_id}</p>}
+						{errores.departamento_id && (
+							<p className="text-sm text-destructive">{errores.departamento_id}</p>
+						)}
 					</div>
 				</div>
 
@@ -316,9 +315,7 @@ export default function DetallesSiniestroStep({ detalles, onDetallesChange }: De
 							className={errores.monto_reserva ? "border-destructive" : ""}
 						/>
 						{errores.monto_reserva && <p className="text-sm text-destructive">{errores.monto_reserva}</p>}
-						<p className="text-xs text-muted-foreground">
-							Monto estimado inicial para cubrir el siniestro
-						</p>
+						<p className="text-xs text-muted-foreground">Monto estimado inicial para cubrir el siniestro</p>
 					</div>
 
 					<div className="space-y-2">
@@ -346,9 +343,7 @@ export default function DetallesSiniestroStep({ detalles, onDetallesChange }: De
 
 				{/* Responsable del Siniestro */}
 				<div className="space-y-2">
-					<Label htmlFor="responsable">
-						Responsable del Siniestro
-					</Label>
+					<Label htmlFor="responsable">Responsable del Siniestro</Label>
 					<Select
 						value={detalles?.responsable_id || usuarioActualId || ""}
 						onValueChange={(value) => handleFieldChange("responsable_id", value)}
@@ -420,7 +415,9 @@ export default function DetallesSiniestroStep({ detalles, onDetallesChange }: De
 										id="contacto_telefono"
 										placeholder="Ej: 70123456"
 										value={nuevoContacto.telefono}
-										onChange={(e) => setNuevoContacto({ ...nuevoContacto, telefono: e.target.value })}
+										onChange={(e) =>
+											setNuevoContacto({ ...nuevoContacto, telefono: e.target.value })
+										}
 									/>
 								</div>
 							</div>
@@ -462,7 +459,9 @@ export default function DetallesSiniestroStep({ detalles, onDetallesChange }: De
 											<p className="text-sm font-medium">{contacto.nombre}</p>
 											<p className="text-xs text-muted-foreground">Tel: {contacto.telefono}</p>
 											{contacto.correo && (
-												<p className="text-xs text-muted-foreground">Email: {contacto.correo}</p>
+												<p className="text-xs text-muted-foreground">
+													Email: {contacto.correo}
+												</p>
 											)}
 										</div>
 										<Button

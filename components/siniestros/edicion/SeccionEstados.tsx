@@ -178,40 +178,7 @@ export default function SeccionEstados({ siniestroId, estadoActual, estadoSinies
 						</div>
 					)}
 
-					{/* Historial de Estados */}
-					{historial.length > 0 && (
-						<div className="pt-4 border-t">
-							<h4 className="text-sm font-medium mb-3">Historial de Estados</h4>
-							<div className="space-y-3">
-								{historial.map((item, index) => (
-									<div key={item.id} className="flex gap-3">
-										<div className="flex flex-col items-center">
-											<div
-												className={`h-2 w-2 rounded-full mt-1 ${
-													index === 0 ? "bg-primary" : "bg-muted-foreground"
-												}`}
-											/>
-											{index !== historial.length - 1 && <div className="w-px h-full bg-border mt-1" />}
-										</div>
-										<div className="flex-1 pb-3">
-											<p className="text-sm font-medium">{item.estado.nombre}</p>
-											<p className="text-xs text-muted-foreground">
-												{item.usuario_nombre || "Sistema"} •{" "}
-												{new Date(item.created_at).toLocaleDateString("es-BO")} a las{" "}
-												{new Date(item.created_at).toLocaleTimeString("es-BO", {
-													hour: "2-digit",
-													minute: "2-digit",
-												})}
-											</p>
-											{item.observacion && (
-												<p className="text-xs text-muted-foreground mt-1 italic">"{item.observacion}"</p>
-											)}
-										</div>
-									</div>
-								))}
-							</div>
-						</div>
-					)}
+					{/* Nota: El historial de estados se muestra en el tab "Historial" junto con todos los cambios del siniestro */}
 				</CardContent>
 			</Card>
 
