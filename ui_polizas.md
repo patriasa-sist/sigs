@@ -550,7 +550,7 @@ Espera liquidacion
 
 ---
 
-continuaremos con las mejoras esta vez en la forma en la que se registran los siniestros por cada paso:
+ahora continuaremos con las mejoras esta vez en la forma en la que se registran los siniestros por cada paso:
 
 4. paso 2
 

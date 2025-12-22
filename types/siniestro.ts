@@ -161,15 +161,40 @@ export type PolizaParaSiniestro = {
 // PASO 2: DETALLES DEL SINIESTRO
 // ============================================
 
+export type ContactoSiniestro = {
+	nombre: string; // Obligatorio
+	telefono: string; // Obligatorio
+	correo?: string; // Opcional
+};
+
+// Helper para normalizar contactos (retrocompatibilidad)
+export function normalizarContactos(contactos: ContactoSiniestro[] | string[] | null | undefined): ContactoSiniestro[] {
+	if (!contactos || contactos.length === 0) return [];
+
+	// Si el primer elemento es string, son emails viejos
+	if (typeof contactos[0] === "string") {
+		return (contactos as string[]).map((email) => ({
+			nombre: "Contacto",
+			telefono: "N/A",
+			correo: email,
+		}));
+	}
+
+	// Si no, ya son objetos ContactoSiniestro
+	return contactos as ContactoSiniestro[];
+}
+
 export type DetallesSiniestro = {
-	fecha_siniestro: string; // ISO date string
-	fecha_reporte: string; // ISO date string
+	fecha_siniestro: string; // ISO date string - Fecha en que ocurrió el siniestro
+	fecha_reporte: string; // ISO date string - Fecha de reporte del siniestro
+	fecha_reporte_cliente: string; // ISO date string - Fecha en que el cliente reportó (NUEVO)
+	fecha_reporte_compania: string; // ISO date string - Fecha en que se reportó a la compañía (NUEVO)
 	lugar_hecho: string;
 	departamento_id: string; // FK a regionales
 	monto_reserva: number;
 	moneda: Moneda;
 	descripcion: string;
-	contactos: string[]; // Array de emails
+	contactos: ContactoSiniestro[]; // Array de objetos contacto (actualizado de string[])
 	responsable_id?: string; // FK a profiles - responsable del siniestro
 };
 
@@ -285,13 +310,15 @@ export type Siniestro = {
 
 	// Detalles
 	fecha_siniestro: string;
-	fecha_reporte: string;
+	fecha_reporte: string; // Fecha de reporte interno (para retrocompatibilidad)
+	fecha_reporte_cliente: string; // NUEVO - Fecha en que el cliente reportó
+	fecha_reporte_compania: string; // NUEVO - Fecha en que se reportó a la compañía
 	lugar_hecho: string;
 	departamento_id: string;
 	monto_reserva: number;
 	moneda: Moneda;
 	descripcion: string;
-	contactos: string[];
+	contactos: ContactoSiniestro[] | string[]; // Soporta ambos formatos (retrocompatibilidad)
 
 	// Estado
 	estado: EstadoSiniestro;

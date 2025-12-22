@@ -15,7 +15,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { AlertCircle, Plus, X } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
-import type { DetallesSiniestro, Moneda } from "@/types/siniestro";
+import type { DetallesSiniestro, ContactoSiniestro, Moneda } from "@/types/siniestro";
 
 interface DetallesSiniestroProps {
 	detalles: DetallesSiniestro | null;
@@ -41,8 +41,13 @@ export default function DetallesSiniestroStep({ detalles, onDetallesChange }: De
 	const [regionales, setRegionales] = useState<Regional[]>([]);
 	const [responsables, setResponsables] = useState<UsuarioResponsable[]>([]);
 	const [usuarioActualId, setUsuarioActualId] = useState<string | null>(null);
-	const [nuevoContacto, setNuevoContacto] = useState("");
+	const [nuevoContacto, setNuevoContacto] = useState<{ nombre: string; telefono: string; correo: string }>({
+		nombre: "",
+		telefono: "",
+		correo: "",
+	});
 	const [errores, setErrores] = useState<Record<string, string>>({});
+	const [advertenciaFechaReporte, setAdvertenciaFechaReporte] = useState(false);
 
 	// Cargar regionales (departamentos)
 	useEffect(() => {
@@ -89,7 +94,7 @@ export default function DetallesSiniestroStep({ detalles, onDetallesChange }: De
 		cargarResponsables();
 	}, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-	const handleFieldChange = (field: keyof DetallesSiniestro, value: string | number | string[]) => {
+	const handleFieldChange = (field: keyof DetallesSiniestro, value: string | number | ContactoSiniestro[]) => {
 		const nuevosDetalles = {
 			...detalles,
 			[field]: value,
@@ -107,12 +112,34 @@ export default function DetallesSiniestroStep({ detalles, onDetallesChange }: De
 		}
 	};
 
+	const validarFechaReporte = (fecha: string) => {
+		if (!fecha) {
+			setAdvertenciaFechaReporte(false);
+			return;
+		}
+
+		const fechaReporte = new Date(fecha);
+		const hoy = new Date();
+		const diff = hoy.getTime() - fechaReporte.getTime();
+		const diasDiferencia = Math.floor(diff / (1000 * 60 * 60 * 24));
+
+		setAdvertenciaFechaReporte(diasDiferencia > 10);
+	};
+
 	const handleAgregarContacto = () => {
-		if (!nuevoContacto.trim()) return;
+		if (!nuevoContacto.nombre.trim() || !nuevoContacto.telefono.trim()) {
+			return;
+		}
 
 		const contactosActuales = detalles?.contactos || [];
-		handleFieldChange("contactos", [...contactosActuales, nuevoContacto.trim()]);
-		setNuevoContacto("");
+		const nuevoContactoObj: ContactoSiniestro = {
+			nombre: nuevoContacto.nombre.trim(),
+			telefono: nuevoContacto.telefono.trim(),
+			correo: nuevoContacto.correo.trim() || undefined,
+		};
+
+		handleFieldChange("contactos", [...contactosActuales, nuevoContactoObj]);
+		setNuevoContacto({ nombre: "", telefono: "", correo: "" });
 	};
 
 	const handleEliminarContacto = (index: number) => {
@@ -142,7 +169,7 @@ export default function DetallesSiniestroStep({ detalles, onDetallesChange }: De
 					</p>
 				</div>
 
-				{/* Fechas */}
+				{/* Fechas - Primera fila */}
 				<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 					<div className="space-y-2">
 						<Label htmlFor="fecha_siniestro">
@@ -159,21 +186,77 @@ export default function DetallesSiniestroStep({ detalles, onDetallesChange }: De
 						{errores.fecha_siniestro && (
 							<p className="text-sm text-destructive">{errores.fecha_siniestro}</p>
 						)}
+						<p className="text-xs text-muted-foreground">Fecha en que ocurrió el siniestro</p>
 					</div>
 
 					<div className="space-y-2">
 						<Label htmlFor="fecha_reporte">
-							Fecha de Reporte <span className="text-destructive">*</span>
+							Fecha Reporte Siniestro <span className="text-destructive">*</span>
 						</Label>
 						<Input
 							id="fecha_reporte"
 							type="date"
 							value={detalles?.fecha_reporte || ""}
-							onChange={(e) => handleFieldChange("fecha_reporte", e.target.value)}
+							onChange={(e) => {
+								handleFieldChange("fecha_reporte", e.target.value);
+								validarFechaReporte(e.target.value);
+							}}
 							max={today}
 							className={errores.fecha_reporte ? "border-destructive" : ""}
 						/>
-						{errores.fecha_reporte && <p className="text-sm text-destructive">{errores.fecha_reporte}</p>}
+						{errores.fecha_reporte && (
+							<p className="text-sm text-destructive">{errores.fecha_reporte}</p>
+						)}
+						{advertenciaFechaReporte && (
+							<div className="flex items-start gap-2 text-sm bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-2">
+								<AlertCircle className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
+								<p className="text-amber-900 dark:text-amber-100">
+									Esta fecha tiene más de 10 días de antigüedad
+								</p>
+							</div>
+						)}
+						<p className="text-xs text-muted-foreground">Fecha de reporte del siniestro</p>
+					</div>
+				</div>
+
+				{/* Fechas - Segunda fila */}
+				<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+					<div className="space-y-2">
+						<Label htmlFor="fecha_reporte_cliente">
+							Fecha Reporte Cliente <span className="text-destructive">*</span>
+						</Label>
+						<Input
+							id="fecha_reporte_cliente"
+							type="date"
+							value={detalles?.fecha_reporte_cliente || ""}
+							onChange={(e) => handleFieldChange("fecha_reporte_cliente", e.target.value)}
+							max={today}
+							className={errores.fecha_reporte_cliente ? "border-destructive" : ""}
+						/>
+						{errores.fecha_reporte_cliente && (
+							<p className="text-sm text-destructive">{errores.fecha_reporte_cliente}</p>
+						)}
+						<p className="text-xs text-muted-foreground">Fecha en que el cliente reportó el siniestro</p>
+					</div>
+
+					<div className="space-y-2">
+						<Label htmlFor="fecha_reporte_compania">
+							Fecha Reporte Compañía <span className="text-destructive">*</span>
+						</Label>
+						<Input
+							id="fecha_reporte_compania"
+							type="date"
+							value={detalles?.fecha_reporte_compania || ""}
+							onChange={(e) => handleFieldChange("fecha_reporte_compania", e.target.value)}
+							max={today}
+							className={errores.fecha_reporte_compania ? "border-destructive" : ""}
+						/>
+						{errores.fecha_reporte_compania && (
+							<p className="text-sm text-destructive">{errores.fecha_reporte_compania}</p>
+						)}
+						<p className="text-xs text-muted-foreground">
+							Fecha en que se reportó a la compañía aseguradora
+						</p>
 					</div>
 				</div>
 
@@ -305,42 +388,83 @@ export default function DetallesSiniestroStep({ detalles, onDetallesChange }: De
 					</p>
 				</div>
 
-				{/* Contactos */}
+				{/* Contactos - Nueva estructura */}
 				<div className="space-y-2">
-					<Label htmlFor="nuevo_contacto">Contactos (Emails)</Label>
-					<div className="flex gap-2">
-						<Input
-							id="nuevo_contacto"
-							type="email"
-							placeholder="email@ejemplo.com"
-							value={nuevoContacto}
-							onChange={(e) => setNuevoContacto(e.target.value)}
-							onKeyPress={(e) => {
-								if (e.key === "Enter") {
-									e.preventDefault();
-									handleAgregarContacto();
-								}
-							}}
-						/>
-						<Button type="button" onClick={handleAgregarContacto} disabled={!nuevoContacto.trim()}>
-							<Plus className="h-4 w-4" />
-						</Button>
-					</div>
+					<Label>
+						Contactos <span className="text-destructive">*</span>
+					</Label>
 					<p className="text-xs text-muted-foreground">
-						Agrega emails de contacto relacionados al siniestro (ajustador, perito, cliente, etc.)
+						Agrega contactos relacionados al siniestro (cliente, ajustador, perito, etc.)
 					</p>
+
+					{/* Formulario para agregar contacto */}
+					<Card className="bg-secondary/20">
+						<CardContent className="p-4 space-y-3">
+							<div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+								<div className="space-y-1">
+									<Label htmlFor="contacto_nombre" className="text-xs">
+										Nombre <span className="text-destructive">*</span>
+									</Label>
+									<Input
+										id="contacto_nombre"
+										placeholder="Nombre completo"
+										value={nuevoContacto.nombre}
+										onChange={(e) => setNuevoContacto({ ...nuevoContacto, nombre: e.target.value })}
+									/>
+								</div>
+								<div className="space-y-1">
+									<Label htmlFor="contacto_telefono" className="text-xs">
+										Teléfono <span className="text-destructive">*</span>
+									</Label>
+									<Input
+										id="contacto_telefono"
+										placeholder="Ej: 70123456"
+										value={nuevoContacto.telefono}
+										onChange={(e) => setNuevoContacto({ ...nuevoContacto, telefono: e.target.value })}
+									/>
+								</div>
+							</div>
+							<div className="space-y-1">
+								<Label htmlFor="contacto_correo" className="text-xs">
+									Correo electrónico (opcional)
+								</Label>
+								<Input
+									id="contacto_correo"
+									type="email"
+									placeholder="email@ejemplo.com"
+									value={nuevoContacto.correo}
+									onChange={(e) => setNuevoContacto({ ...nuevoContacto, correo: e.target.value })}
+								/>
+							</div>
+							<Button
+								type="button"
+								onClick={handleAgregarContacto}
+								disabled={!nuevoContacto.nombre.trim() || !nuevoContacto.telefono.trim()}
+								size="sm"
+							>
+								<Plus className="h-4 w-4 mr-2" />
+								Agregar Contacto
+							</Button>
+						</CardContent>
+					</Card>
 
 					{/* Lista de contactos agregados */}
 					{detalles?.contactos && detalles.contactos.length > 0 && (
 						<div className="space-y-2 mt-3">
 							<p className="text-sm font-medium">Contactos agregados:</p>
 							<div className="space-y-2">
-								{detalles.contactos.map((email, index) => (
+								{detalles.contactos.map((contacto, index) => (
 									<div
 										key={index}
-										className="flex items-center justify-between bg-secondary/30 rounded-lg px-3 py-2"
+										className="flex items-start justify-between bg-secondary/30 rounded-lg px-3 py-2 border"
 									>
-										<span className="text-sm">{email}</span>
+										<div className="flex-1">
+											<p className="text-sm font-medium">{contacto.nombre}</p>
+											<p className="text-xs text-muted-foreground">Tel: {contacto.telefono}</p>
+											{contacto.correo && (
+												<p className="text-xs text-muted-foreground">Email: {contacto.correo}</p>
+											)}
+										</div>
 										<Button
 											variant="ghost"
 											size="sm"
