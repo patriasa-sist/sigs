@@ -3,11 +3,8 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/button";
-import { Loader2, Plus, X } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { obtenerCoberturasPorRamo } from "@/app/siniestros/actions";
 import type { CoberturaCatalogo, CoberturaSeleccionada } from "@/types/siniestro";
 
@@ -15,23 +12,16 @@ interface CoberturaSelectorProps {
 	ramo: string;
 	coberturasSeleccionadas: CoberturaSeleccionada[];
 	onCoberturaToggle: (cobertura: CoberturaSeleccionada, selected: boolean) => void;
-	onCobertulaCustom?: (nombre: string, descripcion?: string) => void;
-	nuevaCobertura?: { nombre: string; descripcion?: string };
 }
 
 export default function CoberturaSelector({
 	ramo,
 	coberturasSeleccionadas,
 	onCoberturaToggle,
-	onCobertulaCustom,
-	nuevaCobertura,
 }: CoberturaSelectorProps) {
 	const [coberturasCatalogo, setCoberturasCatalogo] = useState<CoberturaCatalogo[]>([]);
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
-	const [showCustomForm, setShowCustomForm] = useState(false);
-	const [customNombre, setCustomNombre] = useState("");
-	const [customDescripcion, setCustomDescripcion] = useState("");
 
 	// Cargar coberturas del catálogo
 	useEffect(() => {
@@ -72,23 +62,6 @@ export default function CoberturaSelector({
 			},
 			checked
 		);
-	};
-
-	const handleAgregarCustom = () => {
-		if (customNombre.trim().length === 0) return;
-
-		if (onCobertulaCustom) {
-			onCobertulaCustom(customNombre.trim(), customDescripcion.trim() || undefined);
-			setCustomNombre("");
-			setCustomDescripcion("");
-			setShowCustomForm(false);
-		}
-	};
-
-	const handleCancelarCustom = () => {
-		setCustomNombre("");
-		setCustomDescripcion("");
-		setShowCustomForm(false);
 	};
 
 	if (loading) {
@@ -161,86 +134,6 @@ export default function CoberturaSelector({
 					</CardContent>
 				</Card>
 			)}
-
-			{/* Agregar cobertura personalizada */}
-			<Card>
-				<CardHeader>
-					<CardTitle className="text-base">Cobertura Personalizada</CardTitle>
-				</CardHeader>
-				<CardContent>
-					{!showCustomForm && !nuevaCobertura ? (
-						<Button variant="outline" onClick={() => setShowCustomForm(true)} className="w-full">
-							<Plus className="h-4 w-4 mr-2" />
-							Agregar Cobertura Personalizada
-						</Button>
-					) : showCustomForm ? (
-						<div className="space-y-3">
-							<div>
-								<Label htmlFor="custom-nombre">Nombre de la Cobertura *</Label>
-								<Input
-									id="custom-nombre"
-									placeholder="Ej: Cobertura especial por daños..."
-									value={customNombre}
-									onChange={(e) => setCustomNombre(e.target.value)}
-								/>
-							</div>
-
-							<div>
-								<Label htmlFor="custom-descripcion">Descripción (Opcional)</Label>
-								<Textarea
-									id="custom-descripcion"
-									placeholder="Descripción detallada de la cobertura..."
-									value={customDescripcion}
-									onChange={(e) => setCustomDescripcion(e.target.value)}
-									rows={3}
-								/>
-							</div>
-
-							<div className="flex gap-2">
-								<Button
-									onClick={handleAgregarCustom}
-									disabled={customNombre.trim().length === 0}
-									className="flex-1"
-								>
-									Agregar
-								</Button>
-								<Button variant="outline" onClick={handleCancelarCustom}>
-									Cancelar
-								</Button>
-							</div>
-						</div>
-					) : (
-						nuevaCobertura && (
-							<div className="bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg p-3">
-								<div className="flex items-start justify-between gap-2">
-									<div className="flex-1">
-										<p className="font-medium text-green-900 dark:text-green-100">
-											{nuevaCobertura.nombre}
-										</p>
-										{nuevaCobertura.descripcion && (
-											<p className="text-sm text-green-700 dark:text-green-300 mt-1">
-												{nuevaCobertura.descripcion}
-											</p>
-										)}
-									</div>
-									<Button
-										variant="ghost"
-										size="sm"
-										onClick={() => {
-											if (onCobertulaCustom) {
-												onCobertulaCustom("", undefined);
-											}
-										}}
-										className="h-6 w-6 p-0"
-									>
-										<X className="h-4 w-4" />
-									</Button>
-								</div>
-							</div>
-						)
-					)}
-				</CardContent>
-			</Card>
 		</div>
 	);
 }

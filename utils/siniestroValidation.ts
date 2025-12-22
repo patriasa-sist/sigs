@@ -97,14 +97,26 @@ export function validarDetalles(detalles: DetallesSiniestro | null): ValidacionS
 		advertencias.push("La descripción es muy corta. Se recomienda incluir más detalles");
 	}
 
-	// Validar contactos (emails)
+	// Validar contactos (objetos con nombre, telefono, correo)
 	if (!detalles.contactos || detalles.contactos.length === 0) {
-		advertencias.push("No se agregaron contactos. Se recomienda agregar al menos un email de contacto");
+		advertencias.push("No se agregaron contactos. Se recomienda agregar al menos un contacto");
 	} else {
-		const emailsInvalidos = detalles.contactos.filter((email) => !esEmailValido(email));
-		if (emailsInvalidos.length > 0) {
-			errores.push(`Los siguientes emails son inválidos: ${emailsInvalidos.join(", ")}`);
-		}
+		// Validar que cada contacto tenga al menos un medio de contacto
+		detalles.contactos.forEach((contacto, index) => {
+			if (!contacto.nombre || contacto.nombre.trim().length === 0) {
+				errores.push(`El contacto ${index + 1} debe tener un nombre`);
+			}
+
+			const tieneContacto = contacto.telefono || contacto.correo;
+			if (!tieneContacto) {
+				errores.push(`El contacto "${contacto.nombre}" debe tener al menos un teléfono o correo`);
+			}
+
+			// Validar correo si existe
+			if (contacto.correo && !esEmailValido(contacto.correo)) {
+				errores.push(`El correo "${contacto.correo}" del contacto "${contacto.nombre}" no es válido`);
+			}
+		});
 	}
 
 	return {
@@ -129,28 +141,11 @@ export function validarCoberturas(coberturas: CoberturasStep | null): Validacion
 		};
 	}
 
-	// Validar que haya al menos una cobertura seleccionada o una custom
+	// Validar que haya al menos una cobertura seleccionada
 	const tieneCoberturas = coberturas.coberturas_seleccionadas.length > 0;
-	const tieneCustom = coberturas.nueva_cobertura !== undefined;
 
-	if (!tieneCoberturas && !tieneCustom) {
-		errores.push("Debe seleccionar al menos una cobertura del catálogo o agregar una personalizada");
-	}
-
-	// Validar cobertura custom si existe
-	if (tieneCustom && coberturas.nueva_cobertura) {
-		if (!coberturas.nueva_cobertura.nombre || coberturas.nueva_cobertura.nombre.trim().length === 0) {
-			errores.push("El nombre de la cobertura personalizada es obligatorio");
-		} else if (coberturas.nueva_cobertura.nombre.trim().length < 3) {
-			errores.push("El nombre de la cobertura personalizada debe tener al menos 3 caracteres");
-		}
-	}
-
-	// Advertencia si solo tiene cobertura custom
-	if (!tieneCoberturas && tieneCustom) {
-		advertencias.push(
-			"Solo se agregó una cobertura personalizada. Considere si alguna del catálogo aplica también"
-		);
+	if (!tieneCoberturas) {
+		errores.push("Debe seleccionar al menos una cobertura");
 	}
 
 	return {

@@ -41,25 +41,6 @@ export default function CoberturasStepComponent({ ramo, coberturas, onCoberturas
 		} as CoberturasStep);
 	};
 
-	const handleCoberturaCustom = (nombre: string, descripcion?: string) => {
-		if (nombre.trim().length === 0) {
-			// Eliminar cobertura custom
-			onCoberturasChange({
-				...coberturas,
-				nueva_cobertura: undefined,
-			} as CoberturasStep);
-		} else {
-			// Agregar cobertura custom
-			onCoberturasChange({
-				...coberturas,
-				nueva_cobertura: {
-					nombre,
-					descripcion,
-				},
-			} as CoberturasStep);
-		}
-	};
-
 	const handleGestionComercialToggle = (checked: boolean) => {
 		setGestionComercialSeleccionada(checked);
 
@@ -136,20 +117,17 @@ export default function CoberturasStepComponent({ ramo, coberturas, onCoberturas
 					ramo={ramo}
 					coberturasSeleccionadas={coberturas?.coberturas_seleccionadas || []}
 					onCoberturaToggle={handleCoberturaToggle}
-					onCobertulaCustom={handleCoberturaCustom}
-					nuevaCobertura={coberturas?.nueva_cobertura}
 				/>
 
 				{/* Advertencia si no hay coberturas */}
-				{(!coberturas?.coberturas_seleccionadas || coberturas.coberturas_seleccionadas.length === 0) &&
-					!coberturas?.nueva_cobertura && (
-						<div className="flex items-start gap-2 text-sm bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
-							<AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
-							<p className="text-amber-900 dark:text-amber-100">
-								Debes seleccionar al menos una cobertura o agregar una personalizada para continuar.
-							</p>
-						</div>
-					)}
+				{(!coberturas?.coberturas_seleccionadas || coberturas.coberturas_seleccionadas.length === 0) && (
+					<div className="flex items-start gap-2 text-sm bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
+						<AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+						<p className="text-amber-900 dark:text-amber-100">
+							Debes seleccionar al menos una cobertura para continuar.
+						</p>
+					</div>
+				)}
 			</CardContent>
 		</Card>
 	);
