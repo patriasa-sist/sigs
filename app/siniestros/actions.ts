@@ -411,22 +411,13 @@ export async function obtenerSiniestroDetalle(siniestroId: string): Promise<Obte
 
 		// Enriquecer con nombres de usuario
 		const historial = await Promise.all(
-			(historialRaw || []).map(async (h: {
-			id: string;
-			siniestro_id: string;
-			accion: string;
-			estado_anterior: string | null;
-			estado_nuevo: string;
-			cambio_descripcion: string;
-			created_at: string;
-			created_by: string | null;
-		}) => {
+			(historialRaw || []).map(async (h: any) => {
 				if (!h.created_by) {
 					return {
-					...h,
-					created_by: undefined,
-					usuario_nombre: "Sistema"
-				};
+						...h,
+						created_by: undefined,
+						usuario_nombre: "Sistema"
+					};
 				}
 
 				const { data: usuario } = await supabase
@@ -1234,14 +1225,15 @@ export async function cambiarEstadoSiniestro(
 
 		if (error) throw error;
 
-		// Registrar en historial global (sin observación, se usa el tab Observaciones para eso)
+		// Registrar en historial global usando campos existentes
 		await supabase.from("siniestros_historial").insert({
 			siniestro_id: siniestroId,
 			accion: "cambio_estado",
+			valor_nuevo: estadoData.nombre, // Guardar nombre del estado en valor_nuevo
 			detalles: {
-				estado_nuevo: estadoData.nombre,
+				estado_id: estadoId,
+				estado_nombre: estadoData.nombre,
 			},
-			descripcion: `Estado cambiado a: ${estadoData.nombre}`,
 			created_by: user.id,
 		});
 

@@ -13,6 +13,7 @@ const ACCION_ICONS = {
 	updated: <Edit className="h-4 w-4 text-blue-500" />,
 	documento_agregado: <FileText className="h-4 w-4 text-purple-500" />,
 	observacion_agregada: <MessageSquare className="h-4 w-4 text-amber-500" />,
+	cambio_estado: <XCircle className="h-4 w-4 text-blue-500" />,
 	estado_cambiado: <XCircle className="h-4 w-4 text-red-500" />,
 	cerrado: <CheckCircle className="h-4 w-4 text-gray-500" />,
 };
@@ -22,6 +23,7 @@ const ACCION_LABELS = {
 	updated: "Siniestro Actualizado",
 	documento_agregado: "Documento Agregado",
 	observacion_agregada: "Observación Agregada",
+	cambio_estado: "Estado de Seguimiento Cambiado",
 	estado_cambiado: "Estado Cambiado",
 	cerrado: "Siniestro Cerrado",
 };
@@ -84,28 +86,41 @@ export default function HistorialCronologico({ historial }: HistorialCronologico
 										</div>
 									</div>
 
-									{/* Detalles del cambio */}
-									{item.campo_modificado && (
-										<div className="mt-2 text-xs">
-											<span className="text-muted-foreground">Campo modificado: </span>
-											<span className="font-medium">{item.campo_modificado}</span>
+									{/* Mostrar valor_nuevo como descripción para cambio_estado */}
+									{item.accion === "cambio_estado" && item.valor_nuevo && (
+										<div className="mt-2 text-sm">
+											<p className="text-muted-foreground">
+												Estado cambiado a: <span className="font-medium text-blue-600 dark:text-blue-400">{item.valor_nuevo}</span>
+											</p>
 										</div>
 									)}
 
-									{item.valor_anterior && (
-										<div className="mt-1 text-xs">
-											<span className="text-muted-foreground">Valor anterior: </span>
-											<span className="line-through opacity-70">{item.valor_anterior}</span>
-										</div>
-									)}
+									{/* Detalles del cambio (para otros tipos de acciones) */}
+									{item.accion !== "cambio_estado" && (
+										<>
+											{item.campo_modificado && (
+												<div className="mt-2 text-xs">
+													<span className="text-muted-foreground">Campo modificado: </span>
+													<span className="font-medium">{item.campo_modificado}</span>
+												</div>
+											)}
 
-									{item.valor_nuevo && (
-										<div className="mt-1 text-xs">
-											<span className="text-muted-foreground">Valor nuevo: </span>
-											<span className="font-medium text-green-600 dark:text-green-400">
-												{item.valor_nuevo}
-											</span>
-										</div>
+											{item.valor_anterior && (
+												<div className="mt-1 text-xs">
+													<span className="text-muted-foreground">Valor anterior: </span>
+													<span className="line-through opacity-70">{item.valor_anterior}</span>
+												</div>
+											)}
+
+											{item.valor_nuevo && (
+												<div className="mt-1 text-xs">
+													<span className="text-muted-foreground">Valor nuevo: </span>
+													<span className="font-medium text-green-600 dark:text-green-400">
+														{item.valor_nuevo}
+													</span>
+												</div>
+											)}
+										</>
 									)}
 
 									{item.detalles && (

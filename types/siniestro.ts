@@ -428,11 +428,11 @@ export type SiniestrosStats = {
 export type HistorialSiniestro = {
 	id: string;
 	siniestro_id: string;
-	accion: string; // 'created', 'updated', 'documento_agregado', 'observacion_agregada', 'estado_cambiado', 'cerrado'
+	accion: string; // 'created', 'updated', 'documento_agregado', 'observacion_agregada', 'cambio_estado', 'estado_cambiado', 'cerrado'
 	campo_modificado?: string;
 	valor_anterior?: string;
-	valor_nuevo?: string;
-	detalles?: any; // JSONB
+	valor_nuevo?: string; // Para cambio_estado: nombre del nuevo estado
+	detalles?: any; // JSONB - información adicional del cambio
 	created_at: string;
 	created_by?: string;
 	usuario_nombre?: string;
