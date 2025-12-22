@@ -531,4 +531,96 @@ export type ObtenerUsuariosResponsablesResponse = ServerResponse<{
 	usuarios: UsuarioResponsable[];
 }>;
 
+// ============================================
+// SISTEMA DE ESTADOS (NUEVO)
+// ============================================
+
+export type EstadoSiniestroCatalogo = {
+	id: string;
+	codigo: string;
+	nombre: string;
+	descripcion?: string;
+	orden: number;
+	activo: boolean;
+	created_at?: string;
+};
+
+export type EstadoSiniestroHistorial = {
+	id: string;
+	siniestro_id: string;
+	estado_id: string;
+	observacion?: string;
+	created_by?: string;
+	created_at: string;
+};
+
+export type EstadoSiniestroHistorialConUsuario = EstadoSiniestroHistorial & {
+	estado: EstadoSiniestroCatalogo;
+	usuario_nombre?: string;
+};
+
+export type EstadoActualSiniestro = {
+	estado_actual_id?: string;
+	estado_actual_nombre?: string;
+	estado_actual_codigo?: string;
+	estado_actual_fecha?: string;
+	estado_actual_observacion?: string;
+};
+
+// Siniestro con flag de atención (sin actualizaciones en 10+ días)
+export type SiniestroConEstado = Siniestro & EstadoActualSiniestro & {
+	requiere_atencion: boolean;
+};
+
+export type SiniestroVistaConEstado = SiniestroVista & EstadoActualSiniestro & {
+	requiere_atencion: boolean;
+};
+
+// ============================================
+// CONTACTO PARA WHATSAPP (NUEVO)
+// ============================================
+
+export type ContactoClienteSiniestro = {
+	nombre_completo: string;
+	telefono?: string | null;
+	celular?: string | null;
+	correo?: string | null;
+};
+
+// ============================================
+// DOCUMENTOS AGRUPADOS POR TIPO (NUEVO)
+// ============================================
+
+export type DocumentosAgrupadosPorTipo = {
+	[K in TipoDocumentoSiniestro]: DocumentoSiniestroConUsuario[];
+};
+
+// ============================================
+// RESPUESTAS DE SERVER ACTIONS PARA ESTADOS (NUEVO)
+// ============================================
+
+export type ObtenerEstadosCatalogoResponse = ServerResponse<{
+	estados: EstadoSiniestroCatalogo[];
+}>;
+
+export type ObtenerHistorialEstadosResponse = ServerResponse<{
+	historial: EstadoSiniestroHistorialConUsuario[];
+}>;
+
+export type CambiarEstadoSiniestroResponse = ServerResponse<{
+	estado: EstadoSiniestroHistorial;
+}>;
+
+// ============================================
+// RESPUESTAS DE SERVER ACTIONS PARA WHATSAPP (NUEVO)
+// ============================================
+
+export type EnviarWhatsAppSiniestroResponse = ServerResponse<{
+	url: string; // URL de WhatsApp generada
+}>;
+
+export type ObtenerContactoParaWhatsAppResponse = ServerResponse<{
+	contacto: ContactoClienteSiniestro;
+}>;
+
 export type CambiarResponsableResponse = ServerResponse<void>;

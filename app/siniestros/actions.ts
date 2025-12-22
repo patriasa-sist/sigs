@@ -23,7 +23,19 @@ import type {
 	TipoDocumentoSiniestro,
 	ObtenerUsuariosResponsablesResponse,
 	CambiarResponsableResponse,
+	// Nuevos tipos
+	EstadoSiniestroCatalogo,
+	EstadoSiniestroHistorialConUsuario,
+	ObtenerEstadosCatalogoResponse,
+	ObtenerHistorialEstadosResponse,
+	CambiarEstadoSiniestroResponse,
+	SiniestroVistaConEstado,
+	ContactoClienteSiniestro,
+	EnviarWhatsAppSiniestroResponse,
+	EstadoSiniestro,
 } from "@/types/siniestro";
+import type { ContactoCliente, DatosEspecificosRamo, VehiculoAutomotor } from "@/types/cobranza";
+import { generarURLWhatsApp, cleanPhoneNumber } from "@/utils/whatsapp";
 
 /**
  * Verificar permisos de siniestros, comercial o admin
@@ -1064,6 +1076,575 @@ export async function cambiarResponsableSiniestro(
 		return { success: true, data: undefined };
 	} catch (error) {
 		console.error("Error cambiando responsable del siniestro:", error);
+		return {
+			success: false,
+			error: error instanceof Error ? error.message : "Error desconocido",
+		};
+	}
+}
+
+// ============================================
+// NUEVAS FUNCIONES: SISTEMA DE ESTADOS
+// ============================================
+
+/**
+ * Obtener catálogo de estados activos
+ */
+export async function obtenerEstadosCatalogo(): Promise<ObtenerEstadosCatalogoResponse> {
+	const permiso = await verificarPermisoSiniestros();
+	if (!permiso.authorized) {
+		return { success: false, error: permiso.error };
+	}
+
+	const supabase = await createClient();
+
+	try {
+		const { data, error } = await supabase
+			.from("siniestros_estados_catalogo")
+			.select("*")
+			.eq("activo", true)
+			.order("orden", { ascending: true });
+
+		if (error) throw error;
+
+		return {
+			success: true,
+			data: { estados: data || [] },
+		};
+	} catch (error) {
+		console.error("Error obteniendo catálogo de estados:", error);
+		return {
+			success: false,
+			error: error instanceof Error ? error.message : "Error desconocido",
+		};
+	}
+}
+
+/**
+ * Obtener historial de estados de un siniestro
+ */
+export async function obtenerHistorialEstados(
+	siniestroId: string
+): Promise<ObtenerHistorialEstadosResponse> {
+	const permiso = await verificarPermisoSiniestros();
+	if (!permiso.authorized) {
+		return { success: false, error: permiso.error };
+	}
+
+	const supabase = await createClient();
+
+	try {
+		const { data, error } = await supabase
+			.from("siniestros_estados_historial")
+			.select(`
+				*,
+				estado:siniestros_estados_catalogo(*),
+				perfil:profiles(full_name)
+			`)
+			.eq("siniestro_id", siniestroId)
+			.order("created_at", { ascending: false });
+
+		if (error) throw error;
+
+		const historial: EstadoSiniestroHistorialConUsuario[] = (data || []).map((item: any) => ({
+			id: item.id,
+			siniestro_id: item.siniestro_id,
+			estado_id: item.estado_id,
+			observacion: item.observacion,
+			created_by: item.created_by,
+			created_at: item.created_at,
+			estado: item.estado,
+			usuario_nombre: item.perfil?.full_name,
+		}));
+
+		return {
+			success: true,
+			data: { historial },
+		};
+	} catch (error) {
+		console.error("Error obteniendo historial de estados:", error);
+		return {
+			success: false,
+			error: error instanceof Error ? error.message : "Error desconocido",
+		};
+	}
+}
+
+/**
+ * Cambiar estado de un siniestro
+ */
+export async function cambiarEstadoSiniestro(
+	siniestroId: string,
+	estadoId: string,
+	observacion?: string
+): Promise<CambiarEstadoSiniestroResponse> {
+	const permiso = await verificarPermisoSiniestros();
+	if (!permiso.authorized) {
+		return { success: false, error: permiso.error };
+	}
+
+	const supabase = await createClient();
+	const {
+		data: { user },
+	} = await supabase.auth.getUser();
+
+	if (!user) {
+		return { success: false, error: "No autenticado" };
+	}
+
+	try {
+		// Verificar que el siniestro existe y está abierto
+		const { data: siniestro, error: siniestroError } = await supabase
+			.from("siniestros")
+			.select("id, estado")
+			.eq("id", siniestroId)
+			.single();
+
+		if (siniestroError || !siniestro) {
+			return { success: false, error: "Siniestro no encontrado" };
+		}
+
+		if (siniestro.estado !== "abierto") {
+			return { success: false, error: "Solo se pueden cambiar estados de siniestros abiertos" };
+		}
+
+		// Insertar en historial de estados
+		const { data, error } = await supabase
+			.from("siniestros_estados_historial")
+			.insert({
+				siniestro_id: siniestroId,
+				estado_id: estadoId,
+				observacion: observacion || null,
+				created_by: user.id,
+			})
+			.select()
+			.single();
+
+		if (error) throw error;
+
+		// El trigger actualiza updated_at automáticamente, pero por si acaso lo hacemos explícito
+		await supabase.from("siniestros").update({ updated_at: new Date().toISOString() }).eq("id", siniestroId);
+
+		// Revalidar rutas
+		revalidatePath("/siniestros");
+		revalidatePath(`/siniestros/editar/${siniestroId}`);
+
+		return {
+			success: true,
+			data: { estado: data },
+		};
+	} catch (error) {
+		console.error("Error cambiando estado del siniestro:", error);
+		return {
+			success: false,
+			error: error instanceof Error ? error.message : "Error desconocido",
+		};
+	}
+}
+
+/**
+ * Obtener siniestros con flag de atención (sin actualización en 10+ días)
+ */
+export async function obtenerSiniestrosConAtencion(): Promise<ObtenerSiniestrosResponse> {
+	const permiso = await verificarPermisoSiniestros();
+	if (!permiso.authorized) {
+		return { success: false, error: permiso.error };
+	}
+
+	const supabase = await createClient();
+
+	try {
+		// Query a la vista que incluye el flag requiere_atencion
+		const { data, error } = await supabase
+			.from("siniestros_con_estado_actual")
+			.select("*")
+			.order("requiere_atencion", { ascending: false }) // Primero los que requieren atención
+			.order("updated_at", { ascending: false });
+
+		if (error) throw error;
+
+		// Calcular estadísticas
+		const siniestros = (data || []) as SiniestroVistaConEstado[];
+
+		const stats: SiniestrosStats = {
+			total_abiertos: siniestros.filter((s) => s.estado === "abierto").length,
+			cerrados_mes: siniestros.filter((s) => {
+				if (s.estado === "abierto") return false;
+				const fechaCierre = new Date(s.fecha_cierre || "");
+				const hace30Dias = new Date();
+				hace30Dias.setDate(hace30Dias.getDate() - 30);
+				return fechaCierre >= hace30Dias;
+			}).length,
+			monto_total_reservado: siniestros
+				.filter((s) => s.estado === "abierto")
+				.reduce((sum, s) => sum + (s.monto_reserva || 0), 0),
+			promedio_dias_cierre: 0, // Calcular si es necesario
+			por_estado: {
+				abierto: siniestros.filter((s) => s.estado === "abierto").length,
+				rechazado: siniestros.filter((s) => s.estado === "rechazado").length,
+				declinado: siniestros.filter((s) => s.estado === "declinado").length,
+				concluido: siniestros.filter((s) => s.estado === "concluido").length,
+			},
+			por_ramo: siniestros.reduce(
+				(acc, s) => {
+					acc[s.ramo] = (acc[s.ramo] || 0) + 1;
+					return acc;
+				},
+				{} as Record<string, number>
+			),
+		};
+
+		return {
+			success: true,
+			data: {
+				siniestros: siniestros as any, // Cast temporal
+				stats,
+			},
+		};
+	} catch (error) {
+		console.error("Error obteniendo siniestros con atención:", error);
+		return {
+			success: false,
+			error: error instanceof Error ? error.message : "Error desconocido",
+		};
+	}
+}
+
+// ============================================
+// NUEVAS FUNCIONES: DETALLE DE PÓLIZA Y WHATSAPP
+// ============================================
+
+/**
+ * Obtener contacto del cliente para WhatsApp
+ */
+export async function obtenerContactoParaWhatsApp(
+	siniestroId: string
+): Promise<{ success: boolean; data?: ContactoClienteSiniestro; error?: string }> {
+	const permiso = await verificarPermisoSiniestros();
+	if (!permiso.authorized) {
+		return { success: false, error: permiso.error };
+	}
+
+	const supabase = await createClient();
+
+	try {
+		// Obtener póliza asociada al siniestro
+		const { data: siniestro, error: siniestroError } = await supabase
+			.from("siniestros")
+			.select("poliza_id")
+			.eq("id", siniestroId)
+			.single();
+
+		if (siniestroError || !siniestro) {
+			return { success: false, error: "Siniestro no encontrado" };
+		}
+
+		// Obtener contacto usando función SQL
+		const { data: contacto, error: contactoError } = await supabase
+			.rpc("obtener_contacto_poliza", { poliza_id_param: siniestro.poliza_id })
+			.single();
+
+		if (contactoError) {
+			console.error("Error al obtener contacto:", contactoError);
+			return { success: false, error: "Error al obtener contacto del cliente" };
+		}
+
+		if (!contacto) {
+			return { success: false, error: "No se encontró contacto del cliente" };
+		}
+
+		return {
+			success: true,
+			data: contacto as ContactoClienteSiniestro,
+		};
+	} catch (error) {
+		console.error("Error obteniendo contacto para WhatsApp:", error);
+		return {
+			success: false,
+			error: error instanceof Error ? error.message : "Error desconocido",
+		};
+	}
+}
+
+/**
+ * Generar URL de WhatsApp para registro de siniestro
+ */
+export async function generarWhatsAppRegistroSiniestro(
+	siniestroId: string
+): Promise<EnviarWhatsAppSiniestroResponse> {
+	const permiso = await verificarPermisoSiniestros();
+	if (!permiso.authorized) {
+		return { success: false, error: permiso.error };
+	}
+
+	const supabase = await createClient();
+
+	try {
+		// Obtener datos del siniestro con póliza
+		const { data: siniestro, error: siniestroError } = await supabase
+			.from("siniestros")
+			.select(`
+				codigo_siniestro,
+				fecha_siniestro,
+				poliza:polizas(
+					numero_poliza,
+					ramo
+				)
+			`)
+			.eq("id", siniestroId)
+			.single();
+
+		if (siniestroError || !siniestro) {
+			return { success: false, error: "Siniestro no encontrado" };
+		}
+
+		// Obtener contacto
+		const contactoResponse = await obtenerContactoParaWhatsApp(siniestroId);
+		if (!contactoResponse.success || !contactoResponse.data) {
+			return { success: false, error: contactoResponse.error || "No se encontró contacto" };
+		}
+
+		const contacto = contactoResponse.data;
+		const telefono = contacto.celular || contacto.telefono;
+
+		if (!telefono) {
+			return { success: false, error: "No se encontró número de contacto" };
+		}
+
+		// Generar mensaje
+		const mensaje = `Estimado/a *${contacto.nombre_completo}*,
+
+Le informamos que su siniestro ha sido registrado exitosamente en nuestro sistema:
+
+📋 *Código:* ${siniestro.codigo_siniestro}
+📅 *Fecha del siniestro:* ${new Date(siniestro.fecha_siniestro).toLocaleDateString("es-BO")}
+🛡️ *Póliza:* ${(siniestro.poliza as any)?.numero_poliza || "N/A"}
+📦 *Ramo:* ${(siniestro.poliza as any)?.ramo || "N/A"}
+
+Nuestro equipo procederá con la evaluación correspondiente. Le mantendremos informado sobre el avance del proceso.
+
+Para cualquier consulta, no dude en contactarnos.
+
+Saludos cordiales,
+*PATRIA Seguros y Reaseguros S.A.*`;
+
+		// Generar URL
+		const url = generarURLWhatsApp(telefono, mensaje);
+
+		return { success: true, data: { url } };
+	} catch (error) {
+		console.error("Error generando WhatsApp de registro:", error);
+		return {
+			success: false,
+			error: error instanceof Error ? error.message : "Error desconocido",
+		};
+	}
+}
+
+/**
+ * Generar URL de WhatsApp para cierre de siniestro
+ */
+export async function generarWhatsAppCierreSiniestro(
+	siniestroId: string,
+	tipoCierre: "rechazado" | "declinado" | "concluido"
+): Promise<EnviarWhatsAppSiniestroResponse> {
+	const permiso = await verificarPermisoSiniestros();
+	if (!permiso.authorized) {
+		return { success: false, error: permiso.error };
+	}
+
+	const supabase = await createClient();
+
+	try {
+		// Obtener datos del siniestro con póliza
+		const { data: siniestro, error: siniestroError } = await supabase
+			.from("siniestros")
+			.select(`
+				codigo_siniestro,
+				poliza:polizas(
+					numero_poliza,
+					ramo
+				)
+			`)
+			.eq("id", siniestroId)
+			.single();
+
+		if (siniestroError || !siniestro) {
+			return { success: false, error: "Siniestro no encontrado" };
+		}
+
+		// Obtener contacto
+		const contactoResponse = await obtenerContactoParaWhatsApp(siniestroId);
+		if (!contactoResponse.success || !contactoResponse.data) {
+			return { success: false, error: contactoResponse.error || "No se encontró contacto" };
+		}
+
+		const contacto = contactoResponse.data;
+		const telefono = contacto.celular || contacto.telefono;
+
+		if (!telefono) {
+			return { success: false, error: "No se encontró número de contacto" };
+		}
+
+		// Generar mensaje según tipo de cierre
+		let estadoTexto = "";
+		let detalleTexto = "";
+
+		switch (tipoCierre) {
+			case "rechazado":
+				estadoTexto = "❌ *RECHAZADO*";
+				detalleTexto =
+					"Lamentamos informarle que su siniestro ha sido rechazado tras la evaluación correspondiente. Para más información, por favor contáctenos.";
+				break;
+			case "declinado":
+				estadoTexto = "⚠️ *DECLINADO*";
+				detalleTexto =
+					"Su siniestro ha sido declinado según los términos y condiciones de su póliza. Puede solicitar información adicional contactándonos.";
+				break;
+			case "concluido":
+				estadoTexto = "✅ *CONCLUIDO*";
+				detalleTexto =
+					"Nos complace informarle que su siniestro ha sido procesado exitosamente y se ha concluido el trámite correspondiente.";
+				break;
+		}
+
+		const mensaje = `Estimado/a *${contacto.nombre_completo}*,
+
+Le informamos que su siniestro ha sido cerrado con el siguiente estado:
+
+${estadoTexto}
+
+📋 *Código:* ${siniestro.codigo_siniestro}
+🛡️ *Póliza:* ${(siniestro.poliza as any)?.numero_poliza || "N/A"}
+📅 *Fecha de cierre:* ${new Date().toLocaleDateString("es-BO")}
+
+${detalleTexto}
+
+Para cualquier consulta o aclaración, estamos a su disposición.
+
+Saludos cordiales,
+*PATRIA Seguros y Reaseguros S.A.*`;
+
+		// Generar URL
+		const url = generarURLWhatsApp(telefono, mensaje);
+
+		return { success: true, data: { url } };
+	} catch (error) {
+		console.error("Error generando WhatsApp de cierre:", error);
+		return {
+			success: false,
+			error: error instanceof Error ? error.message : "Error desconocido",
+		};
+	}
+}
+
+/**
+ * Obtener detalle completo de póliza (para mostrar en siniestros)
+ * Patrón similar a cobranzas
+ */
+export async function obtenerDetalleCompletoPoliza(polizaId: string): Promise<{
+	success: boolean;
+	data?: {
+		poliza: any; // PolizaConPagos
+		contacto: ContactoCliente;
+		datos_ramo: DatosEspecificosRamo;
+	};
+	error?: string;
+}> {
+	const permiso = await verificarPermisoSiniestros();
+	if (!permiso.authorized) {
+		return { success: false, error: permiso.error };
+	}
+
+	const supabase = await createClient();
+
+	try {
+		// 1. Query base de póliza
+		const { data: poliza, error: polizaError } = await supabase
+			.from("polizas")
+			.select(`
+				*,
+				compania:companias_aseguradoras(nombre),
+				regional:regionales(nombre),
+				responsable:profiles(full_name)
+			`)
+			.eq("id", polizaId)
+			.single();
+
+		if (polizaError || !poliza) {
+			return { success: false, error: "Póliza no encontrada" };
+		}
+
+		// 2. Obtener contacto usando función SQL
+		const { data: contactoData } = await supabase
+			.rpc("obtener_contacto_poliza", { poliza_id_param: polizaId })
+			.single();
+
+		const contacto: ContactoCliente = contactoData || {
+			telefono: null,
+			celular: null,
+			correo: null,
+		};
+
+		// 3. Obtener datos específicos por ramo
+		let datos_ramo: DatosEspecificosRamo = { tipo: "otros", descripcion: poliza.ramo };
+
+		const ramoLower = (poliza.ramo || "").toLowerCase();
+
+		if (ramoLower.includes("automotor")) {
+			const { data: vehiculos } = await supabase
+				.from("polizas_automotor_vehiculos")
+				.select(`
+					id,
+					placa,
+					valor_asegurado,
+					tipo_vehiculo:tipos_vehiculo(nombre),
+					marca:marcas_vehiculo(nombre),
+					modelo,
+					ano,
+					color
+				`)
+				.eq("poliza_id", polizaId);
+
+			const vehiculosFormateados: VehiculoAutomotor[] = (vehiculos || []).map((v: any) => ({
+				id: v.id,
+				placa: v.placa,
+				tipo_vehiculo: v.tipo_vehiculo?.nombre,
+				marca: v.marca?.nombre,
+				modelo: v.modelo,
+				ano: v.ano,
+				color: v.color,
+				valor_asegurado: v.valor_asegurado,
+			}));
+
+			datos_ramo = {
+				tipo: "automotor",
+				vehiculos: vehiculosFormateados,
+			};
+		} else if (ramoLower.includes("salud") || ramoLower.includes("vida") || ramoLower.includes("sepelio")) {
+			// TODO: Implementar query para asegurados cuando esté disponible
+			datos_ramo = {
+				tipo: "salud",
+				asegurados: [],
+			};
+		} else if (ramoLower.includes("incendio")) {
+			// TODO: Implementar query para ubicaciones
+			datos_ramo = {
+				tipo: "incendio",
+				ubicaciones: [],
+			};
+		}
+
+		return {
+			success: true,
+			data: {
+				poliza,
+				contacto,
+				datos_ramo,
+			},
+		};
+	} catch (error) {
+		console.error("Error obteniendo detalle completo de póliza:", error);
 		return {
 			success: false,
 			error: error instanceof Error ? error.message : "Error desconocido",

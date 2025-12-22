@@ -426,7 +426,7 @@ selector de conclusion>
 
 -   quitar informacion de registro
 
--   mensaje estandarizado al registrar el siniestro [[pedir mensaje]]]
+-   mensaje estandarizado al registrar el siniestro [[pedir mensaje]]
 
 paso1
 
@@ -438,3 +438,61 @@ etiquetas cambiar a Etapa
 
 acceso futuro>
 enviar observaciones del caso al cliente por correo
+
+---
+
+prompt:
+Mejoraremos el modulo de siniestros con los siguientes cambios:
+
+1. colorear en rojo el siniestro cargado en la visualización inicial si este no ha sufrido actualizaciones en los ultimos 10 dias
+
+2. agregar limitantes en sistema de conclusion de siniestros de la siguiente manera:
+
+-   quitar pago comercial de cierre concluido
+-   NUEVO Enviar mensaje de WhatsApp al cerrar el cierre del reporte (inventar mensaje estandar formal)
+-   mensaje estandarizado al registrar el siniestro [[pedir mensaje]]
+
+3. modificar la edicion de siniestros de la siguiente forma:
+
+seccion resumen:
+
+-   agregar detalles completos de la persona y los bienes asegurados en la poliza asociada como sucede en el modulo cobranzas
+-   quitar parte de informacion de registro
+
+seccion documentos:
+
+-   reconstrucción completa de la seccion de documentos al cargar y editar el siniestro, ahora los tipos de documento se deben mostrar como pestañas en un lateral y al seleccionar cualquier pestaña se muestran todos los archivos bajo esa etiqueta, ademas se muestran miniaturas de los archivos de imagen y en cada pestaña (etiqueta) se puede cargar un nuevo archivo (de forma manual sin arrastrar) que queda etiquetado automaticamente.
+
+seccion observaciones:
+NUEVA seccion de "estados" encima de la seccion de "agregar observacion" que debe tener los siguientes estados (traidos desde la db, crear tabla de eso) en un menu desplegable
+Espera informe transito
+Espera proforma
+Espera franquicia
+Espera orden
+Espera reparacion
+Espera conformidad
+Espera receta medica
+Espera autorizacion/ordenes
+Espera liquidacion
+
+---
+
+continuaremos con las mejoras esta vez en la forma en la que se registran los siniestros por cada paso:
+
+4. paso 2
+
+-   fecha de reporte siniestro (no fecha futura, alerta de aviso si la fecha ingresada es mayor a 10 dias pasados)
+-   fecha de reporte cliente (no fecha futura)
+-   fecha reporte compania (no fecha futura)
+-   modificar la forma de agregar contacto>
+    nombre (obligatorio)
+    telefono (obligatorio)
+    correo (opcional)
+
+5. paso3
+
+-   agregar "Gestion comercial" como cobertura seleccionable extra a las coberturas que se cargan de la poliza
+
+6. paso4
+
+-   cambiar a vista mejorada de documentos usada en la parte de modificacion de documentos
