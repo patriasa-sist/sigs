@@ -1208,6 +1208,17 @@ export async function cambiarEstadoSiniestro(
 			return { success: false, error: "Solo se pueden cambiar estados de siniestros abiertos" };
 		}
 
+		// Obtener el nombre del estado
+		const { data: estadoData, error: estadoError } = await supabase
+			.from("siniestros_estados_catalogo")
+			.select("nombre")
+			.eq("id", estadoId)
+			.single();
+
+		if (estadoError || !estadoData) {
+			return { success: false, error: "Estado no encontrado" };
+		}
+
 		// Insertar en historial de estados
 		const { data, error } = await supabase
 			.from("siniestros_estados_historial")
@@ -1221,6 +1232,22 @@ export async function cambiarEstadoSiniestro(
 			.single();
 
 		if (error) throw error;
+
+		// Registrar en historial global
+		const historialMessage = observacion
+			? `Estado cambiado a: ${estadoData.nombre} - ${observacion}`
+			: `Estado cambiado a: ${estadoData.nombre}`;
+
+		await supabase.from("siniestros_historial").insert({
+			siniestro_id: siniestroId,
+			accion: "cambio_estado",
+			detalles: {
+				estado_nuevo: estadoData.nombre,
+				observacion: observacion || null,
+			},
+			descripcion: historialMessage,
+			created_by: user.id,
+		});
 
 		// El trigger actualiza updated_at automáticamente, pero por si acaso lo hacemos explícito
 		await supabase.from("siniestros").update({ updated_at: new Date().toISOString() }).eq("id", siniestroId);
@@ -1268,7 +1295,7 @@ export async function obtenerSiniestrosConAtencion(): Promise<ObtenerSiniestrosR
 
 		const stats: SiniestrosStats = {
 			total_abiertos: siniestros.filter((s) => s.estado === "abierto").length,
-			cerrados_mes: siniestros.filter((s) => {
+			total_cerrados_mes: siniestros.filter((s) => {
 				if (s.estado === "abierto") return false;
 				const fechaCierre = new Date(s.fecha_cierre || "");
 				const hace30Dias = new Date();
@@ -1279,19 +1306,21 @@ export async function obtenerSiniestrosConAtencion(): Promise<ObtenerSiniestrosR
 				.filter((s) => s.estado === "abierto")
 				.reduce((sum, s) => sum + (s.monto_reserva || 0), 0),
 			promedio_dias_cierre: 0, // Calcular si es necesario
-			por_estado: {
+			siniestros_por_estado: {
 				abierto: siniestros.filter((s) => s.estado === "abierto").length,
 				rechazado: siniestros.filter((s) => s.estado === "rechazado").length,
 				declinado: siniestros.filter((s) => s.estado === "declinado").length,
 				concluido: siniestros.filter((s) => s.estado === "concluido").length,
 			},
-			por_ramo: siniestros.reduce(
-				(acc, s) => {
-					acc[s.ramo] = (acc[s.ramo] || 0) + 1;
-					return acc;
-				},
-				{} as Record<string, number>
-			),
+			siniestros_por_ramo: Object.entries(
+				siniestros.reduce(
+					(acc, s) => {
+						acc[s.ramo] = (acc[s.ramo] || 0) + 1;
+						return acc;
+					},
+					{} as Record<string, number>
+				)
+			).map(([ramo, cantidad]) => ({ ramo, cantidad })),
 		};
 
 		return {

@@ -12,20 +12,20 @@ import {
 } from "@/components/ui/select";
 import { Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import type { SiniestroVista, SiniestrosStats, EstadoSiniestro } from "@/types/siniestro";
+import type { SiniestroVista, SiniestroVistaConEstado, SiniestrosStats, EstadoSiniestro } from "@/types/siniestro";
 import StatsCards from "./StatsCards";
 import SiniestrosTable from "./SiniestrosTable";
 import ExportarSiniestros from "./ExportarSiniestros";
 
 interface DashboardProps {
-	siniestrosIniciales: SiniestroVista[];
+	siniestrosIniciales: SiniestroVistaConEstado[];
 	statsIniciales: SiniestrosStats;
 }
 
 const ITEMS_PER_PAGE = 25;
 
 export default function Dashboard({ siniestrosIniciales, statsIniciales }: DashboardProps) {
-	const [siniestros] = useState<SiniestroVista[]>(siniestrosIniciales);
+	const [siniestros] = useState<SiniestroVistaConEstado[]>(siniestrosIniciales);
 	const [stats] = useState<SiniestrosStats>(statsIniciales);
 
 	// Filtros
@@ -69,14 +69,14 @@ export default function Dashboard({ siniestrosIniciales, statsIniciales }: Dashb
 		return siniestros.filter((siniestro) => {
 			const searchLower = searchTerm.toLowerCase();
 			const matchesSearch =
-				siniestro.numero_poliza.toLowerCase().includes(searchLower) ||
-				siniestro.cliente_nombre.toLowerCase().includes(searchLower) ||
-				siniestro.cliente_documento.toLowerCase().includes(searchLower) ||
-				siniestro.lugar_hecho.toLowerCase().includes(searchLower) ||
-				siniestro.departamento_nombre.toLowerCase().includes(searchLower) ||
+				(siniestro.numero_poliza && siniestro.numero_poliza.toLowerCase().includes(searchLower)) ||
+				(siniestro.cliente_nombre && siniestro.cliente_nombre.toLowerCase().includes(searchLower)) ||
+				(siniestro.cliente_documento && siniestro.cliente_documento.toLowerCase().includes(searchLower)) ||
+				(siniestro.lugar_hecho && siniestro.lugar_hecho.toLowerCase().includes(searchLower)) ||
+				(siniestro.departamento_nombre && siniestro.departamento_nombre.toLowerCase().includes(searchLower)) ||
 				(siniestro.codigo_siniestro && siniestro.codigo_siniestro.toLowerCase().includes(searchLower)) ||
 				(siniestro.responsable_nombre && siniestro.responsable_nombre.toLowerCase().includes(searchLower)) ||
-				siniestro.compania_nombre.toLowerCase().includes(searchLower);
+				(siniestro.compania_nombre && siniestro.compania_nombre.toLowerCase().includes(searchLower));
 
 			const matchesEstado = estadoFiltro === "todos" || siniestro.estado === estadoFiltro;
 			const matchesRamo = ramoFiltro === "todos" || siniestro.ramo === ramoFiltro;

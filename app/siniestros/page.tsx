@@ -4,7 +4,7 @@ import { createClient } from "@/utils/supabase/server";
 import { Button } from "@/components/ui/button";
 import { FileWarning } from "lucide-react";
 import Dashboard from "@/components/siniestros/Dashboard";
-import { obtenerSiniestros } from "./actions";
+import { obtenerSiniestrosConAtencion } from "./actions";
 
 export const metadata = {
 	title: "Siniestros - Gestión de Reportes",
@@ -33,8 +33,8 @@ export default async function SiniestrosPage() {
 		redirect("/unauthorized");
 	}
 
-	// Obtener siniestros con estadísticas
-	const result = await obtenerSiniestros();
+	// Obtener siniestros con estadísticas y flag de atención
+	const result = await obtenerSiniestrosConAtencion();
 
 	return (
 		<div className="container mx-auto py-8 px-4">

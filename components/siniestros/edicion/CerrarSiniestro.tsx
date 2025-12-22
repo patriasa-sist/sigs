@@ -19,7 +19,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Lock, Upload, X, AlertTriangle, Loader2, CheckCircle } from "lucide-react";
-import { cerrarSiniestro } from "@/app/siniestros/actions";
+import { cerrarSiniestro, generarWhatsAppCierreSiniestro } from "@/app/siniestros/actions";
+import { toast } from "sonner";
 import {
 	validarCierreRechazo,
 	validarCierreDeclinacion,
@@ -71,7 +72,7 @@ export default function CerrarSiniestro({ siniestroId, numeroPoliza }: CerrarSin
 	const [monedaDeducible, setMonedaDeducible] = useState<Moneda>("Bs");
 	const [montoPagado, setMontoPagado] = useState<number>(0);
 	const [monedaPagado, setMonedaPagado] = useState<Moneda>("Bs");
-	const [esPagoComercial, setEsPagoComercial] = useState(false);
+	// const [esPagoComercial, setEsPagoComercial] = useState(false); // REMOVIDO: Ya no se usa
 
 	// Handler de archivo
 	const handleFileUpload = useCallback(
@@ -208,7 +209,7 @@ export default function CerrarSiniestro({ siniestroId, numeroPoliza }: CerrarSin
 				moneda_deducible: monedaDeducible,
 				monto_pagado: montoPagado,
 				moneda_pagado: monedaPagado,
-				es_pago_comercial: esPagoComercial,
+				es_pago_comercial: false, // Siempre false por defecto
 			};
 
 			const validacion = validarCierreIndemnizacion(datos);
@@ -235,7 +236,7 @@ export default function CerrarSiniestro({ siniestroId, numeroPoliza }: CerrarSin
 		monedaDeducible,
 		montoPagado,
 		monedaPagado,
-		esPagoComercial,
+		// esPagoComercial, // REMOVIDO
 	]);
 
 	// Cerrar siniestro
@@ -274,7 +275,7 @@ export default function CerrarSiniestro({ siniestroId, numeroPoliza }: CerrarSin
 					moneda_deducible: monedaDeducible,
 					monto_pagado: montoPagado,
 					moneda_pagado: monedaPagado,
-					es_pago_comercial: esPagoComercial,
+					es_pago_comercial: false, // Siempre false por defecto
 				};
 			}
 
@@ -285,7 +286,22 @@ export default function CerrarSiniestro({ siniestroId, numeroPoliza }: CerrarSin
 				return;
 			}
 
-			// Éxito: cerrar modal y redirigir
+			// Éxito: enviar mensaje por WhatsApp
+			// Mapear tipo de cierre para WhatsApp
+			const tipoWhatsApp =
+				activeTab === "rechazo" ? "rechazado" : activeTab === "declinacion" ? "declinado" : "concluido";
+
+			const whatsappResponse = await generarWhatsAppCierreSiniestro(siniestroId, tipoWhatsApp);
+
+			if (whatsappResponse.success && whatsappResponse.data?.url) {
+				window.open(whatsappResponse.data.url, "_blank");
+				toast.success("WhatsApp Web se abrirá en una nueva pestaña con el mensaje preparado");
+			} else {
+				// No bloquear el flujo si falla WhatsApp
+				toast.warning("Siniestro cerrado exitosamente, pero no se pudo preparar el mensaje de WhatsApp");
+			}
+
+			// Cerrar modal y redirigir
 			setOpen(false);
 			router.push("/siniestros");
 			router.refresh();
@@ -602,8 +618,8 @@ export default function CerrarSiniestro({ siniestroId, numeroPoliza }: CerrarSin
 							</div>
 						</div>
 
-						{/* Pago Comercial */}
-						<div className="flex items-center space-x-2">
+						{/* Pago Comercial - REMOVIDO */}
+						{/* <div className="flex items-center space-x-2">
 							<Checkbox
 								id="pago-comercial"
 								checked={esPagoComercial}
@@ -612,7 +628,7 @@ export default function CerrarSiniestro({ siniestroId, numeroPoliza }: CerrarSin
 							<Label htmlFor="pago-comercial" className="text-sm font-normal cursor-pointer">
 								Es pago comercial (no cubre la aseguradora)
 							</Label>
-						</div>
+						</div> */}
 					</TabsContent>
 				</Tabs>
 

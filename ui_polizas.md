@@ -475,6 +475,79 @@ Espera receta medica
 Espera autorizacion/ordenes
 Espera liquidacion
 
+1. Base de Datos ✅
+
+-   Creada migración SQL completa con:
+    -   Tabla siniestros_estados_catalogo (9 estados predefinidos)
+    -   Tabla siniestros_estados_historial (auditoría de cambios)
+    -   Vista siniestros_con_estado_actual con flag requiere_atencion
+    -   Función obtener_contacto_poliza() para WhatsApp
+    -   Índices optimizados en updated_at
+    -   Políticas RLS configuradas
+
+2. Tipos TypeScript ✅
+
+-   Agregados ~15 nuevos tipos en types/siniestro.ts
+-   Incluye tipos para estados, contactos, WhatsApp, y vistas extendidas
+
+3. Server Actions ✅
+
+-   Implementadas 8 nuevas funciones en app/siniestros/actions.ts:
+    -   obtenerEstadosCatalogo() - Lista de estados
+    -   obtenerHistorialEstados() - Historial cronológico
+    -   cambiarEstadoSiniestro() - Cambiar estado con observación
+    -   obtenerSiniestrosConAtencion() - Query con flag de atención
+    -   obtenerContactoParaWhatsApp() - Contacto del cliente
+    -   generarWhatsAppRegistroSiniestro() - URL WhatsApp registro
+    -   generarWhatsAppCierreSiniestro() - URL WhatsApp cierre
+    -   obtenerDetalleCompletoPoliza() - Detalle completo por ramo
+
+4. Componentes Nuevos ✅
+
+-   BotonWhatsAppRegistro.tsx - Botón WhatsApp después de registro
+-   BotonWhatsAppCierre.tsx - Botón WhatsApp al cerrar
+-   UltimoCambioSiniestro.tsx - Card destacado con último cambio
+-   DetallePolizaSiniestro.tsx - Detalles completos de póliza por ramo
+-   SeccionEstados.tsx - Dropdown de estados + historial + modal
+-   DocumentosPorTipo.tsx - Sistema de tabs laterales con 16 tipos
+
+5. Modificaciones a Componentes ✅
+
+-   Dashboard (page.tsx + Dashboard.tsx + SiniestrosTable.tsx):
+    -   Usa obtenerSiniestrosConAtencion()
+    -   Filas rojas para siniestros sin actualización en 10+ días
+    -   Badge "⚠️ Atención" visible
+    -   Tooltip explicativo
+-   CerrarSiniestro.tsx:
+    -   Eliminado checkbox "Pago Comercial"
+    -   Integrado WhatsApp automático al cerrar
+    -   Mensajes personalizados por tipo de cierre
+-   Registro (RegistrarSiniestroForm.tsx):
+    -   Pantalla de éxito con WhatsApp opcional
+    -   No redirige inmediatamente
+    -   Botón "Ir al Dashboard"
+-   EditarSiniestroForm.tsx:
+    -   Tab Resumen: Agregados UltimoCambioSiniestro + DetallePolizaSiniestro
+    -   Tab Documentos: Reemplazado con DocumentosPorTipo
+    -   Tab Observaciones: Agregado SeccionEstados arriba
+-   ResumenReadonly.tsx:
+    -   Eliminada sección "Información de Registro" completa
+    -   Datos ahora visibles en historial y último cambio
+
+📋 Para ejecutar manualmente:
+
+1. Ejecutar la migración SQL en Supabase (supabase/migrations/migration_siniestros_mejoras.sql)
+2. Verificar que los 9 estados se insertaron correctamente
+3. Probar el flujo completo de registro → edición → cierre
+
+-   ✅ Siniestros sin actualización: fondo rojo + badge de atención
+-   ✅ Pestañas laterales de documentos con contadores
+-   ✅ Timeline de estados con indicadores visuales
+-   ✅ Cards destacados para último cambio
+-   ✅ Mensajes de éxito con opciones de acción
+-   ✅ Tooltips informativos
+-   ✅ Dark mode compatible en todos los componentes
+
 ---
 
 continuaremos con las mejoras esta vez en la forma en la que se registran los siniestros por cada paso:
@@ -496,3 +569,11 @@ continuaremos con las mejoras esta vez en la forma en la que se registran los si
 6. paso4
 
 -   cambiar a vista mejorada de documentos usada en la parte de modificacion de documentos
+
+errores y cambios a realizar:
+
+1. dashboard siniestros no se visualiza datos de cliente en siniestros
+2. resumen: existen dos secciones que muestran la misma información (datos de cliente y datos de poliza) consolidar en una sola seccion
+3. resumen: ultimo cambio no refleja modificaciones en el estado del siniestro
+4. el cambio de estado no deberia tener observacion opcional, para eso ya existe el campo de observaciones
+5. el historial de estado deberia ser parte del historial goblal del siniestro, por que esta separado? se puede corregir o es complicado?

@@ -2,15 +2,20 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Card, CardHeader } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertTriangle, XCircle, Ban, CheckCircle, ArrowLeft } from "lucide-react";
 import ResumenReadonly from "./ResumenReadonly";
 import AgregarObservacion from "./AgregarObservacion";
-import AgregarDocumentos from "./AgregarDocumentos";
 import HistorialCronologico from "./HistorialCronologico";
 import CerrarSiniestro from "./CerrarSiniestro";
+import UltimoCambioSiniestro from "./UltimoCambioSiniestro";
+import DetallePolizaSiniestro from "./DetallePolizaSiniestro";
+import SeccionEstados from "./SeccionEstados";
+import DocumentosPorTipo from "./DocumentosPorTipo";
 import type {
 	SiniestroVista,
 	CoberturaCatalogo,
@@ -59,7 +64,12 @@ export default function EditarSiniestroForm({
 	historial,
 	esAdmin,
 }: EditarSiniestroFormProps) {
+	const router = useRouter();
 	const [activeTab, setActiveTab] = useState("resumen");
+
+	const handleRefresh = () => {
+		router.refresh();
+	};
 
 	const estadoConfig = ESTADO_CONFIG[siniestro.estado as keyof typeof ESTADO_CONFIG] || ESTADO_CONFIG.abierto;
 	const EstadoIcon = estadoConfig.icon;
@@ -155,20 +165,46 @@ export default function EditarSiniestroForm({
 					<TabsTrigger value="historial">Historial</TabsTrigger>
 				</TabsList>
 
-				<TabsContent value="resumen" className="mt-6">
+				<TabsContent value="resumen" className="mt-6 space-y-6">
+					{/* Último cambio destacado */}
+					<UltimoCambioSiniestro
+						historial={historial}
+						onVerHistorialCompleto={() => setActiveTab("historial")}
+					/>
+
+					{/* Datos básicos del siniestro */}
 					<ResumenReadonly siniestro={siniestro} coberturas={coberturas} />
+
+					<Separator className="my-6" />
+
+					{/* Datos completos de la póliza y cliente */}
+					<div>
+						<h3 className="text-lg font-semibold mb-4">Datos Completos de la Póliza</h3>
+						<DetallePolizaSiniestro polizaId={siniestro.poliza_id} />
+					</div>
 				</TabsContent>
 
 				<TabsContent value="documentos" className="mt-6">
-					<AgregarDocumentos
+					<DocumentosPorTipo
 						siniestroId={siniestro.id}
-						documentosIniciales={documentos}
+						documentos={documentos}
+						onDocumentosChange={handleRefresh}
 						estadoSiniestro={siniestro.estado}
 						esAdmin={esAdmin}
 					/>
 				</TabsContent>
 
-				<TabsContent value="observaciones" className="mt-6">
+				<TabsContent value="observaciones" className="mt-6 space-y-6">
+					{/* Sección de Estados */}
+					<SeccionEstados
+						siniestroId={siniestro.id}
+						estadoActual={siniestro}
+						estadoSiniestro={siniestro.estado}
+					/>
+
+					<Separator className="my-6" />
+
+					{/* Sección de Observaciones */}
 					<AgregarObservacion
 						siniestroId={siniestro.id}
 						observacionesIniciales={observaciones}

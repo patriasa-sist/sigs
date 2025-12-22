@@ -4,10 +4,10 @@ import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Eye, AlertTriangle, XCircle, Ban, CheckCircle, FileText } from "lucide-react";
-import type { SiniestroVista } from "@/types/siniestro";
+import type { SiniestroVistaConEstado } from "@/types/siniestro";
 
 interface SiniestrosTableProps {
-	siniestros: SiniestroVista[];
+	siniestros: SiniestroVistaConEstado[];
 }
 
 export default function SiniestrosTable({ siniestros }: SiniestrosTableProps) {
@@ -85,13 +85,19 @@ export default function SiniestrosTable({ siniestros }: SiniestrosTableProps) {
 							</tr>
 						</thead>
 						<tbody>
-							{siniestros.map((siniestro, index) => (
-								<tr
-									key={siniestro.id}
-									className={`border-b hover:bg-gray-50 dark:hover:bg-gray-800/50 ${
-										index % 2 === 0 ? "bg-white dark:bg-gray-900" : "bg-gray-50/50 dark:bg-gray-800/50"
-									}`}
-								>
+							{siniestros.map((siniestro, index) => {
+								const requiereAtencion = siniestro.requiere_atencion === true;
+
+								return (
+									<tr
+										key={siniestro.id}
+										className={`border-b ${
+											requiereAtencion
+												? "bg-red-50 hover:bg-red-100 dark:bg-red-950/30 dark:hover:bg-red-950/50"
+												: `hover:bg-gray-50 dark:hover:bg-gray-800/50 ${index % 2 === 0 ? "bg-white dark:bg-gray-900" : "bg-gray-50/50 dark:bg-gray-800/50"}`
+										}`}
+										title={requiereAtencion ? "⚠️ Sin actualizaciones en más de 10 días" : ""}
+									>
 									<td className="p-3 text-sm">
 										<div className="font-mono text-xs font-medium text-primary">
 											{siniestro.codigo_siniestro || "N/A"}
@@ -138,12 +144,22 @@ export default function SiniestrosTable({ siniestros }: SiniestrosTableProps) {
 										</div>
 									</td>
 									<td className="p-3 text-center">
-										<span
-											className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium border ${getEstadoStyle(siniestro.estado)}`}
-										>
-											{getEstadoIcon(siniestro.estado)}
-											{getEstadoLabel(siniestro.estado)}
-										</span>
+										<div className="flex flex-col gap-1 items-center">
+											<span
+												className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium border ${getEstadoStyle(siniestro.estado)}`}
+											>
+												{getEstadoIcon(siniestro.estado)}
+												{getEstadoLabel(siniestro.estado)}
+											</span>
+											{requiereAtencion && (
+												<span
+													className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 border border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800"
+													title="Sin actualizaciones en más de 10 días"
+												>
+													⚠️ Atención
+												</span>
+											)}
+										</div>
 									</td>
 									<td className="p-3 text-center">
 										<Button variant="ghost" size="sm" asChild>
@@ -154,7 +170,8 @@ export default function SiniestrosTable({ siniestros }: SiniestrosTableProps) {
 										</Button>
 									</td>
 								</tr>
-							))}
+								);
+							})}
 						</tbody>
 					</table>
 				</div>

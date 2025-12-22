@@ -75,23 +75,111 @@ CREATE INDEX IF NOT EXISTS idx_siniestros_estado_updated
 -- ============================================
 -- 4. Vista para estado actual de siniestros con flag de atención
 -- ============================================
-CREATE OR REPLACE VIEW siniestros_con_estado_actual AS
+-- Usar siniestros_vista como base para incluir todos los datos de cliente y póliza
+DROP VIEW IF EXISTS siniestros_con_estado_actual CASCADE;
+
+CREATE VIEW siniestros_con_estado_actual AS
 SELECT
-  s.*,
+  -- Columnas base de siniestro
+  sv.id,
+  sv.poliza_id,
+  sv.codigo_siniestro,
+
+  -- Detalles del siniestro
+  sv.fecha_siniestro,
+  sv.fecha_reporte,
+  sv.lugar_hecho,
+  sv.departamento_id,
+  sv.monto_reserva,
+  sv.moneda,
+  sv.descripcion,
+  sv.contactos,
+
+  -- Estado
+  sv.estado,
+  sv.motivo_cierre_tipo,
+  sv.fecha_cierre,
+  sv.cerrado_por,
+
+  -- Datos de rechazo
+  sv.motivo_rechazo,
+
+  -- Datos de declinación
+  sv.motivo_declinacion,
+
+  -- Datos de indemnización
+  sv.monto_reclamado,
+  sv.moneda_reclamado,
+  sv.deducible,
+  sv.moneda_deducible,
+  sv.monto_pagado,
+  sv.moneda_pagado,
+  sv.es_pago_comercial,
+  sv.fecha_llegada_repuestos,
+
+  -- Auditoría
+  sv.created_at,
+  sv.updated_at,
+  sv.created_by,
+  sv.updated_by,
+  sv.responsable_id,
+
+  -- Datos de la póliza
+  sv.numero_poliza,
+  sv.ramo,
+  sv.poliza_inicio_vigencia,
+  sv.poliza_fin_vigencia,
+
+  -- Datos del cliente
+  sv.cliente_nombre,
+  sv.cliente_documento,
+  sv.cliente_tipo,
+
+  -- Datos de compañía
+  sv.compania_nombre,
+  sv.compania_id,
+
+  -- Datos de departamento
+  sv.departamento_nombre,
+  sv.departamento_codigo,
+
+  -- Responsable de la póliza
+  sv.poliza_responsable_nombre,
+
+  -- Responsable del siniestro
+  sv.responsable_nombre,
+  sv.responsable_email,
+
+  -- Usuario que creó el siniestro
+  sv.creado_por_nombre,
+  sv.fecha_creacion,
+
+  -- Usuario que cerró el siniestro
+  sv.cerrado_por_nombre,
+
+  -- Contadores
+  sv.total_documentos,
+  sv.total_observaciones,
+  sv.total_coberturas,
+
+  -- Campos de estado actual (del historial)
   seh.estado_id AS estado_actual_id,
   sec.nombre AS estado_actual_nombre,
   sec.codigo AS estado_actual_codigo,
   seh.created_at AS estado_actual_fecha,
   seh.observacion AS estado_actual_observacion,
+
+  -- Flag de atención (calculado)
   CASE
-    WHEN s.updated_at < (now() - INTERVAL '10 days') THEN true
+    WHEN sv.updated_at < (now() - INTERVAL '10 days') THEN true
     ELSE false
   END AS requiere_atencion
-FROM siniestros s
+
+FROM siniestros_vista sv
 LEFT JOIN LATERAL (
   SELECT estado_id, created_at, observacion
   FROM siniestros_estados_historial
-  WHERE siniestro_id = s.id
+  WHERE siniestro_id = sv.id
   ORDER BY created_at DESC
   LIMIT 1
 ) seh ON true

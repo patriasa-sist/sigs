@@ -4,7 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { ChevronLeft, ChevronRight, Save, Loader2, AlertCircle } from "lucide-react";
+import { ChevronLeft, ChevronRight, Save, Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
+import BotonWhatsAppRegistro from "../shared/BotonWhatsAppRegistro";
 import { guardarSiniestro } from "@/app/siniestros/actions";
 import { validarDetalles, validarCoberturas, validarFormularioCompleto } from "@/utils/siniestroValidation";
 import SeleccionarPoliza from "./steps/SeleccionarPoliza";
@@ -32,6 +33,8 @@ export default function RegistrarSiniestroForm() {
 
 	const [guardando, setGuardando] = useState(false);
 	const [errores, setErrores] = useState<string[]>([]);
+	const [registroExitoso, setRegistroExitoso] = useState(false);
+	const [nuevoSiniestroId, setNuevoSiniestroId] = useState<string | null>(null);
 
 	// Navegación entre pasos
 	const irAPaso = (paso: 1 | 2 | 3 | 4) => {
@@ -107,8 +110,10 @@ export default function RegistrarSiniestroForm() {
 		try {
 			const result = await guardarSiniestro(formState);
 
-			if (result.success) {
-				router.push("/siniestros");
+			if (result.success && result.data) {
+				// Mostrar éxito y botón de WhatsApp
+				setRegistroExitoso(true);
+				setNuevoSiniestroId(result.data.siniestro_id);
 			} else {
 				setErrores([result.error]);
 			}
@@ -121,6 +126,36 @@ export default function RegistrarSiniestroForm() {
 
 	// Calcular progreso
 	const progreso = (formState.paso_actual / 4) * 100;
+
+	// Mostrar mensaje de éxito si el registro fue exitoso
+	if (registroExitoso && nuevoSiniestroId) {
+		return (
+			<div className="max-w-3xl mx-auto">
+				<div className="bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg p-8">
+					<div className="flex flex-col items-center text-center space-y-4">
+						<CheckCircle2 className="h-16 w-16 text-green-600 dark:text-green-400" />
+						<h2 className="text-2xl font-bold text-green-900 dark:text-green-100">
+							¡Siniestro registrado exitosamente!
+						</h2>
+						<p className="text-green-800 dark:text-green-200">
+							El siniestro ha sido registrado correctamente en el sistema.
+						</p>
+
+						<div className="flex flex-col sm:flex-row gap-3 mt-6 w-full sm:w-auto">
+							<BotonWhatsAppRegistro siniestroId={nuevoSiniestroId} />
+							<Button
+								variant="outline"
+								onClick={() => router.push("/siniestros")}
+								className="w-full sm:w-auto"
+							>
+								Ir al Dashboard
+							</Button>
+						</div>
+					</div>
+				</div>
+			</div>
+		);
+	}
 
 	return (
 		<div className="max-w-5xl mx-auto space-y-6">

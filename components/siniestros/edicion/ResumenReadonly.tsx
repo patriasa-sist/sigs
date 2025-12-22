@@ -13,51 +13,6 @@ interface ResumenReadonlyProps {
 export default function ResumenReadonly({ siniestro, coberturas }: ResumenReadonlyProps) {
 	return (
 		<div className="space-y-4">
-			{/* Datos de la Póliza */}
-			<Card>
-				<CardHeader>
-					<CardTitle className="text-lg flex items-center gap-2">
-						<FileText className="h-5 w-5 text-primary" />
-						Póliza Asociada
-					</CardTitle>
-				</CardHeader>
-				<CardContent className="space-y-3">
-					<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-						<div>
-							<p className="text-sm text-muted-foreground">Número de Póliza</p>
-							<p className="font-medium text-lg">{siniestro.numero_poliza}</p>
-						</div>
-						<div>
-							<p className="text-sm text-muted-foreground">Ramo</p>
-							<span className="bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 px-3 py-1 rounded-full text-sm font-medium">
-								{siniestro.ramo}
-							</span>
-						</div>
-					</div>
-
-					<div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t">
-						<div className="flex gap-2">
-							<User className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-0.5" />
-							<div>
-								<p className="text-sm text-muted-foreground">Cliente</p>
-								<p className="font-medium">{siniestro.cliente_nombre}</p>
-								<p className="text-sm text-muted-foreground">
-									{siniestro.cliente_tipo === "natural" ? "CI" : "NIT"}: {siniestro.cliente_documento}
-								</p>
-							</div>
-						</div>
-
-						<div className="flex gap-2">
-							<Building className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-0.5" />
-							<div>
-								<p className="text-sm text-muted-foreground">Compañía Aseguradora</p>
-								<p className="font-medium">{siniestro.compania_nombre}</p>
-							</div>
-						</div>
-					</div>
-				</CardContent>
-			</Card>
-
 			{/* Detalles del Siniestro */}
 			<Card>
 				<CardHeader>
@@ -162,44 +117,6 @@ export default function ResumenReadonly({ siniestro, coberturas }: ResumenReadon
 							))}
 						</div>
 					)}
-				</CardContent>
-			</Card>
-
-			{/* Información de Registro */}
-			<Card>
-				<CardHeader>
-					<CardTitle className="text-lg flex items-center gap-2">
-						<User className="h-5 w-5 text-primary" />
-						Información de Registro
-					</CardTitle>
-				</CardHeader>
-				<CardContent className="space-y-2">
-					<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-						<div>
-							<p className="text-sm text-muted-foreground">Responsable de Póliza</p>
-							<p className="font-medium">{siniestro.poliza_responsable_nombre || "N/A"}</p>
-						</div>
-						<div>
-							<p className="text-sm text-muted-foreground">Registrado por</p>
-							<p className="font-medium">{siniestro.creado_por_nombre || "N/A"}</p>
-						</div>
-						<div>
-							<p className="text-sm text-muted-foreground">Fecha de Registro</p>
-							<p className="font-medium">
-								{new Date(siniestro.created_at).toLocaleDateString("es-BO")} -{" "}
-								{new Date(siniestro.created_at).toLocaleTimeString("es-BO")}
-							</p>
-						</div>
-						{siniestro.updated_at && siniestro.updated_at !== siniestro.created_at && (
-							<div>
-								<p className="text-sm text-muted-foreground">Última Actualización</p>
-								<p className="font-medium">
-									{new Date(siniestro.updated_at).toLocaleDateString("es-BO")} -{" "}
-									{new Date(siniestro.updated_at).toLocaleTimeString("es-BO")}
-								</p>
-							</div>
-						)}
-					</div>
 				</CardContent>
 			</Card>
 
