@@ -515,3 +515,20 @@ export type ObtenerCoberturasPorRamoResponse = ServerResponse<{
 export type DescartarDocumentoResponse = ServerResponse<void>;
 export type RestaurarDocumentoResponse = ServerResponse<void>;
 export type EliminarDocumentoResponse = ServerResponse<void>;
+
+// ============================================
+// GESTIÓN DE RESPONSABLES
+// ============================================
+
+export type UsuarioResponsable = {
+	id: string;
+	full_name: string;
+	email: string;
+	role: string;
+};
+
+export type ObtenerUsuariosResponsablesResponse = ServerResponse<{
+	usuarios: UsuarioResponsable[];
+}>;
+
+export type CambiarResponsableResponse = ServerResponse<void>;

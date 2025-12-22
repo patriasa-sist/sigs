@@ -21,6 +21,8 @@ import type {
 	AgregarDocumentosResponse,
 	DocumentoSiniestro,
 	TipoDocumentoSiniestro,
+	ObtenerUsuariosResponsablesResponse,
+	CambiarResponsableResponse,
 } from "@/types/siniestro";
 
 /**
@@ -957,6 +959,111 @@ export async function obtenerCoberturasPorRamo(ramo: string): Promise<ObtenerCob
 		};
 	} catch (error) {
 		console.error("Error obteniendo coberturas por ramo:", error);
+		return {
+			success: false,
+			error: error instanceof Error ? error.message : "Error desconocido",
+		};
+	}
+}
+
+/**
+ * Obtener usuarios elegibles como responsables de siniestros
+ * (usuarios con rol: siniestros, comercial, admin)
+ */
+export async function obtenerUsuariosResponsables(): Promise<ObtenerUsuariosResponsablesResponse> {
+	const permiso = await verificarPermisoSiniestros();
+	if (!permiso.authorized) {
+		return { success: false, error: permiso.error };
+	}
+
+	const supabase = await createClient();
+
+	try {
+		const { data: usuarios, error } = await supabase
+			.from("profiles")
+			.select("id, full_name, email, role")
+			.in("role", ["siniestros", "comercial", "admin"])
+			.order("full_name");
+
+		if (error) throw error;
+
+		return {
+			success: true,
+			data: {
+				usuarios:
+					usuarios?.map((u) => ({
+						id: u.id,
+						full_name: u.full_name || "Sin nombre",
+						email: u.email || "",
+						role: u.role || "",
+					})) || [],
+			},
+		};
+	} catch (error) {
+		console.error("Error obteniendo usuarios responsables:", error);
+		return {
+			success: false,
+			error: error instanceof Error ? error.message : "Error desconocido",
+		};
+	}
+}
+
+/**
+ * Cambiar el responsable de un siniestro
+ */
+export async function cambiarResponsableSiniestro(
+	siniestroId: string,
+	nuevoResponsableId: string
+): Promise<CambiarResponsableResponse> {
+	const permiso = await verificarPermisoSiniestros();
+	if (!permiso.authorized) {
+		return { success: false, error: permiso.error };
+	}
+
+	const supabase = await createClient();
+
+	try {
+		// Verificar que el siniestro existe
+		const { data: siniestro, error: siniestroError } = await supabase
+			.from("siniestros")
+			.select("id")
+			.eq("id", siniestroId)
+			.single();
+
+		if (siniestroError || !siniestro) {
+			return { success: false, error: "Siniestro no encontrado" };
+		}
+
+		// Verificar que el nuevo responsable existe y tiene rol válido
+		const { data: usuario, error: usuarioError } = await supabase
+			.from("profiles")
+			.select("id, role")
+			.eq("id", nuevoResponsableId)
+			.single();
+
+		if (usuarioError || !usuario) {
+			return { success: false, error: "Usuario no encontrado" };
+		}
+
+		if (!["siniestros", "comercial", "admin"].includes(usuario.role)) {
+			return { success: false, error: "El usuario no tiene un rol válido para ser responsable" };
+		}
+
+		// Actualizar responsable (el trigger registrará el cambio en historial automáticamente)
+		const { error: updateError } = await supabase
+			.from("siniestros")
+			.update({ responsable_id: nuevoResponsableId })
+			.eq("id", siniestroId);
+
+		if (updateError) throw updateError;
+
+		// Revalidar rutas
+		revalidatePath("/siniestros");
+		revalidatePath(`/siniestros/editar/${siniestroId}`);
+
+		return { success: true, data: undefined };
+	} catch (error) {
+		console.error("Error cambiando responsable del siniestro:", error);
 		return {
 			success: false,
 			error: error instanceof Error ? error.message : "Error desconocido",

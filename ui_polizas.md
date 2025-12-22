@@ -359,3 +359,82 @@ si yo entro al reporte y este está abierto tengo la posibilidad de visualizar l
     declinado: carta de respaldo (archivo obligatorio), seleccionar el motivo de una lista parametrizada (solicitud cliente, pagó otra poliza) y boton "cerrar reporte"
     concluido: - seccion indemnizacion: archivo UIF y archivo PEP ambos obligatorios - monto reclamado y selector moneda Bs/USD - deducible y selector moneda Bs/USD - monto pagado y selector moneda Bs/USD - check para marcar si es un "pago comercial" - boton "cerrar reporte"
     toda actualizacion que se haga en este modo edicion debe quedar registrada en el propio siniestro para saber quién subió x archivo o quién anotó Y observación, además de quién cambió el siniestro de estado o quién lo cerró, esto debe ser visualizado como una lista con la fecha, el autor y el cambio realizado
+
+## siniestros 2da reunion
+
+reunion 18-12-2025
+
+paso 2
+
+-   fecha de reporte siniestro (no futura, ancla de aviso)
+-   fecha de reporte cliente (no futura)
+-   fecha reporte compania (no futura)
+-   NUEVO alerta de dias de "aviso de siniestro"
+-   (fecha de registro interno es automatico)
+
+modificar contacto>
+nombre (obligatorio)
+telefono (obligatorio)
+correo (opcional)
+
+paso3
+agregar "Gestion comercial" como cobertura seleccionable
+
+paso4
+cambiar a vista mejorada (dibujo)
+
+Resumen>
+visual de datos como cobranza
+info de registro quitar
+
+Documentos>
+nueva visual ref
+
+-------------------- acomodar
+
+Nuevo archivo "correo compania"
+alerta si el reporte no ha sufrido cambios en 10 dias y sigue abierto
+
+Observaciones>>
+
+-   NUEVA seccion "estados" encima de agregar observacion
+    Espera informe transito
+    Espera proforma
+    Espera franquicia
+    Espera orden
+    Espera reparacion
+    Espera conformidad
+    Espera receta medica
+    Espera autorizacion/ordenes
+    Espera liquidacion
+    [[[FALTA ESTADOS DE POLIZAS GENERALES]]]
+
+-   Documentos siniestro con minatura reconstruccion total
+    [[[pasar etiquetado e archivos para revision]]]
+
+-   visualizar no solo polizas vigentes, sino vencidas dentro del anio
+
+selector de conclusion>
+
+-   indemnizacion y/o reembolso>
+    UIF y PEP obligatorio
+-   ordenes>
+    reclamado, deducible, pagado
+-   quitar pago comercial de cierre concluido
+
+-   NUEVO Enviar mensaje de WhatsApp al cerrar el cierre del reporte
+
+-   quitar informacion de registro
+
+-   mensaje estandarizado al registrar el siniestro [[pedir mensaje]]]
+
+paso1
+
+-   color segun estado de poliza al seleccionarla
+
+alertas para siniestros (detalle grafico)
+
+etiquetas cambiar a Etapa
+
+acceso futuro>
+enviar observaciones del caso al cliente por correo

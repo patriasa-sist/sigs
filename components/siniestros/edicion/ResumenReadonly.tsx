@@ -1,7 +1,8 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { FileText, User, Building, Calendar, DollarSign, MapPin, Shield } from "lucide-react";
+import { FileText, User, Building, Calendar, DollarSign, MapPin, Shield, UserCog } from "lucide-react";
+import CambiarResponsable from "./CambiarResponsable";
 import type { SiniestroVista, CoberturaCatalogo } from "@/types/siniestro";
 
 interface ResumenReadonlyProps {
@@ -164,7 +165,7 @@ export default function ResumenReadonly({ siniestro, coberturas }: ResumenReadon
 				</CardContent>
 			</Card>
 
-			{/* Responsable del Siniestro */}
+			{/* Información de Registro */}
 			<Card>
 				<CardHeader>
 					<CardTitle className="text-lg flex items-center gap-2">
@@ -176,7 +177,7 @@ export default function ResumenReadonly({ siniestro, coberturas }: ResumenReadon
 					<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 						<div>
 							<p className="text-sm text-muted-foreground">Responsable de Póliza</p>
-							<p className="font-medium">{siniestro.responsable_nombre}</p>
+							<p className="font-medium">{siniestro.poliza_responsable_nombre || "N/A"}</p>
 						</div>
 						<div>
 							<p className="text-sm text-muted-foreground">Registrado por</p>
@@ -199,6 +200,47 @@ export default function ResumenReadonly({ siniestro, coberturas }: ResumenReadon
 							</div>
 						)}
 					</div>
+				</CardContent>
+			</Card>
+
+			{/* Responsable del Siniestro */}
+			<Card>
+				<CardHeader>
+					<CardTitle className="text-lg flex items-center gap-2">
+						<UserCog className="h-5 w-5 text-primary" />
+						Responsable del Siniestro
+					</CardTitle>
+				</CardHeader>
+				<CardContent className="space-y-4">
+					<div className="flex items-start justify-between gap-4">
+						<div className="flex-1">
+							<p className="text-sm text-muted-foreground mb-1">Responsable Actual</p>
+							<div className="flex items-center gap-2">
+								<User className="h-4 w-4 text-muted-foreground" />
+								<p className="font-medium text-lg">
+									{siniestro.responsable_nombre || "Sin asignar"}
+								</p>
+							</div>
+							{siniestro.responsable_email && (
+								<p className="text-sm text-muted-foreground mt-1">
+									{siniestro.responsable_email}
+								</p>
+							)}
+						</div>
+
+						<CambiarResponsable
+							siniestroId={siniestro.id}
+							responsableActualId={siniestro.responsable_id}
+							responsableActualNombre={siniestro.responsable_nombre}
+							estadoSiniestro={siniestro.estado}
+						/>
+					</div>
+
+					{siniestro.estado !== "abierto" && (
+						<div className="text-xs text-muted-foreground bg-secondary/30 rounded p-2">
+							El responsable solo puede cambiarse cuando el siniestro está abierto
+						</div>
+					)}
 				</CardContent>
 			</Card>
 		</div>
