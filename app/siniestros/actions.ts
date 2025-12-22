@@ -151,8 +151,7 @@ export async function guardarSiniestro(formState: RegistroSiniestroFormState): P
 				poliza_id: formState.poliza_seleccionada.id,
 				fecha_siniestro: formState.detalles.fecha_siniestro,
 				fecha_reporte: formState.detalles.fecha_reporte,
-				fecha_reporte_cliente: formState.detalles.fecha_reporte_cliente, // NUEVO
-				fecha_reporte_compania: formState.detalles.fecha_reporte_compania, // NUEVO
+				fecha_reporte_compania: formState.detalles.fecha_reporte_compania,
 				lugar_hecho: formState.detalles.lugar_hecho,
 				departamento_id: formState.detalles.departamento_id,
 				monto_reserva: formState.detalles.monto_reserva,

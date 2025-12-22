@@ -186,9 +186,9 @@ export function normalizarContactos(contactos: ContactoSiniestro[] | string[] | 
 
 export type DetallesSiniestro = {
 	fecha_siniestro: string; // ISO date string - Fecha en que ocurrió el siniestro
-	fecha_reporte: string; // ISO date string - Fecha de reporte del siniestro
-	fecha_reporte_cliente: string; // ISO date string - Fecha en que el cliente reportó (NUEVO)
-	fecha_reporte_compania: string; // ISO date string - Fecha en que se reportó a la compañía (NUEVO)
+	fecha_reporte: string; // ISO date string - Fecha de reporte del siniestro (PATRIA)
+	fecha_reporte_compania: string; // ISO date string - Fecha en que se reportó a la compañía aseguradora
+	// NOTA: fecha cuando cliente reportó = created_at (timestamp automático)
 	lugar_hecho: string;
 	departamento_id: string; // FK a regionales
 	monto_reserva: number;
@@ -309,10 +309,10 @@ export type Siniestro = {
 	codigo_siniestro?: string; // Código correlativo AÑO-00001 (generado automáticamente)
 
 	// Detalles
-	fecha_siniestro: string;
-	fecha_reporte: string; // Fecha de reporte interno (para retrocompatibilidad)
-	fecha_reporte_cliente: string; // NUEVO - Fecha en que el cliente reportó
-	fecha_reporte_compania: string; // NUEVO - Fecha en que se reportó a la compañía
+	fecha_siniestro: string; // Fecha en que ocurrió el siniestro
+	fecha_reporte: string; // Fecha de reporte PATRIA
+	fecha_reporte_compania: string; // Fecha en que se reportó a la compañía aseguradora
+	// NOTA: fecha cuando cliente reportó = created_at (timestamp automático)
 	lugar_hecho: string;
 	departamento_id: string;
 	monto_reserva: number;

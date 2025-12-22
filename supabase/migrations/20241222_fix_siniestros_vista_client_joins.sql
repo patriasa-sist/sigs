@@ -1,15 +1,31 @@
 -- ============================================
--- Fix: Corrección de JOINs en siniestros_vista
+-- Fix: Agregar fecha_reporte_compania + Corrección de JOINs en siniestros_vista
 -- Fecha: 2024-12-22
--- Descripción: Corregir nombres de tablas y columnas para mostrar correctamente
---              datos de cliente en dashboard de siniestros
+-- Descripción:
+--   1. Agregar fecha_reporte_compania a tabla siniestros
+--   2. Corregir nombres de tablas y columnas para mostrar correctamente
+--      datos de cliente en dashboard de siniestros
 -- ============================================
 
--- ISSUE: La vista usaba nombres incorrectos:
+-- ISSUE 1: Campo de fecha faltante referenciado en la vista
+--   - fecha_reporte_compania (cuando se reportó a la aseguradora)
+--   NOTA: created_at ya captura cuando el cliente reportó (momento de registro)
+--         por lo tanto NO se necesita fecha_reporte_cliente
+
+-- ISSUE 2: La vista usaba nombres incorrectos de tablas/columnas:
 --   - asegurado_id → debe ser client_id
 --   - tipo_asegurado → debe ser clients.client_type
 --   - personas_naturales/personas_juridicas → debe ser natural_clients/juridic_clients
+--   - responsable_comercial_id → debe ser responsable_id (columna no existe)
+--   - nc.ci → debe ser nc.numero_documento (columna correcta en natural_clients)
 
+-- STEP 1: Agregar campo de fecha faltante a tabla siniestros
+ALTER TABLE siniestros
+ADD COLUMN IF NOT EXISTS fecha_reporte_compania date;
+
+COMMENT ON COLUMN siniestros.fecha_reporte_compania IS 'Fecha en que se reportó a la compañía aseguradora';
+
+-- STEP 2: Recrear vista con JOINs corregidos y nuevos campos
 DROP VIEW IF EXISTS siniestros_vista CASCADE;
 
 CREATE VIEW siniestros_vista AS
@@ -19,7 +35,6 @@ SELECT
   s.codigo_siniestro,
   s.fecha_siniestro,
   s.fecha_reporte,
-  s.fecha_reporte_cliente,
   s.fecha_reporte_compania,
   s.lugar_hecho,
   s.departamento_id,
@@ -51,7 +66,7 @@ SELECT
   END AS cliente_nombre,
 
   CASE
-    WHEN c.client_type = 'natural' THEN nc.ci
+    WHEN c.client_type = 'natural' THEN nc.numero_documento
     WHEN c.client_type = 'juridic' THEN jc.nit
     ELSE NULL
   END AS cliente_documento,
@@ -110,7 +125,7 @@ LEFT JOIN clients c ON p.client_id = c.id
 LEFT JOIN natural_clients nc ON c.id = nc.client_id AND c.client_type = 'natural'
 LEFT JOIN juridic_clients jc ON c.id = jc.client_id AND c.client_type = 'juridic'
 LEFT JOIN profiles resp ON s.responsable_id = resp.id
-LEFT JOIN profiles resp_poliza ON p.responsable_comercial_id = resp_poliza.id
+LEFT JOIN profiles resp_poliza ON p.responsable_id = resp_poliza.id
 LEFT JOIN companias_aseguradoras comp ON p.compania_aseguradora_id = comp.id
 LEFT JOIN regionales reg ON s.departamento_id = reg.id
 LEFT JOIN profiles creador ON s.created_by = creador.id

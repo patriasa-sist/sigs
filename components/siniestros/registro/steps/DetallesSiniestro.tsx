@@ -108,17 +108,20 @@ export default function DetallesSiniestroStep({ detalles, onDetallesChange }: De
 		}
 	};
 
-	const validarFechaReporte = (fecha: string) => {
-		if (!fecha) {
+	const validarFechaReporte = (fechaSiniestro?: string) => {
+		const fechaSin = fechaSiniestro || detalles?.fecha_siniestro;
+
+		if (!fechaSin) {
 			setAdvertenciaFechaReporte(false);
 			return;
 		}
 
-		const fechaReporte = new Date(fecha);
+		const dateSiniestro = new Date(fechaSin);
 		const hoy = new Date();
-		const diff = hoy.getTime() - fechaReporte.getTime();
+		const diff = hoy.getTime() - dateSiniestro.getTime();
 		const diasDiferencia = Math.floor(diff / (1000 * 60 * 60 * 24));
 
+		// Advertir si el siniestro ocurrió hace más de 10 días
 		setAdvertenciaFechaReporte(diasDiferencia > 10);
 	};
 
@@ -175,64 +178,46 @@ export default function DetallesSiniestroStep({ detalles, onDetallesChange }: De
 							id="fecha_siniestro"
 							type="date"
 							value={detalles?.fecha_siniestro || ""}
-							onChange={(e) => handleFieldChange("fecha_siniestro", e.target.value)}
+							onChange={(e) => {
+								handleFieldChange("fecha_siniestro", e.target.value);
+								validarFechaReporte(e.target.value);
+							}}
 							max={today}
 							className={errores.fecha_siniestro ? "border-destructive" : ""}
 						/>
 						{errores.fecha_siniestro && (
 							<p className="text-sm text-destructive">{errores.fecha_siniestro}</p>
 						)}
+						{advertenciaFechaReporte && (
+							<div className="flex items-start gap-2 text-sm bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-2">
+								<AlertCircle className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
+								<p className="text-amber-900 dark:text-amber-100">
+									El siniestro ocurrió hace más de 10 días
+								</p>
+							</div>
+						)}
 						<p className="text-xs text-muted-foreground">Fecha en que ocurrió el siniestro</p>
 					</div>
 
 					<div className="space-y-2">
 						<Label htmlFor="fecha_reporte">
-							Fecha Reporte PATRIA <span className="text-destructive">*</span>
+							Fecha Reporte cliente <span className="text-destructive">*</span>
 						</Label>
 						<Input
 							id="fecha_reporte"
 							type="date"
 							value={detalles?.fecha_reporte || ""}
-							onChange={(e) => {
-								handleFieldChange("fecha_reporte", e.target.value);
-								validarFechaReporte(e.target.value);
-							}}
+							onChange={(e) => handleFieldChange("fecha_reporte", e.target.value)}
 							max={today}
 							className={errores.fecha_reporte ? "border-destructive" : ""}
 						/>
 						{errores.fecha_reporte && <p className="text-sm text-destructive">{errores.fecha_reporte}</p>}
-						{advertenciaFechaReporte && (
-							<div className="flex items-start gap-2 text-sm bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-2">
-								<AlertCircle className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
-								<p className="text-amber-900 dark:text-amber-100">
-									Esta fecha tiene más de 10 días de antigüedad
-								</p>
-							</div>
-						)}
-						<p className="text-xs text-muted-foreground">Fecha de reporte del siniestro</p>
+						<p className="text-xs text-muted-foreground">Fecha en que reportó el cliente</p>
 					</div>
 				</div>
 
-				{/* Fechas - Segunda fila */}
+				{/* Fecha Reporte Compañía */}
 				<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-					<div className="space-y-2">
-						<Label htmlFor="fecha_reporte_cliente">
-							Fecha Reporte Cliente <span className="text-destructive">*</span>
-						</Label>
-						<Input
-							id="fecha_reporte_cliente"
-							type="date"
-							value={detalles?.fecha_reporte_cliente || ""}
-							onChange={(e) => handleFieldChange("fecha_reporte_cliente", e.target.value)}
-							max={today}
-							className={errores.fecha_reporte_cliente ? "border-destructive" : ""}
-						/>
-						{errores.fecha_reporte_cliente && (
-							<p className="text-sm text-destructive">{errores.fecha_reporte_cliente}</p>
-						)}
-						<p className="text-xs text-muted-foreground">Fecha en que el cliente reportó el siniestro</p>
-					</div>
-
 					<div className="space-y-2">
 						<Label htmlFor="fecha_reporte_compania">
 							Fecha Reporte Compañía <span className="text-destructive">*</span>
@@ -439,8 +424,7 @@ export default function DetallesSiniestroStep({ detalles, onDetallesChange }: De
 								disabled={!nuevoContacto.nombre.trim() || !nuevoContacto.telefono.trim()}
 								size="sm"
 							>
-								<Plus className="h-4 w-4 mr-2" />
-								Agregar Contacto
+								Registrar Contacto
 							</Button>
 						</CardContent>
 					</Card>
