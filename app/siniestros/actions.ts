@@ -1172,11 +1172,12 @@ export async function obtenerHistorialEstados(
 
 /**
  * Cambiar estado de un siniestro
+ * Nota: Las observaciones se manejan en el tab "Observaciones" separadamente
  */
 export async function cambiarEstadoSiniestro(
 	siniestroId: string,
 	estadoId: string,
-	observacion?: string
+	observacion?: string | null
 ): Promise<CambiarEstadoSiniestroResponse> {
 	const permiso = await verificarPermisoSiniestros();
 	if (!permiso.authorized) {
@@ -1219,13 +1220,13 @@ export async function cambiarEstadoSiniestro(
 			return { success: false, error: "Estado no encontrado" };
 		}
 
-		// Insertar en historial de estados
+		// Insertar en historial de estados (sin observación)
 		const { data, error } = await supabase
 			.from("siniestros_estados_historial")
 			.insert({
 				siniestro_id: siniestroId,
 				estado_id: estadoId,
-				observacion: observacion || null,
+				observacion: null,
 				created_by: user.id,
 			})
 			.select()
@@ -1233,19 +1234,14 @@ export async function cambiarEstadoSiniestro(
 
 		if (error) throw error;
 
-		// Registrar en historial global
-		const historialMessage = observacion
-			? `Estado cambiado a: ${estadoData.nombre} - ${observacion}`
-			: `Estado cambiado a: ${estadoData.nombre}`;
-
+		// Registrar en historial global (sin observación, se usa el tab Observaciones para eso)
 		await supabase.from("siniestros_historial").insert({
 			siniestro_id: siniestroId,
 			accion: "cambio_estado",
 			detalles: {
 				estado_nuevo: estadoData.nombre,
-				observacion: observacion || null,
 			},
-			descripcion: historialMessage,
+			descripcion: `Estado cambiado a: ${estadoData.nombre}`,
 			created_by: user.id,
 		});
 

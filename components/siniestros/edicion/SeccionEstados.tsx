@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
 	Dialog,
@@ -30,7 +29,6 @@ export default function SeccionEstados({ siniestroId, estadoActual, estadoSinies
 	const [estados, setEstados] = useState<EstadoSiniestroCatalogo[]>([]);
 	const [historial, setHistorial] = useState<EstadoSiniestroHistorialConUsuario[]>([]);
 	const [estadoSeleccionado, setEstadoSeleccionado] = useState<string>("");
-	const [observacion, setObservacion] = useState("");
 	const [loading, setLoading] = useState(true);
 	const [saving, setSaving] = useState(false);
 	const [modalOpen, setModalOpen] = useState(false);
@@ -76,21 +74,15 @@ export default function SeccionEstados({ siniestroId, estadoActual, estadoSinies
 			return;
 		}
 
-		if (!observacion || observacion.trim() === "") {
-			toast.error("La observación es obligatoria");
-			return;
-		}
-
 		setSaving(true);
 
 		try {
-			const response = await cambiarEstadoSiniestro(siniestroId, estadoSeleccionado, observacion);
+			const response = await cambiarEstadoSiniestro(siniestroId, estadoSeleccionado, null);
 
 			if (response.success) {
 				toast.success("Estado cambiado exitosamente");
 				setModalOpen(false);
 				setEstadoSeleccionado("");
-				setObservacion("");
 				// Recargar historial
 				await loadData();
 				// Recargar página para actualizar
@@ -229,7 +221,7 @@ export default function SeccionEstados({ siniestroId, estadoActual, estadoSinies
 					<DialogHeader>
 						<DialogTitle>Cambiar Estado del Siniestro</DialogTitle>
 						<DialogDescription>
-							Confirma el cambio de estado. Opcionalmente puedes agregar una observación.
+							Confirma el cambio de estado. Si necesitas agregar notas adicionales, usa el tab "Observaciones".
 						</DialogDescription>
 					</DialogHeader>
 
@@ -241,20 +233,6 @@ export default function SeccionEstados({ siniestroId, estadoActual, estadoSinies
 									{estados.find((e) => e.id === estadoSeleccionado)?.nombre || "Estado seleccionado"}
 								</p>
 							</div>
-						</div>
-
-						<div className="space-y-2">
-							<Label htmlFor="observacion-modal">
-								Observación <span className="text-red-500">*</span>
-							</Label>
-							<Textarea
-								id="observacion-modal"
-								placeholder="Agrega una observación sobre este cambio de estado... (obligatorio)"
-								value={observacion}
-								onChange={(e) => setObservacion(e.target.value)}
-								rows={3}
-								required
-							/>
 						</div>
 					</div>
 
