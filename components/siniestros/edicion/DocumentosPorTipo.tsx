@@ -171,6 +171,18 @@ export default function DocumentosPorTipo({
 		return ["jpg", "jpeg", "png", "gif", "webp"].includes(ext || "");
 	};
 
+	// Construir URL completa del archivo desde Supabase Storage
+	const obtenerUrlArchivo = (archivoUrl: string) => {
+		// Si archivo_url ya es una URL completa, usarla directamente
+		if (archivoUrl.startsWith("http")) {
+			return archivoUrl;
+		}
+
+		// Si es una ruta relativa, construir la URL completa
+		const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+		return `${supabaseUrl}/storage/v1/object/public/siniestros-documentos/${archivoUrl}`;
+	};
+
 	const puedeAgregarDocumentos = estadoSiniestro === "abierto";
 
 	return (
@@ -263,7 +275,7 @@ export default function DocumentosPorTipo({
 										<div className="aspect-video bg-secondary rounded-md flex items-center justify-center overflow-hidden">
 											{esImagen(doc.nombre_archivo) ? (
 												// eslint-disable-next-line @next/next/no-img-element
-											<img src={doc.archivo_url} alt={doc.nombre_archivo} className="w-full h-full object-cover" />
+											<img src={obtenerUrlArchivo(doc.archivo_url)} alt={doc.nombre_archivo} className="w-full h-full object-cover" />
 											) : (
 												<FileText className="h-12 w-12 text-muted-foreground" />
 											)}
@@ -286,7 +298,7 @@ export default function DocumentosPorTipo({
 										{/* Acciones */}
 										<div className="flex gap-2">
 											<Button variant="outline" size="sm" asChild className="flex-1">
-												<a href={doc.archivo_url} target="_blank" rel="noopener noreferrer">
+												<a href={obtenerUrlArchivo(doc.archivo_url)} target="_blank" rel="noopener noreferrer">
 													<ExternalLink className="mr-1 h-3 w-3" />
 													Ver
 												</a>

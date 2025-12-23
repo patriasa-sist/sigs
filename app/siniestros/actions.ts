@@ -1569,7 +1569,7 @@ export async function obtenerDetalleCompletoPoliza(polizaId: string): Promise<{
 	success: boolean;
 	data?: {
 		poliza: Record<string, unknown>;
-		contacto: ContactoCliente;
+		contacto: ContactoClienteSiniestro;
 		datos_ramo: DatosEspecificosRamo;
 	};
 	error?: string;
@@ -1603,7 +1603,8 @@ export async function obtenerDetalleCompletoPoliza(polizaId: string): Promise<{
 			.rpc("obtener_contacto_poliza", { poliza_id_param: polizaId })
 			.single();
 
-		const contacto: ContactoCliente = (contactoData as ContactoCliente | null) ?? {
+		const contacto: ContactoClienteSiniestro = (contactoData as ContactoClienteSiniestro | null) ?? {
+			nombre_completo: "Desconocido",
 			telefono: null,
 			celular: null,
 			correo: null,
