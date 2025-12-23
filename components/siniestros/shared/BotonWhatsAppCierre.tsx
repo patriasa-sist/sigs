@@ -27,7 +27,7 @@ export default function BotonWhatsAppCierre({ siniestroId, tipoCierre, onComplet
 					description: "El mensaje de notificación está listo para enviar",
 				});
 				onComplete?.();
-			} else {
+			} else if (!response.success) {
 				toast.error(response.error || "Error al preparar mensaje de WhatsApp", {
 					description: "Verifica que el cliente tenga un número de contacto registrado",
 				});

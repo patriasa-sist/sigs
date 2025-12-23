@@ -114,7 +114,7 @@ export default function RegistrarSiniestroForm() {
 				// Mostrar éxito y botón de WhatsApp
 				setRegistroExitoso(true);
 				setNuevoSiniestroId(result.data.siniestro_id);
-			} else {
+			} else if (!result.success) {
 				setErrores([result.error]);
 			}
 		} catch {

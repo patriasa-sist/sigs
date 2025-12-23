@@ -80,8 +80,8 @@ export default function Dashboard({ polizasIniciales, statsIniciales }: Dashboar
 		// Apply sorting if active
 		if (sortField) {
 			filtered = [...filtered].sort((a, b) => {
-				let valueA: any;
-				let valueB: any;
+				let valueA: string | number;
+				let valueB: string | number;
 
 				switch (sortField) {
 					case "numero_poliza":

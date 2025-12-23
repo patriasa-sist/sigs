@@ -29,6 +29,7 @@ export default function DocumentosPolizaModal({
 	const getFileIcon = (filename: string) => {
 		const ext = filename.split(".").pop()?.toLowerCase();
 		if (["jpg", "jpeg", "png"].includes(ext || "")) {
+			// eslint-disable-next-line jsx-a11y/alt-text
 			return <Image className="h-6 w-6 text-blue-500" />;
 		}
 		if (ext === "pdf") {

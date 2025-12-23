@@ -53,6 +53,7 @@ export default function CuotasModal({ poliza, open, onClose, onSelectQuota }: Cu
 		if (open && poliza) {
 			loadExtendedData();
 		}
+	// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [open, poliza]);
 
 	const loadExtendedData = async () => {

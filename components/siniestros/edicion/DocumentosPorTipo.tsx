@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { FileText, Image as ImageIcon, Upload, Trash2, ExternalLink, Loader2, RotateCcw } from "lucide-react";
+import { FileText, Upload, Trash2, ExternalLink, Loader2, RotateCcw } from "lucide-react";
 import { TIPOS_DOCUMENTO_SINIESTRO, type TipoDocumentoSiniestro, type DocumentoSiniestroConUsuario } from "@/types/siniestro";
 import { agregarDocumentosSiniestro } from "@/app/siniestros/actions";
 import {
@@ -36,7 +36,7 @@ export default function DocumentosPorTipo({
 
 	// Agrupar documentos por tipo
 	const documentosPorTipo = useMemo(() => {
-		const grupos: Record<TipoDocumentoSiniestro, DocumentoSiniestroConUsuario[]> = {} as any;
+		const grupos: Record<TipoDocumentoSiniestro, DocumentoSiniestroConUsuario[]> = {} as Record<TipoDocumentoSiniestro, DocumentoSiniestroConUsuario[]>;
 
 		TIPOS_DOCUMENTO_SINIESTRO.forEach((tipo) => {
 			grupos[tipo] = documentos.filter((doc) => doc.tipo_documento === tipo);
@@ -262,7 +262,8 @@ export default function DocumentosPorTipo({
 										{/* Miniatura o icono */}
 										<div className="aspect-video bg-secondary rounded-md flex items-center justify-center overflow-hidden">
 											{esImagen(doc.nombre_archivo) ? (
-												<img src={doc.archivo_url} alt={doc.nombre_archivo} className="w-full h-full object-cover" />
+												// eslint-disable-next-line @next/next/no-img-element
+											<img src={doc.archivo_url} alt={doc.nombre_archivo} className="w-full h-full object-cover" />
 											) : (
 												<FileText className="h-12 w-12 text-muted-foreground" />
 											)}

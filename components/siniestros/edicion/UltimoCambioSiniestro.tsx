@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Clock, ExternalLink, Circle, Edit, FileText, MessageSquare, XCircle, CheckCircle } from "lucide-react";
+import { Clock, ExternalLink } from "lucide-react";
 import type { HistorialSiniestro } from "@/types/siniestro";
 
 interface UltimoCambioSiniestroProps {

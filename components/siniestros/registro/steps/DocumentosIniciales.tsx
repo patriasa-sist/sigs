@@ -25,7 +25,7 @@ export default function DocumentosInicialesStep({
 
 	// Agrupar documentos por tipo
 	const documentosPorTipo = useMemo(() => {
-		const grupos: Record<TipoDocumentoSiniestro, DocumentoSiniestro[]> = {} as any;
+		const grupos: Record<TipoDocumentoSiniestro, DocumentoSiniestro[]> = {} as Record<TipoDocumentoSiniestro, DocumentoSiniestro[]>;
 
 		TIPOS_DOCUMENTO_SINIESTRO.forEach((tipo) => {
 			grupos[tipo] = documentos.filter((doc) => doc.tipo_documento === tipo);
@@ -90,7 +90,7 @@ export default function DocumentosInicialesStep({
 	};
 
 	// Handler para eliminar documento
-	const handleEliminar = (index: number) => {
+	const handleEliminar = () => {
 		const docIndex = documentos.findIndex((doc) =>
 			doc.tipo_documento === tipoSeleccionado &&
 			documentosFiltrados.includes(doc)
@@ -201,7 +201,7 @@ export default function DocumentosInicialesStep({
 										<div className="text-center text-muted-foreground">
 											<FileText className="h-12 w-12 mx-auto mb-2 opacity-20" />
 											<p className="text-sm">No hay documentos de este tipo</p>
-											<p className="text-xs mt-1">Usa el botón "Subir Archivo" para agregar</p>
+											<p className="text-xs mt-1">Usa el botón &quot;Subir Archivo&quot; para agregar</p>
 										</div>
 									</div>
 								) : (
@@ -211,6 +211,7 @@ export default function DocumentosInicialesStep({
 												{/* Miniatura o icono */}
 												<div className="aspect-video bg-secondary rounded-md flex items-center justify-center overflow-hidden">
 													{doc.file && esImagen(doc.nombre_archivo) ? (
+														// eslint-disable-next-line @next/next/no-img-element
 														<img
 															src={getPreviewUrl(doc.file)}
 															alt={doc.nombre_archivo}
@@ -236,7 +237,7 @@ export default function DocumentosInicialesStep({
 													<Button
 														variant="destructive"
 														size="sm"
-														onClick={() => handleEliminar(index)}
+														onClick={handleEliminar}
 														className="flex-1"
 													>
 														<Trash2 className="mr-1 h-3 w-3" />

@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/select";
 import { Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import type { SiniestroVista, SiniestroVistaConEstado, SiniestrosStats, EstadoSiniestro } from "@/types/siniestro";
+import type { SiniestroVistaConEstado, SiniestrosStats, EstadoSiniestro } from "@/types/siniestro";
 import StatsCards from "./StatsCards";
 import SiniestrosTable from "./SiniestrosTable";
 import ExportarSiniestros from "./ExportarSiniestros";

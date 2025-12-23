@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -15,8 +15,8 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Clock, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
-import { obtenerEstadosCatalogo, obtenerHistorialEstados, cambiarEstadoSiniestro } from "@/app/siniestros/actions";
-import type { EstadoSiniestroCatalogo, EstadoSiniestroHistorialConUsuario, EstadoActualSiniestro } from "@/types/siniestro";
+import { obtenerEstadosCatalogo, cambiarEstadoSiniestro } from "@/app/siniestros/actions";
+import type { EstadoSiniestroCatalogo, EstadoActualSiniestro } from "@/types/siniestro";
 import { toast } from "sonner";
 
 interface SeccionEstadosProps {
@@ -27,17 +27,12 @@ interface SeccionEstadosProps {
 
 export default function SeccionEstados({ siniestroId, estadoActual, estadoSiniestro }: SeccionEstadosProps) {
 	const [estados, setEstados] = useState<EstadoSiniestroCatalogo[]>([]);
-	const [historial, setHistorial] = useState<EstadoSiniestroHistorialConUsuario[]>([]);
 	const [estadoSeleccionado, setEstadoSeleccionado] = useState<string>("");
 	const [loading, setLoading] = useState(true);
 	const [saving, setSaving] = useState(false);
 	const [modalOpen, setModalOpen] = useState(false);
 
-	useEffect(() => {
-		loadData();
-	}, [siniestroId]);
-
-	const loadData = async () => {
+	const loadData = useCallback(async () => {
 		setLoading(true);
 
 		try {
@@ -46,19 +41,17 @@ export default function SeccionEstados({ siniestroId, estadoActual, estadoSinies
 			if (estadosResponse.success && estadosResponse.data) {
 				setEstados(estadosResponse.data.estados);
 			}
-
-			// Cargar historial de estados
-			const historialResponse = await obtenerHistorialEstados(siniestroId);
-			if (historialResponse.success && historialResponse.data) {
-				setHistorial(historialResponse.data.historial);
-			}
 		} catch (error) {
 			console.error("Error loading estados:", error);
 			toast.error("Error al cargar estados");
 		} finally {
 			setLoading(false);
 		}
-	};
+	}, []);
+
+	useEffect(() => {
+		loadData();
+	}, [siniestroId, loadData]);
 
 	const handleOpenModal = () => {
 		if (!estadoSeleccionado) {
@@ -77,7 +70,7 @@ export default function SeccionEstados({ siniestroId, estadoActual, estadoSinies
 		setSaving(true);
 
 		try {
-			const response = await cambiarEstadoSiniestro(siniestroId, estadoSeleccionado, null);
+			const response = await cambiarEstadoSiniestro(siniestroId, estadoSeleccionado);
 
 			if (response.success) {
 				toast.success("Estado cambiado exitosamente");
@@ -139,7 +132,7 @@ export default function SeccionEstados({ siniestroId, estadoActual, estadoSinies
 								)}
 							</div>
 							{estadoActual.estado_actual_observacion && (
-								<p className="text-sm text-muted-foreground mt-2 italic">"{estadoActual.estado_actual_observacion}"</p>
+								<p className="text-sm text-muted-foreground mt-2 italic">&quot;{estadoActual.estado_actual_observacion}&quot;</p>
 							)}
 						</div>
 					)}
@@ -188,7 +181,7 @@ export default function SeccionEstados({ siniestroId, estadoActual, estadoSinies
 					<DialogHeader>
 						<DialogTitle>Cambiar Estado del Siniestro</DialogTitle>
 						<DialogDescription>
-							Confirma el cambio de estado. Si necesitas agregar notas adicionales, usa el tab "Observaciones".
+							Confirma el cambio de estado. Si necesitas agregar notas adicionales, usa el tab &quot;Observaciones&quot;.
 						</DialogDescription>
 					</DialogHeader>
 

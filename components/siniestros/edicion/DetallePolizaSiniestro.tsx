@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { User, Phone, Mail, MessageCircle, MapPin, Car, Users as UsersIcon, Loader2 } from "lucide-react";
+import { User, Phone, Mail, MessageCircle, MapPin, Car, Loader2 } from "lucide-react";
 import { obtenerDetalleCompletoPoliza } from "@/app/siniestros/actions";
 import { generarURLWhatsApp } from "@/utils/whatsapp";
 import type { ContactoCliente, DatosEspecificosRamo } from "@/types/cobranza";
@@ -11,15 +11,27 @@ interface DetallePolizaSiniestroProps {
 	polizaId: string;
 }
 
+interface PolizaDetalle {
+	numero_poliza?: string;
+	ramo?: string;
+	compania?: { nombre?: string };
+	fecha_inicio_vigencia?: string;
+	fecha_fin_vigencia?: string;
+	moneda?: string;
+	prima_total?: number;
+	[key: string]: unknown;
+}
+
 export default function DetallePolizaSiniestro({ polizaId }: DetallePolizaSiniestroProps) {
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
-	const [poliza, setPoliza] = useState<any>(null);
+	const [poliza, setPoliza] = useState<PolizaDetalle | null>(null);
 	const [contacto, setContacto] = useState<ContactoCliente | null>(null);
 	const [datosRamo, setDatosRamo] = useState<DatosEspecificosRamo | null>(null);
 
 	useEffect(() => {
 		loadDetallePoliza();
+	// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [polizaId]);
 
 	const loadDetallePoliza = async () => {
@@ -119,7 +131,7 @@ export default function DetallePolizaSiniestro({ polizaId }: DetallePolizaSinies
 							<div className="text-sm">
 								<span className="text-muted-foreground">Inicio vigencia:</span>
 								<p className="font-medium">
-									{poliza.fecha_inicio_vigencia
+									{poliza.fecha_inicio_vigencia && typeof poliza.fecha_inicio_vigencia === 'string'
 										? new Date(poliza.fecha_inicio_vigencia).toLocaleDateString("es-BO")
 										: "N/A"}
 								</p>
@@ -127,7 +139,7 @@ export default function DetallePolizaSiniestro({ polizaId }: DetallePolizaSinies
 							<div className="text-sm">
 								<span className="text-muted-foreground">Fin vigencia:</span>
 								<p className="font-medium">
-									{poliza.fecha_fin_vigencia
+									{poliza.fecha_fin_vigencia && typeof poliza.fecha_fin_vigencia === 'string'
 										? new Date(poliza.fecha_fin_vigencia).toLocaleDateString("es-BO")
 										: "N/A"}
 								</p>
@@ -161,7 +173,7 @@ export default function DetallePolizaSiniestro({ polizaId }: DetallePolizaSinies
 										</p>
 										{vehiculo.color && <p className="text-xs text-muted-foreground">Color: {vehiculo.color}</p>}
 										<p className="text-sm font-medium mt-1">
-											Valor: {poliza.moneda || "Bs"} {vehiculo.valor_asegurado.toLocaleString("es-BO")}
+											Valor: {poliza?.moneda ?? "Bs"} {vehiculo.valor_asegurado.toLocaleString("es-BO")}
 										</p>
 									</div>
 								))}

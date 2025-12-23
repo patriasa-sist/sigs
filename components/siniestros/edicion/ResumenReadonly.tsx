@@ -1,7 +1,7 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { FileText, User, Building, Calendar, DollarSign, MapPin, Shield, UserCog } from "lucide-react";
+import { User, Calendar, MapPin, Shield, UserCog } from "lucide-react";
 import CambiarResponsable from "./CambiarResponsable";
 import type { SiniestroVista, CoberturaCatalogo } from "@/types/siniestro";
 
@@ -50,14 +50,19 @@ export default function ResumenReadonly({ siniestro, coberturas }: ResumenReadon
 						<div className="pt-2 border-t">
 							<p className="text-sm text-muted-foreground mb-1">Contactos</p>
 							<div className="flex flex-wrap gap-2">
-								{siniestro.contactos.filter(c => c).map((contacto, idx) => (
-									<span
-										key={`contacto-${idx}-${contacto}`}
-										className="text-xs bg-secondary px-2 py-1 rounded"
-									>
-										{contacto}
-									</span>
-								))}
+								{siniestro.contactos.filter(c => c).map((contacto, idx) => {
+									const displayText = typeof contacto === 'string'
+										? contacto
+										: `${contacto.nombre} - ${contacto.telefono}${contacto.correo ? ` (${contacto.correo})` : ''}`;
+									return (
+										<span
+											key={`contacto-${idx}`}
+											className="text-xs bg-secondary px-2 py-1 rounded"
+										>
+											{displayText}
+										</span>
+									);
+								})}
 							</div>
 						</div>
 					)}

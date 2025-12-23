@@ -484,12 +484,12 @@ export type GuardarSiniestroResponse = ServerResponse<{
 }>;
 
 export type ObtenerSiniestrosResponse = ServerResponse<{
-	siniestros: SiniestroVista[];
+	siniestros: SiniestroVistaConEstado[];
 	stats: SiniestrosStats;
 }>;
 
 export type ObtenerSiniestroDetalleResponse = ServerResponse<{
-	siniestro: SiniestroVista;
+	siniestro: SiniestroVistaConEstado;
 	coberturas: CoberturaCatalogo[];
 	documentos: DocumentoSiniestroConUsuario[];
 	observaciones: ObservacionSiniestro[];

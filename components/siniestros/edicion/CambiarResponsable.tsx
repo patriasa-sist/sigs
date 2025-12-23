@@ -57,7 +57,7 @@ export default function CambiarResponsable({
 			const result = await obtenerUsuariosResponsables();
 			if (result.success && result.data) {
 				setUsuarios(result.data.usuarios);
-			} else {
+			} else if (!result.success) {
 				toast.error(result.error || "Error al cargar usuarios");
 			}
 		} catch (error) {

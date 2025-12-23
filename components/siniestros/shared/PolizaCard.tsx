@@ -315,7 +315,7 @@ export default function PolizaCard({ poliza, onDeselect, showDeselectButton = tr
 
 									{!showAllCuotas && poliza.cuotas.length > 3 && (
 										<p className="text-xs text-muted-foreground text-center italic">
-											+{poliza.cuotas.length - 3} cuotas más (haz clic en "Ver todas" arriba)
+											+{poliza.cuotas.length - 3} cuotas más (haz clic en &quot;Ver todas&quot; arriba)
 										</p>
 									)}
 								</div>

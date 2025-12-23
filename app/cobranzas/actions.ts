@@ -21,7 +21,6 @@ import type {
 	ContactoCliente,
 	DatosEspecificosRamo,
 	VehiculoAutomotor,
-	AseguradoPoliza,
 	TipoComprobante,
 	ObtenerDetallePolizaResponse,
 	SubirComprobanteResponse,
@@ -759,6 +758,17 @@ export async function obtenerDetallePolizaParaCuotas(
 			case "automotor":
 			case "automotores": {
 				// Query vehicles from separate table
+				type VehiculoRaw = {
+					id: string;
+					placa: string;
+					valor_asegurado: number;
+					tipo_vehiculo: { nombre: string } | null;
+					marca: { nombre: string } | null;
+					modelo: string | null;
+					ano: number | null;
+					color: string | null;
+				};
+
 				const { data: vehiculos, error: vehiculosError } = await supabase
 					.from("polizas_automotor_vehiculos")
 					.select(
@@ -780,14 +790,14 @@ export async function obtenerDetallePolizaParaCuotas(
 				}
 
 				const vehiculosFormateados: VehiculoAutomotor[] =
-					vehiculos?.map((v) => ({
+					(vehiculos as VehiculoRaw[] | null)?.map((v) => ({
 						id: v.id,
 						placa: v.placa,
 						tipo_vehiculo: v.tipo_vehiculo?.nombre,
 						marca: v.marca?.nombre,
-						modelo: v.modelo,
-						ano: v.ano,
-						color: v.color,
+						modelo: v.modelo ?? undefined,
+						ano: v.ano ?? undefined,
+						color: v.color ?? undefined,
 						valor_asegurado: v.valor_asegurado,
 					})) || [];
 
@@ -833,13 +843,13 @@ export async function obtenerDetallePolizaParaCuotas(
 		// Calculate totals
 		const cuotas = poliza.cuotas || [];
 		const total_pagado = cuotas
-			.filter((c) => c.estado === "pagado")
-			.reduce((sum, c) => sum + c.monto, 0);
+			.filter((c: CuotaPago) => c.estado === "pagado")
+			.reduce((sum: number, c: CuotaPago) => sum + c.monto, 0);
 		const total_pendiente = cuotas
-			.filter((c) => c.estado !== "pagado")
-			.reduce((sum, c) => sum + c.monto, 0);
-		const cuotas_pendientes = cuotas.filter((c) => c.estado === "pendiente").length;
-		const cuotas_vencidas = cuotas.filter((c) => c.estado === "vencido").length;
+			.filter((c: CuotaPago) => c.estado !== "pagado")
+			.reduce((sum: number, c: CuotaPago) => sum + c.monto, 0);
+		const cuotas_pendientes = cuotas.filter((c: CuotaPago) => c.estado === "pendiente").length;
+		const cuotas_vencidas = cuotas.filter((c: CuotaPago) => c.estado === "vencido").length;
 
 		// Build extended policy object
 		const polizaExtendida: PolizaConPagosExtendida = {

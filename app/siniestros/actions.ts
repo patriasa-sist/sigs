@@ -24,7 +24,6 @@ import type {
 	ObtenerUsuariosResponsablesResponse,
 	CambiarResponsableResponse,
 	// Nuevos tipos
-	EstadoSiniestroCatalogo,
 	EstadoSiniestroHistorialConUsuario,
 	ObtenerEstadosCatalogoResponse,
 	ObtenerHistorialEstadosResponse,
@@ -32,10 +31,9 @@ import type {
 	SiniestroVistaConEstado,
 	ContactoClienteSiniestro,
 	EnviarWhatsAppSiniestroResponse,
-	EstadoSiniestro,
 } from "@/types/siniestro";
 import type { ContactoCliente, DatosEspecificosRamo, VehiculoAutomotor } from "@/types/cobranza";
-import { generarURLWhatsApp, cleanPhoneNumber } from "@/utils/whatsapp";
+import { generarURLWhatsApp } from "@/utils/whatsapp";
 
 /**
  * Verificar permisos de siniestros, comercial o admin
@@ -85,7 +83,16 @@ export async function obtenerSiniestros(): Promise<ObtenerSiniestrosResponse> {
 
 		if (siniestrosError) throw siniestrosError;
 
-		const siniestrosArray = siniestros || [];
+		// Calcular requiere_atencion para cada siniestro
+		const ahora = new Date();
+		const siniestrosArray = (siniestros || []).map((s) => {
+			const updatedAt = new Date(s.updated_at as string);
+			const diasSinActualizacion = Math.floor((ahora.getTime() - updatedAt.getTime()) / (1000 * 60 * 60 * 24));
+			return {
+				...s,
+				requiere_atencion: s.estado === "abierto" && diasSinActualizacion >= 10,
+			};
+		});
 
 		// Calcular estadísticas
 		const hoy = new Date();
@@ -265,13 +272,22 @@ export async function obtenerSiniestroDetalle(siniestroId: string): Promise<Obte
 
 	try {
 		// Obtener siniestro desde vista con estado actual
-		const { data: siniestro, error: siniestroError } = await supabase
+		const { data: siniestroRaw, error: siniestroError } = await supabase
 			.from("siniestros_con_estado_actual")
 			.select("*")
 			.eq("id", siniestroId)
 			.single();
 
 		if (siniestroError) throw siniestroError;
+
+		// Calcular requiere_atencion
+		const ahora = new Date();
+		const updatedAt = new Date(siniestroRaw.updated_at);
+		const diasSinActualizacion = Math.floor((ahora.getTime() - updatedAt.getTime()) / (1000 * 60 * 60 * 24));
+		const siniestro: SiniestroVistaConEstado = {
+			...siniestroRaw,
+			requiere_atencion: siniestroRaw.estado === "abierto" && diasSinActualizacion >= 10,
+		};
 
 		// Obtener coberturas
 		const { data: coberturasRaw, error: coberturasError } = await supabase
@@ -295,26 +311,16 @@ export async function obtenerSiniestroDetalle(siniestroId: string): Promise<Obte
 		if (coberturasError) throw coberturasError;
 
 		const coberturas =
-			coberturasRaw?.map((c: {
-				coberturas_catalogo: {
-					id: string;
-					nombre: string;
-					descripcion?: string;
-					codigo_puc: string;
-					ramo: string;
-					es_custom: boolean;
-					activo: boolean;
-				} | null;
-			}) => {
-				const catalogo = c.coberturas_catalogo;
+			coberturasRaw?.map((c: Record<string, unknown>) => {
+				const catalogo = c.coberturas_catalogo as Record<string, unknown> | null;
 				return {
-					id: catalogo?.id || "",
-					nombre: catalogo?.nombre || "",
-					descripcion: catalogo?.descripcion,
-					codigo_puc: catalogo?.codigo_puc || "",
-					ramo: catalogo?.ramo || "",
-					es_custom: catalogo?.es_custom || false,
-					activo: catalogo?.activo || false,
+					id: (catalogo?.id as string) || "",
+					nombre: (catalogo?.nombre as string) || "",
+					descripcion: catalogo?.descripcion as string | undefined,
+					codigo_puc: (catalogo?.codigo_puc as string) || "",
+					ramo: (catalogo?.ramo as string) || "",
+					es_custom: (catalogo?.es_custom as boolean) || false,
+					activo: (catalogo?.activo as boolean) || false,
 				};
 			}) || [];
 
@@ -412,7 +418,7 @@ export async function obtenerSiniestroDetalle(siniestroId: string): Promise<Obte
 
 		// Enriquecer con nombres de usuario
 		const historial = await Promise.all(
-			(historialRaw || []).map(async (h: any) => {
+			(historialRaw || []).map(async (h) => {
 				if (!h.created_by) {
 					return {
 						...h,
@@ -1138,12 +1144,12 @@ export async function obtenerHistorialEstados(
 
 		if (error) throw error;
 
-		const historial: EstadoSiniestroHistorialConUsuario[] = (data || []).map((item: any) => ({
+		const historial: EstadoSiniestroHistorialConUsuario[] = (data || []).map((item) => ({
 			id: item.id,
 			siniestro_id: item.siniestro_id,
 			estado_id: item.estado_id,
-			observacion: item.observacion,
-			created_by: item.created_by,
+			observacion: item.observacion ?? undefined,
+			created_by: item.created_by ?? undefined,
 			created_at: item.created_at,
 			estado: item.estado,
 			usuario_nombre: item.perfil?.full_name,
@@ -1168,8 +1174,7 @@ export async function obtenerHistorialEstados(
  */
 export async function cambiarEstadoSiniestro(
 	siniestroId: string,
-	estadoId: string,
-	observacion?: string | null
+	estadoId: string
 ): Promise<CambiarEstadoSiniestroResponse> {
 	const permiso = await verificarPermisoSiniestros();
 	if (!permiso.authorized) {
@@ -1315,7 +1320,7 @@ export async function obtenerSiniestrosConAtencion(): Promise<ObtenerSiniestrosR
 		return {
 			success: true,
 			data: {
-				siniestros: siniestros as any, // Cast temporal
+				siniestros: siniestros as SiniestroVistaConEstado[],
 				stats,
 			},
 		};
@@ -1436,8 +1441,8 @@ Le informamos que su siniestro ha sido registrado exitosamente en nuestro sistem
 
 📋 *Código:* ${siniestro.codigo_siniestro}
 📅 *Fecha del siniestro:* ${new Date(siniestro.fecha_siniestro).toLocaleDateString("es-BO")}
-🛡️ *Póliza:* ${(siniestro.poliza as any)?.numero_poliza || "N/A"}
-📦 *Ramo:* ${(siniestro.poliza as any)?.ramo || "N/A"}
+🛡️ *Póliza:* ${typeof siniestro.poliza === 'object' && siniestro.poliza && 'numero_poliza' in siniestro.poliza ? siniestro.poliza.numero_poliza : "N/A"}
+📦 *Ramo:* ${typeof siniestro.poliza === 'object' && siniestro.poliza && 'ramo' in siniestro.poliza ? siniestro.poliza.ramo : "N/A"}
 
 Nuestro equipo procederá con la evaluación correspondiente. Le mantendremos informado sobre el avance del proceso.
 
@@ -1533,7 +1538,7 @@ Le informamos que su siniestro ha sido cerrado con el siguiente estado:
 ${estadoTexto}
 
 📋 *Código:* ${siniestro.codigo_siniestro}
-🛡️ *Póliza:* ${(siniestro.poliza as any)?.numero_poliza || "N/A"}
+🛡️ *Póliza:* ${typeof siniestro.poliza === 'object' && siniestro.poliza && 'numero_poliza' in siniestro.poliza ? siniestro.poliza.numero_poliza : "N/A"}
 📅 *Fecha de cierre:* ${new Date().toLocaleDateString("es-BO")}
 
 ${detalleTexto}
@@ -1563,7 +1568,7 @@ Saludos cordiales,
 export async function obtenerDetalleCompletoPoliza(polizaId: string): Promise<{
 	success: boolean;
 	data?: {
-		poliza: any; // PolizaConPagos
+		poliza: Record<string, unknown>;
 		contacto: ContactoCliente;
 		datos_ramo: DatosEspecificosRamo;
 	};
@@ -1598,7 +1603,7 @@ export async function obtenerDetalleCompletoPoliza(polizaId: string): Promise<{
 			.rpc("obtener_contacto_poliza", { poliza_id_param: polizaId })
 			.single();
 
-		const contacto: ContactoCliente = contactoData || {
+		const contacto: ContactoCliente = (contactoData as ContactoCliente | null) ?? {
 			telefono: null,
 			celular: null,
 			correo: null,
@@ -1624,15 +1629,15 @@ export async function obtenerDetalleCompletoPoliza(polizaId: string): Promise<{
 				`)
 				.eq("poliza_id", polizaId);
 
-			const vehiculosFormateados: VehiculoAutomotor[] = (vehiculos || []).map((v: any) => ({
-				id: v.id,
-				placa: v.placa,
-				tipo_vehiculo: v.tipo_vehiculo?.nombre,
-				marca: v.marca?.nombre,
-				modelo: v.modelo,
-				ano: v.ano,
-				color: v.color,
-				valor_asegurado: v.valor_asegurado,
+			const vehiculosFormateados: VehiculoAutomotor[] = (vehiculos || []).map((v: Record<string, unknown>) => ({
+				id: v.id as string,
+				placa: v.placa as string,
+				tipo_vehiculo: (v.tipo_vehiculo as Record<string, unknown> | null)?.nombre as string | undefined,
+				marca: (v.marca as Record<string, unknown> | null)?.nombre as string | undefined,
+				modelo: v.modelo as string | undefined,
+				ano: v.ano as number | undefined,
+				color: v.color as string | undefined,
+				valor_asegurado: v.valor_asegurado as number,
 			}));
 
 			datos_ramo = {

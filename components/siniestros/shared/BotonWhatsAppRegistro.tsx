@@ -24,7 +24,7 @@ export default function BotonWhatsAppRegistro({ siniestroId }: BotonWhatsAppRegi
 				toast.success("WhatsApp Web se abrirá en una nueva pestaña", {
 					description: "El mensaje de confirmación está listo para enviar",
 				});
-			} else {
+			} else if (!response.success) {
 				toast.error(response.error || "Error al preparar mensaje de WhatsApp", {
 					description: "Verifica que el cliente tenga un número de contacto registrado",
 				});

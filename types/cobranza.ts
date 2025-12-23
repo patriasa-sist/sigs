@@ -23,6 +23,8 @@ export type CuotaPago = {
 	fecha_pago: string | null; // ISO date string
 	estado: EstadoPago;
 	observaciones: string | null;
+	fecha_vencimiento_original?: string | null; // Fecha original antes de prórrogas
+	prorrogas_historial?: any[] | null; // Array de prórrogas aplicadas
 	created_at: string;
 	updated_at: string;
 	created_by: string | null;
