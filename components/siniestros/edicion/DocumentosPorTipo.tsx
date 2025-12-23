@@ -172,7 +172,9 @@ export default function DocumentosPorTipo({
 	};
 
 	// Construir URL completa del archivo desde Supabase Storage
-	const obtenerUrlArchivo = (archivoUrl: string) => {
+	const obtenerUrlArchivo = (archivoUrl: string | undefined) => {
+		if (!archivoUrl) return "";
+
 		// Si archivo_url ya es una URL completa, usarla directamente
 		if (archivoUrl.startsWith("http")) {
 			return archivoUrl;

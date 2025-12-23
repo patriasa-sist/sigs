@@ -32,7 +32,7 @@ import type {
 	ContactoClienteSiniestro,
 	EnviarWhatsAppSiniestroResponse,
 } from "@/types/siniestro";
-import type { ContactoCliente, DatosEspecificosRamo, VehiculoAutomotor } from "@/types/cobranza";
+import type { DatosEspecificosRamo, VehiculoAutomotor } from "@/types/cobranza";
 import { generarURLWhatsApp } from "@/utils/whatsapp";
 
 /**
@@ -50,10 +50,7 @@ async function verificarPermisoSiniestros() {
 
 	const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
 
-	if (
-		!profile ||
-		(profile.role !== "siniestros" && profile.role !== "comercial" && profile.role !== "admin")
-	) {
+	if (!profile || (profile.role !== "siniestros" && profile.role !== "comercial" && profile.role !== "admin")) {
 		return {
 			authorized: false as const,
 			error: "No tiene permisos para acceder al módulo de siniestros" as const,
@@ -342,30 +339,33 @@ export async function obtenerSiniestroDetalle(siniestroId: string): Promise<Obte
 		if (documentosError) throw documentosError;
 
 		const documentos =
-			documentosRaw?.map((d: {
-				id: string;
-				siniestro_id: string;
-				tipo_documento: string;
-				nombre_archivo: string;
-				archivo_url: string;
-				estado: string;
-				uploaded_at: string;
-				uploaded_by: string | null;
-				usuario?: Array<{ full_name?: string }> | null;
-			}) => {
-				const usuarioNombre = Array.isArray(d.usuario) && d.usuario.length > 0 ? d.usuario[0]?.full_name : undefined;
-				return {
-					id: d.id,
-					siniestro_id: d.siniestro_id,
-					tipo_documento: d.tipo_documento as TipoDocumentoSiniestro,
-					nombre_archivo: d.nombre_archivo,
-					archivo_url: d.archivo_url,
-					estado: d.estado as "activo" | "descartado",
-					uploaded_at: d.uploaded_at,
-					uploaded_by: d.uploaded_by ?? undefined,
-					usuario_nombre: usuarioNombre,
-				};
-			}) || [];
+			documentosRaw?.map(
+				(d: {
+					id: string;
+					siniestro_id: string;
+					tipo_documento: string;
+					nombre_archivo: string;
+					archivo_url: string;
+					estado: string;
+					uploaded_at: string;
+					uploaded_by: string | null;
+					usuario?: Array<{ full_name?: string }> | null;
+				}) => {
+					const usuarioNombre =
+						Array.isArray(d.usuario) && d.usuario.length > 0 ? d.usuario[0]?.full_name : undefined;
+					return {
+						id: d.id,
+						siniestro_id: d.siniestro_id,
+						tipo_documento: d.tipo_documento as TipoDocumentoSiniestro,
+						nombre_archivo: d.nombre_archivo,
+						archivo_url: d.archivo_url,
+						estado: d.estado as "activo" | "descartado",
+						uploaded_at: d.uploaded_at,
+						uploaded_by: d.uploaded_by ?? undefined,
+						usuario_nombre: usuarioNombre,
+					};
+				}
+			) || [];
 
 		// Obtener observaciones
 		const { data: observacionesRaw, error: observacionesError } = await supabase
@@ -378,33 +378,35 @@ export async function obtenerSiniestroDetalle(siniestroId: string): Promise<Obte
 
 		// Enriquecer con nombres de usuario
 		const observaciones = await Promise.all(
-			(observacionesRaw || []).map(async (o: {
-				id: string;
-				siniestro_id: string;
-				observacion: string;
-				created_at: string;
-				created_by: string | null;
-			}) => {
-				if (!o.created_by) {
+			(observacionesRaw || []).map(
+				async (o: {
+					id: string;
+					siniestro_id: string;
+					observacion: string;
+					created_at: string;
+					created_by: string | null;
+				}) => {
+					if (!o.created_by) {
+						return {
+							...o,
+							created_by: undefined,
+							usuario_nombre: "Sistema",
+						};
+					}
+
+					const { data: usuario } = await supabase
+						.from("profiles")
+						.select("full_name")
+						.eq("id", o.created_by)
+						.single();
+
 					return {
-					...o,
-					created_by: undefined,
-					usuario_nombre: "Sistema"
-				};
+						...o,
+						created_by: o.created_by ?? undefined,
+						usuario_nombre: usuario?.full_name || "Usuario",
+					};
 				}
-
-				const { data: usuario } = await supabase
-					.from("profiles")
-					.select("full_name")
-					.eq("id", o.created_by)
-					.single();
-
-				return {
-					...o,
-					created_by: o.created_by ?? undefined,
-					usuario_nombre: usuario?.full_name || "Usuario",
-				};
-			})
+			)
 		);
 
 		// Obtener historial
@@ -423,7 +425,7 @@ export async function obtenerSiniestroDetalle(siniestroId: string): Promise<Obte
 					return {
 						...h,
 						created_by: undefined,
-						usuario_nombre: "Sistema"
+						usuario_nombre: "Sistema",
 					};
 				}
 
@@ -842,7 +844,9 @@ export async function buscarPolizasActivas(query: string): Promise<BusquedaPoliz
 					.single();
 
 				if (natural) {
-					nombreCliente = `${natural.primer_nombre} ${natural.segundo_nombre || ""} ${natural.primer_apellido} ${natural.segundo_apellido || ""}`.trim();
+					nombreCliente = `${natural.primer_nombre} ${natural.segundo_nombre || ""} ${
+						natural.primer_apellido
+					} ${natural.segundo_apellido || ""}`.trim();
 					documentoCliente = natural.numero_documento;
 					celularCliente = natural.celular || undefined;
 					correoCliente = natural.correo_electronico || undefined;
@@ -879,7 +883,9 @@ export async function buscarPolizasActivas(query: string): Promise<BusquedaPoliz
 			// Obtener cuotas de pago con prórrogas
 			const { data: cuotasRaw } = await supabase
 				.from("polizas_pagos")
-				.select("id, numero_cuota, monto, fecha_vencimiento, estado, fecha_pago, fecha_vencimiento_original, prorrogas_historial, observaciones")
+				.select(
+					"id, numero_cuota, monto, fecha_vencimiento, estado, fecha_pago, fecha_vencimiento_original, prorrogas_historial, observaciones"
+				)
 				.eq("poliza_id", pol.id)
 				.order("numero_cuota");
 
@@ -1121,9 +1127,7 @@ export async function obtenerEstadosCatalogo(): Promise<ObtenerEstadosCatalogoRe
 /**
  * Obtener historial de estados de un siniestro
  */
-export async function obtenerHistorialEstados(
-	siniestroId: string
-): Promise<ObtenerHistorialEstadosResponse> {
+export async function obtenerHistorialEstados(siniestroId: string): Promise<ObtenerHistorialEstadosResponse> {
 	const permiso = await verificarPermisoSiniestros();
 	if (!permiso.authorized) {
 		return { success: false, error: permiso.error };
@@ -1134,11 +1138,13 @@ export async function obtenerHistorialEstados(
 	try {
 		const { data, error } = await supabase
 			.from("siniestros_estados_historial")
-			.select(`
+			.select(
+				`
 				*,
 				estado:siniestros_estados_catalogo(*),
 				perfil:profiles(full_name)
-			`)
+			`
+			)
 			.eq("siniestro_id", siniestroId)
 			.order("created_at", { ascending: false });
 
@@ -1307,13 +1313,10 @@ export async function obtenerSiniestrosConAtencion(): Promise<ObtenerSiniestrosR
 				concluido: siniestros.filter((s) => s.estado === "concluido").length,
 			},
 			siniestros_por_ramo: Object.entries(
-				siniestros.reduce(
-					(acc, s) => {
-						acc[s.ramo] = (acc[s.ramo] || 0) + 1;
-						return acc;
-					},
-					{} as Record<string, number>
-				)
+				siniestros.reduce((acc, s) => {
+					acc[s.ramo] = (acc[s.ramo] || 0) + 1;
+					return acc;
+				}, {} as Record<string, number>)
 			).map(([ramo, cantidad]) => ({ ramo, cantidad })),
 		};
 
@@ -1392,9 +1395,7 @@ export async function obtenerContactoParaWhatsApp(
 /**
  * Generar URL de WhatsApp para registro de siniestro
  */
-export async function generarWhatsAppRegistroSiniestro(
-	siniestroId: string
-): Promise<EnviarWhatsAppSiniestroResponse> {
+export async function generarWhatsAppRegistroSiniestro(siniestroId: string): Promise<EnviarWhatsAppSiniestroResponse> {
 	const permiso = await verificarPermisoSiniestros();
 	if (!permiso.authorized) {
 		return { success: false, error: permiso.error };
@@ -1406,14 +1407,16 @@ export async function generarWhatsAppRegistroSiniestro(
 		// Obtener datos del siniestro con póliza
 		const { data: siniestro, error: siniestroError } = await supabase
 			.from("siniestros")
-			.select(`
+			.select(
+				`
 				codigo_siniestro,
 				fecha_siniestro,
 				poliza:polizas(
 					numero_poliza,
 					ramo
 				)
-			`)
+			`
+			)
 			.eq("id", siniestroId)
 			.single();
 
@@ -1441,8 +1444,16 @@ Le informamos que su siniestro ha sido registrado exitosamente en nuestro sistem
 
 📋 *Código:* ${siniestro.codigo_siniestro}
 📅 *Fecha del siniestro:* ${new Date(siniestro.fecha_siniestro).toLocaleDateString("es-BO")}
-🛡️ *Póliza:* ${typeof siniestro.poliza === 'object' && siniestro.poliza && 'numero_poliza' in siniestro.poliza ? siniestro.poliza.numero_poliza : "N/A"}
-📦 *Ramo:* ${typeof siniestro.poliza === 'object' && siniestro.poliza && 'ramo' in siniestro.poliza ? siniestro.poliza.ramo : "N/A"}
+🛡️ *Póliza:* ${
+			typeof siniestro.poliza === "object" && siniestro.poliza && "numero_poliza" in siniestro.poliza
+				? siniestro.poliza.numero_poliza
+				: "N/A"
+		}
+📦 *Ramo:* ${
+			typeof siniestro.poliza === "object" && siniestro.poliza && "ramo" in siniestro.poliza
+				? siniestro.poliza.ramo
+				: "N/A"
+		}
 
 Nuestro equipo procederá con la evaluación correspondiente. Le mantendremos informado sobre el avance del proceso.
 
@@ -1482,13 +1493,15 @@ export async function generarWhatsAppCierreSiniestro(
 		// Obtener datos del siniestro con póliza
 		const { data: siniestro, error: siniestroError } = await supabase
 			.from("siniestros")
-			.select(`
+			.select(
+				`
 				codigo_siniestro,
 				poliza:polizas(
 					numero_poliza,
 					ramo
 				)
-			`)
+			`
+			)
 			.eq("id", siniestroId)
 			.single();
 
@@ -1538,7 +1551,11 @@ Le informamos que su siniestro ha sido cerrado con el siguiente estado:
 ${estadoTexto}
 
 📋 *Código:* ${siniestro.codigo_siniestro}
-🛡️ *Póliza:* ${typeof siniestro.poliza === 'object' && siniestro.poliza && 'numero_poliza' in siniestro.poliza ? siniestro.poliza.numero_poliza : "N/A"}
+🛡️ *Póliza:* ${
+			typeof siniestro.poliza === "object" && siniestro.poliza && "numero_poliza" in siniestro.poliza
+				? siniestro.poliza.numero_poliza
+				: "N/A"
+		}
 📅 *Fecha de cierre:* ${new Date().toLocaleDateString("es-BO")}
 
 ${detalleTexto}
@@ -1585,12 +1602,14 @@ export async function obtenerDetalleCompletoPoliza(polizaId: string): Promise<{
 		// 1. Query base de póliza
 		const { data: poliza, error: polizaError } = await supabase
 			.from("polizas")
-			.select(`
+			.select(
+				`
 				*,
 				compania:companias_aseguradoras(nombre),
 				regional:regionales(nombre),
 				responsable:profiles(full_name)
-			`)
+			`
+			)
 			.eq("id", polizaId)
 			.single();
 
@@ -1618,7 +1637,8 @@ export async function obtenerDetalleCompletoPoliza(polizaId: string): Promise<{
 		if (ramoLower.includes("automotor")) {
 			const { data: vehiculos } = await supabase
 				.from("polizas_automotor_vehiculos")
-				.select(`
+				.select(
+					`
 					id,
 					placa,
 					valor_asegurado,
@@ -1627,7 +1647,8 @@ export async function obtenerDetalleCompletoPoliza(polizaId: string): Promise<{
 					modelo,
 					ano,
 					color
-				`)
+				`
+				)
 				.eq("poliza_id", polizaId);
 
 			const vehiculosFormateados: VehiculoAutomotor[] = (vehiculos || []).map((v: Record<string, unknown>) => ({
