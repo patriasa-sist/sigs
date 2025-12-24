@@ -7,9 +7,9 @@ const PROTECTED_ROUTES = {
 	"/admin": "admin",
 	// New role-based routes:
 	"/agentes": "agente",
-	"/vencimientos": ["usuario", "agente", "comercial", "admin"],
-	"/clientes": ["usuario", "agente", "comercial", "admin"],
-	"/polizas": ["usuario", "agente", "comercial", "admin"],
+	"/vencimientos": ["agente", "comercial", "admin"],
+	"/clientes": ["agente", "comercial", "admin"],
+	"/polizas": ["agente", "comercial", "admin"],
 	"/cobranzas": ["cobranza", "admin"],
 } as const;
 
