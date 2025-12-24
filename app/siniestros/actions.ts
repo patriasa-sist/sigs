@@ -1305,7 +1305,7 @@ export async function cambiarEstadoSiniestro(
 					const mensaje = `Estimado/a *${contacto.nombre_completo}*,
 
 Le informamos que el estado de su siniestro ha sido actualizado:
-* *Código:* ${siniestro.codigo_siniestro || "N/A"}
+* *Cód. Siniestro:* ${siniestro.codigo_siniestro || "N/A"}
 * *Estado anterior:* ${estadoAnteriorNombre}
 * *Estado actual:* ${estadoData.nombre}
 * *Fecha:* ${new Date().toLocaleDateString("es-BO")}
@@ -1521,7 +1521,7 @@ export async function generarWhatsAppRegistroSiniestro(siniestroId: string): Pro
 		const mensaje = `Estimado/a *${contacto.nombre_completo}*,
 
 Le informamos que su siniestro ha sido registrado exitosamente y se encuentra en proceso activo de resolución:
-* *Código:* ${siniestro.codigo_siniestro}
+* *Cód. Siniestro:* ${siniestro.codigo_siniestro}
 * *Fecha del siniestro:* ${new Date(siniestro.fecha_siniestro).toLocaleDateString("es-BO")}
 * *Póliza:* ${
 			typeof siniestro.poliza === "object" && siniestro.poliza && "numero_poliza" in siniestro.poliza
@@ -1619,10 +1619,10 @@ export async function generarWhatsAppCierreSiniestro(
 
 		const mensaje = `Estimado/a *${contacto.nombre_completo}*,
 
-		${detalleTexto}
+${detalleTexto}
 
-		${estadoTexto}
-* *Código:* ${siniestro.codigo_siniestro}
+${estadoTexto}
+* *Cód. Siniestro:* ${siniestro.codigo_siniestro}
 * *Póliza:* ${
 			typeof siniestro.poliza === "object" && siniestro.poliza && "numero_poliza" in siniestro.poliza
 				? siniestro.poliza.numero_poliza
