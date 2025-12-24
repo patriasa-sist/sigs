@@ -1607,27 +1607,71 @@ export async function obtenerDetalleCompletoPoliza(polizaId: string): Promise<{
 				*,
 				compania:companias_aseguradoras(nombre),
 				regional:regionales(nombre),
-				responsable:profiles(full_name)
+				responsable:profiles!polizas_responsable_id_fkey(full_name)
 			`
 			)
 			.eq("id", polizaId)
 			.single();
 
 		if (polizaError || !poliza) {
+			console.error("Error obteniendo póliza:", polizaError);
 			return { success: false, error: "Póliza no encontrada" };
 		}
 
-		// 2. Obtener contacto usando función SQL
-		const { data: contactoData } = await supabase
-			.rpc("obtener_contacto_poliza", { poliza_id_param: polizaId })
-			.single();
-
-		const contacto: ContactoClienteSiniestro = (contactoData as ContactoClienteSiniestro | null) ?? {
+		// 2. Obtener información del cliente
+		const clientId = poliza.client_id;
+		let contacto: ContactoClienteSiniestro = {
 			nombre_completo: "Desconocido",
+			documento: null,
 			telefono: null,
 			celular: null,
 			correo: null,
 		};
+
+		if (clientId) {
+			// Obtener tipo de cliente
+			const { data: client } = await supabase
+				.from("clients")
+				.select("id, client_type")
+				.eq("id", clientId)
+				.single();
+
+			if (client) {
+				if (client.client_type === "natural") {
+					const { data: naturalClient } = await supabase
+						.from("natural_clients")
+						.select("primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, numero_documento, celular, correo_electronico")
+						.eq("client_id", clientId)
+						.single();
+
+					if (naturalClient) {
+						contacto = {
+							nombre_completo: `${naturalClient.primer_nombre || ""} ${naturalClient.segundo_nombre || ""} ${naturalClient.primer_apellido || ""} ${naturalClient.segundo_apellido || ""}`.trim(),
+							documento: naturalClient.numero_documento,
+							telefono: null,
+							celular: naturalClient.celular,
+							correo: naturalClient.correo_electronico,
+						};
+					}
+				} else if (client.client_type === "juridic") {
+					const { data: juridicClient } = await supabase
+						.from("juridic_clients")
+						.select("razon_social, nit, telefono, correo_electronico")
+						.eq("client_id", clientId)
+						.single();
+
+					if (juridicClient) {
+						contacto = {
+							nombre_completo: juridicClient.razon_social || "Desconocido",
+							documento: juridicClient.nit,
+							telefono: juridicClient.telefono,
+							celular: null,
+							correo: juridicClient.correo_electronico,
+						};
+					}
+				}
+			}
+		}
 
 		// 3. Obtener datos específicos por ramo
 		let datos_ramo: DatosEspecificosRamo = { tipo: "otros", descripcion: poliza.ramo };

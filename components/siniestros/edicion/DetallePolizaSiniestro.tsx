@@ -2,7 +2,24 @@
 
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { User, Phone, Mail, MessageCircle, MapPin, Car, Loader2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import {
+	User,
+	Phone,
+	Mail,
+	MessageCircle,
+	MapPin,
+	Car,
+	Loader2,
+	FileText,
+	Building2,
+	MapPinned,
+	UserCircle,
+	Calendar,
+	DollarSign,
+	Shield,
+	CreditCard
+} from "lucide-react";
 import { obtenerDetalleCompletoPoliza } from "@/app/siniestros/actions";
 import { generarURLWhatsApp } from "@/utils/whatsapp";
 import type { ContactoClienteSiniestro } from "@/types/siniestro";
@@ -16,10 +33,14 @@ interface PolizaDetalle {
 	numero_poliza?: string;
 	ramo?: string;
 	compania?: { nombre?: string };
+	regional?: { nombre?: string };
+	responsable?: { full_name?: string };
 	fecha_inicio_vigencia?: string;
 	fecha_fin_vigencia?: string;
+	fecha_emision?: string;
 	moneda?: string;
 	prima_total?: number;
+	estado?: string;
 	[key: string]: unknown;
 }
 
@@ -80,63 +101,113 @@ export default function DetallePolizaSiniestro({ polizaId }: DetallePolizaSinies
 		);
 	}
 
+	const formatEstado = (estado?: string) => {
+		const estadoMap: Record<string, { label: string; variant: "default" | "secondary" | "outline" | "destructive" }> = {
+			activa: { label: "Activa", variant: "default" },
+			pendiente: { label: "Pendiente", variant: "secondary" },
+			vencida: { label: "Vencida", variant: "destructive" },
+			cancelada: { label: "Cancelada", variant: "outline" },
+			renovada: { label: "Renovada", variant: "secondary" },
+		};
+		return estadoMap[estado || "activa"] || { label: estado || "Activa", variant: "default" as const };
+	};
+
 	return (
 		<div className="space-y-4">
-			{/* Información de Contacto */}
+			{/* Información de la Póliza */}
 			<Card>
 				<CardHeader>
 					<CardTitle className="text-lg flex items-center gap-2">
-						<User className="h-5 w-5 text-primary" />
-						Información de Contacto
+						<FileText className="h-5 w-5 text-primary" />
+						Información de la Póliza
 					</CardTitle>
 				</CardHeader>
 				<CardContent>
-					<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-						{/* Nombre Completo */}
-						<div className="flex items-center gap-2 col-span-full">
-							<User className="h-4 w-4 text-muted-foreground" />
-							<span className="text-sm">
-								<span className="font-medium">Cliente:</span> {contacto.nombre_completo}
-							</span>
+					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+						{/* Número de Póliza */}
+						<div className="flex items-center gap-2">
+							<Shield className="h-4 w-4 text-muted-foreground" />
+							<div className="text-sm">
+								<span className="text-muted-foreground">N° Póliza:</span>
+								<p className="font-medium">{poliza.numero_poliza || "N/A"}</p>
+							</div>
 						</div>
 
-						{/* Teléfono */}
-						{contacto.telefono && (
+						{/* Ramo */}
+						<div className="flex items-center gap-2">
+							<Car className="h-4 w-4 text-muted-foreground" />
+							<div className="text-sm">
+								<span className="text-muted-foreground">Ramo:</span>
+								<p className="font-medium">{poliza.ramo || "N/A"}</p>
+							</div>
+						</div>
+
+						{/* Estado */}
+						<div className="flex items-center gap-2">
+							<div className="text-sm flex items-center gap-2">
+								<span className="text-muted-foreground">Estado:</span>
+								<Badge variant={formatEstado(poliza.estado).variant}>
+									{formatEstado(poliza.estado).label}
+								</Badge>
+							</div>
+						</div>
+
+						{/* Compañía */}
+						<div className="flex items-center gap-2">
+							<Building2 className="h-4 w-4 text-muted-foreground" />
+							<div className="text-sm">
+								<span className="text-muted-foreground">Compañía:</span>
+								<p className="font-medium">{poliza.compania?.nombre || "N/A"}</p>
+							</div>
+						</div>
+
+						{/* Regional */}
+						<div className="flex items-center gap-2">
+							<MapPinned className="h-4 w-4 text-muted-foreground" />
+							<div className="text-sm">
+								<span className="text-muted-foreground">Regional:</span>
+								<p className="font-medium">{poliza.regional?.nombre || "N/A"}</p>
+							</div>
+						</div>
+
+						{/* Responsable */}
+						<div className="flex items-center gap-2">
+							<UserCircle className="h-4 w-4 text-muted-foreground" />
+							<div className="text-sm">
+								<span className="text-muted-foreground">Responsable:</span>
+								<p className="font-medium">{poliza.responsable?.full_name || "N/A"}</p>
+							</div>
+						</div>
+
+						{/* Prima Total */}
+						{poliza.prima_total !== undefined && (
 							<div className="flex items-center gap-2">
-								<Phone className="h-4 w-4 text-muted-foreground" />
-								<span className="text-sm">
-									<span className="font-medium">Teléfono:</span> {contacto.telefono}
-								</span>
+								<DollarSign className="h-4 w-4 text-muted-foreground" />
+								<div className="text-sm">
+									<span className="text-muted-foreground">Prima Total:</span>
+									<p className="font-medium">
+										{poliza.moneda || "Bs"} {poliza.prima_total.toLocaleString("es-BO", { minimumFractionDigits: 2 })}
+									</p>
+								</div>
 							</div>
 						)}
 
-						{/* Celular con WhatsApp */}
-						{contacto.celular && (
+						{/* Fecha Emisión */}
+						{poliza.fecha_emision && (
 							<div className="flex items-center gap-2">
-								<MessageCircle className="h-4 w-4 text-green-600" />
-								<a
-									href={generarURLWhatsApp(contacto.celular, "")}
-									target="_blank"
-									rel="noopener noreferrer"
-									className="text-sm text-blue-600 hover:underline"
-								>
-									<span className="font-medium">Celular:</span> {contacto.celular}
-								</a>
+								<Calendar className="h-4 w-4 text-muted-foreground" />
+								<div className="text-sm">
+									<span className="text-muted-foreground">F. Emisión:</span>
+									<p className="font-medium">
+										{new Date(poliza.fecha_emision).toLocaleDateString("es-BO")}
+									</p>
+								</div>
 							</div>
 						)}
 
-						{/* Email */}
-						{contacto.correo && (
-							<div className="flex items-center gap-2">
-								<Mail className="h-4 w-4 text-muted-foreground" />
-								<a href={`mailto:${contacto.correo}`} className="text-sm text-blue-600 hover:underline">
-									{contacto.correo}
-								</a>
-							</div>
-						)}
-
-						{/* Vigencia */}
-						<div className="col-span-full grid grid-cols-2 gap-4 pt-2 border-t">
+						{/* Inicio Vigencia */}
+						<div className="flex items-center gap-2">
+							<Calendar className="h-4 w-4 text-green-600" />
 							<div className="text-sm">
 								<span className="text-muted-foreground">Inicio vigencia:</span>
 								<p className="font-medium">
@@ -145,6 +216,11 @@ export default function DetallePolizaSiniestro({ polizaId }: DetallePolizaSinies
 										: "N/A"}
 								</p>
 							</div>
+						</div>
+
+						{/* Fin Vigencia */}
+						<div className="flex items-center gap-2">
+							<Calendar className="h-4 w-4 text-red-600" />
 							<div className="text-sm">
 								<span className="text-muted-foreground">Fin vigencia:</span>
 								<p className="font-medium">
@@ -158,7 +234,73 @@ export default function DetallePolizaSiniestro({ polizaId }: DetallePolizaSinies
 				</CardContent>
 			</Card>
 
-			{/* Datos Específicos por Ramo */}
+			{/* Información de Contacto del Cliente */}
+			<Card>
+				<CardHeader>
+					<CardTitle className="text-lg flex items-center gap-2">
+						<User className="h-5 w-5 text-primary" />
+						Información de Contacto del Cliente
+					</CardTitle>
+				</CardHeader>
+				<CardContent>
+					<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+						{/* Nombre Completo */}
+						<div className="flex items-center gap-2 col-span-full">
+							<User className="h-4 w-4 text-muted-foreground" />
+							<div className="text-sm">
+								<span className="font-medium">Cliente:</span> {contacto.nombre_completo}
+							</div>
+						</div>
+
+						{/* Documento (CI/NIT) */}
+						{contacto.documento && (
+							<div className="flex items-center gap-2">
+								<CreditCard className="h-4 w-4 text-muted-foreground" />
+								<div className="text-sm">
+									<span className="font-medium">CI/NIT:</span> {contacto.documento}
+								</div>
+							</div>
+						)}
+
+						{/* Teléfono */}
+						{contacto.telefono && (
+							<div className="flex items-center gap-2">
+								<Phone className="h-4 w-4 text-muted-foreground" />
+								<div className="text-sm">
+									<span className="font-medium">Teléfono:</span> {contacto.telefono}
+								</div>
+							</div>
+						)}
+
+						{/* Celular con WhatsApp */}
+						{contacto.celular && (
+							<div className="flex items-center gap-2">
+								<MessageCircle className="h-4 w-4 text-green-600" />
+								<a
+									href={generarURLWhatsApp(contacto.celular, "")}
+									target="_blank"
+									rel="noopener noreferrer"
+									className="text-sm text-blue-600 hover:underline flex items-center gap-1"
+								>
+									<span className="font-medium">Celular (WhatsApp):</span> {contacto.celular}
+								</a>
+							</div>
+						)}
+
+						{/* Email */}
+						{contacto.correo && (
+							<div className="flex items-center gap-2 col-span-full">
+								<Mail className="h-4 w-4 text-muted-foreground" />
+								<a href={`mailto:${contacto.correo}`} className="text-sm text-blue-600 hover:underline">
+									<span className="font-medium">Correo:</span> {contacto.correo}
+								</a>
+							</div>
+						)}
+					</div>
+				</CardContent>
+			</Card>
+
+			{/* Bienes Asegurados */}
 			<Card>
 				<CardHeader>
 					<CardTitle className="text-lg flex items-center gap-2">

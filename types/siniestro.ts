@@ -609,6 +609,7 @@ export type SiniestroVistaConEstado = SiniestroVista & EstadoActualSiniestro & {
 
 export type ContactoClienteSiniestro = {
 	nombre_completo: string;
+	documento?: string | null; // CI o NIT del cliente
 	telefono?: string | null;
 	celular?: string | null;
 	correo?: string | null;
