@@ -360,7 +360,7 @@ si yo entro al reporte y este está abierto tengo la posibilidad de visualizar l
     concluido: - seccion indemnizacion: archivo UIF y archivo PEP ambos obligatorios - monto reclamado y selector moneda Bs/USD - deducible y selector moneda Bs/USD - monto pagado y selector moneda Bs/USD - check para marcar si es un "pago comercial" - boton "cerrar reporte"
     toda actualizacion que se haga en este modo edicion debe quedar registrada en el propio siniestro para saber quién subió x archivo o quién anotó Y observación, además de quién cambió el siniestro de estado o quién lo cerró, esto debe ser visualizado como una lista con la fecha, el autor y el cambio realizado
 
-## siniestros 2da reunion
+## siniestros 2da reunion (listo)
 
 reunion 18-12-2025
 

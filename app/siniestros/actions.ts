@@ -1440,7 +1440,7 @@ export async function generarWhatsAppRegistroSiniestro(siniestroId: string): Pro
 		// Generar mensaje
 		const mensaje = `Estimado/a *${contacto.nombre_completo}*,
 
-Le informamos que su siniestro ha sido registrado exitosamente en nuestro sistema:
+Le informamos que su siniestro ha sido registrado exitosamente y se encuentra en proceso activo de resolución:
 
 📋 *Código:* ${siniestro.codigo_siniestro}
 📅 *Fecha del siniestro:* ${new Date(siniestro.fecha_siniestro).toLocaleDateString("es-BO")}
@@ -1449,14 +1449,8 @@ Le informamos que su siniestro ha sido registrado exitosamente en nuestro sistem
 				? siniestro.poliza.numero_poliza
 				: "N/A"
 		}
-📦 *Ramo:* ${
-			typeof siniestro.poliza === "object" && siniestro.poliza && "ramo" in siniestro.poliza
-				? siniestro.poliza.ramo
-				: "N/A"
-		}
 
-Nuestro equipo procederá con la evaluación correspondiente. Le mantendremos informado sobre el avance del proceso.
-
+Le informaremos de toda novedad con respecto a su caso lo más antes posible.
 Para cualquier consulta, no dude en contactarnos.
 
 Saludos cordiales,
@@ -1530,23 +1524,21 @@ export async function generarWhatsAppCierreSiniestro(
 			case "rechazado":
 				estadoTexto = "❌ *RECHAZADO*";
 				detalleTexto =
-					"Lamentamos informarle que su siniestro ha sido rechazado tras la evaluación correspondiente. Para más información, por favor contáctenos.";
+					"Lamentamos informarle que a pesar de todos nuestros esfuerzos su siniestro ha sido rechazado de acuerdo a la carta adjunta por parte de la compañía.";
 				break;
 			case "declinado":
 				estadoTexto = "⚠️ *DECLINADO*";
 				detalleTexto =
-					"Su siniestro ha sido declinado según los términos y condiciones de su póliza. Puede solicitar información adicional contactándonos.";
+					"Se le informa que *con la conformidad de su persona*, procedemos a informar a su compañía aseguradora y dar de baja el presente caso.";
 				break;
 			case "concluido":
 				estadoTexto = "✅ *CONCLUIDO*";
 				detalleTexto =
-					"Nos complace informarle que su siniestro ha sido procesado exitosamente y se ha concluido el trámite correspondiente.";
+					"Nos complace informarle que su siniestro ha concluido exitosamente, por lo cual se procede al cierre del mismo.";
 				break;
 		}
 
 		const mensaje = `Estimado/a *${contacto.nombre_completo}*,
-
-Le informamos que su siniestro ha sido cerrado con el siguiente estado:
 
 ${estadoTexto}
 
@@ -1562,7 +1554,7 @@ ${detalleTexto}
 
 Para cualquier consulta o aclaración, estamos a su disposición.
 
-Saludos cordiales,
+Sin otro particular y a la espera de poder servirle en otra ocacion, aprovechamos para saludarlo muy atentamente.,
 *PATRIA Seguros y Reaseguros S.A.*`;
 
 		// Generar URL
@@ -1640,13 +1632,17 @@ export async function obtenerDetalleCompletoPoliza(polizaId: string): Promise<{
 				if (client.client_type === "natural") {
 					const { data: naturalClient } = await supabase
 						.from("natural_clients")
-						.select("primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, numero_documento, celular, correo_electronico")
+						.select(
+							"primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, numero_documento, celular, correo_electronico"
+						)
 						.eq("client_id", clientId)
 						.single();
 
 					if (naturalClient) {
 						contacto = {
-							nombre_completo: `${naturalClient.primer_nombre || ""} ${naturalClient.segundo_nombre || ""} ${naturalClient.primer_apellido || ""} ${naturalClient.segundo_apellido || ""}`.trim(),
+							nombre_completo: `${naturalClient.primer_nombre || ""} ${
+								naturalClient.segundo_nombre || ""
+							} ${naturalClient.primer_apellido || ""} ${naturalClient.segundo_apellido || ""}`.trim(),
 							documento: naturalClient.numero_documento,
 							telefono: null,
 							celular: naturalClient.celular,
