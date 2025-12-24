@@ -1305,14 +1305,12 @@ export async function cambiarEstadoSiniestro(
 					const mensaje = `Estimado/a *${contacto.nombre_completo}*,
 
 Le informamos que el estado de su siniestro ha sido actualizado:
+* *Código:* ${siniestro.codigo_siniestro || "N/A"}
+* *Estado anterior:* ${estadoAnteriorNombre}
+* *Estado actual:* ${estadoData.nombre}
+* *Fecha:* ${new Date().toLocaleDateString("es-BO")}
 
-📋 *Código:* ${siniestro.codigo_siniestro || "N/A"}
-🔄 *Estado anterior:* ${estadoAnteriorNombre}
-✅ *Estado actual:* ${estadoData.nombre}
-📅 *Fecha:* ${new Date().toLocaleDateString("es-BO")}
-
-Hacemos todo lo posible para acelerar la conclusión de su caso. Le informaremos de toda novedad lo más antes posible.
-
+Hacemos todo lo posible para acelerar la conclusión de su caso y le informaremos de toda novedad lo más antes posible.
 Para cualquier consulta, estamos a su disposición.
 
 Saludos cordiales,
@@ -1523,10 +1521,9 @@ export async function generarWhatsAppRegistroSiniestro(siniestroId: string): Pro
 		const mensaje = `Estimado/a *${contacto.nombre_completo}*,
 
 Le informamos que su siniestro ha sido registrado exitosamente y se encuentra en proceso activo de resolución:
-
-📋 *Código:* ${siniestro.codigo_siniestro}
-📅 *Fecha del siniestro:* ${new Date(siniestro.fecha_siniestro).toLocaleDateString("es-BO")}
-🛡️ *Póliza:* ${
+* *Código:* ${siniestro.codigo_siniestro}
+* *Fecha del siniestro:* ${new Date(siniestro.fecha_siniestro).toLocaleDateString("es-BO")}
+* *Póliza:* ${
 			typeof siniestro.poliza === "object" && siniestro.poliza && "numero_poliza" in siniestro.poliza
 				? siniestro.poliza.numero_poliza
 				: "N/A"
@@ -1622,21 +1619,20 @@ export async function generarWhatsAppCierreSiniestro(
 
 		const mensaje = `Estimado/a *${contacto.nombre_completo}*,
 
-${estadoTexto}
+		${detalleTexto}
 
-📋 *Código:* ${siniestro.codigo_siniestro}
-🛡️ *Póliza:* ${
+		${estadoTexto}
+* *Código:* ${siniestro.codigo_siniestro}
+* *Póliza:* ${
 			typeof siniestro.poliza === "object" && siniestro.poliza && "numero_poliza" in siniestro.poliza
 				? siniestro.poliza.numero_poliza
 				: "N/A"
 		}
-📅 *Fecha de cierre:* ${new Date().toLocaleDateString("es-BO")}
-
-${detalleTexto}
+* *Fecha de cierre:* ${new Date().toLocaleDateString("es-BO")}
 
 Para cualquier consulta o aclaración, estamos a su disposición.
 
-Sin otro particular y a la espera de poder servirle en otra ocacion, aprovechamos para saludarlo muy atentamente.,
+Sin otro particular y a la espera de poder servirle en otra ocacion, aprovechamos para saludarlo muy atentamente.
 *PATRIA Seguros y Reaseguros S.A.*`;
 
 		// Generar URL
