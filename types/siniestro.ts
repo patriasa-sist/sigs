@@ -637,6 +637,13 @@ export type ObtenerHistorialEstadosResponse = ServerResponse<{
 
 export type CambiarEstadoSiniestroResponse = ServerResponse<{
 	estado: EstadoSiniestroHistorial;
+	whatsapp?: {
+		url: string;
+		mensaje: string;
+		contacto: ContactoClienteSiniestro;
+		estado_anterior: string;
+		estado_nuevo: string;
+	};
 }>;
 
 // ============================================

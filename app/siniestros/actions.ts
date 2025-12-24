@@ -1200,7 +1200,7 @@ export async function cambiarEstadoSiniestro(
 		// Verificar que el siniestro existe y está abierto
 		const { data: siniestro, error: siniestroError } = await supabase
 			.from("siniestros")
-			.select("id, estado")
+			.select("id, estado, poliza_id, codigo_siniestro")
 			.eq("id", siniestroId)
 			.single();
 
@@ -1212,7 +1212,32 @@ export async function cambiarEstadoSiniestro(
 			return { success: false, error: "Solo se pueden cambiar estados de siniestros abiertos" };
 		}
 
-		// Obtener el nombre del estado
+		// Obtener el estado actual (anterior) del siniestro desde el historial
+		const { data: estadoAnteriorData } = await supabase
+			.from("siniestros_estados_historial")
+			.select(
+				`
+				estado_id,
+				siniestros_estados_catalogo(nombre)
+			`
+			)
+			.eq("siniestro_id", siniestroId)
+			.order("created_at", { ascending: false })
+			.limit(1)
+			.single();
+
+		let estadoAnteriorNombre = "Sin estado previo";
+		if (estadoAnteriorData?.siniestros_estados_catalogo) {
+			const catalogo = estadoAnteriorData.siniestros_estados_catalogo;
+			// Puede ser un objeto o un array dependiendo de la configuración de Supabase
+			if (Array.isArray(catalogo) && catalogo.length > 0) {
+				estadoAnteriorNombre = (catalogo[0] as { nombre: string }).nombre || "Sin estado previo";
+			} else if (typeof catalogo === "object" && "nombre" in catalogo) {
+				estadoAnteriorNombre = (catalogo as { nombre: string }).nombre || "Sin estado previo";
+			}
+		}
+
+		// Obtener el nombre del nuevo estado
 		const { data: estadoData, error: estadoError } = await supabase
 			.from("siniestros_estados_catalogo")
 			.select("nombre")
@@ -1256,9 +1281,66 @@ export async function cambiarEstadoSiniestro(
 		revalidatePath("/siniestros");
 		revalidatePath(`/siniestros/editar/${siniestroId}`);
 
+		// Generar mensaje de WhatsApp automáticamente
+		let whatsappData:
+			| {
+					url: string;
+					mensaje: string;
+					contacto: ContactoClienteSiniestro;
+					estado_anterior: string;
+					estado_nuevo: string;
+			  }
+			| undefined;
+
+		try {
+			// Obtener contacto del cliente
+			const contactoResponse = await obtenerContactoParaWhatsApp(siniestroId);
+
+			if (contactoResponse.success && contactoResponse.data) {
+				const contacto = contactoResponse.data;
+				const telefono = contacto.celular || contacto.telefono;
+
+				if (telefono) {
+					// Generar mensaje personalizado
+					const mensaje = `Estimado/a *${contacto.nombre_completo}*,
+
+Le informamos que el estado de su siniestro ha sido actualizado:
+
+📋 *Código:* ${siniestro.codigo_siniestro || "N/A"}
+🔄 *Estado anterior:* ${estadoAnteriorNombre}
+✅ *Estado actual:* ${estadoData.nombre}
+📅 *Fecha:* ${new Date().toLocaleDateString("es-BO")}
+
+Hacemos todo lo posible para acelerar la conclusión de su caso. Le informaremos de toda novedad lo más antes posible.
+
+Para cualquier consulta, estamos a su disposición.
+
+Saludos cordiales,
+*PATRIA Seguros y Reaseguros S.A.*`;
+
+					// Generar URL de WhatsApp
+					const url = generarURLWhatsApp(telefono, mensaje);
+
+					whatsappData = {
+						url,
+						mensaje,
+						contacto,
+						estado_anterior: estadoAnteriorNombre as string,
+						estado_nuevo: estadoData.nombre,
+					};
+				}
+			}
+		} catch (whatsappError) {
+			// No fallar toda la operación si solo falla WhatsApp
+			console.error("Error generando WhatsApp:", whatsappError);
+		}
+
 		return {
 			success: true,
-			data: { estado: data },
+			data: {
+				estado: data,
+				whatsapp: whatsappData,
+			},
 		};
 	} catch (error) {
 		console.error("Error cambiando estado del siniestro:", error);

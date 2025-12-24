@@ -76,6 +76,15 @@ export default function SeccionEstados({ siniestroId, estadoActual, estadoSinies
 				toast.success("Estado cambiado exitosamente");
 				setModalOpen(false);
 				setEstadoSeleccionado("");
+
+				// Si hay datos de WhatsApp, abrir automáticamente en nueva pestaña
+				if (response.data.whatsapp?.url) {
+					window.open(response.data.whatsapp.url, "_blank");
+					toast.success("WhatsApp Web se abrirá en una nueva pestaña", {
+						description: "El mensaje de notificación está listo para enviar",
+					});
+				}
+
 				// Recargar historial
 				await loadData();
 				// Recargar página para actualizar
