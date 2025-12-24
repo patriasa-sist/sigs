@@ -35,9 +35,9 @@ interface PolizaDetalle {
 	compania?: { nombre?: string };
 	regional?: { nombre?: string };
 	responsable?: { full_name?: string };
-	fecha_inicio_vigencia?: string;
-	fecha_fin_vigencia?: string;
-	fecha_emision?: string;
+	inicio_vigencia?: string;
+	fin_vigencia?: string;
+	fecha_emision_compania?: string;
 	moneda?: string;
 	prima_total?: number;
 	estado?: string;
@@ -193,13 +193,13 @@ export default function DetallePolizaSiniestro({ polizaId }: DetallePolizaSinies
 						)}
 
 						{/* Fecha Emisión */}
-						{poliza.fecha_emision && (
+						{poliza.fecha_emision_compania && (
 							<div className="flex items-center gap-2">
 								<Calendar className="h-4 w-4 text-muted-foreground" />
 								<div className="text-sm">
 									<span className="text-muted-foreground">F. Emisión:</span>
 									<p className="font-medium">
-										{new Date(poliza.fecha_emision).toLocaleDateString("es-BO")}
+										{new Date(poliza.fecha_emision_compania).toLocaleDateString("es-BO")}
 									</p>
 								</div>
 							</div>
@@ -211,8 +211,8 @@ export default function DetallePolizaSiniestro({ polizaId }: DetallePolizaSinies
 							<div className="text-sm">
 								<span className="text-muted-foreground">Inicio vigencia:</span>
 								<p className="font-medium">
-									{poliza.fecha_inicio_vigencia && typeof poliza.fecha_inicio_vigencia === 'string'
-										? new Date(poliza.fecha_inicio_vigencia).toLocaleDateString("es-BO")
+									{poliza.inicio_vigencia && typeof poliza.inicio_vigencia === 'string'
+										? new Date(poliza.inicio_vigencia).toLocaleDateString("es-BO")
 										: "N/A"}
 								</p>
 							</div>
@@ -224,8 +224,8 @@ export default function DetallePolizaSiniestro({ polizaId }: DetallePolizaSinies
 							<div className="text-sm">
 								<span className="text-muted-foreground">Fin vigencia:</span>
 								<p className="font-medium">
-									{poliza.fecha_fin_vigencia && typeof poliza.fecha_fin_vigencia === 'string'
-										? new Date(poliza.fecha_fin_vigencia).toLocaleDateString("es-BO")
+									{poliza.fin_vigencia && typeof poliza.fin_vigencia === 'string'
+										? new Date(poliza.fin_vigencia).toLocaleDateString("es-BO")
 										: "N/A"}
 								</p>
 							</div>
