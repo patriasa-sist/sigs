@@ -1,6 +1,7 @@
 "use client";
 
 import { Client, ClientSearchResult } from "@/types/client";
+import { getStatusLabel, formatCurrency, formatDate } from "@/utils/clientHelpers";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -19,15 +20,20 @@ export function ClientCard({ client, searchMode = false }: ClientCardProps) {
 	};
 
 	const getStatusColor = (status: string) => {
-		switch (status) {
-			case "vigente":
+		// Import Policy type for proper status typing
+		type PolicyStatus = "pendiente" | "activa" | "vencida" | "cancelada" | "renovada";
+		const statusInfo = getStatusLabel(status as PolicyStatus);
+		switch (statusInfo.color) {
+			case "green":
 				return "bg-green-500 text-white";
-			case "vencida":
+			case "red":
 				return "bg-red-500 text-white";
-			case "cancelada":
+			case "gray":
 				return "bg-gray-500 text-white";
-			case "pendiente":
+			case "yellow":
 				return "bg-yellow-500 text-white";
+			case "blue":
+				return "bg-blue-500 text-white";
 			default:
 				return "bg-blue-500 text-white";
 		}
@@ -100,7 +106,7 @@ export function ClientCard({ client, searchMode = false }: ClientCardProps) {
 								<AccordionTrigger className="hover:no-underline py-2">
 									<div className="flex items-center gap-2 w-full">
 										<Badge className={getStatusColor(policy.status)}>
-											{policy.status.toUpperCase()}
+											{getStatusLabel(policy.status).label}
 										</Badge>
 										<span
 											className={`font-medium ${
@@ -119,21 +125,17 @@ export function ClientCard({ client, searchMode = false }: ClientCardProps) {
 										<div className="grid grid-cols-2 gap-2">
 											<div>
 												<span className="text-muted-foreground">Inicio:</span>
-												<span className="ml-2 font-medium">
-													{new Date(policy.startDate).toLocaleDateString("es-ES")}
-												</span>
+												<span className="ml-2 font-medium">{formatDate(policy.startDate)}</span>
 											</div>
 											<div>
 												<span className="text-muted-foreground">Vencimiento:</span>
-												<span className="ml-2 font-medium">
-													{new Date(policy.expirationDate).toLocaleDateString("es-ES")}
-												</span>
+												<span className="ml-2 font-medium">{formatDate(policy.expirationDate)}</span>
 											</div>
 										</div>
 										<div>
 											<span className="text-muted-foreground">Prima:</span>
 											<span className="ml-2 font-medium">
-												Bs. {policy.premium.toLocaleString("es-ES")}
+												{formatCurrency(policy.premium, policy.currency)}
 											</span>
 										</div>
 										{policy.beneficiaryName && (

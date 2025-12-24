@@ -1,7 +1,7 @@
 'use client';
 
 import { Client, ClientSearchResult } from '@/types/client';
-import { getActivePolicyCount } from '@/utils/mockClients';
+import { getActivePolicyCount } from '@/utils/clientHelpers';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { ChevronRight } from 'lucide-react';

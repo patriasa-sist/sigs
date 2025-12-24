@@ -1,72 +1,62 @@
 /**
  * Client Module Type Definitions
  * Defines data structures for client and policy management
+ *
+ * NOTE: These types are now compatible with the database layer (types/database/client.ts)
+ * Import ClientViewModel from database layer for type-safe database operations
  */
 
-// Policy status types
-export type PolicyStatus = 'vigente' | 'vencida' | 'cancelada' | 'pendiente';
+import type { ClientViewModel, PolicyViewModel } from "./database/client";
 
-// Insurance type
-export type InsuranceType = 'salud' | 'automotor' | 'vida' | 'general';
+// ============================================
+// RE-EXPORTS FROM DATABASE LAYER
+// ============================================
 
 /**
- * Policy associated with a client
+ * Client type - re-exported from database layer for consistency
  */
-export interface Policy {
-  id: string;
-  policyNumber: string;
-  insuranceType: InsuranceType;
-  status: PolicyStatus;
-  startDate: Date;
-  expirationDate: Date;
-  premium: number;
-  beneficiaryName?: string;
-  coverageDetails?: string;
-  notes?: string;
-}
+export type Client = ClientViewModel;
 
 /**
- * Client record with all searchable fields
+ * Policy type - re-exported from database layer for consistency
  */
-export interface Client {
-  id: string;
-  // Personal Information
-  fullName: string;
-  idNumber: string; // Carnet/ID
-  nit?: string; // Tax identification number
+export type Policy = PolicyViewModel;
 
-  // Contact Information
-  email?: string;
-  phone?: string;
-  address?: string;
+// ============================================
+// LEGACY TYPE ALIASES (for backward compatibility)
+// ============================================
 
-  // Account Management
-  executiveInCharge?: string; // Executive/agent managing this client
+/**
+ * @deprecated Use PolicyStatus from database layer instead
+ * Policy status types - kept for backward compatibility
+ */
+export type PolicyStatus = "pendiente" | "activa" | "vencida" | "cancelada" | "renovada";
 
-  // Associated Policies
-  policies: Policy[];
+/**
+ * @deprecated Use specific ramo strings instead
+ * Insurance type - simplified for display purposes
+ */
+export type InsuranceType = "salud" | "automotor" | "vida" | "general" | string;
 
-  // Metadata
-  createdAt: Date;
-  updatedAt: Date;
-  notes?: string;
-}
+// ============================================
+// SEARCH AND FILTERING TYPES
+// ============================================
 
 /**
  * Search criteria for client filtering
  */
 export interface ClientSearchParams {
-  query: string; // Multi-field search query
-  insuranceType?: InsuranceType;
-  policyStatus?: PolicyStatus;
-  dateFrom?: Date;
-  dateTo?: Date;
+	query: string; // Multi-field search query
+	insuranceType?: string; // Ramo/insurance type
+	policyStatus?: PolicyStatus;
+	dateFrom?: Date;
+	dateTo?: Date;
 }
 
 /**
  * Client with computed search relevance
  */
 export interface ClientSearchResult extends Client {
-  matchedFields: string[]; // Fields that matched the search
-  relevanceScore: number; // Search relevance (0-1)
+	matchedFields: string[]; // Fields that matched the search
+	relevanceScore: number; // Search relevance (0-100)
 }

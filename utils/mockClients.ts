@@ -10,7 +10,7 @@ import { Client, Policy, ClientSearchResult } from "@/types/client";
  */
 function generateMockPolicies(clientId: string, count: number): Policy[] {
 	const types = ["salud", "automotor", "vida", "general"] as const;
-	const statuses = ["vigente", "vencida", "cancelada", "pendiente"] as const;
+	const statuses = ["activa", "vencida", "cancelada", "pendiente"] as const;
 
 	const policies: Policy[] = [];
 
@@ -25,10 +25,12 @@ function generateMockPolicies(clientId: string, count: number): Policy[] {
 			id: `${clientId}-POL${i + 1}`,
 			policyNumber: `POL-${Math.floor(1000 + Math.random() * 9000)}`,
 			insuranceType: types[Math.floor(Math.random() * types.length)],
-			status: i === 0 ? "vigente" : statuses[Math.floor(Math.random() * statuses.length)],
+			insuranceCompany: undefined,
+			status: i === 0 ? "activa" : statuses[Math.floor(Math.random() * statuses.length)],
 			startDate,
 			expirationDate,
 			premium: Math.floor(500 + Math.random() * 4500),
+			currency: "Bs",
 			beneficiaryName: Math.random() > 0.5 ? `Beneficiario ${i + 1}` : undefined,
 			coverageDetails: `Cobertura completa tipo ${i + 1}`,
 		});
@@ -104,6 +106,8 @@ export function generateMockClients(): Client[] {
 
 		const client: Client = {
 			id: `CLIENT-${String(i + 1).padStart(3, "0")}`,
+			clientType: "natural",
+			status: "active",
 			fullName,
 			idNumber,
 			nit,
@@ -207,8 +211,9 @@ export function getRecentClients(clients: Client[], count: number = 20): Client[
 }
 
 /**
- * Count active (vigente) policies for a client
+ * Count active policies for a client
+ * @deprecated Use getActivePolicyCount from clientHelpers instead
  */
 export function getActivePolicyCount(client: Client): number {
-	return client.policies.filter((policy) => policy.status === "vigente").length;
+	return client.policies.filter((policy) => policy.status === "activa").length;
 }

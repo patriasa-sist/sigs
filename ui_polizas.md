@@ -141,7 +141,7 @@ crearemos el módulo de cobranza, este módulo solo tienen acceso las cuentas ma
 3. Excesos: Deben redistribuirse completamente antes de confirmar
 4. RLS: Las policies permiten SELECT/UPDATE solo a cobranza y admin
 
-## clientes feedback (Listo)
+## clientes feedback
 
 sociedad con rubrica y detalle
 2do apellido obligatorio
@@ -162,20 +162,32 @@ ejecutivo visible
 agente visible
 paso extra para datos de facturacion
 
-NUEVO tipo de cliente llamado "asegurado" con datos minimos
-
-form extra accionista
-todos datos obligatorios en natural excepto salario
-
 POlizas
 Ci cambiar por vigencia fecha inicio-fecha fin
 visualización rapida>compañía
 anexos inclusion/exclusion visualizan dentro de la misma poliza
 
-Cobranza
-modificación de datos bloqueados bajo solicitud
+Prompt ordenado:
 
-## polizas feedback
+1. trabajaremos en mejoras para el modulo de clientes usando los mejores estandares de cleancode, seguridad, zod y demas patrones de diseño y arquitectura del mas alto nivel como experto en desarrollo de plataformas que eres.
+2. te ire pasando uno a uno las secciones o pantallas a mejorar y trabajaremos granularmente en ello
+3. esta es tu primer modificacion a pantallas existentes:
+
+✅ en la visualizacion principal de clientes se deben ver los datos reales, desechar los datos de mockup
+
+-   al dar al boton nuevo cliente el hover del mouse debe cambiar a una manito y no se porque tarda un monton en cargar el registrador de nuevo cliente, quiza no este optimizado o algo este fallando suavemente? quiero tu opinion para tomar una decision
+
+**_seguir ordenando el feedback de arriba_**
+
+-   actualizar como se muestra el progreso de registro de circulos y lineas a como se muestra en el progreso de registro de un siniestro
+
+-   en registro de cliente natural todos datos son obligatorios excepto salario
+
+-   NUEVO form extra accionista para registrarlo con datos minimos: nombre y carnet
+
+-   NUEVO tipo de cliente llamado "asegurado" con datos minimos
+
+## polizas feedback (REVISAR)
 
 8 12 25
 Paso1
