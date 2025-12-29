@@ -28,7 +28,6 @@ export default function ClientesPage() {
 	const [currentPage, setCurrentPage] = useState(1);
 	const [pageSize, setPageSize] = useState(20);
 	const [totalRecords, setTotalRecords] = useState(0);
-	const [totalPages, setTotalPages] = useState(0);
 
 	// Load clients from database with server-side pagination
 	useEffect(() => {
@@ -45,7 +44,6 @@ export default function ClientesPage() {
 				if (result.success) {
 					setDisplayedClients(result.data);
 					setTotalRecords(result.pagination.totalRecords);
-					setTotalPages(result.pagination.totalPages);
 				} else {
 					setError(result.error);
 					console.error("Error loading clients:", result.error, result.details);
@@ -80,7 +78,6 @@ export default function ClientesPage() {
 				setIsSearchMode(true);
 				// Update pagination for search results
 				setTotalRecords(result.data.length);
-				setTotalPages(1);
 			} else {
 				console.error("Search error:", result.error);
 				setError("Error al buscar clientes");

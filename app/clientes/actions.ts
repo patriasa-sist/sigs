@@ -164,7 +164,16 @@ export async function getAllClients(options?: {
 
 		if (!clientsData || clientsData.length === 0) {
 			console.log("[getAllClients] No clients found");
-			return { success: true, data: [] };
+			return {
+				success: true,
+				data: [],
+				pagination: {
+					page,
+					pageSize,
+					totalRecords: 0,
+					totalPages: 0,
+				},
+			};
 		}
 
 		// Extract client IDs for policy query
