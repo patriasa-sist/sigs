@@ -154,9 +154,7 @@ export function NaturalClientForm({ form, partnerForm, onFieldBlur }: NaturalCli
 						<Controller
 							name="fecha_nacimiento"
 							control={control}
-							render={({ field }) => (
-								<DatePicker date={field.value} onSelect={field.onChange} placeholder="DD-MM-AAAA" />
-							)}
+							render={({ field }) => <DatePicker date={field.value} onSelect={field.onChange} />}
 						/>
 						{errors.fecha_nacimiento && (
 							<p className="text-sm text-red-500 mt-1">{errors.fecha_nacimiento.message}</p>
@@ -219,9 +217,7 @@ export function NaturalClientForm({ form, partnerForm, onFieldBlur }: NaturalCli
 							Dirección <span className="text-red-500">*</span>
 						</Label>
 						<Input id="direccion" {...register("direccion")} onBlur={onFieldBlur} />
-						{errors.direccion && (
-							<p className="text-sm text-red-500 mt-1">{errors.direccion.message}</p>
-						)}
+						{errors.direccion && <p className="text-sm text-red-500 mt-1">{errors.direccion.message}</p>}
 					</div>
 
 					<div>
@@ -259,8 +255,13 @@ export function NaturalClientForm({ form, partnerForm, onFieldBlur }: NaturalCli
 			<FormSection title="Otros Datos" description="Información adicional (opcional)">
 				<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 					<div>
-						<Label htmlFor="profesion_oficio">Profesión u Oficio</Label>
+						<Label htmlFor="profesion_oficio">
+							Profesión u Oficio <span className="text-red-500">*</span>
+						</Label>
 						<Input id="profesion_oficio" {...register("profesion_oficio")} onBlur={onFieldBlur} />
+						{errors.profesion_oficio && (
+							<p className="text-sm text-red-500 mt-1">{errors.profesion_oficio.message}</p>
+						)}
 					</div>
 
 					<div>
@@ -274,13 +275,20 @@ export function NaturalClientForm({ form, partnerForm, onFieldBlur }: NaturalCli
 					</div>
 
 					<div>
-						<Label htmlFor="pais_residencia">País de Residencia</Label>
+						<Label htmlFor="pais_residencia">
+							País de Residencia <span className="text-red-500">*</span>
+						</Label>
 						<Input
 							id="pais_residencia"
 							{...register("pais_residencia")}
 							onBlur={onFieldBlur}
 							defaultValue="Bolivia"
+							readOnly
+							className="bg-muted cursor-not-allowed"
 						/>
+						{errors.pais_residencia && (
+							<p className="text-sm text-red-500 mt-1">{errors.pais_residencia.message}</p>
+						)}
 					</div>
 
 					<div>
@@ -341,20 +349,18 @@ export function NaturalClientForm({ form, partnerForm, onFieldBlur }: NaturalCli
 						<Controller
 							name="anio_ingreso"
 							control={control}
-							render={({ field }) => (
-								<DatePicker date={field.value} onSelect={field.onChange} placeholder="DD-MM-AAAA" />
-							)}
+							render={({ field }) => <DatePicker date={field.value} onSelect={field.onChange} />}
 						/>
 					</div>
 
 					<div>
-						<Label htmlFor="nit">NIT</Label>
+						<Label htmlFor="nit">NIT de Facturación</Label>
 						<Input id="nit" {...register("nit")} onBlur={onFieldBlur} placeholder="Min. 7 dígitos" />
 						{errors.nit && <p className="text-sm text-red-500 mt-1">{errors.nit.message}</p>}
 					</div>
 
 					<div className="md:col-span-2">
-						<Label htmlFor="domicilio_comercial">Domicilio Comercial</Label>
+						<Label htmlFor="domicilio_comercial">Dirección de Facturación</Label>
 						<Input
 							id="domicilio_comercial"
 							{...register("domicilio_comercial")}
@@ -389,13 +395,7 @@ export function NaturalClientForm({ form, partnerForm, onFieldBlur }: NaturalCli
 }
 
 // Partner fields component
-function PartnerFields({
-	form,
-	onFieldBlur,
-}: {
-	form: UseFormReturn<ClientPartnerData>;
-	onFieldBlur?: () => void;
-}) {
+function PartnerFields({ form, onFieldBlur }: { form: UseFormReturn<ClientPartnerData>; onFieldBlur?: () => void }) {
 	const {
 		register,
 		formState: { errors },
@@ -408,9 +408,7 @@ function PartnerFields({
 					Primer Nombre <span className="text-red-500">*</span>
 				</Label>
 				<Input id="partner_primer_nombre" {...register("primer_nombre")} onBlur={onFieldBlur} />
-				{errors.primer_nombre && (
-					<p className="text-sm text-red-500 mt-1">{errors.primer_nombre.message}</p>
-				)}
+				{errors.primer_nombre && <p className="text-sm text-red-500 mt-1">{errors.primer_nombre.message}</p>}
 			</div>
 
 			<div>
@@ -445,12 +443,7 @@ function PartnerFields({
 				<Label htmlFor="partner_celular">
 					Celular <span className="text-red-500">*</span>
 				</Label>
-				<Input
-					id="partner_celular"
-					{...register("celular")}
-					onBlur={onFieldBlur}
-					placeholder="Solo números"
-				/>
+				<Input id="partner_celular" {...register("celular")} onBlur={onFieldBlur} placeholder="Solo números" />
 				{errors.celular && <p className="text-sm text-red-500 mt-1">{errors.celular.message}</p>}
 			</div>
 
@@ -494,9 +487,7 @@ function PartnerFields({
 					Lugar de Trabajo <span className="text-red-500">*</span>
 				</Label>
 				<Input id="partner_lugar_trabajo" {...register("lugar_trabajo")} onBlur={onFieldBlur} />
-				{errors.lugar_trabajo && (
-					<p className="text-sm text-red-500 mt-1">{errors.lugar_trabajo.message}</p>
-				)}
+				{errors.lugar_trabajo && <p className="text-sm text-red-500 mt-1">{errors.lugar_trabajo.message}</p>}
 			</div>
 		</div>
 	);

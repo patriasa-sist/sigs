@@ -41,11 +41,6 @@ export function UnipersonalClientForm({ form, partnerForm, onFieldBlur }: Uniper
 	// "Same As" checkbox states
 	const [useSameAsDireccion, setUseSameAsDireccion] = useState(false);
 	const [useSameAsEmail, setUseSameAsEmail] = useState(false);
-	const [useSameAsNombre, setUseSameAsNombre] = useState(false);
-	const [useSameAsApellido, setUseSameAsApellido] = useState(false);
-	const [useSameAsDocumento, setUseSameAsDocumento] = useState(false);
-	const [useSameAsExtension, setUseSameAsExtension] = useState(false);
-	const [useSameAsNacionalidad, setUseSameAsNacionalidad] = useState(false);
 	const [useSameAsPropietario, setUseSameAsPropietario] = useState(false);
 
 	// Watch values for "same as" functionality
@@ -57,11 +52,6 @@ export function UnipersonalClientForm({ form, partnerForm, onFieldBlur }: Uniper
 	const segundoApellido = watch("segundo_apellido");
 	const numeroDocumento = watch("numero_documento");
 	const extensionCi = watch("extension_ci");
-	const nacionalidad = watch("nacionalidad");
-	const nombrePropietario = watch("nombre_propietario");
-	const apellidoPropietario = watch("apellido_propietario");
-	const documentoPropietario = watch("documento_propietario");
-	const extensionPropietario = watch("extension_propietario");
 
 	// Helper function to combine nombres for "same as" checkbox
 	const combineNombres = () => {
@@ -74,9 +64,9 @@ export function UnipersonalClientForm({ form, partnerForm, onFieldBlur }: Uniper
 		return apellidos || undefined;
 	};
 
-	const combinePropietarioNombre = () => {
-		const nombre = [nombrePropietario, apellidoPropietario].filter(Boolean).join(" ");
-		return nombre || undefined;
+	const combineNombreCompleto = () => {
+		const nombreCompleto = [primerNombre, segundoNombre, primerApellido, segundoApellido].filter(Boolean).join(" ");
+		return nombreCompleto || undefined;
 	};
 
 	return (
@@ -189,9 +179,7 @@ export function UnipersonalClientForm({ form, partnerForm, onFieldBlur }: Uniper
 						<Controller
 							name="fecha_nacimiento"
 							control={control}
-							render={({ field }) => (
-								<DatePicker date={field.value} onSelect={field.onChange} placeholder="DD-MM-AAAA" />
-							)}
+							render={({ field }) => <DatePicker date={field.value} onSelect={field.onChange} />}
 						/>
 						{errors.fecha_nacimiento && (
 							<p className="text-sm text-red-500 mt-1">{errors.fecha_nacimiento.message}</p>
@@ -254,9 +242,7 @@ export function UnipersonalClientForm({ form, partnerForm, onFieldBlur }: Uniper
 							Dirección <span className="text-red-500">*</span>
 						</Label>
 						<Input id="direccion" {...register("direccion")} onBlur={onFieldBlur} />
-						{errors.direccion && (
-							<p className="text-sm text-red-500 mt-1">{errors.direccion.message}</p>
-						)}
+						{errors.direccion && <p className="text-sm text-red-500 mt-1">{errors.direccion.message}</p>}
 					</div>
 
 					<div>
@@ -294,8 +280,13 @@ export function UnipersonalClientForm({ form, partnerForm, onFieldBlur }: Uniper
 			<FormSection title="Otros Datos Personales" description="Información adicional (opcional)">
 				<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 					<div>
-						<Label htmlFor="profesion_oficio">Profesión u Oficio</Label>
+						<Label htmlFor="profesion_oficio">
+							Profesión u Oficio <span className="text-red-500">*</span>
+						</Label>
 						<Input id="profesion_oficio" {...register("profesion_oficio")} onBlur={onFieldBlur} />
+						{errors.profesion_oficio && (
+							<p className="text-sm text-red-500 mt-1">{errors.profesion_oficio.message}</p>
+						)}
 					</div>
 
 					<div>
@@ -309,13 +300,20 @@ export function UnipersonalClientForm({ form, partnerForm, onFieldBlur }: Uniper
 					</div>
 
 					<div>
-						<Label htmlFor="pais_residencia">País de Residencia</Label>
+						<Label htmlFor="pais_residencia">
+							País de Residencia <span className="text-red-500">*</span>
+						</Label>
 						<Input
 							id="pais_residencia"
 							{...register("pais_residencia")}
 							onBlur={onFieldBlur}
 							defaultValue="Bolivia"
+							readOnly
+							className="bg-muted cursor-not-allowed"
 						/>
+						{errors.pais_residencia && (
+							<p className="text-sm text-red-500 mt-1">{errors.pais_residencia.message}</p>
+						)}
 					</div>
 
 					<div>
@@ -350,20 +348,18 @@ export function UnipersonalClientForm({ form, partnerForm, onFieldBlur }: Uniper
 						<Controller
 							name="anio_ingreso"
 							control={control}
-							render={({ field }) => (
-								<DatePicker date={field.value} onSelect={field.onChange} placeholder="DD-MM-AAAA" />
-							)}
+							render={({ field }) => <DatePicker date={field.value} onSelect={field.onChange} />}
 						/>
 					</div>
 
 					<div>
-						<Label htmlFor="nit">NIT Personal</Label>
+						<Label htmlFor="nit">NIT de Facturación</Label>
 						<Input id="nit" {...register("nit")} onBlur={onFieldBlur} placeholder="Min. 7 dígitos" />
 						{errors.nit && <p className="text-sm text-red-500 mt-1">{errors.nit.message}</p>}
 					</div>
 
 					<div className="md:col-span-2">
-						<Label htmlFor="domicilio_comercial">Domicilio Comercial</Label>
+						<Label htmlFor="domicilio_comercial">Dirección de Facturación</Label>
 						<Input
 							id="domicilio_comercial"
 							{...register("domicilio_comercial")}
@@ -411,7 +407,7 @@ export function UnipersonalClientForm({ form, partnerForm, onFieldBlur }: Uniper
 					</div>
 
 					<div>
-						<Label htmlFor="matricula_comercio">Matrícula de Comercio</Label>
+						<Label htmlFor="matricula_comercio">Matrícula de Comercio SEPREC</Label>
 						<Input
 							id="matricula_comercio"
 							{...register("matricula_comercio")}
@@ -454,6 +450,7 @@ export function UnipersonalClientForm({ form, partnerForm, onFieldBlur }: Uniper
 						</Label>
 						<Input
 							id="telefono_comercial"
+							type="tel"
 							{...register("telefono_comercial")}
 							onBlur={onFieldBlur}
 							placeholder="Solo números, min. 5 dígitos"
@@ -495,7 +492,7 @@ export function UnipersonalClientForm({ form, partnerForm, onFieldBlur }: Uniper
 									<SelectContent>
 										{INCOME_LEVELS.map((level) => (
 											<SelectItem key={level} value={INCOME_VALUES[level].toString()}>
-												{level.charAt(0).toUpperCase() + level.slice(1)} ($
+												{level.charAt(0).toUpperCase() + level.slice(1)} (Bs.
 												{INCOME_VALUES[level].toLocaleString()})
 											</SelectItem>
 										))}
@@ -537,137 +534,27 @@ export function UnipersonalClientForm({ form, partnerForm, onFieldBlur }: Uniper
 				</div>
 			</FormSection>
 
-			{/* SECCIÓN 5: DATOS DEL PROPIETARIO */}
-			<FormSection title="Datos del Propietario" description="Información del propietario del emprendimiento">
+			{/* SECCIÓN 5: REPRESENTANTE LEGAL */}
+			<FormSection title="Representante Legal" description="Persona autorizada para actuar en nombre del negocio">
 				<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 					<div className="md:col-span-2">
-						<Label htmlFor="nombre_propietario">
-							Nombre del Propietario <span className="text-red-500">*</span>
-						</Label>
-						<Input
-							id="nombre_propietario"
-							{...register("nombre_propietario")}
-							onBlur={onFieldBlur}
-							disabled={useSameAsNombre}
-						/>
-						{errors.nombre_propietario && (
-							<p className="text-sm text-red-500 mt-1">{errors.nombre_propietario.message}</p>
-						)}
-						<div className="mt-2">
+						<div className="mb-2">
 							<SameAsCheckbox
-								id="same-as-nombre"
-								label="Mismo que nombres personales"
-								checked={useSameAsNombre}
-								onCheckedChange={setUseSameAsNombre}
-								sourceValue={combineNombres()}
-								onCopyValue={(value) => setValue("nombre_propietario", value as string)}
+								id="same-as-propietario"
+								label="Mismos datos personales"
+								checked={useSameAsPropietario}
+								onCheckedChange={(checked) => {
+									setUseSameAsPropietario(checked);
+									if (checked) {
+										setValue("nombre_representante", combineNombreCompleto() || "");
+										setValue("ci_representante", numeroDocumento || "");
+										setValue("extension_representante", extensionCi || "");
+									}
+								}}
+								sourceValue={combineNombreCompleto()}
+								onCopyValue={(value) => setValue("nombre_representante", value as string)}
 							/>
 						</div>
-					</div>
-
-					<div className="md:col-span-2">
-						<Label htmlFor="apellido_propietario">
-							Apellido del Propietario <span className="text-red-500">*</span>
-						</Label>
-						<Input
-							id="apellido_propietario"
-							{...register("apellido_propietario")}
-							onBlur={onFieldBlur}
-							disabled={useSameAsApellido}
-						/>
-						{errors.apellido_propietario && (
-							<p className="text-sm text-red-500 mt-1">{errors.apellido_propietario.message}</p>
-						)}
-						<div className="mt-2">
-							<SameAsCheckbox
-								id="same-as-apellido"
-								label="Mismo que apellidos personales"
-								checked={useSameAsApellido}
-								onCheckedChange={setUseSameAsApellido}
-								sourceValue={combineApellidos()}
-								onCopyValue={(value) => setValue("apellido_propietario", value as string)}
-							/>
-						</div>
-					</div>
-
-					<div>
-						<Label htmlFor="documento_propietario">
-							Número de Documento <span className="text-red-500">*</span>
-						</Label>
-						<Input
-							id="documento_propietario"
-							{...register("documento_propietario")}
-							onBlur={onFieldBlur}
-							disabled={useSameAsDocumento}
-							placeholder="Min. 7 dígitos"
-						/>
-						{errors.documento_propietario && (
-							<p className="text-sm text-red-500 mt-1">{errors.documento_propietario.message}</p>
-						)}
-						<div className="mt-2">
-							<SameAsCheckbox
-								id="same-as-documento"
-								label="Mismo que documento personal"
-								checked={useSameAsDocumento}
-								onCheckedChange={setUseSameAsDocumento}
-								sourceValue={numeroDocumento}
-								onCopyValue={(value) => setValue("documento_propietario", value as string)}
-							/>
-						</div>
-					</div>
-
-					<div>
-						<Label htmlFor="extension_propietario">Extensión</Label>
-						<Input
-							id="extension_propietario"
-							{...register("extension_propietario")}
-							onBlur={onFieldBlur}
-							disabled={useSameAsExtension}
-						/>
-						<div className="mt-2">
-							<SameAsCheckbox
-								id="same-as-extension"
-								label="Mismo que extensión personal"
-								checked={useSameAsExtension}
-								onCheckedChange={setUseSameAsExtension}
-								sourceValue={extensionCi}
-								onCopyValue={(value) => setValue("extension_propietario", value as string)}
-							/>
-						</div>
-					</div>
-
-					<div className="md:col-span-2">
-						<Label htmlFor="nacionalidad_propietario">
-							Nacionalidad <span className="text-red-500">*</span>
-						</Label>
-						<Input
-							id="nacionalidad_propietario"
-							{...register("nacionalidad_propietario")}
-							onBlur={onFieldBlur}
-							disabled={useSameAsNacionalidad}
-							defaultValue="Boliviana"
-						/>
-						{errors.nacionalidad_propietario && (
-							<p className="text-sm text-red-500 mt-1">{errors.nacionalidad_propietario.message}</p>
-						)}
-						<div className="mt-2">
-							<SameAsCheckbox
-								id="same-as-nacionalidad"
-								label="Mismo que nacionalidad personal"
-								checked={useSameAsNacionalidad}
-								onCheckedChange={setUseSameAsNacionalidad}
-								sourceValue={nacionalidad}
-								onCopyValue={(value) => setValue("nacionalidad_propietario", value as string)}
-							/>
-						</div>
-					</div>
-				</div>
-			</FormSection>
-
-			{/* SECCIÓN 6: REPRESENTANTE LEGAL */}
-			<FormSection title="Representante Legal" description="Datos del representante legal">
-				<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-					<div className="md:col-span-2">
 						<Label htmlFor="nombre_representante">
 							Nombre del Representante <span className="text-red-500">*</span>
 						</Label>
@@ -680,23 +567,6 @@ export function UnipersonalClientForm({ form, partnerForm, onFieldBlur }: Uniper
 						{errors.nombre_representante && (
 							<p className="text-sm text-red-500 mt-1">{errors.nombre_representante.message}</p>
 						)}
-						<div className="mt-2">
-							<SameAsCheckbox
-								id="same-as-propietario"
-								label="Mismo que propietario"
-								checked={useSameAsPropietario}
-								onCheckedChange={(checked) => {
-									setUseSameAsPropietario(checked);
-									if (checked) {
-										setValue("nombre_representante", combinePropietarioNombre() || "");
-										setValue("ci_representante", documentoPropietario || "");
-										setValue("extension_representante", extensionPropietario || "");
-									}
-								}}
-								sourceValue={combinePropietarioNombre()}
-								onCopyValue={(value) => setValue("nombre_representante", value as string)}
-							/>
-						</div>
 					</div>
 
 					<div>
@@ -741,13 +611,7 @@ export function UnipersonalClientForm({ form, partnerForm, onFieldBlur }: Uniper
 }
 
 // Partner fields component
-function PartnerFields({
-	form,
-	onFieldBlur,
-}: {
-	form: UseFormReturn<ClientPartnerData>;
-	onFieldBlur?: () => void;
-}) {
+function PartnerFields({ form, onFieldBlur }: { form: UseFormReturn<ClientPartnerData>; onFieldBlur?: () => void }) {
 	const {
 		register,
 		formState: { errors },
@@ -760,9 +624,7 @@ function PartnerFields({
 					Primer Nombre <span className="text-red-500">*</span>
 				</Label>
 				<Input id="partner_primer_nombre" {...register("primer_nombre")} onBlur={onFieldBlur} />
-				{errors.primer_nombre && (
-					<p className="text-sm text-red-500 mt-1">{errors.primer_nombre.message}</p>
-				)}
+				{errors.primer_nombre && <p className="text-sm text-red-500 mt-1">{errors.primer_nombre.message}</p>}
 			</div>
 
 			<div>
@@ -797,12 +659,7 @@ function PartnerFields({
 				<Label htmlFor="partner_celular">
 					Celular <span className="text-red-500">*</span>
 				</Label>
-				<Input
-					id="partner_celular"
-					{...register("celular")}
-					onBlur={onFieldBlur}
-					placeholder="Solo números"
-				/>
+				<Input id="partner_celular" {...register("celular")} onBlur={onFieldBlur} placeholder="Solo números" />
 				{errors.celular && <p className="text-sm text-red-500 mt-1">{errors.celular.message}</p>}
 			</div>
 
@@ -846,9 +703,7 @@ function PartnerFields({
 					Lugar de Trabajo <span className="text-red-500">*</span>
 				</Label>
 				<Input id="partner_lugar_trabajo" {...register("lugar_trabajo")} onBlur={onFieldBlur} />
-				{errors.lugar_trabajo && (
-					<p className="text-sm text-red-500 mt-1">{errors.lugar_trabajo.message}</p>
-				)}
+				{errors.lugar_trabajo && <p className="text-sm text-red-500 mt-1">{errors.lugar_trabajo.message}</p>}
 			</div>
 		</div>
 	);

@@ -302,6 +302,14 @@ export default function NuevoClientePage() {
 		if (naturalError) throw naturalError;
 
 		// 3. Insert into unipersonal_clients table (commercial data)
+		// Auto-fill propietario fields from personal data (unipersonal = same person)
+		const nombrePropietario = [normalized.primer_nombre, normalized.segundo_nombre]
+			.filter(Boolean)
+			.join(" ");
+		const apellidoPropietario = [normalized.primer_apellido, normalized.segundo_apellido]
+			.filter(Boolean)
+			.join(" ");
+
 		const { error: unipersonalError } = await supabase.from("unipersonal_clients").insert({
 			client_id: client.id,
 			razon_social: normalized.razon_social,
@@ -312,11 +320,12 @@ export default function NuevoClientePage() {
 			actividad_economica_comercial: normalized.actividad_economica_comercial,
 			nivel_ingresos: normalized.nivel_ingresos,
 			correo_electronico_comercial: normalized.correo_electronico_comercial,
-			nombre_propietario: normalized.nombre_propietario,
-			apellido_propietario: normalized.apellido_propietario,
-			documento_propietario: normalized.documento_propietario,
-			extension_propietario: normalized.extension_propietario || null,
-			nacionalidad_propietario: normalized.nacionalidad_propietario,
+			// Propietario data auto-filled from personal data
+			nombre_propietario: nombrePropietario,
+			apellido_propietario: apellidoPropietario,
+			documento_propietario: normalized.numero_documento,
+			extension_propietario: normalized.extension_ci || null,
+			nacionalidad_propietario: normalized.nacionalidad,
 			nombre_representante: normalized.nombre_representante,
 			ci_representante: normalized.ci_representante,
 			extension_representante: normalized.extension_representante || null,

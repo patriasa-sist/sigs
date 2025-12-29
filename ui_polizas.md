@@ -143,16 +143,19 @@ crearemos el módulo de cobranza, este módulo solo tienen acceso las cuentas ma
 
 ## clientes feedback
 
+--1er commit
+✅2do apellido obligatorio
+✅CEX NUEVO DOCUMENTO
+(confirmar) CONYUGUE OPCIONAL
+✅Bolivia residencia obligatorio
+✅profesion obligatoria
+✅unipersonal nro telefono comercial
+(????)agregar es el mismo
+✅documento seprec opcional unipersonal
+(polizas)Información de Contacto-cobranza una o mas
+
+-- 2do commit
 sociedad con rubrica y detalle
-2do apellido obligatorio
-CEX NUEVO DOCUMENTO
-CONYUGUE OPCIONAL
-Bolivia residencia obligatorio
-obl profesion
-unipersonal nro telefono comercial
-agregar es el mismo
-documento seprec opcional unipersonal
-Información de Contacto-cobranza una o mas
 ACCIONISTAS o SOCIOS: nombre, carnet, porcentaje (puede existir sin accionistas)
 RENOVACION DE POLIZA EXIGE RENOVACION DE DOCUMENTOS
 carta de nombramiento todos clientes
@@ -166,6 +169,7 @@ POlizas
 Ci cambiar por vigencia fecha inicio-fecha fin
 visualización rapida>compañía
 anexos inclusion/exclusion visualizan dentro de la misma poliza
+agregar input para guardar contacto de cobranza [nombre, número, correo]
 
 Prompt ordenado:
 
@@ -173,15 +177,15 @@ Prompt ordenado:
 2. te ire pasando uno a uno las secciones o pantallas a mejorar y trabajaremos granularmente en ello
 3. esta es tu primer modificacion a pantallas existentes:
 
-✅ en la visualizacion principal de clientes se deben ver los datos reales, desechar los datos de mockup
-
+✅ en la visualizacion principal de clientes se deben ver los datos reales, desechar los datos de mocku
 ✅ al dar al boton nuevo cliente no se porque tarda un monton en cargar el registrador de nuevo cliente, quiza no este optimizado o algo este fallando suavemente? quiero tu opinion para tomar una decision
+✅ mejorar la pagina inicial con paginacion y busqueda para performance
+(dejar para luego) - actualizar como se muestra el progreso de registro de circulos y lineas a como se muestra en el progreso de registro de un siniestro
 
-**_seguir ordenando el feedback de arriba_**
-
--   actualizar como se muestra el progreso de registro de circulos y lineas a como se muestra en el progreso de registro de un siniestro
-
--   en registro de cliente natural todos datos son obligatorios excepto salario
+Vamos a continuar con la mejora del modulo de clientes:
+✅ en registro de cliente natural un nuevo documento es el CEX, agregalo al dropdown
+✅ la fecha de nacimiento no puede ser mayor a hoy
+✅ quitar redundancia de datos comerciales para unipersonal son los mismos que los datos personales
 
 -   NUEVO form extra accionista para registrarlo con datos minimos: nombre y carnet
 

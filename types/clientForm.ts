@@ -13,7 +13,7 @@ import { z } from 'zod';
 export const CLIENT_TYPES = ['natural', 'juridica', 'unipersonal'] as const;
 export type ClientType = (typeof CLIENT_TYPES)[number];
 
-export const DOCUMENT_TYPES = ['ci', 'pasaporte'] as const;
+export const DOCUMENT_TYPES = ['ci', 'pasaporte', 'cex'] as const;
 export type DocumentType = (typeof DOCUMENT_TYPES)[number];
 
 export const CIVIL_STATUS = ['casado', 'soltero', 'divorciado', 'viudo'] as const;
@@ -99,7 +99,9 @@ export const naturalClientPersonalSchema = z.object({
   numero_documento: documentValidation,
   extension_ci: z.string().optional(),
   nacionalidad: z.string().min(1, 'Nacionalidad es requerida'),
-  fecha_nacimiento: z.date({ message: 'Fecha de nacimiento es requerida' }),
+  fecha_nacimiento: z
+    .date({ message: 'Fecha de nacimiento es requerida' })
+    .max(new Date(), 'La fecha de nacimiento no puede ser mayor a hoy'),
   estado_civil: z.enum(CIVIL_STATUS, { message: 'Estado civil es requerido' }),
 });
 
@@ -118,10 +120,10 @@ export const naturalClientContactSchema = z.object({
 
 // Section 3: Otros Datos
 export interface NaturalClientOtherData {
-  profesion_oficio?: string;
+  profesion_oficio: string;
   actividad_economica?: string;
   lugar_trabajo?: string;
-  pais_residencia?: string;
+  pais_residencia: string;
   genero?: Gender;
   nivel_ingresos?: number;
   cargo?: string;
@@ -131,10 +133,10 @@ export interface NaturalClientOtherData {
 }
 
 export const naturalClientOtherSchema = z.object({
-  profesion_oficio: z.string().optional(),
+  profesion_oficio: z.string().min(1, 'Profesión u oficio es requerido'),
   actividad_economica: z.string().optional(),
   lugar_trabajo: z.string().optional(),
-  pais_residencia: z.string().optional(),
+  pais_residencia: z.string().min(1, 'País de residencia es requerido'),
   genero: z.enum(GENDER_OPTIONS).optional(),
   nivel_ingresos: z.number().positive().optional(),
   cargo: z.string().optional(),
@@ -276,7 +278,7 @@ export const unipersonalClientFormSchema = naturalClientPersonalSchema
   .merge(naturalClientContactSchema)
   .merge(naturalClientOtherSchema.omit({ nit: true, domicilio_comercial: true, nivel_ingresos: true })) // Remove overlapping optional fields
   .merge(unipersonalCommercialSchema) // Use required fields from commercial
-  .merge(unipersonalOwnerSchema)
+  .merge(unipersonalOwnerSchema.partial()) // Make owner fields optional (auto-filled from personal data)
   .merge(unipersonalRepresentativeSchema)
   .extend({
     executive_in_charge: z.string().optional(),
