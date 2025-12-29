@@ -86,7 +86,7 @@ export interface NaturalClientPersonalData {
   numero_documento: string;
   extension_ci?: string;
   nacionalidad: string;
-  fecha_nacimiento: Date;
+  fecha_nacimiento: string; // ISO date string (YYYY-MM-DD)
   estado_civil: CivilStatus;
 }
 
@@ -100,8 +100,9 @@ export const naturalClientPersonalSchema = z.object({
   extension_ci: z.string().optional(),
   nacionalidad: z.string().min(1, 'Nacionalidad es requerida'),
   fecha_nacimiento: z
-    .date({ message: 'Fecha de nacimiento es requerida' })
-    .max(new Date(), 'La fecha de nacimiento no puede ser mayor a hoy'),
+    .string({ message: 'Fecha de nacimiento es requerida' })
+    .min(1, 'Fecha de nacimiento es requerida')
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Formato de fecha inválido'),
   estado_civil: z.enum(CIVIL_STATUS, { message: 'Estado civil es requerido' }),
 });
 
@@ -127,7 +128,7 @@ export interface NaturalClientOtherData {
   genero?: Gender;
   nivel_ingresos?: number;
   cargo?: string;
-  anio_ingreso?: Date;
+  anio_ingreso?: string; // ISO date string (YYYY-MM-DD) - optional
   nit?: string;
   domicilio_comercial?: string;
 }
@@ -140,12 +141,13 @@ export const naturalClientOtherSchema = z.object({
   genero: z.enum(GENDER_OPTIONS).optional(),
   nivel_ingresos: z.number().positive().optional(),
   cargo: z.string().optional(),
-  anio_ingreso: z.date().optional(),
+  anio_ingreso: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Formato de fecha inválido').optional().or(z.literal('')),
   nit: z
     .string()
-    .min(7, 'NIT debe tener al menos 7 dígitos')
-    .regex(/^[0-9]+$/, 'Solo números permitidos')
-    .optional(),
+    .refine((val) => !val || val.length >= 7, { message: 'NIT debe tener al menos 7 dígitos' })
+    .refine((val) => !val || /^[0-9]+$/.test(val), { message: 'Solo números permitidos' })
+    .optional()
+    .or(z.literal('')),
   domicilio_comercial: z.string().optional(),
 });
 

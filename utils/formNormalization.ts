@@ -180,6 +180,9 @@ export function normalizeFormData<T extends Record<string, any>>(
  * Applies all normalization rules for natural client fields
  * @param data - Natural client form data
  * @returns Normalized data
+ *
+ * NOTE: tipo_documento, estado_civil, and genero are NOT normalized to uppercase
+ * because they must match database CHECK constraints in lowercase
  */
 export function normalizeNaturalClientData<T extends Record<string, any>>(data: T): T {
   const textFields = [
@@ -187,17 +190,17 @@ export function normalizeNaturalClientData<T extends Record<string, any>>(data: 
     'segundo_nombre',
     'primer_apellido',
     'segundo_apellido',
-    'tipo_documento',
+    // 'tipo_documento', // EXCLUDED: Must remain lowercase for DB constraint
     'numero_documento',
     'extension_ci',
     'nacionalidad',
-    'estado_civil',
+    // 'estado_civil', // EXCLUDED: Must remain lowercase for DB constraint
     'direccion',
     'profesion_oficio',
     'actividad_economica',
     'lugar_trabajo',
     'pais_residencia',
-    'genero',
+    // 'genero', // EXCLUDED: Must remain lowercase for DB constraint
     'cargo',
     'domicilio_comercial',
   ];
@@ -236,6 +239,9 @@ export function normalizeJuridicClientData<T extends Record<string, any>>(data: 
  * Applies all normalization rules for unipersonal client fields
  * @param data - Unipersonal client form data
  * @returns Normalized data
+ *
+ * NOTE: tipo_documento, estado_civil, and genero are NOT normalized to uppercase
+ * because they must match database CHECK constraints in lowercase
  */
 export function normalizeUnipersonalClientData<T extends Record<string, any>>(data: T): T {
   const textFields = [
@@ -244,17 +250,17 @@ export function normalizeUnipersonalClientData<T extends Record<string, any>>(da
     'segundo_nombre',
     'primer_apellido',
     'segundo_apellido',
-    'tipo_documento',
+    // 'tipo_documento', // EXCLUDED: Must remain lowercase for DB constraint
     'numero_documento',
     'extension_ci',
     'nacionalidad',
-    'estado_civil',
+    // 'estado_civil', // EXCLUDED: Must remain lowercase for DB constraint
     'direccion',
     'profesion_oficio',
     'actividad_economica',
     'lugar_trabajo',
     'pais_residencia',
-    'genero',
+    // 'genero', // EXCLUDED: Must remain lowercase for DB constraint
     'cargo',
     // Commercial data (unipersonal fields)
     'razon_social',
@@ -373,4 +379,38 @@ export function parseDateDDMMYYYY(dateString: string): Date | null {
   }
 
   return date;
+}
+
+/**
+ * Normalizes a date value to be database-safe
+ * Converts invalid dates, empty objects, undefined to null
+ * @param value - Date value to normalize (can be Date, object, undefined, null)
+ * @returns Valid Date object or null
+ */
+export function normalizeDate(value: any): Date | null {
+  // If null or undefined, return null
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  // If it's already a Date and is valid
+  if (value instanceof Date && !isNaN(value.getTime())) {
+    return value;
+  }
+
+  // If it's an empty object {} or invalid object
+  if (typeof value === 'object' && Object.keys(value).length === 0) {
+    return null;
+  }
+
+  // If it's a string, try to parse it
+  if (typeof value === 'string') {
+    const parsed = new Date(value);
+    if (!isNaN(parsed.getTime())) {
+      return parsed;
+    }
+  }
+
+  // Default: return null for any invalid value
+  return null;
 }

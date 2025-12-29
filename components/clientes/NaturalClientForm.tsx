@@ -15,7 +15,6 @@ import { FormSection } from "./FormSection";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { DatePicker } from "@/components/ui/date-picker";
 import { SameAsCheckbox } from "@/components/ui/same-as-checkbox";
 import { ExecutiveDropdown } from "@/components/shared/ExecutiveDropdown";
 
@@ -151,10 +150,12 @@ export function NaturalClientForm({ form, partnerForm, onFieldBlur }: NaturalCli
 						<Label htmlFor="fecha_nacimiento">
 							Fecha de Nacimiento <span className="text-red-500">*</span>
 						</Label>
-						<Controller
-							name="fecha_nacimiento"
-							control={control}
-							render={({ field }) => <DatePicker date={field.value} onSelect={field.onChange} />}
+						<Input
+							id="fecha_nacimiento"
+							type="date"
+							{...register("fecha_nacimiento")}
+							onBlur={onFieldBlur}
+							className={errors.fecha_nacimiento ? "border-red-500" : ""}
 						/>
 						{errors.fecha_nacimiento && (
 							<p className="text-sm text-red-500 mt-1">{errors.fecha_nacimiento.message}</p>
@@ -346,11 +347,16 @@ export function NaturalClientForm({ form, partnerForm, onFieldBlur }: NaturalCli
 
 					<div>
 						<Label htmlFor="anio_ingreso">Año de Ingreso</Label>
-						<Controller
-							name="anio_ingreso"
-							control={control}
-							render={({ field }) => <DatePicker date={field.value} onSelect={field.onChange} />}
+						<Input
+							id="anio_ingreso"
+							type="date"
+							{...register("anio_ingreso")}
+							onBlur={onFieldBlur}
+							className={errors.anio_ingreso ? "border-red-500" : ""}
 						/>
+						{errors.anio_ingreso && (
+							<p className="text-sm text-red-500 mt-1">{errors.anio_ingreso.message}</p>
+						)}
 					</div>
 
 					<div>

@@ -23,6 +23,7 @@ import {
 	normalizeJuridicClientData,
 	normalizePartnerData,
 	normalizeLegalRepresentativeData,
+	normalizeDate,
 } from "@/utils/formNormalization";
 import {
 	saveDraft,
@@ -181,6 +182,22 @@ export default function NuevoClientePage() {
 		const formData = naturalForm.getValues();
 		const normalized = normalizeNaturalClientData(formData);
 
+		// Validate and convert required date fields before submission
+		if (!normalized.fecha_nacimiento || typeof normalized.fecha_nacimiento !== 'string') {
+			throw new Error("Fecha de nacimiento es requerida");
+		}
+
+		// Convert ISO date strings to Date objects
+		const fechaNacimiento = new Date(normalized.fecha_nacimiento);
+		if (isNaN(fechaNacimiento.getTime())) {
+			throw new Error("Fecha de nacimiento inválida");
+		}
+
+		// Convert optional anio_ingreso to Date or null
+		const anioIngreso = normalized.anio_ingreso && normalized.anio_ingreso.trim() !== ''
+			? new Date(normalized.anio_ingreso)
+			: null;
+
 		// 1. Insert into clients table
 		const { data: client, error: clientError } = await supabase
 			.from("clients")
@@ -206,7 +223,7 @@ export default function NuevoClientePage() {
 			numero_documento: normalized.numero_documento,
 			extension_ci: normalized.extension_ci || null,
 			nacionalidad: normalized.nacionalidad,
-			fecha_nacimiento: normalized.fecha_nacimiento,
+			fecha_nacimiento: fechaNacimiento.toISOString(), // Convert Date to ISO string for PostgreSQL
 			estado_civil: normalized.estado_civil,
 			direccion: normalized.direccion,
 			correo_electronico: normalized.correo_electronico,
@@ -218,7 +235,7 @@ export default function NuevoClientePage() {
 			genero: normalized.genero || null,
 			nivel_ingresos: normalized.nivel_ingresos || null,
 			cargo: normalized.cargo || null,
-			anio_ingreso: normalized.anio_ingreso || null,
+			anio_ingreso: anioIngreso ? anioIngreso.toISOString() : null, // Convert Date to ISO or null
 			nit: normalized.nit || null,
 			domicilio_comercial: normalized.domicilio_comercial || null,
 		});
@@ -257,6 +274,22 @@ export default function NuevoClientePage() {
 		const formData = unipersonalForm.getValues();
 		const normalized = normalizeUnipersonalClientData(formData);
 
+		// Validate and convert required date fields before submission
+		if (!normalized.fecha_nacimiento || typeof normalized.fecha_nacimiento !== 'string') {
+			throw new Error("Fecha de nacimiento es requerida");
+		}
+
+		// Convert ISO date strings to Date objects
+		const fechaNacimiento = new Date(normalized.fecha_nacimiento);
+		if (isNaN(fechaNacimiento.getTime())) {
+			throw new Error("Fecha de nacimiento inválida");
+		}
+
+		// Convert optional anio_ingreso to Date or null
+		const anioIngreso = normalized.anio_ingreso && normalized.anio_ingreso.trim() !== ''
+			? new Date(normalized.anio_ingreso)
+			: null;
+
 		// 1. Insert into clients table
 		const { data: client, error: clientError } = await supabase
 			.from("clients")
@@ -282,7 +315,7 @@ export default function NuevoClientePage() {
 			numero_documento: normalized.numero_documento,
 			extension_ci: normalized.extension_ci || null,
 			nacionalidad: normalized.nacionalidad,
-			fecha_nacimiento: normalized.fecha_nacimiento,
+			fecha_nacimiento: fechaNacimiento.toISOString(), // Convert Date to ISO string for PostgreSQL
 			estado_civil: normalized.estado_civil,
 			direccion: normalized.direccion,
 			correo_electronico: normalized.correo_electronico,
@@ -294,7 +327,7 @@ export default function NuevoClientePage() {
 			genero: normalized.genero || null,
 			nivel_ingresos: normalized.nivel_ingresos || null,
 			cargo: normalized.cargo || null,
-			anio_ingreso: normalized.anio_ingreso || null,
+			anio_ingreso: anioIngreso ? anioIngreso.toISOString() : null, // Convert Date to ISO or null
 			nit: normalized.nit || null,
 			domicilio_comercial: normalized.domicilio_comercial || null,
 		});
