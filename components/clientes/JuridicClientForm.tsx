@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Trash2 } from "lucide-react";
+import { ExecutiveDropdown } from "@/components/shared/ExecutiveDropdown";
 
 interface JuridicClientFormProps {
 	form: UseFormReturn<JuridicClientFormData>;
@@ -141,6 +142,25 @@ export function JuridicClientForm({ form, onFieldBlur }: JuridicClientFormProps)
 						{errors.actividad_economica && (
 							<p className="text-sm text-red-500 mt-1">{errors.actividad_economica.message}</p>
 						)}
+					</div>
+
+					{/* Ejecutivo a Cargo */}
+					<div>
+						<Controller
+							name="executive_in_charge"
+							control={control}
+							render={({ field }) => (
+								<ExecutiveDropdown
+									value={field.value}
+									onValueChange={field.onChange}
+									error={errors.executive_in_charge?.message}
+									label="Ejecutivo a Cargo"
+									placeholder="Seleccione un ejecutivo"
+									required={false}
+									showRole={false}
+								/>
+							)}
+						/>
 					</div>
 				</div>
 			</FormSection>

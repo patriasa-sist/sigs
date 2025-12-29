@@ -175,7 +175,7 @@ Prompt ordenado:
 
 ✅ en la visualizacion principal de clientes se deben ver los datos reales, desechar los datos de mockup
 
--   al dar al boton nuevo cliente el hover del mouse debe cambiar a una manito y no se porque tarda un monton en cargar el registrador de nuevo cliente, quiza no este optimizado o algo este fallando suavemente? quiero tu opinion para tomar una decision
+✅ al dar al boton nuevo cliente no se porque tarda un monton en cargar el registrador de nuevo cliente, quiza no este optimizado o algo este fallando suavemente? quiero tu opinion para tomar una decision
 
 **_seguir ordenando el feedback de arriba_**
 

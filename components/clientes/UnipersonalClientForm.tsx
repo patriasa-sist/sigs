@@ -17,6 +17,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DatePicker } from "@/components/ui/date-picker";
 import { SameAsCheckbox } from "@/components/ui/same-as-checkbox";
+import { ExecutiveDropdown } from "@/components/shared/ExecutiveDropdown";
 
 interface UnipersonalClientFormProps {
 	form: UseFormReturn<UnipersonalClientFormData>;
@@ -222,6 +223,25 @@ export function UnipersonalClientForm({ form, partnerForm, onFieldBlur }: Uniper
 						{errors.estado_civil && (
 							<p className="text-sm text-red-500 mt-1">{errors.estado_civil.message}</p>
 						)}
+					</div>
+
+					{/* Ejecutivo a Cargo */}
+					<div>
+						<Controller
+							name="executive_in_charge"
+							control={control}
+							render={({ field }) => (
+								<ExecutiveDropdown
+									value={field.value}
+									onValueChange={field.onChange}
+									error={errors.executive_in_charge?.message}
+									label="Ejecutivo a Cargo"
+									placeholder="Seleccione un ejecutivo"
+									required={false}
+									showRole={false}
+								/>
+							)}
+						/>
 					</div>
 				</div>
 			</FormSection>

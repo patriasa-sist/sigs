@@ -31,6 +31,21 @@ export type ActionResult<T> =
 	| { success: true; data: T }
 	| { success: false; error: string; details?: unknown };
 
+export type PaginatedResult<T> = {
+	success: true;
+	data: T[];
+	pagination: {
+		page: number;
+		pageSize: number;
+		totalRecords: number;
+		totalPages: number;
+	};
+} | {
+	success: false;
+	error: string;
+	details?: unknown;
+};
+
 // ============================================
 // HELPER FUNCTIONS
 // ============================================
@@ -77,28 +92,54 @@ function getErrorMessage(error: unknown): string {
  * Fetch all clients with their policies
  *
  * @description
- * Retrieves all clients from the database with:
+ * Retrieves clients from the database with:
  * - Type-specific client data (natural/juridic/unipersonal)
  * - Associated policies with insurance company info
  * - Proper validation and transformation
+ * - Optional server-side pagination for performance
  *
- * @returns Action result with array of client view models
+ * @param options - Optional pagination parameters
+ * @param options.page - Page number (default: 1)
+ * @param options.pageSize - Records per page (default: 20)
+ * @returns Paginated result with client view models and pagination metadata
  *
  * @example
  * ```typescript
- * const result = await getAllClients();
+ * // Fetch first page with 20 clients
+ * const result = await getAllClients({ page: 1, pageSize: 20 });
  * if (result.success) {
- *   console.log(`Found ${result.data.length} clients`);
+ *   console.log(`Found ${result.data.length} clients (page ${result.pagination.page} of ${result.pagination.totalPages})`);
  * }
  * ```
  */
-export async function getAllClients(): Promise<ActionResult<ClientViewModel[]>> {
+export async function getAllClients(options?: {
+	page?: number;
+	pageSize?: number;
+}): Promise<PaginatedResult<ClientViewModel>> {
 	try {
 		const { supabase, user } = await getAuthenticatedClient();
 
-		console.log(`[getAllClients] User ${user.email} fetching all clients`);
+		const page = options?.page ?? 1;
+		const pageSize = options?.pageSize ?? 20;
+		const offset = (page - 1) * pageSize;
 
-		// Query base clients with type-specific data
+		console.log(`[getAllClients] User ${user.email} fetching clients (page ${page}, size ${pageSize})`);
+
+		// Get total count first (lightweight query)
+		const { count: totalRecords, error: countError } = await supabase
+			.from("clients")
+			.select("*", { count: "exact", head: true });
+
+		if (countError) {
+			console.error("[getAllClients] Error counting clients:", countError);
+			return {
+				success: false,
+				error: "Error al contar clientes",
+				details: countError,
+			};
+		}
+
+		// Query base clients with type-specific data (paginated)
 		const { data: clientsData, error: clientsError } = await supabase
 			.from("clients")
 			.select(
@@ -109,7 +150,8 @@ export async function getAllClients(): Promise<ActionResult<ClientViewModel[]>> 
 				unipersonal_clients (*)
 			`
 			)
-			.order("created_at", { ascending: false });
+			.order("created_at", { ascending: false })
+			.range(offset, offset + pageSize - 1);
 
 		if (clientsError) {
 			console.error("[getAllClients] Error fetching clients:", clientsError);
@@ -201,9 +243,20 @@ export async function getAllClients(): Promise<ActionResult<ClientViewModel[]>> 
 			console.warn(`[getAllClients] ${errors.length} clients failed validation:`, errors);
 		}
 
-		console.log(`[getAllClients] Successfully fetched ${validatedClients.length} clients`);
+		const totalPages = Math.ceil((totalRecords ?? 0) / pageSize);
 
-		return { success: true, data: validatedClients };
+		console.log(`[getAllClients] Successfully fetched ${validatedClients.length} clients (page ${page}/${totalPages})`);
+
+		return {
+			success: true,
+			data: validatedClients,
+			pagination: {
+				page,
+				pageSize,
+				totalRecords: totalRecords ?? 0,
+				totalPages,
+			},
+		};
 	} catch (error) {
 		console.error("[getAllClients] Unexpected error:", error);
 		return {
@@ -366,17 +419,21 @@ export async function searchClients(query: string): Promise<ActionResult<ClientV
 
 		const trimmedQuery = query.trim();
 		if (!trimmedQuery) {
-			// Return all clients if query is empty
-			return getAllClients();
+			// Return all clients if query is empty (first page)
+			const result = await getAllClients({ page: 1, pageSize: 20 });
+			if (!result.success) {
+				return result;
+			}
+			return { success: true, data: result.data };
 		}
 
 		console.log(`[searchClients] User ${user.email} searching for: "${trimmedQuery}"`);
 
-		// Get all clients (we'll filter in-memory for better cross-field matching)
-		const allClientsResult = await getAllClients();
+		// Get all clients for search (increase page size for comprehensive search)
+		const allClientsResult = await getAllClients({ page: 1, pageSize: 1000 });
 
 		if (!allClientsResult.success) {
-			return allClientsResult;
+			return { success: false, error: allClientsResult.error, details: allClientsResult.details };
 		}
 
 		const allClients = allClientsResult.data;
