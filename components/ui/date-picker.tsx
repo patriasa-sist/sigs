@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import { format } from "date-fns";
-import { es } from "date-fns/locale";
 
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
@@ -36,7 +35,7 @@ export function DatePicker({
 		if (date) {
 			setInputValue(format(date, "dd/MM/yyyy"));
 			setIsValid(true);
-		} else if (!inputValue) {
+		} else {
 			setInputValue("");
 			setIsValid(true);
 		}
@@ -57,11 +56,7 @@ export function DatePicker({
 			if (day >= 1 && day <= 31 && month >= 1 && month <= 12 && year >= 1900 && year <= 2100) {
 				const newDate = new Date(year, month - 1, day);
 				// Check if the date is valid (handles invalid dates like 31/02)
-				if (
-					newDate.getFullYear() === year &&
-					newDate.getMonth() === month - 1 &&
-					newDate.getDate() === day
-				) {
+				if (newDate.getFullYear() === year && newDate.getMonth() === month - 1 && newDate.getDate() === day) {
 					return newDate;
 				}
 			}
@@ -76,11 +71,7 @@ export function DatePicker({
 
 			if (day >= 1 && day <= 31 && month >= 1 && month <= 12 && year >= 1900 && year <= 2100) {
 				const newDate = new Date(year, month - 1, day);
-				if (
-					newDate.getFullYear() === year &&
-					newDate.getMonth() === month - 1 &&
-					newDate.getDate() === day
-				) {
+				if (newDate.getFullYear() === year && newDate.getMonth() === month - 1 && newDate.getDate() === day) {
 					return newDate;
 				}
 			}

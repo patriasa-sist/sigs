@@ -152,17 +152,18 @@ crearemos el módulo de cobranza, este módulo solo tienen acceso las cuentas ma
 ✅unipersonal nro telefono comercial
 (????)agregar es el mismo
 ✅documento seprec opcional unipersonal
-(polizas)Información de Contacto-cobranza una o mas
 ✅fecha de nacimiento no puede ser mayor a hoy y se escribe manualmente
 
 -- 2do commit
-arreglar que no se puede cargar datos a la db y el error no explica porque
+✅arreglar que no se puede cargar datos a la db y el error no explica porque
 
 --3er commit
-visualizar clientes de forma correcta
+✅visualizar clientes de forma correcta
 
---3er commit
-ahora en datos personales aparte de Ejecutivo a cargo también se debe ingresar el "director de cartera" que se obtiene de la misma lista de ejecutivos comerciales de momento, luego existirá otro rol de "directores" en la db pero eso es en el futuro
+--4to commit
+✅cambiar ejecutivo a cargo por director de cartera solo visualmente db sigue igual
+
+--5to commit
 sociedad con rubrica y detalle
 ACCIONISTAS o SOCIOS: nombre, carnet, porcentaje (puede existir sin accionistas)
 RENOVACION DE POLIZA EXIGE RENOVACION DE DOCUMENTOS
@@ -172,6 +173,7 @@ visualización cliente>póliza agregar compañía
 ejecutivo visible
 agente visible
 paso extra para datos de facturacion
+(polizas)Información de Contacto-cobranza una o mas
 
 POlizas
 Ci cambiar por vigencia fecha inicio-fecha fin
@@ -198,6 +200,9 @@ Vamos a continuar con la mejora del modulo de clientes:
 -   NUEVO form extra accionista para registrarlo con datos minimos: nombre y carnet
 
 -   NUEVO tipo de cliente llamado "asegurado" con datos minimos
+
+trabajar editor de clientes con trazabilidad
+trabajar editor de polizas con trazabilidad
 
 ## polizas feedback (REVISAR)
 

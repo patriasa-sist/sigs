@@ -23,7 +23,6 @@ import {
 	normalizeJuridicClientData,
 	normalizePartnerData,
 	normalizeLegalRepresentativeData,
-	normalizeDate,
 } from "@/utils/formNormalization";
 import {
 	saveDraft,
@@ -167,9 +166,7 @@ export default function NuevoClientePage() {
 
 	// Handle cancel
 	const handleCancel = () => {
-		const shouldCancel = confirm(
-			"¿Está seguro que desea cancelar? Se perderá el borrador guardado."
-		);
+		const shouldCancel = confirm("¿Está seguro que desea cancelar? Se perderá el borrador guardado.");
 
 		if (shouldCancel) {
 			clearDraft();
@@ -183,7 +180,7 @@ export default function NuevoClientePage() {
 		const normalized = normalizeNaturalClientData(formData);
 
 		// Validate and convert required date fields before submission
-		if (!normalized.fecha_nacimiento || typeof normalized.fecha_nacimiento !== 'string') {
+		if (!normalized.fecha_nacimiento || typeof normalized.fecha_nacimiento !== "string") {
 			throw new Error("Fecha de nacimiento es requerida");
 		}
 
@@ -194,9 +191,8 @@ export default function NuevoClientePage() {
 		}
 
 		// Convert optional anio_ingreso to Date or null
-		const anioIngreso = normalized.anio_ingreso && normalized.anio_ingreso.trim() !== ''
-			? new Date(normalized.anio_ingreso)
-			: null;
+		const anioIngreso =
+			normalized.anio_ingreso && normalized.anio_ingreso.trim() !== "" ? new Date(normalized.anio_ingreso) : null;
 
 		// 1. Insert into clients table
 		const { data: client, error: clientError } = await supabase
@@ -275,7 +271,7 @@ export default function NuevoClientePage() {
 		const normalized = normalizeUnipersonalClientData(formData);
 
 		// Validate and convert required date fields before submission
-		if (!normalized.fecha_nacimiento || typeof normalized.fecha_nacimiento !== 'string') {
+		if (!normalized.fecha_nacimiento || typeof normalized.fecha_nacimiento !== "string") {
 			throw new Error("Fecha de nacimiento es requerida");
 		}
 
@@ -286,9 +282,8 @@ export default function NuevoClientePage() {
 		}
 
 		// Convert optional anio_ingreso to Date or null
-		const anioIngreso = normalized.anio_ingreso && normalized.anio_ingreso.trim() !== ''
-			? new Date(normalized.anio_ingreso)
-			: null;
+		const anioIngreso =
+			normalized.anio_ingreso && normalized.anio_ingreso.trim() !== "" ? new Date(normalized.anio_ingreso) : null;
 
 		// 1. Insert into clients table
 		const { data: client, error: clientError } = await supabase
@@ -336,12 +331,8 @@ export default function NuevoClientePage() {
 
 		// 3. Insert into unipersonal_clients table (commercial data)
 		// Auto-fill propietario fields from personal data (unipersonal = same person)
-		const nombrePropietario = [normalized.primer_nombre, normalized.segundo_nombre]
-			.filter(Boolean)
-			.join(" ");
-		const apellidoPropietario = [normalized.primer_apellido, normalized.segundo_apellido]
-			.filter(Boolean)
-			.join(" ");
+		const nombrePropietario = [normalized.primer_nombre, normalized.segundo_nombre].filter(Boolean).join(" ");
+		const apellidoPropietario = [normalized.primer_apellido, normalized.segundo_apellido].filter(Boolean).join(" ");
 
 		const { error: unipersonalError } = await supabase.from("unipersonal_clients").insert({
 			client_id: client.id,
@@ -529,11 +520,7 @@ export default function NuevoClientePage() {
 			</div>
 
 			{/* Progress Bar */}
-			<FormProgressBar
-				currentStep={clientType ? 2 : 1}
-				clientType={clientType}
-				completedSections={{}}
-			/>
+			<FormProgressBar currentStep={clientType ? 2 : 1} clientType={clientType} completedSections={{}} />
 
 			{/* Client Type Selector */}
 			<ClientTypeSelector selectedType={clientType} onSelect={handleClientTypeSelect} />
@@ -541,11 +528,7 @@ export default function NuevoClientePage() {
 			{/* Form Content */}
 			{clientType === "natural" && (
 				<div className="mt-6">
-					<NaturalClientForm
-						form={naturalForm}
-						partnerForm={partnerForm}
-						onFieldBlur={handleAutoSave}
-					/>
+					<NaturalClientForm form={naturalForm} partnerForm={partnerForm} onFieldBlur={handleAutoSave} />
 				</div>
 			)}
 

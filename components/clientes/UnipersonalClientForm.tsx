@@ -53,16 +53,6 @@ export function UnipersonalClientForm({ form, partnerForm, onFieldBlur }: Uniper
 	const extensionCi = watch("extension_ci");
 
 	// Helper function to combine nombres for "same as" checkbox
-	const combineNombres = () => {
-		const nombres = [primerNombre, segundoNombre].filter(Boolean).join(" ");
-		return nombres || undefined;
-	};
-
-	const combineApellidos = () => {
-		const apellidos = [primerApellido, segundoApellido].filter(Boolean).join(" ");
-		return apellidos || undefined;
-	};
-
 	const combineNombreCompleto = () => {
 		const nombreCompleto = [primerNombre, segundoNombre, primerApellido, segundoApellido].filter(Boolean).join(" ");
 		return nombreCompleto || undefined;

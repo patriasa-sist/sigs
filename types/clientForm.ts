@@ -280,7 +280,7 @@ export const unipersonalClientFormSchema = naturalClientPersonalSchema
   .merge(naturalClientContactSchema)
   .merge(naturalClientOtherSchema.omit({ nit: true, domicilio_comercial: true, nivel_ingresos: true })) // Remove overlapping optional fields
   .merge(unipersonalCommercialSchema) // Use required fields from commercial
-  .merge(unipersonalOwnerSchema.partial()) // Make owner fields optional (auto-filled from personal data)
+  .merge(unipersonalOwnerSchema) // Owner fields are required (auto-filled from personal data)
   .merge(unipersonalRepresentativeSchema)
   .extend({
     executive_in_charge: z.string().optional(),
