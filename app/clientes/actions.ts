@@ -147,7 +147,12 @@ export async function getAllClients(options?: {
 				*,
 				natural_clients (*),
 				juridic_clients (*),
-				unipersonal_clients (*)
+				unipersonal_clients (*),
+				executive:profiles!executive_in_charge (
+					id,
+					full_name,
+					email
+				)
 			`
 			)
 			.order("created_at", { ascending: false })
@@ -226,7 +231,12 @@ export async function getAllClients(options?: {
 					juridic_clients: Array.isArray(clientData.juridic_clients)
 						? clientData.juridic_clients[0] ?? null
 						: clientData.juridic_clients ?? null,
-					unipersonal_clients: null, // Not in current DB schema
+					unipersonal_clients: Array.isArray(clientData.unipersonal_clients)
+						? clientData.unipersonal_clients[0] ?? null
+						: clientData.unipersonal_clients ?? null,
+					executive: Array.isArray(clientData.executive)
+						? clientData.executive[0] ?? null
+						: clientData.executive ?? null,
 					policies: policiesByClient.get(clientData.id) ?? [],
 				};
 
@@ -313,7 +323,12 @@ export async function getClientById(clientId: string): Promise<ActionResult<Clie
 				*,
 				natural_clients (*),
 				juridic_clients (*),
-				unipersonal_clients (*)
+				unipersonal_clients (*),
+				executive:profiles!executive_in_charge (
+					id,
+					full_name,
+					email
+				)
 			`
 			)
 			.eq("id", clientId)
@@ -366,7 +381,12 @@ export async function getClientById(clientId: string): Promise<ActionResult<Clie
 			juridic_clients: Array.isArray(clientData.juridic_clients)
 				? clientData.juridic_clients[0] ?? null
 				: clientData.juridic_clients ?? null,
-			unipersonal_clients: null, // Not in current DB schema
+			unipersonal_clients: Array.isArray(clientData.unipersonal_clients)
+				? clientData.unipersonal_clients[0] ?? null
+				: clientData.unipersonal_clients ?? null,
+			executive: Array.isArray(clientData.executive)
+				? clientData.executive[0] ?? null
+				: clientData.executive ?? null,
 			policies: policiesData ?? [],
 		};
 

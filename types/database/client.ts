@@ -93,7 +93,7 @@ export const NaturalClientSchema = z.object({
 	lugar_trabajo: z.string().nullable(),
 	pais_residencia: z.string().nullable(),
 	genero: z.enum(["masculino", "femenino", "otro"]).nullable(),
-	nivel_ingresos: z.number().nullable(),
+	nivel_ingresos: z.coerce.number().nullable(),
 	cargo: z.string().nullable(),
 	anio_ingreso: z.string().nullable(),
 	nit: z.string().nullable(),
@@ -143,7 +143,7 @@ export const UnipersonalClientSchema = z.object({
 	domicilio_comercial: z.string().min(1, "Domicilio comercial requerido"),
 	telefono_comercial: z.string().regex(/^[0-9]{5,}$/, "Teléfono inválido"),
 	actividad_economica_comercial: z.string().min(1, "Actividad económica requerida"),
-	nivel_ingresos: z.number().positive("Nivel de ingresos debe ser positivo"),
+	nivel_ingresos: z.coerce.number().positive("Nivel de ingresos debe ser positivo"),
 	correo_electronico_comercial: z.string().email("Email inválido"),
 	nombre_propietario: z.string().min(1, "Nombre del propietario requerido"),
 	apellido_propietario: z.string().min(1, "Apellido del propietario requerido"),
@@ -295,6 +295,13 @@ export const ClientQueryResultSchema = z.object({
 	juridic_clients: JuridicClientSchema.nullable(),
 	unipersonal_clients: UnipersonalClientSchema.nullable(),
 
+	// Executive information (from profiles table)
+	executive: z.object({
+		id: z.string().uuid(),
+		full_name: z.string(),
+		email: z.string().email(),
+	}).nullable(),
+
 	// Related policies with company info
 	policies: z.array(
 		PolicySchema.extend({
@@ -316,7 +323,7 @@ export type ClientQueryResult = z.infer<typeof ClientQueryResultSchema>;
  * @throws ZodError if validation fails
  */
 export function transformClientToViewModel(queryResult: ClientQueryResult): ClientViewModel {
-	const { clients, natural_clients, juridic_clients, unipersonal_clients, policies } = queryResult;
+	const { clients, natural_clients, juridic_clients, unipersonal_clients, executive, policies } = queryResult;
 
 	// Build full name and identification based on client type
 	let fullName = "";
@@ -409,7 +416,7 @@ export function transformClientToViewModel(queryResult: ClientQueryResult): Clie
 		email,
 		phone,
 		address,
-		executiveInCharge: clients.executive_in_charge ?? undefined,
+		executiveInCharge: executive?.full_name ?? undefined,
 		policies: transformedPolicies,
 		createdAt: new Date(clients.created_at),
 		updatedAt: new Date(clients.updated_at),
