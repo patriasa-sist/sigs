@@ -159,6 +159,9 @@ crearemos el módulo de cobranza, este módulo solo tienen acceso las cuentas ma
 arreglar que no se puede cargar datos a la db y el error no explica porque
 
 --3er commit
+visualizar clientes de forma correcta
+
+--3er commit
 ahora en datos personales aparte de Ejecutivo a cargo también se debe ingresar el "director de cartera" que se obtiene de la misma lista de ejecutivos comerciales de momento, luego existirá otro rol de "directores" en la db pero eso es en el futuro
 sociedad con rubrica y detalle
 ACCIONISTAS o SOCIOS: nombre, carnet, porcentaje (puede existir sin accionistas)

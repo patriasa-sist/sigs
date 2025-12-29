@@ -92,12 +92,7 @@ export function JuridicClientForm({ form, onFieldBlur }: JuridicClientFormProps)
 						<Label htmlFor="nit">
 							NIT <span className="text-red-500">*</span>
 						</Label>
-						<Input
-							id="nit"
-							{...register("nit")}
-							onBlur={onFieldBlur}
-							placeholder="Min. 7 dígitos"
-						/>
+						<Input id="nit" {...register("nit")} onBlur={onFieldBlur} placeholder="Min. 7 dígitos" />
 						{errors.nit && <p className="text-sm text-red-500 mt-1">{errors.nit.message}</p>}
 					</div>
 
@@ -154,8 +149,8 @@ export function JuridicClientForm({ form, onFieldBlur }: JuridicClientFormProps)
 									value={field.value}
 									onValueChange={field.onChange}
 									error={errors.executive_in_charge?.message}
-									label="Ejecutivo a Cargo"
-									placeholder="Seleccione un ejecutivo"
+									label="Director de cartera"
+									placeholder="Seleccione un director"
 									required={false}
 									showRole={false}
 								/>

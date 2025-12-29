@@ -224,8 +224,8 @@ export function UnipersonalClientForm({ form, partnerForm, onFieldBlur }: Uniper
 									value={field.value}
 									onValueChange={field.onChange}
 									error={errors.executive_in_charge?.message}
-									label="Ejecutivo a Cargo"
-									placeholder="Seleccione un ejecutivo"
+									label="Director de cartera"
+									placeholder="Seleccione un director"
 									required={false}
 									showRole={false}
 								/>
