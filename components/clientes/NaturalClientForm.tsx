@@ -203,7 +203,7 @@ export function NaturalClientForm({ form, partnerForm, onFieldBlur }: NaturalCli
 									error={errors.executive_in_charge?.message}
 									label="Director de cartera"
 									placeholder="Seleccione un director"
-									required={false}
+									required={true}
 									showRole={false}
 								/>
 							)}

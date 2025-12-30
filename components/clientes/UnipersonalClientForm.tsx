@@ -218,7 +218,7 @@ export function UnipersonalClientForm({ form, partnerForm, onFieldBlur }: Uniper
 									error={errors.executive_in_charge?.message}
 									label="Director de cartera"
 									placeholder="Seleccione un director"
-									required={false}
+									required={true}
 									showRole={false}
 								/>
 							)}
