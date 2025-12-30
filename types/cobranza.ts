@@ -148,7 +148,7 @@ export type CobranzaStats = {
 	monto_total_pendiente: number;
 	monto_total_cobrado_hoy: number;
 	monto_total_cobrado_mes: number;
-	cuotas_por_vencer_7dias: number; // Cuotas que vencen en los próximos 7 días
+	cuotas_por_vencer_7dias: number; // Cuotas que vencen en los próximos 10 días
 };
 
 /**

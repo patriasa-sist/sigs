@@ -236,7 +236,7 @@ export async function obtenerPolizasConPendientes(): Promise<ObtenerPolizasConPa
 		const firstDayOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1)
 			.toISOString()
 			.split("T")[0];
-		const sevenDaysFromNow = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+		const sevenDaysFromNow = new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
 
 		for (const poliza of polizasConPagos) {
 			for (const cuota of poliza.cuotas) {

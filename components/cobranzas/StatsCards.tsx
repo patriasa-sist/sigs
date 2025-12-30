@@ -70,7 +70,7 @@ export default function StatsCards({ stats }: StatsCardsProps) {
 			{/* Por Vencer (7 días) */}
 			<Card>
 				<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-					<CardTitle className="text-sm font-medium">Por Vencer (7 días)</CardTitle>
+					<CardTitle className="text-sm font-medium">Por Vencer (10 días)</CardTitle>
 					<Calendar className="h-4 w-4 text-orange-600 dark:text-orange-400" />
 				</CardHeader>
 				<CardContent>
