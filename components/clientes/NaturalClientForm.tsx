@@ -315,7 +315,7 @@ export function NaturalClientForm({ form, partnerForm, onFieldBlur }: NaturalCli
 					</div>
 
 					<div>
-						<Label htmlFor="nivel_ingresos">Nivel de Ingresos</Label>
+						<Label htmlFor="nivel_ingresos">Nivel de Ingresos aproximado</Label>
 						<Controller
 							name="nivel_ingresos"
 							control={control}
@@ -330,7 +330,7 @@ export function NaturalClientForm({ form, partnerForm, onFieldBlur }: NaturalCli
 									<SelectContent>
 										{INCOME_LEVELS.map((level) => (
 											<SelectItem key={level} value={INCOME_VALUES[level].toString()}>
-												{level.charAt(0).toUpperCase() + level.slice(1)} ($
+												{level.charAt(0).toUpperCase() + level.slice(1)} (Bs.
 												{INCOME_VALUES[level].toLocaleString()})
 											</SelectItem>
 										))}

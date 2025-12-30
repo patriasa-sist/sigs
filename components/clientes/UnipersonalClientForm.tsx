@@ -472,7 +472,7 @@ export function UnipersonalClientForm({ form, partnerForm, onFieldBlur }: Uniper
 
 					<div>
 						<Label htmlFor="nivel_ingresos">
-							Nivel de Ingresos <span className="text-red-500">*</span>
+							Nivel de Ingresos aproximado<span className="text-red-500">*</span>
 						</Label>
 						<Controller
 							name="nivel_ingresos"
