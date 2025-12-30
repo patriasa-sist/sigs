@@ -166,7 +166,6 @@ crearemos el módulo de cobranza, este módulo solo tienen acceso las cuentas ma
 --5to commit
 sociedad con rubrica y detalle
 ACCIONISTAS o SOCIOS: nombre, carnet, porcentaje (puede existir sin accionistas)
-RENOVACION DE POLIZA EXIGE RENOVACION DE DOCUMENTOS
 carta de nombramiento todos clientes
 botón para ver detalles de la póliza
 visualización cliente>póliza agregar compañía
@@ -174,6 +173,8 @@ ejecutivo visible
 agente visible
 paso extra para datos de facturacion
 (polizas)Información de Contacto-cobranza una o mas
+
+RENOVACION DE POLIZA EXIGE RENOVACION DE DOCUMENTOS
 
 POlizas
 Ci cambiar por vigencia fecha inicio-fecha fin

@@ -86,9 +86,15 @@ export function BuscarAsegurado({ asegurado, onAseguradoSeleccionado, onSiguient
 						documento = "N/A";
 					} else {
 						detalles = natural as ClienteNatural;
-						nombre_completo = `${natural.primer_nombre} ${natural.segundo_nombre || ""} ${
-							natural.primer_apellido
-						} ${natural.segundo_apellido || ""}`.trim();
+						// Construir nombre completo filtrando valores vacíos y normalizando espacios
+						nombre_completo = [
+							natural.primer_nombre,
+							natural.segundo_nombre,
+							natural.primer_apellido,
+							natural.segundo_apellido,
+						]
+							.filter((parte) => parte && parte.trim())
+							.join(" ");
 						documento = `${natural.numero_documento}${
 							natural.extension_ci ? ` ${natural.extension_ci}` : ""
 						}`;
@@ -125,13 +131,16 @@ export function BuscarAsegurado({ asegurado, onAseguradoSeleccionado, onSiguient
 				};
 			});
 
-			// Filtrar por búsqueda
-			const queryLower = query.toLowerCase();
+			// Filtrar por búsqueda - normalizar espacios múltiples a uno solo
+			const queryNormalizada = query.toLowerCase().trim().replace(/\s+/g, " ");
 			const filtrados = asegurados.filter((a) => {
+				const nombreNormalizado = a.nombre_completo.toLowerCase().replace(/\s+/g, " ");
+				const documentoNormalizado = a.documento.toLowerCase().replace(/\s+/g, " ");
+
 				return (
-					a.nombre_completo.toLowerCase().includes(queryLower) ||
-					a.documento.toLowerCase().includes(queryLower) ||
-					a.id.toLowerCase().includes(queryLower)
+					nombreNormalizado.includes(queryNormalizada) ||
+					documentoNormalizado.includes(queryNormalizada) ||
+					a.id.toLowerCase().includes(queryNormalizada)
 				);
 			});
 
