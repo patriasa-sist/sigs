@@ -53,14 +53,21 @@ export default function ExportarReporte() {
 				{ header: "CI/NIT", key: "ci_nit", width: 15 },
 				{ header: "Compañía", key: "compania", width: 25 },
 				{ header: "Ramo", key: "ramo", width: 20 },
+				{ header: "Responsable", key: "responsable", width: 25 },
+				{ header: "Regional", key: "regional", width: 15 },
+				{ header: "Prima Total", key: "prima_total", width: 12 },
+				{ header: "Inicio Vigencia", key: "inicio_vigencia", width: 15 },
+				{ header: "Fin Vigencia", key: "fin_vigencia", width: 15 },
 				{ header: "N° Cuota", key: "numero_cuota", width: 10 },
 				{ header: "Monto Cuota", key: "monto_cuota", width: 12 },
 				{ header: "Moneda", key: "moneda", width: 8 },
 				{ header: "F. Vencimiento", key: "fecha_vencimiento", width: 15 },
+				{ header: "F. Venc. Original", key: "fecha_vencimiento_original", width: 15 },
 				{ header: "F. Pago", key: "fecha_pago", width: 15 },
 				{ header: "Estado", key: "estado", width: 12 },
 				{ header: "Días Vencido", key: "dias_vencido", width: 12 },
 				{ header: "Monto Pagado", key: "monto_pagado", width: 12 },
+				{ header: "Tiene Prórroga", key: "tiene_prorroga", width: 12 },
 				{ header: "Observaciones", key: "observaciones", width: 40 },
 			];
 
@@ -83,16 +90,29 @@ export default function ExportarReporte() {
 					ci_nit: row.ci_nit,
 					compania: row.compania,
 					ramo: row.ramo,
+					responsable: row.responsable,
+					regional: row.regional,
+					prima_total: row.prima_total,
+					inicio_vigencia: row.inicio_vigencia
+						? new Date(row.inicio_vigencia).toLocaleDateString("es-BO")
+						: "",
+					fin_vigencia: row.fin_vigencia
+						? new Date(row.fin_vigencia).toLocaleDateString("es-BO")
+						: "",
 					numero_cuota: row.numero_cuota,
 					monto_cuota: row.monto_cuota,
 					moneda: row.moneda,
 					fecha_vencimiento: row.fecha_vencimiento
 						? new Date(row.fecha_vencimiento).toLocaleDateString("es-BO")
 						: "",
+					fecha_vencimiento_original: row.fecha_vencimiento_original
+						? new Date(row.fecha_vencimiento_original).toLocaleDateString("es-BO")
+						: "-",
 					fecha_pago: row.fecha_pago ? new Date(row.fecha_pago).toLocaleDateString("es-BO") : "-",
 					estado: row.estado,
 					dias_vencido: row.dias_vencido,
 					monto_pagado: row.monto_pagado,
+					tiene_prorroga: row.tiene_prorroga ? "Sí" : "No",
 					observaciones: row.observaciones,
 				});
 

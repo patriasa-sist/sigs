@@ -555,12 +555,17 @@ export async function exportarReporte(filtros: ExportFilters): Promise<CobranzaS
           numero_poliza,
           ramo,
           moneda,
+          prima_total,
+          inicio_vigencia,
+          fin_vigencia,
           client:clients!client_id (
             id,
             client_type,
             natural_clients (
               primer_nombre,
+              segundo_nombre,
               primer_apellido,
+              segundo_apellido,
               numero_documento
             ),
             juridic_clients (
@@ -569,6 +574,12 @@ export async function exportarReporte(filtros: ExportFilters): Promise<CobranzaS
             )
           ),
           compania:companias_aseguradoras!compania_aseguradora_id (
+            nombre
+          ),
+          responsable:profiles!responsable_id (
+            full_name
+          ),
+          regional:regionales!regional_id (
             nombre
           )
         )
@@ -579,12 +590,16 @@ export async function exportarReporte(filtros: ExportFilters): Promise<CobranzaS
 			query = query.eq("estado", filtros.estado_cuota);
 		}
 
+		// Determine which date field to filter by
+		// Para "today" usamos fecha_pago por defecto para mostrar pagos del día
+		const tipoFiltro = filtros.tipo_filtro_fecha || (filtros.periodo === "today" ? "fecha_pago" : "fecha_vencimiento");
+
 		if (fechaDesde) {
-			query = query.gte("fecha_vencimiento", fechaDesde);
+			query = query.gte(tipoFiltro, fechaDesde);
 		}
 
 		if (fechaHasta) {
-			query = query.lte("fecha_vencimiento", fechaHasta);
+			query = query.lte(tipoFiltro, fechaHasta);
 		}
 
 		const { data: pagos, error } = await query.order("fecha_vencimiento", { ascending: true });
@@ -600,15 +615,22 @@ export async function exportarReporte(filtros: ExportFilters): Promise<CobranzaS
 			numero_cuota: number;
 			monto: number;
 			fecha_vencimiento: string;
+			fecha_vencimiento_original: string | null;
 			fecha_pago: string | null;
 			estado: EstadoPago;
 			observaciones: string | null;
+			prorrogas_historial: unknown;
 			poliza: {
 				numero_poliza: string;
 				ramo: string;
 				moneda: string;
+				prima_total: number;
+				inicio_vigencia: string;
+				fin_vigencia: string;
 				client: ClientQueryResult;
 				compania?: { nombre?: string } | null;
+				responsable?: { full_name?: string } | null;
+				regional?: { nombre?: string } | null;
 			} | null;
 		}) => {
 			const poliza = pago.poliza;
@@ -622,7 +644,7 @@ export async function exportarReporte(filtros: ExportFilters): Promise<CobranzaS
 					// natural_clients is a 1:1 relationship object
 					const natural = clientData.natural_clients;
 					if (natural) {
-						cliente = `${natural.primer_nombre || ""} ${natural.primer_apellido || ""}`.trim();
+						cliente = `${natural.primer_nombre || ""} ${natural.segundo_nombre || ""} ${natural.primer_apellido || ""} ${natural.segundo_apellido || ""}`.trim();
 						ciNit = natural.numero_documento || "N/A";
 					}
 				} else {
@@ -641,20 +663,30 @@ export async function exportarReporte(filtros: ExportFilters): Promise<CobranzaS
 					? Math.max(0, Math.floor((Date.now() - new Date(pago.fecha_vencimiento).getTime()) / (24 * 60 * 60 * 1000)))
 					: 0;
 
+			// Check if quota has prorroga
+			const tieneProrroga = Array.isArray(pago.prorrogas_historial) && pago.prorrogas_historial.length > 0;
+
 			return {
 				numero_poliza: poliza?.numero_poliza || "N/A",
 				cliente,
 				ci_nit: ciNit,
 				compania: poliza?.compania?.nombre || "N/A",
 				ramo: poliza?.ramo || "N/A",
+				responsable: poliza?.responsable?.full_name || "N/A",
+				regional: poliza?.regional?.nombre || "N/A",
+				prima_total: poliza?.prima_total || 0,
+				inicio_vigencia: poliza?.inicio_vigencia || "",
+				fin_vigencia: poliza?.fin_vigencia || "",
 				numero_cuota: pago.numero_cuota,
 				monto_cuota: pago.monto,
 				moneda: (poliza?.moneda as Moneda) || "Bs",
 				fecha_vencimiento: pago.fecha_vencimiento,
+				fecha_vencimiento_original: pago.fecha_vencimiento_original,
 				fecha_pago: pago.fecha_pago,
 				estado: pago.estado,
 				dias_vencido: diasVencido,
 				monto_pagado: pago.estado === "pagado" ? pago.monto : 0,
+				tiene_prorroga: tieneProrroga,
 				observaciones: pago.observaciones || "",
 			};
 		});

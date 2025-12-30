@@ -193,6 +193,11 @@ export type SortOptions = {
 export type ExportPeriod = "today" | "week" | "month" | "custom";
 
 /**
+ * Tipo de filtro de fecha para exportación
+ */
+export type TipoFiltroFecha = "fecha_vencimiento" | "fecha_pago";
+
+/**
  * Filtros para exportación de reportes
  */
 export type ExportFilters = {
@@ -201,6 +206,7 @@ export type ExportFilters = {
 	fecha_hasta?: string; // Solo para período 'custom'
 	estado_cuota?: EstadoPago | "all";
 	compania_id?: string; // UUID o 'all'
+	tipo_filtro_fecha?: TipoFiltroFecha; // Por defecto: fecha_vencimiento
 };
 
 /**
@@ -213,14 +219,21 @@ export type ExportRow = {
 	ci_nit: string;
 	compania: string;
 	ramo: string;
+	responsable: string; // Responsable de la póliza
+	regional: string; // Regional de la póliza
+	prima_total: number; // Prima total de la póliza
+	inicio_vigencia: string; // Inicio de vigencia de la póliza
+	fin_vigencia: string; // Fin de vigencia de la póliza
 	numero_cuota: number;
 	monto_cuota: number;
 	moneda: Moneda;
 	fecha_vencimiento: string;
+	fecha_vencimiento_original: string | null; // Si tiene prórroga
 	fecha_pago: string | null;
 	estado: EstadoPago;
 	dias_vencido: number; // Calculado
 	monto_pagado: number; // Para pagos parciales
+	tiene_prorroga: boolean; // Si la cuota tiene prórroga
 	observaciones: string;
 };
 
