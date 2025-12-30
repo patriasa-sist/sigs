@@ -11,12 +11,14 @@ import {
 	INCOME_LEVELS,
 	INCOME_VALUES,
 } from "@/types/clientForm";
+import type { ClienteDocumentoFormState } from "@/types/clienteDocumento";
 import { FormSection } from "./FormSection";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SameAsCheckbox } from "@/components/ui/same-as-checkbox";
 import { ExecutiveDropdown } from "@/components/shared/ExecutiveDropdown";
+import { ClienteDocumentUpload } from "./ClienteDocumentUpload";
 
 interface NaturalClientFormProps {
 	form: UseFormReturn<NaturalClientFormData>;
@@ -396,6 +398,21 @@ export function NaturalClientForm({ form, partnerForm, onFieldBlur }: NaturalCli
 					<PartnerFields form={partnerForm} onFieldBlur={onFieldBlur} />
 				</FormSection>
 			)}
+
+			{/* SECCIÓN 5: DOCUMENTOS DEL CLIENTE */}
+			<FormSection
+				title="Documentos del Cliente"
+				description="Cargue los documentos requeridos del cliente"
+			>
+				<ClienteDocumentUpload
+					clientType="natural"
+					documentos={watch("documentos") || []}
+					onDocumentosChange={(docs: ClienteDocumentoFormState[]) => {
+						setValue("documentos", docs);
+						onFieldBlur?.();
+					}}
+				/>
+			</FormSection>
 		</div>
 	);
 }

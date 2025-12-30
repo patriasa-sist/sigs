@@ -11,12 +11,14 @@ import {
 	INCOME_LEVELS,
 	INCOME_VALUES,
 } from "@/types/clientForm";
+import type { ClienteDocumentoFormState } from "@/types/clienteDocumento";
 import { FormSection } from "./FormSection";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SameAsCheckbox } from "@/components/ui/same-as-checkbox";
 import { ExecutiveDropdown } from "@/components/shared/ExecutiveDropdown";
+import { ClienteDocumentUpload } from "./ClienteDocumentUpload";
 
 interface UnipersonalClientFormProps {
 	form: UseFormReturn<UnipersonalClientFormData>;
@@ -602,6 +604,21 @@ export function UnipersonalClientForm({ form, partnerForm, onFieldBlur }: Uniper
 					<PartnerFields form={partnerForm} onFieldBlur={onFieldBlur} />
 				</FormSection>
 			)}
+
+			{/* SECCIÓN: DOCUMENTOS DEL CLIENTE */}
+			<FormSection
+				title="Documentos del Cliente"
+				description="Cargue los documentos requeridos del cliente unipersonal"
+			>
+				<ClienteDocumentUpload
+					clientType="unipersonal"
+					documentos={watch("documentos") || []}
+					onDocumentosChange={(docs: ClienteDocumentoFormState[]) => {
+						setValue("documentos", docs);
+						onFieldBlur?.();
+					}}
+				/>
+			</FormSection>
 		</div>
 	);
 }

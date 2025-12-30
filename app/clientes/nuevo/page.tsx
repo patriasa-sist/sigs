@@ -17,6 +17,8 @@ import {
 	clientPartnerSchema,
 	ClientFormState,
 } from "@/types/clientForm";
+import type { ClienteDocumentoFormState } from "@/types/clienteDocumento";
+import { generateStoragePath } from "@/types/clienteDocumento";
 import {
 	normalizeNaturalClientData,
 	normalizeUnipersonalClientData,
@@ -174,6 +176,68 @@ export default function NuevoClientePage() {
 		}
 	};
 
+	// Upload client documents to Storage and database
+	const uploadClientDocuments = async (
+		clientId: string,
+		documentos: ClienteDocumentoFormState[] | undefined
+	): Promise<void> => {
+		if (!documentos || documentos.length === 0) {
+			return; // No documents to upload
+		}
+
+		const {
+			data: { user },
+		} = await supabase.auth.getUser();
+		const currentUserId = user?.id;
+
+		if (!currentUserId) {
+			throw new Error("Usuario no autenticado");
+		}
+
+		// Upload each document
+		for (const doc of documentos) {
+			try {
+				// Generate storage path
+				const storagePath = generateStoragePath(clientId, doc.nombre_archivo);
+
+				// Upload file to Storage
+				const { error: uploadError } = await supabase.storage
+					.from("clientes-documentos")
+					.upload(storagePath, doc.file, {
+						contentType: doc.tipo_archivo,
+						upsert: false,
+					});
+
+				if (uploadError) {
+					console.error(`Error uploading document ${doc.nombre_archivo}:`, uploadError);
+					throw new Error(`Error al subir documento: ${doc.nombre_archivo}`);
+				}
+
+				// Insert document metadata into database
+				const { error: dbError } = await supabase.from("clientes_documentos").insert({
+					client_id: clientId,
+					tipo_documento: doc.tipo_documento,
+					nombre_archivo: doc.nombre_archivo,
+					tipo_archivo: doc.tipo_archivo,
+					tamano_bytes: doc.tamano_bytes,
+					storage_path: storagePath,
+					storage_bucket: "clientes-documentos",
+					estado: "activo",
+					subido_por: currentUserId,
+					descripcion: doc.descripcion || null,
+				});
+
+				if (dbError) {
+					console.error(`Error saving document metadata for ${doc.nombre_archivo}:`, dbError);
+					throw new Error(`Error al guardar metadatos del documento: ${doc.nombre_archivo}`);
+				}
+			} catch (error) {
+				console.error("Error processing document:", error);
+				throw error;
+			}
+		}
+	};
+
 	// Natural client submission
 	const submitNaturalClient = async () => {
 		const formData = naturalForm.getValues();
@@ -261,6 +325,9 @@ export default function NuevoClientePage() {
 				if (partnerError) throw partnerError;
 			}
 		}
+
+		// 4. Upload client documents
+		await uploadClientDocuments(client.id, formData.documentos);
 
 		return client.id;
 	};
@@ -381,6 +448,9 @@ export default function NuevoClientePage() {
 			}
 		}
 
+		// 5. Upload client documents
+		await uploadClientDocuments(client.id, formData.documentos);
+
 		return client.id;
 	};
 
@@ -444,6 +514,9 @@ export default function NuevoClientePage() {
 
 			if (repsError) throw repsError;
 		}
+
+		// 3. Upload client documents
+		await uploadClientDocuments(client.id, formData.documentos);
 
 		return client.id;
 	};

@@ -164,6 +164,17 @@ crearemos el módulo de cobranza, este módulo solo tienen acceso las cuentas ma
 ✅cambiar ejecutivo a cargo por director de cartera solo visualmente db sigue igual
 
 --5to commit
+✅arreglos en input de busqueda cliente poliza
+
+--6to commit
+✅detalles menores nivel de ingreso input
+
+--7mo commit
+ahora mejoraremos el registro de clientes con un nuevo paso para permitir agregar los siguientes documentos que pueden cargarse a la db solo el documento de identidad y el formulario conoce a tu cliente son obligatorios:
+para cliente natural y unipersonal: documento identidad, certificacion PEP, Formulario conoce a tu cliente
+apra cliente unipersonal: documento identidad, certificacion PEP, Formulario conoce a tu cliente, NIT, Matricula de comercio
+agregado extra a juridico: NIT, Matricula de comercio, Testimonio de constitucion social, Balance general y estado de resultados, Poder de representacion, Documento identidad representante legal, Certificacion PEP, Formulario conoce a tu cliente
+
 sociedad con rubrica y detalle
 ACCIONISTAS o SOCIOS: nombre, carnet, porcentaje (puede existir sin accionistas)
 carta de nombramiento todos clientes

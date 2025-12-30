@@ -2,6 +2,7 @@
 
 import { UseFormReturn, Controller, useFieldArray } from "react-hook-form";
 import { JuridicClientFormData, DOCUMENT_TYPES, COMPANY_TYPES } from "@/types/clientForm";
+import type { ClienteDocumentoFormState } from "@/types/clienteDocumento";
 import { FormSection } from "./FormSection";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Trash2 } from "lucide-react";
 import { ExecutiveDropdown } from "@/components/shared/ExecutiveDropdown";
+import { ClienteDocumentUpload } from "./ClienteDocumentUpload";
 
 interface JuridicClientFormProps {
 	form: UseFormReturn<JuridicClientFormData>;
@@ -20,6 +22,8 @@ export function JuridicClientForm({ form, onFieldBlur }: JuridicClientFormProps)
 		register,
 		control,
 		formState: { errors },
+		watch,
+		setValue,
 	} = form;
 
 	const { fields, append, remove } = useFieldArray({
@@ -395,6 +399,21 @@ export function JuridicClientForm({ form, onFieldBlur }: JuridicClientFormProps)
 						<p className="text-sm text-red-500">{errors.legal_representatives.root.message}</p>
 					)}
 				</div>
+			</FormSection>
+
+			{/* SECCIÓN: DOCUMENTOS DEL CLIENTE */}
+			<FormSection
+				title="Documentos del Cliente"
+				description="Cargue los documentos requeridos de la persona jurídica"
+			>
+				<ClienteDocumentUpload
+					clientType="juridica"
+					documentos={watch("documentos") || []}
+					onDocumentosChange={(docs: ClienteDocumentoFormState[]) => {
+						setValue("documentos", docs);
+						onFieldBlur?.();
+					}}
+				/>
 			</FormSection>
 		</div>
 	);

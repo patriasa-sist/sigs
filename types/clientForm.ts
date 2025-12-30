@@ -5,6 +5,7 @@
  */
 
 import { z } from 'zod';
+import type { ClienteDocumentoFormState } from './clienteDocumento';
 
 // ============================================================================
 // ENUMS & CONSTANTS
@@ -157,6 +158,7 @@ export interface NaturalClientFormData
     NaturalClientContactData,
     NaturalClientOtherData {
   executive_in_charge?: string;
+  documentos?: ClienteDocumentoFormState[];
 }
 
 export const naturalClientFormSchema = naturalClientPersonalSchema
@@ -274,6 +276,7 @@ export interface UnipersonalClientFormData
     UnipersonalOwnerData,
     UnipersonalRepresentativeData {
   executive_in_charge?: string;
+  documentos?: ClienteDocumentoFormState[];
 }
 
 export const unipersonalClientFormSchema = naturalClientPersonalSchema
@@ -371,6 +374,7 @@ export interface JuridicClientFormData
     JuridicClientContactData {
   executive_in_charge?: string;
   legal_representatives: LegalRepresentativeData[];
+  documentos?: ClienteDocumentoFormState[];
 }
 
 export const juridicClientFormSchema = juridicClientCompanySchema
