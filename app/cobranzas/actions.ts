@@ -32,20 +32,21 @@ import type {
 } from "@/types/cobranza";
 
 // Helper types for Supabase query results
+// Note: natural_clients and juridic_clients are 1:1 relationships, not arrays
 type ClientQueryResult = {
 	id: string;
 	client_type: "natural" | "juridica";
-	natural_clients: Array<{
+	natural_clients: {
 		primer_nombre?: string;
 		segundo_nombre?: string;
 		primer_apellido?: string;
 		segundo_apellido?: string;
 		numero_documento?: string;
-	}>;
-	juridic_clients: Array<{
+	} | null;
+	juridic_clients: {
 		razon_social?: string;
 		nit?: string;
-	}>;
+	} | null;
 } | null;
 
 /**
@@ -172,15 +173,15 @@ export async function obtenerPolizasConPendientes(): Promise<ObtenerPolizasConPa
 
 			if (clientData) {
 				if (clientData.client_type === "natural") {
-					// natural_clients is an array from Supabase query - get first element
-					const natural = clientData.natural_clients[0];
+					// natural_clients is a 1:1 relationship object
+					const natural = clientData.natural_clients;
 					if (natural) {
 						nombreCompleto = `${natural.primer_nombre || ""} ${natural.segundo_nombre || ""} ${natural.primer_apellido || ""} ${natural.segundo_apellido || ""}`.trim();
 						documento = natural.numero_documento || "N/A";
 					}
 				} else {
-					// juridic_clients is an array from Supabase query - get first element
-					const juridic = clientData.juridic_clients[0];
+					// juridic_clients is a 1:1 relationship object
+					const juridic = clientData.juridic_clients;
 					if (juridic) {
 						nombreCompleto = juridic.razon_social || "N/A";
 						documento = juridic.nit || "N/A";
@@ -618,15 +619,15 @@ export async function exportarReporte(filtros: ExportFilters): Promise<CobranzaS
 
 			if (clientData) {
 				if (clientData.client_type === "natural") {
-					// natural_clients is an array from Supabase query - get first element
-					const natural = clientData.natural_clients[0];
+					// natural_clients is a 1:1 relationship object
+					const natural = clientData.natural_clients;
 					if (natural) {
 						cliente = `${natural.primer_nombre || ""} ${natural.primer_apellido || ""}`.trim();
 						ciNit = natural.numero_documento || "N/A";
 					}
 				} else {
-					// juridic_clients is an array from Supabase query - get first element
-					const juridic = clientData.juridic_clients[0];
+					// juridic_clients is a 1:1 relationship object
+					const juridic = clientData.juridic_clients;
 					if (juridic) {
 						cliente = juridic.razon_social || "N/A";
 						ciNit = juridic.nit || "N/A";
