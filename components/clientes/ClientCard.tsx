@@ -10,9 +10,10 @@ import { User, CreditCard, Phone, Mail } from "lucide-react";
 interface ClientCardProps {
 	client: Client | ClientSearchResult;
 	searchMode?: boolean;
+	onClick?: () => void;
 }
 
-export function ClientCard({ client, searchMode = false }: ClientCardProps) {
+export function ClientCard({ client, searchMode = false, onClick }: ClientCardProps) {
 	const matchedFields = "matchedFields" in client ? client.matchedFields : [];
 
 	const isFieldMatched = (fieldName: string) => {
@@ -40,7 +41,10 @@ export function ClientCard({ client, searchMode = false }: ClientCardProps) {
 	};
 
 	return (
-		<Card className="hover:shadow-lg transition-shadow">
+		<Card
+			className="hover:shadow-lg transition-shadow cursor-pointer"
+			onClick={onClick}
+		>
 			<CardHeader className="pb-3">
 				<div className="flex items-start justify-between">
 					<div className="flex-1">

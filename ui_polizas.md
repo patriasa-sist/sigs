@@ -176,8 +176,8 @@ apra cliente unipersonal: documento identidad, certificacion PEP, Formulario con
 agregado extra a juridico: NIT, Matricula de comercio, Testimonio de constitucion social, Balance general y estado de resultados, Poder de representacion, Documento identidad representante legal, Certificacion PEP, Formulario conoce a tu cliente
 
 --8vo commit
-(los datos facturacion ya son guardados)paso extra para datos de facturacion
-al hacer click en la poliza ver TODOS los detalles de la póliza
+✅(los datos facturacion ya son guardados)paso extra para datos de facturacion
+✅al hacer click en la poliza ver TODOS los detalles de la póliza
 
 sociedad con rubrica y detalle
 ACCIONISTAS o SOCIOS: nombre, carnet, porcentaje (puede existir sin accionistas)
@@ -188,7 +188,6 @@ agente visible
 (polizas)Información de Contacto-cobranza una o mas
 
 RENOVACION DE POLIZA EXIGE RENOVACION DE DOCUMENTOS
-
 POlizas
 Ci cambiar por vigencia fecha inicio-fecha fin
 visualización rapida>compañía
@@ -215,8 +214,36 @@ Vamos a continuar con la mejora del modulo de clientes:
 
 -   NUEVO tipo de cliente llamado "asegurado" con datos minimos
 
+finalizar cambios en el modulo de clientes actual
 trabajar editor de clientes con trazabilidad
 trabajar editor de polizas con trazabilidad
+
+arregla la visualizacion con este log:
+[getClientDetailsComplete] Client data loaded: {
+id: 'a171af66-e69b-4a08-9812-0f1abd7e6ac2',
+type: 'natural',
+has_natural: false,
+has_juridic: false,
+has_unipersonal: false
+}
+[getClientDetailsComplete] Partner data: false
+[getClientDetailsComplete] Documents: 2
+[getClientDetailsComplete] Policies error: {
+code: '42703',
+details: null,
+hint: 'Perhaps you meant to reference the column "polizas.numero_poliza".',
+message: 'column polizas.nro_poliza does not exist'
+}
+[getClientDetailsComplete] Policies: 0
+[getClientDetailsComplete] Returning result: {
+id: 'a171af66-e69b-4a08-9812-0f1abd7e6ac2',
+type: 'natural',
+has_natural_data: false,
+has_juridic_data: false,
+has_unipersonal_data: false,
+docs_count: 2,
+policies_count: 0
+}
 
 ## polizas feedback (REVISAR)
 

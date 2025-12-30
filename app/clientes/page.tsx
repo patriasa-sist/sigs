@@ -7,11 +7,11 @@ import { getAllClients, searchClients as searchClientsAction } from "./actions";
 import { SearchBar } from "@/components/clientes/SearchBar";
 import { ClientList } from "@/components/clientes/ClientList";
 import { ClientTable } from "@/components/clientes/ClientTable";
-import { ClientCard } from "@/components/clientes/ClientCard";
+import { ClientDetailModal } from "@/components/clientes/ClientDetailModal";
 import { ViewToggle, ViewMode } from "@/components/clientes/ViewToggle";
 import { Pagination } from "@/components/clientes/Pagination";
 import { Button } from "@/components/ui/button";
-import { UserPlus, X, AlertCircle } from "lucide-react";
+import { UserPlus, AlertCircle } from "lucide-react";
 
 export default function ClientesPage() {
 	const router = useRouter();
@@ -22,7 +22,7 @@ export default function ClientesPage() {
 
 	// View mode state
 	const [viewMode, setViewMode] = useState<ViewMode>("table");
-	const [selectedClient, setSelectedClient] = useState<Client | ClientSearchResult | null>(null);
+	const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
 
 	// Server-side pagination state
 	const [currentPage, setCurrentPage] = useState(1);
@@ -107,11 +107,11 @@ export default function ClientesPage() {
 	};
 
 	const handleClientClick = (client: Client | ClientSearchResult) => {
-		setSelectedClient(client);
+		setSelectedClientId(client.id);
 	};
 
 	const handleCloseDetail = () => {
-		setSelectedClient(null);
+		setSelectedClientId(null);
 	};
 
 	if (isLoading) {
@@ -176,6 +176,7 @@ export default function ClientesPage() {
 					<ClientList
 						clients={displayedClients}
 						searchMode={isSearchMode}
+						onClientClick={handleClientClick}
 						emptyMessage={
 							isSearchMode
 								? "No se encontraron clientes que coincidan con tu búsqueda. Intenta con otros términos."
@@ -198,22 +199,8 @@ export default function ClientesPage() {
 				)}
 			</div>
 
-			{/* Selected Client Detail (shown when clicking a table row) */}
-			{selectedClient && (
-				<div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-					<div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-						<div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between">
-							<h2 className="text-xl font-semibold">Detalles del Cliente</h2>
-							<Button variant="ghost" size="icon" onClick={handleCloseDetail} className="rounded-full">
-								<X className="h-5 w-5" />
-							</Button>
-						</div>
-						<div className="p-6">
-							<ClientCard client={selectedClient} searchMode={isSearchMode} />
-						</div>
-					</div>
-				</div>
-			)}
+			{/* Selected Client Detail Modal */}
+			{selectedClientId && <ClientDetailModal clientId={selectedClientId} onClose={handleCloseDetail} />}
 
 			{/* Floating Add Client Button */}
 			<div className="fixed bottom-8 right-8">

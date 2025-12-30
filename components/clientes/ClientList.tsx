@@ -7,9 +7,10 @@ interface ClientListProps {
   clients: Client[] | ClientSearchResult[];
   searchMode?: boolean;
   emptyMessage?: string;
+  onClientClick?: (client: Client | ClientSearchResult) => void;
 }
 
-export function ClientList({ clients, searchMode = false, emptyMessage }: ClientListProps) {
+export function ClientList({ clients, searchMode = false, emptyMessage, onClientClick }: ClientListProps) {
   if (clients.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center">
@@ -39,7 +40,12 @@ export function ClientList({ clients, searchMode = false, emptyMessage }: Client
   return (
     <div className="grid gap-4 grid-cols-1 lg:grid-cols-2 xl:grid-cols-3">
       {clients.map((client) => (
-        <ClientCard key={client.id} client={client} searchMode={searchMode} />
+        <ClientCard
+          key={client.id}
+          client={client}
+          searchMode={searchMode}
+          onClick={() => onClientClick?.(client)}
+        />
       ))}
     </div>
   );
