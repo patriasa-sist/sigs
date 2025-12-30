@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { ChevronRight, ChevronLeft, CheckCircle2, Upload, FileText, Trash2, AlertCircle } from "lucide-react";
+import { useState, useCallback } from "react";
+import { useDropzone } from "react-dropzone";
+import { ChevronRight, ChevronLeft, CheckCircle2, Upload, FileText, X, AlertCircle } from "lucide-react";
 import type { DocumentoPoliza } from "@/types/poliza";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,126 +16,142 @@ type Props = {
 	onAnterior: () => void;
 };
 
-// Tipos de documentos sugeridos (usando las constantes del sistema)
+// Tipos de documentos sugeridos para pólizas
 const TIPOS_DOCUMENTO = [
 	"Póliza firmada",
 	"Comprobante de envio de poliza (correo)",
 	"Plan de pago BROKER",
-	"plan de pago CLIENTE",
+	"Plan de pago CLIENTE",
 	"Anexos",
 	"Condicionado general",
+	"Certificado de cobertura",
+	"Recibo de pago",
 	"Otro",
 ] as const;
 
 export function CargarDocumentos({ documentos, onChange, onSiguiente, onAnterior }: Props) {
-	const [tipoSeleccionado, setTipoSeleccionado] = useState<string>(TIPOS_DOCUMENTO[0]);
+	const [tipoSeleccionado, setTipoSeleccionado] = useState<string>("");
 	const [tipoPersonalizado, setTipoPersonalizado] = useState<string>("");
-	const [errores, setErrores] = useState<string[]>([]);
+	const [error, setError] = useState<string | null>(null);
 
-	const handleAgregarArchivo = (event: React.ChangeEvent<HTMLInputElement>) => {
-		const archivos = event.target.files;
-		if (!archivos || archivos.length === 0) return;
-
-		const nuevosDocumentos: DocumentoPoliza[] = [];
-		const nuevosErrores: string[] = [];
-
-		// Validar y procesar cada archivo
-		Array.from(archivos).forEach((file) => {
-			// Validar tamaño (máximo 20MB)
-			const MAX_SIZE = 20 * 1024 * 1024; // 20MB
-			if (file.size > MAX_SIZE) {
-				nuevosErrores.push(`${file.name}: El archivo excede el tamaño máximo de 20MB`);
-				return;
-			}
-
-			// Validar tipo de archivo (incluye .msg y .eml)
-			const tiposPermitidos = [
-				"application/pdf",
-				"image/jpeg",
-				"image/jpg",
-				"image/png",
-				"application/msword",
-				"application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-				"application/vnd.ms-outlook", // .msg
-				"message/rfc822", // .eml
-			];
-
-			// Para .msg y .eml, el navegador puede no detectar el tipo correcto, validar por extensión
-			const extension = file.name.split('.').pop()?.toLowerCase();
-			const extensionesPermitidas = ['pdf', 'jpg', 'jpeg', 'png', 'doc', 'docx', 'msg', 'eml'];
-
-			if (!tiposPermitidos.includes(file.type) && !extensionesPermitidas.includes(extension || '')) {
-				nuevosErrores.push(
-					`${file.name}: Tipo de archivo no permitido. Solo se permiten PDF, JPG, PNG, DOC, DOCX, MSG, EML`
-				);
-				return;
-			}
-
-			// Determinar el tipo de documento
-			const tipoDoc = tipoSeleccionado === "Otro" ? tipoPersonalizado : tipoSeleccionado;
-
-			if (!tipoDoc || tipoDoc.trim() === "") {
-				nuevosErrores.push(`${file.name}: Debe especificar un tipo de documento`);
-				return;
-			}
-
-			// Crear documento
-			nuevosDocumentos.push({
-				tipo_documento: tipoDoc,
-				nombre_archivo: file.name,
-				tamano_bytes: file.size,
-				file: file,
-			});
-		});
-
-		// Actualizar estado
-		if (nuevosDocumentos.length > 0) {
-			onChange([...documentos, ...nuevosDocumentos]);
+	// Validar archivo
+	const validarArchivo = (file: File): string | null => {
+		// Validar tamaño (máximo 20MB)
+		const MAX_SIZE = 20 * 1024 * 1024; // 20MB
+		if (file.size > MAX_SIZE) {
+			return `El archivo excede el tamaño máximo de 20MB`;
 		}
 
-		if (nuevosErrores.length > 0) {
-			setErrores(nuevosErrores);
-		} else {
-			setErrores([]);
+		// Validar tipo de archivo (incluye .msg y .eml)
+		const tiposPermitidos = [
+			"application/pdf",
+			"image/jpeg",
+			"image/jpg",
+			"image/png",
+			"application/msword",
+			"application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+			"application/vnd.ms-outlook", // .msg
+			"message/rfc822", // .eml
+		];
+
+		// Para .msg y .eml, el navegador puede no detectar el tipo correcto, validar por extensión
+		const extension = file.name.split(".").pop()?.toLowerCase();
+		const extensionesPermitidas = ["pdf", "jpg", "jpeg", "png", "doc", "docx", "msg", "eml"];
+
+		if (!tiposPermitidos.includes(file.type) && !extensionesPermitidas.includes(extension || "")) {
+			return "Tipo de archivo no permitido. Solo se permiten PDF, JPG, PNG, DOC, DOCX, MSG, EML";
 		}
 
-		// Resetear input
-		event.target.value = "";
+		return null;
 	};
 
+	// Handle file drop con react-dropzone
+	const onDrop = useCallback(
+		(acceptedFiles: File[]) => {
+			setError(null);
+
+			if (!tipoSeleccionado) {
+				setError("Por favor seleccione el tipo de documento antes de subir archivos");
+				return;
+			}
+
+			if (acceptedFiles.length === 0) {
+				setError("No se seleccionaron archivos válidos");
+				return;
+			}
+
+			const nuevosDocumentos: DocumentoPoliza[] = [];
+
+			for (const file of acceptedFiles) {
+				// Validar archivo
+				const errorValidacion = validarArchivo(file);
+				if (errorValidacion) {
+					setError(errorValidacion);
+					continue;
+				}
+
+				// Determinar el tipo de documento
+				const tipoDoc = tipoSeleccionado === "Otro" ? tipoPersonalizado : tipoSeleccionado;
+
+				if (!tipoDoc || tipoDoc.trim() === "") {
+					setError("Debe especificar un tipo de documento personalizado");
+					continue;
+				}
+
+				// Crear documento
+				nuevosDocumentos.push({
+					tipo_documento: tipoDoc,
+					nombre_archivo: file.name,
+					tamano_bytes: file.size,
+					file: file,
+				});
+			}
+
+			if (nuevosDocumentos.length > 0) {
+				onChange([...documentos, ...nuevosDocumentos]);
+				setTipoSeleccionado("");
+				setTipoPersonalizado("");
+			}
+		},
+		[tipoSeleccionado, tipoPersonalizado, documentos, onChange]
+	);
+
+	const { getRootProps, getInputProps, isDragActive } = useDropzone({
+		onDrop,
+		accept: {
+			"application/pdf": [".pdf"],
+			"image/jpeg": [".jpg", ".jpeg"],
+			"image/png": [".png"],
+			"application/msword": [".doc"],
+			"application/vnd.openxmlformats-officedocument.wordprocessingml.document": [".docx"],
+			"application/vnd.ms-outlook": [".msg"],
+			"message/rfc822": [".eml"],
+		},
+		maxSize: 20 * 1024 * 1024, // 20MB
+		multiple: true,
+	});
+
 	const handleEliminarDocumento = (index: number) => {
-		if (confirm("¿Está seguro de eliminar este documento?")) {
-			const nuevosDocumentos = documentos.filter((_, i) => i !== index);
-			onChange(nuevosDocumentos);
-		}
+		const nuevosDocumentos = documentos.filter((_, i) => i !== index);
+		onChange(nuevosDocumentos);
 	};
 
 	const formatearTamano = (bytes: number): string => {
-		if (bytes < 1024) return `${bytes} B`;
-		if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-		return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+		if (bytes === 0) return "0 Bytes";
+		const k = 1024;
+		const sizes = ["Bytes", "KB", "MB", "GB"];
+		const i = Math.floor(Math.log(bytes) / Math.log(k));
+		return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + " " + sizes[i];
 	};
 
-	const obtenerIconoPorExtension = (nombreArchivo: string) => {
-		const ext = nombreArchivo.split(".").pop()?.toLowerCase();
-		if (ext === "pdf") return "📄";
-		if (["jpg", "jpeg", "png"].includes(ext || "")) return "🖼️";
-		if (["doc", "docx"].includes(ext || "")) return "📝";
-		if (["msg", "eml"].includes(ext || "")) return "📧";
-		return "📎";
-	};
-
-	const handleContinuar = () => {
-		// Los documentos son opcionales, pero si se agrega uno debe ser válido
-		// La validación ya se hizo al agregar
-
-		onSiguiente();
-	};
+	// Get available document types (allow duplicates for policies)
+	const availableDocTypes = Array.from(TIPOS_DOCUMENTO);
 
 	const tieneDocumentos = documentos.length > 0;
 
 	return (
 		<div className="bg-white rounded-lg shadow-sm border p-6">
+			{/* Header */}
 			<div className="flex items-center justify-between mb-6">
 				<div>
 					<h2 className="text-xl font-semibold text-gray-900">Paso 5: Cargar Documentos</h2>
@@ -153,138 +170,130 @@ export function CargarDocumentos({ documentos, onChange, onSiguiente, onAnterior
 				)}
 			</div>
 
-			{/* Selector de tipo de documento */}
-			<div className="mb-6 p-4 bg-gray-50 border border-gray-200 rounded-lg">
-				<Label htmlFor="tipo_documento" className="mb-2 block">
-					Tipo de Documento a Cargar
-				</Label>
+			{/* Upload Section */}
+			<div className="border border-gray-200 rounded-lg p-6 space-y-4 mb-6">
 				<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-					<Select value={tipoSeleccionado} onValueChange={setTipoSeleccionado}>
-						<SelectTrigger>
-							<SelectValue />
-						</SelectTrigger>
-						<SelectContent>
-							{TIPOS_DOCUMENTO.map((tipo) => (
-								<SelectItem key={tipo} value={tipo}>
-									{tipo}
-								</SelectItem>
-							))}
-						</SelectContent>
-					</Select>
+					{/* Document type selector */}
+					<div className="space-y-2">
+						<Label htmlFor="tipo_documento">Tipo de Documento</Label>
+						<Select value={tipoSeleccionado} onValueChange={(value) => setTipoSeleccionado(value)}>
+							<SelectTrigger id="tipo_documento">
+								<SelectValue placeholder="Seleccione el tipo..." />
+							</SelectTrigger>
+							<SelectContent>
+								{availableDocTypes.length === 0 ? (
+									<div className="p-2 text-sm text-gray-500">No hay tipos disponibles</div>
+								) : (
+									availableDocTypes.map((tipo) => (
+										<SelectItem key={tipo} value={tipo}>
+											{tipo}
+										</SelectItem>
+									))
+								)}
+							</SelectContent>
+						</Select>
+					</div>
 
+					{/* Custom document type input */}
 					{tipoSeleccionado === "Otro" && (
-						<Input
-							placeholder="Especifique el tipo de documento"
-							value={tipoPersonalizado}
-							onChange={(e) => setTipoPersonalizado(e.target.value)}
-						/>
+						<div className="space-y-2">
+							<Label htmlFor="tipo_personalizado">Tipo Personalizado</Label>
+							<Input
+								id="tipo_personalizado"
+								placeholder="Especifique el tipo..."
+								value={tipoPersonalizado}
+								onChange={(e) => setTipoPersonalizado(e.target.value)}
+							/>
+						</div>
 					)}
 				</div>
-			</div>
 
-			{/* Zona de carga */}
-			<div className="mb-6">
-				<label
-					htmlFor="file-upload"
-					className="flex flex-col items-center justify-center w-full h-40 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors"
+				{/* Dropzone */}
+				<div
+					{...getRootProps()}
+					className={`
+            border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors
+            ${isDragActive ? "border-primary bg-primary/5" : "border-gray-300 hover:border-primary/50"}
+            ${!tipoSeleccionado ? "opacity-50 cursor-not-allowed" : ""}
+          `}
 				>
-					<div className="flex flex-col items-center justify-center pt-5 pb-6">
-						<Upload className="h-10 w-10 text-gray-400 mb-3" />
-						<p className="mb-2 text-sm text-gray-600">
-							<span className="font-semibold">Click para cargar</span> o arrastra archivos aquí
-						</p>
-						<p className="text-xs text-gray-500">PDF, JPG, PNG, DOC, DOCX, MSG, EML (máx. 20MB por archivo)</p>
+					<input {...getInputProps()} disabled={!tipoSeleccionado} />
+					<Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+
+					{isDragActive ? (
+						<p className="text-sm text-gray-600">Suelte los archivos aquí...</p>
+					) : (
+						<>
+							<p className="text-sm text-gray-600 mb-1">
+								Arrastre archivos aquí o haga clic para seleccionar
+							</p>
+							<p className="text-xs text-gray-500">
+								PDF, JPG, PNG, DOC, DOCX, MSG, EML (máx. 20MB por archivo)
+							</p>
+						</>
+					)}
+				</div>
+
+				{error && (
+					<div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+						<AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+						<p className="text-sm text-red-800">{error}</p>
 					</div>
-					<input
-						id="file-upload"
-						type="file"
-						className="hidden"
-						onChange={handleAgregarArchivo}
-						multiple
-						accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.msg,.eml"
-					/>
-				</label>
+				)}
 			</div>
 
-			{/* Errores de carga */}
-			{errores.length > 0 && (
-				<div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-					<div className="flex gap-2">
-						<AlertCircle className="h-5 w-5 text-yellow-600 flex-shrink-0 mt-0.5" />
-						<div>
-							<h4 className="text-sm font-semibold text-yellow-800 mb-2">
-								Algunos archivos no pudieron ser agregados:
-							</h4>
-							<ul className="text-sm text-yellow-700 space-y-1">
-								{errores.map((error, i) => (
-									<li key={i}>• {error}</li>
-								))}
-							</ul>
-						</div>
+			{/* Uploaded Documents List */}
+			{documentos.length > 0 && (
+				<div className="border border-gray-200 rounded-lg mb-6">
+					<div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
+						<h4 className="text-sm font-medium text-gray-900">
+							Documentos Cargados ({documentos.length})
+						</h4>
 					</div>
-				</div>
-			)}
 
-			{/* Lista de documentos cargados */}
-			{documentos.length === 0 ? (
-				<div className="text-center py-12 border-2 border-dashed rounded-lg">
-					<FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-					<p className="text-gray-600 mb-2">No hay documentos cargados</p>
-					<p className="text-sm text-gray-500">Los documentos son opcionales pero recomendados</p>
-				</div>
-			) : (
-				<div className="space-y-3 mb-6">
-					<h4 className="text-sm font-semibold text-gray-900">Documentos Cargados ({documentos.length})</h4>
-					<div className="space-y-2">
+					<div className="divide-y divide-gray-200">
 						{documentos.map((doc, index) => (
-							<div
-								key={index}
-								className="flex items-center justify-between p-3 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors"
-							>
-								<div className="flex items-center gap-3 flex-1 min-w-0">
-									<span className="text-2xl flex-shrink-0">
-										{obtenerIconoPorExtension(doc.nombre_archivo)}
-									</span>
+							<div key={index} className="p-4 hover:bg-gray-50 transition-colors">
+								<div className="flex items-start gap-3">
+									<FileText className="h-10 w-10 text-primary flex-shrink-0" />
+
 									<div className="flex-1 min-w-0">
-										<p className="text-sm font-medium text-gray-900 truncate">
-											{doc.nombre_archivo}
-										</p>
-										<div className="flex items-center gap-3 text-xs text-gray-500 mt-1">
-											<span className="font-medium text-blue-600">{doc.tipo_documento}</span>
-											{doc.tamano_bytes && (
-												<>
-													<span>•</span>
-													<span>{formatearTamano(doc.tamano_bytes)}</span>
-												</>
-											)}
+										<div className="flex items-start justify-between gap-2">
+											<div className="flex-1">
+												<p className="font-medium text-gray-900">{doc.tipo_documento}</p>
+												<p className="text-sm text-gray-600 truncate">{doc.nombre_archivo}</p>
+												{doc.tamano_bytes !== undefined && (
+													<p className="text-xs text-gray-500 mt-1">
+														{formatearTamano(doc.tamano_bytes)}
+													</p>
+												)}
+											</div>
+
+											<Button
+												variant="ghost"
+												size="sm"
+												onClick={() => handleEliminarDocumento(index)}
+												className="flex-shrink-0"
+											>
+												<X className="h-4 w-4" />
+											</Button>
 										</div>
 									</div>
 								</div>
-								<Button
-									variant="ghost"
-									size="sm"
-									onClick={() => handleEliminarDocumento(index)}
-									className="text-red-600 hover:text-red-700 hover:bg-red-50 flex-shrink-0"
-								>
-									<Trash2 className="h-4 w-4" />
-								</Button>
 							</div>
 						))}
 					</div>
 				</div>
 			)}
 
-			{/* Información adicional */}
-			<div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-				<h4 className="text-sm font-semibold text-blue-900 mb-2">Información sobre Documentos</h4>
-				<ul className="text-sm text-blue-800 space-y-1">
-					<li>• Los documentos se cargarán al servidor cuando guarde la póliza</li>
-					<li>• Puede agregar múltiples archivos del mismo tipo</li>
-					<li>• Los documentos son opcionales pero ayudan a tener un registro completo</li>
-					<li>• Tamaño máximo por archivo: 20MB</li>
-					<li>• Formatos soportados: PDF, imágenes, Word, correos de Outlook (.msg, .eml)</li>
-				</ul>
-			</div>
+			{/* Empty state */}
+			{documentos.length === 0 && (
+				<div className="text-center py-8 text-gray-500 border border-dashed border-gray-300 rounded-lg mb-6">
+					<FileText className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+					<p className="text-sm">No se han cargado documentos todavía</p>
+					<p className="text-xs mt-1">Los documentos son opcionales pero recomendados</p>
+				</div>
+			)}
 
 			{/* Botones de navegación */}
 			<div className="flex justify-between pt-6 border-t">
@@ -293,7 +302,7 @@ export function CargarDocumentos({ documentos, onChange, onSiguiente, onAnterior
 					Anterior
 				</Button>
 
-				<Button onClick={handleContinuar}>
+				<Button onClick={onSiguiente}>
 					Continuar al Resumen
 					<ChevronRight className="ml-2 h-5 w-5" />
 				</Button>

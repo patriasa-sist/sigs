@@ -170,19 +170,21 @@ crearemos el módulo de cobranza, este módulo solo tienen acceso las cuentas ma
 ✅detalles menores nivel de ingreso input
 
 --7mo commit
-ahora mejoraremos el registro de clientes con un nuevo paso para permitir agregar los siguientes documentos que pueden cargarse a la db solo el documento de identidad y el formulario conoce a tu cliente son obligatorios:
+✅ahora mejoraremos el registro de clientes con un nuevo paso para permitir agregar los siguientes documentos que pueden cargarse a la db solo el documento de identidad y el formulario conoce a tu cliente son obligatorios:
 para cliente natural y unipersonal: documento identidad, certificacion PEP, Formulario conoce a tu cliente
 apra cliente unipersonal: documento identidad, certificacion PEP, Formulario conoce a tu cliente, NIT, Matricula de comercio
 agregado extra a juridico: NIT, Matricula de comercio, Testimonio de constitucion social, Balance general y estado de resultados, Poder de representacion, Documento identidad representante legal, Certificacion PEP, Formulario conoce a tu cliente
 
+--8vo commit
+(los datos facturacion ya son guardados)paso extra para datos de facturacion
+al hacer click en la poliza ver TODOS los detalles de la póliza
+
 sociedad con rubrica y detalle
 ACCIONISTAS o SOCIOS: nombre, carnet, porcentaje (puede existir sin accionistas)
 carta de nombramiento todos clientes
-botón para ver detalles de la póliza
 visualización cliente>póliza agregar compañía
 ejecutivo visible
 agente visible
-paso extra para datos de facturacion
 (polizas)Información de Contacto-cobranza una o mas
 
 RENOVACION DE POLIZA EXIGE RENOVACION DE DOCUMENTOS
