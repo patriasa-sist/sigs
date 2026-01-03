@@ -16,7 +16,7 @@ const ACCION_LABELS: Record<string, string> = {
 	updated: "Siniestro Actualizado",
 	documento_agregado: "Documento Agregado",
 	observacion_agregada: "Observación Agregada",
-	cambio_estado: "Estado de Seguimiento Cambiado",
+	cambio_estado: "Etapa de Seguimiento Cambiado",
 	estado_cambiado: "Estado Cambiado",
 	cerrado: "Siniestro Cerrado",
 };
@@ -45,9 +45,7 @@ export default function UltimoCambioSiniestro({ historial, onVerHistorialComplet
 			</CardHeader>
 			<CardContent className="space-y-3">
 				<div>
-					<p className="font-medium text-sm">
-						{ACCION_LABELS[ultimoCambio.accion] || ultimoCambio.accion}
-					</p>
+					<p className="font-medium text-sm">{ACCION_LABELS[ultimoCambio.accion] || ultimoCambio.accion}</p>
 
 					{/* Mostrar valor_nuevo para cambio_estado */}
 					{ultimoCambio.accion === "cambio_estado" && ultimoCambio.valor_nuevo && (
@@ -70,15 +68,17 @@ export default function UltimoCambioSiniestro({ historial, onVerHistorialComplet
 				</div>
 
 				{/* Mostrar detalles solo si NO es cambio_estado (ya mostramos valor_nuevo arriba) */}
-				{ultimoCambio.accion !== "cambio_estado" && ultimoCambio.detalles && typeof ultimoCambio.detalles === "object" && (
-					<div className="text-xs bg-white dark:bg-gray-900 rounded-md p-2 border">
-						{Object.entries(ultimoCambio.detalles).map(([key, value]) => (
-							<div key={key} className="text-muted-foreground">
-								<span className="font-medium">{key}:</span> {String(value)}
-							</div>
-						))}
-					</div>
-				)}
+				{ultimoCambio.accion !== "cambio_estado" &&
+					ultimoCambio.detalles &&
+					typeof ultimoCambio.detalles === "object" && (
+						<div className="text-xs bg-white dark:bg-gray-900 rounded-md p-2 border">
+							{Object.entries(ultimoCambio.detalles).map(([key, value]) => (
+								<div key={key} className="text-muted-foreground">
+									<span className="font-medium">{key}:</span> {String(value)}
+								</div>
+							))}
+						</div>
+					)}
 
 				{onVerHistorialCompleto && (
 					<Button

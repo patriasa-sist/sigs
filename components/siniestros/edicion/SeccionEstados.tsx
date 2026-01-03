@@ -122,7 +122,7 @@ export default function SeccionEstados({ siniestroId, estadoActual, estadoSinies
 				<CardHeader>
 					<CardTitle className="text-lg flex items-center gap-2">
 						<Clock className="h-5 w-5 text-primary" />
-						Estado del Seguimiento
+						Etapa del Seguimiento
 					</CardTitle>
 				</CardHeader>
 				<CardContent className="space-y-4">
@@ -141,7 +141,9 @@ export default function SeccionEstados({ siniestroId, estadoActual, estadoSinies
 								)}
 							</div>
 							{estadoActual.estado_actual_observacion && (
-								<p className="text-sm text-muted-foreground mt-2 italic">&quot;{estadoActual.estado_actual_observacion}&quot;</p>
+								<p className="text-sm text-muted-foreground mt-2 italic">
+									&quot;{estadoActual.estado_actual_observacion}&quot;
+								</p>
 							)}
 						</div>
 					)}
@@ -150,11 +152,11 @@ export default function SeccionEstados({ siniestroId, estadoActual, estadoSinies
 					{puedeEditarEstado ? (
 						<div className="space-y-3">
 							<div>
-								<Label htmlFor="estado-select">Cambiar Estado</Label>
+								<Label htmlFor="estado-select">Cambiar Etapa</Label>
 								<div className="flex gap-2 mt-1">
 									<Select value={estadoSeleccionado} onValueChange={setEstadoSeleccionado}>
 										<SelectTrigger id="estado-select" className="flex-1">
-											<SelectValue placeholder="Seleccionar estado..." />
+											<SelectValue placeholder="Seleccionar etapa..." />
 										</SelectTrigger>
 										<SelectContent>
 											{estados.map((estado) => (
@@ -190,7 +192,8 @@ export default function SeccionEstados({ siniestroId, estadoActual, estadoSinies
 					<DialogHeader>
 						<DialogTitle>Cambiar Estado del Siniestro</DialogTitle>
 						<DialogDescription>
-							Confirma el cambio de estado. Si necesitas agregar notas adicionales, usa el tab &quot;Observaciones&quot;.
+							Confirma el cambio de estado. Si necesitas agregar notas adicionales, usa el tab
+							&quot;Observaciones&quot;.
 						</DialogDescription>
 					</DialogHeader>
 

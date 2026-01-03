@@ -23,7 +23,7 @@ const ACCION_LABELS = {
 	updated: "Siniestro Actualizado",
 	documento_agregado: "Documento Agregado",
 	observacion_agregada: "Observación Agregada",
-	cambio_estado: "Estado de Seguimiento Cambiado",
+	cambio_estado: "Etapa de Seguimiento Cambiado",
 	estado_cambiado: "Estado Cambiado",
 	cerrado: "Siniestro Cerrado",
 };
@@ -39,9 +39,7 @@ export default function HistorialCronologico({ historial }: HistorialCronologico
 			</CardHeader>
 			<CardContent>
 				{historial.length === 0 ? (
-					<p className="text-sm text-muted-foreground text-center py-8">
-						No hay cambios registrados
-					</p>
+					<p className="text-sm text-muted-foreground text-center py-8">No hay cambios registrados</p>
 				) : (
 					<div className="relative space-y-4">
 						{/* Timeline line */}
@@ -67,7 +65,8 @@ export default function HistorialCronologico({ historial }: HistorialCronologico
 									<div className="flex items-start justify-between gap-2 mb-2">
 										<div>
 											<p className="font-medium text-sm">
-												{ACCION_LABELS[item.accion as keyof typeof ACCION_LABELS] || item.accion}
+												{ACCION_LABELS[item.accion as keyof typeof ACCION_LABELS] ||
+													item.accion}
 											</p>
 											<div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
 												<User className="h-3 w-3" />
@@ -90,7 +89,10 @@ export default function HistorialCronologico({ historial }: HistorialCronologico
 									{item.accion === "cambio_estado" && item.valor_nuevo && (
 										<div className="mt-2 text-sm">
 											<p className="text-muted-foreground">
-												Estado cambiado a: <span className="font-medium text-blue-600 dark:text-blue-400">{item.valor_nuevo}</span>
+												Estado cambiado a:{" "}
+												<span className="font-medium text-blue-600 dark:text-blue-400">
+													{item.valor_nuevo}
+												</span>
 											</p>
 										</div>
 									)}
@@ -108,7 +110,9 @@ export default function HistorialCronologico({ historial }: HistorialCronologico
 											{item.valor_anterior && (
 												<div className="mt-1 text-xs">
 													<span className="text-muted-foreground">Valor anterior: </span>
-													<span className="line-through opacity-70">{item.valor_anterior}</span>
+													<span className="line-through opacity-70">
+														{item.valor_anterior}
+													</span>
 												</div>
 											)}
 
