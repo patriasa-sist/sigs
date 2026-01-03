@@ -525,24 +525,37 @@ export async function exportarReporte(filtros: ExportFilters): Promise<CobranzaS
 		// Calculate date range based on period
 		let fechaDesde: string | undefined;
 		let fechaHasta: string | undefined;
+		let aplicarFiltroFecha = true; // Flag para controlar si se aplica filtro de fecha
 		const today = new Date().toISOString().split("T")[0];
 
 		switch (filtros.periodo) {
 			case "today":
+				// Filtrar por pagos realizados hoy
 				fechaDesde = today;
 				fechaHasta = today;
 				break;
 			case "week":
-				const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
-				fechaDesde = weekAgo;
-				fechaHasta = today;
-				break;
 			case "month":
-				const monthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
-				fechaDesde = monthAgo;
-				fechaHasta = today;
+				// Para week/month, NO filtrar por fecha si no se especifica tipo_filtro_fecha
+				// Esto permite ver TODAS las cuotas según su estado, sin importar cuándo vencen
+				// Solo aplicar filtro si el usuario explícitamente lo solicitó
+				if (filtros.tipo_filtro_fecha) {
+					if (filtros.periodo === "week") {
+						const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+						fechaDesde = weekAgo;
+						fechaHasta = today;
+					} else {
+						const monthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+						fechaDesde = monthAgo;
+						fechaHasta = today;
+					}
+				} else {
+					// No aplicar filtro de fecha para week/month
+					aplicarFiltroFecha = false;
+				}
 				break;
 			case "custom":
+				// Modo personalizado: el usuario decide
 				fechaDesde = filtros.fecha_desde;
 				fechaHasta = filtros.fecha_hasta;
 				break;
@@ -590,16 +603,19 @@ export async function exportarReporte(filtros: ExportFilters): Promise<CobranzaS
 			query = query.eq("estado", filtros.estado_cuota);
 		}
 
-		// Determine which date field to filter by
-		// Para "today" usamos fecha_pago por defecto para mostrar pagos del día
-		const tipoFiltro = filtros.tipo_filtro_fecha || (filtros.periodo === "today" ? "fecha_pago" : "fecha_vencimiento");
+		// Apply date filters only if aplicarFiltroFecha is true
+		if (aplicarFiltroFecha && (fechaDesde || fechaHasta)) {
+			// Determine which date field to filter by
+			// Para "today" usamos fecha_pago por defecto para mostrar pagos del día
+			const tipoFiltro = filtros.tipo_filtro_fecha || (filtros.periodo === "today" ? "fecha_pago" : "fecha_vencimiento");
 
-		if (fechaDesde) {
-			query = query.gte(tipoFiltro, fechaDesde);
-		}
+			if (fechaDesde) {
+				query = query.gte(tipoFiltro, fechaDesde);
+			}
 
-		if (fechaHasta) {
-			query = query.lte(tipoFiltro, fechaHasta);
+			if (fechaHasta) {
+				query = query.lte(tipoFiltro, fechaHasta);
+			}
 		}
 
 		const { data: pagos, error } = await query.order("fecha_vencimiento", { ascending: true });

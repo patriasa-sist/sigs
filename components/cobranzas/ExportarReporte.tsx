@@ -12,16 +12,17 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Download, AlertCircle } from "lucide-react";
+import { Download, AlertCircle, Info } from "lucide-react";
 import { exportarReporte } from "@/app/cobranzas/actions";
 import * as ExcelJS from "exceljs";
-import type { ExportPeriod, EstadoPago } from "@/types/cobranza";
+import type { ExportPeriod, EstadoPago, TipoFiltroFecha } from "@/types/cobranza";
 
 export default function ExportarReporte() {
 	const [periodo, setPeriodo] = useState<ExportPeriod>("month");
 	const [fechaDesde, setFechaDesde] = useState("");
 	const [fechaHasta, setFechaHasta] = useState("");
 	const [estadoCuota, setEstadoCuota] = useState<EstadoPago | "all">("all");
+	const [tipoFiltroFecha, setTipoFiltroFecha] = useState<TipoFiltroFecha | "ninguno">("ninguno");
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
@@ -35,6 +36,7 @@ export default function ExportarReporte() {
 				fecha_desde: periodo === "custom" ? fechaDesde : undefined,
 				fecha_hasta: periodo === "custom" ? fechaHasta : undefined,
 				estado_cuota: estadoCuota,
+				tipo_filtro_fecha: tipoFiltroFecha !== "ninguno" ? tipoFiltroFecha : undefined,
 			});
 
 			if (!result.success || !result.data) {
@@ -227,6 +229,23 @@ export default function ExportarReporte() {
 					</Select>
 				</div>
 
+				{/* Filtro de Fecha (solo si NO es "today") */}
+				{periodo !== "today" && (
+					<div className="space-y-2">
+						<Label>Filtrar por Fecha</Label>
+						<Select value={tipoFiltroFecha} onValueChange={(value) => setTipoFiltroFecha(value as TipoFiltroFecha | "ninguno")}>
+							<SelectTrigger>
+								<SelectValue />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value="ninguno">Sin Filtro (Recomendado)</SelectItem>
+								<SelectItem value="fecha_vencimiento">Fecha Vencimiento</SelectItem>
+								<SelectItem value="fecha_pago">Fecha Pago</SelectItem>
+							</SelectContent>
+						</Select>
+					</div>
+				)}
+
 				{/* Fecha Desde (solo si es personalizado) */}
 				{periodo === "custom" && (
 					<div className="space-y-2">
@@ -251,6 +270,16 @@ export default function ExportarReporte() {
 					</div>
 				)}
 			</div>
+
+			{/* Mensaje informativo */}
+			{(periodo === "week" || periodo === "month") && tipoFiltroFecha === "ninguno" && (
+				<Alert>
+					<Info className="h-4 w-4" />
+					<AlertDescription>
+						Sin filtro de fecha: Se exportarán TODAS las cuotas según el estado seleccionado, incluyendo pólizas nuevas con cuotas futuras.
+					</AlertDescription>
+				</Alert>
+			)}
 
 			{error && (
 				<Alert variant="destructive">
