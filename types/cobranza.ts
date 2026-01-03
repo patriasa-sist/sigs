@@ -169,12 +169,7 @@ export type FilterOptions = {
 /**
  * Campos disponibles para ordenamiento
  */
-export type SortField =
-	| "numero_poliza"
-	| "cliente"
-	| "fecha_vencimiento"
-	| "monto_pendiente"
-	| "cuotas_vencidas";
+export type SortField = "numero_poliza" | "cliente" | "fecha_vencimiento" | "monto_pendiente" | "cuotas_vencidas";
 
 /**
  * Opciones de ordenamiento
@@ -437,12 +432,13 @@ export type CuotaVencidaConMora = CuotaPago & {
  * Datos completos para generar PDF de aviso de mora
  */
 export type AvisoMoraData = {
-	poliza: PolizaConPagos;
+	poliza: PolizaConPagosExtendida;
 	cliente: ContactoCliente;
 	cuotas_vencidas: CuotaVencidaConMora[];
 	total_adeudado: number;
 	fecha_generacion: string; // ISO date string
 	numero_referencia: string; // Auto-generado formato: AM-YYYYMMDD-XXXXX
+	generado_por: string; // Nombre completo del usuario que genera la carta
 };
 
 // ============================================

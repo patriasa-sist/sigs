@@ -89,26 +89,42 @@ export default function CuotasModal({ poliza, open, onClose, onSelectQuota }: Cu
 			const response = await prepararDatosAvisoMora(poliza.id);
 
 			if (response.success && response.data) {
-				// Generate PDF and open WhatsApp
 				const avisoData = response.data;
 
-				// TODO: Generate PDF using AvisoMoraTemplate
-				// For now, open WhatsApp with message
-				const mensaje = `Estimado/a cliente, se ha generado un aviso de mora para su póliza ${poliza.numero_poliza}. Tiene ${avisoData.cuotas_vencidas.length} cuotas vencidas por un total de ${formatearMonto(avisoData.total_adeudado, poliza.moneda)}. Por favor, regularice su situación a la brevedad.`;
+				// Generate and download PDF
+				const { generarYDescargarAvisoMoraPDF } = await import("@/utils/cobranza");
+				await generarYDescargarAvisoMoraPDF(avisoData);
+
+				// Show success message
+				toast.success("PDF de aviso de mora generado", {
+					description: "El documento se ha descargado correctamente"
+				});
+
+				// Open WhatsApp with message
+				const mensaje = `Estimado/a cliente, se ha generado un aviso de mora para su póliza ${poliza.numero_poliza}. Tiene ${avisoData.cuotas_vencidas.length} cuotas vencidas por un total de ${formatearMonto(avisoData.total_adeudado, poliza.moneda)}. Por favor, regularice su situación a la brevedad. Adjunto encontrará el documento detallado.`;
 
 				const telefono = polizaExtendida?.contacto?.celular || polizaExtendida?.contacto?.telefono;
 				if (telefono) {
 					const url = generarURLWhatsApp(telefono, mensaje);
 					window.open(url, "_blank");
 				} else {
-					alert("No se encontró número de teléfono para este cliente");
+					toast.warning("Sin número de teléfono", {
+						description: "No se encontró número de contacto para enviar por WhatsApp"
+					});
 				}
 			} else {
 				setError(response.error || "Error al preparar aviso de mora");
+				toast.error("Error al generar aviso", {
+					description: response.error || "No se pudo preparar el aviso de mora"
+				});
 			}
 		} catch (err) {
 			console.error("Error generating aviso de mora:", err);
-			setError("Error al generar aviso de mora");
+			const errorMessage = err instanceof Error ? err.message : "Error al generar aviso de mora";
+			setError(errorMessage);
+			toast.error("Error al generar PDF", {
+				description: errorMessage
+			});
 		} finally {
 			setGeneratingPDF(false);
 		}

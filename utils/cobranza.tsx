@@ -1,6 +1,8 @@
 // utils/cobranza.ts - Utility functions for Cobranzas module
 
-import type { CuotaPago, PolizaConPagos, ContactoCliente, Moneda } from "@/types/cobranza";
+import React from "react";
+import { pdf } from "@react-pdf/renderer";
+import type { CuotaPago, PolizaConPagos, ContactoCliente, Moneda, AvisoMoraData } from "@/types/cobranza";
 import { cleanPhoneNumber } from "./whatsapp";
 
 /**
@@ -266,3 +268,29 @@ export function puedeProrrogar(estado: string): boolean {
 export function puedeRegistrarPago(estado: string): boolean {
 	return estado === "pendiente" || estado === "vencido" || estado === "parcial";
 }
+
+/**
+ * Genera y descarga el PDF del Aviso de Mora
+ * Utiliza el template AvisoMoraTemplate consistente con las cartas de vencimiento
+ */
+export async function generarYDescargarAvisoMoraPDF(avisoData: AvisoMoraData): Promise<void> {
+	// Dynamic import to avoid bundling in server components
+	const { AvisoMoraTemplate } = await import("@/components/cobranzas/PDFGeneration/AvisoMoraTemplate");
+
+	// Generate PDF blob
+	const pdfBlob = await pdf(<AvisoMoraTemplate avisoData={avisoData} />).toBlob();
+
+	// Generate filename
+	const fileName = `Aviso_Mora_${avisoData.poliza.numero_poliza}_${avisoData.numero_referencia}.pdf`;
+
+	// Download blob
+	const url = URL.createObjectURL(pdfBlob);
+	const link = document.createElement("a");
+	link.href = url;
+	link.download = fileName;
+	document.body.appendChild(link);
+	link.click();
+	document.body.removeChild(link);
+	URL.revokeObjectURL(url);
+}
+

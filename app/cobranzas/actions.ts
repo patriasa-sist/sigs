@@ -160,8 +160,7 @@ export async function obtenerPolizasConPendientes(): Promise<ObtenerPolizasConPa
 			// Skip policies with no pending quotas
 			if (cuotasPendientes.length === 0) continue;
 
-			const totalPagado =
-				cuotas?.filter((c) => c.estado === "pagado").reduce((sum, c) => sum + c.monto, 0) || 0;
+			const totalPagado = cuotas?.filter((c) => c.estado === "pagado").reduce((sum, c) => sum + c.monto, 0) || 0;
 
 			const totalPendiente = cuotasPendientes.reduce((sum, c) => sum + c.monto, 0);
 
@@ -177,7 +176,9 @@ export async function obtenerPolizasConPendientes(): Promise<ObtenerPolizasConPa
 					// natural_clients is a 1:1 relationship object
 					const natural = clientData.natural_clients;
 					if (natural) {
-						nombreCompleto = `${natural.primer_nombre || ""} ${natural.segundo_nombre || ""} ${natural.primer_apellido || ""} ${natural.segundo_apellido || ""}`.trim();
+						nombreCompleto = `${natural.primer_nombre || ""} ${natural.segundo_nombre || ""} ${
+							natural.primer_apellido || ""
+						} ${natural.segundo_apellido || ""}`.trim();
 						documento = natural.numero_documento || "N/A";
 					}
 				} else {
@@ -317,7 +318,9 @@ export async function registrarPago(registro: RegistroPago): Promise<RegistrarPa
 			// PARTIAL PAYMENT
 			tipoPago = "parcial";
 			nuevoEstado = "parcial";
-			observaciones += `\n[${registro.fecha_pago}] Pago parcial de ${montoPagado}. Saldo pendiente: ${montoCuota - montoPagado}.`;
+			observaciones += `\n[${registro.fecha_pago}] Pago parcial de ${montoPagado}. Saldo pendiente: ${
+				montoCuota - montoPagado
+			}.`;
 		} else if (montoPagado === montoCuota) {
 			// EXACT PAYMENT
 			tipoPago = "exacto";
@@ -374,9 +377,7 @@ export async function registrarPago(registro: RegistroPago): Promise<RegistrarPa
 /**
  * Redistribuye el exceso de pago entre cuotas pendientes seleccionadas
  */
-export async function redistribuirExceso(
-	distribucion: ExcessPaymentDistribution
-): Promise<RedistribuirExcesoResponse> {
+export async function redistribuirExceso(distribucion: ExcessPaymentDistribution): Promise<RedistribuirExcesoResponse> {
 	const permiso = await verificarPermisoCobranza();
 	if (!permiso.authorized) {
 		return { success: false, error: permiso.error };
@@ -479,9 +480,7 @@ export async function redistribuirExceso(
  * Obtiene cuotas pendientes de una póliza para redistribución de exceso
  * Helper usado en el frontend después de detectar exceso
  */
-export async function obtenerCuotasPendientesPorPoliza(
-	polizaId: string
-): Promise<CobranzaServerResponse<CuotaPago[]>> {
+export async function obtenerCuotasPendientesPorPoliza(polizaId: string): Promise<CobranzaServerResponse<CuotaPago[]>> {
 	const permiso = await verificarPermisoCobranza();
 	if (!permiso.authorized) {
 		return { success: false, error: permiso.error };
@@ -608,7 +607,8 @@ export async function exportarReporte(filtros: ExportFilters): Promise<CobranzaS
 		if (aplicarFiltroFecha && (fechaDesde || fechaHasta)) {
 			// Determine which date field to filter by
 			// Para "today" usamos fecha_pago por defecto para mostrar pagos del día
-			const tipoFiltro = filtros.tipo_filtro_fecha || (filtros.periodo === "today" ? "fecha_pago" : "fecha_vencimiento");
+			const tipoFiltro =
+				filtros.tipo_filtro_fecha || (filtros.periodo === "today" ? "fecha_pago" : "fecha_vencimiento");
 
 			if (fechaDesde) {
 				query = query.gte(tipoFiltro, fechaDesde);
@@ -627,86 +627,95 @@ export async function exportarReporte(filtros: ExportFilters): Promise<CobranzaS
 		}
 
 		// Transform to export rows
-		const exportRows: ExportRow[] = (pagos || []).map((pago: {
-			id: string;
-			numero_cuota: number;
-			monto: number;
-			fecha_vencimiento: string;
-			fecha_vencimiento_original: string | null;
-			fecha_pago: string | null;
-			estado: EstadoPago;
-			observaciones: string | null;
-			prorrogas_historial: unknown;
-			poliza: {
-				numero_poliza: string;
-				ramo: string;
-				moneda: string;
-				prima_total: number;
-				inicio_vigencia: string;
-				fin_vigencia: string;
-				client: ClientQueryResult;
-				compania?: { nombre?: string } | null;
-				responsable?: { full_name?: string } | null;
-				regional?: { nombre?: string } | null;
-			} | null;
-		}) => {
-			const poliza = pago.poliza;
-			const clientData = poliza?.client;
+		const exportRows: ExportRow[] = (pagos || []).map(
+			(pago: {
+				id: string;
+				numero_cuota: number;
+				monto: number;
+				fecha_vencimiento: string;
+				fecha_vencimiento_original: string | null;
+				fecha_pago: string | null;
+				estado: EstadoPago;
+				observaciones: string | null;
+				prorrogas_historial: unknown;
+				poliza: {
+					numero_poliza: string;
+					ramo: string;
+					moneda: string;
+					prima_total: number;
+					inicio_vigencia: string;
+					fin_vigencia: string;
+					client: ClientQueryResult;
+					compania?: { nombre?: string } | null;
+					responsable?: { full_name?: string } | null;
+					regional?: { nombre?: string } | null;
+				} | null;
+			}) => {
+				const poliza = pago.poliza;
+				const clientData = poliza?.client;
 
-			let cliente = "N/A";
-			let ciNit = "N/A";
+				let cliente = "N/A";
+				let ciNit = "N/A";
 
-			if (clientData) {
-				if (clientData.client_type === "natural") {
-					// natural_clients is a 1:1 relationship object
-					const natural = clientData.natural_clients;
-					if (natural) {
-						cliente = `${natural.primer_nombre || ""} ${natural.segundo_nombre || ""} ${natural.primer_apellido || ""} ${natural.segundo_apellido || ""}`.trim();
-						ciNit = natural.numero_documento || "N/A";
-					}
-				} else {
-					// juridic_clients is a 1:1 relationship object
-					const juridic = clientData.juridic_clients;
-					if (juridic) {
-						cliente = juridic.razon_social || "N/A";
-						ciNit = juridic.nit || "N/A";
+				if (clientData) {
+					if (clientData.client_type === "natural") {
+						// natural_clients is a 1:1 relationship object
+						const natural = clientData.natural_clients;
+						if (natural) {
+							cliente = `${natural.primer_nombre || ""} ${natural.segundo_nombre || ""} ${
+								natural.primer_apellido || ""
+							} ${natural.segundo_apellido || ""}`.trim();
+							ciNit = natural.numero_documento || "N/A";
+						}
+					} else {
+						// juridic_clients is a 1:1 relationship object
+						const juridic = clientData.juridic_clients;
+						if (juridic) {
+							cliente = juridic.razon_social || "N/A";
+							ciNit = juridic.nit || "N/A";
+						}
 					}
 				}
+
+				// Calculate days overdue
+				const diasVencido =
+					pago.estado === "vencido" || pago.estado === "pendiente"
+						? Math.max(
+								0,
+								Math.floor(
+									(Date.now() - new Date(pago.fecha_vencimiento).getTime()) / (24 * 60 * 60 * 1000)
+								)
+						  )
+						: 0;
+
+				// Check if quota has prorroga
+				const tieneProrroga = Array.isArray(pago.prorrogas_historial) && pago.prorrogas_historial.length > 0;
+
+				return {
+					numero_poliza: poliza?.numero_poliza || "N/A",
+					cliente,
+					ci_nit: ciNit,
+					compania: poliza?.compania?.nombre || "N/A",
+					ramo: poliza?.ramo || "N/A",
+					responsable: poliza?.responsable?.full_name || "N/A",
+					regional: poliza?.regional?.nombre || "N/A",
+					prima_total: poliza?.prima_total || 0,
+					inicio_vigencia: poliza?.inicio_vigencia || "",
+					fin_vigencia: poliza?.fin_vigencia || "",
+					numero_cuota: pago.numero_cuota,
+					monto_cuota: pago.monto,
+					moneda: (poliza?.moneda as Moneda) || "Bs",
+					fecha_vencimiento: pago.fecha_vencimiento,
+					fecha_vencimiento_original: pago.fecha_vencimiento_original,
+					fecha_pago: pago.fecha_pago,
+					estado: pago.estado,
+					dias_vencido: diasVencido,
+					monto_pagado: pago.estado === "pagado" ? pago.monto : 0,
+					tiene_prorroga: tieneProrroga,
+					observaciones: pago.observaciones || "",
+				};
 			}
-
-			// Calculate days overdue
-			const diasVencido =
-				pago.estado === "vencido" || pago.estado === "pendiente"
-					? Math.max(0, Math.floor((Date.now() - new Date(pago.fecha_vencimiento).getTime()) / (24 * 60 * 60 * 1000)))
-					: 0;
-
-			// Check if quota has prorroga
-			const tieneProrroga = Array.isArray(pago.prorrogas_historial) && pago.prorrogas_historial.length > 0;
-
-			return {
-				numero_poliza: poliza?.numero_poliza || "N/A",
-				cliente,
-				ci_nit: ciNit,
-				compania: poliza?.compania?.nombre || "N/A",
-				ramo: poliza?.ramo || "N/A",
-				responsable: poliza?.responsable?.full_name || "N/A",
-				regional: poliza?.regional?.nombre || "N/A",
-				prima_total: poliza?.prima_total || 0,
-				inicio_vigencia: poliza?.inicio_vigencia || "",
-				fin_vigencia: poliza?.fin_vigencia || "",
-				numero_cuota: pago.numero_cuota,
-				monto_cuota: pago.monto,
-				moneda: (poliza?.moneda as Moneda) || "Bs",
-				fecha_vencimiento: pago.fecha_vencimiento,
-				fecha_vencimiento_original: pago.fecha_vencimiento_original,
-				fecha_pago: pago.fecha_pago,
-				estado: pago.estado,
-				dias_vencido: diasVencido,
-				monto_pagado: pago.estado === "pagado" ? pago.monto : 0,
-				tiene_prorroga: tieneProrroga,
-				observaciones: pago.observaciones || "",
-			};
-		});
+		);
 
 		return { success: true, data: exportRows };
 	} catch (error) {
@@ -726,9 +735,7 @@ export async function exportarReporte(filtros: ExportFilters): Promise<CobranzaS
  * MEJORA #3: Obtener detalle extendido de póliza para visualización de cuotas
  * Incluye: contacto del cliente y datos específicos según el ramo
  */
-export async function obtenerDetallePolizaParaCuotas(
-	polizaId: string
-): Promise<ObtenerDetallePolizaResponse> {
+export async function obtenerDetallePolizaParaCuotas(polizaId: string): Promise<ObtenerDetallePolizaResponse> {
 	try {
 		const supabase = await createClient();
 
@@ -918,14 +925,14 @@ export async function obtenerDetallePolizaParaCuotas(
 				nombre_completo:
 					poliza.client.client_type === "natural"
 						? [
-							poliza.client.natural_clients?.primer_nombre,
-							poliza.client.natural_clients?.segundo_nombre,
-							poliza.client.natural_clients?.primer_apellido,
-							poliza.client.natural_clients?.segundo_apellido,
-					  ]
-							.filter(Boolean)
-							.join(" ")
-							.trim() || "N/A"
+								poliza.client.natural_clients?.primer_nombre,
+								poliza.client.natural_clients?.segundo_nombre,
+								poliza.client.natural_clients?.primer_apellido,
+								poliza.client.natural_clients?.segundo_apellido,
+						  ]
+								.filter(Boolean)
+								.join(" ")
+								.trim() || "N/A"
 						: poliza.client.juridic_clients?.razon_social || "N/A",
 				documento:
 					poliza.client.client_type === "natural"
@@ -962,10 +969,7 @@ export async function obtenerDetallePolizaParaCuotas(
 /**
  * MEJORA #1: Subir comprobante de pago a Supabase Storage
  */
-export async function subirComprobantePago(
-	pagoId: string,
-	fileData: FormData
-): Promise<SubirComprobanteResponse> {
+export async function subirComprobantePago(pagoId: string, fileData: FormData): Promise<SubirComprobanteResponse> {
 	try {
 		const supabase = await createClient();
 
@@ -1153,6 +1157,17 @@ export async function prepararDatosAvisoMora(polizaId: string): Promise<Preparar
 			return { success: false, error: "No autenticado" };
 		}
 
+		// Get current user profile
+		const { data: profile, error: profileError } = await supabase
+			.from("profiles")
+			.select("full_name")
+			.eq("id", user.id)
+			.single();
+
+		if (profileError || !profile) {
+			return { success: false, error: "Error al obtener perfil del usuario" };
+		}
+
 		// Get extended policy details (reuse function)
 		const polizaResponse = await obtenerDetallePolizaParaCuotas(polizaId);
 		if (!polizaResponse.success || !polizaResponse.data) {
@@ -1202,6 +1217,7 @@ export async function prepararDatosAvisoMora(polizaId: string): Promise<Preparar
 			total_adeudado: totalAdeudado,
 			fecha_generacion: hoy.toISOString(),
 			numero_referencia: numeroReferencia,
+			generado_por: profile.full_name,
 		};
 
 		return { success: true, data: avisoMoraData };
