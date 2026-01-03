@@ -21,6 +21,7 @@ import type { PolizaConPagos, CuotaPago, PolizaConPagosExtendida } from "@/types
 import { obtenerDetallePolizaParaCuotas, prepararDatosAvisoMora } from "@/app/cobranzas/actions";
 import { enviarRecordatorioWhatsApp, enviarRecordatorioEmail, formatearFecha, formatearMonto } from "@/utils/cobranza";
 import { generarURLWhatsApp } from "@/utils/whatsapp";
+import { contarCuotasVencidas, obtenerEstadoReal } from "@/utils/estadoCuota";
 import RegistrarProrrogaModal from "./RegistrarProrrogaModal";
 import { toast } from "sonner";
 
@@ -182,7 +183,7 @@ export default function CuotasModal({ poliza, open, onClose, onSelectQuota }: Cu
 		return estado === "pendiente" || estado === "vencido" || estado === "parcial";
 	};
 
-	const cuotasVencidas = poliza.cuotas?.filter(c => c.estado === "vencido" || c.estado === "parcial").length || 0;
+	const cuotasVencidas = contarCuotasVencidas(poliza.cuotas || []);
 	const puedeGenerarAvisoMora = cuotasVencidas >= 3;
 
 	return (
@@ -462,11 +463,11 @@ export default function CuotasModal({ poliza, open, onClose, onSelectQuota }: Cu
 											<td className="p-3 text-sm">
 												{cuota.fecha_pago ? formatearFecha(cuota.fecha_pago, "corto") : "-"}
 											</td>
-											<td className="p-3 text-sm">{getEstadoBadge(cuota.estado)}</td>
+											<td className="p-3 text-sm">{getEstadoBadge(obtenerEstadoReal(cuota))}</td>
 											<td className="p-3 text-sm">
 												<div className="flex items-center gap-2 flex-wrap">
 													{/* Registrar Pago */}
-													{puedeRegistrarPago(cuota.estado) && (
+													{puedeRegistrarPago(obtenerEstadoReal(cuota)) && (
 														<Button
 															size="sm"
 															variant="default"
@@ -480,7 +481,7 @@ export default function CuotasModal({ poliza, open, onClose, onSelectQuota }: Cu
 													)}
 
 													{/* MEJORA #8: Registrar Prórroga */}
-													{puedeProrroga(cuota.estado) && (
+													{puedeProrroga(obtenerEstadoReal(cuota)) && (
 														<Button
 															size="sm"
 															variant="outline"
@@ -514,7 +515,7 @@ export default function CuotasModal({ poliza, open, onClose, onSelectQuota }: Cu
 														</Button>
 													)}
 
-													{cuota.estado === "pagado" && (
+													{obtenerEstadoReal(cuota) === "pagado" && (
 														<span className="text-muted-foreground">-</span>
 													)}
 												</div>

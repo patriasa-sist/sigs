@@ -2,7 +2,9 @@
 
 import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
+import { obtenerEstadoReal } from "@/utils/estadoCuota";
 import type {
+	CuotaPago,
 	PolizaConPagos,
 	CobranzaStats,
 	ObtenerPolizasConPagosResponse,
@@ -13,7 +15,6 @@ import type {
 	ExportFilters,
 	ExportRow,
 	CobranzaServerResponse,
-	CuotaPago,
 	Moneda,
 	EstadoPago,
 	// New types for improvements
@@ -164,7 +165,7 @@ export async function obtenerPolizasConPendientes(): Promise<ObtenerPolizasConPa
 
 			const totalPendiente = cuotasPendientes.reduce((sum, c) => sum + c.monto, 0);
 
-			const cuotasVencidas = cuotas?.filter((c) => c.estado === "vencido").length || 0;
+			const cuotasVencidas = cuotas?.filter((c) => obtenerEstadoReal(c) === "vencido").length || 0;
 
 			// Format client name
 			const clientData = poliza.client as unknown as ClientQueryResult;
@@ -898,7 +899,7 @@ export async function obtenerDetallePolizaParaCuotas(
 			.filter((c: CuotaPago) => c.estado !== "pagado")
 			.reduce((sum: number, c: CuotaPago) => sum + c.monto, 0);
 		const cuotas_pendientes = cuotas.filter((c: CuotaPago) => c.estado === "pendiente").length;
-		const cuotas_vencidas = cuotas.filter((c: CuotaPago) => c.estado === "vencido").length;
+		const cuotas_vencidas = cuotas.filter((c: CuotaPago) => obtenerEstadoReal(c) === "vencido").length;
 
 		// Build extended policy object
 		const polizaExtendida: PolizaConPagosExtendida = {
@@ -1161,7 +1162,7 @@ export async function prepararDatosAvisoMora(polizaId: string): Promise<Preparar
 		const poliza = polizaResponse.data;
 
 		// Filter overdue quotas
-		const cuotasVencidas = poliza.cuotas.filter((c) => c.estado === "vencido" || c.estado === "parcial");
+		const cuotasVencidas = poliza.cuotas.filter((c) => obtenerEstadoReal(c) === "vencido");
 
 		// Validate minimum 3 overdue quotas
 		if (cuotasVencidas.length < 3) {

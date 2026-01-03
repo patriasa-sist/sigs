@@ -21,7 +21,8 @@ export type CuotaPago = {
 	monto: number;
 	fecha_vencimiento: string; // ISO date string
 	fecha_pago: string | null; // ISO date string
-	estado: EstadoPago;
+	estado: EstadoPago; // Estado manual (se mantiene para compatibilidad)
+	estado_real?: EstadoPago; // Estado calculado automáticamente (GENERATED COLUMN)
 	observaciones: string | null;
 	fecha_vencimiento_original?: string | null; // Fecha original antes de prórrogas
 	prorrogas_historial?: any[] | null; // Array de prórrogas aplicadas
