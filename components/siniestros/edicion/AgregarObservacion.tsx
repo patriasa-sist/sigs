@@ -71,7 +71,7 @@ export default function AgregarObservacion({
 				<CardHeader>
 					<CardTitle className="text-lg flex items-center gap-2">
 						<MessageSquare className="h-5 w-5 text-primary" />
-						Agregar Nueva Observación
+						Agregar Nueva Observación interna
 					</CardTitle>
 				</CardHeader>
 				<CardContent className="space-y-3">
@@ -111,9 +111,7 @@ export default function AgregarObservacion({
 			{/* Lista de observaciones */}
 			<Card>
 				<CardHeader>
-					<CardTitle className="text-lg">
-						Historial de Observaciones ({observaciones.length})
-					</CardTitle>
+					<CardTitle className="text-lg">Historial de Observaciones ({observaciones.length})</CardTitle>
 				</CardHeader>
 				<CardContent>
 					{observaciones.length === 0 ? (
