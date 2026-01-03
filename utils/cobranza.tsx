@@ -8,11 +8,7 @@ import { cleanPhoneNumber } from "./whatsapp";
 /**
  * MEJORA #7: Genera mensaje cordial de recordatorio de pago para WhatsApp o Email
  */
-export function generarMensajeRecordatorio(
-	cuota: CuotaPago,
-	poliza: PolizaConPagos,
-	clienteNombre: string
-): string {
+export function generarMensajeRecordatorio(cuota: CuotaPago, poliza: PolizaConPagos, clienteNombre: string): string {
 	const formatCurrency = (amount: number, moneda: Moneda) => {
 		return `${moneda} ${new Intl.NumberFormat("es-BO", {
 			minimumFractionDigits: 2,
@@ -30,7 +26,9 @@ export function generarMensajeRecordatorio(
 
 	const mensaje = `Estimado/a ${clienteNombre},
 
-Nos comunicamos con usted para recordarle el vencimiento de la cuota N° ${cuota.numero_cuota} de su póliza ${poliza.numero_poliza}.
+Nos comunicamos con usted para recordarle el vencimiento de la cuota N° ${cuota.numero_cuota} de su póliza ${
+		poliza.numero_poliza
+	}.
 
 Monto: ${formatCurrency(cuota.monto, poliza.moneda)}
 Fecha de vencimiento: ${formatDate(cuota.fecha_vencimiento)}
@@ -41,7 +39,7 @@ Por favor, realice el pago a la brevedad posible para mantener su cobertura acti
 Para cualquier consulta, no dude en contactarnos.
 
 Atentamente,
-Patria Seguros y Reaseguros S.A.`;
+Patria S.A.`;
 
 	return mensaje;
 }
@@ -293,4 +291,3 @@ export async function generarYDescargarAvisoMoraPDF(avisoData: AvisoMoraData): P
 	document.body.removeChild(link);
 	URL.revokeObjectURL(url);
 }
-

@@ -1314,7 +1314,7 @@ Hacemos todo lo posible para acelerar la conclusión de su caso y le informaremo
 Para cualquier consulta, estamos a su disposición.
 
 Saludos cordiales,
-*PATRIA Seguros y Reaseguros S.A.*`;
+*PATRIA S.A.*`;
 
 					// Generar URL de WhatsApp
 					const url = generarURLWhatsApp(telefono, mensaje);
@@ -1533,7 +1533,7 @@ Le informaremos de toda novedad con respecto a su caso lo más antes posible.
 Para cualquier consulta, no dude en contactarnos.
 
 Saludos cordiales,
-*PATRIA Seguros y Reaseguros S.A.*`;
+*PATRIA S.A.*`;
 
 		// Generar URL
 		const url = generarURLWhatsApp(telefono, mensaje);
@@ -1633,7 +1633,7 @@ ${estadoTexto}
 Para cualquier consulta o aclaración, estamos a su disposición.
 
 Sin otro particular y a la espera de poder servirle en otra ocacion, aprovechamos para saludarlo muy atentamente.
-*PATRIA Seguros y Reaseguros S.A.*`;
+*PATRIA S.A.*`;
 
 		// Generar URL
 		const url = generarURLWhatsApp(telefono, mensaje);
