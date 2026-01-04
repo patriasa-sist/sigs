@@ -4,14 +4,32 @@ import { memo } from "react";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Eye, AlertTriangle, XCircle, Ban, CheckCircle, FileText } from "lucide-react";
+import { Eye, AlertTriangle, XCircle, Ban, CheckCircle, FileText, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import type { SiniestroVistaConEstado } from "@/types/siniestro";
+
+type SortField =
+	| "fecha_siniestro"
+	| "fecha_reporte"
+	| "numero_poliza"
+	| "cliente_nombre"
+	| "monto_reserva"
+	| "codigo_siniestro";
+type SortDirection = "asc" | "desc";
 
 interface SiniestrosTableProps {
 	siniestros: SiniestroVistaConEstado[];
+	sortField: SortField;
+	sortDirection: SortDirection;
+	onSort: (field: SortField) => void;
 }
 
-function SiniestrosTable({ siniestros }: SiniestrosTableProps) {
+function SiniestrosTable({ siniestros, sortField, sortDirection, onSort }: SiniestrosTableProps) {
+	const getSortIcon = (field: SortField) => {
+		if (sortField !== field) {
+			return <ArrowUpDown className="h-3 w-3 ml-1 opacity-40" />;
+		}
+		return sortDirection === "asc" ? <ArrowUp className="h-3 w-3 ml-1" /> : <ArrowDown className="h-3 w-3 ml-1" />;
+	};
 	const getEstadoStyle = (estado: string) => {
 		switch (estado) {
 			case "abierto":
@@ -75,12 +93,52 @@ function SiniestrosTable({ siniestros }: SiniestrosTableProps) {
 					<table className="w-full border-collapse">
 						<thead>
 							<tr className="bg-gray-50 dark:bg-gray-800 border-b">
-								<th className="text-left p-3 text-sm font-semibold">Código</th>
-								<th className="text-left p-3 text-sm font-semibold">Fecha</th>
-								<th className="text-left p-3 text-sm font-semibold">Póliza</th>
-								<th className="text-left p-3 text-sm font-semibold">Cliente</th>
+								<th className="text-left p-3 text-sm font-semibold">
+									<button
+										onClick={() => onSort("codigo_siniestro")}
+										className="flex items-center hover:text-primary transition-colors"
+									>
+										Código
+										{getSortIcon("codigo_siniestro")}
+									</button>
+								</th>
+								<th className="text-left p-3 text-sm font-semibold">
+									<button
+										onClick={() => onSort("fecha_siniestro")}
+										className="flex items-center hover:text-primary transition-colors"
+									>
+										Fecha siniestro
+										{getSortIcon("fecha_siniestro")}
+									</button>
+								</th>
+								<th className="text-left p-3 text-sm font-semibold">
+									<button
+										onClick={() => onSort("numero_poliza")}
+										className="flex items-center hover:text-primary transition-colors"
+									>
+										Póliza
+										{getSortIcon("numero_poliza")}
+									</button>
+								</th>
+								<th className="text-left p-3 text-sm font-semibold">
+									<button
+										onClick={() => onSort("cliente_nombre")}
+										className="flex items-center hover:text-primary transition-colors"
+									>
+										Cliente
+										{getSortIcon("cliente_nombre")}
+									</button>
+								</th>
 								<th className="text-left p-3 text-sm font-semibold">Responsable</th>
-								<th className="text-right p-3 text-sm font-semibold">Reserva</th>
+								<th className="text-right p-3 text-sm font-semibold">
+									<button
+										onClick={() => onSort("monto_reserva")}
+										className="flex items-center ml-auto hover:text-primary transition-colors"
+									>
+										Reserva
+										{getSortIcon("monto_reserva")}
+									</button>
+								</th>
 								<th className="text-center p-3 text-sm font-semibold">Estado</th>
 								<th className="text-center p-3 text-sm font-semibold">Acciones</th>
 							</tr>
@@ -95,82 +153,92 @@ function SiniestrosTable({ siniestros }: SiniestrosTableProps) {
 										className={`border-b ${
 											requiereAtencion
 												? "bg-red-50 hover:bg-red-100 dark:bg-red-950/30 dark:hover:bg-red-950/50"
-												: `hover:bg-gray-50 dark:hover:bg-gray-800/50 ${index % 2 === 0 ? "bg-white dark:bg-gray-900" : "bg-gray-50/50 dark:bg-gray-800/50"}`
+												: `hover:bg-gray-50 dark:hover:bg-gray-800/50 ${
+														index % 2 === 0
+															? "bg-white dark:bg-gray-900"
+															: "bg-gray-50/50 dark:bg-gray-800/50"
+												  }`
 										}`}
 										title={requiereAtencion ? "⚠️ Sin actualizaciones en más de 10 días" : ""}
 									>
-									<td className="p-3 text-sm">
-										<div className="font-mono text-xs font-medium text-primary">
-											{siniestro.codigo_siniestro || "N/A"}
-										</div>
-									</td>
-									<td className="p-3 text-sm">
-										<div>
-											<div className="font-medium">
-												{new Date(siniestro.fecha_siniestro).toLocaleDateString("es-BO")}
+										<td className="p-3 text-sm">
+											<div className="font-mono text-xs font-medium text-primary">
+												{siniestro.codigo_siniestro || "N/A"}
 											</div>
-											<div className="text-xs text-gray-500 dark:text-gray-400">
-												Rep: {new Date(siniestro.fecha_reporte).toLocaleDateString("es-BO")}
+										</td>
+										<td className="p-3 text-sm">
+											<div>
+												<div className="font-medium">
+													{new Date(siniestro.fecha_siniestro).toLocaleDateString("es-BO")}
+												</div>
+												<div className="text-xs text-gray-500 dark:text-gray-400">
+													Rep: {new Date(siniestro.fecha_reporte).toLocaleDateString("es-BO")}
+												</div>
 											</div>
-										</div>
-									</td>
-									<td className="p-3 text-sm">
-										<div>
-											<div className="font-medium">{siniestro.numero_poliza}</div>
-											<div className="text-xs text-gray-500 dark:text-gray-400">{siniestro.ramo}</div>
-										</div>
-									</td>
-									<td className="p-3 text-sm">
-										<div>
-											<div className="font-medium">{siniestro.cliente_nombre}</div>
-											<div className="text-xs text-gray-500 dark:text-gray-400">
-												{siniestro.cliente_documento}
+										</td>
+										<td className="p-3 text-sm">
+											<div>
+												<div className="font-medium">{siniestro.numero_poliza}</div>
+												<div className="text-xs text-gray-500 dark:text-gray-400">
+													{siniestro.ramo}
+												</div>
 											</div>
-										</div>
-									</td>
-									<td className="p-3 text-sm">
-										<div className="text-xs">
-											{siniestro.responsable_nombre || "Sin asignar"}
-										</div>
-									</td>
-									<td className="p-3 text-sm text-right">
-										<div>
-											<div className="font-medium">
-												{siniestro.monto_reserva.toLocaleString("es-BO", {
-													minimumFractionDigits: 2,
-													maximumFractionDigits: 2,
-												})}
+										</td>
+										<td className="p-3 text-sm">
+											<div>
+												<div className="font-medium">{siniestro.cliente_nombre}</div>
+												<div className="text-xs text-gray-500 dark:text-gray-400">
+													{siniestro.cliente_documento}
+												</div>
 											</div>
-											<div className="text-xs text-gray-500 dark:text-gray-400">{siniestro.moneda}</div>
-										</div>
-									</td>
-									<td className="p-3 text-center">
-										<div className="flex flex-col gap-1 items-center">
-											<span
-												className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium border ${getEstadoStyle(siniestro.estado)}`}
-											>
-												{getEstadoIcon(siniestro.estado)}
-												{getEstadoLabel(siniestro.estado)}
-											</span>
-											{requiereAtencion && (
+										</td>
+										<td className="p-3 text-sm">
+											<div className="text-xs">
+												{siniestro.responsable_nombre || "Sin asignar"}
+											</div>
+										</td>
+										<td className="p-3 text-sm text-right">
+											<div>
+												<div className="font-medium">
+													{siniestro.monto_reserva.toLocaleString("es-BO", {
+														minimumFractionDigits: 2,
+														maximumFractionDigits: 2,
+													})}
+												</div>
+												<div className="text-xs text-gray-500 dark:text-gray-400">
+													{siniestro.moneda}
+												</div>
+											</div>
+										</td>
+										<td className="p-3 text-center">
+											<div className="flex flex-col gap-1 items-center">
 												<span
-													className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 border border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800"
-													title="Sin actualizaciones en más de 10 días"
+													className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium border ${getEstadoStyle(
+														siniestro.estado
+													)}`}
 												>
-													⚠️ Atención
+													{getEstadoIcon(siniestro.estado)}
+													{getEstadoLabel(siniestro.estado)}
 												</span>
-											)}
-										</div>
-									</td>
-									<td className="p-3 text-center">
-										<Button variant="ghost" size="sm" asChild>
-											<Link href={`/siniestros/editar/${siniestro.id}`}>
-												<Eye className="h-4 w-4 mr-1" />
-												Ver
-											</Link>
-										</Button>
-									</td>
-								</tr>
+												{requiereAtencion && (
+													<span
+														className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 border border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800"
+														title="Sin actualizaciones en más de 10 días"
+													>
+														⚠️ Atención
+													</span>
+												)}
+											</div>
+										</td>
+										<td className="p-3 text-center">
+											<Button variant="ghost" size="sm" asChild>
+												<Link href={`/siniestros/editar/${siniestro.id}`}>
+													<Eye className="h-4 w-4 mr-1" />
+													Ver
+												</Link>
+											</Button>
+										</td>
+									</tr>
 								);
 							})}
 						</tbody>

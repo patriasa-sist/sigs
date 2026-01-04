@@ -17,6 +17,9 @@ import StatsCards from "./StatsCards";
 import SiniestrosTable from "./SiniestrosTable";
 import ExportarSiniestros from "./ExportarSiniestros";
 
+type SortField = "fecha_siniestro" | "fecha_reporte" | "numero_poliza" | "cliente_nombre" | "monto_reserva" | "codigo_siniestro";
+type SortDirection = "asc" | "desc";
+
 interface DashboardProps {
 	siniestrosIniciales: SiniestroVistaConEstado[];
 	statsIniciales: SiniestrosStats;
@@ -38,6 +41,23 @@ export default function Dashboard({ siniestrosIniciales, statsIniciales }: Dashb
 	const [responsableFiltro, setResponsableFiltro] = useState<string>("todos");
 	const [companiaFiltro, setCompaniaFiltro] = useState<string>("todos");
 	const [currentPage, setCurrentPage] = useState(1);
+
+	// Ordenamiento
+	const [sortField, setSortField] = useState<SortField>("fecha_siniestro");
+	const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
+
+	// Función para cambiar el ordenamiento
+	const handleSort = (field: SortField) => {
+		if (sortField === field) {
+			// Si ya está ordenado por este campo, cambiar dirección
+			setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+		} else {
+			// Nuevo campo, ordenar descendente por defecto
+			setSortField(field);
+			setSortDirection("desc");
+		}
+		setCurrentPage(1); // Reset a primera página
+	};
 
 	// Debounce para búsqueda
 	useEffect(() => {
@@ -112,12 +132,55 @@ export default function Dashboard({ siniestrosIniciales, statsIniciales }: Dashb
 		});
 	}, [siniestros, searchTerm, estadoFiltro, etapaInternaFiltro, ramoFiltro, departamentoFiltro, responsableFiltro, companiaFiltro]);
 
-	const totalPages = Math.ceil(filteredData.length / ITEMS_PER_PAGE);
+	// Ordenamiento de datos filtrados
+	const sortedData = useMemo(() => {
+		const sorted = [...filteredData].sort((a, b) => {
+			let aValue: string | number;
+			let bValue: string | number;
+
+			switch (sortField) {
+				case "fecha_siniestro":
+					aValue = new Date(a.fecha_siniestro).getTime();
+					bValue = new Date(b.fecha_siniestro).getTime();
+					break;
+				case "fecha_reporte":
+					aValue = new Date(a.fecha_reporte).getTime();
+					bValue = new Date(b.fecha_reporte).getTime();
+					break;
+				case "numero_poliza":
+					aValue = a.numero_poliza;
+					bValue = b.numero_poliza;
+					break;
+				case "cliente_nombre":
+					aValue = a.cliente_nombre.toLowerCase();
+					bValue = b.cliente_nombre.toLowerCase();
+					break;
+				case "monto_reserva":
+					aValue = a.monto_reserva;
+					bValue = b.monto_reserva;
+					break;
+				case "codigo_siniestro":
+					aValue = a.codigo_siniestro || "";
+					bValue = b.codigo_siniestro || "";
+					break;
+				default:
+					return 0;
+			}
+
+			if (aValue < bValue) return sortDirection === "asc" ? -1 : 1;
+			if (aValue > bValue) return sortDirection === "asc" ? 1 : -1;
+			return 0;
+		});
+
+		return sorted;
+	}, [filteredData, sortField, sortDirection]);
+
+	const totalPages = Math.ceil(sortedData.length / ITEMS_PER_PAGE);
 
 	const paginatedData = useMemo(() => {
 		const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-		return filteredData.slice(startIndex, startIndex + ITEMS_PER_PAGE);
-	}, [filteredData, currentPage]);
+		return sortedData.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+	}, [sortedData, currentPage]);
 
 	return (
 		<div className="space-y-6">
@@ -327,14 +390,14 @@ export default function Dashboard({ siniestrosIniciales, statsIniciales }: Dashb
 			{/* Contador de resultados */}
 			<div className="flex items-center justify-between">
 				<p className="text-sm text-muted-foreground">
-					{filteredData.length === 0 ? (
+					{sortedData.length === 0 ? (
 						"No se encontraron siniestros"
 					) : (
 						<>
 							Mostrando{" "}
-							<span className="font-semibold text-primary">{filteredData.length}</span>{" "}
-							{filteredData.length === 1 ? "siniestro" : "siniestros"}
-							{siniestros.length !== filteredData.length && (
+							<span className="font-semibold text-primary">{sortedData.length}</span>{" "}
+							{sortedData.length === 1 ? "siniestro" : "siniestros"}
+							{siniestros.length !== sortedData.length && (
 								<span className="text-xs ml-2">
 									(de {siniestros.length} totales)
 								</span>
@@ -345,10 +408,15 @@ export default function Dashboard({ siniestrosIniciales, statsIniciales }: Dashb
 			</div>
 
 			{/* Tabla */}
-			<SiniestrosTable siniestros={paginatedData} />
+			<SiniestrosTable
+				siniestros={paginatedData}
+				sortField={sortField}
+				sortDirection={sortDirection}
+				onSort={handleSort}
+			/>
 
 			{/* Paginación */}
-			{filteredData.length > 0 && (
+			{sortedData.length > 0 && (
 				<Card>
 					<CardContent className="py-4">
 						<div className="flex flex-col md:flex-row items-center justify-between gap-4">
@@ -359,14 +427,14 @@ export default function Dashboard({ siniestrosIniciales, statsIniciales }: Dashb
 								</span>
 								{" - "}
 								<span className="font-semibold text-foreground">
-									{Math.min(currentPage * ITEMS_PER_PAGE, filteredData.length)}
+									{Math.min(currentPage * ITEMS_PER_PAGE, sortedData.length)}
 								</span>
 								{" de "}
 								<span className="font-semibold text-foreground">
-									{filteredData.length}
+									{sortedData.length}
 								</span>
 								{" "}
-								{filteredData.length === 1 ? "siniestro" : "siniestros"}
+								{sortedData.length === 1 ? "siniestro" : "siniestros"}
 							</div>
 							{totalPages > 1 && (
 								<div className="flex items-center gap-2">
