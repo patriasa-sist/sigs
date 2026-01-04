@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FileText, X, User, Building, Calendar, DollarSign, File, CheckCircle, Clock, XCircle, Phone, Mail, AlertTriangle } from "lucide-react";
 import DocumentosPolizaModal from "./DocumentosPolizaModal";
-import type { PolizaParaSiniestro } from "@/types/siniestro";
+import type { PolizaParaSiniestro, CuotaPago } from "@/types/siniestro";
 
 interface PolizaCardProps {
 	poliza: PolizaParaSiniestro;
@@ -17,14 +17,20 @@ export default function PolizaCard({ poliza, onDeselect, showDeselectButton = tr
 	const [showDocumentosModal, setShowDocumentosModal] = useState(false);
 	const [showAllCuotas, setShowAllCuotas] = useState(false);
 
-	// Calcular porcentaje de cuotas pagadas
-	const porcentajePagado =
-		poliza.cuotas_total && poliza.cuotas_total > 0
-			? Math.round(((poliza.cuotas_pagadas || 0) / poliza.cuotas_total) * 100)
-			: 0;
-
 	// Contar cuotas vencidas
 	const cuotasVencidas = poliza.cuotas?.filter(c => c.estado === "vencida").length || 0;
+
+	// Función para determinar si una cuota está en mora (pendiente + más de 10 días vencida)
+	const esMora = (cuota: CuotaPago) => {
+		if (cuota.estado !== "pendiente") return false;
+		const fechaVencimiento = new Date(cuota.fecha_vencimiento);
+		const hoy = new Date();
+		const diasVencidos = Math.floor((hoy.getTime() - fechaVencimiento.getTime()) / (1000 * 60 * 60 * 24));
+		return diasVencidos > 10;
+	};
+
+	// Contar cuotas en mora
+	const cuotasEnMora = poliza.cuotas?.filter(esMora).length || 0;
 
 	return (
 		<>
@@ -168,144 +174,141 @@ export default function PolizaCard({ poliza, onDeselect, showDeselectButton = tr
 					{poliza.cuotas_total !== undefined && poliza.cuotas_total > 0 && (
 						<div className="pt-2 border-t space-y-3">
 							<div className="flex items-center justify-between">
-								<p className="text-sm font-medium">Estado de Pagos</p>
-								<span className="text-xs text-muted-foreground">
-									{porcentajePagado}% completado
-								</span>
+								<p className="text-sm font-medium">Cuotas de Pago</p>
+								{poliza.cuotas && poliza.cuotas.length > 0 && (
+									<span className="text-xs text-muted-foreground">
+										{poliza.cuotas.length} cuota{poliza.cuotas.length > 1 ? "s" : ""}
+									</span>
+								)}
 							</div>
 
-							{/* Alerta si hay cuotas vencidas */}
-							{cuotasVencidas > 0 && (
+							{/* Alerta si hay cuotas vencidas o en mora */}
+							{(cuotasVencidas > 0 || cuotasEnMora > 0) && (
 								<div className="flex items-start gap-2 text-sm bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
 									<AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
 									<div className="text-red-900 dark:text-red-100">
 										<p className="font-medium">Cliente con pagos atrasados</p>
-										<p className="text-xs mt-1">
-											{cuotasVencidas} cuota{cuotasVencidas > 1 ? "s" : ""} vencida{cuotasVencidas > 1 ? "s" : ""}. Considerar esta información antes de registrar el siniestro.
-										</p>
+										<div className="text-xs mt-1 space-y-0.5">
+											{cuotasEnMora > 0 && (
+												<p className="font-semibold">
+													⚠️ {cuotasEnMora} cuota{cuotasEnMora > 1 ? "s" : ""} en MORA (más de 10 días vencida{cuotasEnMora > 1 ? "s" : ""})
+												</p>
+											)}
+											{cuotasVencidas > 0 && (
+												<p>
+													{cuotasVencidas} cuota{cuotasVencidas > 1 ? "s" : ""} vencida{cuotasVencidas > 1 ? "s" : ""}
+												</p>
+											)}
+											<p className="mt-1 italic">Considerar esta información antes de registrar el siniestro.</p>
+										</div>
 									</div>
 								</div>
 							)}
 
-							{/* Barra de progreso */}
-							<div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-								<div
-									className={`h-2 rounded-full transition-all ${
-										porcentajePagado === 100
-											? "bg-green-500"
-											: porcentajePagado >= 50
-												? "bg-blue-500"
-												: "bg-amber-500"
-									}`}
-									style={{ width: `${porcentajePagado}%` }}
-								/>
-							</div>
-
-							{/* Resumen de cuotas */}
-							<div className="grid grid-cols-3 gap-2 text-xs">
-								<div className="flex items-center gap-1 bg-green-50 dark:bg-green-950/20 p-2 rounded">
-									<CheckCircle className="h-3 w-3 text-green-600 dark:text-green-400" />
-									<div>
-										<p className="text-green-700 dark:text-green-300 font-medium">
-											{poliza.cuotas_pagadas || 0}
-										</p>
-										<p className="text-green-600 dark:text-green-400">Pagadas</p>
-									</div>
-								</div>
-
-								<div className="flex items-center gap-1 bg-amber-50 dark:bg-amber-950/20 p-2 rounded">
-									<Clock className="h-3 w-3 text-amber-600 dark:text-amber-400" />
-									<div>
-										<p className="text-amber-700 dark:text-amber-300 font-medium">
-											{poliza.cuotas_pendientes || 0}
-										</p>
-										<p className="text-amber-600 dark:text-amber-400">Pendientes</p>
-									</div>
-								</div>
-
-								<div className="flex items-center gap-1 bg-blue-50 dark:bg-blue-950/20 p-2 rounded">
-									<DollarSign className="h-3 w-3 text-blue-600 dark:text-blue-400" />
-									<div>
-										<p className="text-blue-700 dark:text-blue-300 font-medium">{poliza.cuotas_total}</p>
-										<p className="text-blue-600 dark:text-blue-400">Total</p>
-									</div>
-								</div>
-							</div>
-
-							{/* Todas las cuotas */}
+							{/* Tabla de cuotas */}
 							{poliza.cuotas && poliza.cuotas.length > 0 && (
 								<div className="space-y-2">
+									{/* Controles de visualización */}
 									<div className="flex items-center justify-between">
-										<p className="text-xs text-muted-foreground">
-											{showAllCuotas ? "Todas las cuotas:" : "Últimas cuotas:"}
-										</p>
-										{poliza.cuotas.length > 3 && (
+										{poliza.cuotas.length > 5 && (
 											<Button
-												variant="ghost"
+												variant="outline"
 												size="sm"
 												onClick={() => setShowAllCuotas(!showAllCuotas)}
-												className="h-6 text-xs px-2"
+												className="h-7 text-xs px-3"
 											>
 												{showAllCuotas ? "Ver menos" : `Ver todas (${poliza.cuotas.length})`}
 											</Button>
 										)}
 									</div>
 
+									{/* Encabezados de tabla */}
+									<div className="grid grid-cols-12 gap-2 text-xs font-medium text-muted-foreground px-2 py-1 border-b">
+										<div className="col-span-2">Cuota</div>
+										<div className="col-span-3">Estado</div>
+										<div className="col-span-3 text-right">Monto</div>
+										<div className="col-span-4 text-right">Vencimiento</div>
+									</div>
+
 									{/* Lista de cuotas con scroll */}
-									<div className={`space-y-1 ${showAllCuotas ? "max-h-96 overflow-y-auto" : ""}`}>
-										{(showAllCuotas ? poliza.cuotas : poliza.cuotas.slice(0, 3)).map((cuota) => {
+									<div className={`space-y-1 ${showAllCuotas ? "max-h-96 overflow-y-auto pr-1" : ""}`}>
+										{(showAllCuotas ? poliza.cuotas : poliza.cuotas.slice(0, 5)).map((cuota) => {
 											const tieneProrrogas = cuota.prorrogas_historial && cuota.prorrogas_historial.length > 0;
 											const esVencida = cuota.estado === "vencida";
 											const esPagada = cuota.estado === "pagada";
+											const enMora = esMora(cuota);
 
 											return (
 												<div
 													key={cuota.id}
-													className={`flex items-center justify-between text-xs p-2 rounded border ${
+													className={`grid grid-cols-12 gap-2 text-xs p-2 rounded border ${
 														esVencida
-															? "bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800"
-															: esPagada
-																? "bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800"
-																: "bg-secondary/20 border-secondary"
+															? "bg-red-100 dark:bg-red-950/40 border-red-300 dark:border-red-700"
+															: enMora
+																? "bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800"
+																: esPagada
+																	? "bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800"
+																	: "bg-secondary/20 border-secondary"
 													}`}
 												>
-													<div className="flex items-center gap-2">
-														{esPagada ? (
-															<CheckCircle className="h-3 w-3 text-green-600 dark:text-green-400" />
-														) : esVencida ? (
-															<XCircle className="h-3 w-3 text-red-600 dark:text-red-400" />
-														) : (
-															<Clock className="h-3 w-3 text-amber-600 dark:text-amber-400" />
-														)}
-														<span className={esVencida ? "font-medium" : ""}>
-															Cuota {cuota.numero_cuota}
+													{/* Número de cuota */}
+													<div className="col-span-2 flex items-center">
+														<span className={`font-medium ${enMora || esVencida ? "text-red-700 dark:text-red-300" : ""}`}>
+															#{cuota.numero_cuota}
 														</span>
-														{tieneProrrogas && (
-															<span
-																className="flex items-center gap-0.5 text-amber-600 dark:text-amber-400"
-																title={`${cuota.prorrogas_historial?.length} prórroga(s) aplicada(s)`}
-															>
-																<AlertTriangle className="h-3 w-3" />
-																<span className="text-[10px]">{cuota.prorrogas_historial?.length}</span>
-															</span>
-														)}
-														{esVencida && (
-															<span className="text-[10px] bg-red-200 dark:bg-red-900 text-red-800 dark:text-red-200 px-1 py-0.5 rounded">
-																VENCIDA
-															</span>
+													</div>
+
+													{/* Estado */}
+													<div className="col-span-3 flex items-center gap-1">
+														{esPagada ? (
+															<>
+																<CheckCircle className="h-3 w-3 text-green-600 dark:text-green-400 flex-shrink-0" />
+																<span className="text-green-700 dark:text-green-300">Pagada</span>
+															</>
+														) : enMora ? (
+															<>
+																<XCircle className="h-3 w-3 text-red-700 dark:text-red-300 flex-shrink-0" />
+																<span className="text-red-800 dark:text-red-200 font-bold">MORA</span>
+															</>
+														) : esVencida ? (
+															<>
+																<XCircle className="h-3 w-3 text-red-600 dark:text-red-400 flex-shrink-0" />
+																<span className="text-red-700 dark:text-red-300 font-medium">Vencida</span>
+															</>
+														) : (
+															<>
+																<Clock className="h-3 w-3 text-amber-600 dark:text-amber-400 flex-shrink-0" />
+																<span className="text-amber-700 dark:text-amber-300">Pendiente</span>
+															</>
 														)}
 													</div>
-													<div className="text-right">
-														<p className="font-medium">
+
+													{/* Monto */}
+													<div className="col-span-3 flex items-center justify-end">
+														<span className={`font-medium ${enMora || esVencida ? "text-red-700 dark:text-red-300" : ""}`}>
 															{poliza.moneda} {cuota.monto.toLocaleString("es-BO", { minimumFractionDigits: 2 })}
-														</p>
-														<p className={`text-muted-foreground ${esVencida ? "font-medium text-red-600 dark:text-red-400" : ""}`}>
-															{new Date(cuota.fecha_vencimiento).toLocaleDateString("es-BO")}
-														</p>
+														</span>
+													</div>
+
+													{/* Fecha vencimiento */}
+													<div className="col-span-4 flex flex-col items-end justify-center">
+														<div className="flex items-center gap-1">
+															<span className={`${enMora || esVencida ? "font-medium text-red-700 dark:text-red-300" : ""}`}>
+																{new Date(cuota.fecha_vencimiento).toLocaleDateString("es-BO")}
+															</span>
+															{tieneProrrogas && (
+																<span
+																	className="flex items-center gap-0.5 text-amber-600 dark:text-amber-400"
+																	title={`${cuota.prorrogas_historial?.length} prórroga(s) aplicada(s)`}
+																>
+																	<AlertTriangle className="h-3 w-3" />
+																</span>
+															)}
+														</div>
 														{tieneProrrogas && cuota.fecha_vencimiento_original && (
-															<p className="text-[10px] text-amber-600 dark:text-amber-400">
+															<span className="text-[10px] text-amber-600 dark:text-amber-400">
 																Original: {new Date(cuota.fecha_vencimiento_original).toLocaleDateString("es-BO")}
-															</p>
+															</span>
 														)}
 													</div>
 												</div>
@@ -313,9 +316,9 @@ export default function PolizaCard({ poliza, onDeselect, showDeselectButton = tr
 										})}
 									</div>
 
-									{!showAllCuotas && poliza.cuotas.length > 3 && (
-										<p className="text-xs text-muted-foreground text-center italic">
-											+{poliza.cuotas.length - 3} cuotas más (haz clic en &quot;Ver todas&quot; arriba)
+									{!showAllCuotas && poliza.cuotas.length > 5 && (
+										<p className="text-xs text-muted-foreground text-center italic py-1">
+											+{poliza.cuotas.length - 5} cuotas más
 										</p>
 									)}
 								</div>
