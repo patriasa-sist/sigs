@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
@@ -29,13 +29,24 @@ export default function Dashboard({ siniestrosIniciales, statsIniciales }: Dashb
 	const [stats] = useState<SiniestrosStats>(statsIniciales);
 
 	// Filtros
-	const [searchTerm, setSearchTerm] = useState("");
+	const [searchInput, setSearchInput] = useState(""); // Input inmediato
+	const [searchTerm, setSearchTerm] = useState(""); // Término con debounce
 	const [estadoFiltro, setEstadoFiltro] = useState<EstadoSiniestro | "todos">("todos");
 	const [ramoFiltro, setRamoFiltro] = useState<string>("todos");
 	const [departamentoFiltro, setDepartamentoFiltro] = useState<string>("todos");
 	const [responsableFiltro, setResponsableFiltro] = useState<string>("todos");
 	const [companiaFiltro, setCompaniaFiltro] = useState<string>("todos");
 	const [currentPage, setCurrentPage] = useState(1);
+
+	// Debounce para búsqueda
+	useEffect(() => {
+		const timer = setTimeout(() => {
+			setSearchTerm(searchInput);
+			setCurrentPage(1);
+		}, 300);
+
+		return () => clearTimeout(timer);
+	}, [searchInput]);
 
 	// Obtener opciones únicas para filtros
 	const ramosUnicos = useMemo(() => {
@@ -95,11 +106,6 @@ export default function Dashboard({ siniestrosIniciales, statsIniciales }: Dashb
 		return filteredData.slice(startIndex, startIndex + ITEMS_PER_PAGE);
 	}, [filteredData, currentPage]);
 
-	const handleSearchChange = useCallback((value: string) => {
-		setSearchTerm(value);
-		setCurrentPage(1);
-	}, []);
-
 	return (
 		<div className="space-y-6">
 			{/* Estadísticas */}
@@ -127,8 +133,8 @@ export default function Dashboard({ siniestrosIniciales, statsIniciales }: Dashb
 							<Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
 							<Input
 								placeholder="Buscar por póliza, cliente, documento o lugar..."
-								value={searchTerm}
-								onChange={(e) => handleSearchChange(e.target.value)}
+								value={searchInput}
+								onChange={(e) => setSearchInput(e.target.value)}
 								className="pl-10"
 							/>
 						</div>
@@ -258,32 +264,55 @@ export default function Dashboard({ siniestrosIniciales, statsIniciales }: Dashb
 			<SiniestrosTable siniestros={paginatedData} />
 
 			{/* Paginación */}
-			{totalPages > 1 && (
-				<div className="flex items-center justify-between">
-					<p className="text-sm text-muted-foreground">
-						Página {currentPage} de {totalPages}
-					</p>
-					<div className="flex gap-2">
-						<Button
-							variant="outline"
-							size="sm"
-							onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-							disabled={currentPage === 1}
-						>
-							<ChevronLeft className="h-4 w-4 mr-1" />
-							Anterior
-						</Button>
-						<Button
-							variant="outline"
-							size="sm"
-							onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-							disabled={currentPage === totalPages}
-						>
-							Siguiente
-							<ChevronRight className="h-4 w-4 ml-1" />
-						</Button>
-					</div>
-				</div>
+			{filteredData.length > 0 && (
+				<Card>
+					<CardContent className="py-4">
+						<div className="flex flex-col md:flex-row items-center justify-between gap-4">
+							<div className="text-sm text-muted-foreground">
+								Mostrando{" "}
+								<span className="font-semibold text-foreground">
+									{(currentPage - 1) * ITEMS_PER_PAGE + 1}
+								</span>
+								{" - "}
+								<span className="font-semibold text-foreground">
+									{Math.min(currentPage * ITEMS_PER_PAGE, filteredData.length)}
+								</span>
+								{" de "}
+								<span className="font-semibold text-foreground">
+									{filteredData.length}
+								</span>
+								{" "}
+								{filteredData.length === 1 ? "siniestro" : "siniestros"}
+							</div>
+							{totalPages > 1 && (
+								<div className="flex items-center gap-2">
+									<Button
+										variant="outline"
+										size="sm"
+										onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+										disabled={currentPage === 1}
+									>
+										<ChevronLeft className="h-4 w-4 mr-1" />
+										Anterior
+									</Button>
+									<div className="text-sm text-muted-foreground">
+										Página <span className="font-semibold text-foreground">{currentPage}</span> de{" "}
+										<span className="font-semibold text-foreground">{totalPages}</span>
+									</div>
+									<Button
+										variant="outline"
+										size="sm"
+										onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+										disabled={currentPage === totalPages}
+									>
+										Siguiente
+										<ChevronRight className="h-4 w-4 ml-1" />
+									</Button>
+								</div>
+							)}
+						</div>
+					</CardContent>
+				</Card>
 			)}
 		</div>
 	);

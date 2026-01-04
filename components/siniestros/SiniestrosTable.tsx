@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,7 +11,7 @@ interface SiniestrosTableProps {
 	siniestros: SiniestroVistaConEstado[];
 }
 
-export default function SiniestrosTable({ siniestros }: SiniestrosTableProps) {
+function SiniestrosTable({ siniestros }: SiniestrosTableProps) {
 	const getEstadoStyle = (estado: string) => {
 		switch (estado) {
 			case "abierto":
@@ -179,3 +180,5 @@ export default function SiniestrosTable({ siniestros }: SiniestrosTableProps) {
 		</Card>
 	);
 }
+
+export default memo(SiniestrosTable);

@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertTriangle, XCircle, Ban, CheckCircle, DollarSign, TrendingUp } from "lucide-react";
 import type { SiniestrosStats } from "@/types/siniestro";
@@ -8,7 +9,7 @@ interface StatsCardsProps {
 	stats: SiniestrosStats;
 }
 
-export default function StatsCards({ stats }: StatsCardsProps) {
+function StatsCards({ stats }: StatsCardsProps) {
 	const cards = [
 		{
 			title: "Siniestros Abiertos",
@@ -73,3 +74,5 @@ export default function StatsCards({ stats }: StatsCardsProps) {
 		</div>
 	);
 }
+
+export default memo(StatsCards);

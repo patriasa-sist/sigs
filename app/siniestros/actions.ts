@@ -1366,7 +1366,7 @@ export async function obtenerSiniestrosConAtencion(): Promise<ObtenerSiniestrosR
 			.from("siniestros_con_estado_actual")
 			.select("*")
 			.order("requiere_atencion", { ascending: false }) // Primero los que requieren atención
-			.order("updated_at", { ascending: false });
+			.order("fecha_creacion", { ascending: false }); // Luego por fecha de creación (más reciente primero)
 
 		if (error) throw error;
 
