@@ -32,6 +32,7 @@ export default function Dashboard({ siniestrosIniciales, statsIniciales }: Dashb
 	const [searchInput, setSearchInput] = useState(""); // Input inmediato
 	const [searchTerm, setSearchTerm] = useState(""); // Término con debounce
 	const [estadoFiltro, setEstadoFiltro] = useState<EstadoSiniestro | "todos">("todos");
+	const [etapaInternaFiltro, setEtapaInternaFiltro] = useState<string>("todos");
 	const [ramoFiltro, setRamoFiltro] = useState<string>("todos");
 	const [departamentoFiltro, setDepartamentoFiltro] = useState<string>("todos");
 	const [responsableFiltro, setResponsableFiltro] = useState<string>("todos");
@@ -75,6 +76,17 @@ export default function Dashboard({ siniestrosIniciales, statsIniciales }: Dashb
 		return companias;
 	}, [siniestros]);
 
+	const etapasInternasUnicas = useMemo(() => {
+		const etapas = Array.from(
+			new Set(
+				siniestros
+					.map((s) => s.estado_actual_nombre)
+					.filter((e): e is string => e !== undefined && e !== null)
+			)
+		).sort();
+		return etapas;
+	}, [siniestros]);
+
 	// Filtrado con useMemo
 	const filteredData = useMemo(() => {
 		return siniestros.filter((siniestro) => {
@@ -90,14 +102,15 @@ export default function Dashboard({ siniestrosIniciales, statsIniciales }: Dashb
 				(siniestro.compania_nombre && siniestro.compania_nombre.toLowerCase().includes(searchLower));
 
 			const matchesEstado = estadoFiltro === "todos" || siniestro.estado === estadoFiltro;
+			const matchesEtapaInterna = etapaInternaFiltro === "todos" || siniestro.estado_actual_nombre === etapaInternaFiltro;
 			const matchesRamo = ramoFiltro === "todos" || siniestro.ramo === ramoFiltro;
 			const matchesDepartamento = departamentoFiltro === "todos" || siniestro.departamento_nombre === departamentoFiltro;
 			const matchesResponsable = responsableFiltro === "todos" || siniestro.responsable_nombre === responsableFiltro;
 			const matchesCompania = companiaFiltro === "todos" || siniestro.compania_nombre === companiaFiltro;
 
-			return matchesSearch && matchesEstado && matchesRamo && matchesDepartamento && matchesResponsable && matchesCompania;
+			return matchesSearch && matchesEstado && matchesEtapaInterna && matchesRamo && matchesDepartamento && matchesResponsable && matchesCompania;
 		});
-	}, [siniestros, searchTerm, estadoFiltro, ramoFiltro, departamentoFiltro, responsableFiltro, companiaFiltro]);
+	}, [siniestros, searchTerm, estadoFiltro, etapaInternaFiltro, ramoFiltro, departamentoFiltro, responsableFiltro, companiaFiltro]);
 
 	const totalPages = Math.ceil(filteredData.length / ITEMS_PER_PAGE);
 
@@ -115,7 +128,7 @@ export default function Dashboard({ siniestrosIniciales, statsIniciales }: Dashb
 			<Card>
 				<CardHeader>
 					<div className="flex items-center justify-between">
-						<CardTitle>Filtros</CardTitle>
+						<CardTitle>Filtros de Búsqueda</CardTitle>
 						<ExportarSiniestros
 							siniestros={filteredData}
 							filtrosActivos={{
@@ -127,115 +140,186 @@ export default function Dashboard({ siniestrosIniciales, statsIniciales }: Dashb
 						/>
 					</div>
 				</CardHeader>
-				<CardContent>
-					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-						<div className="relative lg:col-span-2">
+				<CardContent className="space-y-6">
+					{/* Búsqueda General */}
+					<div>
+						<label className="text-sm font-medium text-muted-foreground mb-2 block">
+							Búsqueda General
+						</label>
+						<div className="relative">
 							<Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
 							<Input
-								placeholder="Buscar por póliza, cliente, documento o lugar..."
+								placeholder="Buscar por código, póliza, cliente, documento o lugar del hecho..."
 								value={searchInput}
 								onChange={(e) => setSearchInput(e.target.value)}
 								className="pl-10"
 							/>
 						</div>
-						<Select
-							value={estadoFiltro}
-							onValueChange={(val) => {
-								setEstadoFiltro(val as EstadoSiniestro | "todos");
-								setCurrentPage(1);
-							}}
-						>
-							<SelectTrigger>
-								<SelectValue />
-							</SelectTrigger>
-							<SelectContent>
-								<SelectItem value="todos">Todos los estados</SelectItem>
-								<SelectItem value="abierto">Abierto</SelectItem>
-								<SelectItem value="rechazado">Rechazado</SelectItem>
-								<SelectItem value="declinado">Declinado</SelectItem>
-								<SelectItem value="concluido">Concluido</SelectItem>
-							</SelectContent>
-						</Select>
-						<Select
-							value={ramoFiltro}
-							onValueChange={(val) => {
-								setRamoFiltro(val);
-								setCurrentPage(1);
-							}}
-						>
-							<SelectTrigger>
-								<SelectValue />
-							</SelectTrigger>
-							<SelectContent>
-								<SelectItem value="todos">Todos los ramos</SelectItem>
-								{ramosUnicos.map((ramo) => (
-									<SelectItem key={ramo} value={ramo}>
-										{ramo}
-									</SelectItem>
-								))}
-							</SelectContent>
-						</Select>
 					</div>
-					<div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-						<Select
-							value={departamentoFiltro}
-							onValueChange={(val) => {
-								setDepartamentoFiltro(val);
-								setCurrentPage(1);
-							}}
-						>
-							<SelectTrigger>
-								<SelectValue />
-							</SelectTrigger>
-							<SelectContent>
-								<SelectItem value="todos">Todos los departamentos</SelectItem>
-								{departamentosUnicos.map((dpto) => (
-									<SelectItem key={dpto} value={dpto}>
-										{dpto}
-									</SelectItem>
-								))}
-							</SelectContent>
-						</Select>
 
-						<Select
-							value={responsableFiltro}
-							onValueChange={(val) => {
-								setResponsableFiltro(val);
-								setCurrentPage(1);
-							}}
-						>
-							<SelectTrigger>
-								<SelectValue />
-							</SelectTrigger>
-							<SelectContent>
-								<SelectItem value="todos">Todos los responsables</SelectItem>
-								{responsablesUnicos.map((resp) => (
-									<SelectItem key={resp} value={resp}>
-										{resp}
-									</SelectItem>
-								))}
-							</SelectContent>
-						</Select>
+					{/* Filtros por Estado y Tipo */}
+					<div>
+						<label className="text-sm font-medium text-muted-foreground mb-2 block">
+							Estado y Tipo de Póliza
+						</label>
+						<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+							<div>
+								<label className="text-xs text-muted-foreground mb-1.5 block">
+									Estado Global
+								</label>
+								<Select
+									value={estadoFiltro}
+									onValueChange={(val) => {
+										setEstadoFiltro(val as EstadoSiniestro | "todos");
+										setCurrentPage(1);
+									}}
+								>
+									<SelectTrigger>
+										<SelectValue />
+									</SelectTrigger>
+									<SelectContent>
+										<SelectItem value="todos">Todos los estados</SelectItem>
+										<SelectItem value="abierto">Abierto</SelectItem>
+										<SelectItem value="rechazado">Rechazado</SelectItem>
+										<SelectItem value="declinado">Declinado</SelectItem>
+										<SelectItem value="concluido">Concluido</SelectItem>
+									</SelectContent>
+								</Select>
+							</div>
 
-						<Select
-							value={companiaFiltro}
-							onValueChange={(val) => {
-								setCompaniaFiltro(val);
-								setCurrentPage(1);
-							}}
-						>
-							<SelectTrigger>
-								<SelectValue />
-							</SelectTrigger>
-							<SelectContent>
-								<SelectItem value="todos">Todas las compañías</SelectItem>
-								{companiasUnicas.map((comp) => (
-									<SelectItem key={comp} value={comp}>
-										{comp}
-									</SelectItem>
-								))}
-							</SelectContent>
-						</Select>
+							<div>
+								<label className="text-xs text-muted-foreground mb-1.5 block">
+									Etapa de Seguimiento Interna
+								</label>
+								<Select
+									value={etapaInternaFiltro}
+									onValueChange={(val) => {
+										setEtapaInternaFiltro(val);
+										setCurrentPage(1);
+									}}
+								>
+									<SelectTrigger>
+										<SelectValue />
+									</SelectTrigger>
+									<SelectContent>
+										<SelectItem value="todos">Todas las etapas</SelectItem>
+										{etapasInternasUnicas.map((etapa) => (
+											<SelectItem key={etapa} value={etapa}>
+												{etapa}
+											</SelectItem>
+										))}
+									</SelectContent>
+								</Select>
+							</div>
+
+							<div>
+								<label className="text-xs text-muted-foreground mb-1.5 block">
+									Ramo de Seguro
+								</label>
+								<Select
+									value={ramoFiltro}
+									onValueChange={(val) => {
+										setRamoFiltro(val);
+										setCurrentPage(1);
+									}}
+								>
+									<SelectTrigger>
+										<SelectValue />
+									</SelectTrigger>
+									<SelectContent>
+										<SelectItem value="todos">Todos los ramos</SelectItem>
+										{ramosUnicos.map((ramo) => (
+											<SelectItem key={ramo} value={ramo}>
+												{ramo}
+											</SelectItem>
+										))}
+									</SelectContent>
+								</Select>
+							</div>
+						</div>
+					</div>
+
+					{/* Filtros por Ubicación y Responsabilidad */}
+					<div>
+						<label className="text-sm font-medium text-muted-foreground mb-2 block">
+							Ubicación y Responsabilidad
+						</label>
+						<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+							<div>
+								<label className="text-xs text-muted-foreground mb-1.5 block">
+									Departamento
+								</label>
+								<Select
+									value={departamentoFiltro}
+									onValueChange={(val) => {
+										setDepartamentoFiltro(val);
+										setCurrentPage(1);
+									}}
+								>
+									<SelectTrigger>
+										<SelectValue />
+									</SelectTrigger>
+									<SelectContent>
+										<SelectItem value="todos">Todos los departamentos</SelectItem>
+										{departamentosUnicos.map((dpto) => (
+											<SelectItem key={dpto} value={dpto}>
+												{dpto}
+											</SelectItem>
+										))}
+									</SelectContent>
+								</Select>
+							</div>
+
+							<div>
+								<label className="text-xs text-muted-foreground mb-1.5 block">
+									Responsable
+								</label>
+								<Select
+									value={responsableFiltro}
+									onValueChange={(val) => {
+										setResponsableFiltro(val);
+										setCurrentPage(1);
+									}}
+								>
+									<SelectTrigger>
+										<SelectValue />
+									</SelectTrigger>
+									<SelectContent>
+										<SelectItem value="todos">Todos los responsables</SelectItem>
+										{responsablesUnicos.map((resp) => (
+											<SelectItem key={resp} value={resp}>
+												{resp}
+											</SelectItem>
+										))}
+									</SelectContent>
+								</Select>
+							</div>
+
+							<div>
+								<label className="text-xs text-muted-foreground mb-1.5 block">
+									Compañía Aseguradora
+								</label>
+								<Select
+									value={companiaFiltro}
+									onValueChange={(val) => {
+										setCompaniaFiltro(val);
+										setCurrentPage(1);
+									}}
+								>
+									<SelectTrigger>
+										<SelectValue />
+									</SelectTrigger>
+									<SelectContent>
+										<SelectItem value="todos">Todas las compañías</SelectItem>
+										{companiasUnicas.map((comp) => (
+											<SelectItem key={comp} value={comp}>
+												{comp}
+											</SelectItem>
+										))}
+									</SelectContent>
+								</Select>
+							</div>
+						</div>
 					</div>
 				</CardContent>
 			</Card>
