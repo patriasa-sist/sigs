@@ -248,15 +248,14 @@ export default function NuevoClientePage() {
 			throw new Error("Fecha de nacimiento es requerida");
 		}
 
-		// Convert ISO date strings to Date objects
-		const fechaNacimiento = new Date(normalized.fecha_nacimiento);
-		if (isNaN(fechaNacimiento.getTime())) {
+		// Validate fecha_nacimiento format (YYYY-MM-DD)
+		if (!/^\d{4}-\d{2}-\d{2}$/.test(normalized.fecha_nacimiento)) {
 			throw new Error("Fecha de nacimiento inválida");
 		}
 
-		// Convert optional anio_ingreso to Date or null
+		// Keep anio_ingreso as YYYY-MM-DD string or null (PostgreSQL date type expects this format)
 		const anioIngreso =
-			normalized.anio_ingreso && normalized.anio_ingreso.trim() !== "" ? new Date(normalized.anio_ingreso) : null;
+			normalized.anio_ingreso && normalized.anio_ingreso.trim() !== "" ? normalized.anio_ingreso : null;
 
 		// 1. Insert into clients table
 		const { data: client, error: clientError } = await supabase
@@ -283,7 +282,7 @@ export default function NuevoClientePage() {
 			numero_documento: normalized.numero_documento,
 			extension_ci: normalized.extension_ci || null,
 			nacionalidad: normalized.nacionalidad,
-			fecha_nacimiento: fechaNacimiento.toISOString(), // Convert Date to ISO string for PostgreSQL
+			fecha_nacimiento: normalized.fecha_nacimiento, // Already in YYYY-MM-DD format (PostgreSQL date type)
 			estado_civil: normalized.estado_civil,
 			direccion: normalized.direccion,
 			correo_electronico: normalized.correo_electronico,
@@ -295,7 +294,7 @@ export default function NuevoClientePage() {
 			genero: normalized.genero || null,
 			nivel_ingresos: normalized.nivel_ingresos || null,
 			cargo: normalized.cargo || null,
-			anio_ingreso: anioIngreso ? anioIngreso.toISOString() : null, // Convert Date to ISO or null
+			anio_ingreso: anioIngreso, // Already in YYYY-MM-DD format or null
 			nit: normalized.nit || null,
 			domicilio_comercial: normalized.domicilio_comercial || null,
 		});
@@ -342,15 +341,14 @@ export default function NuevoClientePage() {
 			throw new Error("Fecha de nacimiento es requerida");
 		}
 
-		// Convert ISO date strings to Date objects
-		const fechaNacimiento = new Date(normalized.fecha_nacimiento);
-		if (isNaN(fechaNacimiento.getTime())) {
+		// Validate fecha_nacimiento format (YYYY-MM-DD)
+		if (!/^\d{4}-\d{2}-\d{2}$/.test(normalized.fecha_nacimiento)) {
 			throw new Error("Fecha de nacimiento inválida");
 		}
 
-		// Convert optional anio_ingreso to Date or null
+		// Keep anio_ingreso as YYYY-MM-DD string or null (PostgreSQL date type expects this format)
 		const anioIngreso =
-			normalized.anio_ingreso && normalized.anio_ingreso.trim() !== "" ? new Date(normalized.anio_ingreso) : null;
+			normalized.anio_ingreso && normalized.anio_ingreso.trim() !== "" ? normalized.anio_ingreso : null;
 
 		// 1. Insert into clients table
 		const { data: client, error: clientError } = await supabase
@@ -377,7 +375,7 @@ export default function NuevoClientePage() {
 			numero_documento: normalized.numero_documento,
 			extension_ci: normalized.extension_ci || null,
 			nacionalidad: normalized.nacionalidad,
-			fecha_nacimiento: fechaNacimiento.toISOString(), // Convert Date to ISO string for PostgreSQL
+			fecha_nacimiento: normalized.fecha_nacimiento, // Already in YYYY-MM-DD format (PostgreSQL date type)
 			estado_civil: normalized.estado_civil,
 			direccion: normalized.direccion,
 			correo_electronico: normalized.correo_electronico,
@@ -389,7 +387,7 @@ export default function NuevoClientePage() {
 			genero: normalized.genero || null,
 			nivel_ingresos: normalized.nivel_ingresos || null,
 			cargo: normalized.cargo || null,
-			anio_ingreso: anioIngreso ? anioIngreso.toISOString() : null, // Convert Date to ISO or null
+			anio_ingreso: anioIngreso, // Already in YYYY-MM-DD format or null
 			nit: normalized.nit || null,
 			domicilio_comercial: normalized.domicilio_comercial || null,
 		});
