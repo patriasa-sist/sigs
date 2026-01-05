@@ -1601,17 +1601,17 @@ export async function generarWhatsAppCierreSiniestro(
 
 		switch (tipoCierre) {
 			case "rechazado":
-				estadoTexto = "❌ *RECHAZADO*";
+				estadoTexto = "*RECHAZADO*";
 				detalleTexto =
 					"Lamentamos informarle que a pesar de todos nuestros esfuerzos su siniestro ha sido rechazado de acuerdo a la carta adjunta por parte de la compañía.";
 				break;
 			case "declinado":
-				estadoTexto = "⚠️ *DECLINADO*";
+				estadoTexto = "*DECLINADO*";
 				detalleTexto =
 					"Se le informa que *con la conformidad de su persona*, procedemos a informar a su compañía aseguradora y dar de baja el presente caso.";
 				break;
 			case "concluido":
-				estadoTexto = "✅ *CONCLUIDO*";
+				estadoTexto = "*CONCLUIDO*";
 				detalleTexto =
 					"Nos complace informarle que su siniestro ha concluido exitosamente, por lo cual se procede al cierre del mismo.";
 				break;
