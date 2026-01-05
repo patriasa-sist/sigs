@@ -144,11 +144,17 @@ export default function RegistrarSiniestroForm() {
 						<div className="flex flex-col sm:flex-row gap-3 mt-6 w-full sm:w-auto">
 							<BotonWhatsAppRegistro siniestroId={nuevoSiniestroId} />
 							<Button
+								onClick={() => router.push(`/siniestros/editar/${nuevoSiniestroId}`)}
+								className="w-full sm:w-auto"
+							>
+								Ver Siniestro
+							</Button>
+							<Button
 								variant="outline"
 								onClick={() => router.push("/siniestros")}
 								className="w-full sm:w-auto"
 							>
-								Ir al Dashboard
+								Volver al Dashboard
 							</Button>
 						</div>
 					</div>
