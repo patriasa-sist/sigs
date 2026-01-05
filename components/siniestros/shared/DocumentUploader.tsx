@@ -21,6 +21,8 @@ interface DocumentUploaderProps {
 	onEliminarDocumento: (index: number) => void;
 	maxFiles?: number;
 	maxSizeMB?: number;
+	tipoPreseleccionado?: TipoDocumentoSiniestro;
+	mostrarSelectorTipo?: boolean;
 }
 
 const ACCEPTED_FILE_TYPES = {
@@ -37,9 +39,14 @@ export default function DocumentUploader({
 	onEliminarDocumento,
 	maxFiles = 20,
 	maxSizeMB = 20,
+	tipoPreseleccionado,
+	mostrarSelectorTipo = true,
 }: DocumentUploaderProps) {
 	const [selectedTipo, setSelectedTipo] = useState<TipoDocumentoSiniestro>("fotografía VA");
 	const [error, setError] = useState<string | null>(null);
+
+	// Usar tipo preseleccionado si se proporciona, sino usar el estado interno
+	const tipoActual = tipoPreseleccionado || selectedTipo;
 
 	const onDrop = useCallback(
 		(acceptedFiles: File[]) => {
@@ -60,7 +67,7 @@ export default function DocumentUploader({
 				}
 
 				const documento: DocumentoSiniestro = {
-					tipo_documento: selectedTipo,
+					tipo_documento: tipoActual,
 					nombre_archivo: file.name,
 					file: file,
 					tamano_bytes: file.size,
@@ -69,7 +76,7 @@ export default function DocumentUploader({
 				onAgregarDocumento(documento);
 			});
 		},
-		[documentos.length, maxFiles, maxSizeMB, selectedTipo, onAgregarDocumento]
+		[documentos.length, maxFiles, maxSizeMB, tipoActual, onAgregarDocumento]
 	);
 
 	const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -100,25 +107,27 @@ export default function DocumentUploader({
 
 	return (
 		<div className="space-y-4">
-			{/* Selector de tipo de documento */}
-			<div className="space-y-2">
-				<Label htmlFor="tipo-documento">Tipo de Documento</Label>
-				<Select
-					value={selectedTipo}
-					onValueChange={(value) => setSelectedTipo(value as TipoDocumentoSiniestro)}
-				>
-					<SelectTrigger id="tipo-documento">
-						<SelectValue />
-					</SelectTrigger>
-					<SelectContent>
-						{TIPOS_DOCUMENTO_SINIESTRO.map((tipo) => (
-							<SelectItem key={tipo} value={tipo}>
-								{tipo}
-							</SelectItem>
-						))}
-					</SelectContent>
-				</Select>
-			</div>
+			{/* Selector de tipo de documento (opcional) */}
+			{mostrarSelectorTipo && (
+				<div className="space-y-2">
+					<Label htmlFor="tipo-documento">Tipo de Documento</Label>
+					<Select
+						value={selectedTipo}
+						onValueChange={(value) => setSelectedTipo(value as TipoDocumentoSiniestro)}
+					>
+						<SelectTrigger id="tipo-documento">
+							<SelectValue />
+						</SelectTrigger>
+						<SelectContent>
+							{TIPOS_DOCUMENTO_SINIESTRO.map((tipo) => (
+								<SelectItem key={tipo} value={tipo}>
+									{tipo}
+								</SelectItem>
+							))}
+						</SelectContent>
+					</Select>
+				</div>
+			)}
 
 			{/* Zona de drag & drop */}
 			<Card

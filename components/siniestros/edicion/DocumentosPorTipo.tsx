@@ -3,10 +3,8 @@
 import { useState, useCallback, useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { FileText, Upload, Trash2, ExternalLink, Loader2, RotateCcw } from "lucide-react";
-import { TIPOS_DOCUMENTO_SINIESTRO, type TipoDocumentoSiniestro, type DocumentoSiniestroConUsuario } from "@/types/siniestro";
+import { FileText, Trash2, ExternalLink, Loader2, RotateCcw } from "lucide-react";
+import { TIPOS_DOCUMENTO_SINIESTRO, type TipoDocumentoSiniestro, type DocumentoSiniestroConUsuario, type DocumentoSiniestro } from "@/types/siniestro";
 import { agregarDocumentosSiniestro } from "@/app/siniestros/actions";
 import {
 	descartarDocumentoSiniestro,
@@ -14,6 +12,7 @@ import {
 	eliminarDocumentoSiniestroPermanente,
 } from "@/app/siniestros/documentos/actions";
 import { toast } from "sonner";
+import DocumentUploader from "@/components/siniestros/shared/DocumentUploader";
 
 interface DocumentosPorTipoProps {
 	siniestroId: string;
@@ -31,8 +30,11 @@ export default function DocumentosPorTipo({
 	esAdmin,
 }: DocumentosPorTipoProps) {
 	const [tipoSeleccionado, setTipoSeleccionado] = useState<TipoDocumentoSiniestro>(TIPOS_DOCUMENTO_SINIESTRO[0]);
-	const [uploading, setUploading] = useState(false);
 	const [operationLoading, setOperationLoading] = useState<string | null>(null);
+
+	// Documentos temporales (para el uploader)
+	const [documentosTemporales, setDocumentosTemporales] = useState<DocumentoSiniestro[]>([]);
+	const [uploading, setUploading] = useState(false);
 
 	// Agrupar documentos por tipo
 	const documentosPorTipo = useMemo(() => {
@@ -45,51 +47,53 @@ export default function DocumentosPorTipo({
 		return grupos;
 	}, [documentos]);
 
-	// Documentos del tipo seleccionado
-	const documentosFiltrados = documentosPorTipo[tipoSeleccionado] || [];
-
-	// Handler para subir archivo
-	const handleFileUpload = useCallback(
-		async (e: React.ChangeEvent<HTMLInputElement>) => {
-			const file = e.target.files?.[0];
-			if (!file) return;
-
-			// Validar tamaño (20MB)
-			if (file.size > 20 * 1024 * 1024) {
-				toast.error("El archivo excede el tamaño máximo de 20MB");
-				return;
-			}
-
-			setUploading(true);
-
-			try {
-				// Crear documento con el tipo seleccionado
-				const documento = {
-					tipo_documento: tipoSeleccionado,
-					nombre_archivo: file.name,
-					file,
-					tamano_bytes: file.size,
-				};
-
-				const result = await agregarDocumentosSiniestro(siniestroId, [documento]);
-
-				if (result.success) {
-					toast.success("Documento agregado correctamente");
-					onDocumentosChange();
-				} else {
-					toast.error(result.error || "Error al subir documento");
-				}
-			} catch (error) {
-				console.error("Error:", error);
-				toast.error("Error al subir documento");
-			} finally {
-				setUploading(false);
-				// Reset input
-				e.target.value = "";
-			}
-		},
-		[tipoSeleccionado, siniestroId, onDocumentosChange]
+	// Documentos del tipo seleccionado (memoizado)
+	const documentosFiltrados = useMemo(
+		() => documentosPorTipo[tipoSeleccionado] || [],
+		[documentosPorTipo, tipoSeleccionado]
 	);
+
+	// Handler para agregar documento temporal
+	const handleAgregarDocumento = useCallback((doc: DocumentoSiniestro) => {
+		// Asegurar que el documento tenga el tipo seleccionado
+		const documentoConTipo: DocumentoSiniestro = {
+			...doc,
+			tipo_documento: tipoSeleccionado,
+		};
+		setDocumentosTemporales(prev => [...prev, documentoConTipo]);
+	}, [tipoSeleccionado]);
+
+	// Handler para eliminar documento temporal
+	const handleEliminarDocumentoTemporal = useCallback((index: number) => {
+		setDocumentosTemporales(prev => prev.filter((_, i) => i !== index));
+	}, []);
+
+	// Handler para subir documentos temporales
+	const handleSubirDocumentos = useCallback(async () => {
+		if (documentosTemporales.length === 0) {
+			toast.error("Agrega al menos un documento");
+			return;
+		}
+
+		setUploading(true);
+
+		try {
+			const result = await agregarDocumentosSiniestro(siniestroId, documentosTemporales);
+
+			if (result.success) {
+				toast.success(`${documentosTemporales.length} documento(s) agregado(s) correctamente`);
+				setDocumentosTemporales([]);
+				onDocumentosChange();
+			} else {
+				toast.error(result.error || "Error al subir documentos");
+			}
+		} catch (error) {
+			console.error("Error:", error);
+			toast.error("Error al subir documentos");
+		} finally {
+			setUploading(false);
+		}
+	}, [documentosTemporales, siniestroId, onDocumentosChange]);
 
 	// Handler para descartar
 	const handleDescartar = useCallback(
@@ -226,50 +230,56 @@ export default function DocumentosPorTipo({
 
 			{/* Área principal con documentos */}
 			<Card className="lg:col-span-3">
-				<CardContent className="p-6 h-full flex flex-col">
-					<div className="flex items-center justify-between mb-4">
-						<h3 className="text-lg font-semibold">{tipoSeleccionado}</h3>
-						{puedeAgregarDocumentos && (
-							<div>
-								<Input
-									id={`file-upload-${tipoSeleccionado}`}
-									type="file"
-									className="hidden"
-									onChange={handleFileUpload}
-									disabled={uploading}
-									accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
-								/>
-								<Label htmlFor={`file-upload-${tipoSeleccionado}`}>
-									<Button variant="outline" size="sm" disabled={uploading} asChild>
-										<span>
-											{uploading ? (
-												<>
-													<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-													Subiendo...
-												</>
-											) : (
-												<>
-													<Upload className="mr-2 h-4 w-4" />
-													Subir Archivo
-												</>
-											)}
-										</span>
-									</Button>
-								</Label>
-							</div>
-						)}
+				<CardContent className="p-6 h-full flex flex-col overflow-y-auto">
+					<div className="mb-4">
+						<h3 className="text-lg font-semibold mb-1">{tipoSeleccionado}</h3>
+						<p className="text-sm text-muted-foreground">
+							{documentosFiltrados.length > 0
+								? `${documentosFiltrados.length} documento(s) en sistema`
+								: "No hay documentos de este tipo"}
+						</p>
 					</div>
 
-					{/* Lista de documentos */}
-					<div className="flex-1 overflow-y-auto">
-						{documentosFiltrados.length === 0 ? (
-							<div className="h-full flex items-center justify-center">
-								<div className="text-center text-muted-foreground">
-									<FileText className="h-12 w-12 mx-auto mb-2 opacity-20" />
-									<p className="text-sm">No hay documentos de este tipo</p>
+					{/* DocumentUploader con drag & drop (solo si puede agregar) */}
+					{puedeAgregarDocumentos && (
+						<div className="mb-4">
+							<DocumentUploader
+								documentos={documentosTemporales}
+								onAgregarDocumento={handleAgregarDocumento}
+								onEliminarDocumento={handleEliminarDocumentoTemporal}
+								tipoPreseleccionado={tipoSeleccionado}
+								mostrarSelectorTipo={false}
+								maxFiles={50}
+								maxSizeMB={20}
+							/>
+
+							{/* Botón para subir los documentos temporales */}
+							{documentosTemporales.length > 0 && (
+								<div className="flex justify-end gap-2 mt-4 pt-4 border-t">
+									<Button variant="outline" onClick={() => setDocumentosTemporales([])} disabled={uploading}>
+										Cancelar
+									</Button>
+									<Button onClick={handleSubirDocumentos} disabled={uploading}>
+										{uploading ? (
+											<>
+												<Loader2 className="h-4 w-4 mr-2 animate-spin" />
+												Subiendo...
+											</>
+										) : (
+											`Subir ${documentosTemporales.length} Documento(s)`
+										)}
+									</Button>
 								</div>
-							</div>
-						) : (
+							)}
+						</div>
+					)}
+
+					{/* Documentos ya subidos */}
+					{documentosFiltrados.length > 0 && (
+						<div className="space-y-3">
+							<p className="text-sm font-medium">
+								Documentos de {tipoSeleccionado} ({documentosFiltrados.length})
+							</p>
 							<div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
 								{documentosFiltrados.map((doc) => (
 									<div key={doc.id} className="border rounded-lg p-3 space-y-2">
@@ -353,8 +363,8 @@ export default function DocumentosPorTipo({
 									</div>
 								))}
 							</div>
-						)}
-					</div>
+						</div>
+					)}
 				</CardContent>
 			</Card>
 		</div>

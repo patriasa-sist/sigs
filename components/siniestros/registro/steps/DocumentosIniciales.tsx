@@ -1,13 +1,12 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { FileText, Upload, Trash2, AlertCircle, Loader2 } from "lucide-react";
+import { FileText, Trash2, AlertCircle } from "lucide-react";
 import { TIPOS_DOCUMENTO_SINIESTRO, type TipoDocumentoSiniestro, type DocumentoSiniestro } from "@/types/siniestro";
 import { toast } from "sonner";
+import DocumentUploader from "@/components/siniestros/shared/DocumentUploader";
 
 interface DocumentosInicialesProps {
 	documentos: DocumentoSiniestro[];
@@ -21,7 +20,6 @@ export default function DocumentosInicialesStep({
 	onEliminarDocumento,
 }: DocumentosInicialesProps) {
 	const [tipoSeleccionado, setTipoSeleccionado] = useState<TipoDocumentoSiniestro>(TIPOS_DOCUMENTO_SINIESTRO[0]);
-	const [uploading, setUploading] = useState(false);
 
 	// Agrupar documentos por tipo
 	const documentosPorTipo = useMemo(() => {
@@ -34,73 +32,44 @@ export default function DocumentosInicialesStep({
 		return grupos;
 	}, [documentos]);
 
-	// Documentos del tipo seleccionado
-	const documentosFiltrados = documentosPorTipo[tipoSeleccionado] || [];
+	// Documentos del tipo seleccionado (memoizado)
+	const documentosFiltrados = useMemo(
+		() => documentosPorTipo[tipoSeleccionado] || [],
+		[documentosPorTipo, tipoSeleccionado]
+	);
 
-	// Handler para subir archivo
-	const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-		const file = e.target.files?.[0];
-		if (!file) return;
+	// Documentos temporales para el uploader (solo del tipo seleccionado)
+	const documentosTemporales: DocumentoSiniestro[] = [];
 
-		// Validar tamaño (20MB)
-		if (file.size > 20 * 1024 * 1024) {
-			toast.error("El archivo excede el tamaño máximo de 20MB");
-			return;
-		}
+	// Handler para agregar documento con el tipo seleccionado
+	const handleAgregarDocumento = useCallback((doc: DocumentoSiniestro) => {
+		// Asegurar que el documento tenga el tipo seleccionado
+		const documentoConTipo: DocumentoSiniestro = {
+			...doc,
+			tipo_documento: tipoSeleccionado,
+		};
+		onAgregarDocumento(documentoConTipo);
+	}, [tipoSeleccionado, onAgregarDocumento]);
 
-		// Validar tipo de archivo
-		const allowedTypes = ["application/pdf", "image/jpeg", "image/jpg", "image/png", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"];
-		if (!allowedTypes.includes(file.type)) {
-			toast.error("Tipo de archivo no permitido. Solo se aceptan PDF, JPG, PNG, DOC, DOCX");
-			return;
-		}
+	// Handler para eliminar documento (ajustado para encontrar el índice correcto)
+	const handleEliminarDocumento = useCallback((localIndex: number) => {
+		// Calcular documentos filtrados localmente para evitar dependencia
+		const docsDelTipo = documentosPorTipo[tipoSeleccionado] || [];
+		const docToRemove = docsDelTipo[localIndex];
+		if (!docToRemove) return;
 
-		setUploading(true);
-
-		try {
-			// Crear documento con el tipo seleccionado
-			const documento: DocumentoSiniestro = {
-				tipo_documento: tipoSeleccionado,
-				nombre_archivo: file.name,
-				file,
-				tamano_bytes: file.size,
-			};
-
-			onAgregarDocumento(documento);
-			toast.success("Documento agregado correctamente");
-		} catch (error) {
-			console.error("Error:", error);
-			toast.error("Error al agregar documento");
-		} finally {
-			setUploading(false);
-			// Reset input
-			e.target.value = "";
-		}
-	};
-
-	// Verificar si es imagen para mostrar miniatura
-	const esImagen = (nombreArchivo: string) => {
-		const ext = nombreArchivo.split(".").pop()?.toLowerCase();
-		return ["jpg", "jpeg", "png", "gif", "webp"].includes(ext || "");
-	};
-
-	// Crear URL de objeto para preview de imágenes
-	const getPreviewUrl = (file: File) => {
-		return URL.createObjectURL(file);
-	};
-
-	// Handler para eliminar documento
-	const handleEliminar = () => {
-		const docIndex = documentos.findIndex((doc) =>
-			doc.tipo_documento === tipoSeleccionado &&
-			documentosFiltrados.includes(doc)
+		// Encontrar el índice global
+		const globalIndex = documentos.findIndex(
+			doc => doc.nombre_archivo === docToRemove.nombre_archivo &&
+			       doc.tipo_documento === docToRemove.tipo_documento
 		);
 
-		if (docIndex !== -1) {
-			onEliminarDocumento(docIndex);
+		if (globalIndex !== -1) {
+			onEliminarDocumento(globalIndex);
 			toast.success("Documento eliminado");
 		}
-	};
+	}, [documentosPorTipo, tipoSeleccionado, documentos, onEliminarDocumento]);
+
 
 	return (
 		<Card>
@@ -115,18 +84,19 @@ export default function DocumentosInicialesStep({
 				<div className="flex items-start gap-2 text-sm bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
 					<AlertCircle className="h-4 w-4 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
 					<div className="text-blue-900 dark:text-blue-100">
-						<p className="font-medium mb-1">Organiza tus documentos por tipo</p>
+						<p className="font-medium mb-1">Organiza tus documentos por tipo con Drag & Drop</p>
 						<p className="text-xs">
-							Selecciona un tipo de documento en el menú lateral y sube los archivos correspondientes.
-							Los documentos se organizarán automáticamente por categoría.
+							Selecciona un tipo de documento en el menú lateral. Luego arrastra y suelta archivos en el área
+							de carga, o haz click para seleccionar múltiples archivos. Los documentos se organizarán
+							automáticamente por categoría.
 						</p>
 					</div>
 				</div>
 
 				{/* Layout con pestañas laterales */}
-				<div className="grid grid-cols-1 lg:grid-cols-4 gap-4 min-h-[500px]">
+				<div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
 					{/* Sidebar con pestañas */}
-					<Card className="lg:col-span-1 overflow-y-auto max-h-[500px]">
+					<Card className="lg:col-span-1 overflow-y-auto max-h-[600px]">
 						<CardContent className="p-2 space-y-1">
 							{TIPOS_DOCUMENTO_SINIESTRO.map((tipo) => {
 								const count = documentosPorTipo[tipo]?.length || 0;
@@ -160,95 +130,62 @@ export default function DocumentosInicialesStep({
 						</CardContent>
 					</Card>
 
-					{/* Área principal con documentos */}
+					{/* Área principal con DocumentUploader */}
 					<Card className="lg:col-span-3">
-						<CardContent className="p-6 h-full flex flex-col">
-							<div className="flex items-center justify-between mb-4">
-								<h3 className="text-lg font-semibold">{tipoSeleccionado}</h3>
-								<div>
-									<Input
-										id={`file-upload-${tipoSeleccionado}`}
-										type="file"
-										className="hidden"
-										onChange={handleFileUpload}
-										disabled={uploading}
-										accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
-									/>
-									<Label htmlFor={`file-upload-${tipoSeleccionado}`}>
-										<Button variant="outline" size="sm" disabled={uploading} asChild>
-											<span>
-												{uploading ? (
-													<>
-														<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-														Agregando...
-													</>
-												) : (
-													<>
-														<Upload className="mr-2 h-4 w-4" />
-														Subir Archivo
-													</>
-												)}
-											</span>
-										</Button>
-									</Label>
-								</div>
+						<CardContent className="p-6 space-y-4">
+							<div>
+								<h3 className="text-lg font-semibold mb-1">{tipoSeleccionado}</h3>
+								<p className="text-sm text-muted-foreground">
+									{documentosFiltrados.length > 0
+										? `${documentosFiltrados.length} documento(s) agregado(s)`
+										: "Aún no hay documentos de este tipo"}
+								</p>
 							</div>
 
-							{/* Lista de documentos */}
-							<div className="flex-1 overflow-y-auto">
-								{documentosFiltrados.length === 0 ? (
-									<div className="h-full flex items-center justify-center">
-										<div className="text-center text-muted-foreground">
-											<FileText className="h-12 w-12 mx-auto mb-2 opacity-20" />
-											<p className="text-sm">No hay documentos de este tipo</p>
-											<p className="text-xs mt-1">Usa el botón &quot;Subir Archivo&quot; para agregar</p>
-										</div>
-									</div>
-								) : (
-									<div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+							{/* DocumentUploader con drag & drop */}
+							<DocumentUploader
+								documentos={documentosTemporales}
+								onAgregarDocumento={handleAgregarDocumento}
+								onEliminarDocumento={handleEliminarDocumento}
+								tipoPreseleccionado={tipoSeleccionado}
+								mostrarSelectorTipo={false}
+								maxFiles={50}
+								maxSizeMB={20}
+							/>
+
+							{/* Mostrar documentos ya agregados de este tipo */}
+							{documentosFiltrados.length > 0 && (
+								<div className="pt-4 border-t">
+									<p className="text-sm font-medium mb-3">
+										Documentos de {tipoSeleccionado} ({documentosFiltrados.length})
+									</p>
+									<div className="space-y-2">
 										{documentosFiltrados.map((doc, index) => (
-											<div key={`${doc.nombre_archivo}-${index}`} className="border rounded-lg p-3 space-y-2">
-												{/* Miniatura o icono */}
-												<div className="aspect-video bg-secondary rounded-md flex items-center justify-center overflow-hidden">
-													{doc.file && esImagen(doc.nombre_archivo) ? (
-														// eslint-disable-next-line @next/next/no-img-element
-														<img
-															src={getPreviewUrl(doc.file)}
-															alt={doc.nombre_archivo}
-															className="w-full h-full object-cover"
-														/>
-													) : (
-														<FileText className="h-12 w-12 text-muted-foreground" />
-													)}
-												</div>
-
-												{/* Información */}
-												<div>
-													<p className="text-sm font-medium truncate" title={doc.nombre_archivo}>
-														{doc.nombre_archivo}
-													</p>
-													<p className="text-xs text-muted-foreground">
-														{doc.tamano_bytes ? `${(doc.tamano_bytes / 1024).toFixed(1)} KB` : ""}
-													</p>
-												</div>
-
-												{/* Acciones */}
-												<div className="flex gap-2">
-													<Button
-														variant="destructive"
-														size="sm"
-														onClick={handleEliminar}
-														className="flex-1"
-													>
-														<Trash2 className="mr-1 h-3 w-3" />
-														Eliminar
-													</Button>
-												</div>
-											</div>
+											<Card key={`${doc.nombre_archivo}-${index}`}>
+												<CardContent className="p-3">
+													<div className="flex items-center gap-3">
+														<FileText className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+														<div className="flex-1 min-w-0">
+															<p className="text-sm font-medium truncate">{doc.nombre_archivo}</p>
+															<p className="text-xs text-muted-foreground">
+																{doc.tamano_bytes ? `${(doc.tamano_bytes / 1024).toFixed(1)} KB` : ""}
+															</p>
+														</div>
+														<Button
+															variant="ghost"
+															size="sm"
+															onClick={() => handleEliminarDocumento(index)}
+															className="h-8 w-8 p-0 hover:bg-destructive/10 hover:text-destructive"
+														>
+															<Trash2 className="h-4 w-4" />
+														</Button>
+													</div>
+												</CardContent>
+											</Card>
 										))}
 									</div>
-								)}
-							</div>
+								</div>
+							)}
 						</CardContent>
 					</Card>
 				</div>
