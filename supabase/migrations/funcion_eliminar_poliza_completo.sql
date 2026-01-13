@@ -6,8 +6,13 @@
 -- Uso: SELECT eliminar_poliza_completo('uuid-de-poliza');
 -- ============================================
 
+-- Eliminar versiones antiguas de las funciones si existen
+DROP FUNCTION IF EXISTS eliminar_poliza_completo(UUID);
+DROP FUNCTION IF EXISTS eliminar_poliza_por_numero(TEXT);
+
 CREATE OR REPLACE FUNCTION eliminar_poliza_completo(
-  p_poliza_id UUID
+  p_poliza_id UUID,
+  p_usuario_id UUID DEFAULT NULL
 )
 RETURNS TABLE (
   eliminado BOOLEAN,
@@ -128,34 +133,30 @@ BEGIN
   -- ============================================
   -- PASO 6: ELIMINAR PÓLIZA
   -- ============================================
-  -- Esto automáticamente elimina (CASCADE o manual):
-  -- - polizas_pagos (manual, no tiene CASCADE explícito)
-  -- - polizas_pagos_comprobantes (CASCADE desde pagos)
-  -- - polizas_documentos (manual)
-  -- - polizas_automotor_vehiculos (manual)
-  -- - polizas_historial_ediciones (manual)
+  -- IMPORTANTE: Eliminar historial PRIMERO para evitar conflictos con triggers
+  -- o registros viejos con usuario_id NULL
 
-  -- Eliminar comprobantes (a través de pagos)
-  DELETE FROM polizas_pagos_comprobantes
-  WHERE pago_id IN (SELECT id FROM polizas_pagos WHERE poliza_id = p_poliza_id);
-
-  -- Eliminar pagos
-  DELETE FROM polizas_pagos
-  WHERE poliza_id = p_poliza_id;
-
-  -- Eliminar documentos
-  DELETE FROM polizas_documentos
-  WHERE poliza_id = p_poliza_id;
-
-  -- Eliminar vehículos (si es automotor)
-  DELETE FROM polizas_automotor_vehiculos
-  WHERE poliza_id = p_poliza_id;
-
-  -- Eliminar historial
+  -- 1. PRIMERO: Eliminar historial completo (evita problemas con triggers)
   DELETE FROM polizas_historial_ediciones
   WHERE poliza_id = p_poliza_id;
 
-  -- Eliminar póliza principal
+  -- 2. Eliminar comprobantes (a través de pagos)
+  DELETE FROM polizas_pagos_comprobantes
+  WHERE pago_id IN (SELECT id FROM polizas_pagos WHERE poliza_id = p_poliza_id);
+
+  -- 3. Eliminar pagos
+  DELETE FROM polizas_pagos
+  WHERE poliza_id = p_poliza_id;
+
+  -- 4. Eliminar documentos
+  DELETE FROM polizas_documentos
+  WHERE poliza_id = p_poliza_id;
+
+  -- 5. Eliminar vehículos (si es automotor)
+  DELETE FROM polizas_automotor_vehiculos
+  WHERE poliza_id = p_poliza_id;
+
+  -- 6. FINALMENTE: Eliminar póliza principal
   DELETE FROM polizas
   WHERE id = p_poliza_id;
 
@@ -196,7 +197,8 @@ $$;
 -- FUNCIÓN ALTERNATIVA: Eliminar por Número de Póliza
 -- ============================================
 CREATE OR REPLACE FUNCTION eliminar_poliza_por_numero(
-  p_numero_poliza TEXT
+  p_numero_poliza TEXT,
+  p_usuario_id UUID DEFAULT NULL
 )
 RETURNS TABLE (
   eliminado BOOLEAN,
@@ -225,7 +227,7 @@ BEGIN
   END IF;
 
   -- Llamar a la función principal
-  RETURN QUERY SELECT * FROM eliminar_poliza_completo(v_poliza_id);
+  RETURN QUERY SELECT * FROM eliminar_poliza_completo(v_poliza_id, p_usuario_id);
 END;
 $$;
 
@@ -301,19 +303,22 @@ $$;
 -- ============================================
 -- COMENTARIOS
 -- ============================================
-COMMENT ON FUNCTION eliminar_poliza_completo(UUID) IS
-'Elimina una póliza completamente incluyendo:
+COMMENT ON FUNCTION eliminar_poliza_completo(UUID, UUID) IS
+'Elimina una póliza COMPLETAMENTE de la existencia, incluyendo:
 - Registro principal de la póliza
 - Pagos y comprobantes asociados
 - Documentos (registros y archivos físicos de Storage)
 - Vehículos (si es automotor)
-- Historial completo de ediciones
-IMPORTANTE: No puede eliminar pólizas con siniestros asociados (ON DELETE RESTRICT).
+- Historial completo de ediciones (sin dejar rastro)
+IMPORTANTE:
+- No puede eliminar pólizas con siniestros asociados (ON DELETE RESTRICT).
+- Esta operación es IRREVERSIBLE, no hay forma de recuperar los datos.
+- El parámetro usuario_id es opcional (reservado para uso futuro).
 Retorna información detallada de lo eliminado.';
 
-COMMENT ON FUNCTION eliminar_poliza_por_numero(TEXT) IS
+COMMENT ON FUNCTION eliminar_poliza_por_numero(TEXT, UUID) IS
 'Wrapper de eliminar_poliza_completo que permite eliminar por número de póliza.
-Ejemplo: SELECT * FROM eliminar_poliza_por_numero(''POL-123'');';
+Ejemplo: SELECT * FROM eliminar_poliza_por_numero(''POL-123'', ''uuid-del-usuario'');';
 
 COMMENT ON FUNCTION puede_eliminar_poliza(UUID) IS
 'Verifica si una póliza puede eliminarse antes de intentar la eliminación.
@@ -327,10 +332,13 @@ Retorna si puede eliminar y razones por las que no podría.
 -- Ejemplo 1: Verificar primero si se puede eliminar
 -- SELECT * FROM puede_eliminar_poliza('uuid-de-poliza');
 
--- Ejemplo 2: Eliminar por ID (UUID)
+-- Ejemplo 2: Eliminar por ID (UUID) - sin especificar usuario
 -- SELECT * FROM eliminar_poliza_completo('uuid-de-poliza');
 
--- Ejemplo 3: Eliminar por número de póliza
+-- Ejemplo 3: Eliminar por ID (UUID) - especificando usuario (opcional)
+-- SELECT * FROM eliminar_poliza_completo('uuid-de-poliza', 'uuid-del-usuario');
+
+-- Ejemplo 4: Eliminar por número de póliza
 -- SELECT * FROM eliminar_poliza_por_numero('POL-123');
 
 -- Ejemplo 4: Ver detalles antes de eliminar
