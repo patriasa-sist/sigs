@@ -179,6 +179,30 @@ export async function guardarPoliza(formState: PolizaFormState) {
 			}
 		}
 
+		// Insertar beneficiarios para ramo Salud
+		if (formState.datos_especificos?.tipo_ramo === "Salud") {
+			const beneficiarios = formState.datos_especificos.datos.beneficiarios || [];
+
+			if (beneficiarios.length > 0) {
+				const beneficiariosParaInsertar = beneficiarios.map((beneficiario) => ({
+					poliza_id: poliza.id,
+					nombre_completo: beneficiario.nombre_completo,
+					carnet: beneficiario.carnet,
+					fecha_nacimiento: beneficiario.fecha_nacimiento,
+					genero: beneficiario.genero,
+					nivel_id: beneficiario.nivel_id,
+				}));
+
+				const { error: errorBeneficiarios } = await supabase
+					.from("polizas_salud_beneficiarios")
+					.insert(beneficiariosParaInsertar);
+
+				if (errorBeneficiarios) {
+					console.error("Error insertando beneficiarios de salud:", errorBeneficiarios);
+				}
+			}
+		}
+
 		// 5. Subir documentos a Supabase Storage y registrar en base de datos
 		if (formState.documentos.length > 0) {
 			console.log(`[DOCS] Procesando ${formState.documentos.length} documentos`);
