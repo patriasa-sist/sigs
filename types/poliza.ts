@@ -145,19 +145,22 @@ export type NivelSalud = {
 	monto: number; // Monto de cobertura del nivel
 };
 
-export type RolAseguradoSalud = "contratante" | "titular"; // MODIFICADO: Solo contratante y titular (opcional)
+export type RolAseguradoSalud = "contratante" | "titular"; // Para clientes registrados con datos completos
+
+export type RolBeneficiarioSalud = "dependiente" | "conyugue"; // Para beneficiarios sin registro completo
 
 export type AseguradoSalud = {
 	client_id: string;
 	client_name: string;
 	client_ci: string;
 	nivel_id: string; // NUEVO: Referencia al NivelSalud
-	rol?: RolAseguradoSalud; // MODIFICADO: Ahora opcional, simplificado a contratante/titular
+	rol: RolAseguradoSalud; // OBLIGATORIO: contratante o titular
 };
 
 // NUEVO: Beneficiario específico de póliza de salud (persona cubierta por el seguro)
-// Diferencia con AseguradoSalud: AseguradoSalud son clientes registrados (contratantes),
-// mientras que BeneficiarioSalud son personas cubiertas específicas de esta póliza
+// Diferencia con AseguradoSalud:
+//   - AseguradoSalud: Clientes registrados (contratante/titular) con todos sus datos
+//   - BeneficiarioSalud: Dependientes o cónyuges con datos mínimos
 export type BeneficiarioSalud = {
 	id: string; // UUID generado en cliente (temporal hasta guardar en DB)
 	nombre_completo: string;
@@ -165,6 +168,7 @@ export type BeneficiarioSalud = {
 	fecha_nacimiento: string; // ISO date string
 	genero: "M" | "F" | "Otro";
 	nivel_id: string; // Referencia al NivelSalud
+	rol: RolBeneficiarioSalud; // OBLIGATORIO: dependiente o conyugue
 };
 
 export type DatosSalud = {

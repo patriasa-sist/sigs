@@ -143,7 +143,7 @@ export function SaludForm({ datos, regionales, onChange, onSiguiente, onAnterior
 			return;
 		}
 
-		// Agregar con el primer nivel disponible por defecto
+		// Agregar con el primer nivel y rol contratante por defecto
 		setAsegurados([
 			...asegurados,
 			{
@@ -151,6 +151,7 @@ export function SaludForm({ datos, regionales, onChange, onSiguiente, onAnterior
 				client_name: cliente.nombre,
 				client_ci: cliente.ci,
 				nivel_id: niveles[0]?.id || "",
+				rol: "contratante",
 			},
 		]);
 		setMostrarBuscador(false);
@@ -160,7 +161,7 @@ export function SaludForm({ datos, regionales, onChange, onSiguiente, onAnterior
 		setAsegurados(asegurados.map((a) => (a.client_id === clientId ? { ...a, nivel_id: nivelId } : a)));
 	};
 
-	const cambiarRol = (clientId: string, rol: "contratante" | "titular" | undefined) => {
+	const cambiarRol = (clientId: string, rol: "contratante" | "titular") => {
 		setAsegurados(asegurados.map((a) => (a.client_id === clientId ? { ...a, rol } : a)));
 	};
 
@@ -217,16 +218,26 @@ export function SaludForm({ datos, regionales, onChange, onSiguiente, onAnterior
 			nuevosErrores.asegurados = "Debe agregar al menos un cliente o beneficiario";
 		}
 
-		// Validar que todos los asegurados (clientes) tengan un nivel asignado
+		// Validar que todos los asegurados (clientes) tengan un nivel y rol asignado
 		const aseguradosSinNivel = asegurados.filter((a) => !a.nivel_id);
 		if (aseguradosSinNivel.length > 0) {
 			nuevosErrores.asegurados = "Todos los clientes deben tener un nivel asignado";
 		}
 
-		// Validar que todos los beneficiarios tengan un nivel asignado
+		const aseguradosSinRol = asegurados.filter((a) => !a.rol);
+		if (aseguradosSinRol.length > 0) {
+			nuevosErrores.asegurados = "Todos los clientes deben tener un rol asignado (Contratante o Titular)";
+		}
+
+		// Validar que todos los beneficiarios tengan un nivel y rol asignado
 		const beneficiariosSinNivel = beneficiarios.filter((b) => !b.nivel_id);
 		if (beneficiariosSinNivel.length > 0) {
 			nuevosErrores.beneficiarios = "Todos los beneficiarios deben tener un nivel asignado";
+		}
+
+		const beneficiariosSinRol = beneficiarios.filter((b) => !b.rol);
+		if (beneficiariosSinRol.length > 0) {
+			nuevosErrores.beneficiarios = "Todos los beneficiarios deben tener un rol asignado (Dependiente o Cónyuge)";
 		}
 
 		if (Object.keys(nuevosErrores).length > 0) {
@@ -569,16 +580,19 @@ export function SaludForm({ datos, regionales, onChange, onSiguiente, onAnterior
 													</Select>
 												</div>
 												<div className="space-y-1">
-													<Label className="text-xs text-gray-600">Rol (Opcional)</Label>
+													<Label className="text-xs text-gray-600">
+														Rol <span className="text-red-500">*</span>
+													</Label>
 													<Select
-														value={asegurado.rol || "ninguno"}
-														onValueChange={(value) => cambiarRol(asegurado.client_id, value === "ninguno" ? undefined : value as "contratante" | "titular")}
+														value={asegurado.rol}
+														onValueChange={(value) =>
+															cambiarRol(asegurado.client_id, value as "contratante" | "titular")
+														}
 													>
 														<SelectTrigger className="w-full">
-															<SelectValue placeholder="Sin rol específico" />
+															<SelectValue placeholder="Seleccione un rol" />
 														</SelectTrigger>
 														<SelectContent>
-															<SelectItem value="ninguno">Sin rol específico</SelectItem>
 															<SelectItem value="contratante">Contratante</SelectItem>
 															<SelectItem value="titular">Titular</SelectItem>
 														</SelectContent>
@@ -641,7 +655,18 @@ export function SaludForm({ datos, regionales, onChange, onSiguiente, onAnterior
 									<div className="flex-1 space-y-3">
 										<div className="flex items-start justify-between">
 											<div>
-												<p className="font-medium text-gray-900">{beneficiario.nombre_completo}</p>
+												<div className="flex items-center gap-2">
+													<p className="font-medium text-gray-900">{beneficiario.nombre_completo}</p>
+													{beneficiario.rol && (
+														<span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
+															{beneficiario.rol === "dependiente"
+																? "Dependiente"
+																: beneficiario.rol === "conyugue"
+																? "Cónyuge"
+																: beneficiario.rol}
+														</span>
+													)}
+												</div>
 												<div className="text-sm text-gray-600 space-y-0.5 mt-1">
 													<p>CI: {beneficiario.carnet}</p>
 													<p>
@@ -712,11 +737,22 @@ export function SaludForm({ datos, regionales, onChange, onSiguiente, onAnterior
 			{/* Información sobre roles */}
 			<div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
 				<p className="text-sm text-blue-900 font-medium mb-2">Información sobre roles:</p>
-				<ul className="text-xs text-blue-800 space-y-1">
-					<li>• <strong>Contratante:</strong> Persona o empresa que contrata el seguro (opcional)</li>
-					<li>• <strong>Titular:</strong> Persona principal asegurada (opcional)</li>
-					<li>• <strong>Sin rol:</strong> Otros asegurados sin rol específico</li>
-				</ul>
+				<div className="text-xs text-blue-800 space-y-2">
+					<div>
+						<p className="font-semibold mb-1">Clientes Registrados:</p>
+						<ul className="space-y-1 ml-3">
+							<li>• <strong>Contratante:</strong> Cliente que contrata el seguro (opcional)</li>
+							<li>• <strong>Titular:</strong> Cliente principal asegurado (opcional)</li>
+						</ul>
+					</div>
+					<div>
+						<p className="font-semibold mb-1">Beneficiarios (sin registro completo):</p>
+						<ul className="space-y-1 ml-3">
+							<li>• <strong>Dependiente:</strong> Hijo, familiar u otro dependiente</li>
+							<li>• <strong>Cónyuge:</strong> Pareja o cónyuge del asegurado</li>
+						</ul>
+					</div>
+				</div>
 			</div>
 
 			{/* Botones de navegación */}

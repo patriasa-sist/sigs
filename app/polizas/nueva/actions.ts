@@ -191,6 +191,7 @@ export async function guardarPoliza(formState: PolizaFormState) {
 					fecha_nacimiento: beneficiario.fecha_nacimiento,
 					genero: beneficiario.genero,
 					nivel_id: beneficiario.nivel_id,
+					rol: beneficiario.rol,
 				}));
 
 				const { error: errorBeneficiarios } = await supabase

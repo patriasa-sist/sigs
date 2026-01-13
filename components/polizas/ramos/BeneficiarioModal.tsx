@@ -21,6 +21,7 @@ type ErroresBeneficiario = {
 	fecha_nacimiento?: string;
 	genero?: string;
 	nivel_id?: string;
+	rol?: string;
 };
 
 export function BeneficiarioModal({ beneficiario, niveles, onGuardar, onCancelar }: Props) {
@@ -32,12 +33,13 @@ export function BeneficiarioModal({ beneficiario, niveles, onGuardar, onCancelar
 			fecha_nacimiento: "",
 			genero: "M",
 			nivel_id: niveles[0]?.id || "",
+			rol: "dependiente",
 		}
 	);
 
 	const [errores, setErrores] = useState<ErroresBeneficiario>({});
 
-	const handleChange = (campo: keyof BeneficiarioSalud, valor: string) => {
+	const handleChange = (campo: keyof ErroresBeneficiario, valor: string) => {
 		setFormData((prev) => ({
 			...prev,
 			[campo]: valor,
@@ -92,6 +94,11 @@ export function BeneficiarioModal({ beneficiario, niveles, onGuardar, onCancelar
 			nuevosErrores.nivel_id = "Debe seleccionar un nivel de cobertura";
 		}
 
+		// Validar rol
+		if (!formData.rol) {
+			nuevosErrores.rol = "El rol es obligatorio";
+		}
+
 		return {
 			valido: Object.keys(nuevosErrores).length === 0,
 			errores: nuevosErrores,
@@ -132,8 +139,9 @@ export function BeneficiarioModal({ beneficiario, niveles, onGuardar, onCancelar
 								<div className="text-sm text-blue-900">
 									<p className="font-medium mb-1">Beneficiarios de la póliza</p>
 									<p>
-										Los beneficiarios son las personas cubiertas por esta póliza de salud. No necesitan
-										estar registrados como clientes en el sistema.
+										Los beneficiarios son dependientes (hijos, familiares) o cónyuges cubiertos por
+										esta póliza. No necesitan estar registrados como clientes en el sistema. Los
+										contratantes y titulares deben ser clientes registrados.
 									</p>
 								</div>
 							</div>
@@ -169,7 +177,9 @@ export function BeneficiarioModal({ beneficiario, niveles, onGuardar, onCancelar
 								className={errores.carnet ? "border-red-500" : ""}
 							/>
 							{errores.carnet && <p className="text-sm text-red-600">{errores.carnet}</p>}
-							<p className="text-xs text-gray-500">Incluya el complemento si corresponde (ej: 1234567 LP)</p>
+							<p className="text-xs text-gray-500">
+								Incluya el complemento si corresponde (ej: 1234567 LP)
+							</p>
 						</div>
 
 						{/* Grid de 2 columnas para Fecha de Nacimiento y Género */}
@@ -213,27 +223,49 @@ export function BeneficiarioModal({ beneficiario, niveles, onGuardar, onCancelar
 							</div>
 						</div>
 
-						{/* Nivel de Cobertura */}
-						<div className="space-y-2">
-							<Label htmlFor="nivel_id">
-								Nivel de Cobertura <span className="text-red-500">*</span>
-							</Label>
-							<Select value={formData.nivel_id} onValueChange={(value) => handleChange("nivel_id", value)}>
-								<SelectTrigger className={errores.nivel_id ? "border-red-500" : ""}>
-									<SelectValue placeholder="Seleccione un nivel" />
-								</SelectTrigger>
-								<SelectContent>
-									{niveles.map((nivel) => (
-										<SelectItem key={nivel.id} value={nivel.id}>
-											{nivel.nombre} - Bs {nivel.monto.toLocaleString()}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
-							{errores.nivel_id && <p className="text-sm text-red-600">{errores.nivel_id}</p>}
-							<p className="text-xs text-gray-500">
-								Seleccione el nivel de cobertura que tendrá este beneficiario
-							</p>
+						{/* Grid de 2 columnas para Nivel de Cobertura y Rol */}
+						<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+							{/* Nivel de Cobertura */}
+							<div className="space-y-2">
+								<Label htmlFor="nivel_id">
+									Nivel de Cobertura <span className="text-red-500">*</span>
+								</Label>
+								<Select
+									value={formData.nivel_id}
+									onValueChange={(value) => handleChange("nivel_id", value)}
+								>
+									<SelectTrigger className={errores.nivel_id ? "border-red-500" : ""}>
+										<SelectValue placeholder="Seleccione un nivel" />
+									</SelectTrigger>
+									<SelectContent>
+										{niveles.map((nivel) => (
+											<SelectItem key={nivel.id} value={nivel.id}>
+												{nivel.nombre} - Bs {nivel.monto.toLocaleString()}
+											</SelectItem>
+										))}
+									</SelectContent>
+								</Select>
+								{errores.nivel_id && <p className="text-sm text-red-600">{errores.nivel_id}</p>}
+								<p className="text-xs text-gray-500">Nivel de cobertura del beneficiario</p>
+							</div>
+
+							{/* Rol */}
+							<div className="space-y-2">
+								<Label htmlFor="rol">
+									Rol <span className="text-red-500">*</span>
+								</Label>
+								<Select value={formData.rol} onValueChange={(value) => handleChange("rol", value)}>
+									<SelectTrigger className={errores.rol ? "border-red-500" : ""}>
+										<SelectValue placeholder="Seleccione un rol" />
+									</SelectTrigger>
+									<SelectContent>
+										<SelectItem value="dependiente">Dependiente</SelectItem>
+										<SelectItem value="conyugue">Cónyuge</SelectItem>
+									</SelectContent>
+								</Select>
+								{errores.rol && <p className="text-sm text-red-600">{errores.rol}</p>}
+								<p className="text-xs text-gray-500">Dependiente (hijo/familiar) o cónyuge</p>
+							</div>
 						</div>
 					</div>
 				</div>

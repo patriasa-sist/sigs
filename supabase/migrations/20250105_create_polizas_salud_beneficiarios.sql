@@ -10,8 +10,8 @@
 -- Relación 1:N con polizas (una póliza puede tener múltiples beneficiarios)
 --
 -- Diferencia con AseguradoSalud (cliente):
---   - AseguradoSalud: Referencias a clientes registrados en el sistema (contratante)
---   - Beneficiarios: Personas cubiertas específicas de esta póliza (datos mínimos)
+--   - AseguradoSalud: Clientes registrados con todos sus datos (roles: contratante, titular)
+--   - Beneficiarios: Dependientes o cónyuges con datos mínimos (roles: dependiente, conyugue)
 -- ═══════════════════════════════════════════════════════════════════════════════
 
 -- =============================================
@@ -27,6 +27,7 @@ CREATE TABLE IF NOT EXISTS polizas_salud_beneficiarios (
   carnet text NOT NULL,
   fecha_nacimiento date NOT NULL,
   genero text NOT NULL CHECK (genero IN ('M', 'F', 'Otro')),
+  rol text NOT NULL CHECK (rol IN ('dependiente', 'conyugue')),
 
   -- Nivel de cobertura (referencia local al nivel configurado en DatosSalud)
   nivel_id text NOT NULL,
@@ -48,6 +49,7 @@ COMMENT ON COLUMN polizas_salud_beneficiarios.nombre_completo IS 'Nombre complet
 COMMENT ON COLUMN polizas_salud_beneficiarios.carnet IS 'Número de carnet de identidad';
 COMMENT ON COLUMN polizas_salud_beneficiarios.fecha_nacimiento IS 'Fecha de nacimiento del beneficiario';
 COMMENT ON COLUMN polizas_salud_beneficiarios.genero IS 'Género del beneficiario (M, F, Otro)';
+COMMENT ON COLUMN polizas_salud_beneficiarios.rol IS 'Rol del beneficiario (dependiente, conyugue, OBLIGATORIO)';
 COMMENT ON COLUMN polizas_salud_beneficiarios.nivel_id IS 'ID del nivel de cobertura asignado (referencia local a DatosSalud.niveles)';
 COMMENT ON COLUMN polizas_salud_beneficiarios.created_by IS 'Usuario que creó el registro';
 COMMENT ON COLUMN polizas_salud_beneficiarios.updated_by IS 'Usuario que actualizó el registro por última vez';
@@ -88,7 +90,7 @@ CREATE POLICY "Usuarios autorizados pueden crear beneficiarios"
     EXISTS (
       SELECT 1 FROM profiles
       WHERE profiles.id = auth.uid()
-      AND profiles.role IN ('admin', 'usuario', 'comercial')
+      AND profiles.role IN ('admin', 'comercial')
     )
   );
 
@@ -101,7 +103,7 @@ CREATE POLICY "Usuarios autorizados pueden actualizar beneficiarios"
     EXISTS (
       SELECT 1 FROM profiles
       WHERE profiles.id = auth.uid()
-      AND profiles.role IN ('admin', 'usuario', 'comercial')
+      AND profiles.role IN ('admin', 'comercial')
     )
   );
 
