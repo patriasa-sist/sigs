@@ -6,7 +6,7 @@ import { obtenerPolizas, buscarPolizas, type PolizaListItem } from "./actions";
 import { SearchBar } from "@/components/clientes/SearchBar";
 import { Button } from "@/components/ui/button";
 import { FileText, Plus, X, Calendar, DollarSign, Building2, User } from "lucide-react";
-import { formatCurrency } from "@/utils/formatters";
+import { formatCurrency, formatDate } from "@/utils/formatters";
 
 export default function PolizasPage() {
 	const router = useRouter();
@@ -84,6 +84,7 @@ export default function PolizasPage() {
 	// Status styling
 	const getEstadoStyle = (estado: string) => {
 		const styles = {
+			pendiente: "bg-yellow-100 text-yellow-800 border-yellow-200",
 			activa: "bg-green-100 text-green-800 border-green-200",
 			vencida: "bg-red-100 text-red-800 border-red-200",
 			cancelada: "bg-gray-100 text-gray-800 border-gray-200",
@@ -94,6 +95,7 @@ export default function PolizasPage() {
 
 	const getEstadoLabel = (estado: string) => {
 		const labels = {
+			pendiente: "pendiente",
 			activa: "Activa",
 			vencida: "Vencida",
 			cancelada: "Cancelada",
@@ -221,10 +223,10 @@ export default function PolizasPage() {
 										<td className="px-4 py-4">
 											<div className="text-sm">
 												<div className="text-gray-900">
-													{new Date(poliza.inicio_vigencia).toLocaleDateString("es-BO")}
+													{formatDate(poliza.inicio_vigencia)}
 												</div>
 												<div className="text-gray-500 text-xs">
-													hasta {new Date(poliza.fin_vigencia).toLocaleDateString("es-BO")}
+													hasta {formatDate(poliza.fin_vigencia)}
 												</div>
 											</div>
 										</td>
@@ -403,8 +405,8 @@ export default function PolizasPage() {
 										Vigencia
 									</label>
 									<p className="text-base text-gray-900 mt-1">
-										{new Date(selectedPoliza.inicio_vigencia).toLocaleDateString("es-BO")} -{" "}
-										{new Date(selectedPoliza.fin_vigencia).toLocaleDateString("es-BO")}
+										{formatDate(selectedPoliza.inicio_vigencia)} -{" "}
+										{formatDate(selectedPoliza.fin_vigencia)}
 									</p>
 								</div>
 								<div>
