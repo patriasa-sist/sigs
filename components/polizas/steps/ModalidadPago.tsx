@@ -69,6 +69,14 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, onChange, on
 		}
 	}, [cuotaUnica, tipoPago]);
 
+	// En crédito siempre mínimo 2 cuotas
+	useEffect(() => {
+		if (tipoPago === "credito" && cantidadCuotas < 2) {
+			setCantidadCuotas(2);
+			setCuotasGeneradas(false);
+		}
+	}, [tipoPago, cantidadCuotas]);
+
 	const handleChangeTipoPago = (tipo: string) => {
 		setTipoPago(tipo as "contado" | "credito");
 		setErrores({});
@@ -76,19 +84,30 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, onChange, on
 		setCuotasGeneradas(false);
 	};
 
-	const calcularFechasCuotas = (): string[] => {
+	const calcularFechasCuotas = (numCuotas: number, iniciarDesdeMesSiguiente: boolean): string[] => {
 		if (!fechaInicioCuotas) return [];
 
 		const fechas: string[] = [];
-		const fechaBase = new Date(fechaInicioCuotas);
+
+		// Parsear la fecha correctamente para evitar problemas de timezone
+		const [year, month, day] = fechaInicioCuotas.split('-').map(Number);
 
 		// Calcular el incremento en meses según el periodo
 		const incrementoMeses = periodoPago === "mensual" ? 1 : periodoPago === "trimestral" ? 3 : 6;
 
-		for (let i = 0; i < cantidadCuotas; i++) {
-			const fecha = new Date(fechaBase);
-			fecha.setMonth(fecha.getMonth() + (i * incrementoMeses));
-			fechas.push(fecha.toISOString().split('T')[0]);
+		// Si hay cuota inicial, las cuotas regulares empiezan desde el mes siguiente
+		const offsetInicial = iniciarDesdeMesSiguiente ? incrementoMeses : 0;
+
+		for (let i = 0; i < numCuotas; i++) {
+			// Crear fecha en zona horaria local
+			const fecha = new Date(year, month - 1, day);
+			fecha.setMonth(fecha.getMonth() + offsetInicial + (i * incrementoMeses));
+
+			// Formatear como YYYY-MM-DD sin usar toISOString para evitar problemas de timezone
+			const y = fecha.getFullYear();
+			const m = String(fecha.getMonth() + 1).padStart(2, '0');
+			const d = String(fecha.getDate()).padStart(2, '0');
+			fechas.push(`${y}-${m}-${d}`);
 		}
 
 		return fechas;
@@ -109,16 +128,29 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, onChange, on
 		setErrores({});
 		setAdvertencias({});
 
-		// Calcular monto de cada cuota
+		// Si hay cuota inicial, las cuotas regulares son cantidadCuotas - 1
+		// para que el total (inicial + regulares) sea igual a cantidadCuotas
+		const tieneCuotaInicial = cuotaInicial > 0;
+		const numCuotasRegulares = tieneCuotaInicial ? cantidadCuotas - 1 : cantidadCuotas;
+
+		// Validar que haya al menos 1 cuota regular si hay cuota inicial
+		if (tieneCuotaInicial && numCuotasRegulares < 1) {
+			setErrores({ cantidad_cuotas: "Debe seleccionar al menos 2 cuotas si hay cuota inicial" });
+			return;
+		}
+
+		// Calcular monto de cada cuota regular
 		const restoAPagar = primaTotal - cuotaInicial;
-		const montoPorCuota = restoAPagar / cantidadCuotas;
+		const montoPorCuota = numCuotasRegulares > 0 ? restoAPagar / numCuotasRegulares : 0;
 
-		// Calcular fechas
-		const fechasCuotas = calcularFechasCuotas();
+		// Calcular fechas para las cuotas regulares
+		// Si hay cuota inicial, las regulares empiezan desde el mes siguiente
+		const fechasCuotas = calcularFechasCuotas(numCuotasRegulares, tieneCuotaInicial);
 
-		// Generar cuotas con numeración secuencial por defecto
+		// Generar cuotas regulares (la cuota inicial es la #1, estas empiezan desde #2)
+		const inicioNumeracion = tieneCuotaInicial ? 2 : 1;
 		const nuevasCuotas: CuotaCredito[] = fechasCuotas.map((fecha, index) => ({
-			numero: index + 1,
+			numero: inicioNumeracion + index,
 			monto: Math.round(montoPorCuota * 100) / 100,
 			fecha_vencimiento: fecha,
 		}));
@@ -172,11 +204,13 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, onChange, on
 				comision,
 			};
 		} else {
+			// cantidad_cuotas representa el total de cuotas (inicial + regulares)
+			const totalCuotas = cuotaInicial > 0 ? cuotas.length + 1 : cuotas.length;
 			datosPago = {
 				tipo: "credito",
 				prima_total: primaTotal,
 				moneda,
-				cantidad_cuotas: cantidadCuotas,
+				cantidad_cuotas: totalCuotas,
 				cuota_inicial: cuotaInicial,
 				fecha_inicio_cuotas: fechaInicioCuotas,
 				periodo_pago: periodoPago,
@@ -238,7 +272,7 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, onChange, on
 					<div className="flex items-center gap-2 text-green-600">
 						<CheckCircle2 className="h-5 w-5" />
 						<span className="text-sm font-medium">
-							{tipoPago === "contado" ? "Pago al contado" : `${cantidadCuotas} cuotas`}
+							{tipoPago === "contado" ? "Pago al contado" : `${cuotaInicial > 0 ? cuotas.length + 1 : cuotas.length} cuotas`}
 						</span>
 					</div>
 				)}
@@ -439,7 +473,11 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, onChange, on
 							{errores.cuota_inicial && (
 								<p className="text-sm text-red-600">{errores.cuota_inicial}</p>
 							)}
-							<p className="text-xs text-gray-500">Si no hay cuota inicial, ingrese 0 o deje vacío</p>
+							<p className="text-xs text-gray-500">
+								{cuotaInicial > 0
+									? `La cuota inicial será la cuota #1, las restantes serán cuotas #2 a #${cantidadCuotas}`
+									: "Si no hay cuota inicial, ingrese 0 o deje vacío"}
+							</p>
 						</div>
 
 						{/* Fecha Inicio Cuotas */}
@@ -495,11 +533,14 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, onChange, on
 						<div className="space-y-2">
 							<Label htmlFor="cantidad_cuotas">
 								Cantidad de Cuotas: <span className="font-bold text-blue-600">{cantidadCuotas}</span>
+								{cuotaInicial > 0 && (
+									<span className="text-xs text-gray-500 ml-2">(#1 inicial + #{2}-{cantidadCuotas} regulares)</span>
+								)}
 							</Label>
 							<div className="pt-2">
 								<Slider
 									id="cantidad_cuotas"
-									min={POLIZA_RULES.CUOTAS_MIN}
+									min={2}
 									max={POLIZA_RULES.CUOTAS_MAX}
 									step={1}
 									value={[cantidadCuotas]}
@@ -510,7 +551,7 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, onChange, on
 									className="w-full"
 								/>
 								<div className="flex justify-between text-xs text-gray-500 mt-1">
-									<span>1 cuota</span>
+									<span>2 cuotas</span>
 									<span>12 cuotas</span>
 								</div>
 							</div>
@@ -568,7 +609,9 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, onChange, on
 									Plan de Cuotas
 								</h4>
 								<span className="text-xs text-gray-600">
-									{cuotas.length} cuota{cuotas.length !== 1 ? "s" : ""}
+									{cuotaInicial > 0
+										? `Cuota #1 (inicial) + Cuotas #2-${cuotas.length + 1} = ${cuotas.length + 1} total`
+										: `${cuotas.length} cuota${cuotas.length !== 1 ? "s" : ""}`}
 								</span>
 							</div>
 
@@ -601,8 +644,32 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, onChange, on
 											</tr>
 										</thead>
 										<tbody className="divide-y">
+											{/* Mostrar cuota inicial si existe */}
+											{cuotaInicial > 0 && (
+												<tr className="bg-blue-50">
+													<td className="px-4 py-3">
+														<span className="font-medium text-blue-700">1 (Inicial)</span>
+													</td>
+													<td className="px-4 py-3">
+														<div className="flex items-center justify-end gap-2">
+															<span className="font-semibold text-blue-900">
+																{cuotaInicial.toLocaleString("es-BO", { minimumFractionDigits: 2 })}
+															</span>
+															<span className="text-sm text-gray-600 font-medium">{moneda}</span>
+														</div>
+													</td>
+													<td className="px-4 py-3">
+														<div className="flex items-center gap-2">
+															<Calendar className="h-4 w-4 text-blue-400" />
+															<span className="text-sm text-blue-700">
+																{fechaInicioCuotas ? new Date(fechaInicioCuotas + 'T00:00:00').toLocaleDateString("es-BO") : "-"}
+															</span>
+														</div>
+													</td>
+												</tr>
+											)}
 											{cuotas.map((cuota, index) => (
-												<tr key={index} className={index === 0 && cuotaInicial > 0 ? "bg-blue-50" : "hover:bg-gray-50"}>
+												<tr key={index} className="hover:bg-gray-50">
 													<td className="px-4 py-3">
 														<Input
 															type="number"
