@@ -70,7 +70,7 @@ export function DatosBasicos({ datos, onChange, onSiguiente, onAnterior }: Props
 				{ data: regionalesData },
 				{ data: categoriasData },
 				usuariosResult,
-				{ data: tiposData },
+				{ data: tiposData, error: tiposError },
 			] = await Promise.all([
 				supabase.from("companias_aseguradoras").select("*").eq("activo", true).order("nombre"),
 				supabase.from("regionales").select("*").eq("activo", true).order("nombre"),
@@ -94,6 +94,10 @@ export function DatosBasicos({ datos, onChange, onSiguiente, onAnterior }: Props
 					.order("nombre"),
 			]);
 
+			if (tiposError) {
+				console.error("Error cargando tipos de seguros:", tiposError);
+			}
+
 			const { data: usuariosData, error: usuariosError } = usuariosResult;
 
 			if (usuariosError) {
@@ -114,7 +118,9 @@ export function DatosBasicos({ datos, onChange, onSiguiente, onAnterior }: Props
 			setRegionales(regionalesData || []);
 			setCategorias(categoriasData || []);
 			setUsuarios(usuariosData || []);
-			setTiposSeguros(tiposData || []);
+			// Filtro adicional del lado del cliente para asegurar que solo se muestren ramos activos
+			const tiposActivos = (tiposData || []).filter((tipo) => tipo.activo === true);
+			setTiposSeguros(tiposActivos);
 		} catch (error) {
 			console.error("Error cargando catálogos:", error);
 		} finally {
