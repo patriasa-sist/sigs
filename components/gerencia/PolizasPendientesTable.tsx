@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { validarPoliza, rechazarPoliza } from "@/app/gerencia/validacion/actions";
 import { Button } from "@/components/ui/button";
 import {
@@ -66,11 +67,12 @@ interface Props {
 }
 
 export default function PolizasPendientesTable({ polizas: initialPolizas }: Props) {
+	const router = useRouter();
 	const [polizas, setPolizas] = useState(initialPolizas);
 	const [loading, setLoading] = useState<string | null>(null);
 	const [dialogOpen, setDialogOpen] = useState(false);
 	const [selectedPoliza, setSelectedPoliza] = useState<PolizaPendiente | null>(null);
-	const [dialogType, setDialogType] = useState<"validar" | "rechazar" | "ver">("ver");
+	const [dialogType, setDialogType] = useState<"validar" | "rechazar">("validar");
 
 	// Formatear nombre del cliente
 	const formatClientName = (poliza: PolizaPendiente) => {
@@ -135,11 +137,16 @@ export default function PolizasPendientesTable({ polizas: initialPolizas }: Prop
 		setLoading(null);
 	};
 
-	// Abrir diálogo de detalles
-	const openDialog = (poliza: PolizaPendiente, type: "validar" | "rechazar" | "ver") => {
+	// Abrir diálogo de confirmación
+	const openDialog = (poliza: PolizaPendiente, type: "validar" | "rechazar") => {
 		setSelectedPoliza(poliza);
 		setDialogType(type);
 		setDialogOpen(true);
+	};
+
+	// Navegar al detalle de la póliza
+	const verDetallePoliza = (polizaId: string) => {
+		router.push(`/polizas/${polizaId}`);
 	};
 
 	if (polizas.length === 0) {
@@ -213,7 +220,7 @@ export default function PolizasPendientesTable({ polizas: initialPolizas }: Prop
 										<Button
 											variant="outline"
 											size="sm"
-											onClick={() => openDialog(poliza, "ver")}
+											onClick={() => verDetallePoliza(poliza.id)}
 										>
 											<Eye className="h-4 w-4 mr-1" />
 											Ver
@@ -246,74 +253,32 @@ export default function PolizasPendientesTable({ polizas: initialPolizas }: Prop
 
 			{/* Diálogo de confirmación */}
 			<Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-				<DialogContent className="max-w-2xl">
+				<DialogContent>
 					<DialogHeader>
 						<DialogTitle>
-							{dialogType === "validar" && "Validar Póliza"}
-							{dialogType === "rechazar" && "Rechazar Póliza"}
-							{dialogType === "ver" && "Detalles de Póliza"}
+							{dialogType === "validar" ? "Validar Póliza" : "Rechazar Póliza"}
 						</DialogTitle>
 						<DialogDescription>
 							{selectedPoliza && (
 								<>
-									Póliza <strong>{selectedPoliza.numero_poliza}</strong>
+									¿Está seguro que desea {dialogType === "validar" ? "validar" : "rechazar"} la póliza{" "}
+									<strong>{selectedPoliza.numero_poliza}</strong>?
 								</>
 							)}
 						</DialogDescription>
 					</DialogHeader>
 
 					{selectedPoliza && (
-						<div className="grid grid-cols-2 gap-4 py-4">
-							<div>
-								<p className="text-sm font-medium text-gray-500">Asegurado</p>
-								<p className="text-base">{formatClientName(selectedPoliza)}</p>
+						<div className="py-4 space-y-2">
+							<div className="flex justify-between text-sm">
+								<span className="text-gray-500">Asegurado:</span>
+								<span className="font-medium">{formatClientName(selectedPoliza)}</span>
 							</div>
-							<div>
-								<p className="text-sm font-medium text-gray-500">Compañía</p>
-								<p className="text-base">{selectedPoliza.compania?.nombre || "N/A"}</p>
-							</div>
-							<div>
-								<p className="text-sm font-medium text-gray-500">Ramo</p>
-								<p className="text-base">{selectedPoliza.ramo}</p>
-							</div>
-							<div>
-								<p className="text-sm font-medium text-gray-500">Modalidad de Pago</p>
-								<p className="text-base capitalize">{selectedPoliza.modalidad_pago}</p>
-							</div>
-							<div>
-								<p className="text-sm font-medium text-gray-500">Prima Total</p>
-								<p className="text-base">
+							<div className="flex justify-between text-sm">
+								<span className="text-gray-500">Prima Total:</span>
+								<span className="font-medium">
 									{formatCurrency(selectedPoliza.prima_total, selectedPoliza.moneda)}
-								</p>
-							</div>
-							<div>
-								<p className="text-sm font-medium text-gray-500">Prima Neta</p>
-								<p className="text-base">
-									{formatCurrency(selectedPoliza.prima_neta, selectedPoliza.moneda)}
-								</p>
-							</div>
-							<div>
-								<p className="text-sm font-medium text-gray-500">Vigencia</p>
-								<p className="text-base">
-									{formatDate(selectedPoliza.inicio_vigencia)} - {formatDate(selectedPoliza.fin_vigencia)}
-								</p>
-							</div>
-							<div>
-								<p className="text-sm font-medium text-gray-500">Regional</p>
-								<p className="text-base">{selectedPoliza.regional?.nombre || "N/A"}</p>
-							</div>
-							<div>
-								<p className="text-sm font-medium text-gray-500">Responsable</p>
-								<p className="text-base">{selectedPoliza.responsable?.full_name || "N/A"}</p>
-							</div>
-							<div>
-								<p className="text-sm font-medium text-gray-500">Creado por</p>
-								<p className="text-base">
-									{selectedPoliza.created_by_user?.full_name || "N/A"}
-								</p>
-								<p className="text-xs text-gray-500">
-									{formatDate(selectedPoliza.created_at)}
-								</p>
+								</span>
 							</div>
 						</div>
 					)}
