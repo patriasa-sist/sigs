@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { obtenerDetallePoliza, type PolizaDetalle } from "../actions";
+import { validarPoliza, rechazarPoliza } from "@/app/gerencia/validacion/actions";
 import { Button } from "@/components/ui/button";
 import {
 	FileText,
@@ -16,6 +17,7 @@ import {
 	FileDown,
 	CreditCard,
 	XCircle,
+	CheckCircle,
 } from "lucide-react";
 import { formatCurrency, formatDate } from "@/utils/formatters";
 
@@ -27,6 +29,8 @@ export default function PolizaDetallePage() {
 	const [poliza, setPoliza] = useState<PolizaDetalle | null>(null);
 	const [isLoading, setIsLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
+	const [userRole, setUserRole] = useState<string | null>(null);
+	const [validationLoading, setValidationLoading] = useState<"validar" | "rechazar" | null>(null);
 
 	const cargarDetalle = useCallback(async () => {
 		setIsLoading(true);
@@ -34,6 +38,7 @@ export default function PolizaDetallePage() {
 		const resultado = await obtenerDetallePoliza(polizaId);
 		if (resultado.success && resultado.poliza) {
 			setPoliza(resultado.poliza);
+			setUserRole(resultado.userRole || null);
 		} else {
 			setError(resultado.error || "Error al cargar la póliza");
 		}
@@ -46,6 +51,7 @@ export default function PolizaDetallePage() {
 
 	const getEstadoStyle = (estado: string) => {
 		const styles = {
+			pendiente: "bg-yellow-100 text-yellow-800 border-yellow-200",
 			activa: "bg-green-100 text-green-800 border-green-200",
 			vencida: "bg-red-100 text-red-800 border-red-200",
 			cancelada: "bg-gray-100 text-gray-800 border-gray-200",
@@ -56,12 +62,44 @@ export default function PolizaDetallePage() {
 
 	const getEstadoLabel = (estado: string) => {
 		const labels = {
+			pendiente: "Pendiente",
 			activa: "Activa",
 			vencida: "Vencida",
 			cancelada: "Cancelada",
 			renovada: "Renovada",
 		};
 		return labels[estado as keyof typeof labels] || estado;
+	};
+
+	// Verificar si el usuario puede validar (admin o usuario con póliza pendiente)
+	const puedeValidar = (userRole === "admin" || userRole === "usuario") && poliza?.estado === "pendiente";
+
+	// Manejar validación
+	const handleValidar = async () => {
+		if (!poliza) return;
+		setValidationLoading("validar");
+		const result = await validarPoliza(poliza.id);
+		if (result.success) {
+			// Recargar los datos de la póliza
+			await cargarDetalle();
+		} else {
+			alert(`Error: ${result.error}`);
+		}
+		setValidationLoading(null);
+	};
+
+	// Manejar rechazo
+	const handleRechazar = async () => {
+		if (!poliza) return;
+		setValidationLoading("rechazar");
+		const result = await rechazarPoliza(poliza.id, "Rechazada por gerencia");
+		if (result.success) {
+			// Recargar los datos de la póliza
+			await cargarDetalle();
+		} else {
+			alert(`Error: ${result.error}`);
+		}
+		setValidationLoading(null);
 	};
 
 	const getEstadoPagoStyle = (estado: string) => {
@@ -132,13 +170,37 @@ export default function PolizaDetallePage() {
 						</div>
 						<p className="text-gray-600 ml-11">Detalles completos de la póliza</p>
 					</div>
-					<span
-						className={`inline-flex items-center px-4 py-2 rounded-full text-sm font-medium border ${getEstadoStyle(
-							poliza.estado
-						)}`}
-					>
-						{getEstadoLabel(poliza.estado)}
-					</span>
+					<div className="flex items-center gap-3">
+						<span
+							className={`inline-flex items-center px-4 py-2 rounded-full text-sm font-medium border ${getEstadoStyle(
+								poliza.estado
+							)}`}
+						>
+							{getEstadoLabel(poliza.estado)}
+						</span>
+						{puedeValidar && (
+							<>
+								<Button
+									variant="default"
+									size="sm"
+									onClick={handleValidar}
+									disabled={validationLoading !== null}
+								>
+									<CheckCircle className="h-4 w-4 mr-1" />
+									{validationLoading === "validar" ? "Validando..." : "Validar"}
+								</Button>
+								<Button
+									variant="destructive"
+									size="sm"
+									onClick={handleRechazar}
+									disabled={validationLoading !== null}
+								>
+									<XCircle className="h-4 w-4 mr-1" />
+									{validationLoading === "rechazar" ? "Rechazando..." : "Rechazar"}
+								</Button>
+							</>
+						)}
+					</div>
 				</div>
 			</div>
 

@@ -329,7 +329,18 @@ export async function obtenerDetallePoliza(polizaId: string) {
 			documentos: documentos || [],
 		};
 
-		return { success: true, poliza: polizaDetalle };
+		// Obtener rol del usuario actual
+		const { data: profile } = await supabase
+			.from("profiles")
+			.select("role")
+			.eq("id", user.id)
+			.single();
+
+		return {
+			success: true,
+			poliza: polizaDetalle,
+			userRole: profile?.role || null
+		};
 	} catch (error) {
 		console.error("Error general obteniendo detalle póliza:", error);
 		return {
