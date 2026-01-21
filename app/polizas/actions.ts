@@ -26,6 +26,11 @@ export type PolizaDetalle = PolizaListItem & {
 	prima_neta: number;
 	comision: number;
 	categoria_nombre: string;
+	// Audit and validation fields
+	creador_nombre: string | null;
+	validado_por: string | null;
+	fecha_validacion: string | null;
+	validador_nombre: string | null;
 	pagos: Array<{
 		id: string;
 		numero_cuota: number;
@@ -51,6 +56,14 @@ export type PolizaDetalle = PolizaListItem & {
 		nombre_archivo: string;
 		archivo_url: string;
 		uploaded_at: string;
+	}>;
+	historial: Array<{
+		id: string;
+		accion: string;
+		usuario_nombre: string | null;
+		campos_modificados: string[] | null;
+		descripcion: string | null;
+		timestamp: string;
 	}>;
 };
 
@@ -303,6 +316,53 @@ export async function obtenerDetallePoliza(polizaId: string) {
 			.eq("estado", "activo")
 			.order("uploaded_at", { ascending: false });
 
+		// Obtener nombre del creador
+		let creador_nombre: string | null = null;
+		if (poliza.created_by) {
+			const { data: creador } = await supabase
+				.from("profiles")
+				.select("full_name")
+				.eq("id", poliza.created_by)
+				.single();
+			creador_nombre = creador?.full_name || null;
+		}
+
+		// Obtener nombre del validador
+		let validador_nombre: string | null = null;
+		if (poliza.validado_por) {
+			const { data: validador } = await supabase
+				.from("profiles")
+				.select("full_name")
+				.eq("id", poliza.validado_por)
+				.single();
+			validador_nombre = validador?.full_name || null;
+		}
+
+		// Obtener historial de ediciones (últimos 20 registros)
+		const { data: historialData } = await supabase
+			.from("polizas_historial_ediciones")
+			.select(`
+				id,
+				accion,
+				usuario_id,
+				campos_modificados,
+				descripcion,
+				timestamp,
+				profiles!polizas_historial_ediciones_usuario_id_fkey (full_name)
+			`)
+			.eq("poliza_id", polizaId)
+			.order("timestamp", { ascending: false })
+			.limit(20);
+
+		const historial = historialData?.map((h) => ({
+			id: h.id,
+			accion: h.accion,
+			usuario_nombre: (h.profiles as { full_name?: string } | null)?.full_name || null,
+			campos_modificados: h.campos_modificados,
+			descripcion: h.descripcion,
+			timestamp: h.timestamp,
+		})) || [];
+
 		const polizaDetalle: PolizaDetalle = {
 			id: poliza.id,
 			numero_poliza: poliza.numero_poliza,
@@ -324,9 +384,14 @@ export async function obtenerDetallePoliza(polizaId: string) {
 			regional_nombre: (poliza.regionales as { nombre?: string } | null)?.nombre || "-",
 			categoria_nombre: (poliza.categorias as { nombre?: string } | null)?.nombre || "-",
 			created_at: poliza.created_at,
+			creador_nombre,
+			validado_por: poliza.validado_por || null,
+			fecha_validacion: poliza.fecha_validacion || null,
+			validador_nombre,
 			pagos: pagos || [],
 			vehiculos: vehiculos.length > 0 ? (vehiculos as PolizaDetalle["vehiculos"]) : undefined,
 			documentos: documentos || [],
+			historial,
 		};
 
 		// Obtener rol del usuario actual

@@ -529,11 +529,84 @@ export default function PolizaDetallePage() {
 					{/* Información Adicional */}
 					<div className="bg-white rounded-lg shadow-sm border p-6">
 						<h2 className="text-lg font-semibold text-gray-900 mb-4">Información Adicional</h2>
-						<div className="space-y-3 text-sm">
+						<div className="space-y-4 text-sm">
+							{/* Fecha de creación */}
 							<div>
 								<label className="font-medium text-gray-600">Fecha de Creación</label>
 								<p className="text-gray-900">{formatDate(poliza.created_at)}</p>
+								{poliza.creador_nombre && (
+									<p className="text-gray-500 text-xs">por {poliza.creador_nombre}</p>
+								)}
 							</div>
+
+							{/* Fecha de validación */}
+							{poliza.fecha_validacion && (
+								<div>
+									<label className="font-medium text-gray-600">Fecha de Validación</label>
+									<p className="text-gray-900">{formatDate(poliza.fecha_validacion)}</p>
+									{poliza.validador_nombre && (
+										<p className="text-gray-500 text-xs">por {poliza.validador_nombre}</p>
+									)}
+								</div>
+							)}
+
+							{/* Historial de cambios - solo ediciones reales, no creación ni cambios de estado por validación */}
+							{(() => {
+								const edicionesRelevantes = poliza.historial?.filter((item) => {
+									// Excluir creación (ya se muestra arriba)
+									if (item.accion === "creacion") return false;
+									// Excluir ediciones que solo cambiaron estado (validación ya se muestra arriba)
+									if (
+										item.accion === "edicion" &&
+										item.campos_modificados?.length === 1 &&
+										item.campos_modificados[0] === "estado"
+									) {
+										return false;
+									}
+									return true;
+								}) || [];
+
+								if (edicionesRelevantes.length === 0) return null;
+
+								const formatCampos = (campos: string[] | null) => {
+									if (!campos || campos.length === 0) return null;
+									const labels: Record<string, string> = {
+										prima_total: "prima",
+										inicio_vigencia: "inicio vigencia",
+										fin_vigencia: "fin vigencia",
+										fecha_emision_compania: "fecha emisión",
+										modalidad_pago: "modalidad pago",
+										compania_aseguradora: "compañía",
+										numero_poliza: "número póliza",
+										responsable: "ejecutivo",
+										regional: "regional",
+										categoria: "categoría",
+										estado: "estado",
+										moneda: "moneda",
+										ramo: "ramo",
+									};
+									// Filtrar 'estado' de los campos mostrados si hay otros campos
+									const camposFiltrados = campos.filter((c) => c !== "estado" || campos.length === 1);
+									return camposFiltrados.map((c) => labels[c] || c).join(", ");
+								};
+
+								return (
+									<div className="pt-3 border-t">
+										<label className="font-medium text-gray-600 mb-2 block">Historial</label>
+										<div className="space-y-2 max-h-48 overflow-y-auto">
+											{edicionesRelevantes.map((item) => {
+												const camposTexto = formatCampos(item.campos_modificados);
+												return (
+													<p key={item.id} className="text-xs text-gray-600">
+														{formatDate(item.timestamp)} - {item.usuario_nombre || "Usuario"}{" "}
+														modificó{camposTexto && `: ${camposTexto}`}
+													</p>
+												);
+											})}
+										</div>
+									</div>
+								);
+							})()}
 						</div>
 					</div>
 				</div>
