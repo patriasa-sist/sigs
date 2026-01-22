@@ -53,7 +53,14 @@ export async function guardarPoliza(formState: PolizaFormState) {
 			return { success: false, error: "Modalidad de pago no definida" };
 		}
 
+		// Validar producto_id (obligatorio para nuevas pólizas)
+		if (!formState.datos_basicos.producto_id) {
+			return { success: false, error: "Producto es requerido" };
+		}
+
 		// 2. Insertar póliza principal
+		// Extraer valores de comisión del estado del pago
+		const pagoData = formState.modalidad_pago as { prima_neta?: number; comision?: number; comision_empresa?: number; comision_encargado?: number };
 		const { data: poliza, error: errorPoliza } = await supabase
 			.from("polizas")
 			.insert({
@@ -61,6 +68,7 @@ export async function guardarPoliza(formState: PolizaFormState) {
 				numero_poliza: formState.datos_basicos.numero_poliza,
 				compania_aseguradora_id: formState.datos_basicos.compania_aseguradora_id,
 				ramo: formState.datos_basicos.ramo,
+				producto_id: formState.datos_basicos.producto_id,
 				grupo_produccion: formState.datos_basicos.grupo_produccion,
 				inicio_vigencia: formState.datos_basicos.inicio_vigencia,
 				fin_vigencia: formState.datos_basicos.fin_vigencia,
@@ -71,6 +79,10 @@ export async function guardarPoliza(formState: PolizaFormState) {
 				modalidad_pago: formState.modalidad_pago.tipo,
 				prima_total: formState.modalidad_pago.prima_total,
 				moneda: formState.modalidad_pago.moneda,
+				prima_neta: pagoData.prima_neta || null,
+				comision: pagoData.comision_empresa || pagoData.comision || null,
+				comision_empresa: pagoData.comision_empresa || null,
+				comision_encargado: pagoData.comision_encargado || null,
 				estado: "pendiente",
 			})
 			.select()

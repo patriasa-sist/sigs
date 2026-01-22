@@ -24,6 +24,7 @@ import type {
 } from "@/types/poliza";
 import { validarFechasPago } from "@/utils/polizaValidation";
 import { Button } from "@/components/ui/button";
+import { createClient } from "@/utils/supabase/client";
 
 type Props = {
 	formState: PolizaFormState;
@@ -35,6 +36,7 @@ type Props = {
 export function Resumen({ formState, onAnterior, onEditarPaso, onGuardar }: Props) {
 	const [advertencias, setAdvertencias] = useState<AdvertenciaPoliza[]>([]);
 	const [guardando, setGuardando] = useState(false);
+	const [productoNombre, setProductoNombre] = useState<string | null>(null);
 
 	const generarAdvertencias = useCallback(() => {
 		const nuevasAdvertencias: AdvertenciaPoliza[] = [];
@@ -90,6 +92,33 @@ export function Resumen({ formState, onAnterior, onEditarPaso, onGuardar }: Prop
 	useEffect(() => {
 		generarAdvertencias();
 	}, [generarAdvertencias]);
+
+	// Cargar nombre del producto
+	useEffect(() => {
+		const cargarProducto = async () => {
+			if (!formState.datos_basicos?.producto_id) {
+				setProductoNombre(null);
+				return;
+			}
+
+			const supabase = createClient();
+			const { data, error } = await supabase
+				.from("productos_aseguradoras")
+				.select("nombre_producto, codigo_producto")
+				.eq("id", formState.datos_basicos.producto_id)
+				.single();
+
+			if (error || !data) {
+				console.error("Error cargando producto:", error);
+				setProductoNombre(null);
+				return;
+			}
+
+			setProductoNombre(`${data.nombre_producto} (${data.codigo_producto})`);
+		};
+
+		cargarProducto();
+	}, [formState.datos_basicos?.producto_id]);
 
 	const handleGuardar = async () => {
 		if (guardando) return;
@@ -235,6 +264,12 @@ export function Resumen({ formState, onAnterior, onEditarPaso, onGuardar }: Prop
 											<span className="font-medium text-gray-700">Ramo:</span>{" "}
 											{datos_basicos.ramo}
 										</div>
+										{productoNombre && (
+											<div className="col-span-2">
+												<span className="font-medium text-gray-700">Producto:</span>{" "}
+												<span className="text-blue-600">{productoNombre}</span>
+											</div>
+										)}
 										<div>
 											<span className="font-medium text-gray-700">Vigencia:</span>{" "}
 											{new Date(datos_basicos.inicio_vigencia).toLocaleDateString("es-BO")} -{" "}
@@ -531,6 +566,27 @@ export function Resumen({ formState, onAnterior, onEditarPaso, onGuardar }: Prop
 												{modalidad_pago.moneda}
 											</p>
 										)}
+										{/* Mostrar desglose de comisiones si están disponibles */}
+										{(() => {
+											const pago = modalidad_pago as { comision_empresa?: number; comision_encargado?: number; moneda: string };
+											if (!pago.comision_empresa) return null;
+											return (
+												<div className="mt-2 pt-2 border-t border-gray-200">
+													<p className="text-green-600">
+														<span className="font-medium">Comisión Empresa:</span>{" "}
+														{pago.comision_empresa.toLocaleString("es-BO")}{" "}
+														{pago.moneda}
+													</p>
+													{pago.comision_encargado && (
+														<p className="text-green-700">
+															<span className="font-medium">Comisión Encargado:</span>{" "}
+															{pago.comision_encargado.toLocaleString("es-BO")}{" "}
+															{pago.moneda}
+														</p>
+													)}
+												</div>
+											);
+										})()}
 									</div>
 								)}
 							</div>

@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { ChevronRight, ChevronLeft, CheckCircle2, DollarSign, CreditCard, Calendar, AlertCircle, Sparkles } from "lucide-react";
-import type { ModalidadPago as ModalidadPagoType, Moneda, CuotaCredito, PeriodoPago } from "@/types/poliza";
-import { validarModalidadPago, calcularPrimaNetaYComision, validarFechasDentroVigencia } from "@/utils/polizaValidation";
+import type { ModalidadPago as ModalidadPagoType, Moneda, CuotaCredito, PeriodoPago, ProductoAseguradora, CalculoComisionResult } from "@/types/poliza";
+import { validarModalidadPago, calcularPrimaNetaYComision, calcularComisionesConProducto, validarFechasDentroVigencia } from "@/utils/polizaValidation";
 import { POLIZA_RULES } from "@/utils/validationConstants";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,12 +16,14 @@ type Props = {
 	datos: ModalidadPagoType | null;
 	inicioVigencia?: string;
 	finVigencia?: string;
+	producto?: ProductoAseguradora | null; // Producto seleccionado para cálculos dinámicos
+	porcentajeComisionUsuario?: number; // Porcentaje de comisión del usuario encargado
 	onChange: (datos: ModalidadPagoType) => void;
 	onSiguiente: () => void;
 	onAnterior: () => void;
 };
 
-export function ModalidadPago({ datos, inicioVigencia, finVigencia, onChange, onSiguiente, onAnterior }: Props) {
+export function ModalidadPago({ datos, inicioVigencia, finVigencia, producto, porcentajeComisionUsuario = 0.5, onChange, onSiguiente, onAnterior }: Props) {
 	const [tipoPago, setTipoPago] = useState<"contado" | "credito">(datos?.tipo || "contado");
 
 	// Estados para pago contado
@@ -58,9 +60,26 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, onChange, on
 	const [errores, setErrores] = useState<Record<string, string>>({});
 	const [advertencias, setAdvertencias] = useState<Record<string, string>>({});
 
-	// Calcular prima neta y comisión
+	// Calcular prima neta y comisiones
 	const montoPago = tipoPago === "contado" ? cuotaUnica : primaTotal;
-	const { prima_neta, comision } = calcularPrimaNetaYComision(montoPago);
+
+	// Usar cálculos basados en producto si está disponible, de lo contrario usar legacy
+	const calculos: CalculoComisionResult | null = producto && montoPago > 0
+		? calcularComisionesConProducto({
+				prima_total: montoPago,
+				modalidad_pago: tipoPago,
+				producto,
+				porcentaje_comision_usuario: porcentajeComisionUsuario,
+		  })
+		: null;
+
+	// Valores legacy para compatibilidad
+	const { prima_neta: prima_neta_legacy, comision: comision_legacy } = calcularPrimaNetaYComision(montoPago);
+
+	// Usar valores del producto si está disponible, de lo contrario usar legacy
+	const prima_neta = calculos?.prima_neta ?? prima_neta_legacy;
+	const comision = calculos?.comision_empresa ?? comision_legacy;
+	const comision_encargado = calculos?.comision_encargado ?? 0;
 
 	// Sincronizar prima_total con cuota_unica en modo contado
 	useEffect(() => {
@@ -191,7 +210,7 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, onChange, on
 	};
 
 	const handleContinuar = () => {
-		let datosPago: ModalidadPagoType;
+		let datosPago: ModalidadPagoType & { comision_empresa?: number; comision_encargado?: number };
 
 		if (tipoPago === "contado") {
 			datosPago = {
@@ -218,6 +237,12 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, onChange, on
 				prima_neta,
 				comision,
 			};
+		}
+
+		// Agregar campos de comisión del producto si está disponible
+		if (calculos) {
+			datosPago.comision_empresa = calculos.comision_empresa;
+			datosPago.comision_encargado = calculos.comision_encargado;
 		}
 
 		// Validar campos requeridos
@@ -372,8 +397,15 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, onChange, on
 					{/* Cálculos */}
 					{cuotaUnica > 0 && (
 						<div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-							<h4 className="text-sm font-semibold text-blue-900 mb-3">Cálculos Automáticos</h4>
-							<div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+							<h4 className="text-sm font-semibold text-blue-900 mb-3">
+								Cálculos Automáticos
+								{producto && (
+									<span className="text-xs font-normal text-blue-600 ml-2">
+										(Producto: {producto.nombre_producto})
+									</span>
+								)}
+							</h4>
+							<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
 								<div>
 									<p className="text-blue-700 font-medium">Prima Total</p>
 									<p className="text-blue-900 text-lg font-bold">
@@ -381,18 +413,50 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, onChange, on
 									</p>
 								</div>
 								<div>
-									<p className="text-blue-700 font-medium">Prima Neta (87%)</p>
+									<p className="text-blue-700 font-medium">
+										Prima Neta
+										{calculos && (
+											<span className="text-xs font-normal text-blue-500 ml-1">
+												(Factor: {calculos.factor_usado}%)
+											</span>
+										)}
+									</p>
 									<p className="text-blue-900 text-lg font-bold">
 										{prima_neta.toLocaleString("es-BO", { minimumFractionDigits: 2 })} {moneda}
 									</p>
 								</div>
 								<div>
-									<p className="text-blue-700 font-medium">Comisión (2%)</p>
+									<p className="text-blue-700 font-medium">
+										Comisión Empresa
+										{calculos && (
+											<span className="text-xs font-normal text-blue-500 ml-1">
+												({(calculos.porcentaje_comision * 100).toFixed(1)}%)
+											</span>
+										)}
+									</p>
 									<p className="text-blue-900 text-lg font-bold">
 										{comision.toLocaleString("es-BO", { minimumFractionDigits: 2 })} {moneda}
 									</p>
 								</div>
+								{calculos && comision_encargado > 0 && (
+									<div>
+										<p className="text-blue-700 font-medium">
+											Comisión Encargado
+											<span className="text-xs font-normal text-blue-500 ml-1">
+												({(porcentajeComisionUsuario * 100).toFixed(0)}%)
+											</span>
+										</p>
+										<p className="text-green-700 text-lg font-bold">
+											{comision_encargado.toLocaleString("es-BO", { minimumFractionDigits: 2 })} {moneda}
+										</p>
+									</div>
+								)}
 							</div>
+							{!producto && (
+								<p className="text-xs text-yellow-600 mt-2">
+									⚠️ Cálculos usando fórmula legacy (87% / 2%). Seleccione un producto para cálculos dinámicos.
+								</p>
+							)}
 						</div>
 					)}
 				</TabsContent>
@@ -577,20 +641,54 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, onChange, on
 					{/* Cálculos */}
 					{primaTotal > 0 && (
 						<div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-							<h4 className="text-sm font-semibold text-blue-900 mb-3">Cálculos Automáticos</h4>
-							<div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+							<h4 className="text-sm font-semibold text-blue-900 mb-3">
+								Cálculos Automáticos
+								{producto && (
+									<span className="text-xs font-normal text-blue-600 ml-2">
+										(Producto: {producto.nombre_producto})
+									</span>
+								)}
+							</h4>
+							<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
 								<div>
-									<p className="text-blue-700 font-medium">Prima Neta (87%)</p>
+									<p className="text-blue-700 font-medium">
+										Prima Neta
+										{calculos && (
+											<span className="text-xs font-normal text-blue-500 ml-1">
+												(Factor: {calculos.factor_usado}%)
+											</span>
+										)}
+									</p>
 									<p className="text-blue-900 text-lg font-bold">
 										{prima_neta.toLocaleString("es-BO", { minimumFractionDigits: 2 })} {moneda}
 									</p>
 								</div>
 								<div>
-									<p className="text-blue-700 font-medium">Comisión (2%)</p>
+									<p className="text-blue-700 font-medium">
+										Comisión Empresa
+										{calculos && (
+											<span className="text-xs font-normal text-blue-500 ml-1">
+												({(calculos.porcentaje_comision * 100).toFixed(1)}%)
+											</span>
+										)}
+									</p>
 									<p className="text-blue-900 text-lg font-bold">
 										{comision.toLocaleString("es-BO", { minimumFractionDigits: 2 })} {moneda}
 									</p>
 								</div>
+								{calculos && comision_encargado > 0 && (
+									<div>
+										<p className="text-blue-700 font-medium">
+											Comisión Encargado
+											<span className="text-xs font-normal text-blue-500 ml-1">
+												({(porcentajeComisionUsuario * 100).toFixed(0)}%)
+											</span>
+										</p>
+										<p className="text-green-700 text-lg font-bold">
+											{comision_encargado.toLocaleString("es-BO", { minimumFractionDigits: 2 })} {moneda}
+										</p>
+									</div>
+								)}
 								<div>
 									<p className="text-blue-700 font-medium">Resto a Pagar</p>
 									<p className="text-blue-900 text-lg font-bold">
@@ -598,6 +696,11 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, onChange, on
 									</p>
 								</div>
 							</div>
+							{!producto && (
+								<p className="text-xs text-yellow-600 mt-2">
+									⚠️ Cálculos usando fórmula legacy (87% / 2%). Seleccione un producto para cálculos dinámicos.
+								</p>
+							)}
 						</div>
 					)}
 

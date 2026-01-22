@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { FileText, X } from "lucide-react";
-import type { PolizaFormState, PasoFormulario } from "@/types/poliza";
+import type { PolizaFormState, PasoFormulario, ProductoAseguradora } from "@/types/poliza";
 import { Button } from "@/components/ui/button";
 import { guardarPoliza } from "@/app/polizas/nueva/actions";
 import { createClient } from "@/utils/supabase/client";
@@ -34,6 +34,10 @@ export function NuevaPolizaForm() {
 	// Catálogos
 	const [regionales, setRegionales] = useState<Array<{ id: string; nombre: string }>>([]);
 
+	// Estado para producto y comisión de usuario
+	const [productoSeleccionado, setProductoSeleccionado] = useState<ProductoAseguradora | null>(null);
+	const [porcentajeComisionUsuario, setPorcentajeComisionUsuario] = useState<number>(0.5);
+
 	// Cargar regionales al montar el componente
 	useEffect(() => {
 		const cargarRegionales = async () => {
@@ -51,6 +55,60 @@ export function NuevaPolizaForm() {
 
 		cargarRegionales();
 	}, []);
+
+	// Cargar producto cuando cambia producto_id en datos_basicos
+	useEffect(() => {
+		const cargarProducto = async () => {
+			if (!formState.datos_basicos?.producto_id) {
+				setProductoSeleccionado(null);
+				return;
+			}
+
+			const supabase = createClient();
+			const { data, error } = await supabase
+				.from("productos_aseguradoras")
+				.select("*")
+				.eq("id", formState.datos_basicos.producto_id)
+				.single();
+
+			if (error) {
+				console.error("Error cargando producto:", error);
+				setProductoSeleccionado(null);
+				return;
+			}
+
+			setProductoSeleccionado(data);
+		};
+
+		cargarProducto();
+	}, [formState.datos_basicos?.producto_id]);
+
+	// Cargar porcentaje de comisión del responsable
+	useEffect(() => {
+		const cargarPorcentajeUsuario = async () => {
+			if (!formState.datos_basicos?.responsable_id) {
+				setPorcentajeComisionUsuario(0.5); // Default
+				return;
+			}
+
+			const supabase = createClient();
+			const { data, error } = await supabase
+				.from("profiles")
+				.select("porcentaje_comision")
+				.eq("id", formState.datos_basicos.responsable_id)
+				.single();
+
+			if (error || !data) {
+				console.error("Error cargando porcentaje de comisión:", error);
+				setPorcentajeComisionUsuario(0.5); // Default
+				return;
+			}
+
+			setPorcentajeComisionUsuario(data.porcentaje_comision || 0.5);
+		};
+
+		cargarPorcentajeUsuario();
+	}, [formState.datos_basicos?.responsable_id]);
 
 	// Navegación
 	const handleCancelar = () => {
@@ -160,6 +218,8 @@ export function NuevaPolizaForm() {
 					datos={formState.modalidad_pago}
 					inicioVigencia={formState.datos_basicos?.inicio_vigencia}
 					finVigencia={formState.datos_basicos?.fin_vigencia}
+					producto={productoSeleccionado}
+					porcentajeComisionUsuario={porcentajeComisionUsuario}
 					onChange={(datos) => {
 						setFormState((prev) => ({
 							...prev,

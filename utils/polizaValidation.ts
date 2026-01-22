@@ -7,8 +7,10 @@ import type {
 	ValidationError,
 	ValidationResult,
 	DocumentoPoliza,
+	CalculoComisionParams,
+	CalculoComisionResult,
 } from "@/types/poliza";
-import { POLIZA_RULES, VEHICULO_RULES, PAGO_RULES, VALIDATION_MESSAGES } from "./validationConstants";
+import { POLIZA_RULES, VEHICULO_RULES, PAGO_RULES, PRODUCTO_RULES, VALIDATION_MESSAGES } from "./validationConstants";
 
 /**
  * Valida los datos básicos de una póliza (Paso 2)
@@ -97,6 +99,14 @@ export function validarDatosBasicos(datos: Partial<DatosBasicosPoliza>): Validat
 		errores.push({
 			campo: "moneda",
 			mensaje: `Moneda debe ser: ${POLIZA_RULES.MONEDAS.join(", ")}`,
+		});
+	}
+
+	// Validar producto_id (obligatorio)
+	if (!datos.producto_id) {
+		errores.push({
+			campo: "producto_id",
+			mensaje: "Debe seleccionar un producto para esta póliza",
 		});
 	}
 
@@ -428,5 +438,51 @@ export function validarDocumentosMinimos(documentos: DocumentoPoliza[]): Validat
 	return {
 		valido: true, // No es error crítico
 		errores,
+	};
+}
+
+/**
+ * Calcula comisiones usando el producto de aseguradora (sistema nuevo)
+ *
+ * Fórmulas:
+ * - Prima Neta = Prima Total / (factor/100 + 1)
+ * - Comisión Empresa = Prima Neta * porcentaje_comision
+ * - Comisión Encargado = Comisión Empresa * porcentaje_usuario
+ *
+ * @param params - Parámetros de cálculo incluyendo el producto obligatorio
+ * @returns Resultado del cálculo con prima_neta, comision_empresa y comision_encargado
+ * @throws Error si el producto no está definido
+ */
+export function calcularComisionesConProducto(params: CalculoComisionParams): CalculoComisionResult {
+	const {
+		prima_total,
+		modalidad_pago,
+		producto,
+		porcentaje_comision_usuario = PRODUCTO_RULES.PORCENTAJE_COMISION_USUARIO_DEFAULT,
+	} = params;
+
+	// Producto es obligatorio - error si no existe
+	if (!producto) {
+		throw new Error("Producto es requerido para calcular comisiones");
+	}
+
+	// Seleccionar factor según modalidad de pago
+	const factor = modalidad_pago === "contado" ? producto.factor_contado : producto.factor_credito;
+
+	// Calcular prima neta: prima_total / (factor/100 + 1)
+	const prima_neta = prima_total / (factor / 100 + 1);
+
+	// Calcular comisión empresa: prima_neta * porcentaje_comision
+	const comision_empresa = prima_neta * producto.porcentaje_comision;
+
+	// Calcular comisión encargado: comision_empresa * porcentaje_usuario
+	const comision_encargado = comision_empresa * porcentaje_comision_usuario;
+
+	return {
+		prima_neta: Math.round(prima_neta * 100) / 100,
+		comision_empresa: Math.round(comision_empresa * 100) / 100,
+		comision_encargado: Math.round(comision_encargado * 100) / 100,
+		factor_usado: factor,
+		porcentaje_comision: producto.porcentaje_comision,
 	};
 }

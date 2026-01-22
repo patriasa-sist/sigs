@@ -42,6 +42,39 @@ export type MarcaVehiculo = {
 };
 
 // ============================================
+// PRODUCTOS DE ASEGURADORAS
+// ============================================
+
+export type ProductoAseguradora = {
+	id: string;
+	compania_aseguradora_id: string;
+	tipo_seguro_id: number;
+	codigo_producto: string;
+	nombre_producto: string;
+	factor_contado: number;
+	factor_credito: number;
+	porcentaje_comision: number;
+	activo: boolean;
+	created_at?: string;
+	updated_at?: string;
+};
+
+export type CalculoComisionParams = {
+	prima_total: number;
+	modalidad_pago: "contado" | "credito";
+	producto: ProductoAseguradora;
+	porcentaje_comision_usuario?: number;
+};
+
+export type CalculoComisionResult = {
+	prima_neta: number;
+	comision_empresa: number;
+	comision_encargado: number;
+	factor_usado: number;
+	porcentaje_comision: number;
+};
+
+// ============================================
 // PASO 1: BÚSQUEDA Y SELECCIÓN DE ASEGURADO
 // ============================================
 
@@ -96,6 +129,7 @@ export type DatosBasicosPoliza = {
 	numero_poliza: string;
 	compania_aseguradora_id: string;
 	ramo: string; // Nombre del ramo de tipos_seguros
+	producto_id: string; // ID del producto seleccionado (OBLIGATORIO)
 	inicio_vigencia: string; // ISO date string
 	fin_vigencia: string;
 	fecha_emision_compania: string;
@@ -433,6 +467,7 @@ export type PolizaDB = {
 	numero_poliza: string;
 	compania_aseguradora_id: string;
 	ramo: string;
+	producto_id?: string; // Referencia al producto de la aseguradora
 	inicio_vigencia: string;
 	fin_vigencia: string;
 	fecha_emision_compania: string;
@@ -442,8 +477,10 @@ export type PolizaDB = {
 	modalidad_pago: "contado" | "credito";
 	prima_total: number;
 	moneda: Moneda;
-	prima_neta: number; // Generado automáticamente
-	comision: number; // Generado automáticamente
+	prima_neta: number;
+	comision: number;
+	comision_empresa?: number; // Comisión calculada para la empresa
+	comision_encargado?: number; // Comisión calculada para el encargado
 	estado: "pendiente" | "activa" | "vencida" | "cancelada" | "renovada";
 	validado_por?: string; // Usuario gerente que validó la póliza
 	fecha_validacion?: string; // Fecha de validación gerencial

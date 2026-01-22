@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { ChevronRight, ChevronLeft, CheckCircle2 } from "lucide-react";
-import type { DatosBasicosPoliza, CompaniaAseguradora, Regional, Categoria, GrupoProduccion, Moneda } from "@/types/poliza";
+import type { DatosBasicosPoliza, CompaniaAseguradora, Regional, Categoria, GrupoProduccion, Moneda, ProductoAseguradora } from "@/types/poliza";
 import { validarDatosBasicos } from "@/utils/polizaValidation";
 import { POLIZA_RULES } from "@/utils/validationConstants";
 import { Button } from "@/components/ui/button";
@@ -39,6 +39,7 @@ export function DatosBasicos({ datos, onChange, onSiguiente, onAnterior }: Props
 			numero_poliza: "",
 			compania_aseguradora_id: "",
 			ramo: "",
+			producto_id: "",
 			inicio_vigencia: "",
 			fin_vigencia: "",
 			fecha_emision_compania: "",
@@ -56,9 +57,12 @@ export function DatosBasicos({ datos, onChange, onSiguiente, onAnterior }: Props
 	const [categorias, setCategorias] = useState<Categoria[]>([]);
 	const [usuarios, setUsuarios] = useState<Usuario[]>([]);
 	const [tiposSeguros, setTiposSeguros] = useState<TipoSeguro[]>([]);
+	const [productos, setProductos] = useState<ProductoAseguradora[]>([]);
 
 	// Estados
 	const [cargandoCatalogos, setCargandoCatalogos] = useState(true);
+	const [cargandoProductos, setCargandoProductos] = useState(false);
+	const [errorProductos, setErrorProductos] = useState<string | null>(null);
 	const [errores, setErrores] = useState<Record<string, string>>({});
 
 	// Cargar catálogos
@@ -132,6 +136,84 @@ export function DatosBasicos({ datos, onChange, onSiguiente, onAnterior }: Props
 		cargarCatalogos();
 	}, [cargarCatalogos]);
 
+	// Cargar productos cuando cambian compañía y ramo
+	useEffect(() => {
+		const cargarProductos = async () => {
+			// Limpiar productos y errores previos
+			setProductos([]);
+			setErrorProductos(null);
+
+			// Solo cargar si hay compañía y ramo seleccionados
+			if (!formData.compania_aseguradora_id || !formData.ramo) {
+				// Si no hay selección, limpiar producto_id
+				if (formData.producto_id) {
+					setFormData((prev) => ({ ...prev, producto_id: "" }));
+				}
+				return;
+			}
+
+			setCargandoProductos(true);
+
+			try {
+				const supabase = createClient();
+
+				// Primero obtener el tipo_seguro_id basado en el nombre del ramo
+				const { data: tipoSeguro, error: tipoError } = await supabase
+					.from("tipos_seguros")
+					.select("id")
+					.eq("nombre", formData.ramo)
+					.single();
+
+				if (tipoError || !tipoSeguro) {
+					console.error("Error obteniendo tipo de seguro:", tipoError);
+					setErrorProductos("No se pudo determinar el tipo de seguro");
+					return;
+				}
+
+				// Cargar productos filtrados por compañía + tipo de seguro
+				const { data: productosData, error: productosError } = await supabase
+					.from("productos_aseguradoras")
+					.select("*")
+					.eq("compania_aseguradora_id", formData.compania_aseguradora_id)
+					.eq("tipo_seguro_id", tipoSeguro.id)
+					.eq("activo", true)
+					.order("nombre_producto");
+
+				if (productosError) {
+					console.error("Error cargando productos:", productosError);
+					setErrorProductos("Error al cargar productos");
+					return;
+				}
+
+				setProductos(productosData || []);
+
+				// Si no hay productos disponibles, mostrar error
+				if (!productosData || productosData.length === 0) {
+					setErrorProductos(
+						"No hay productos configurados para esta combinación de compañía y ramo. Contacte al administrador."
+					);
+				}
+
+				// Limpiar producto_id si el producto actual no está en la nueva lista
+				if (
+					formData.producto_id &&
+					productosData &&
+					!productosData.find((p) => p.id === formData.producto_id)
+				) {
+					setFormData((prev) => ({ ...prev, producto_id: "" }));
+				}
+			} catch (error) {
+				console.error("Error en cargarProductos:", error);
+				setErrorProductos("Error inesperado al cargar productos");
+			} finally {
+				setCargandoProductos(false);
+			}
+		};
+
+		cargarProductos();
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [formData.compania_aseguradora_id, formData.ramo]); // Intentionally not including formData.producto_id to avoid infinite loops
+
 	// Manejar cambios en el formulario
 	const handleChange = (campo: keyof DatosBasicosPoliza, valor: string | GrupoProduccion | Moneda | undefined) => {
 		const nuevosDatos = {
@@ -187,6 +269,7 @@ export function DatosBasicos({ datos, onChange, onSiguiente, onAnterior }: Props
 		formData.numero_poliza &&
 		formData.compania_aseguradora_id &&
 		formData.ramo &&
+		formData.producto_id &&
 		formData.inicio_vigencia &&
 		formData.fin_vigencia &&
 		formData.fecha_emision_compania &&
@@ -284,6 +367,66 @@ export function DatosBasicos({ datos, onChange, onSiguiente, onAnterior }: Props
 						</SelectContent>
 					</Select>
 					{errores.ramo && <p className="text-sm text-red-600">{errores.ramo}</p>}
+				</div>
+
+				{/* Producto de Aseguradora */}
+				<div className="space-y-2">
+					<Label htmlFor="producto_id">
+						Producto <span className="text-red-500">*</span>
+					</Label>
+					<Select
+						value={formData.producto_id}
+						onValueChange={(value) => handleChange("producto_id", value)}
+						disabled={
+							!formData.compania_aseguradora_id ||
+							!formData.ramo ||
+							cargandoProductos ||
+							productos.length === 0
+						}
+					>
+						<SelectTrigger className={errores.producto_id || errorProductos ? "border-red-500" : ""}>
+							<SelectValue
+								placeholder={
+									cargandoProductos
+										? "Cargando productos..."
+										: !formData.compania_aseguradora_id || !formData.ramo
+										? "Seleccione compañía y ramo primero"
+										: productos.length === 0
+										? "No hay productos disponibles"
+										: "Seleccione un producto"
+								}
+							/>
+						</SelectTrigger>
+						<SelectContent>
+							{productos.map((producto) => (
+								<SelectItem key={producto.id} value={producto.id}>
+									<span className="font-mono text-xs text-gray-500">({producto.codigo_producto})</span>{" "}
+									{producto.nombre_producto}
+								</SelectItem>
+							))}
+						</SelectContent>
+					</Select>
+					{errores.producto_id && <p className="text-sm text-red-600">{errores.producto_id}</p>}
+					{errorProductos && !errores.producto_id && (
+						<p className="text-sm text-red-600">{errorProductos}</p>
+					)}
+					{formData.producto_id && productos.length > 0 && (
+						<div className="text-xs text-blue-600 mt-1">
+							{(() => {
+								const producto = productos.find((p) => p.id === formData.producto_id);
+								if (producto) {
+									return (
+										<span>
+											Factor contado: {producto.factor_contado}% | Factor crédito:{" "}
+											{producto.factor_credito}% | Comisión:{" "}
+											{(producto.porcentaje_comision * 100).toFixed(1)}%
+										</span>
+									);
+								}
+								return null;
+							})()}
+						</div>
+					)}
 				</div>
 
 				{/* Ejecutivo comercial */}

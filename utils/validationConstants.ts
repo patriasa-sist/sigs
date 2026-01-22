@@ -62,12 +62,29 @@ export const POLIZA_RULES = {
  * Reglas de validación para pagos
  */
 export const PAGO_RULES = {
-	// Cálculos automáticos
+	// Cálculos automáticos (LEGACY - usar PRODUCTO_RULES para nuevas pólizas)
 	PORCENTAJE_PRIMA_NETA: 0.87, // 87% de la prima total
 	PORCENTAJE_COMISION: 0.02, // 2% de la prima neta
 
 	// Límites
 	MONTO_MIN: 0,
+} as const;
+
+/**
+ * Reglas de validación para productos de aseguradoras
+ * Valores por defecto cuando se crea un nuevo producto
+ */
+export const PRODUCTO_RULES = {
+	// Factores por defecto para cálculo de prima neta
+	// Fórmula: prima_neta = prima_total / (factor/100 + 1)
+	FACTOR_CONTADO_DEFAULT: 35,
+	FACTOR_CREDITO_DEFAULT: 40,
+
+	// Porcentaje de comisión por defecto (15%)
+	PORCENTAJE_COMISION_DEFAULT: 0.15,
+
+	// Porcentaje de comisión usuario por defecto (50%)
+	PORCENTAJE_COMISION_USUARIO_DEFAULT: 0.5,
 } as const;
 
 /**
