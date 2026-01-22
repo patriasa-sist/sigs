@@ -31,6 +31,7 @@ import { checkEditPermission } from "@/app/clientes/permisos/actions";
 import { updateNaturalClient, updateJuridicClient, updateUnipersonalClient } from "@/app/clientes/editar/actions";
 import { ClientPermissionsPanel } from "./ClientPermissionsPanel";
 import { ClienteDocumentUploadEdit } from "./ClienteDocumentUploadEdit";
+import { ClientAuditTrailPanel } from "./ClientAuditTrailPanel";
 import type { PermissionCheckResult } from "@/types/clientPermission";
 import { CIVIL_STATUS, DOCUMENT_TYPES, GENDER_OPTIONS, COMPANY_TYPES } from "@/types/clientForm";
 
@@ -387,6 +388,12 @@ export function ClientDetailModal({ clientId, onClose }: Props) {
 									Permisos
 								</TabsTrigger>
 							)}
+							{permission?.isAdmin && (
+								<TabsTrigger value="trazabilidad" className="flex-1">
+									<FileText className="h-4 w-4 mr-1" />
+									Trazabilidad
+								</TabsTrigger>
+							)}
 						</TabsList>
 
 						{/* GENERAL TAB */}
@@ -480,6 +487,13 @@ export function ClientDetailModal({ clientId, onClose }: Props) {
 						{permission?.isAdmin && (
 							<TabsContent value="permisos" className="space-y-6">
 								<ClientPermissionsPanel clientId={clientId} clientName={getClientName()} />
+							</TabsContent>
+						)}
+
+						{/* TRAZABILIDAD TAB (Admin only) */}
+						{permission?.isAdmin && (
+							<TabsContent value="trazabilidad" className="space-y-6">
+								<ClientAuditTrailPanel clientId={clientId} />
 							</TabsContent>
 						)}
 					</Tabs>

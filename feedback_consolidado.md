@@ -323,10 +323,10 @@ polizas:
 
 -   que exista una forma de marcar si la póliza a registrar es nuevo o renovación, pedir esa confirmación obligatoria al principio del formulario
 -   que no hayan bloqueos en la fecha de emisión de la póliza
--   la visualizacion de resumen de datos esta atrasada por 1 dia, Tambien al guardar, 1-12-25 paso a ser 30-11-25
--   se pueden seleccionar beneficiarios para las polizas de salud, un beneficiario es como un cliente pero con datos minimos: nombre, carnet, fecha de nacimiento y género
+    ✅la visualizacion de resumen de datos esta atrasada por 1 dia, Tambien al guardar, 1-12-25 paso a ser 30-11-25
+    ✅se pueden seleccionar beneficiarios para las polizas de salud, un beneficiario es como un cliente pero con datos minimos: nombre, carnet, fecha de nacimiento y género
 -   que se quite la opcion de contratante del selector de rol en salud
--   que se agrege la opcion de rol en la creacion de asegurados
+    ✅que se agrege la opcion de rol en la creacion de asegurados
 -   rol del asegurado es obligatorio
 
 validacion:
@@ -358,3 +358,14 @@ SISTEMA DE EDICION:
    -la póliza debe dejar de figurar en la lista de pólizas
 
 ---
+
+crea la tabla de trazabilidad de historial de ediciones de clientes
+
+vamos a mejorar el modulo de polizas al crear una poliza nueva actualmente solo se selecciona el ramo, pero ahora se debe seleccionar obligatoriamente el producto porque el producto trae consigo la comision que recibe patria y el factor de comision que recibe el encargado de ese cliente, por lo que quiero crear una tabla en la db que contenga un uuid, cod_aseguradora FK, cod_ramo FK, cod_producto int, nombre_producto varchar, porcentaje_comision int, factor_contado float y factor_credito float. Notaras que si la poliza se paga al contado tiene un factor y si es al credito otro.
+Una vez seleccionada la compañia y el ramo quiero que se habilite la seleccion del producto de la lista de productos disponibles para ese ramo y esa compañia en especifico, y ya que lo hemos seleccionado al final cuando se está creando el plan de pago se podrá calcular la comsión real que recibe la empresa y el usuario y no como ahora que es un valor fijo inventado de comsión.
+
+vamos a mejorar el modulo de polizas creando el mismo modo de edicion para administrador y otorgar permisos para los demas usuarios comerciales, el boton de edicion debe estar dentro de la vista a detalle de la poliza, no olvidar tambien que estas modificaciones deben ser registradas en la tabla de trazabilidad y mostradas en el detalle de la poliza una vez guardada (ya creamos esa seccion anteriormente)
+
+vamos a mejorar el validador de polizas porque ahora necesitamos que el boton de rechazar contenga el motivo del rechazo de la póliza y active automaticamente un permiso de 1 dia para modificar los datos de la poliza
+
+vamos a mejorar el modulo de siniestros ahora permitiendo registrar un siniestro anónimo (sin póliza asociada) para luego poder asociarle una póliza en el futuro. {{{{debatible con Pablo si es necesario}}}}
