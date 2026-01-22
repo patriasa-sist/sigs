@@ -30,6 +30,7 @@ import type { NaturalClient, JuridicClient, UnipersonalClient } from "@/types/da
 import { checkEditPermission } from "@/app/clientes/permisos/actions";
 import { updateNaturalClient, updateJuridicClient, updateUnipersonalClient } from "@/app/clientes/editar/actions";
 import { ClientPermissionsPanel } from "./ClientPermissionsPanel";
+import { ClienteDocumentUploadEdit } from "./ClienteDocumentUploadEdit";
 import type { PermissionCheckResult } from "@/types/clientPermission";
 import { CIVIL_STATUS, DOCUMENT_TYPES, GENDER_OPTIONS, COMPANY_TYPES } from "@/types/clientForm";
 
@@ -459,11 +460,20 @@ export function ClientDetailModal({ clientId, onClose }: Props) {
 
 						{/* DOCUMENTOS TAB */}
 						<TabsContent value="documentos" className="space-y-6">
-							<DocumentsList
-								documents={client.documents || []}
-								documentTypes={documentTypes}
-								onDownload={handleDownloadDocument}
-							/>
+							{isEditMode ? (
+								<ClienteDocumentUploadEdit
+									clientId={clientId}
+									clientType={client.client_type}
+									isAdmin={permission?.isAdmin}
+									onDocumentChange={loadClientDetails}
+								/>
+							) : (
+								<DocumentsList
+									documents={client.documents || []}
+									documentTypes={documentTypes}
+									onDownload={handleDownloadDocument}
+								/>
+							)}
 						</TabsContent>
 
 						{/* PERMISOS TAB (Admin only) */}

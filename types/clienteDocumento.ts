@@ -116,11 +116,12 @@ export type ClienteDocumentoFormState = {
 // ================================================
 
 /**
- * Document estado (soft delete)
+ * Document estado (soft delete + versioning)
  */
 export const ESTADO_DOCUMENTO = {
 	activo: "activo",
 	descartado: "descartado",
+	reemplazado: "reemplazado",
 } as const;
 
 export type EstadoDocumento = (typeof ESTADO_DOCUMENTO)[keyof typeof ESTADO_DOCUMENTO];
@@ -147,12 +148,16 @@ export const clienteDocumentoSchema = z.object({
 	tamano_bytes: z.number(),
 	storage_path: z.string(),
 	storage_bucket: z.string(),
-	estado: z.enum(["activo", "descartado"]),
+	estado: z.enum(["activo", "descartado", "reemplazado"]),
 	subido_por: z.string().uuid().nullable(),
 	fecha_subida: z.string(), // ISO timestamp
 	descartado_por: z.string().uuid().nullable(),
 	fecha_descarte: z.string().nullable(),
 	descripcion: z.string().nullable(),
+	// Versioning fields
+	version: z.number().default(1),
+	replaced_by: z.string().uuid().nullable(),
+	replaced_at: z.string().nullable(),
 	created_at: z.string(),
 	updated_at: z.string(),
 });
