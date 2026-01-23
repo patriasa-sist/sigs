@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { FileText, X } from "lucide-react";
+import { toast } from "sonner";
 import type { PolizaFormState, PasoFormulario, ProductoAseguradora } from "@/types/poliza";
 import { Button } from "@/components/ui/button";
 import { guardarPoliza } from "@/app/polizas/nueva/actions";
@@ -164,7 +165,11 @@ export function NuevaPolizaForm({ mode = "create", polizaId, initialData }: Nuev
 		}));
 	};
 
+	// Estado de carga para el guardado
+	const [guardando, setGuardando] = useState(false);
+
 	const handleGuardar = async () => {
+		setGuardando(true);
 		try {
 			let resultado;
 
@@ -172,24 +177,36 @@ export function NuevaPolizaForm({ mode = "create", polizaId, initialData }: Nuev
 				// Modo edición - usar actualizarPoliza
 				resultado = await actualizarPoliza(polizaId, formState);
 				if (resultado.success) {
-					alert("Póliza actualizada exitosamente!");
+					toast.success("Póliza actualizada exitosamente", {
+						description: "Los cambios han sido guardados correctamente."
+					});
 					router.push(`/polizas/${polizaId}`);
 				} else {
-					alert(`Error al actualizar la póliza: ${resultado.error}`);
+					toast.error("Error al actualizar la póliza", {
+						description: resultado.error
+					});
 				}
 			} else {
 				// Modo creación - usar guardarPoliza
 				resultado = await guardarPoliza(formState);
 				if (resultado.success) {
-					alert("Póliza guardada exitosamente!");
+					toast.success("Póliza guardada exitosamente", {
+						description: "La póliza ha sido registrada correctamente."
+					});
 					router.push("/polizas");
 				} else {
-					alert(`Error al guardar la póliza: ${resultado.error}`);
+					toast.error("Error al guardar la póliza", {
+						description: resultado.error
+					});
 				}
 			}
 		} catch (error) {
 			console.error("Error guardando póliza:", error);
-			alert("Error al guardar la póliza. Por favor intente nuevamente.");
+			toast.error("Error al guardar la póliza", {
+				description: "Por favor intente nuevamente."
+			});
+		} finally {
+			setGuardando(false);
 		}
 	};
 
@@ -285,6 +302,7 @@ export function NuevaPolizaForm({ mode = "create", polizaId, initialData }: Nuev
 					onAnterior={handlePasoAnterior}
 					onEditarPaso={handleActualizarPaso}
 					onGuardar={handleGuardar}
+					guardando={guardando}
 				/>
 			)}
 			</div>

@@ -368,7 +368,7 @@ export type DatosEspecificosPoliza =
 export type Moneda = "Bs" | "USD" | "USDT" | "UFV";
 export type PeriodoPago = "mensual" | "trimestral" | "semestral";
 
-export type EstadoCuota = "pendiente" | "pagada" | "vencida";
+export type EstadoCuota = "pendiente" | "pagado" | "vencida";
 
 export type CuotaCredito = {
 	id?: string; // ID en BD (para cuotas existentes en edición)

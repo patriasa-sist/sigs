@@ -31,11 +31,11 @@ type Props = {
 	onAnterior: () => void;
 	onEditarPaso: (paso: PasoFormulario) => void;
 	onGuardar: () => Promise<void>;
+	guardando?: boolean; // Estado de carga desde el padre
 };
 
-export function Resumen({ formState, onAnterior, onEditarPaso, onGuardar }: Props) {
+export function Resumen({ formState, onAnterior, onEditarPaso, onGuardar, guardando = false }: Props) {
 	const [advertencias, setAdvertencias] = useState<AdvertenciaPoliza[]>([]);
-	const [guardando, setGuardando] = useState(false);
 	const [productoNombre, setProductoNombre] = useState<string | null>(null);
 
 	const generarAdvertencias = useCallback(() => {
@@ -130,12 +130,7 @@ export function Resumen({ formState, onAnterior, onEditarPaso, onGuardar }: Prop
 			if (!confirmar) return;
 		}
 
-		setGuardando(true);
-		try {
-			await onGuardar();
-		} finally {
-			setGuardando(false);
-		}
+		await onGuardar();
 	};
 
 	const { asegurado, datos_basicos, datos_especificos, modalidad_pago, documentos } = formState;

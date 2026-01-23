@@ -242,7 +242,7 @@ export async function obtenerPolizaParaEdicion(
 		let modalidad_pago: ModalidadPago;
 
 		// Check if any cuota is paid (to block modality changes)
-		const tienePagos = pagos?.some(p => p.estado === "pagada") || false;
+		const tienePagos = pagos?.some(p => p.estado === "pagado") || false;
 
 		if (poliza.modalidad_pago === "contado") {
 			const pago = pagos?.[0];
@@ -255,7 +255,7 @@ export async function obtenerPolizaParaEdicion(
 				prima_neta: poliza.prima_neta,
 				comision: poliza.comision,
 				cuota_id: pago?.id,
-				cuota_pagada: pago?.estado === "pagada",
+				cuota_pagada: pago?.estado === "pagado",
 			};
 		} else {
 			// Credito
@@ -275,13 +275,13 @@ export async function obtenerPolizaParaEdicion(
 					numero: idx + 1,
 					monto: c.monto,
 					fecha_vencimiento: c.fecha_vencimiento,
-					estado: c.estado as "pendiente" | "pagada" | "vencida",
+					estado: c.estado as "pendiente" | "pagado" | "vencida",
 					fecha_pago: c.fecha_pago || undefined,
 				})),
 				prima_neta: poliza.prima_neta,
 				comision: poliza.comision,
 				cuota_inicial_id: cuotaInicial?.id,
-				cuota_inicial_pagada: cuotaInicial?.estado === "pagada",
+				cuota_inicial_pagada: cuotaInicial?.estado === "pagado",
 				tiene_pagos: tienePagos,
 			};
 		}
@@ -408,7 +408,7 @@ export async function actualizarPoliza(
 			.select("id, estado, monto, numero_cuota")
 			.eq("poliza_id", polizaId);
 
-		const cuotasPagadas = currentPagos?.filter(p => p.estado === "pagada") || [];
+		const cuotasPagadas = currentPagos?.filter(p => p.estado === "pagado") || [];
 		const tienePagos = cuotasPagadas.length > 0;
 
 		// Block modality change if there are paid cuotas
@@ -478,12 +478,12 @@ export async function actualizarPoliza(
 		}
 
 		// 2. Update payments - preserve paid cuotas, only update unpaid ones
-		// Delete only UNPAID cuotas (estado != 'pagada')
+		// Delete only UNPAID cuotas (estado != 'pagado')
 		await supabase
 			.from("polizas_pagos")
 			.delete()
 			.eq("poliza_id", polizaId)
-			.neq("estado", "pagada");
+			.neq("estado", "pagado");
 
 		if (formState.modalidad_pago.tipo === "contado") {
 			// Only insert if the cuota is not already paid
@@ -512,8 +512,7 @@ export async function actualizarPoliza(
 			// Handle cuota inicial
 			if (formState.modalidad_pago.cuota_inicial > 0) {
 				const cuotaInicialPagada = cuotasPagadas.some(
-					p => p.numero_cuota === 1 ||
-					currentPagos?.find(c => c.id === formState.modalidad_pago.cuota_inicial_id)?.estado === "pagada"
+					p => p.numero_cuota === 1
 				);
 
 				if (!cuotaInicialPagada) {
@@ -532,7 +531,7 @@ export async function actualizarPoliza(
 			// Handle regular cuotas - only add if not paid
 			formState.modalidad_pago.cuotas.forEach((cuota) => {
 				// Check if this cuota is already paid
-				const estaPagada = cuota.estado === "pagada" ||
+				const estaPagada = cuota.estado === "pagado" ||
 					(cuota.id && cuotasPagadas.some(p => p.id === cuota.id));
 
 				if (!estaPagada) {

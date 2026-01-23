@@ -31,10 +31,10 @@ const tieneCuotasPagadas = (datos: ModalidadPagoType | null): boolean => {
 	if (datos.tipo === "contado") {
 		return datos.cuota_pagada === true;
 	}
-	// For credito, check cuota_inicial_pagada and any cuota with estado "pagada"
+	// For credito, check cuota_inicial_pagada and any cuota with estado "pagado"
 	return datos.cuota_inicial_pagada === true ||
 		datos.tiene_pagos === true ||
-		datos.cuotas.some(c => c.estado === "pagada");
+		datos.cuotas.some(c => c.estado === "pagado");
 };
 
 export function ModalidadPago({ datos, inicioVigencia, finVigencia, producto, porcentajeComisionUsuario = 0.5, mode = "create", onChange, onSiguiente, onAnterior }: Props) {
@@ -330,7 +330,7 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, producto, po
 				<div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg flex items-center gap-2">
 					<Lock className="h-5 w-5 text-yellow-600 flex-shrink-0" />
 					<p className="text-sm text-yellow-800">
-						No se puede cambiar la modalidad de pago porque hay cuotas ya pagadas.
+						No se puede cambiar la modalidad de pago porque hay cuotas ya pagados.
 						Solo puede editar las cuotas pendientes.
 					</p>
 				</div>
@@ -365,7 +365,7 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, producto, po
 						<div className="p-3 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2">
 							<CheckCircle2 className="h-5 w-5 text-green-600 flex-shrink-0" />
 							<p className="text-sm text-green-800">
-								Esta cuota ya está <strong>pagada</strong>. Los datos no pueden ser modificados.
+								Esta cuota ya está <strong>pagado</strong>. Los datos no pueden ser modificados.
 							</p>
 						</div>
 					)}
@@ -561,6 +561,7 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, producto, po
 						<div className="space-y-2">
 							<Label htmlFor="cuota_inicial">
 								Cuota Inicial
+								{bloquearCambioModalidad && <Lock className="inline h-3 w-3 ml-1 text-gray-400" />}
 							</Label>
 							<Input
 								id="cuota_inicial"
@@ -578,14 +579,17 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, producto, po
 								}}
 								placeholder="0.00 (opcional)"
 								className={errores.cuota_inicial ? "border-red-500" : ""}
+								disabled={bloquearCambioModalidad}
 							/>
 							{errores.cuota_inicial && (
 								<p className="text-sm text-red-600">{errores.cuota_inicial}</p>
 							)}
 							<p className="text-xs text-gray-500">
-								{cuotaInicial > 0
-									? `La cuota inicial será la cuota #1, las restantes serán cuotas #2 a #${cantidadCuotas}`
-									: "Si no hay cuota inicial, ingrese 0 o deje vacío"}
+								{bloquearCambioModalidad
+									? "No se puede modificar porque hay cuotas pagadas"
+									: cuotaInicial > 0
+										? `La cuota inicial será la cuota #1, las restantes serán cuotas #2 a #${cantidadCuotas}`
+										: "Si no hay cuota inicial, ingrese 0 o deje vacío"}
 							</p>
 						</div>
 
@@ -593,6 +597,7 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, producto, po
 						<div className="space-y-2">
 							<Label htmlFor="fecha_inicio_cuotas">
 								Fecha Inicio Cuotas <span className="text-red-500">*</span>
+								{bloquearCambioModalidad && <Lock className="inline h-3 w-3 ml-1 text-gray-400" />}
 							</Label>
 							<Input
 								id="fecha_inicio_cuotas"
@@ -606,6 +611,7 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, producto, po
 									setCuotasGeneradas(false);
 								}}
 								className={errores.fecha_inicio_cuotas ? "border-red-500" : ""}
+								disabled={bloquearCambioModalidad}
 							/>
 							{errores.fecha_inicio_cuotas && (
 								<p className="text-sm text-red-600">{errores.fecha_inicio_cuotas}</p>
@@ -616,6 +622,7 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, producto, po
 						<div className="space-y-2">
 							<Label htmlFor="periodo_pago">
 								Periodo de Pago <span className="text-red-500">*</span>
+								{bloquearCambioModalidad && <Lock className="inline h-3 w-3 ml-1 text-gray-400" />}
 							</Label>
 							<Select
 								value={periodoPago}
@@ -623,6 +630,7 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, producto, po
 									setPeriodoPago(value as PeriodoPago);
 									setCuotasGeneradas(false);
 								}}
+								disabled={bloquearCambioModalidad}
 							>
 								<SelectTrigger className={errores.periodo_pago ? "border-red-500" : ""}>
 									<SelectValue />
@@ -645,6 +653,7 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, producto, po
 								{cuotaInicial > 0 && (
 									<span className="text-xs text-gray-500 ml-2">(#1 inicial + #{2}-{cantidadCuotas} regulares)</span>
 								)}
+								{bloquearCambioModalidad && <Lock className="inline h-3 w-3 ml-1 text-gray-400" />}
 							</Label>
 							<div className="pt-2">
 								<Slider
@@ -658,6 +667,7 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, producto, po
 										setCuotasGeneradas(false);
 									}}
 									className="w-full"
+									disabled={bloquearCambioModalidad}
 								/>
 								<div className="flex justify-between text-xs text-gray-500 mt-1">
 									<span>2 cuotas</span>
@@ -671,16 +681,22 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, producto, po
 					</div>
 
 					{/* Botón Generar Cuotas */}
-					<div className="flex justify-center">
+					<div className="flex flex-col items-center gap-2">
 						<Button
 							onClick={handleGenerarCuotas}
-							disabled={!primaTotal || primaTotal <= 0 || !fechaInicioCuotas}
+							disabled={bloquearCambioModalidad || !primaTotal || primaTotal <= 0 || !fechaInicioCuotas}
 							className="w-full md:w-auto"
 							size="lg"
 						>
 							<Sparkles className="mr-2 h-5 w-5" />
 							Generar Cuotas
 						</Button>
+						{bloquearCambioModalidad && (
+							<p className="text-xs text-yellow-600 flex items-center gap-1">
+								<Lock className="h-3 w-3" />
+								No se pueden regenerar las cuotas porque hay pagos registrados
+							</p>
+						)}
 					</div>
 
 					{/* Cálculos */}
@@ -829,7 +845,7 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, producto, po
 												</tr>
 											)}
 											{cuotas.map((cuota, index) => {
-												const estaPagada = cuota.estado === "pagada";
+												const estaPagada = cuota.estado === "pagado";
 												return (
 													<tr key={index} className={estaPagada ? "bg-green-50" : "hover:bg-gray-50"}>
 														<td className="px-4 py-3">
