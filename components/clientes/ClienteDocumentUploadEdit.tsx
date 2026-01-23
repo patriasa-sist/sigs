@@ -635,7 +635,7 @@ export function ClienteDocumentUploadEdit({ clientId, clientType, isAdmin = fals
 							</div>
 						) : (
 							<div className="space-y-3 max-h-96 overflow-y-auto">
-								{historyData.map((item, index) => (
+								{historyData.map((item) => (
 									<div
 										key={item.id}
 										className={`p-3 rounded-lg border ${

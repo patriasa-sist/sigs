@@ -17,7 +17,6 @@ import {
 	GENDER_OPTIONS,
 	COMPANY_TYPES,
 	type CivilStatus,
-	type DocumentType,
 	type Gender,
 	type CompanyType,
 } from "@/types/clientForm";

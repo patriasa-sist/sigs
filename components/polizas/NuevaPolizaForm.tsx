@@ -6,6 +6,7 @@ import { FileText, X } from "lucide-react";
 import type { PolizaFormState, PasoFormulario, ProductoAseguradora } from "@/types/poliza";
 import { Button } from "@/components/ui/button";
 import { guardarPoliza } from "@/app/polizas/nueva/actions";
+import { actualizarPoliza } from "@/app/polizas/[id]/editar/actions";
 import { createClient } from "@/utils/supabase/client";
 
 // Steps
@@ -16,19 +17,30 @@ import { ModalidadPago } from "./steps/ModalidadPago";
 import { CargarDocumentos } from "./steps/CargarDocumentos";
 import { Resumen } from "./steps/Resumen";
 
-export function NuevaPolizaForm() {
+interface NuevaPolizaFormProps {
+	mode?: "create" | "edit";
+	polizaId?: string;
+	initialData?: PolizaFormState;
+}
+
+export function NuevaPolizaForm({ mode = "create", polizaId, initialData }: NuevaPolizaFormProps) {
 	const router = useRouter();
 
-	// Estado global del formulario
-	const [formState, setFormState] = useState<PolizaFormState>({
-		paso_actual: 1,
-		asegurado: null,
-		datos_basicos: null,
-		datos_especificos: null,
-		modalidad_pago: null,
-		documentos: [],
-		advertencias: [],
-		en_edicion: false,
+	// Estado global del formulario - usa initialData si está disponible
+	const [formState, setFormState] = useState<PolizaFormState>(() => {
+		if (initialData) {
+			return initialData;
+		}
+		return {
+			paso_actual: 1,
+			asegurado: null,
+			datos_basicos: null,
+			datos_especificos: null,
+			modalidad_pago: null,
+			documentos: [],
+			advertencias: [],
+			en_edicion: false,
+		};
 	});
 
 	// Catálogos
@@ -112,10 +124,16 @@ export function NuevaPolizaForm() {
 
 	// Navegación
 	const handleCancelar = () => {
-		if (
-			confirm("¿Está seguro de cancelar? Se perderán todos los datos ingresados.")
-		) {
-			router.push("/polizas");
+		const mensaje = mode === "edit"
+			? "¿Está seguro de cancelar? Se perderán los cambios no guardados."
+			: "¿Está seguro de cancelar? Se perderán todos los datos ingresados.";
+
+		if (confirm(mensaje)) {
+			if (mode === "edit" && polizaId) {
+				router.push(`/polizas/${polizaId}`);
+			} else {
+				router.push("/polizas");
+			}
 		}
 	};
 
@@ -148,13 +166,26 @@ export function NuevaPolizaForm() {
 
 	const handleGuardar = async () => {
 		try {
-			const resultado = await guardarPoliza(formState);
+			let resultado;
 
-			if (resultado.success) {
-				alert("Póliza guardada exitosamente!");
-				router.push("/polizas");
+			if (mode === "edit" && polizaId) {
+				// Modo edición - usar actualizarPoliza
+				resultado = await actualizarPoliza(polizaId, formState);
+				if (resultado.success) {
+					alert("Póliza actualizada exitosamente!");
+					router.push(`/polizas/${polizaId}`);
+				} else {
+					alert(`Error al actualizar la póliza: ${resultado.error}`);
+				}
 			} else {
-				alert(`Error al guardar la póliza: ${resultado.error}`);
+				// Modo creación - usar guardarPoliza
+				resultado = await guardarPoliza(formState);
+				if (resultado.success) {
+					alert("Póliza guardada exitosamente!");
+					router.push("/polizas");
+				} else {
+					alert(`Error al guardar la póliza: ${resultado.error}`);
+				}
 			}
 		} catch (error) {
 			console.error("Error guardando póliza:", error);

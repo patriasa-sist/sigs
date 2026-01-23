@@ -4,7 +4,9 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { obtenerDetallePoliza, type PolizaDetalle } from "../actions";
 import { validarPoliza, rechazarPoliza } from "@/app/gerencia/validacion/actions";
+import { checkPolicyEditPermission } from "@/app/polizas/permisos/actions";
 import { Button } from "@/components/ui/button";
+import { PolicyPermissionsModal } from "@/components/polizas/PolicyPermissionsModal";
 import {
 	FileText,
 	ArrowLeft,
@@ -18,6 +20,8 @@ import {
 	CreditCard,
 	XCircle,
 	CheckCircle,
+	Pencil,
+	Shield,
 } from "lucide-react";
 import { formatCurrency, formatDate } from "@/utils/formatters";
 
@@ -32,13 +36,28 @@ export default function PolizaDetallePage() {
 	const [userRole, setUserRole] = useState<string | null>(null);
 	const [validationLoading, setValidationLoading] = useState<"validar" | "rechazar" | null>(null);
 
+	// Edit permission state
+	const [canEdit, setCanEdit] = useState(false);
+	const [isAdmin, setIsAdmin] = useState(false);
+	const [showPermissionsModal, setShowPermissionsModal] = useState(false);
+
 	const cargarDetalle = useCallback(async () => {
 		setIsLoading(true);
 		setError(null);
+
+		// Load policy details
 		const resultado = await obtenerDetallePoliza(polizaId);
 		if (resultado.success && resultado.poliza) {
 			setPoliza(resultado.poliza);
 			setUserRole(resultado.userRole || null);
+			setIsAdmin(resultado.userRole === "admin");
+
+			// Check edit permission
+			const permResult = await checkPolicyEditPermission(polizaId);
+			if (permResult.success) {
+				setCanEdit(permResult.data.canEdit);
+				setIsAdmin(permResult.data.isAdmin);
+			}
 		} else {
 			setError(resultado.error || "Error al cargar la póliza");
 		}
@@ -178,6 +197,31 @@ export default function PolizaDetallePage() {
 						>
 							{getEstadoLabel(poliza.estado)}
 						</span>
+
+						{/* Edit button - visible if user has permission */}
+						{canEdit && (
+							<Button
+								variant="outline"
+								size="sm"
+								onClick={() => router.push(`/polizas/${polizaId}/editar`)}
+							>
+								<Pencil className="h-4 w-4 mr-1" />
+								Editar
+							</Button>
+						)}
+
+						{/* Permissions button - admin only */}
+						{isAdmin && (
+							<Button
+								variant="ghost"
+								size="sm"
+								onClick={() => setShowPermissionsModal(true)}
+							>
+								<Shield className="h-4 w-4 mr-1" />
+								Permisos
+							</Button>
+						)}
+
 						{puedeValidar && (
 							<>
 								<Button
@@ -611,6 +655,14 @@ export default function PolizaDetallePage() {
 					</div>
 				</div>
 			</div>
+
+			{/* Permissions Modal */}
+			<PolicyPermissionsModal
+				polizaId={polizaId}
+				numeroPoliza={poliza.numero_poliza}
+				isOpen={showPermissionsModal}
+				onClose={() => setShowPermissionsModal(false)}
+			/>
 		</div>
 	);
 }
