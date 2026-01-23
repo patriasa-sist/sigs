@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ChevronRight, ChevronLeft, CheckCircle2, DollarSign, CreditCard, Calendar, AlertCircle, Sparkles, Lock } from "lucide-react";
+import { ChevronRight, ChevronLeft, CheckCircle2, DollarSign, CreditCard, Calendar, AlertCircle, Sparkles, Lock, Check, Save } from "lucide-react";
 import type { ModalidadPago as ModalidadPagoType, Moneda, CuotaCredito, PeriodoPago, ProductoAseguradora, CalculoComisionResult } from "@/types/poliza";
 import { validarModalidadPago, calcularPrimaNetaYComision, calcularComisionesConProducto, validarFechasDentroVigencia } from "@/utils/polizaValidation";
 import { POLIZA_RULES } from "@/utils/validationConstants";
@@ -78,6 +78,9 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, producto, po
 	const [moneda, setMoneda] = useState<Moneda>(datos?.moneda || "Bs");
 	const [errores, setErrores] = useState<Record<string, string>>({});
 	const [advertencias, setAdvertencias] = useState<Record<string, string>>({});
+
+	// Estado para feedback visual en modo edición
+	const [datosActualizados, setDatosActualizados] = useState<boolean>(false);
 
 	// Calcular prima neta y comisiones
 	const montoPago = tipoPago === "contado" ? cuotaUnica : primaTotal;
@@ -296,12 +299,22 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, producto, po
 		setAdvertencias({});
 
 		onChange(datosPago);
+
+		// En modo edición, mostrar feedback visual antes de continuar
+		if (mode === "edit") {
+			setDatosActualizados(true);
+			// Reset después de 2 segundos
+			setTimeout(() => setDatosActualizados(false), 2000);
+		}
+
 		onSiguiente();
 	};
 
+	// En modo edición, si ya hay cuotas cargadas de la BD (tienen id), no requerir cuotasGeneradas
+	const cuotasExistentes = cuotas.some(c => c.id);
 	const tieneDatos = tipoPago === "contado"
 		? cuotaUnica > 0 && fechaPagoUnico
-		: primaTotal > 0 && cuotasGeneradas && cuotas.length > 0;
+		: primaTotal > 0 && cuotas.length > 0 && (cuotasGeneradas || cuotasExistentes);
 
 	return (
 		<div className="bg-white rounded-lg shadow-sm border p-6">
@@ -974,10 +987,33 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, producto, po
 					Anterior
 				</Button>
 
-				<Button onClick={handleContinuar} disabled={!tieneDatos}>
-					{mode === "edit" ? "Actualizar Datos de Pago" : "Continuar con Documentos"}
-					<ChevronRight className="ml-2 h-5 w-5" />
-				</Button>
+				<div className="flex items-center gap-3">
+					{/* Feedback visual de actualización exitosa */}
+					{datosActualizados && (
+						<span className="flex items-center gap-1 text-green-600 text-sm font-medium animate-in fade-in duration-300">
+							<Check className="h-4 w-4" />
+							Datos actualizados
+						</span>
+					)}
+
+					<Button
+						onClick={handleContinuar}
+						disabled={!tieneDatos}
+						className={datosActualizados ? "bg-green-600 hover:bg-green-700" : ""}
+					>
+						{mode === "edit" ? (
+							<>
+								<Save className="mr-2 h-4 w-4" />
+								Guardar y Continuar
+							</>
+						) : (
+							<>
+								Continuar con Documentos
+								<ChevronRight className="ml-2 h-5 w-5" />
+							</>
+						)}
+					</Button>
+				</div>
 			</div>
 		</div>
 	);

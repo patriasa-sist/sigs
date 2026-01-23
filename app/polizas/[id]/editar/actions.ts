@@ -270,9 +270,9 @@ export async function obtenerPolizaParaEdicion(
 				cuota_inicial: cuotaInicial?.monto || 0,
 				fecha_inicio_cuotas: cuotasRestantes[0]?.fecha_vencimiento || poliza.inicio_vigencia,
 				periodo_pago: "mensual", // Default, this is calculated
-				cuotas: cuotasRestantes.map((c, idx) => ({
+				cuotas: cuotasRestantes.map((c) => ({
 					id: c.id,
-					numero: idx + 1,
+					numero: c.numero_cuota, // Preservar número original de la BD
 					monto: c.monto,
 					fecha_vencimiento: c.fecha_vencimiento,
 					estado: c.estado as "pendiente" | "pagado" | "vencida",
@@ -405,7 +405,7 @@ export async function actualizarPoliza(
 		// Get current payments to check for paid cuotas
 		const { data: currentPagos } = await supabase
 			.from("polizas_pagos")
-			.select("id, estado, monto, numero_cuota")
+			.select("id, estado, monto, numero_cuota, observaciones")
 			.eq("poliza_id", polizaId);
 
 		const cuotasPagadas = currentPagos?.filter(p => p.estado === "pagado") || [];
@@ -477,77 +477,117 @@ export async function actualizarPoliza(
 			return { success: false, error: "Error al actualizar la póliza" };
 		}
 
-		// 2. Update payments - preserve paid cuotas, only update unpaid ones
-		// Delete only UNPAID cuotas (estado != 'pagado')
-		await supabase
-			.from("polizas_pagos")
-			.delete()
-			.eq("poliza_id", polizaId)
-			.neq("estado", "pagado");
+		// 2. Update payments - usar UPDATE para cuotas existentes (evita problemas de constraint único)
+		// Map de cuotas pagadas por id para verificación rápida
+		const idsCuotasPagadas = new Set(cuotasPagadas.map(p => p.id));
 
 		if (formState.modalidad_pago.tipo === "contado") {
-			// Only insert if the cuota is not already paid
-			const cuotaPagadaContado = cuotasPagadas.find(p => p.numero_cuota === 1);
-			if (!cuotaPagadaContado) {
-				await supabase.from("polizas_pagos").insert({
+			// Buscar la cuota existente para contado
+			const cuotaExistente = currentPagos?.find(p => p.numero_cuota === 1);
+
+			if (cuotaExistente) {
+				// Solo actualizar si no está pagada
+				if (!idsCuotasPagadas.has(cuotaExistente.id)) {
+					const { error: updateError } = await supabase
+						.from("polizas_pagos")
+						.update({
+							monto: formState.modalidad_pago.cuota_unica,
+							fecha_vencimiento: formState.modalidad_pago.fecha_pago_unico,
+						})
+						.eq("id", cuotaExistente.id);
+
+					if (updateError) {
+						console.error("[actualizarPoliza] Error updating contado cuota:", updateError);
+						return { success: false, error: "Error al actualizar la cuota de pago" };
+					}
+				}
+			} else {
+				// No existe, crear nueva
+				const { error: insertError } = await supabase.from("polizas_pagos").insert({
 					poliza_id: polizaId,
 					numero_cuota: 1,
 					monto: formState.modalidad_pago.cuota_unica,
 					fecha_vencimiento: formState.modalidad_pago.fecha_pago_unico,
 					estado: "pendiente",
 				});
+				if (insertError) {
+					console.error("[actualizarPoliza] Error inserting contado cuota:", insertError);
+					return { success: false, error: "Error al guardar la cuota de pago" };
+				}
 			}
 		} else {
-			const cuotas: Array<{
-				poliza_id: string;
-				numero_cuota: number;
-				monto: number;
-				fecha_vencimiento: string;
-				estado: string;
-				observaciones?: string;
-			}> = [];
+			// Crédito: actualizar cuotas existentes, insertar nuevas
+			const erroresActualizacion: string[] = [];
 
-			let numeroCuotaActual = 1;
-
-			// Handle cuota inicial
-			if (formState.modalidad_pago.cuota_inicial > 0) {
-				const cuotaInicialPagada = cuotasPagadas.some(
-					p => p.numero_cuota === 1
-				);
-
-				if (!cuotaInicialPagada) {
-					cuotas.push({
-						poliza_id: polizaId,
-						numero_cuota: numeroCuotaActual,
-						monto: formState.modalidad_pago.cuota_inicial,
-						fecha_vencimiento: formState.datos_basicos.inicio_vigencia,
-						estado: "pendiente",
-						observaciones: "Cuota inicial",
-					});
-				}
-				numeroCuotaActual++;
-			}
-
-			// Handle regular cuotas - only add if not paid
-			formState.modalidad_pago.cuotas.forEach((cuota) => {
-				// Check if this cuota is already paid
+			// Procesar todas las cuotas del formulario
+			for (const cuota of formState.modalidad_pago.cuotas) {
+				// Skip cuotas pagadas - no se modifican
 				const estaPagada = cuota.estado === "pagado" ||
-					(cuota.id && cuotasPagadas.some(p => p.id === cuota.id));
+					(cuota.id && idsCuotasPagadas.has(cuota.id));
 
-				if (!estaPagada) {
-					cuotas.push({
+				if (estaPagada) {
+					continue;
+				}
+
+				if (cuota.id) {
+					// Cuota existente - UPDATE
+					const { error: updateError } = await supabase
+						.from("polizas_pagos")
+						.update({
+							monto: cuota.monto,
+							fecha_vencimiento: cuota.fecha_vencimiento,
+							numero_cuota: cuota.numero,
+						})
+						.eq("id", cuota.id);
+
+					if (updateError) {
+						console.error(`[actualizarPoliza] Error updating cuota ${cuota.numero}:`, updateError);
+						erroresActualizacion.push(`Cuota ${cuota.numero}: ${updateError.message}`);
+					}
+				} else {
+					// Cuota nueva - INSERT
+					const { error: insertError } = await supabase.from("polizas_pagos").insert({
 						poliza_id: polizaId,
-						numero_cuota: numeroCuotaActual,
+						numero_cuota: cuota.numero,
 						monto: cuota.monto,
 						fecha_vencimiento: cuota.fecha_vencimiento,
 						estado: "pendiente",
 					});
-				}
-				numeroCuotaActual++;
-			});
 
-			if (cuotas.length > 0) {
-				await supabase.from("polizas_pagos").insert(cuotas);
+					if (insertError) {
+						console.error(`[actualizarPoliza] Error inserting cuota ${cuota.numero}:`, insertError);
+						erroresActualizacion.push(`Cuota ${cuota.numero}: ${insertError.message}`);
+					}
+				}
+			}
+
+			// Handle cuota inicial si existe y no está pagada
+			if (formState.modalidad_pago.cuota_inicial > 0) {
+				const cuotaInicialExistente = currentPagos?.find(
+					p => p.observaciones?.toLowerCase().includes("inicial")
+				);
+
+				if (cuotaInicialExistente && !idsCuotasPagadas.has(cuotaInicialExistente.id)) {
+					// Actualizar cuota inicial existente
+					const { error: updateError } = await supabase
+						.from("polizas_pagos")
+						.update({
+							monto: formState.modalidad_pago.cuota_inicial,
+							fecha_vencimiento: formState.datos_basicos.inicio_vigencia,
+						})
+						.eq("id", cuotaInicialExistente.id);
+
+					if (updateError) {
+						erroresActualizacion.push(`Cuota inicial: ${updateError.message}`);
+					}
+				}
+			}
+
+			if (erroresActualizacion.length > 0) {
+				return {
+					success: false,
+					error: `Error al actualizar cuotas: ${erroresActualizacion.join(", ")}`
+				};
 			}
 		}
 
@@ -619,8 +659,38 @@ export async function actualizarPoliza(
 			});
 		}
 
-		// Nota: El historial de ediciones es manejado automáticamente por el trigger
-		// 'trigger_historial_polizas' que detecta campos que realmente cambiaron
+		// Nota: El historial de la tabla polizas es manejado por el trigger 'trigger_historial_polizas'
+		// Pero las cuotas están en otra tabla, así que las registramos manualmente si hubo cambios
+
+		// Detectar si hubo cambios en cuotas (comparar con currentPagos)
+		const { data: newPagos } = await supabase
+			.from("polizas_pagos")
+			.select("numero_cuota, monto, fecha_vencimiento")
+			.eq("poliza_id", polizaId)
+			.order("numero_cuota");
+
+		// Comparar cuotas antiguas vs nuevas
+		const cuotasOriginales = (currentPagos || [])
+			.filter(p => p.estado !== "pagado")
+			.map(p => `${p.numero_cuota}:${p.monto}`)
+			.sort()
+			.join(",");
+		const cuotasNuevas = (newPagos || [])
+			.filter(p => !cuotasPagadas.some(cp => cp.numero_cuota === p.numero_cuota))
+			.map(p => `${p.numero_cuota}:${p.monto}`)
+			.sort()
+			.join(",");
+
+		if (cuotasOriginales !== cuotasNuevas) {
+			const { data: { user } } = await supabase.auth.getUser();
+			await supabase.from("polizas_historial_ediciones").insert({
+				poliza_id: polizaId,
+				accion: "edicion",
+				usuario_id: user?.id,
+				descripcion: "Modificado: cuotas de pago",
+				campos_modificados: ["cuotas"],
+			});
+		}
 
 		// Revalidate paths
 		revalidatePath(`/polizas/${polizaId}`);
