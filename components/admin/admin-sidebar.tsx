@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Users, Mail, Shield, FileText } from "lucide-react";
+import { Users, Mail, Shield, FileText, BarChart3, FileSpreadsheet } from "lucide-react";
 import {
 	Accordion,
 	AccordionContent,
@@ -30,6 +30,17 @@ const navigationItems = [
 				title: "Gestionar Invitaciones",
 				href: "/admin/invitations",
 				icon: Mail,
+			},
+		],
+	},
+	{
+		title: "Reportes",
+		icon: BarChart3,
+		items: [
+			{
+				title: "Producción Mensual",
+				href: "/admin/reportes",
+				icon: FileSpreadsheet,
 			},
 		],
 	},
