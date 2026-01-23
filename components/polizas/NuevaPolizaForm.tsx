@@ -251,6 +251,7 @@ export function NuevaPolizaForm({ mode = "create", polizaId, initialData }: Nuev
 					finVigencia={formState.datos_basicos?.fin_vigencia}
 					producto={productoSeleccionado}
 					porcentajeComisionUsuario={porcentajeComisionUsuario}
+					mode={mode}
 					onChange={(datos) => {
 						setFormState((prev) => ({
 							...prev,

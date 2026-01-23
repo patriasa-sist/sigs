@@ -31,6 +31,12 @@ export type PolizaDetalle = PolizaListItem & {
 	validado_por: string | null;
 	fecha_validacion: string | null;
 	validador_nombre: string | null;
+	// Rejection fields
+	motivo_rechazo: string | null;
+	rechazado_por: string | null;
+	fecha_rechazo: string | null;
+	rechazador_nombre: string | null;
+	puede_editar_hasta: string | null;
 	pagos: Array<{
 		id: string;
 		numero_cuota: number;
@@ -338,6 +344,17 @@ export async function obtenerDetallePoliza(polizaId: string) {
 			validador_nombre = validador?.full_name || null;
 		}
 
+		// Obtener nombre del rechazador
+		let rechazador_nombre: string | null = null;
+		if (poliza.rechazado_por) {
+			const { data: rechazador } = await supabase
+				.from("profiles")
+				.select("full_name")
+				.eq("id", poliza.rechazado_por)
+				.single();
+			rechazador_nombre = rechazador?.full_name || null;
+		}
+
 		// Obtener historial de ediciones (últimos 20 registros)
 		const { data: historialData } = await supabase
 			.from("polizas_historial_ediciones")
@@ -388,6 +405,12 @@ export async function obtenerDetallePoliza(polizaId: string) {
 			validado_por: poliza.validado_por || null,
 			fecha_validacion: poliza.fecha_validacion || null,
 			validador_nombre,
+			// Rejection fields
+			motivo_rechazo: poliza.motivo_rechazo || null,
+			rechazado_por: poliza.rechazado_por || null,
+			fecha_rechazo: poliza.fecha_rechazo || null,
+			rechazador_nombre,
+			puede_editar_hasta: poliza.puede_editar_hasta || null,
 			pagos: pagos || [],
 			vehiculos: vehiculos.length > 0 ? (vehiculos as PolizaDetalle["vehiculos"]) : undefined,
 			documentos: documentos || [],

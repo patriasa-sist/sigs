@@ -94,6 +94,39 @@ export async function checkPolicyEditPermission(
 			};
 		}
 
+		// Check if user is the creator of a rejected policy within edit window
+		const { data: polizaRechazada } = await supabase
+			.from("polizas")
+			.select("created_by, estado, puede_editar_hasta")
+			.eq("id", polizaId)
+			.single();
+
+		if (
+			polizaRechazada?.estado === "rechazada" &&
+			polizaRechazada.created_by === user.id &&
+			polizaRechazada.puede_editar_hasta &&
+			new Date(polizaRechazada.puede_editar_hasta) > new Date()
+		) {
+			// Calculate remaining time
+			const expiresAt = new Date(polizaRechazada.puede_editar_hasta);
+			const now = new Date();
+			const hoursRemaining = Math.ceil((expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60));
+
+			return {
+				success: true,
+				data: {
+					canEdit: true,
+					reason: `Ventana de edicion por rechazo (${hoursRemaining}h restantes)`,
+					isAdmin: false,
+					permission: {
+						id: "rejection-window",
+						expires_at: polizaRechazada.puede_editar_hasta,
+						granted_by_name: "Sistema (Rechazo)",
+					},
+				},
+			};
+		}
+
 		// Only comercial role can have specific permissions
 		if (profile.role !== "comercial") {
 			return {

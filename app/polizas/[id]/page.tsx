@@ -5,6 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import { obtenerDetallePoliza, type PolizaDetalle } from "../actions";
 import { validarPoliza, rechazarPoliza } from "@/app/gerencia/validacion/actions";
 import { checkPolicyEditPermission } from "@/app/polizas/permisos/actions";
+import { RechazoPolizaModal } from "@/components/gerencia/RechazoPolizaModal";
 import { Button } from "@/components/ui/button";
 import { PolicyPermissionsModal } from "@/components/polizas/PolicyPermissionsModal";
 import {
@@ -40,6 +41,8 @@ export default function PolizaDetallePage() {
 	const [canEdit, setCanEdit] = useState(false);
 	const [isAdmin, setIsAdmin] = useState(false);
 	const [showPermissionsModal, setShowPermissionsModal] = useState(false);
+	// Rejection modal state
+	const [showRechazoModal, setShowRechazoModal] = useState(false);
 
 	const cargarDetalle = useCallback(async () => {
 		setIsLoading(true);
@@ -75,6 +78,7 @@ export default function PolizaDetallePage() {
 			vencida: "bg-red-100 text-red-800 border-red-200",
 			cancelada: "bg-gray-100 text-gray-800 border-gray-200",
 			renovada: "bg-blue-100 text-blue-800 border-blue-200",
+			rechazada: "bg-orange-100 text-orange-800 border-orange-200",
 		};
 		return styles[estado as keyof typeof styles] || "bg-gray-100 text-gray-800 border-gray-200";
 	};
@@ -86,6 +90,7 @@ export default function PolizaDetallePage() {
 			vencida: "Vencida",
 			cancelada: "Cancelada",
 			renovada: "Renovada",
+			rechazada: "Rechazada",
 		};
 		return labels[estado as keyof typeof labels] || estado;
 	};
@@ -107,12 +112,13 @@ export default function PolizaDetallePage() {
 		setValidationLoading(null);
 	};
 
-	// Manejar rechazo
-	const handleRechazar = async () => {
+	// Manejar rechazo con motivo desde modal
+	const handleRechazar = async (motivo: string) => {
 		if (!poliza) return;
 		setValidationLoading("rechazar");
-		const result = await rechazarPoliza(poliza.id, "Rechazada por gerencia");
+		const result = await rechazarPoliza(poliza.id, motivo);
 		if (result.success) {
+			setShowRechazoModal(false);
 			// Recargar los datos de la póliza
 			await cargarDetalle();
 		} else {
@@ -236,11 +242,11 @@ export default function PolizaDetallePage() {
 								<Button
 									variant="destructive"
 									size="sm"
-									onClick={handleRechazar}
+									onClick={() => setShowRechazoModal(true)}
 									disabled={validationLoading !== null}
 								>
 									<XCircle className="h-4 w-4 mr-1" />
-									{validationLoading === "rechazar" ? "Rechazando..." : "Rechazar"}
+									Rechazar
 								</Button>
 							</>
 						)}
@@ -594,6 +600,41 @@ export default function PolizaDetallePage() {
 								</div>
 							)}
 
+							{/* Información de rechazo */}
+							{poliza.estado === "rechazada" && poliza.fecha_rechazo && (
+								<div className="pt-3 border-t border-orange-200 bg-orange-50 -mx-6 px-6 py-3 -mb-3 rounded-b-lg">
+									<label className="font-medium text-orange-800 block mb-2">
+										Poliza Rechazada
+									</label>
+									<p className="text-orange-900 text-xs mb-1">
+										{formatDate(poliza.fecha_rechazo)}
+										{poliza.rechazador_nombre && (
+											<span className="text-orange-700"> por {poliza.rechazador_nombre}</span>
+										)}
+									</p>
+									{poliza.motivo_rechazo && (
+										<div className="mt-2 p-2 bg-white rounded border border-orange-200">
+											<p className="text-xs text-gray-700">
+												<strong>Motivo:</strong> {poliza.motivo_rechazo}
+											</p>
+										</div>
+									)}
+									{poliza.puede_editar_hasta && (
+										<>
+											{new Date(poliza.puede_editar_hasta) > new Date() ? (
+												<p className="text-xs text-green-700 mt-2">
+													Puede editar hasta: {formatDate(poliza.puede_editar_hasta)}
+												</p>
+											) : (
+												<p className="text-xs text-red-600 mt-2">
+													Ventana de edicion expirada
+												</p>
+											)}
+										</>
+									)}
+								</div>
+							)}
+
 							{/* Historial de cambios - solo ediciones reales, no creación ni cambios de estado por validación */}
 							{(() => {
 								const edicionesRelevantes = poliza.historial?.filter((item) => {
@@ -662,6 +703,20 @@ export default function PolizaDetallePage() {
 				numeroPoliza={poliza.numero_poliza}
 				isOpen={showPermissionsModal}
 				onClose={() => setShowPermissionsModal(false)}
+			/>
+
+			{/* Rejection Modal */}
+			<RechazoPolizaModal
+				isOpen={showRechazoModal}
+				onClose={() => setShowRechazoModal(false)}
+				onConfirm={handleRechazar}
+				poliza={{
+					id: poliza.id,
+					numero_poliza: poliza.numero_poliza,
+					prima_total: poliza.prima_total,
+					moneda: poliza.moneda,
+				}}
+				isLoading={validationLoading === "rechazar"}
 			/>
 		</div>
 	);

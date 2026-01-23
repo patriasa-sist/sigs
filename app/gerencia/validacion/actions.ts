@@ -155,13 +155,18 @@ export async function validarPoliza(polizaId: string) {
 }
 
 /**
- * Rechaza una póliza (puede eliminarla o marcarla como rechazada)
- * Por ahora solo cambia el estado a "cancelada"
+ * Rechaza una póliza con motivo obligatorio
+ * Cambia el estado a "rechazada" y otorga permiso de edición por 1 día
  */
-export async function rechazarPoliza(polizaId: string, motivo?: string) {
+export async function rechazarPoliza(polizaId: string, motivo: string) {
 	const supabase = await createClient();
 
 	try {
+		// Validar que el motivo esté presente y tenga contenido
+		if (!motivo || motivo.trim().length < 10) {
+			return { success: false, error: "El motivo del rechazo es obligatorio (mínimo 10 caracteres)" };
+		}
+
 		// Verificar autenticación
 		const {
 			data: { user },
@@ -197,12 +202,19 @@ export async function rechazarPoliza(polizaId: string, motivo?: string) {
 			return { success: false, error: "La póliza no está pendiente de validación" };
 		}
 
-		// Actualizar póliza a estado cancelada
-		// En el futuro podrías crear un estado "rechazada" específico
+		// Calcular ventana de edición (1 día desde ahora)
+		const puedeEditarHasta = new Date();
+		puedeEditarHasta.setDate(puedeEditarHasta.getDate() + 1);
+
+		// Actualizar póliza a estado rechazada con todos los campos de trazabilidad
 		const { error: updateError } = await supabase
 			.from("polizas")
 			.update({
-				estado: "cancelada",
+				estado: "rechazada",
+				motivo_rechazo: motivo.trim(),
+				rechazado_por: user.id,
+				fecha_rechazo: new Date().toISOString(),
+				puede_editar_hasta: puedeEditarHasta.toISOString(),
 			})
 			.eq("id", polizaId);
 
@@ -211,15 +223,14 @@ export async function rechazarPoliza(polizaId: string, motivo?: string) {
 			return { success: false, error: "Error al rechazar la póliza" };
 		}
 
-		// Opcional: registrar el motivo en el historial
-		if (motivo) {
-			await supabase.from("polizas_historial_ediciones").insert({
-				poliza_id: polizaId,
-				accion: "edicion",
-				usuario_id: user.id,
-				descripcion: `Póliza rechazada por gerencia. Motivo: ${motivo}`,
-			});
-		}
+		// Registrar en el historial con tipo de acción "rechazo"
+		await supabase.from("polizas_historial_ediciones").insert({
+			poliza_id: polizaId,
+			accion: "rechazo",
+			usuario_id: user.id,
+			descripcion: `Póliza rechazada por gerencia. Motivo: ${motivo.trim()}`,
+			campos_modificados: ["estado", "motivo_rechazo", "rechazado_por", "fecha_rechazo", "puede_editar_hasta"],
+		});
 
 		// Revalidar rutas
 		revalidatePath("/gerencia/validacion");

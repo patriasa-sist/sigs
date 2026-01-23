@@ -83,12 +83,29 @@ async function verifyEditPermission(polizaId: string) {
 		return { supabase, user, profile, canEdit: true };
 	}
 
+	// Check if user is the creator of a rejected policy within edit window
+	const { data: polizaRechazada } = await supabase
+		.from("polizas")
+		.select("created_by, estado, puede_editar_hasta")
+		.eq("id", polizaId)
+		.single();
+
+	if (
+		polizaRechazada?.estado === "rechazada" &&
+		polizaRechazada.created_by === user.id &&
+		polizaRechazada.puede_editar_hasta &&
+		new Date(polizaRechazada.puede_editar_hasta) > new Date()
+	) {
+		// User is the creator and within the rejection edit window
+		return { supabase, user, profile, canEdit: true };
+	}
+
 	// Only comercial role can have specific permissions
 	if (profile.role !== "comercial") {
 		throw new Error("No tienes permiso para editar pólizas");
 	}
 
-	// Check using database function
+	// Check using database function for explicit permissions
 	const { data: canEdit, error } = await supabase.rpc("can_edit_policy", {
 		p_poliza_id: polizaId,
 		p_user_id: user.id,
@@ -218,11 +235,14 @@ export async function obtenerPolizaParaEdicion(
 		// 4. Get payment data and build modalidad_pago
 		const { data: pagos } = await supabase
 			.from("polizas_pagos")
-			.select("*")
+			.select("id, numero_cuota, monto, fecha_vencimiento, estado, fecha_pago, observaciones")
 			.eq("poliza_id", polizaId)
 			.order("numero_cuota", { ascending: true });
 
 		let modalidad_pago: ModalidadPago;
+
+		// Check if any cuota is paid (to block modality changes)
+		const tienePagos = pagos?.some(p => p.estado === "pagada") || false;
 
 		if (poliza.modalidad_pago === "contado") {
 			const pago = pagos?.[0];
@@ -234,6 +254,8 @@ export async function obtenerPolizaParaEdicion(
 				moneda: poliza.moneda,
 				prima_neta: poliza.prima_neta,
 				comision: poliza.comision,
+				cuota_id: pago?.id,
+				cuota_pagada: pago?.estado === "pagada",
 			};
 		} else {
 			// Credito
@@ -244,17 +266,23 @@ export async function obtenerPolizaParaEdicion(
 				tipo: "credito",
 				prima_total: poliza.prima_total,
 				moneda: poliza.moneda,
-				cantidad_cuotas: cuotasRestantes.length,
+				cantidad_cuotas: cuotasRestantes.length + (cuotaInicial ? 1 : 0),
 				cuota_inicial: cuotaInicial?.monto || 0,
 				fecha_inicio_cuotas: cuotasRestantes[0]?.fecha_vencimiento || poliza.inicio_vigencia,
 				periodo_pago: "mensual", // Default, this is calculated
 				cuotas: cuotasRestantes.map((c, idx) => ({
+					id: c.id,
 					numero: idx + 1,
 					monto: c.monto,
 					fecha_vencimiento: c.fecha_vencimiento,
+					estado: c.estado as "pendiente" | "pagada" | "vencida",
+					fecha_pago: c.fecha_pago || undefined,
 				})),
 				prima_neta: poliza.prima_neta,
 				comision: poliza.comision,
+				cuota_inicial_id: cuotaInicial?.id,
+				cuota_inicial_pagada: cuotaInicial?.estado === "pagada",
+				tiene_pagos: tienePagos,
 			};
 		}
 
@@ -366,7 +394,7 @@ export async function actualizarPoliza(
 		// Get current policy state
 		const { data: currentPoliza, error: fetchError } = await supabase
 			.from("polizas")
-			.select("estado")
+			.select("estado, modalidad_pago")
 			.eq("id", polizaId)
 			.single();
 
@@ -374,8 +402,25 @@ export async function actualizarPoliza(
 			return { success: false, error: "Póliza no encontrada" };
 		}
 
-		// Determine if we need to reset to pending
-		const needsRevalidation = currentPoliza.estado === "activa";
+		// Get current payments to check for paid cuotas
+		const { data: currentPagos } = await supabase
+			.from("polizas_pagos")
+			.select("id, estado, monto, numero_cuota")
+			.eq("poliza_id", polizaId);
+
+		const cuotasPagadas = currentPagos?.filter(p => p.estado === "pagada") || [];
+		const tienePagos = cuotasPagadas.length > 0;
+
+		// Block modality change if there are paid cuotas
+		if (tienePagos && currentPoliza.modalidad_pago !== formState.modalidad_pago.tipo) {
+			return {
+				success: false,
+				error: "No se puede cambiar la modalidad de pago porque hay cuotas ya pagadas"
+			};
+		}
+
+		// Determine if we need to reset to pending (from activa OR rechazada)
+		const needsRevalidation = currentPoliza.estado === "activa" || currentPoliza.estado === "rechazada";
 
 		// Build update payload
 		const pagoData = formState.modalidad_pago as {
@@ -407,11 +452,18 @@ export async function actualizarPoliza(
 			comision_encargado: pagoData.comision_encargado || null,
 		};
 
-		// If policy was active, reset to pending and clear validation
+		// If policy was active or rejected, reset to pending and clear validation/rejection
 		if (needsRevalidation) {
 			updatePayload.estado = "pendiente";
 			updatePayload.validado_por = null;
 			updatePayload.fecha_validacion = null;
+			// Clear rejection fields if it was rejected
+			if (currentPoliza.estado === "rechazada") {
+				updatePayload.motivo_rechazo = null;
+				updatePayload.rechazado_por = null;
+				updatePayload.fecha_rechazo = null;
+				updatePayload.puede_editar_hasta = null;
+			}
 		}
 
 		// 1. Update main policy
@@ -425,17 +477,26 @@ export async function actualizarPoliza(
 			return { success: false, error: "Error al actualizar la póliza" };
 		}
 
-		// 2. Update payments - delete existing and recreate
-		await supabase.from("polizas_pagos").delete().eq("poliza_id", polizaId);
+		// 2. Update payments - preserve paid cuotas, only update unpaid ones
+		// Delete only UNPAID cuotas (estado != 'pagada')
+		await supabase
+			.from("polizas_pagos")
+			.delete()
+			.eq("poliza_id", polizaId)
+			.neq("estado", "pagada");
 
 		if (formState.modalidad_pago.tipo === "contado") {
-			await supabase.from("polizas_pagos").insert({
-				poliza_id: polizaId,
-				numero_cuota: 1,
-				monto: formState.modalidad_pago.cuota_unica,
-				fecha_vencimiento: formState.modalidad_pago.fecha_pago_unico,
-				estado: "pendiente",
-			});
+			// Only insert if the cuota is not already paid
+			const cuotaPagadaContado = cuotasPagadas.find(p => p.numero_cuota === 1);
+			if (!cuotaPagadaContado) {
+				await supabase.from("polizas_pagos").insert({
+					poliza_id: polizaId,
+					numero_cuota: 1,
+					monto: formState.modalidad_pago.cuota_unica,
+					fecha_vencimiento: formState.modalidad_pago.fecha_pago_unico,
+					estado: "pendiente",
+				});
+			}
 		} else {
 			const cuotas: Array<{
 				poliza_id: string;
@@ -448,26 +509,41 @@ export async function actualizarPoliza(
 
 			let numeroCuotaActual = 1;
 
+			// Handle cuota inicial
 			if (formState.modalidad_pago.cuota_inicial > 0) {
-				cuotas.push({
-					poliza_id: polizaId,
-					numero_cuota: numeroCuotaActual,
-					monto: formState.modalidad_pago.cuota_inicial,
-					fecha_vencimiento: formState.datos_basicos.inicio_vigencia,
-					estado: "pendiente",
-					observaciones: "Cuota inicial",
-				});
+				const cuotaInicialPagada = cuotasPagadas.some(
+					p => p.numero_cuota === 1 ||
+					currentPagos?.find(c => c.id === formState.modalidad_pago.cuota_inicial_id)?.estado === "pagada"
+				);
+
+				if (!cuotaInicialPagada) {
+					cuotas.push({
+						poliza_id: polizaId,
+						numero_cuota: numeroCuotaActual,
+						monto: formState.modalidad_pago.cuota_inicial,
+						fecha_vencimiento: formState.datos_basicos.inicio_vigencia,
+						estado: "pendiente",
+						observaciones: "Cuota inicial",
+					});
+				}
 				numeroCuotaActual++;
 			}
 
+			// Handle regular cuotas - only add if not paid
 			formState.modalidad_pago.cuotas.forEach((cuota) => {
-				cuotas.push({
-					poliza_id: polizaId,
-					numero_cuota: numeroCuotaActual,
-					monto: cuota.monto,
-					fecha_vencimiento: cuota.fecha_vencimiento,
-					estado: "pendiente",
-				});
+				// Check if this cuota is already paid
+				const estaPagada = cuota.estado === "pagada" ||
+					(cuota.id && cuotasPagadas.some(p => p.id === cuota.id));
+
+				if (!estaPagada) {
+					cuotas.push({
+						poliza_id: polizaId,
+						numero_cuota: numeroCuotaActual,
+						monto: cuota.monto,
+						fecha_vencimiento: cuota.fecha_vencimiento,
+						estado: "pendiente",
+					});
+				}
 				numeroCuotaActual++;
 			});
 
@@ -544,9 +620,13 @@ export async function actualizarPoliza(
 			});
 		}
 
+		// Nota: El historial de ediciones es manejado automáticamente por el trigger
+		// 'trigger_historial_polizas' que detecta campos que realmente cambiaron
+
 		// Revalidate paths
 		revalidatePath(`/polizas/${polizaId}`);
 		revalidatePath("/polizas");
+		revalidatePath("/gerencia/validacion");
 
 		return { success: true, data: { id: polizaId } };
 	} catch (error) {

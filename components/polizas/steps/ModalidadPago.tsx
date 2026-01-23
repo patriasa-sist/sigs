@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ChevronRight, ChevronLeft, CheckCircle2, DollarSign, CreditCard, Calendar, AlertCircle, Sparkles } from "lucide-react";
+import { ChevronRight, ChevronLeft, CheckCircle2, DollarSign, CreditCard, Calendar, AlertCircle, Sparkles, Lock } from "lucide-react";
 import type { ModalidadPago as ModalidadPagoType, Moneda, CuotaCredito, PeriodoPago, ProductoAseguradora, CalculoComisionResult } from "@/types/poliza";
 import { validarModalidadPago, calcularPrimaNetaYComision, calcularComisionesConProducto, validarFechasDentroVigencia } from "@/utils/polizaValidation";
 import { POLIZA_RULES } from "@/utils/validationConstants";
@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Slider } from "@/components/ui/slider";
+import { Badge } from "@/components/ui/badge";
 
 type Props = {
 	datos: ModalidadPagoType | null;
@@ -18,13 +19,31 @@ type Props = {
 	finVigencia?: string;
 	producto?: ProductoAseguradora | null; // Producto seleccionado para cálculos dinámicos
 	porcentajeComisionUsuario?: number; // Porcentaje de comisión del usuario encargado
+	mode?: "create" | "edit"; // Modo del formulario
 	onChange: (datos: ModalidadPagoType) => void;
 	onSiguiente: () => void;
 	onAnterior: () => void;
 };
 
-export function ModalidadPago({ datos, inicioVigencia, finVigencia, producto, porcentajeComisionUsuario = 0.5, onChange, onSiguiente, onAnterior }: Props) {
+// Helper to check if any cuota is paid
+const tieneCuotasPagadas = (datos: ModalidadPagoType | null): boolean => {
+	if (!datos) return false;
+	if (datos.tipo === "contado") {
+		return datos.cuota_pagada === true;
+	}
+	// For credito, check cuota_inicial_pagada and any cuota with estado "pagada"
+	return datos.cuota_inicial_pagada === true ||
+		datos.tiene_pagos === true ||
+		datos.cuotas.some(c => c.estado === "pagada");
+};
+
+export function ModalidadPago({ datos, inicioVigencia, finVigencia, producto, porcentajeComisionUsuario = 0.5, mode = "create", onChange, onSiguiente, onAnterior }: Props) {
 	const [tipoPago, setTipoPago] = useState<"contado" | "credito">(datos?.tipo || "contado");
+
+	// Check if modality change should be blocked (paid cuotas exist)
+	const bloquearCambioModalidad = mode === "edit" && tieneCuotasPagadas(datos);
+	const cuotaUnicaPagada = datos?.tipo === "contado" && datos.cuota_pagada === true;
+	const cuotaInicialPagada = datos?.tipo === "credito" && datos.cuota_inicial_pagada === true;
 
 	// Estados para pago contado
 	const [cuotaUnica, setCuotaUnica] = useState<number>(
@@ -96,6 +115,10 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, producto, po
 	}, [tipoPago, cantidadCuotas]);
 
 	const handleChangeTipoPago = (tipo: string) => {
+		// Block modality change if there are paid cuotas
+		if (bloquearCambioModalidad) {
+			return;
+		}
 		setTipoPago(tipo as "contado" | "credito");
 		setErrores({});
 		setAdvertencias({});
@@ -302,25 +325,57 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, producto, po
 				)}
 			</div>
 
+			{/* Warning about blocked modality change */}
+			{bloquearCambioModalidad && (
+				<div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg flex items-center gap-2">
+					<Lock className="h-5 w-5 text-yellow-600 flex-shrink-0" />
+					<p className="text-sm text-yellow-800">
+						No se puede cambiar la modalidad de pago porque hay cuotas ya pagadas.
+						Solo puede editar las cuotas pendientes.
+					</p>
+				</div>
+			)}
+
 			<Tabs value={tipoPago} onValueChange={handleChangeTipoPago} className="mb-6">
 				<TabsList className="grid w-full grid-cols-2">
-					<TabsTrigger value="contado" className="flex items-center gap-2">
+					<TabsTrigger
+						value="contado"
+						className="flex items-center gap-2"
+						disabled={bloquearCambioModalidad && tipoPago !== "contado"}
+					>
 						<DollarSign className="h-4 w-4" />
 						Contado
+						{bloquearCambioModalidad && tipoPago !== "contado" && <Lock className="h-3 w-3 ml-1" />}
 					</TabsTrigger>
-					<TabsTrigger value="credito" className="flex items-center gap-2">
+					<TabsTrigger
+						value="credito"
+						className="flex items-center gap-2"
+						disabled={bloquearCambioModalidad && tipoPago !== "credito"}
+					>
 						<CreditCard className="h-4 w-4" />
 						Crédito
+						{bloquearCambioModalidad && tipoPago !== "credito" && <Lock className="h-3 w-3 ml-1" />}
 					</TabsTrigger>
 				</TabsList>
 
 				{/* PAGO AL CONTADO */}
 				<TabsContent value="contado" className="space-y-6 mt-6">
+					{/* Show paid indicator */}
+					{cuotaUnicaPagada && (
+						<div className="p-3 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2">
+							<CheckCircle2 className="h-5 w-5 text-green-600 flex-shrink-0" />
+							<p className="text-sm text-green-800">
+								Esta cuota ya está <strong>pagada</strong>. Los datos no pueden ser modificados.
+							</p>
+						</div>
+					)}
+
 					<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 						{/* Cuota Única */}
 						<div className="space-y-2">
 							<Label htmlFor="cuota_unica">
 								Cuota Única <span className="text-red-500">*</span>
+								{cuotaUnicaPagada && <Badge variant="secondary" className="ml-2 bg-green-100 text-green-800">Pagada</Badge>}
 							</Label>
 							<Input
 								id="cuota_unica"
@@ -329,6 +384,7 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, producto, po
 								step="0.01"
 								value={cuotaUnica || ""}
 								onChange={(e) => {
+									if (cuotaUnicaPagada) return;
 									const valor = parseFloat(e.target.value) || 0;
 									setCuotaUnica(valor);
 									// eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -337,6 +393,7 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, producto, po
 								}}
 								placeholder="5000.00"
 								className={errores.cuota_unica ? "border-red-500" : ""}
+								disabled={cuotaUnicaPagada}
 							/>
 							{errores.cuota_unica && (
 								<p className="text-sm text-red-600">{errores.cuota_unica}</p>
@@ -353,6 +410,7 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, producto, po
 								type="date"
 								value={fechaPagoUnico}
 								onChange={(e) => {
+									if (cuotaUnicaPagada) return;
 									setFechaPagoUnico(e.target.value);
 									// eslint-disable-next-line @typescript-eslint/no-unused-vars
 									const { fecha_pago_unico: _removedErr, ...restErrores } = errores;
@@ -362,6 +420,7 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, producto, po
 									setAdvertencias(restAdv);
 								}}
 								className={errores.fecha_pago_unico || advertencias.fecha_pago_unico ? "border-red-500" : ""}
+								disabled={cuotaUnicaPagada}
 							/>
 							{errores.fecha_pago_unico && (
 								<p className="text-sm text-red-600">{errores.fecha_pago_unico}</p>
@@ -715,26 +774,33 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, producto, po
 										<thead className="bg-gray-50 sticky top-0">
 											<tr>
 												<th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">
-													# Cuota <span className="text-green-500">(editable)</span>
+													# Cuota
+													{mode === "edit" && <span className="text-gray-400 ml-1">(solo pendientes)</span>}
 												</th>
 												<th className="px-4 py-3 text-right text-xs font-medium text-gray-700 uppercase">
-													Monto <span className="text-blue-500">(editable)</span>
+													Monto
+													{mode === "edit" && <span className="text-gray-400 ml-1">(solo pendientes)</span>}
 												</th>
 												<th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">
 													Fecha Vencimiento <span className="text-red-500">*</span>
+												</th>
+												<th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">
+													Estado
 												</th>
 											</tr>
 										</thead>
 										<tbody className="divide-y">
 											{/* Mostrar cuota inicial si existe */}
 											{cuotaInicial > 0 && (
-												<tr className="bg-blue-50">
+												<tr className={cuotaInicialPagada ? "bg-green-50" : "bg-blue-50"}>
 													<td className="px-4 py-3">
-														<span className="font-medium text-blue-700">1 (Inicial)</span>
+														<span className={`font-medium ${cuotaInicialPagada ? "text-green-700" : "text-blue-700"}`}>
+															1 (Inicial)
+														</span>
 													</td>
 													<td className="px-4 py-3">
 														<div className="flex items-center justify-end gap-2">
-															<span className="font-semibold text-blue-900">
+															<span className={`font-semibold ${cuotaInicialPagada ? "text-green-900" : "text-blue-900"}`}>
 																{cuotaInicial.toLocaleString("es-BO", { minimumFractionDigits: 2 })}
 															</span>
 															<span className="text-sm text-gray-600 font-medium">{moneda}</span>
@@ -742,59 +808,104 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, producto, po
 													</td>
 													<td className="px-4 py-3">
 														<div className="flex items-center gap-2">
-															<Calendar className="h-4 w-4 text-blue-400" />
-															<span className="text-sm text-blue-700">
+															<Calendar className={`h-4 w-4 ${cuotaInicialPagada ? "text-green-400" : "text-blue-400"}`} />
+															<span className={`text-sm ${cuotaInicialPagada ? "text-green-700" : "text-blue-700"}`}>
 																{fechaInicioCuotas ? new Date(fechaInicioCuotas + 'T00:00:00').toLocaleDateString("es-BO") : "-"}
 															</span>
 														</div>
 													</td>
+													<td className="px-4 py-3">
+														{cuotaInicialPagada ? (
+															<Badge className="bg-green-100 text-green-800 border-green-200">
+																<Lock className="h-3 w-3 mr-1" />
+																Pagada
+															</Badge>
+														) : (
+															<Badge variant="outline" className="bg-yellow-50 text-yellow-800 border-yellow-200">
+																Pendiente
+															</Badge>
+														)}
+													</td>
 												</tr>
 											)}
-											{cuotas.map((cuota, index) => (
-												<tr key={index} className="hover:bg-gray-50">
-													<td className="px-4 py-3">
-														<Input
-															type="number"
-															min="1"
-															value={cuota.numero}
-															onChange={(e) => handleChangeNumeroCuota(index, parseInt(e.target.value) || 1)}
-															className="max-w-[80px]"
-														/>
-													</td>
-													<td className="px-4 py-3">
-														<div className="flex items-center justify-end gap-2">
-															<Input
-																type="number"
-																min="0"
-																step="0.01"
-																value={cuota.monto || ""}
-																onChange={(e) => handleChangeMontoCuota(index, parseFloat(e.target.value) || 0)}
-																className="max-w-[140px] text-right"
-															/>
-															<span className="text-sm text-gray-600 font-medium">{moneda}</span>
-														</div>
-													</td>
-													<td className="px-4 py-3">
-														<div className="flex items-center gap-2">
-															<Calendar className="h-4 w-4 text-gray-400" />
-															<Input
-																type="date"
-																value={cuota.fecha_vencimiento}
-																onChange={(e) => handleChangeFechaCuota(index, e.target.value)}
-																className={`max-w-[180px] ${
-																	errores[`cuota_${index}_fecha`] || advertencias[`cuota_${index}_fecha`] ? "border-red-500" : ""
-																}`}
-															/>
-														</div>
-														{errores[`cuota_${index}_fecha`] && (
-															<p className="text-xs text-red-600 mt-1">{errores[`cuota_${index}_fecha`]}</p>
-														)}
-														{advertencias[`cuota_${index}_fecha`] && (
-															<p className="text-xs text-red-600 mt-1">{advertencias[`cuota_${index}_fecha`]}</p>
-														)}
-													</td>
-												</tr>
-											))}
+											{cuotas.map((cuota, index) => {
+												const estaPagada = cuota.estado === "pagada";
+												return (
+													<tr key={index} className={estaPagada ? "bg-green-50" : "hover:bg-gray-50"}>
+														<td className="px-4 py-3">
+															{estaPagada ? (
+																<span className="font-medium text-green-700">
+																	{cuota.numero}
+																</span>
+															) : (
+																<Input
+																	type="number"
+																	min="1"
+																	value={cuota.numero}
+																	onChange={(e) => handleChangeNumeroCuota(index, parseInt(e.target.value) || 1)}
+																	className="max-w-[80px]"
+																/>
+															)}
+														</td>
+														<td className="px-4 py-3">
+															<div className="flex items-center justify-end gap-2">
+																{estaPagada ? (
+																	<span className="font-semibold text-green-900">
+																		{cuota.monto.toLocaleString("es-BO", { minimumFractionDigits: 2 })}
+																	</span>
+																) : (
+																	<Input
+																		type="number"
+																		min="0"
+																		step="0.01"
+																		value={cuota.monto || ""}
+																		onChange={(e) => handleChangeMontoCuota(index, parseFloat(e.target.value) || 0)}
+																		className="max-w-[140px] text-right"
+																	/>
+																)}
+																<span className="text-sm text-gray-600 font-medium">{moneda}</span>
+															</div>
+														</td>
+														<td className="px-4 py-3">
+															<div className="flex items-center gap-2">
+																<Calendar className={`h-4 w-4 ${estaPagada ? "text-green-400" : "text-gray-400"}`} />
+																{estaPagada ? (
+																	<span className="text-sm text-green-700">
+																		{cuota.fecha_vencimiento ? new Date(cuota.fecha_vencimiento + 'T00:00:00').toLocaleDateString("es-BO") : "-"}
+																	</span>
+																) : (
+																	<Input
+																		type="date"
+																		value={cuota.fecha_vencimiento}
+																		onChange={(e) => handleChangeFechaCuota(index, e.target.value)}
+																		className={`max-w-[180px] ${
+																			errores[`cuota_${index}_fecha`] || advertencias[`cuota_${index}_fecha`] ? "border-red-500" : ""
+																		}`}
+																	/>
+																)}
+															</div>
+															{!estaPagada && errores[`cuota_${index}_fecha`] && (
+																<p className="text-xs text-red-600 mt-1">{errores[`cuota_${index}_fecha`]}</p>
+															)}
+															{!estaPagada && advertencias[`cuota_${index}_fecha`] && (
+																<p className="text-xs text-red-600 mt-1">{advertencias[`cuota_${index}_fecha`]}</p>
+															)}
+														</td>
+														<td className="px-4 py-3">
+															{estaPagada ? (
+																<Badge className="bg-green-100 text-green-800 border-green-200">
+																	<Lock className="h-3 w-3 mr-1" />
+																	Pagada
+																</Badge>
+															) : (
+																<Badge variant="outline" className="bg-yellow-50 text-yellow-800 border-yellow-200">
+																	Pendiente
+																</Badge>
+															)}
+														</td>
+													</tr>
+												);
+											})}
 										</tbody>
 									</table>
 								</div>
@@ -848,7 +959,7 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, producto, po
 				</Button>
 
 				<Button onClick={handleContinuar} disabled={!tieneDatos}>
-					Continuar con Documentos
+					{mode === "edit" ? "Actualizar Datos de Pago" : "Continuar con Documentos"}
 					<ChevronRight className="ml-2 h-5 w-5" />
 				</Button>
 			</div>

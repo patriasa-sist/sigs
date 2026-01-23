@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle, XCircle, Eye } from "lucide-react";
+import { RechazoPolizaModal } from "./RechazoPolizaModal";
 
 type PolizaPendiente = {
 	id: string;
@@ -73,6 +74,9 @@ export default function PolizasPendientesTable({ polizas: initialPolizas }: Prop
 	const [dialogOpen, setDialogOpen] = useState(false);
 	const [selectedPoliza, setSelectedPoliza] = useState<PolizaPendiente | null>(null);
 	const [dialogType, setDialogType] = useState<"validar" | "rechazar">("validar");
+	// Estado para el modal de rechazo
+	const [rechazoModalOpen, setRechazoModalOpen] = useState(false);
+	const [polizaArechazar, setPolizaArechazar] = useState<PolizaPendiente | null>(null);
 
 	// Formatear nombre del cliente
 	const formatClientName = (poliza: PolizaPendiente) => {
@@ -121,20 +125,29 @@ export default function PolizasPendientesTable({ polizas: initialPolizas }: Prop
 		setLoading(null);
 	};
 
-	// Manejar rechazo
-	const handleRechazar = async (polizaId: string) => {
-		setLoading(polizaId);
-		const result = await rechazarPoliza(polizaId, "Rechazada por gerencia");
+	// Manejar rechazo con motivo
+	const handleRechazar = async (motivo: string) => {
+		if (!polizaArechazar) return;
+
+		setLoading(polizaArechazar.id);
+		const result = await rechazarPoliza(polizaArechazar.id, motivo);
 
 		if (result.success) {
 			// Remover de la lista
-			setPolizas((prev) => prev.filter((p) => p.id !== polizaId));
-			setDialogOpen(false);
+			setPolizas((prev) => prev.filter((p) => p.id !== polizaArechazar.id));
+			setRechazoModalOpen(false);
+			setPolizaArechazar(null);
 		} else {
 			alert(`Error: ${result.error}`);
 		}
 
 		setLoading(null);
+	};
+
+	// Abrir modal de rechazo
+	const openRechazoModal = (poliza: PolizaPendiente) => {
+		setPolizaArechazar(poliza);
+		setRechazoModalOpen(true);
 	};
 
 	// Abrir diálogo de confirmación
@@ -237,7 +250,7 @@ export default function PolizasPendientesTable({ polizas: initialPolizas }: Prop
 										<Button
 											variant="destructive"
 											size="sm"
-											onClick={() => openDialog(poliza, "rechazar")}
+											onClick={() => openRechazoModal(poliza)}
 											disabled={loading === poliza.id}
 										>
 											<XCircle className="h-4 w-4 mr-1" />
@@ -296,19 +309,21 @@ export default function PolizasPendientesTable({ polizas: initialPolizas }: Prop
 								Confirmar Validación
 							</Button>
 						)}
-						{dialogType === "rechazar" && selectedPoliza && (
-							<Button
-								variant="destructive"
-								onClick={() => handleRechazar(selectedPoliza.id)}
-								disabled={loading === selectedPoliza.id}
-							>
-								<XCircle className="h-4 w-4 mr-2" />
-								Confirmar Rechazo
-							</Button>
-						)}
 					</DialogFooter>
 				</DialogContent>
 			</Dialog>
+
+			{/* Modal de rechazo con motivo obligatorio */}
+			<RechazoPolizaModal
+				isOpen={rechazoModalOpen}
+				onClose={() => {
+					setRechazoModalOpen(false);
+					setPolizaArechazar(null);
+				}}
+				onConfirm={handleRechazar}
+				poliza={polizaArechazar}
+				isLoading={loading === polizaArechazar?.id}
+			/>
 		</>
 	);
 }

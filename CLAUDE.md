@@ -2,6 +2,12 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## base directives
+- when looking for Database Strucuture or details look directly into Supabase using the MCP, do not trust the local migration files
+- be careful not to query the entire database when querying
+- just run lint and tsc verifications, do not build the project or execute dev servers
+
+
 ## Development Commands
 
 - `npm run dev` - Start development server with Turbopack

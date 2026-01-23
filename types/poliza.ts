@@ -368,10 +368,15 @@ export type DatosEspecificosPoliza =
 export type Moneda = "Bs" | "USD" | "USDT" | "UFV";
 export type PeriodoPago = "mensual" | "trimestral" | "semestral";
 
+export type EstadoCuota = "pendiente" | "pagada" | "vencida";
+
 export type CuotaCredito = {
+	id?: string; // ID en BD (para cuotas existentes en edición)
 	numero: number; // Número de cuota editable (permite cuotas no secuenciales)
 	monto: number;
 	fecha_vencimiento: string; // ISO date
+	estado?: EstadoCuota; // Estado de la cuota (para edición)
+	fecha_pago?: string; // Fecha en que se pagó (si está pagada)
 };
 
 export type PagoContado = {
@@ -383,6 +388,9 @@ export type PagoContado = {
 	// Campos calculados (solo para display)
 	prima_neta?: number; // prima_total * 0.87
 	comision?: number; // prima_neta * 0.02
+	// Campos para edición
+	cuota_id?: string; // ID de la cuota en BD
+	cuota_pagada?: boolean; // Si la cuota única ya está pagada
 };
 
 export type PagoCredito = {
@@ -397,6 +405,10 @@ export type PagoCredito = {
 	// Campos calculados (solo para display)
 	prima_neta?: number;
 	comision?: number;
+	// Campos para edición
+	cuota_inicial_id?: string; // ID de la cuota inicial en BD
+	cuota_inicial_pagada?: boolean; // Si la cuota inicial ya está pagada
+	tiene_pagos?: boolean; // Si hay al menos una cuota pagada (bloquea cambio de modalidad)
 };
 
 export type ModalidadPago = PagoContado | PagoCredito;
@@ -481,9 +493,14 @@ export type PolizaDB = {
 	comision: number;
 	comision_empresa?: number; // Comisión calculada para la empresa
 	comision_encargado?: number; // Comisión calculada para el encargado
-	estado: "pendiente" | "activa" | "vencida" | "cancelada" | "renovada";
+	estado: "pendiente" | "activa" | "vencida" | "cancelada" | "renovada" | "rechazada";
 	validado_por?: string; // Usuario gerente que validó la póliza
 	fecha_validacion?: string; // Fecha de validación gerencial
+	// Campos de rechazo
+	motivo_rechazo?: string; // Razón del rechazo por gerencia
+	rechazado_por?: string; // UUID del gerente/admin que rechazó
+	fecha_rechazo?: string; // Fecha y hora del rechazo
+	puede_editar_hasta?: string; // Ventana de edición permitida (1 día desde rechazo)
 	created_at: string;
 	updated_at: string;
 	created_by?: string;
