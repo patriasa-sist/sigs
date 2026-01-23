@@ -359,10 +359,12 @@ SISTEMA DE EDICION:
 
 ---
 
-crea la tabla de trazabilidad de historial de ediciones de clientes
+✅crea la tabla de trazabilidad de historial de ediciones de clientes
 
-vamos a mejorar el modulo de polizas al crear una poliza nueva actualmente solo se selecciona el ramo, pero ahora se debe seleccionar obligatoriamente el producto porque el producto trae consigo la comision que recibe patria y el factor de comision que recibe el encargado de ese cliente, por lo que quiero crear una tabla en la db que contenga un uuid, cod_aseguradora FK, cod_ramo FK, cod_producto int, nombre_producto varchar, porcentaje_comision int, factor_contado float y factor_credito float. Notaras que si la poliza se paga al contado tiene un factor y si es al credito otro.
+✅vamos a mejorar el modulo de polizas al crear una poliza nueva actualmente solo se selecciona el ramo, pero ahora se debe seleccionar obligatoriamente el producto porque el producto trae consigo la comision que recibe patria y el factor de comision que recibe el encargado de ese cliente, por lo que quiero crear una tabla vacia de momento en la db que contenga un uuid, cod_aseguradora FK de tabla companias_aseguradoras, cod_ramo FK de tabla tipos_seguros, cod_producto entero, nombre_producto texto, porcentaje_comision decimal, factor_contado decimal y factor_credito decimal. Notaras que si la poliza se paga al contado tiene un factor y si es al credito otro.
 Una vez seleccionada la compañia y el ramo quiero que se habilite la seleccion del producto de la lista de productos disponibles para ese ramo y esa compañia en especifico, y ya que lo hemos seleccionado al final cuando se está creando el plan de pago se podrá calcular la comsión real que recibe la empresa y el usuario y no como ahora que es un valor fijo inventado de comsión.
+
+pequeñas modificaciones en lo que acabamos de crear 1. al seleccionar el producto no quiero que me indique los valores del mismo 2. al calcular las cuotas no quiero que se vea la comision del usuario
 
 vamos a mejorar el modulo de polizas creando el mismo modo de edicion para administrador y otorgar permisos para los demas usuarios comerciales, el boton de edicion debe estar dentro de la vista a detalle de la poliza, no olvidar tambien que estas modificaciones deben ser registradas en la tabla de trazabilidad y mostradas en el detalle de la poliza una vez guardada (ya creamos esa seccion anteriormente)
 

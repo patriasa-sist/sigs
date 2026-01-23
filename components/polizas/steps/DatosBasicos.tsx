@@ -410,23 +410,6 @@ export function DatosBasicos({ datos, onChange, onSiguiente, onAnterior }: Props
 					{errorProductos && !errores.producto_id && (
 						<p className="text-sm text-red-600">{errorProductos}</p>
 					)}
-					{formData.producto_id && productos.length > 0 && (
-						<div className="text-xs text-blue-600 mt-1">
-							{(() => {
-								const producto = productos.find((p) => p.id === formData.producto_id);
-								if (producto) {
-									return (
-										<span>
-											Factor contado: {producto.factor_contado}% | Factor crédito:{" "}
-											{producto.factor_credito}% | Comisión:{" "}
-											{(producto.porcentaje_comision * 100).toFixed(1)}%
-										</span>
-									);
-								}
-								return null;
-							})()}
-						</div>
-					)}
 				</div>
 
 				{/* Ejecutivo comercial */}

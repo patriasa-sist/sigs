@@ -79,7 +79,6 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, producto, po
 	// Usar valores del producto si está disponible, de lo contrario usar legacy
 	const prima_neta = calculos?.prima_neta ?? prima_neta_legacy;
 	const comision = calculos?.comision_empresa ?? comision_legacy;
-	const comision_encargado = calculos?.comision_encargado ?? 0;
 
 	// Sincronizar prima_total con cuota_unica en modo contado
 	useEffect(() => {
@@ -438,19 +437,6 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, producto, po
 										{comision.toLocaleString("es-BO", { minimumFractionDigits: 2 })} {moneda}
 									</p>
 								</div>
-								{calculos && comision_encargado > 0 && (
-									<div>
-										<p className="text-blue-700 font-medium">
-											Comisión Encargado
-											<span className="text-xs font-normal text-blue-500 ml-1">
-												({(porcentajeComisionUsuario * 100).toFixed(0)}%)
-											</span>
-										</p>
-										<p className="text-green-700 text-lg font-bold">
-											{comision_encargado.toLocaleString("es-BO", { minimumFractionDigits: 2 })} {moneda}
-										</p>
-									</div>
-								)}
 							</div>
 							{!producto && (
 								<p className="text-xs text-yellow-600 mt-2">
@@ -651,6 +637,12 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, producto, po
 							</h4>
 							<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
 								<div>
+									<p className="text-blue-700 font-medium">Prima Total</p>
+									<p className="text-blue-900 text-lg font-bold">
+										{primaTotal.toLocaleString("es-BO", { minimumFractionDigits: 2 })} {moneda}
+									</p>
+								</div>
+								<div>
 									<p className="text-blue-700 font-medium">
 										Prima Neta
 										{calculos && (
@@ -676,19 +668,6 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, producto, po
 										{comision.toLocaleString("es-BO", { minimumFractionDigits: 2 })} {moneda}
 									</p>
 								</div>
-								{calculos && comision_encargado > 0 && (
-									<div>
-										<p className="text-blue-700 font-medium">
-											Comisión Encargado
-											<span className="text-xs font-normal text-blue-500 ml-1">
-												({(porcentajeComisionUsuario * 100).toFixed(0)}%)
-											</span>
-										</p>
-										<p className="text-green-700 text-lg font-bold">
-											{comision_encargado.toLocaleString("es-BO", { minimumFractionDigits: 2 })} {moneda}
-										</p>
-									</div>
-								)}
 								<div>
 									<p className="text-blue-700 font-medium">Resto a Pagar</p>
 									<p className="text-blue-900 text-lg font-bold">

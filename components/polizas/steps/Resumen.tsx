@@ -566,9 +566,9 @@ export function Resumen({ formState, onAnterior, onEditarPaso, onGuardar }: Prop
 												{modalidad_pago.moneda}
 											</p>
 										)}
-										{/* Mostrar desglose de comisiones si están disponibles */}
+										{/* Mostrar comisión empresa si está disponible */}
 										{(() => {
-											const pago = modalidad_pago as { comision_empresa?: number; comision_encargado?: number; moneda: string };
+											const pago = modalidad_pago as { comision_empresa?: number; moneda: string };
 											if (!pago.comision_empresa) return null;
 											return (
 												<div className="mt-2 pt-2 border-t border-gray-200">
@@ -577,13 +577,6 @@ export function Resumen({ formState, onAnterior, onEditarPaso, onGuardar }: Prop
 														{pago.comision_empresa.toLocaleString("es-BO")}{" "}
 														{pago.moneda}
 													</p>
-													{pago.comision_encargado && (
-														<p className="text-green-700">
-															<span className="font-medium">Comisión Encargado:</span>{" "}
-															{pago.comision_encargado.toLocaleString("es-BO")}{" "}
-															{pago.moneda}
-														</p>
-													)}
 												</div>
 											);
 										})()}
