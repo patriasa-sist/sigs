@@ -1,5 +1,5 @@
 import { createClient } from "@/utils/supabase/server";
-import { Users, Mail, Calendar, MoreHorizontal, Shield, User } from "lucide-react";
+import { Users, Calendar, MoreHorizontal, Shield, User } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DeleteUserDialog } from "@/components/ui/delete-user-dialog";
+import { SendResetPasswordDialog } from "@/components/admin/send-reset-password-dialog";
 
 export default async function ManageUsersPage() {
 	const supabase = await createClient();
@@ -160,10 +161,12 @@ export default async function ManageUsersPage() {
 														</Button>
 													</DropdownMenuTrigger>
 													<DropdownMenuContent align="end">
-														<DropdownMenuItem>
-															<Mail className="h-4 w-4 mr-2" />
-															Enviar Mensaje
-														</DropdownMenuItem>
+														<SendResetPasswordDialog
+															user={{
+																id: user.id,
+																email: user.email,
+															}}
+														/>
 														<DropdownMenuItem>Ver Perfil</DropdownMenuItem>
 														<DeleteUserDialog
 															user={{

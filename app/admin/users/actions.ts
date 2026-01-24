@@ -3,6 +3,7 @@
 import { createClient } from "@/utils/supabase/server";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 
 export async function deleteUser(userId: string) {
 	try {
@@ -96,5 +97,70 @@ export async function deleteUser(userId: string) {
 	} catch (error) {
 		console.error("Error deleting user:", error);
 		return { success: false, error: "An unexpected error occurred" };
+	}
+}
+
+export async function sendPasswordResetEmail(userId: string) {
+	try {
+		const supabase = await createClient();
+
+		// Get current user to verify admin permissions
+		const {
+			data: { user: currentUser },
+			error: authError,
+		} = await supabase.auth.getUser();
+
+		if (authError || !currentUser) {
+			return { success: false, error: "Acceso no autorizado" };
+		}
+
+		// Get current user's profile to check role
+		const { data: currentProfile, error: profileError } = await supabase
+			.from("profiles")
+			.select("role")
+			.eq("id", currentUser.id)
+			.single();
+
+		if (profileError || currentProfile?.role !== "admin") {
+			return { success: false, error: "Se requieren privilegios de administrador" };
+		}
+
+		// Get user to send reset email
+		const { data: targetUser, error: getUserError } = await supabase
+			.from("profiles")
+			.select("email")
+			.eq("id", userId)
+			.single();
+
+		if (getUserError || !targetUser) {
+			return { success: false, error: "Usuario no encontrado" };
+		}
+
+		// Get the origin for redirect URL
+		const headersList = await headers();
+		const origin = headersList.get("origin") || headersList.get("x-forwarded-host") || "http://localhost:3000";
+		const protocol = headersList.get("x-forwarded-proto") || "http";
+		const baseUrl = origin.startsWith("http") ? origin : `${protocol}://${origin}`;
+
+		// Send password reset email via Supabase
+		const { error: resetError } = await supabase.auth.resetPasswordForEmail(
+			targetUser.email,
+			{
+				redirectTo: `${baseUrl}/auth/confirm`,
+			}
+		);
+
+		if (resetError) {
+			console.error("Error sending reset email:", resetError);
+			return { success: false, error: "Error al enviar el correo de recuperación" };
+		}
+
+		return {
+			success: true,
+			message: `Correo de recuperación enviado a ${targetUser.email}`,
+		};
+	} catch (error) {
+		console.error("Error sending password reset email:", error);
+		return { success: false, error: "Ocurrió un error inesperado" };
 	}
 }

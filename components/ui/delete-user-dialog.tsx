@@ -61,20 +61,22 @@ export function DeleteUserDialog({ user }: DeleteUserDialogProps) {
 						<AlertTriangle className="h-5 w-5 text-destructive" />
 						Delete User Account
 					</AlertDialogTitle>
-					<AlertDialogDescription className="space-y-2">
-						<p>
-							Are you sure you want to delete <strong>{user.email}</strong>?
-						</p>
-						<p className="text-sm bg-destructive/10 p-3 rounded-md border border-destructive/20">
-							<strong>Warning:</strong> This action cannot be undone. The user will lose access 
-							to their account and all associated data will be permanently removed.
-						</p>
-						{user.role === "admin" && (
-							<p className="text-sm bg-amber-50 p-3 rounded-md border border-amber-200">
-								<strong>Note:</strong> You are about to delete an admin user. 
-								Make sure there are other admin users to manage the system.
-							</p>
-						)}
+					<AlertDialogDescription asChild>
+						<div className="space-y-2 text-sm text-muted-foreground">
+							<span className="block">
+								Are you sure you want to delete <strong className="text-foreground">{user.email}</strong>?
+							</span>
+							<span className="block text-sm bg-destructive/10 p-3 rounded-md border border-destructive/20">
+								<strong>Warning:</strong> This action cannot be undone. The user will lose access
+								to their account and all associated data will be permanently removed.
+							</span>
+							{user.role === "admin" && (
+								<span className="block text-sm bg-amber-50 p-3 rounded-md border border-amber-200">
+									<strong>Note:</strong> You are about to delete an admin user.
+									Make sure there are other admin users to manage the system.
+								</span>
+							)}
+						</div>
 					</AlertDialogDescription>
 				</AlertDialogHeader>
 				<AlertDialogFooter>
