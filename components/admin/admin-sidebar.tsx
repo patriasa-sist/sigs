@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Users, Mail, Shield, FileText, BarChart3, FileSpreadsheet } from "lucide-react";
+import { Users, Mail, Shield, FileText, BarChart3, FileSpreadsheet, Building2, Layers, Package, Tag, LayoutDashboard } from "lucide-react";
 import {
 	Accordion,
 	AccordionContent,
@@ -48,19 +48,32 @@ const navigationItems = [
 		title: "Seguros",
 		icon: FileText,
 		items: [
-			// Placeholder for future items
-			// {
-			// 	title: "Gestionar Ramos",
-			// 	href: "/admin/seguros/ramos",
-			// 	icon: FileText,
-			// },
-			// {
-			// 	title: "Crear Backup",
-			// 	href: "/admin/seguros/backup",
-			// 	icon: Database,
-			// },
+			{
+				title: "Panel General",
+				href: "/admin/seguros",
+				icon: LayoutDashboard,
+			},
+			{
+				title: "Aseguradoras",
+				href: "/admin/seguros/aseguradoras",
+				icon: Building2,
+			},
+			{
+				title: "Ramos de Seguros",
+				href: "/admin/seguros/ramos",
+				icon: Layers,
+			},
+			{
+				title: "Productos",
+				href: "/admin/seguros/productos",
+				icon: Package,
+			},
+			{
+				title: "Categorías",
+				href: "/admin/seguros/categorias",
+				icon: Tag,
+			},
 		],
-		disabled: true,
 	},
 ];
 
@@ -79,13 +92,9 @@ export function AdminSidebar() {
 						key={index}
 						value={`item-${index}`}
 						className="border rounded-lg px-2"
-						disabled={section.disabled}
 					>
 						<AccordionTrigger
-							className={cn(
-								"hover:no-underline py-2 px-2",
-								section.disabled && "opacity-50 cursor-not-allowed"
-							)}
+							className="hover:no-underline py-2 px-2"
 						>
 							<div className="flex items-center gap-2">
 								<section.icon className="h-4 w-4" />
@@ -121,14 +130,6 @@ export function AdminSidebar() {
 				))}
 			</Accordion>
 
-			{/* Coming Soon Notice */}
-			<div className="mt-6 px-4">
-				<div className="rounded-lg bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 p-3">
-					<p className="text-xs text-blue-700 dark:text-blue-300">
-						<strong>Próximamente:</strong> Gestión de seguros y ramos
-					</p>
-				</div>
-			</div>
 		</aside>
 	);
 }
