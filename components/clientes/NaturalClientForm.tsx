@@ -351,8 +351,11 @@ export function NaturalClientForm({ form, partnerForm, onFieldBlur }: NaturalCli
 						<Label htmlFor="anio_ingreso">Año de Ingreso</Label>
 						<Input
 							id="anio_ingreso"
-							type="date"
-							{...register("anio_ingreso")}
+							type="number"
+							min={1900}
+							max={new Date().getFullYear()}
+							placeholder="Ej: 2020"
+							{...register("anio_ingreso", { valueAsNumber: true })}
 							onBlur={onFieldBlur}
 							className={errors.anio_ingreso ? "border-red-500" : ""}
 						/>

@@ -129,7 +129,7 @@ export interface NaturalClientOtherData {
   genero?: Gender;
   nivel_ingresos?: number;
   cargo?: string;
-  anio_ingreso?: string; // ISO date string (YYYY-MM-DD) - optional
+  anio_ingreso?: number; // Year only (integer) - optional
   nit?: string;
   domicilio_comercial?: string;
 }
@@ -142,7 +142,13 @@ export const naturalClientOtherSchema = z.object({
   genero: z.enum(GENDER_OPTIONS).optional(),
   nivel_ingresos: z.number().positive().optional(),
   cargo: z.string().optional(),
-  anio_ingreso: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Formato de fecha inválido').optional().or(z.literal('')),
+  anio_ingreso: z
+    .number()
+    .int('Debe ser un año válido')
+    .min(1900, 'Año debe ser mayor a 1900')
+    .max(new Date().getFullYear(), 'Año no puede ser mayor al actual')
+    .optional()
+    .or(z.nan().transform(() => undefined)),
   nit: z
     .string()
     .refine((val) => !val || val.length >= 7, { message: 'NIT debe tener al menos 7 dígitos' })

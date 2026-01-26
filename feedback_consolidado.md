@@ -372,7 +372,11 @@ Una vez seleccionada la compañia y el ramo quiero que se habilite la seleccion 
 
 ✅vamos a mejorar el modulo de administración con un sistema para exportar el reporte consolidado de producción del mes, esta función estará en una seccion llamada "reportes" y dentro del modulo de administración. Esta funcion toma la exportacion que reporte de cobranzas que ya existe pero agrega campos importantes como prima neta, comision empresa, factor prima neta, porcentaje de comision empresa. Estos campos deben ser calculados tanto para la prima total como para la cuota individual. comparto una imagen de ejemplo con las celdas resaltadas para que se entienda.
 
-vamos a mejorar el modulo de administración en la seccion de "seguros" para que exista la opcion de editar las empresas aseguradoras, los tipos de seguros, los productos de cada ramo y las categorias de polizas
+✅vamos a crear la funcion para enviar correo de reseteo de contraseña
+
+✅vamos a mejorar el modulo de administración en la seccion de "seguros" para que exista la opcion de editar las empresas aseguradoras, los tipos de seguros, los productos de cada ramo y las categorias de polizas, aqui se pueden crear, actualizar y hacer soft delete de los registros mas no borrar permanentenmente.
+
+✅vamos a crear una funcion y sistema para poder enviar correos de recuperacion
 
 vamos a mejorar el modulo de administracion para poder modificar las comisiones de cada usuario del sistema, esta funcion debe estar bajo la nueva seccion llamada "usuarios"
 

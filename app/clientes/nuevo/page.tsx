@@ -253,9 +253,9 @@ export default function NuevoClientePage() {
 			throw new Error("Fecha de nacimiento inválida");
 		}
 
-		// Keep anio_ingreso as YYYY-MM-DD string or null (PostgreSQL date type expects this format)
+		// anio_ingreso is an integer (year only) or null
 		const anioIngreso =
-			normalized.anio_ingreso && normalized.anio_ingreso.trim() !== "" ? normalized.anio_ingreso : null;
+			normalized.anio_ingreso && !isNaN(normalized.anio_ingreso) ? normalized.anio_ingreso : null;
 
 		// 1. Insert into clients table
 		const { data: client, error: clientError } = await supabase
@@ -294,7 +294,7 @@ export default function NuevoClientePage() {
 			genero: normalized.genero || null,
 			nivel_ingresos: normalized.nivel_ingresos || null,
 			cargo: normalized.cargo || null,
-			anio_ingreso: anioIngreso, // Already in YYYY-MM-DD format or null
+			anio_ingreso: anioIngreso, // Integer (year only) or null
 			nit: normalized.nit || null,
 			domicilio_comercial: normalized.domicilio_comercial || null,
 		});
@@ -346,9 +346,9 @@ export default function NuevoClientePage() {
 			throw new Error("Fecha de nacimiento inválida");
 		}
 
-		// Keep anio_ingreso as YYYY-MM-DD string or null (PostgreSQL date type expects this format)
+		// anio_ingreso is an integer (year only) or null
 		const anioIngreso =
-			normalized.anio_ingreso && normalized.anio_ingreso.trim() !== "" ? normalized.anio_ingreso : null;
+			normalized.anio_ingreso && !isNaN(normalized.anio_ingreso) ? normalized.anio_ingreso : null;
 
 		// 1. Insert into clients table
 		const { data: client, error: clientError } = await supabase
@@ -387,7 +387,7 @@ export default function NuevoClientePage() {
 			genero: normalized.genero || null,
 			nivel_ingresos: normalized.nivel_ingresos || null,
 			cargo: normalized.cargo || null,
-			anio_ingreso: anioIngreso, // Already in YYYY-MM-DD format or null
+			anio_ingreso: anioIngreso, // Integer (year only) or null
 			nit: normalized.nit || null,
 			domicilio_comercial: normalized.domicilio_comercial || null,
 		});
