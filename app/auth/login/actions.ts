@@ -18,6 +18,25 @@ const signupSchema = z.object({
 	password: z.string().min(8, "Password must be at least 8 characters"),
 });
 
+/**
+ * Extrae el rol del usuario desde el JWT token.
+ * El rol se agrega al JWT mediante el custom_access_token_hook en Supabase.
+ */
+function getUserRoleFromToken(accessToken: string): string | null {
+	try {
+		const payload = accessToken.split(".")[1];
+		if (!payload) return null;
+
+		const decodedPayload = JSON.parse(
+			Buffer.from(payload.replace(/-/g, "+").replace(/_/g, "/"), "base64").toString("utf-8")
+		);
+
+		return decodedPayload.user_role || null;
+	} catch {
+		return null;
+	}
+}
+
 export async function login(formData: FormData) {
 	const supabase = await createClient();
 
@@ -31,51 +50,41 @@ export async function login(formData: FormData) {
 	const validationResult = loginSchema.safeParse(rawData);
 
 	if (!validationResult.success) {
-		console.error("Validation errors:", validationResult.error);
 		redirect("/auth/error?error=Invalid input data");
 	}
 
 	const { email, password, otp } = validationResult.data;
 
-	// Attempt to sign in
+	// Attempt to sign in - el JWT ya incluye user_role gracias al hook
 	const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
 		email,
 		password,
 	});
 
 	if (authError) {
-		console.error("Authentication error:", authError.message);
 		const errorMsg = encodeURIComponent(authError.message);
 		redirect(`/auth/error?error=${errorMsg}`);
 	}
 
-	if (!authData.user) {
-		console.error("User Auth Data error");
+	if (!authData.user || !authData.session) {
 		redirect("/auth/error?error=Authentication%20failed");
 	}
 
-	// Check if user has a profile using admin client to bypass RLS policies
-	const supabaseAdmin = createAdminClient(
-		process.env.NEXT_PUBLIC_SUPABASE_URL!,
-		process.env.SUPABASE_SERVICE_ROLE_KEY!
-	);
+	// Obtener el rol directamente del JWT (sin consulta adicional a BD)
+	let userRole = getUserRoleFromToken(authData.session.access_token);
 
-	const { data: profile, error: profileError } = await supabaseAdmin
-		.from("profiles")
-		.select("role, email")
-		.eq("id", authData.user.id)
-		.single();
+	// Si no tiene rol en el JWT (usuario nuevo sin perfil), crear perfil
+	if (!userRole) {
+		const supabaseAdmin = createAdminClient(
+			process.env.NEXT_PUBLIC_SUPABASE_URL!,
+			process.env.SUPABASE_SERVICE_ROLE_KEY!
+		);
 
-	let userProfile = profile;
-
-	if (profileError) {
-		console.error("Profile error:", profileError.message);
-		// Create or update profile if it doesn't exist (using admin client to bypass RLS)
 		const { error: upsertProfileError } = await supabaseAdmin.from("profiles").upsert(
 			{
 				id: authData.user.id,
 				email: authData.user.email!,
-				role: "user",
+				role: "invitado",
 			},
 			{
 				onConflict: "id",
@@ -83,27 +92,22 @@ export async function login(formData: FormData) {
 		);
 
 		if (upsertProfileError) {
-			console.error("Upsert profile error:", upsertProfileError.message);
 			const errorMsg = encodeURIComponent(upsertProfileError.message);
 			redirect(`/auth/error?error=${errorMsg}`);
 		}
 
-		// Set default profile data since upsert was successful
-		userProfile = { role: "user", email: authData.user.email! };
+		userRole = "invitado";
 	}
 
 	// Handle OTP verification if provided
 	if (otp && otp.length === 6) {
-		// Here you would implement your OTP verification logic
-		// For now, we'll skip OTP verification
-		console.log("OTP provided:", otp);
+		// OTP verification logic placeholder
 	}
 
 	revalidatePath("/", "layout");
 
-	// Redirect based on user role
-	if (userProfile?.role === "admin") {
-		console.log("Redirecting to admin dashboard");
+	// Redirect based on user role (from JWT)
+	if (userRole === "admin") {
 		redirect("/admin");
 	} else {
 		redirect("/");

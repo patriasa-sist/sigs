@@ -381,3 +381,10 @@ Una vez seleccionada la compañia y el ramo quiero que se habilite la seleccion 
 vamos a mejorar el modulo de administracion para poder modificar las comisiones de cada usuario del sistema, esta funcion debe estar bajo la nueva seccion llamada "usuarios"
 
 vamos a mejorar el modulo de siniestros ahora permitiendo registrar un siniestro anónimo (sin póliza asociada) para luego poder asociarle una póliza en el futuro. {{{{debatible con Pablo si es necesario}}}}
+
+nit puede tener cualquier cantidad de numero, minimo 5
+datos de conyugue grabado en borrador
+avisar vecimientos pers/30 uni-juri/60
+avisar prima 7dias antes
+
+ejecutar script para eliminar huerfanos

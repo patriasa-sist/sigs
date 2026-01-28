@@ -1,5 +1,4 @@
 import { createServerClient } from "@supabase/ssr";
-import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { NextResponse, type NextRequest } from "next/server";
 
 // Define protected routes and their required roles
@@ -23,6 +22,32 @@ const PUBLIC_ROUTES = [
 	"/profile",
 ] as const;
 
+/**
+ * Extrae el rol del usuario desde el JWT token.
+ * El rol se agrega al JWT mediante el custom_access_token_hook en Supabase.
+ * Esto evita una consulta a la BD en cada request.
+ */
+function getUserRoleFromSession(session: { access_token: string } | null): string | null {
+	if (!session?.access_token) return null;
+
+	try {
+		// El JWT tiene 3 partes separadas por puntos: header.payload.signature
+		const payload = session.access_token.split(".")[1];
+		if (!payload) return null;
+
+		// Decodificar el payload (base64url)
+		const decodedPayload = JSON.parse(
+			Buffer.from(payload.replace(/-/g, "+").replace(/_/g, "/"), "base64").toString("utf-8")
+		);
+
+		// El rol está en el claim 'user_role' agregado por el hook
+		return decodedPayload.user_role || null;
+	} catch {
+		console.error("[Middleware] Error decoding JWT for role");
+		return null;
+	}
+}
+
 export async function updateSession(request: NextRequest) {
 	let supabaseResponse = NextResponse.next({
 		request,
@@ -37,7 +62,7 @@ export async function updateSession(request: NextRequest) {
 					return request.cookies.getAll();
 				},
 				setAll(cookiesToSet) {
-					cookiesToSet.forEach(({ name, value, options }) => request.cookies.set(name, value));
+					cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
 					supabaseResponse = NextResponse.next({
 						request,
 					});
@@ -49,7 +74,7 @@ export async function updateSession(request: NextRequest) {
 		}
 	);
 
-	// Get current user
+	// Get current user and session in a single call
 	const {
 		data: { user },
 	} = await supabase.auth.getUser();
@@ -68,58 +93,36 @@ export async function updateSession(request: NextRequest) {
 
 	// If user is authenticated, check role-based permissions
 	if (user) {
-		console.log("🔍 [Middleware] Authenticated user:", user.id, "accessing:", pathname);
+		// Obtener la sesión para extraer el rol del JWT (sin consulta adicional a BD)
+		const {
+			data: { session },
+		} = await supabase.auth.getSession();
 
-		// Use admin client to get user profile with role (bypasses RLS policies)
-		const supabaseAdmin = createAdminClient(
-			process.env.NEXT_PUBLIC_SUPABASE_URL!,
-			process.env.SUPABASE_SERVICE_ROLE_KEY!
-		);
-
-		const { data: profile, error } = await supabaseAdmin.from("profiles").select("role").eq("id", user.id).single();
-
-		if (error) {
-			console.log("❌ [Middleware] Admin client failed to fetch profile:");
-			console.log("   Error:", error.message);
-		} else if (profile) {
-			console.log("✅ [Middleware] Successfully fetched role via admin client:", profile.role);
-		} else {
-			console.log("⚠️ [Middleware] Admin client returned no profile data");
-		}
+		// Extraer el rol del JWT (agregado por custom_access_token_hook)
+		const userRole = getUserRoleFromSession(session) || "invitado";
 
 		// Check if route requires specific role
 		const requiredRole = Object.entries(PROTECTED_ROUTES).find(([route]) => pathname.startsWith(route))?.[1];
 
 		if (requiredRole) {
-			console.log("🔒🔒 [Middleware] Route requires role:", requiredRole, "| User has role:", profile?.role);
-
 			// Handle multiple roles (array)
 			if (Array.isArray(requiredRole)) {
-				if (!requiredRole.includes(profile?.role as string)) {
-					console.log("🚫 [Middleware] Access denied - user role not in allowed roles");
+				if (!requiredRole.includes(userRole)) {
 					url.pathname = "/unauthorized";
 					return NextResponse.redirect(url);
 				}
 			}
 			// Handle single role (string)
-			else if (profile?.role !== requiredRole) {
-				console.log("🚫 [Middleware] Access denied - redirecting to /unauthorized");
+			else if (userRole !== requiredRole) {
 				url.pathname = "/unauthorized";
 				return NextResponse.redirect(url);
 			}
 		}
 
-		// Example: Block deactivated users from accessing any protected route (uncomment if needed)
-		// if (profile?.role === "desactivado" && !isPublicRoute) {
-		// 	console.log("🚫 [Middleware] Deactivated user trying to access protected route");
-		// 	url.pathname = "/unauthorized";
-		// 	return NextResponse.redirect(url);
-		// }
-
 		// Redirect authenticated users away from auth pages
 		if (pathname.startsWith("/auth/login") || pathname.startsWith("/auth/signup")) {
 			// Redirect based on user role
-			if (profile?.role === "admin") {
+			if (userRole === "admin") {
 				url.pathname = "/admin";
 			} else {
 				url.pathname = "/";
