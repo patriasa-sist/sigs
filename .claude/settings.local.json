@@ -6,7 +6,8 @@
       "Bash(npm run lint)",
       "Bash(npx tsc:*)",
       "mcp__supabase__get_logs",
-      "mcp__supabase__search_docs"
+      "mcp__supabase__search_docs",
+      "Bash(npm run lint:*)"
     ]
   },
   "enableAllProjectMcpServers": true,

@@ -128,18 +128,20 @@ export async function crearProducto(
     };
   }
 
-  // Check for duplicate code within same company
+  // Check for duplicate code within same company + ramo + regional combination
   const { data: existingCode } = await supabase
     .from("productos_aseguradoras")
     .select("id")
     .eq("compania_aseguradora_id", data.compania_aseguradora_id)
+    .eq("tipo_seguro_id", data.tipo_seguro_id)
     .ilike("codigo_producto", data.codigo_producto.trim())
+    .ilike("regional", data.regional.trim())
     .single();
 
   if (existingCode) {
     return {
       success: false,
-      error: "Ya existe un producto con este código para esta aseguradora",
+      error: "Ya existe un producto con este código para esta aseguradora, ramo y regional",
     };
   }
 
@@ -197,19 +199,21 @@ export async function actualizarProducto(
     };
   }
 
-  // Check for duplicate code within same company (excluding current record)
+  // Check for duplicate code within same company + ramo + regional combination (excluding current record)
   const { data: existingCode } = await supabase
     .from("productos_aseguradoras")
     .select("id")
     .eq("compania_aseguradora_id", data.compania_aseguradora_id)
+    .eq("tipo_seguro_id", data.tipo_seguro_id)
     .ilike("codigo_producto", data.codigo_producto.trim())
+    .ilike("regional", data.regional.trim())
     .neq("id", id)
     .single();
 
   if (existingCode) {
     return {
       success: false,
-      error: "Ya existe otro producto con este código para esta aseguradora",
+      error: "Ya existe otro producto con este código para esta aseguradora, ramo y regional",
     };
   }
 
