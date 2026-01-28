@@ -95,7 +95,7 @@ export const NaturalClientSchema = z.object({
 	genero: z.enum(["masculino", "femenino", "otro"]).nullable(),
 	nivel_ingresos: z.coerce.number().nullable(),
 	cargo: z.string().nullable(),
-	anio_ingreso: z.string().nullable(),
+	anio_ingreso: z.coerce.string().nullable(),
 	nit: z.string().nullable(),
 	domicilio_comercial: z.string().nullable(),
 	created_at: z.coerce.string().optional(),

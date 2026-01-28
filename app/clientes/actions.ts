@@ -140,6 +140,7 @@ export async function getAllClients(options?: {
 		}
 
 		// Query base clients with type-specific data (paginated)
+		// Note: executive is fetched separately via profiles_public view for RLS compliance
 		const { data: clientsData, error: clientsError } = await supabase
 			.from("clients")
 			.select(
@@ -147,12 +148,7 @@ export async function getAllClients(options?: {
 				*,
 				natural_clients (*),
 				juridic_clients (*),
-				unipersonal_clients (*),
-				executive:profiles!executive_in_charge (
-					id,
-					full_name,
-					email
-				)
+				unipersonal_clients (*)
 			`
 			)
 			.order("created_at", { ascending: false })
@@ -183,6 +179,31 @@ export async function getAllClients(options?: {
 
 		// Extract client IDs for policy query
 		const clientIds = clientsData.map((c) => c.id);
+
+		// Extract unique executive IDs for profiles_public query
+		const executiveIds = [...new Set(
+			clientsData
+				.map((c) => c.executive_in_charge)
+				.filter((id): id is string => id !== null)
+		)];
+
+		// Query executives from profiles_public view (restricted public access)
+		const executivesMap = new Map<string, { id: string; full_name: string; email: string }>();
+		if (executiveIds.length > 0) {
+			const { data: executivesData, error: executivesError } = await supabase
+				.from("profiles_public")
+				.select("id, full_name, email")
+				.in("id", executiveIds);
+
+			if (executivesError) {
+				console.error("[getAllClients] Error fetching executives:", executivesError);
+				// Continue without executives - non-blocking error
+			} else if (executivesData) {
+				for (const exec of executivesData) {
+					executivesMap.set(exec.id, exec);
+				}
+			}
+		}
 
 		// Query policies for these clients
 		const { data: policiesData, error: policiesError } = await supabase
@@ -223,6 +244,10 @@ export async function getAllClients(options?: {
 			try {
 				// Prepare query result structure
 				// Handle Supabase returning either object or array for 1:1 relationships
+				const executiveData = clientData.executive_in_charge
+					? executivesMap.get(clientData.executive_in_charge) ?? null
+					: null;
+
 				const queryResult: ClientQueryResult = {
 					clients: clientData,
 					natural_clients: Array.isArray(clientData.natural_clients)
@@ -234,9 +259,7 @@ export async function getAllClients(options?: {
 					unipersonal_clients: Array.isArray(clientData.unipersonal_clients)
 						? clientData.unipersonal_clients[0] ?? null
 						: clientData.unipersonal_clients ?? null,
-					executive: Array.isArray(clientData.executive)
-						? clientData.executive[0] ?? null
-						: clientData.executive ?? null,
+					executive: executiveData,
 					policies: policiesByClient.get(clientData.id) ?? [],
 				};
 
@@ -247,13 +270,31 @@ export async function getAllClients(options?: {
 				const viewModel = transformClientToViewModel(validated);
 				validatedClients.push(viewModel);
 			} catch (validationError) {
-				// Log validation error but continue processing other clients
-				const errorMsg =
-					validationError instanceof ZodError
-						? validationError.issues.map((e) => e.message).join(", ")
-						: getErrorMessage(validationError);
+				// Log validation error with detailed field information
+				let errorMsg: string;
 
-				console.error(`[getAllClients] Validation error for client ${clientData.id}:`, errorMsg);
+				if (validationError instanceof ZodError) {
+					// Build detailed error message with field paths
+					const detailedErrors = validationError.issues.map((issue) => {
+						const fieldPath = issue.path.length > 0
+							? issue.path.join('.')
+							: 'root';
+						return `[${fieldPath}] ${issue.message} (expected: ${(issue as { expected?: unknown }).expected ?? 'N/A'}, received: ${(issue as { received?: unknown }).received ?? 'N/A'})`;
+					});
+					errorMsg = detailedErrors.join(' | ');
+
+					// Log each issue separately for clarity
+					console.error(`[getAllClients] Validation error for client ${clientData.id}:`);
+					for (const issue of validationError.issues) {
+						const fieldPath = issue.path.length > 0 ? issue.path.join('.') : 'root';
+						console.error(`  - Field "${fieldPath}": ${issue.message}`);
+						console.error(`    Expected: ${(issue as { expected?: unknown }).expected ?? 'N/A'}, Received: ${(issue as { received?: unknown }).received ?? 'N/A'}`);
+					}
+				} else {
+					errorMsg = getErrorMessage(validationError);
+					console.error(`[getAllClients] Validation error for client ${clientData.id}:`, errorMsg);
+				}
+
 				errors.push({ clientId: clientData.id, error: errorMsg });
 			}
 		}
@@ -316,6 +357,7 @@ export async function getClientById(clientId: string): Promise<ActionResult<Clie
 		}
 
 		// Query base client with type-specific data
+		// Note: executive is fetched separately via profiles_public view for RLS compliance
 		const { data: clientData, error: clientError } = await supabase
 			.from("clients")
 			.select(
@@ -323,12 +365,7 @@ export async function getClientById(clientId: string): Promise<ActionResult<Clie
 				*,
 				natural_clients (*),
 				juridic_clients (*),
-				unipersonal_clients (*),
-				executive:profiles!executive_in_charge (
-					id,
-					full_name,
-					email
-				)
+				unipersonal_clients (*)
 			`
 			)
 			.eq("id", clientId)
@@ -348,6 +385,23 @@ export async function getClientById(clientId: string): Promise<ActionResult<Clie
 				success: false,
 				error: "Cliente no encontrado",
 			};
+		}
+
+		// Fetch executive from profiles_public view (restricted public access)
+		let executiveData: { id: string; full_name: string; email: string } | null = null;
+		if (clientData.executive_in_charge) {
+			const { data: execData, error: execError } = await supabase
+				.from("profiles_public")
+				.select("id, full_name, email")
+				.eq("id", clientData.executive_in_charge)
+				.single();
+
+			if (execError) {
+				console.error("[getClientById] Error fetching executive:", execError);
+				// Continue without executive - non-blocking error
+			} else {
+				executiveData = execData;
+			}
 		}
 
 		// Query policies for this client
@@ -384,9 +438,7 @@ export async function getClientById(clientId: string): Promise<ActionResult<Clie
 			unipersonal_clients: Array.isArray(clientData.unipersonal_clients)
 				? clientData.unipersonal_clients[0] ?? null
 				: clientData.unipersonal_clients ?? null,
-			executive: Array.isArray(clientData.executive)
-				? clientData.executive[0] ?? null
-				: clientData.executive ?? null,
+			executive: executiveData,
 			policies: policiesData ?? [],
 		};
 
