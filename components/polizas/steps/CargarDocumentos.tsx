@@ -18,14 +18,11 @@ type Props = {
 
 // Tipos de documentos sugeridos para pólizas
 const TIPOS_DOCUMENTO = [
-	"Póliza firmada",
-	"Comprobante de envio de poliza (correo)",
+	"Póliza",
 	"Plan de pago BROKER",
 	"Plan de pago CLIENTE",
 	"Anexos",
 	"Condicionado general",
-	"Certificado de cobertura",
-	"Recibo de pago",
 	"Otro",
 ] as const;
 
@@ -246,9 +243,7 @@ export function CargarDocumentos({ documentos, onChange, onSiguiente, onAnterior
 			{documentos.length > 0 && (
 				<div className="border border-gray-200 rounded-lg mb-6">
 					<div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
-						<h4 className="text-sm font-medium text-gray-900">
-							Documentos Cargados ({documentos.length})
-						</h4>
+						<h4 className="text-sm font-medium text-gray-900">Documentos Cargados ({documentos.length})</h4>
 					</div>
 
 					<div className="divide-y divide-gray-200">
