@@ -12,6 +12,7 @@ import { ResponsabilidadCivilForm } from "../ramos/ResponsabilidadCivilForm";
 import { RiesgosVariosForm } from "../ramos/RiesgosVariosForm";
 import { RamosTecnicosForm } from "../ramos/RamosTecnicosForm";
 import { TransporteForm } from "../ramos/TransporteForm";
+import { AeronavegacionForm } from "../ramos/AeronavegacionForm";
 import { SepelioForm } from "../ramos/SepelioForm";
 import { VidaForm } from "../ramos/VidaForm";
 import { AccidentesPersonalesForm } from "../ramos/AccidentesPersonalesForm";
@@ -144,6 +145,42 @@ export function DatosEspecificos({ ramo, datos, regionales, onChange, onSiguient
 						onChange({
 							tipo_ramo: "Transportes",
 							datos: datosTransporte,
+						});
+					}}
+					onSiguiente={onSiguiente}
+					onAnterior={onAnterior}
+				/>
+			);
+		}
+
+		// Aeronavegación
+		if (ramoNormalizado.includes("aeronavegacion") || ramoNormalizado.includes("aeronavegación")) {
+			return (
+				<AeronavegacionForm
+					datos={datos?.tipo_ramo === "Aeronavegación" ? datos.datos : null}
+					tipoNave="aeronave"
+					onChange={(datosAero) => {
+						onChange({
+							tipo_ramo: "Aeronavegación",
+							datos: datosAero,
+						});
+					}}
+					onSiguiente={onSiguiente}
+					onAnterior={onAnterior}
+				/>
+			);
+		}
+
+		// Naves o Embarcaciones
+		if (ramoNormalizado.includes("nave") || ramoNormalizado.includes("embarcacion") || ramoNormalizado.includes("embarcación")) {
+			return (
+				<AeronavegacionForm
+					datos={datos?.tipo_ramo === "Naves o embarcaciones" ? datos.datos : null}
+					tipoNave="embarcacion"
+					onChange={(datosNave) => {
+						onChange({
+							tipo_ramo: "Naves o embarcaciones",
+							datos: datosNave,
 						});
 					}}
 					onSiguiente={onSiguiente}

@@ -359,6 +359,62 @@ export type DatosTransporte = {
 	modalidad: ModalidadTransporte;
 };
 
+// --- AERONAVEGACIÓN / NAVES Y EMBARCACIONES ---
+// Tipo de uso para naves y aeronaves
+export type UsoNave = "privado" | "publico" | "recreacion";
+
+// Catálogos para naves
+export type MarcaNave = {
+	id: string;
+	nombre: string; // "Cessna", "Boeing", "Yamaha", etc.
+	tipo: "aeronave" | "embarcacion"; // Para filtrar según el tipo de seguro
+	activo: boolean;
+	created_at?: string;
+};
+
+// Nivel de Accidentes Personales específico para tripulantes/pasajeros de naves
+export type NivelAPNave = {
+	id: string; // UUID generado en cliente
+	nombre: string; // "Nivel 1", "Nivel 2", etc.
+	monto_muerte_accidental: number;
+	monto_invalidez: number;
+	monto_gastos_medicos: number;
+};
+
+// Nave o embarcación asegurada
+export type NaveEmbarcacion = {
+	id?: string; // Solo para edición de naves existentes
+	// Campos obligatorios
+	matricula: string; // Matrícula de la nave (identificador único)
+	marca: string; // Marca de la nave
+	modelo: string; // Modelo
+	ano: number; // Año de fabricación
+	serie: string; // Número de serie
+	uso: UsoNave; // privado, publico, recreacion
+	nro_pasajeros: number; // Número máximo de pasajeros
+	nro_tripulantes: number; // Número de tripulantes
+	// Valores asegurados
+	valor_casco: number; // Valor asegurado del casco
+	valor_responsabilidad_civil: number; // Valor de responsabilidad civil
+	nivel_ap_id?: string; // Referencia al nivel de Accidentes Personales (opcional)
+};
+
+// Asegurado adicional (cliente registrado completo)
+export type AseguradoAeronavegacion = {
+	client_id: string;
+	client_name: string;
+	client_ci: string;
+};
+
+// Datos específicos del ramo Aeronavegación/Naves
+export type DatosAeronavegacion = {
+	tipo_poliza: "individual" | "corporativo";
+	tipo_nave: "aeronave" | "embarcacion"; // Para distinguir entre aeronavegación y naves marítimas
+	niveles_ap: NivelAPNave[]; // Niveles de Accidentes Personales configurados
+	naves: NaveEmbarcacion[]; // Lista de naves/embarcaciones aseguradas
+	asegurados_adicionales: AseguradoAeronavegacion[]; // Asegurados adicionales (clientes registrados)
+};
+
 // --- ACCIDENTES PERSONALES, VIDA, SEPELIO (CON NIVELES) ---
 export type CoberturasAccidentesPersonales = {
 	muerte_accidental: { habilitado: boolean; valor: number };
@@ -428,6 +484,8 @@ export type DatosEspecificosPoliza =
 	| { tipo_ramo: "Riesgos Varios Misceláneos"; datos: DatosRiesgosVarios }
 	| { tipo_ramo: "Ramos técnicos"; datos: DatosRamosTecnicos }
 	| { tipo_ramo: "Transportes"; datos: DatosTransporte }
+	| { tipo_ramo: "Aeronavegación"; datos: DatosAeronavegacion }
+	| { tipo_ramo: "Naves o embarcaciones"; datos: DatosAeronavegacion }
 	| { tipo_ramo: "Accidentes Personales"; datos: DatosAccidentesPersonales }
 	| { tipo_ramo: "Vida"; datos: DatosVida }
 	| { tipo_ramo: "Sepelio"; datos: DatosSepelio }
@@ -650,6 +708,44 @@ export type EquipoIndustrialDB = {
 	created_by?: string;
 	updated_at?: string;
 	updated_by?: string;
+};
+
+export type NaveEmbarcacionDB = {
+	id: string;
+	poliza_id: string;
+	matricula: string;
+	marca: string;
+	modelo: string;
+	ano: number;
+	serie: string;
+	uso: "privado" | "publico" | "recreacion";
+	nro_pasajeros: number;
+	nro_tripulantes: number;
+	valor_casco: number;
+	valor_responsabilidad_civil: number;
+	nivel_ap_id?: string;
+	created_at: string;
+	created_by?: string;
+	updated_at?: string;
+	updated_by?: string;
+};
+
+export type AseguradoAeronavegacionDB = {
+	id: string;
+	poliza_id: string;
+	client_id: string;
+	created_at: string;
+	created_by?: string;
+};
+
+export type NivelAPNaveDB = {
+	id: string;
+	poliza_id: string;
+	nombre: string;
+	monto_muerte_accidental: number;
+	monto_invalidez: number;
+	monto_gastos_medicos: number;
+	created_at: string;
 };
 
 // ============================================

@@ -31,38 +31,36 @@ anadir logica basica de seguridad de campos de datos en el formulario. Ej:
 -   formato correo validado
 -   documento puede contener solo numeros
 
----
-
-8 12 25
+---------------------------------------- 8 12 25 --------------------------------------------
 Paso 1
 NUEVO opción de seleccionar Asegurado adicional (opcional)
 
 paso 2
 "director comercial", recibe comisión, opcional, default Patria S.A., no excluyente.
 
-paso 3 automotor
+✅paso 3 automotor
 individual-corporativo
 franquicia numero input pasar a derecha
 NO TIENE DETALLES EXTRA DE PRODUCTO
 
-paso 3 AP
+✅paso 3 AP
 Nivel agregar "prima de nivel" moneda, decimal
 NUEVO carga de excel masiva con Carnet|nivel
 Corporativo:: "+ Agregar Nominado por cargo" unico dato "Cargo"
 NO TIENE DETALLES EXTRA DE PRODUCTO
 
-Paso3 Sepelio
+✅Paso3 Sepelio
 NUEVO carga masiva
 largo plazo> solo individual
 quitar asegurados y adicionales
 NO TIENE DETALLES EXTRA DE PRODUCTO
 
-parte3 RC
+✅parte3 RC
 moneda eliminar
 asegurados eliminados
 NO TIENE DETALLES EXTRA DE PRODUCTO
 
-paso3 incendio
+✅paso3 incendio
 Moneda es de toda la póliza
 quitar "(dirección personal)"
 En la creación de dirección se debe agregar "Items" como en los Niveles de AP
@@ -70,7 +68,7 @@ la sumantoria de todos los items da Valor Declarado
 La sumatoria de todas las ubicaciones da Valor ASegurado TOTAL> Valor total en Riesgo
 NO TIENE DETALLES EXTRA DE PRODUCTO
 
-paso3 salud
+✅paso3 salud
 corporativo tiene niveles para cada titular
 corporativo mínimo 1 titular pueden haber mas
 corporativo cada titular puede anexar sus conyugue y dependientes y comparten el nivel
@@ -78,56 +76,55 @@ NUEVO check para marcar la póliza con maternidad
 Salud Internacional>> (detectado mediante cod producto)
 NUEVO deducible numero
 
-paso3 Vida
+✅paso3 Vida
 remover glosa Bs de niveles
 eliminar producto texto pasarlo a lista desplegable (mod gerencias)
 Vida obligatoriamente al contado forzar
 
-paso3 Riesgos Varios Miscelaneos
+✅paso3 Riesgos Varios Miscelaneos
 quitar moneda de la seccion
 5 convenios
 Convenios checkbox para habilitar
 
 CONCRETAR:
 
--   FIANZAS COD 92
+-   FIANZAS COD 92❌ para todas las fianzas??
     BENEFICIARIO (TEXTO MAYUSCULAS)
     OBJETO DEL CONTRATO (TEXTO)
     VALOR DEL CONTRATO (numero)
     VALOR CAUCIONADO (numero) debe mostrar la unidad monetaria que se seleccionó al principio del formulario solo como referencia
     UBICACION DE LA OBRA (TEXTO)
 
--   AERONAVEGACION // Naves y embarcaciones
-    ASEGURADO ADICIONAL (cliente completo)
-    DATOS OBJETO ASEGURADO
+-   AERONAVEGACION // Naves y embarcaciones✅
+    ASEGURADO ADICIONAL (cliente completo) opcional si hay otro asegurado aparte del titular que se seleccionó al principio del formulario
+    DATOS nave/embarcacion ASEGURADA:
 -   MARCA
 -   MODELO
 -   AÑO
 -   SERIE
--   USO privado/publico/recreaccion/
+-   USO (privado/publico/recreaccion)
 -   MATRICULA
--   NUMERO DE PASAJERO
+-   NUMERO DE PASAJEROS
 -   NUMERO TRIPULANTES
     VALOR ASEGURADO:
 -   CASCO (numero)
 -   RESPONSBILIDAD CIVIL (numero)
--   ACCIDENTES PERSONALES (desplegable de niveles AP, varios niveles)
+-   ACCIDENTES PERSONALES (desplegable de niveles AP, varios niveles) como en Accidentes Personales
 
--   ROBO
+-   ROBO❌
     Ubicación de riesgo
     Items seleccionables con su monto
     valor asegurado
 
 faltante>>
 
--   RAMOS TECNICOS
+-   RAMOS TECNICOS✅
     NUEVO nro de serie
     no tiene Placa
     sin ejes ni asientos
-    tipo de vehículo pasa a "tipo de equipo" (industrial)
-    marcas industriales
+    tipo de vehículo pasa a "tipo de equipo" (industrial) seleccionar marcas industriales en vez de marcas de autos
 
--   TRANSPORTE
+-   TRANSPORTE✅
     Materia asegurada (texto largo)
     tipo de embalaje (texto)
     fecha embarque (fecha)
@@ -148,7 +145,7 @@ Ramos generales:: NUEVO Subrrogacion texto y moneda por cada item cubierto
 -   equipo móvil pesado (ramos técnicos)
 -   incendio y aliados
 
-TODAS LAS POLIZAS DEBEN SER LIGADAS AL TIPO DE CLIENTE INDIVIDUAL, UNI, JURID
+✅TODAS LAS POLIZAS DEBEN SER LIGADAS AL TIPO DE CLIENTE INDIVIDUAL, UNI, JURID
 
 CLIENTES
 Carga masiva de "asegurado" nombre completo, carnet, fecha nacimiento, genero
@@ -162,9 +159,7 @@ PARAMETRIZACIONES>
 [] lista de productos AP/vida
 [] tipos de uso de aeronaves
 
----
-
-reunion 18-12-2025
+-------------------- reunion 18-12-2025✅✅ --------------------
 
 paso 2
 
@@ -249,26 +244,26 @@ registro
 
 ---
 
-update de clientes
+update de clientes tentativo
 nuevo cliente tipo asegurado mas sencillo que un cliente completo
 nuevo sistema de edicion de datos cliente
 
-revision de update modulo polizas
+✅revision de update modulo polizas
 nuevo sistema de edicion de polizas
 logica para anexos
 logica para anulaciones
 
 ---
 
--   selector General-personal que sea automatico según la compañía seleccionada
--   manejar cuotas de póliza de 0 a 11 (considerar poeque creo que la cuota inicial ya es la cuota cero)
--   ver donde o como se guarda el calculo de comisión para independizarlo según otra tabla (que me conviene calcularlo en el momento y guardarlo en la póliza o calcularlo a demanda según se lo pida? cual seria el mejor metodo)
--   agregar editor de polizas
--   hacer la mejora de carga de clientes, de una vez consolidar esa parte
+-   ❌selector General-personal que sea automatico según la compañía seleccionada
+-   ❌manejar cuotas de póliza de 0 a 11 (considerar poeque creo que la cuota inicial ya es la cuota cero)
+-   ✅ver donde o como se guarda el calculo de comisión para independizarlo según otra tabla (que me conviene calcularlo en el momento y guardarlo en la póliza o calcularlo a demanda según se lo pida? cual seria el mejor metodo)
+-   ✅agregar editor de polizas
+-   ✅hacer la mejora de carga de clientes, de una vez consolidar esa parte
 
 Conciliaciones:
 
--   Exportar reporte de polizas en TXT:
+-   ⭕Exportar reporte de polizas en TXT:
     [cod patria, cod compania, cod moneda 0 BS-1 USD-2, ultimo dia del mes anterior, ]
 
 ---
@@ -299,25 +294,17 @@ siniestros:
 clientes:
 ✅error al cargar fecha de ingreso a la profesion
 ✅que se pueda clickear en las polizas para redireccionar hacia a poliza
-editor de clentes
+✅editor de clentes con permisos
 
 polizas:
-probar que todo funcione
-editor con autorizaciones de administracion
+⭕probar que todo funcione
+✅editor con autorizaciones de administracion
 
 conciliación:
-filtro para tener toda la sabana completa e ir limitando los campos
-las anulaciones figuran en negativo
+✅filtro para tener toda la sabana completa e ir limitando los campos
+⭕las anulaciones figuran en negativo
 
-todo el sistema:
-optimizar indexamiento y llamada a las tablas
-aplicar particiones para las tablas mas pesadas (polizas, cobranzas, siniestros)
-
----
-
-5-1-2026
-
-oscar Einar -- cliente real
+------------------------------------------------------ 5-1-2026 ------------------------------------------------------------
 
 polizas:
 
@@ -331,7 +318,7 @@ polizas:
 
 validacion:
 ✅el boton de ver me lleva directo a la poliza
--el boton de rechazar contiene una razon del rechazo que se elimina al modificar la poliza
+✅el boton de rechazar contiene una razon del rechazo que se elimina al modificar la poliza
 ✅mostrar fecha de creacion
 ✅guardar y mostrar fecha de validacion
 
@@ -341,7 +328,7 @@ SISTEMA DE EDICION:
 
 -   modificar y guardar dejando trazabilidad
 
-2. inclusion:
+2. inclusion: ❌❌DESCARTADO
 
 -   hacia la póliza principal
     --nro anexo
@@ -349,15 +336,24 @@ SISTEMA DE EDICION:
     --documento de anexo
     --aumento de cuotas (si aplica)
 
-4. exclusion:
+4. exclusion: ❌❌DESCARTADO
    -lo mismo que arriba y las cuotas no pagadas se pueden modificar
 
-5. anulación:
+5. anulación: ❌❌DESCARTADO
    -nro de anulación
    -archivo
    -la póliza debe dejar de figurar en la lista de pólizas
 
----
+nuevo sistema de anexos de polizas:
+
+-   anexos de inclusion y exclusion generan un nuevo registro de cuotas en la tabla de cuotas, pero modifican datos en la poliza original
+-   anexos de anulacion guardan el archivo de anulacion y la poliza madre se marca como desactivada
+-   renovación es basicamente hacer una nueva poliza desde cero solo que esta tiene una referencia a una poliza anterior del cliente que ya se ha vencido
+
+consideracion para cobranzas:
+como habrán dos tablas con datos a cobrar decidir como se hace la unión de ambas tablas para el cobro, suma de los montos
+
+------------------------------ directrices de mejora ----------------------------
 
 ✅crea la tabla de trazabilidad de historial de ediciones de clientes
 
@@ -378,20 +374,25 @@ Una vez seleccionada la compañia y el ramo quiero que se habilite la seleccion 
 
 ✅vamos a crear una funcion y sistema para poder enviar correos de recuperacion
 
-vamos a mejorar el modulo de administracion para poder modificar las comisiones de cada usuario del sistema, esta funcion debe estar bajo la nueva seccion llamada "usuarios"
+⭕vamos a mejorar el modulo de administracion para poder modificar las comisiones de cada usuario del sistema, esta funcion debe estar bajo la nueva seccion llamada "usuarios"
 
-vamos a mejorar el modulo de siniestros ahora permitiendo registrar un siniestro anónimo (sin póliza asociada) para luego poder asociarle una póliza en el futuro. {{{{debatible con Pablo si es necesario}}}}
+⭕vamos a mejorar el modulo de siniestros ahora permitiendo registrar un siniestro anónimo (sin póliza asociada) para luego poder asociarle una póliza en el futuro. {{{{debatible con Pablo si es necesario}}}}
+
+✅ejecutar script para eliminar datos huerfanos de clientes
+
+-------------------------------------- errores y mejoras ---------------------------
 
 nit puede tener cualquier cantidad de numero, minimo 6
 datos de conyugue grabar en borrador tambien
 avisar vecimientos pers/30 uni-juri/60
 avisar prima 7dias antes
 
-✅ejecutar script para eliminar huerfanos
-
+sistema de servidores:
 revisar que hay polizas de prueba con datos faltantes que no se anexan a sus clientes en el modulo de clientes (da error en consola)
+optimizar indexamiento y llamada a las tablas
+aplicar particiones para las tablas mas pesadas (polizas, cobranzas, siniestros)
 
--------------------------------------- 29-01-26 ---------------------------
+-------------------------------------- datos de trabajo 29-01-26 ---------------------------
 
 ## Ramos CON Plantilla ✅
 
@@ -408,6 +409,10 @@ Código Nombre en BD Plantilla
 9342 Vida individual corto plazo VidaForm.tsx
 9346 Vida en grupo corto plazo VidaForm.tsx
 9562 Defunción o sepelio SepelioForm.tsx
+9103 Transportes Alta
+9104 Naves o embarcaciones Baja
+9106 Aeronavegación Baja
+9107 Ramos técnicos Media
 
 ## Ramos SIN Plantilla ❌ (activos)
 
@@ -415,10 +420,6 @@ Código Nombre en BD Plantilla
 
 Código Nombre Prioridad
 9102 Robo Media
-9103 Transportes Alta
-9104 Naves o embarcaciones Baja
-9106 Aeronavegación Baja
-9107 Ramos técnicos Media
 
 ### Seguros de Fianzas (92) - 9 ramos sin plantilla
 
@@ -444,9 +445,9 @@ Código Nombre
 Código Nombre
 9455 Accidentes de tránsito
 
-## Resumen: Faltan 17 plantillas para ramos activos:
+## Resumen: Faltan 13 plantillas para ramos activos:
 
-5 de Seguros Generales
+1 de Seguros Generales
 9 de Seguros de Fianzas (podrían compartir una plantilla genérica de fianzas)
 2 de Desgravamen Hipotecario
 1 de Accidentes de Tránsito
