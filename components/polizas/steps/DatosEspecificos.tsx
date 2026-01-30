@@ -10,6 +10,7 @@ import { SaludForm } from "../ramos/SaludForm";
 import { IncendioForm } from "../ramos/IncendioForm";
 import { ResponsabilidadCivilForm } from "../ramos/ResponsabilidadCivilForm";
 import { RiesgosVariosForm } from "../ramos/RiesgosVariosForm";
+import { TransporteForm } from "../ramos/TransporteForm";
 import { SepelioForm } from "../ramos/SepelioForm";
 import { VidaForm } from "../ramos/VidaForm";
 import { AccidentesPersonalesForm } from "../ramos/AccidentesPersonalesForm";
@@ -108,6 +109,23 @@ export function DatosEspecificos({ ramo, datos, regionales, onChange, onSiguient
 						onChange({
 							tipo_ramo: "Riesgos Varios Misceláneos",
 							datos: datosRV,
+						});
+					}}
+					onSiguiente={onSiguiente}
+					onAnterior={onAnterior}
+				/>
+			);
+		}
+
+		// Transportes
+		if (ramoNormalizado.includes("transporte")) {
+			return (
+				<TransporteForm
+					datos={datos?.tipo_ramo === "Transportes" ? datos.datos : null}
+					onChange={(datosTransporte) => {
+						onChange({
+							tipo_ramo: "Transportes",
+							datos: datosTransporte,
 						});
 					}}
 					onSiguiente={onSiguiente}

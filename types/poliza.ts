@@ -289,6 +289,35 @@ export type DatosRiesgosVarios = {
 	// REMOVED: moneda (usa la moneda de toda la póliza definida en paso 2)
 };
 
+// --- TRANSPORTE ---
+export type TipoTransporte = "terrestre" | "maritimo" | "aereo" | "ferreo" | "multimodal";
+
+export type ModalidadTransporte = "flotante" | "flat" | "un_solo_embarque" | "flat_prima_minima_deposito";
+
+export type Pais = {
+	id: string;
+	codigo_iso: string;
+	nombre: string;
+	activo: boolean;
+};
+
+export type DatosTransporte = {
+	materia_asegurada: string; // Texto largo - descripción de la mercancía
+	tipo_embalaje?: string; // Tipo de embalaje
+	fecha_embarque: string; // ISO date string
+	tipo_transporte: TipoTransporte;
+	ciudad_origen: string;
+	pais_origen_id: string; // Referencia a tabla paises
+	ciudad_destino: string;
+	pais_destino_id: string; // Referencia a tabla paises
+	valor_asegurado: number;
+	factura?: string; // Número de factura
+	fecha_factura?: string; // ISO date string
+	cobertura_a: boolean; // Cobertura A (Todo Riesgo)
+	cobertura_c: boolean; // Cobertura C (Riesgos Nombrados)
+	modalidad: ModalidadTransporte;
+};
+
 // --- ACCIDENTES PERSONALES, VIDA, SEPELIO (CON NIVELES) ---
 export type CoberturasAccidentesPersonales = {
 	muerte_accidental: { habilitado: boolean; valor: number };
@@ -356,6 +385,7 @@ export type DatosEspecificosPoliza =
 	| { tipo_ramo: "Incendio y Aliados"; datos: DatosIncendio }
 	| { tipo_ramo: "Responsabilidad Civil"; datos: DatosResponsabilidadCivil }
 	| { tipo_ramo: "Riesgos Varios Misceláneos"; datos: DatosRiesgosVarios }
+	| { tipo_ramo: "Transportes"; datos: DatosTransporte }
 	| { tipo_ramo: "Accidentes Personales"; datos: DatosAccidentesPersonales }
 	| { tipo_ramo: "Vida"; datos: DatosVida }
 	| { tipo_ramo: "Sepelio"; datos: DatosSepelio }
