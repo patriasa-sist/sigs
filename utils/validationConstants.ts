@@ -35,6 +35,35 @@ export const VEHICULO_RULES = {
 } as const;
 
 /**
+ * Reglas de validación para equipos industriales (Ramos Técnicos)
+ */
+export const EQUIPO_RULES = {
+	// Año del equipo
+	ANO_MIN: 1950,
+	ANO_MAX: 2050,
+
+	// Coaseguro (porcentaje)
+	COASEGURO_MIN: 0,
+	COASEGURO_MAX: 100,
+
+	// Departamentos de Bolivia para plaza de circulación
+	DEPARTAMENTOS_BOLIVIA: [
+		"La Paz",
+		"Cochabamba",
+		"Santa Cruz",
+		"Oruro",
+		"Potosí",
+		"Tarija",
+		"Chuquisaca",
+		"Beni",
+		"Pando",
+	] as const,
+
+	// Uso del equipo
+	TIPOS_USO: ["publico", "particular"] as const,
+} as const;
+
+/**
  * Reglas de validación para pólizas
  */
 export const POLIZA_RULES = {

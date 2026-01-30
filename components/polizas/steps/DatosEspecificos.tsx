@@ -10,6 +10,7 @@ import { SaludForm } from "../ramos/SaludForm";
 import { IncendioForm } from "../ramos/IncendioForm";
 import { ResponsabilidadCivilForm } from "../ramos/ResponsabilidadCivilForm";
 import { RiesgosVariosForm } from "../ramos/RiesgosVariosForm";
+import { RamosTecnicosForm } from "../ramos/RamosTecnicosForm";
 import { TransporteForm } from "../ramos/TransporteForm";
 import { SepelioForm } from "../ramos/SepelioForm";
 import { VidaForm } from "../ramos/VidaForm";
@@ -109,6 +110,23 @@ export function DatosEspecificos({ ramo, datos, regionales, onChange, onSiguient
 						onChange({
 							tipo_ramo: "Riesgos Varios Misceláneos",
 							datos: datosRV,
+						});
+					}}
+					onSiguiente={onSiguiente}
+					onAnterior={onAnterior}
+				/>
+			);
+		}
+
+		// Ramos Técnicos (Equipos Industriales)
+		if (ramoNormalizado.includes("ramo") && ramoNormalizado.includes("tecnico")) {
+			return (
+				<RamosTecnicosForm
+					datos={datos?.tipo_ramo === "Ramos técnicos" ? datos.datos : null}
+					onChange={(datosRT) => {
+						onChange({
+							tipo_ramo: "Ramos técnicos",
+							datos: datosRT,
 						});
 					}}
 					onSiguiente={onSiguiente}

@@ -41,6 +41,21 @@ export type MarcaVehiculo = {
 	created_at?: string;
 };
 
+// --- CATÁLOGOS PARA RAMOS TÉCNICOS (Equipos Industriales) ---
+export type TipoEquipo = {
+	id: string;
+	nombre: string; // "Excavadora", "Retroexcavadora", "Volqueta", etc.
+	activo: boolean;
+	created_at?: string;
+};
+
+export type MarcaEquipo = {
+	id: string;
+	nombre: string; // "Caterpillar", "Komatsu", "John Deere", etc.
+	activo: boolean;
+	created_at?: string;
+};
+
 // ============================================
 // PRODUCTOS DE ASEGURADORAS
 // ============================================
@@ -289,6 +304,32 @@ export type DatosRiesgosVarios = {
 	// REMOVED: moneda (usa la moneda de toda la póliza definida en paso 2)
 };
 
+// --- RAMOS TÉCNICOS (Equipos Industriales) ---
+export type EquipoIndustrial = {
+	id?: string; // Solo para edición de equipos existentes
+	// Campos obligatorios
+	nro_serie: string; // Número de serie (identificador único del equipo)
+	valor_asegurado: number;
+	franquicia: number;
+	nro_chasis: string;
+	uso: "publico" | "particular";
+	coaseguro: number; // Porcentaje de coaseguro (0-100)
+	// Campos opcionales
+	placa?: string; // Placa es opcional para equipos industriales
+	tipo_equipo_id?: string; // Referencia a tipos_equipo
+	marca_equipo_id?: string; // Referencia a marcas_equipo
+	modelo?: string;
+	ano?: number;
+	color?: string;
+	nro_motor?: string;
+	plaza_circulacion?: string;
+};
+
+export type DatosRamosTecnicos = {
+	tipo_poliza: "individual" | "corporativo";
+	equipos: EquipoIndustrial[];
+};
+
 // --- TRANSPORTE ---
 export type TipoTransporte = "terrestre" | "maritimo" | "aereo" | "ferreo" | "multimodal";
 
@@ -385,6 +426,7 @@ export type DatosEspecificosPoliza =
 	| { tipo_ramo: "Incendio y Aliados"; datos: DatosIncendio }
 	| { tipo_ramo: "Responsabilidad Civil"; datos: DatosResponsabilidadCivil }
 	| { tipo_ramo: "Riesgos Varios Misceláneos"; datos: DatosRiesgosVarios }
+	| { tipo_ramo: "Ramos técnicos"; datos: DatosRamosTecnicos }
 	| { tipo_ramo: "Transportes"; datos: DatosTransporte }
 	| { tipo_ramo: "Accidentes Personales"; datos: DatosAccidentesPersonales }
 	| { tipo_ramo: "Vida"; datos: DatosVida }
@@ -587,6 +629,29 @@ export type VehiculoAutomotorDB = {
 	updated_by?: string;
 };
 
+export type EquipoIndustrialDB = {
+	id: string;
+	poliza_id: string;
+	nro_serie: string;
+	valor_asegurado: number;
+	franquicia: number;
+	nro_chasis: string;
+	uso: "publico" | "particular";
+	coaseguro: number;
+	placa?: string;
+	tipo_equipo_id?: string;
+	marca_equipo_id?: string;
+	modelo?: string;
+	ano?: number;
+	color?: string;
+	nro_motor?: string;
+	plaza_circulacion?: string;
+	created_at: string;
+	created_by?: string;
+	updated_at?: string;
+	updated_by?: string;
+};
+
 // ============================================
 // TIPOS PARA VALIDACIÓN Y UTILIDADES
 // ============================================
@@ -626,6 +691,36 @@ export type VehiculoExcelRow = {
 export type ExcelImportResult = {
 	exito: boolean;
 	vehiculos_validos: VehiculoAutomotor[];
+	errores: Array<{
+		fila: number;
+		errores: string[];
+	}>;
+};
+
+// ============================================
+// TIPOS PARA EXCEL IMPORT (Ramos Técnicos)
+// ============================================
+
+export type EquipoExcelRow = {
+	nro_serie: string;
+	valor_asegurado: number | string;
+	franquicia: number | string;
+	nro_chasis: string;
+	uso: string; // Se validará contra "publico" | "particular"
+	coaseguro: number | string;
+	placa?: string; // Opcional
+	tipo_equipo?: string;
+	marca_equipo?: string;
+	modelo?: string;
+	ano?: number | string;
+	color?: string;
+	nro_motor?: string;
+	plaza_circulacion?: string;
+};
+
+export type EquipoExcelImportResult = {
+	exito: boolean;
+	equipos_validos: EquipoIndustrial[];
 	errores: Array<{
 		fila: number;
 		errores: string[];
