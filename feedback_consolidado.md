@@ -93,8 +93,8 @@ CONCRETAR:
 -   FIANZAS COD 92
     BENEFICIARIO (TEXTO MAYUSCULAS)
     OBJETO DEL CONTRATO (TEXTO)
-    VALOR DEL CONTRATO (NUM)
-    VALOR CAUCIONADO (NUM)
+    VALOR DEL CONTRATO (numero)
+    VALOR CAUCIONADO (numero) debe mostrar la unidad monetaria que se seleccionó al principio del formulario solo como referencia
     UBICACION DE LA OBRA (TEXTO)
 
 -   AERONAVEGACION // Naves y embarcaciones
@@ -121,11 +121,11 @@ CONCRETAR:
 faltante>>
 
 -   RAMOS TECNICOS
-    Placa opcional
+    NUEVO nro de serie
+    no tiene Placa
+    sin ejes ni asientos
     tipo de vehículo pasa a "tipo de equipo" (industrial)
     marcas industriales
-    sin ejes ni asientos
-    NUEVO nro de serie opcional
 
 -   TRANSPORTE
     Materia asegurada (texto largo)
@@ -382,9 +382,71 @@ vamos a mejorar el modulo de administracion para poder modificar las comisiones 
 
 vamos a mejorar el modulo de siniestros ahora permitiendo registrar un siniestro anónimo (sin póliza asociada) para luego poder asociarle una póliza en el futuro. {{{{debatible con Pablo si es necesario}}}}
 
-nit puede tener cualquier cantidad de numero, minimo 5
-datos de conyugue grabado en borrador
+nit puede tener cualquier cantidad de numero, minimo 6
+datos de conyugue grabar en borrador tambien
 avisar vecimientos pers/30 uni-juri/60
 avisar prima 7dias antes
 
-ejecutar script para eliminar huerfanos
+✅ejecutar script para eliminar huerfanos
+
+revisar que hay polizas de prueba con datos faltantes que no se anexan a sus clientes en el modulo de clientes (da error en consola)
+
+-------------------------------------- 29-01-26 ---------------------------
+
+## Ramos CON Plantilla ✅
+
+Código Nombre en BD Plantilla
+9105 Automotores AutomotorForm.tsx
+9101 Incendio y aliados IncendioForm.tsx
+9108 Responsabilidad civil ResponsabilidadCivilForm.tsx
+9109 Riesgos varios misceláneos RiesgosVariosForm.tsx
+9111 Salud o enfermedad (generales) SaludForm.tsx
+9347 Salud o enfermedad (personas) SaludForm.tsx
+9112 Accidentes personales (generales) AccidentesPersonalesForm.tsx
+9350 Accidentes personales (personas) AccidentesPersonalesForm.tsx
+9341 Vida individual largo plazo VidaForm.tsx
+9342 Vida individual corto plazo VidaForm.tsx
+9346 Vida en grupo corto plazo VidaForm.tsx
+9562 Defunción o sepelio SepelioForm.tsx
+
+## Ramos SIN Plantilla ❌ (activos)
+
+### Seguros Generales (91)
+
+Código Nombre Prioridad
+9102 Robo Media
+9103 Transportes Alta
+9104 Naves o embarcaciones Baja
+9106 Aeronavegación Baja
+9107 Ramos técnicos Media
+
+### Seguros de Fianzas (92) - 9 ramos sin plantilla
+
+Código Nombre
+9221 Seriedad de propuesta
+9222 Cumplimiento de obra
+9223 Buena ejecución de obra
+9224 Cumplimiento de servicios
+9225 Cumplimiento de suministros
+9226 Inversión de anticipos
+9227 Fidelidad de empleados
+9229 Cumplimiento de Obligaciones Aduaneras
+9230 Cumplimiento de Obligaciones Legales/Telecomunicaciones
+
+### Seguros de Personas (93)
+
+Código Nombre
+9348 Desgravamen hipotecario largo plazo
+9349 Desgravamen hipotecario corto plazo
+
+### Seguros Obligatorios (94)
+
+Código Nombre
+9455 Accidentes de tránsito
+
+## Resumen: Faltan 17 plantillas para ramos activos:
+
+5 de Seguros Generales
+9 de Seguros de Fianzas (podrían compartir una plantilla genérica de fianzas)
+2 de Desgravamen Hipotecario
+1 de Accidentes de Tránsito

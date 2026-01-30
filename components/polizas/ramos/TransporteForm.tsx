@@ -89,6 +89,10 @@ export function TransporteForm({ datos, onChange, onSiguiente, onAnterior }: Pro
 			nuevosErrores.materia = "La materia asegurada es requerida";
 		}
 
+		if (!tipoEmbalaje.trim()) {
+			nuevosErrores.tipo_embalaje = "El tipo de embalaje es requerido";
+		}
+
 		if (!fechaEmbarque) {
 			nuevosErrores.fecha_embarque = "La fecha de embarque es requerida";
 		}
@@ -113,6 +117,14 @@ export function TransporteForm({ datos, onChange, onSiguiente, onAnterior }: Pro
 			nuevosErrores.valor = "El valor asegurado debe ser mayor a 0";
 		}
 
+		if (!factura.trim()) {
+			nuevosErrores.factura = "El número de factura es requerido";
+		}
+
+		if (!fechaFactura) {
+			nuevosErrores.fecha_factura = "La fecha de factura es requerida";
+		}
+
 		if (!coberturaA && !coberturaC) {
 			nuevosErrores.coberturas = "Debe seleccionar al menos una cobertura (A o C)";
 		}
@@ -126,7 +138,7 @@ export function TransporteForm({ datos, onChange, onSiguiente, onAnterior }: Pro
 
 		onChange({
 			materia_asegurada: materiaAsegurada,
-			tipo_embalaje: tipoEmbalaje || undefined,
+			tipo_embalaje: tipoEmbalaje,
 			fecha_embarque: fechaEmbarque,
 			tipo_transporte: tipoTransporte,
 			ciudad_origen: ciudadOrigen,
@@ -134,8 +146,8 @@ export function TransporteForm({ datos, onChange, onSiguiente, onAnterior }: Pro
 			ciudad_destino: ciudadDestino,
 			pais_destino_id: paisDestinoId,
 			valor_asegurado: valorAsegurado,
-			factura: factura || undefined,
-			fecha_factura: fechaFactura || undefined,
+			factura: factura,
+			fecha_factura: fechaFactura,
 			cobertura_a: coberturaA,
 			cobertura_c: coberturaC,
 			modalidad,
@@ -146,12 +158,15 @@ export function TransporteForm({ datos, onChange, onSiguiente, onAnterior }: Pro
 
 	const tieneDatos =
 		materiaAsegurada &&
+		tipoEmbalaje &&
 		fechaEmbarque &&
 		ciudadOrigen &&
 		paisOrigenId &&
 		ciudadDestino &&
 		paisDestinoId &&
 		valorAsegurado > 0 &&
+		factura &&
+		fechaFactura &&
 		(coberturaA || coberturaC);
 
 	// Obtener nombre de país seleccionado para preview
@@ -199,13 +214,17 @@ export function TransporteForm({ datos, onChange, onSiguiente, onAnterior }: Pro
 
 					<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 						<div className="space-y-2">
-							<Label htmlFor="tipo_embalaje">Tipo de Embalaje</Label>
+							<Label htmlFor="tipo_embalaje">
+								Tipo de Embalaje <span className="text-red-500">*</span>
+							</Label>
 							<Input
 								id="tipo_embalaje"
 								value={tipoEmbalaje}
 								onChange={(e) => setTipoEmbalaje(e.target.value)}
 								placeholder="Ej: Cajas de cartón, Pallets, Contenedor..."
+								className={errores.tipo_embalaje ? "border-red-500" : ""}
 							/>
+							{errores.tipo_embalaje && <p className="text-sm text-red-600">{errores.tipo_embalaje}</p>}
 						</div>
 
 						<div className="space-y-2">
@@ -364,23 +383,31 @@ export function TransporteForm({ datos, onChange, onSiguiente, onAnterior }: Pro
 
 					<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 						<div className="space-y-2">
-							<Label htmlFor="factura">Número de Factura</Label>
+							<Label htmlFor="factura">
+								Número de Factura <span className="text-red-500">*</span>
+							</Label>
 							<Input
 								id="factura"
 								value={factura}
 								onChange={(e) => setFactura(e.target.value)}
 								placeholder="Ej: FAC-001-2026"
+								className={errores.factura ? "border-red-500" : ""}
 							/>
+							{errores.factura && <p className="text-sm text-red-600">{errores.factura}</p>}
 						</div>
 
 						<div className="space-y-2">
-							<Label htmlFor="fecha_factura">Fecha de Factura</Label>
+							<Label htmlFor="fecha_factura">
+								Fecha de Factura <span className="text-red-500">*</span>
+							</Label>
 							<Input
 								id="fecha_factura"
 								type="date"
 								value={fechaFactura}
 								onChange={(e) => setFechaFactura(e.target.value)}
+								className={errores.fecha_factura ? "border-red-500" : ""}
 							/>
+							{errores.fecha_factura && <p className="text-sm text-red-600">{errores.fecha_factura}</p>}
 						</div>
 					</div>
 				</div>

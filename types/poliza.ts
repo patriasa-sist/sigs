@@ -303,7 +303,7 @@ export type Pais = {
 
 export type DatosTransporte = {
 	materia_asegurada: string; // Texto largo - descripción de la mercancía
-	tipo_embalaje?: string; // Tipo de embalaje
+	tipo_embalaje: string; // Tipo de embalaje
 	fecha_embarque: string; // ISO date string
 	tipo_transporte: TipoTransporte;
 	ciudad_origen: string;
@@ -311,8 +311,8 @@ export type DatosTransporte = {
 	ciudad_destino: string;
 	pais_destino_id: string; // Referencia a tabla paises
 	valor_asegurado: number;
-	factura?: string; // Número de factura
-	fecha_factura?: string; // ISO date string
+	factura: string; // Número de factura
+	fecha_factura: string; // ISO date string
 	cobertura_a: boolean; // Cobertura A (Todo Riesgo)
 	cobertura_c: boolean; // Cobertura C (Riesgos Nombrados)
 	modalidad: ModalidadTransporte;

@@ -86,7 +86,7 @@ CREATE TABLE IF NOT EXISTS polizas_transporte (
 
     -- Datos de la mercancía
     materia_asegurada TEXT NOT NULL, -- Descripción detallada de la mercancía
-    tipo_embalaje VARCHAR(200), -- Tipo de embalaje
+    tipo_embalaje VARCHAR(200) NOT NULL, -- Tipo de embalaje
 
     -- Datos del embarque
     fecha_embarque DATE NOT NULL,
@@ -104,8 +104,8 @@ CREATE TABLE IF NOT EXISTS polizas_transporte (
 
     -- Valor y facturación
     valor_asegurado NUMERIC(18, 2) NOT NULL CHECK (valor_asegurado > 0),
-    factura VARCHAR(100), -- Número de factura
-    fecha_factura DATE,
+    factura VARCHAR(100) NOT NULL, -- Número de factura
+    fecha_factura DATE NOT NULL,
 
     -- Coberturas
     cobertura_a BOOLEAN DEFAULT false, -- Cobertura A (Todo Riesgo)
