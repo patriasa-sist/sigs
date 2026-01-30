@@ -59,19 +59,6 @@ export function validarDatosBasicos(datos: Partial<DatosBasicosPoliza>): Validat
 		}
 	}
 
-	// Validar que fecha_emision <= inicio_vigencia
-	if (datos.fecha_emision_compania && datos.inicio_vigencia) {
-		const emision = new Date(datos.fecha_emision_compania);
-		const inicio = new Date(datos.inicio_vigencia);
-
-		if (emision > inicio) {
-			errores.push({
-				campo: "fecha_emision_compania",
-				mensaje: "Fecha de emisión no puede ser posterior a inicio de vigencia",
-			});
-		}
-	}
-
 	// Validar responsable
 	if (!datos.responsable_id) {
 		errores.push({ campo: "responsable_id", mensaje: "Ejecutivo comercial es requerido" });
