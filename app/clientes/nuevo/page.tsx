@@ -243,6 +243,18 @@ export default function NuevoClientePage() {
 		const formData = naturalForm.getValues();
 		const normalized = normalizeNaturalClientData(formData);
 
+		// Check if document already exists (unique constraint on tipo_documento + numero_documento)
+		const { data: existingDoc } = await supabase
+			.from("natural_clients")
+			.select("numero_documento")
+			.eq("tipo_documento", normalized.tipo_documento)
+			.eq("numero_documento", normalized.numero_documento)
+			.maybeSingle();
+
+		if (existingDoc) {
+			throw new Error(`Ya existe un cliente registrado con el documento ${normalized.tipo_documento.toUpperCase()} ${normalized.numero_documento}`);
+		}
+
 		// Validate and convert required date fields before submission
 		if (!normalized.fecha_nacimiento || typeof normalized.fecha_nacimiento !== "string") {
 			throw new Error("Fecha de nacimiento es requerida");
@@ -335,6 +347,17 @@ export default function NuevoClientePage() {
 	const submitUnipersonalClient = async () => {
 		const formData = unipersonalForm.getValues();
 		const normalized = normalizeUnipersonalClientData(formData);
+
+		// Check if NIT already exists (unique constraint)
+		const { data: existingNit } = await supabase
+			.from("unipersonal_clients")
+			.select("nit")
+			.eq("nit", normalized.nit)
+			.maybeSingle();
+
+		if (existingNit) {
+			throw new Error(`Ya existe un cliente unipersonal registrado con el NIT ${normalized.nit}`);
+		}
 
 		// Validate and convert required date fields before submission
 		if (!normalized.fecha_nacimiento || typeof normalized.fecha_nacimiento !== "string") {
@@ -456,6 +479,17 @@ export default function NuevoClientePage() {
 	const submitJuridicClient = async () => {
 		const formData = juridicForm.getValues();
 		const normalized = normalizeJuridicClientData(formData);
+
+		// Check if NIT already exists (unique constraint)
+		const { data: existingNit } = await supabase
+			.from("juridic_clients")
+			.select("nit")
+			.eq("nit", normalized.nit)
+			.maybeSingle();
+
+		if (existingNit) {
+			throw new Error(`Ya existe un cliente jurídico registrado con el NIT ${normalized.nit}`);
+		}
 
 		// 1. Insert into clients table
 		const { data: client, error: clientError } = await supabase
