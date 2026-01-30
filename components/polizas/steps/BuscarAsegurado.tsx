@@ -31,120 +31,81 @@ export function BuscarAsegurado({ asegurado, onAseguradoSeleccionado, onSiguient
 
 		try {
 			const supabase = createClient();
-			// Buscar clientes base
-			const { data: clientesBase, error: errorBase } = await supabase
-				.from("clients")
-				.select("*")
-				.eq("status", "active")
-				.limit(20);
+			const queryNormalizada = query.trim();
 
-			if (errorBase) throw errorBase;
-
-			if (!clientesBase || clientesBase.length === 0) {
-				setResultados([]);
-				return;
-			}
-
-			// Obtener detalles de clientes naturales y jurídicos
-			const clientesNaturalesIds = clientesBase.filter((c) => c.client_type === "natural").map((c) => c.id);
-
-			const clientesJuridicosIds = clientesBase.filter((c) => c.client_type === "juridica").map((c) => c.id);
-
+			// Buscar en paralelo: clientes naturales y jurídicos que coincidan con la búsqueda
 			const [naturalesResult, juridicosResult] = await Promise.all([
-				clientesNaturalesIds.length > 0
-					? supabase.from("natural_clients").select("*").in("client_id", clientesNaturalesIds)
-					: { data: [], error: null },
-				clientesJuridicosIds.length > 0
-					? supabase.from("juridic_clients").select("*").in("client_id", clientesJuridicosIds)
-					: { data: [], error: null },
+				// Buscar clientes naturales por nombre, apellido o documento
+				supabase
+					.from("natural_clients")
+					.select("*, clients!inner(id, client_type, status, created_at)")
+					.eq("clients.status", "active")
+					.or(
+						`primer_nombre.ilike.%${queryNormalizada}%,` +
+							`segundo_nombre.ilike.%${queryNormalizada}%,` +
+							`primer_apellido.ilike.%${queryNormalizada}%,` +
+							`segundo_apellido.ilike.%${queryNormalizada}%,` +
+							`numero_documento.ilike.%${queryNormalizada}%`
+					)
+					.order("created_at", { referencedTable: "clients", ascending: false })
+					.limit(20),
+				// Buscar clientes jurídicos por razón social o NIT
+				supabase
+					.from("juridic_clients")
+					.select("*, clients!inner(id, client_type, status, created_at)")
+					.eq("clients.status", "active")
+					.or(`razon_social.ilike.%${queryNormalizada}%,nit.ilike.%${queryNormalizada}%`)
+					.order("created_at", { referencedTable: "clients", ascending: false })
+					.limit(20),
 			]);
 
 			if (naturalesResult.error) throw naturalesResult.error;
 			if (juridicosResult.error) throw juridicosResult.error;
 
-			// Combinar datos
-			const asegurados: AseguradoSeleccionado[] = clientesBase.map((cliente) => {
-				let detalles: ClienteNatural | ClienteJuridico;
-				let nombre_completo: string;
-				let documento: string;
-
-				if (cliente.client_type === "natural") {
-					const natural = naturalesResult.data?.find((n) => n.client_id === cliente.id);
-
-					if (!natural) {
-						// Fallback si no se encuentra el detalle
-						detalles = {
-							client_id: cliente.id,
-							primer_nombre: "N/A",
-							primer_apellido: "N/A",
-							tipo_documento: "CI",
-							numero_documento: "N/A",
-							fecha_nacimiento: "",
-							direccion: "",
-						} as ClienteNatural;
-						nombre_completo = "Cliente Natural";
-						documento = "N/A";
-					} else {
-						detalles = natural as ClienteNatural;
-						// Construir nombre completo filtrando valores vacíos y normalizando espacios
-						nombre_completo = [
-							natural.primer_nombre,
-							natural.segundo_nombre,
-							natural.primer_apellido,
-							natural.segundo_apellido,
-						]
-							.filter((parte) => parte && parte.trim())
-							.join(" ");
-						documento = `${natural.numero_documento}${
-							natural.extension_ci ? ` ${natural.extension_ci}` : ""
-						}`;
-					}
-				} else {
-					const juridico = juridicosResult.data?.find((j) => j.client_id === cliente.id);
-
-					if (!juridico) {
-						detalles = {
-							client_id: cliente.id,
-							razon_social: "N/A",
-							nit: "N/A",
-							direccion_legal: "",
-							actividad_economica: "",
-							tipo_documento: "NIT",
-						} as ClienteJuridico;
-						nombre_completo = "Cliente Jurídico";
-						documento = "N/A";
-					} else {
-						detalles = juridico as ClienteJuridico;
-						nombre_completo = juridico.razon_social;
-						documento = juridico.nit;
-					}
-				}
+			// Construir lista de asegurados desde clientes naturales
+			const aseguradosNaturales: AseguradoSeleccionado[] = (naturalesResult.data || []).map((natural) => {
+				const cliente = natural.clients;
+				const nombre_completo = [
+					natural.primer_nombre,
+					natural.segundo_nombre,
+					natural.primer_apellido,
+					natural.segundo_apellido,
+				]
+					.filter((parte) => parte && parte.trim())
+					.join(" ");
+				const documento = `${natural.numero_documento}${natural.extension_ci ? ` ${natural.extension_ci}` : ""}`;
 
 				return {
 					id: cliente.id,
-					client_type: cliente.client_type as "natural" | "juridica",
+					client_type: "natural" as const,
 					status: cliente.status as "active" | "inactive" | "suspended",
 					created_at: cliente.created_at,
-					detalles,
+					detalles: natural as ClienteNatural,
 					nombre_completo,
 					documento,
 				};
 			});
 
-			// Filtrar por búsqueda - normalizar espacios múltiples a uno solo
-			const queryNormalizada = query.toLowerCase().trim().replace(/\s+/g, " ");
-			const filtrados = asegurados.filter((a) => {
-				const nombreNormalizado = a.nombre_completo.toLowerCase().replace(/\s+/g, " ");
-				const documentoNormalizado = a.documento.toLowerCase().replace(/\s+/g, " ");
-
-				return (
-					nombreNormalizado.includes(queryNormalizada) ||
-					documentoNormalizado.includes(queryNormalizada) ||
-					a.id.toLowerCase().includes(queryNormalizada)
-				);
+			// Construir lista de asegurados desde clientes jurídicos
+			const aseguradosJuridicos: AseguradoSeleccionado[] = (juridicosResult.data || []).map((juridico) => {
+				const cliente = juridico.clients;
+				return {
+					id: cliente.id,
+					client_type: "juridica" as const,
+					status: cliente.status as "active" | "inactive" | "suspended",
+					created_at: cliente.created_at,
+					detalles: juridico as ClienteJuridico,
+					nombre_completo: juridico.razon_social,
+					documento: juridico.nit,
+				};
 			});
 
-			setResultados(filtrados);
+			// Combinar y ordenar por fecha de creación descendente
+			const asegurados = [...aseguradosNaturales, ...aseguradosJuridicos].sort(
+				(a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+			);
+
+			setResultados(asegurados.slice(0, 20));
 		} catch (err) {
 			console.error("Error buscando clientes:", err);
 			setError("Error al buscar clientes. Por favor intente nuevamente.");
