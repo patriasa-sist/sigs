@@ -421,6 +421,7 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, producto, po
 							<Input
 								id="fecha_pago_unico"
 								type="date"
+								lang="es"
 								value={fechaPagoUnico}
 								onChange={(e) => {
 									if (cuotaUnicaPagada) return;
@@ -615,6 +616,7 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, producto, po
 							<Input
 								id="fecha_inicio_cuotas"
 								type="date"
+								lang="es"
 								value={fechaInicioCuotas}
 								onChange={(e) => {
 									setFechaInicioCuotas(e.target.value);
@@ -905,6 +907,7 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, producto, po
 																) : (
 																	<Input
 																		type="date"
+																		lang="es"
 																		value={cuota.fecha_vencimiento}
 																		onChange={(e) => handleChangeFechaCuota(index, e.target.value)}
 																		className={`max-w-[180px] ${

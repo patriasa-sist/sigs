@@ -192,6 +192,7 @@ export function BeneficiarioModal({ beneficiario, niveles, onGuardar, onCancelar
 								<Input
 									id="fecha_nacimiento"
 									type="date"
+									lang="es"
 									value={formData.fecha_nacimiento}
 									onChange={(e) => handleChange("fecha_nacimiento", e.target.value)}
 									className={errores.fecha_nacimiento ? "border-red-500" : ""}

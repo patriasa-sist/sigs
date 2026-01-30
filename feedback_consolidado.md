@@ -382,6 +382,7 @@ Una vez seleccionada la compañia y el ramo quiero que se habilite la seleccion 
 
 -------------------------------------- errores y mejoras ---------------------------
 
+✅si el navegador esta en ingles los inputs de fechas se ponen en formato americano
 nit puede tener cualquier cantidad de numero, minimo 6
 datos de conyugue grabar en borrador tambien
 avisar vecimientos pers/30 uni-juri/60

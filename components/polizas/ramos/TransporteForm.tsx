@@ -258,6 +258,7 @@ export function TransporteForm({ datos, onChange, onSiguiente, onAnterior }: Pro
 							<Input
 								id="fecha_embarque"
 								type="date"
+								lang="es"
 								value={fechaEmbarque}
 								onChange={(e) => setFechaEmbarque(e.target.value)}
 								className={errores.fecha_embarque ? "border-red-500" : ""}
@@ -403,6 +404,7 @@ export function TransporteForm({ datos, onChange, onSiguiente, onAnterior }: Pro
 							<Input
 								id="fecha_factura"
 								type="date"
+								lang="es"
 								value={fechaFactura}
 								onChange={(e) => setFechaFactura(e.target.value)}
 								className={errores.fecha_factura ? "border-red-500" : ""}

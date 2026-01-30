@@ -443,6 +443,7 @@ export function DatosBasicos({ datos, onChange, onSiguiente, onAnterior }: Props
 					<Input
 						id="fecha_emision"
 						type="date"
+						lang="es"
 						value={formData.fecha_emision_compania}
 						onChange={(e) => handleChange("fecha_emision_compania", e.target.value)}
 						className={errores.fecha_emision_compania ? "border-red-500" : ""}
@@ -460,6 +461,7 @@ export function DatosBasicos({ datos, onChange, onSiguiente, onAnterior }: Props
 					<Input
 						id="inicio_vigencia"
 						type="date"
+						lang="es"
 						value={formData.inicio_vigencia}
 						onChange={(e) => handleChange("inicio_vigencia", e.target.value)}
 						className={errores.inicio_vigencia ? "border-red-500" : ""}
@@ -475,6 +477,7 @@ export function DatosBasicos({ datos, onChange, onSiguiente, onAnterior }: Props
 					<Input
 						id="fin_vigencia"
 						type="date"
+						lang="es"
 						value={formData.fin_vigencia}
 						onChange={(e) => handleChange("fin_vigencia", e.target.value)}
 						className={errores.fin_vigencia ? "border-red-500" : ""}
