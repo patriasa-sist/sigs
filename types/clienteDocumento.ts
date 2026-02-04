@@ -10,6 +10,7 @@ import { z } from "zod";
 export const NATURAL_DOCUMENT_TYPES = {
 	documento_identidad: "Documento de Identidad",
 	certificacion_pep: "Certificación PEP",
+	carta_nombramiento: "carta de nombramiento",
 	formulario_kyc: "Formulario Conoce a tu Cliente (KYC)",
 } as const;
 
@@ -33,6 +34,7 @@ export const JURIDIC_DOCUMENT_TYPES = {
 	poder_representacion: "Poder de Representación",
 	documento_identidad_representante: "Documento de Identidad del Representante Legal",
 	certificacion_pep: "Certificación PEP",
+	carta_nombramiento: "carta de nombramiento",
 	formulario_kyc: "Formulario Conoce a tu Cliente (KYC)",
 } as const;
 
