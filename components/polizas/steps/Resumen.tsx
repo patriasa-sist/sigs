@@ -267,12 +267,12 @@ export function Resumen({ formState, onAnterior, onEditarPaso, onGuardar, guarda
 										)}
 										<div>
 											<span className="font-medium text-gray-700">Vigencia:</span>{" "}
-											{new Date(datos_basicos.inicio_vigencia).toLocaleDateString("es-BO")} -{" "}
-											{new Date(datos_basicos.fin_vigencia).toLocaleDateString("es-BO")}
+											{new Date(datos_basicos.inicio_vigencia + 'T00:00:00').toLocaleDateString("es-BO")} -{" "}
+											{new Date(datos_basicos.fin_vigencia + 'T00:00:00').toLocaleDateString("es-BO")}
 										</div>
 										<div>
 											<span className="font-medium text-gray-700">Emisión:</span>{" "}
-											{new Date(datos_basicos.fecha_emision_compania).toLocaleDateString("es-BO")}
+											{new Date(datos_basicos.fecha_emision_compania + 'T00:00:00').toLocaleDateString("es-BO")}
 										</div>
 									</div>
 								)}
@@ -308,7 +308,7 @@ export function Resumen({ formState, onAnterior, onEditarPaso, onGuardar, guarda
 										<ul className="mt-2 space-y-1">
 											{datos_especificos.datos.vehiculos.slice(0, 3).map((v, i) => (
 												<li key={i}>
-													• {v.placa} - Valor: {v.valor_asegurado.toLocaleString("es-BO")} Bs
+													• {v.placa} - Valor: {v.valor_asegurado.toLocaleString("es-BO")} {modalidad_pago?.moneda || "Bs"}
 												</li>
 											))}
 											{datos_especificos.datos.vehiculos.length > 3 && (
@@ -338,7 +338,7 @@ export function Resumen({ formState, onAnterior, onEditarPaso, onGuardar, guarda
 													<li key={i} className="ml-2">
 														• {nivel.nombre}
 														{nivel.prima_nivel &&
-															` - Prima: ${nivel.prima_nivel.toLocaleString("es-BO")} Bs`}
+															` - Prima: ${nivel.prima_nivel.toLocaleString("es-BO")} ${modalidad_pago?.moneda || "Bs"}`}
 													</li>
 												))}
 											</ul>
@@ -387,7 +387,7 @@ export function Resumen({ formState, onAnterior, onEditarPaso, onGuardar, guarda
 											<ul className="mt-1 space-y-1">
 												{datos_especificos.datos.niveles.map((nivel, i) => (
 													<li key={i} className="ml-2">
-														• {nivel.nombre} - {nivel.monto.toLocaleString("es-BO")} Bs
+														• {nivel.nombre} - {nivel.monto.toLocaleString("es-BO")} {modalidad_pago?.moneda || "Bs"}
 													</li>
 												))}
 											</ul>
@@ -418,7 +418,7 @@ export function Resumen({ formState, onAnterior, onEditarPaso, onGuardar, guarda
 													<li key={i} className="ml-2">
 														• {nivel.nombre}
 														{nivel.prima_nivel
-															? ` - ${nivel.prima_nivel.toLocaleString("es-BO")} Bs`
+															? ` - ${nivel.prima_nivel.toLocaleString("es-BO")} ${modalidad_pago?.moneda || "Bs"}`
 															: ""}
 													</li>
 												))}
@@ -455,13 +455,13 @@ export function Resumen({ formState, onAnterior, onEditarPaso, onGuardar, guarda
 																{bien.items.map((item, j) => (
 																	<li key={j} className="text-xs">
 																		• {item.nombre}:{" "}
-																		{item.monto.toLocaleString("es-BO")} Bs
+																		{item.monto.toLocaleString("es-BO")} {modalidad_pago?.moneda || "Bs"}
 																	</li>
 																))}
 															</ul>
 															<div className="mt-1 text-sm font-medium text-purple-700">
 																Valor total:{" "}
-																{bien.valor_total_declarado.toLocaleString("es-BO")} Bs
+																{bien.valor_total_declarado.toLocaleString("es-BO")} {modalidad_pago?.moneda || "Bs"}
 															</div>
 														</li>
 													))}
@@ -479,7 +479,7 @@ export function Resumen({ formState, onAnterior, onEditarPaso, onGuardar, guarda
 											{(datos_especificos.datos as DatosIncendio).valor_asegurado.toLocaleString(
 												"es-BO"
 											)}{" "}
-											Bs
+											{modalidad_pago?.moneda || "Bs"}
 										</div>
 									</div>
 								)}
@@ -489,7 +489,7 @@ export function Resumen({ formState, onAnterior, onEditarPaso, onGuardar, guarda
 									<div className="text-sm text-gray-600 space-y-2">
 										<div>
 											<span className="font-medium text-gray-700">Valor Total Asegurado:</span>{" "}
-											{(datos_especificos.datos as DatosRiesgosVarios).valor_total_asegurado.toLocaleString("es-BO")} Bs
+											{(datos_especificos.datos as DatosRiesgosVarios).valor_total_asegurado.toLocaleString("es-BO")} {modalidad_pago?.moneda || "Bs"}
 										</div>
 										<div>
 											<span className="font-medium text-gray-700">Asegurados:</span>{" "}
@@ -507,7 +507,7 @@ export function Resumen({ formState, onAnterior, onEditarPaso, onGuardar, guarda
 										</div>
 										<div>
 											<span className="font-medium text-gray-700">Valor Asegurado:</span>{" "}
-											{(datos_especificos.datos as DatosResponsabilidadCivil).valor_asegurado.toLocaleString("es-BO")} Bs
+											{(datos_especificos.datos as DatosResponsabilidadCivil).valor_asegurado.toLocaleString("es-BO")} {modalidad_pago?.moneda || "Bs"}
 										</div>
 									</div>
 								)}
