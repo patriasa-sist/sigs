@@ -8,7 +8,8 @@ import { z } from "zod";
  * Document types for Natural Person clients
  */
 export const NATURAL_DOCUMENT_TYPES = {
-	documento_identidad: "Documento de Identidad",
+	documento_identidad: "CI Anverso",
+	documento_identidad_reverso: "CI Reverso",
 	certificacion_pep: "Certificación PEP",
 	carta_nombramiento: "carta de nombramiento",
 	formulario_kyc: "Formulario Conoce a tu Cliente (KYC)",
