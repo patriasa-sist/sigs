@@ -1,9 +1,17 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { FileText, X } from "lucide-react";
 import { toast } from "sonner";
+import {
+	savePolizaDraft,
+	loadPolizaDraft,
+	clearPolizaDraft,
+	hasPolizaDraft,
+	getPolizaDraftTimestamp,
+	formatDraftAge,
+} from "@/utils/polizaFormStorage";
 import type { PolizaFormState, PasoFormulario, ProductoAseguradora } from "@/types/poliza";
 import { Button } from "@/components/ui/button";
 import { guardarPoliza } from "@/app/polizas/nueva/actions";
@@ -123,6 +131,72 @@ export function NuevaPolizaForm({ mode = "create", polizaId, initialData }: Nuev
 		cargarPorcentajeUsuario();
 	}, [formState.datos_basicos?.responsable_id]);
 
+	// --- Draft backup/restore (solo en modo creación) ---
+	const draftInitialized = useRef(false);
+
+	// Restaurar borrador al montar
+	useEffect(() => {
+		if (mode !== "create" || draftInitialized.current) return;
+		draftInitialized.current = true;
+
+		if (!hasPolizaDraft()) return;
+
+		const draft = loadPolizaDraft();
+		const timestamp = getPolizaDraftTimestamp();
+
+		if (!draft || !timestamp) return;
+
+		const age = formatDraftAge(timestamp);
+		const shouldRestore = confirm(
+			`Se encontró un borrador de póliza guardado ${age}.\n\n¿Desea continuar con el borrador?`
+		);
+
+		if (shouldRestore) {
+			setFormState(draft);
+
+			const hadDocuments = draft.documentos.length > 0;
+			if (hadDocuments) {
+				toast.success("Borrador restaurado", {
+					description: "Los documentos adjuntos deben volver a cargarse.",
+				});
+				// Limpiar documentos sin archivo (solo tenían metadata)
+				setFormState((prev) => ({
+					...prev,
+					documentos: [],
+				}));
+			} else {
+				toast.success("Borrador restaurado");
+			}
+		} else {
+			clearPolizaDraft();
+		}
+	}, [mode]);
+
+	// Auto-save con debounce
+	const saveTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+	const debouncedSave = useCallback((state: PolizaFormState) => {
+		if (saveTimeout.current) {
+			clearTimeout(saveTimeout.current);
+		}
+		saveTimeout.current = setTimeout(() => {
+			savePolizaDraft(state);
+		}, 1000);
+	}, []);
+
+	useEffect(() => {
+		if (mode !== "create") return;
+		if (!draftInitialized.current) return;
+
+		debouncedSave(formState);
+
+		return () => {
+			if (saveTimeout.current) {
+				clearTimeout(saveTimeout.current);
+			}
+		};
+	}, [formState, mode, debouncedSave]);
+
 	// Navegación
 	const handleCancelar = () => {
 		const mensaje = mode === "edit"
@@ -130,6 +204,9 @@ export function NuevaPolizaForm({ mode = "create", polizaId, initialData }: Nuev
 			: "¿Está seguro de cancelar? Se perderán todos los datos ingresados.";
 
 		if (confirm(mensaje)) {
+			if (mode === "create") {
+				clearPolizaDraft();
+			}
 			if (mode === "edit" && polizaId) {
 				router.push(`/polizas/${polizaId}`);
 			} else {
@@ -177,6 +254,7 @@ export function NuevaPolizaForm({ mode = "create", polizaId, initialData }: Nuev
 				// Modo edición - usar actualizarPoliza
 				resultado = await actualizarPoliza(polizaId, formState);
 				if (resultado.success) {
+					clearPolizaDraft();
 					toast.success("Póliza actualizada exitosamente", {
 						description: "Los cambios han sido guardados correctamente."
 					});
@@ -190,6 +268,7 @@ export function NuevaPolizaForm({ mode = "create", polizaId, initialData }: Nuev
 				// Modo creación - usar guardarPoliza
 				resultado = await guardarPoliza(formState);
 				if (resultado.success) {
+					clearPolizaDraft();
 					toast.success("Póliza guardada exitosamente", {
 						description: "La póliza ha sido registrada correctamente."
 					});
