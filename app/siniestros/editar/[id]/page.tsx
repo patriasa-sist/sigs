@@ -1,7 +1,7 @@
 // app/siniestros/editar/[id]/page.tsx - Página de Edición de Siniestros
 
 import { redirect } from "next/navigation";
-import { createClient } from "@/utils/supabase/server";
+import { requirePermission } from "@/utils/auth/helpers";
 import { obtenerSiniestroDetalle } from "@/app/siniestros/actions";
 import EditarSiniestroForm from "@/components/siniestros/edicion/EditarSiniestroForm";
 
@@ -15,25 +15,7 @@ interface PageProps {
 }
 
 export default async function EditarSiniestroPage({ params }: PageProps) {
-	// Verificar autenticación
-	const supabase = await createClient();
-	const {
-		data: { user },
-	} = await supabase.auth.getUser();
-
-	if (!user) {
-		redirect("/login");
-	}
-
-	// Verificar rol
-	const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
-
-	if (
-		!profile ||
-		(profile.role !== "siniestros" && profile.role !== "comercial" && profile.role !== "admin")
-	) {
-		redirect("/unauthorized");
-	}
+	const profile = await requirePermission("siniestros.editar");
 
 	// Obtener ID del siniestro desde params
 	const { id: siniestroId } = await params;

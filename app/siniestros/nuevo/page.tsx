@@ -1,6 +1,5 @@
-import { redirect } from "next/navigation";
+import { requirePermission } from "@/utils/auth/helpers";
 import Link from "next/link";
-import { createClient } from "@/utils/supabase/server";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import RegistrarSiniestroForm from "@/components/siniestros/registro/RegistrarSiniestroForm";
@@ -11,26 +10,7 @@ export const metadata = {
 };
 
 export default async function NuevoSiniestroPage() {
-	const supabase = await createClient();
-
-	// Verificar autenticación
-	const {
-		data: { user },
-	} = await supabase.auth.getUser();
-
-	if (!user) {
-		redirect("/auth/login");
-	}
-
-	// Verificar permisos (solo siniestros, comercial o admin)
-	const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
-
-	if (
-		!profile ||
-		(profile.role !== "siniestros" && profile.role !== "comercial" && profile.role !== "admin")
-	) {
-		redirect("/unauthorized");
-	}
+	await requirePermission("siniestros.crear");
 
 	return (
 		<div className="container mx-auto py-8 px-4">

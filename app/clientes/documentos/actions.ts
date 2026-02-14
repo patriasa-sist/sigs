@@ -89,8 +89,12 @@ async function authorizeClientDocumentEdit(clientId: string) {
 		return { supabase, user, profile };
 	}
 
-	// Only comercial role can have edit permissions
-	if (profile.role !== "comercial") {
+	// Check if user has edit permission
+	const { data: hasEditPerm } = await supabase.rpc("user_has_permission", {
+		p_user_id: profile.id,
+		p_permission_id: "clientes.editar",
+	});
+	if (!hasEditPerm) {
 		throw new Error("No tiene permisos para editar documentos");
 	}
 

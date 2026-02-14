@@ -13,6 +13,7 @@
 "use server";
 
 import { createClient } from "@/utils/supabase/server";
+import { checkPermission } from "@/utils/auth/helpers";
 
 // ============================================
 // TYPES
@@ -117,15 +118,9 @@ export async function getClientAuditTrail(
 			return { success: false, error: "No autenticado" };
 		}
 
-		// Get user role
-		const { data: profile } = await supabase
-			.from("profiles")
-			.select("role")
-			.eq("id", user.id)
-			.single();
-
-		// Only admin can see full audit trail
-		if (!profile || profile.role !== "admin") {
+		// Check permission for audit trail
+		const { allowed } = await checkPermission("clientes.trazabilidad");
+		if (!allowed) {
 			return { success: false, error: "Solo administradores pueden ver la trazabilidad" };
 		}
 

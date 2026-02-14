@@ -1,5 +1,4 @@
-import { redirect } from "next/navigation";
-import { createClient } from "@/utils/supabase/server";
+import { requirePermission } from "@/utils/auth/helpers";
 import PolizasPendientesTable from "@/components/gerencia/PolizasPendientesTable";
 import { obtenerPolizasPendientes } from "./actions";
 
@@ -9,27 +8,7 @@ export const metadata = {
 };
 
 export default async function ValidacionPage() {
-	const supabase = await createClient();
-
-	// Verificar autenticación
-	const {
-		data: { user },
-	} = await supabase.auth.getUser();
-
-	if (!user) {
-		redirect("/auth/login");
-	}
-
-	// Verificar permisos (solo admin o usuario)
-	const { data: profile } = await supabase
-		.from("profiles")
-		.select("role")
-		.eq("id", user.id)
-		.single();
-
-	if (!profile || (profile.role !== "admin" && profile.role !== "usuario")) {
-		redirect("/unauthorized");
-	}
+	await requirePermission("polizas.validar");
 
 	// Obtener pólizas pendientes
 	const result = await obtenerPolizasPendientes();

@@ -6,10 +6,82 @@
  * 1. Agregar al tipo UserRole en utils/auth/helpers.ts
  * 2. Agregar al constraint en la base de datos (migración SQL)
  * 3. Agregar configuración a ROLE_CONFIG abajo
+ * 4. Agregar permisos por defecto en role_permissions (BD)
+ *
+ * Para agregar un nuevo permiso:
+ * 1. Agregar al tipo Permission en utils/auth/helpers.ts
+ * 2. INSERT en tabla permissions (BD)
+ * 3. Asignar a roles en role_permissions (BD)
+ * 4. Agregar al array defaultPermissions del rol correspondiente abajo
  */
 
-import type { UserRole } from "./helpers";
+import type { UserRole, Permission } from "./helpers";
 import { Crown, UserCheck, Shield, Users, UserX, Ban, FileWarning } from "lucide-react";
+
+/**
+ * Array de todos los permisos del sistema.
+ * Debe coincidir con el tipo Permission y con la tabla permissions en BD.
+ */
+export const ALL_PERMISSIONS: readonly Permission[] = [
+	"polizas.ver",
+	"polizas.crear",
+	"polizas.editar",
+	"polizas.validar",
+	"polizas.exportar",
+	"clientes.ver",
+	"clientes.crear",
+	"clientes.editar",
+	"clientes.trazabilidad",
+	"cobranzas.ver",
+	"cobranzas.gestionar",
+	"siniestros.ver",
+	"siniestros.crear",
+	"siniestros.editar",
+	"vencimientos.ver",
+	"vencimientos.generar",
+	"documentos.descartar",
+	"documentos.restaurar",
+	"documentos.eliminar",
+	"admin.usuarios",
+	"admin.roles",
+	"admin.invitaciones",
+	"admin.reportes",
+	"admin.permisos",
+] as const;
+
+/**
+ * Módulos del sistema con sus labels para la UI
+ */
+export const PERMISSION_MODULES: Record<string, string> = {
+	polizas: "Pólizas",
+	clientes: "Clientes",
+	cobranzas: "Cobranzas",
+	siniestros: "Siniestros",
+	vencimientos: "Vencimientos",
+	documentos: "Documentos",
+	admin: "Administración",
+};
+
+/**
+ * Labels legibles para cada acción de permiso
+ */
+export const PERMISSION_ACTION_LABELS: Record<string, string> = {
+	ver: "Ver",
+	crear: "Crear",
+	editar: "Editar",
+	validar: "Validar",
+	exportar: "Exportar",
+	gestionar: "Gestionar",
+	trazabilidad: "Trazabilidad",
+	descartar: "Descartar",
+	restaurar: "Restaurar",
+	eliminar: "Eliminar",
+	usuarios: "Usuarios",
+	roles: "Roles",
+	invitaciones: "Invitaciones",
+	reportes: "Reportes",
+	permisos: "Permisos",
+};
 
 /**
  * Array de todos los roles válidos del sistema
@@ -56,7 +128,9 @@ export const OPERATIONAL_ROLES: readonly UserRole[] = [
 
 /**
  * Configuración completa de cada rol
- * Incluye metadata para UI, permisos, etc.
+ * Incluye metadata para UI y permisos por defecto.
+ * Los permisos reales se gestionan en BD (role_permissions + user_permissions).
+ * defaultPermissions es referencia para la UI de admin y seed inicial.
  */
 export const ROLE_CONFIG = {
 	admin: {
@@ -72,16 +146,7 @@ export const ROLE_CONFIG = {
 			border: "border-orange-200",
 			gradient: "from-orange-50 to-white"
 		},
-		permissions: {
-			canManageUsers: true,
-			canManageRoles: true,
-			canSendInvitations: true,
-			canValidatePolicies: true,
-			canCreatePolicies: true,
-			canViewPayments: true,
-			canManagePayments: true,
-			canDeleteDocuments: true
-		}
+		defaultPermissions: [...ALL_PERMISSIONS] as Permission[]
 	},
 	usuario: {
 		label: "Usuario",
@@ -96,16 +161,16 @@ export const ROLE_CONFIG = {
 			border: "border-blue-200",
 			gradient: "from-blue-50 to-white"
 		},
-		permissions: {
-			canManageUsers: false,
-			canManageRoles: false,
-			canSendInvitations: false,
-			canValidatePolicies: true,
-			canCreatePolicies: false,
-			canViewPayments: true,
-			canManagePayments: false,
-			canDeleteDocuments: false
-		}
+		defaultPermissions: [
+			"polizas.ver",
+			"polizas.validar",
+			"polizas.exportar",
+			"clientes.ver",
+			"clientes.trazabilidad",
+			"cobranzas.ver",
+			"siniestros.ver",
+			"vencimientos.ver",
+		] as Permission[]
 	},
 	agente: {
 		label: "Agente",
@@ -120,16 +185,18 @@ export const ROLE_CONFIG = {
 			border: "border-green-200",
 			gradient: "from-green-50 to-white"
 		},
-		permissions: {
-			canManageUsers: false,
-			canManageRoles: false,
-			canSendInvitations: false,
-			canValidatePolicies: false,
-			canCreatePolicies: true,
-			canViewPayments: true,
-			canManagePayments: false,
-			canDeleteDocuments: false
-		}
+		defaultPermissions: [
+			"polizas.ver",
+			"polizas.crear",
+			"polizas.editar",
+			"clientes.ver",
+			"clientes.crear",
+			"clientes.editar",
+			"vencimientos.ver",
+			"vencimientos.generar",
+			"cobranzas.ver",
+			"documentos.descartar",
+		] as Permission[]
 	},
 	comercial: {
 		label: "Comercial",
@@ -144,16 +211,21 @@ export const ROLE_CONFIG = {
 			border: "border-cyan-200",
 			gradient: "from-cyan-50 to-white"
 		},
-		permissions: {
-			canManageUsers: false,
-			canManageRoles: false,
-			canSendInvitations: false,
-			canValidatePolicies: false,
-			canCreatePolicies: true,
-			canViewPayments: true,
-			canManagePayments: false,
-			canDeleteDocuments: false
-		}
+		defaultPermissions: [
+			"polizas.ver",
+			"polizas.crear",
+			"polizas.editar",
+			"clientes.ver",
+			"clientes.crear",
+			"clientes.editar",
+			"vencimientos.ver",
+			"vencimientos.generar",
+			"cobranzas.ver",
+			"siniestros.ver",
+			"siniestros.crear",
+			"siniestros.editar",
+			"documentos.descartar",
+		] as Permission[]
 	},
 	cobranza: {
 		label: "Cobranza",
@@ -168,16 +240,12 @@ export const ROLE_CONFIG = {
 			border: "border-violet-200",
 			gradient: "from-violet-50 to-white"
 		},
-		permissions: {
-			canManageUsers: false,
-			canManageRoles: false,
-			canSendInvitations: false,
-			canValidatePolicies: false,
-			canCreatePolicies: false,
-			canViewPayments: true,
-			canManagePayments: true,
-			canDeleteDocuments: false
-		}
+		defaultPermissions: [
+			"cobranzas.ver",
+			"cobranzas.gestionar",
+			"polizas.ver",
+			"clientes.ver",
+		] as Permission[]
 	},
 	siniestros: {
 		label: "Siniestros",
@@ -192,16 +260,14 @@ export const ROLE_CONFIG = {
 			border: "border-amber-200",
 			gradient: "from-amber-50 to-white"
 		},
-		permissions: {
-			canManageUsers: false,
-			canManageRoles: false,
-			canSendInvitations: false,
-			canValidatePolicies: false,
-			canCreatePolicies: false,
-			canViewPayments: true,
-			canManagePayments: false,
-			canDeleteDocuments: false
-		}
+		defaultPermissions: [
+			"siniestros.ver",
+			"siniestros.crear",
+			"siniestros.editar",
+			"polizas.ver",
+			"clientes.ver",
+			"cobranzas.ver",
+		] as Permission[]
 	},
 	invitado: {
 		label: "Invitado",
@@ -216,16 +282,7 @@ export const ROLE_CONFIG = {
 			border: "border-yellow-200",
 			gradient: "from-yellow-50 to-white"
 		},
-		permissions: {
-			canManageUsers: false,
-			canManageRoles: false,
-			canSendInvitations: false,
-			canValidatePolicies: false,
-			canCreatePolicies: false,
-			canViewPayments: false,
-			canManagePayments: false,
-			canDeleteDocuments: false
-		}
+		defaultPermissions: [] as Permission[]
 	},
 	desactivado: {
 		label: "Desactivado",
@@ -240,16 +297,7 @@ export const ROLE_CONFIG = {
 			border: "border-gray-200",
 			gradient: "from-gray-50 to-white"
 		},
-		permissions: {
-			canManageUsers: false,
-			canManageRoles: false,
-			canSendInvitations: false,
-			canValidatePolicies: false,
-			canCreatePolicies: false,
-			canViewPayments: false,
-			canManagePayments: false,
-			canDeleteDocuments: false
-		}
+		defaultPermissions: [] as Permission[]
 	}
 } as const;
 
@@ -291,8 +339,19 @@ export function isOperationalRole(role: UserRole): boolean {
 }
 
 /**
- * Helper para verificar si un rol tiene un permiso específico
+ * Helper para extraer módulo y acción de un permission ID
  */
-export function hasPermission(role: UserRole, permission: keyof typeof ROLE_CONFIG.admin.permissions): boolean {
-	return ROLE_CONFIG[role].permissions[permission];
+export function parsePermission(permissionId: Permission): { module: string; action: string } {
+	const [module, action] = permissionId.split(".");
+	return { module, action };
+}
+
+/**
+ * Helper para obtener el label legible de un permiso
+ */
+export function getPermissionLabel(permissionId: Permission): string {
+	const { module, action } = parsePermission(permissionId);
+	const moduleLabel = PERMISSION_MODULES[module] || module;
+	const actionLabel = PERMISSION_ACTION_LABELS[action] || action;
+	return `${moduleLabel}: ${actionLabel}`;
 }

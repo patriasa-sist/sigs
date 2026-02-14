@@ -6,10 +6,11 @@ import { User } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Home, LogOut, User as UserIcon, FileText, CheckSquare, DollarSign, FileWarning } from "lucide-react";
+import { Home, LogOut, User as UserIcon, FileText, CheckSquare, DollarSign, FileWarning, Shield } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { signOut } from "@/app/auth/login/actions";
+import type { Permission } from "@/utils/auth/helpers";
 
 interface Profile {
 	id: string;
@@ -18,11 +19,48 @@ interface Profile {
 	full_name?: string;
 }
 
+/**
+ * Extrae los permisos del JWT del usuario actual.
+ * Admin siempre retorna true para cualquier permiso (bypass).
+ */
+function usePermissions() {
+	const [permissions, setPermissions] = useState<string[]>([]);
+	const [role, setRole] = useState<string | null>(null);
+
+	useEffect(() => {
+		async function loadPermissions() {
+			const supabase = createClient();
+			const { data: { session } } = await supabase.auth.getSession();
+			if (!session?.access_token) return;
+
+			try {
+				const payload = session.access_token.split(".")[1];
+				const decoded = JSON.parse(
+					atob(payload.replace(/-/g, "+").replace(/_/g, "/"))
+				);
+				setPermissions(decoded.user_permissions || []);
+				setRole(decoded.user_role || null);
+			} catch {
+				// JWT decode failed
+			}
+		}
+		loadPermissions();
+	}, []);
+
+	const can = (permission: Permission): boolean => {
+		if (role === "admin") return true;
+		return permissions.includes(permission);
+	};
+
+	return { can, role, permissions };
+}
+
 export function Navbar() {
 	const [user, setUser] = useState<User | null>(null);
 	const [profile, setProfile] = useState<Profile | null>(null);
 	const [loading, setLoading] = useState(true);
 	const supabase = createClient();
+	const { can } = usePermissions();
 
 	useEffect(() => {
 		async function getUser() {
@@ -112,15 +150,16 @@ export function Navbar() {
 						</Button>
 					</Link>
 
-					<Link href="/polizas">
-						<Button variant="ghost" size="sm" className="flex items-center space-x-2">
-							<FileText className="h-4 w-4" />
-							<span>Pólizas</span>
-						</Button>
-					</Link>
+					{can("polizas.ver") && (
+						<Link href="/polizas">
+							<Button variant="ghost" size="sm" className="flex items-center space-x-2">
+								<FileText className="h-4 w-4" />
+								<span>Pólizas</span>
+							</Button>
+						</Link>
+					)}
 
-					{/* Mostrar Validación solo para admin y usuario */}
-					{(profile?.role === "admin" || profile?.role === "usuario") && (
+					{can("polizas.validar") && (
 						<Link href="/gerencia/validacion">
 							<Button variant="ghost" size="sm" className="flex items-center space-x-2">
 								<CheckSquare className="h-4 w-4" />
@@ -129,8 +168,7 @@ export function Navbar() {
 						</Link>
 					)}
 
-					{/* Mostrar Cobranzas solo para cobranza y admin */}
-					{(profile?.role === "cobranza" || profile?.role === "admin") && (
+					{can("cobranzas.ver") && (
 						<Link href="/cobranzas">
 							<Button variant="ghost" size="sm" className="flex items-center space-x-2">
 								<DollarSign className="h-4 w-4" />
@@ -139,8 +177,7 @@ export function Navbar() {
 						</Link>
 					)}
 
-					{/* Mostrar Siniestros solo para siniestros, comercial y admin */}
-					{(profile?.role === "siniestros" || profile?.role === "comercial" || profile?.role === "admin") && (
+					{can("siniestros.ver") && (
 						<Link href="/siniestros">
 							<Button variant="ghost" size="sm" className="flex items-center space-x-2">
 								<FileWarning className="h-4 w-4" />
@@ -180,6 +217,14 @@ export function Navbar() {
 									<span>Perfil</span>
 								</DropdownMenuItem>
 							</Link>
+							{can("admin.permisos") && (
+								<Link href="/admin/permisos">
+									<DropdownMenuItem className="cursor-pointer">
+										<Shield className="mr-2 h-4 w-4" />
+										<span>Permisos</span>
+									</DropdownMenuItem>
+								</Link>
+							)}
 							<DropdownMenuSeparator />
 							<DropdownMenuItem
 								className="cursor-pointer text-red-600 focus:text-red-600"

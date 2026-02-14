@@ -1,30 +1,9 @@
-import { createClient } from "@/utils/supabase/server";
-import { redirect } from "next/navigation";
+import { requirePermission } from "@/utils/auth/helpers";
 import { FileSpreadsheet } from "lucide-react";
 import ExportarProduccion from "@/components/admin/ExportarProduccion";
 
 export default async function ReportesPage() {
-	const supabase = await createClient();
-
-	// Verificar autenticación
-	const {
-		data: { user },
-	} = await supabase.auth.getUser();
-
-	if (!user) {
-		redirect("/auth/login");
-	}
-
-	// Verificar rol admin
-	const { data: profile } = await supabase
-		.from("profiles")
-		.select("role")
-		.eq("id", user.id)
-		.single();
-
-	if (!profile || profile.role !== "admin") {
-		redirect("/unauthorized");
-	}
+	await requirePermission("admin.reportes");
 
 	return (
 		<div className="flex-1 w-full flex flex-col gap-6">

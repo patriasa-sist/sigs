@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/utils/supabase/server";
+import { checkPermission } from "@/utils/auth/helpers";
 import { revalidatePath } from "next/cache";
 
 /**
@@ -189,13 +190,8 @@ export async function obtenerTodosDocumentos(polizaId: string) {
 			return { success: false, error: "No autenticado", documentos: [] };
 		}
 
-		const { data: profile } = await supabase
-			.from("profiles")
-			.select("role")
-			.eq("id", user.id)
-			.single();
-
-		if (profile?.role !== "admin") {
+		const { allowed } = await checkPermission("documentos.restaurar");
+		if (!allowed) {
 			return {
 				success: false,
 				error: "Solo administradores pueden ver documentos descartados",

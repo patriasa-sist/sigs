@@ -2,6 +2,7 @@
 
 import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
+import { checkPermission } from "@/utils/auth/helpers";
 
 /**
  * Obtiene todas las pólizas pendientes de validación
@@ -19,14 +20,8 @@ export async function obtenerPolizasPendientes() {
 			return { success: false, error: "No autenticado" };
 		}
 
-		// Verificar que el usuario sea admin o gerente
-		const { data: profile } = await supabase
-			.from("profiles")
-			.select("role")
-			.eq("id", user.id)
-			.single();
-
-		if (!profile || (profile.role !== "admin" && profile.role !== "usuario")) {
+		const { allowed } = await checkPermission("polizas.validar");
+		if (!allowed) {
 			return { success: false, error: "No tiene permisos para validar pólizas" };
 		}
 
@@ -99,14 +94,8 @@ export async function validarPoliza(polizaId: string) {
 			return { success: false, error: "No autenticado" };
 		}
 
-		// Verificar que el usuario sea admin o gerente
-		const { data: profile } = await supabase
-			.from("profiles")
-			.select("role")
-			.eq("id", user.id)
-			.single();
-
-		if (!profile || (profile.role !== "admin" && profile.role !== "usuario")) {
+		const { allowed } = await checkPermission("polizas.validar");
+		if (!allowed) {
 			return { success: false, error: "No tiene permisos para validar pólizas" };
 		}
 
@@ -176,15 +165,9 @@ export async function rechazarPoliza(polizaId: string, motivo: string) {
 			return { success: false, error: "No autenticado" };
 		}
 
-		// Verificar que el usuario sea admin o gerente
-		const { data: profile } = await supabase
-			.from("profiles")
-			.select("role")
-			.eq("id", user.id)
-			.single();
-
-		if (!profile || (profile.role !== "admin" && profile.role !== "usuario")) {
-			return { success: false, error: "No tiene permisos para rechazar pólizas" };
+		const { allowed } = await checkPermission("polizas.validar");
+		if (!allowed) {
+			return { success: false, error: "No tiene permisos para validar pólizas" };
 		}
 
 		// Verificar que la póliza exista y esté pendiente

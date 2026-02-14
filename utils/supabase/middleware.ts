@@ -1,16 +1,21 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import type { Permission } from "@/utils/auth/helpers";
 
-// Define protected routes and their required roles
-const PROTECTED_ROUTES = {
-	"/admin": "admin",
-	// New role-based routes:
-	"/agentes": "agente",
-	"/vencimientos": ["agente", "comercial", "admin"],
-	"/clientes": ["agente", "comercial", "admin"],
-	"/polizas": ["agente", "comercial", "admin"],
-	"/cobranzas": ["cobranza", "admin"],
-} as const;
+/**
+ * Rutas protegidas por permiso.
+ * Cada ruta requiere que el usuario tenga el permiso especificado en su JWT.
+ * Admin bypasea todas las verificaciones (hardcoded en getUserPermissionsFromSession).
+ */
+const PROTECTED_ROUTES: Record<string, Permission> = {
+	"/admin": "admin.usuarios",
+	"/polizas": "polizas.ver",
+	"/clientes": "clientes.ver",
+	"/cobranzas": "cobranzas.ver",
+	"/siniestros": "siniestros.ver",
+	"/vencimientos": "vencimientos.ver",
+	"/gerencia/validacion": "polizas.validar",
+};
 
 const PUBLIC_ROUTES = [
 	"/auth/login",
@@ -23,28 +28,25 @@ const PUBLIC_ROUTES = [
 ] as const;
 
 /**
- * Extrae el rol del usuario desde el JWT token.
- * El rol se agrega al JWT mediante el custom_access_token_hook en Supabase.
- * Esto evita una consulta a la BD en cada request.
+ * Decodifica el payload del JWT y extrae los datos del usuario.
+ * Retorna rol y permisos sin consulta a BD.
  */
-function getUserRoleFromSession(session: { access_token: string } | null): string | null {
-	if (!session?.access_token) return null;
-
+function decodeJWTPayload(accessToken: string): { user_role: string | null; user_permissions: string[] } {
 	try {
-		// El JWT tiene 3 partes separadas por puntos: header.payload.signature
-		const payload = session.access_token.split(".")[1];
-		if (!payload) return null;
+		const payload = accessToken.split(".")[1];
+		if (!payload) return { user_role: null, user_permissions: [] };
 
-		// Decodificar el payload (base64url)
-		const decodedPayload = JSON.parse(
+		const decoded = JSON.parse(
 			Buffer.from(payload.replace(/-/g, "+").replace(/_/g, "/"), "base64").toString("utf-8")
 		);
 
-		// El rol está en el claim 'user_role' agregado por el hook
-		return decodedPayload.user_role || null;
+		return {
+			user_role: decoded.user_role || null,
+			user_permissions: decoded.user_permissions || [],
+		};
 	} catch {
-		console.error("[Middleware] Error decoding JWT for role");
-		return null;
+		console.error("[Middleware] Error decoding JWT");
+		return { user_role: null, user_permissions: [] };
 	}
 }
 
@@ -91,29 +93,31 @@ export async function updateSession(request: NextRequest) {
 		return NextResponse.redirect(url);
 	}
 
-	// If user is authenticated, check role-based permissions
+	// If user is authenticated, check permission-based access
 	if (user) {
-		// Obtener la sesión para extraer el rol del JWT (sin consulta adicional a BD)
 		const {
 			data: { session },
 		} = await supabase.auth.getSession();
 
-		// Extraer el rol del JWT (agregado por custom_access_token_hook)
-		const userRole = getUserRoleFromSession(session) || "invitado";
+		const { user_role: userRole, user_permissions: userPermissions } = session?.access_token
+			? decodeJWTPayload(session.access_token)
+			: { user_role: "invitado", user_permissions: [] as string[] };
 
-		// Check if route requires specific role
-		const requiredRole = Object.entries(PROTECTED_ROUTES).find(([route]) => pathname.startsWith(route))?.[1];
+		const effectiveRole = userRole || "invitado";
 
-		if (requiredRole) {
-			// Handle multiple roles (array)
-			if (Array.isArray(requiredRole)) {
-				if (!requiredRole.includes(userRole)) {
-					url.pathname = "/unauthorized";
-					return NextResponse.redirect(url);
-				}
-			}
-			// Handle single role (string)
-			else if (userRole !== requiredRole) {
+		// Find the most specific matching route (longer path = more specific)
+		const matchingRoutes = Object.entries(PROTECTED_ROUTES)
+			.filter(([route]) => pathname.startsWith(route))
+			.sort(([a], [b]) => b.length - a.length);
+
+		const requiredPermission = matchingRoutes[0]?.[1];
+
+		if (requiredPermission) {
+			// Admin bypass: admin siempre tiene acceso
+			const isAdmin = effectiveRole === "admin";
+			const hasPermission = isAdmin || userPermissions.includes(requiredPermission);
+
+			if (!hasPermission) {
 				url.pathname = "/unauthorized";
 				return NextResponse.redirect(url);
 			}
@@ -121,8 +125,7 @@ export async function updateSession(request: NextRequest) {
 
 		// Redirect authenticated users away from auth pages
 		if (pathname.startsWith("/auth/login") || pathname.startsWith("/auth/signup")) {
-			// Redirect based on user role
-			if (userRole === "admin") {
+			if (effectiveRole === "admin") {
 				url.pathname = "/admin";
 			} else {
 				url.pathname = "/";

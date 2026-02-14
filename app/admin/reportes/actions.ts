@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/utils/supabase/server";
+import { checkPermission } from "@/utils/auth/helpers";
 import type {
 	ExportProduccionFilters,
 	ExportProduccionRow,
@@ -14,31 +15,13 @@ async function verificarPermisoAdmin(): Promise<
 	| { authorized: true; userId: string }
 	| { authorized: false; error: string }
 > {
-	const supabase = await createClient();
+	const { allowed, profile } = await checkPermission("admin.reportes");
 
-	const {
-		data: { user },
-	} = await supabase.auth.getUser();
-
-	if (!user) {
-		return { authorized: false, error: "No autenticado" };
-	}
-
-	const { data: profile, error } = await supabase
-		.from("profiles")
-		.select("role")
-		.eq("id", user.id)
-		.single();
-
-	if (error || !profile) {
-		return { authorized: false, error: "Error al verificar permisos" };
-	}
-
-	if (profile.role !== "admin") {
+	if (!allowed || !profile) {
 		return { authorized: false, error: "No tiene permisos de administrador" };
 	}
 
-	return { authorized: true, userId: user.id };
+	return { authorized: true, userId: profile.id };
 }
 
 // Tipos auxiliares para los datos de cliente

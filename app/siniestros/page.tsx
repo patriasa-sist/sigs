@@ -1,6 +1,5 @@
-import { redirect } from "next/navigation";
+import { requirePermission } from "@/utils/auth/helpers";
 import Link from "next/link";
-import { createClient } from "@/utils/supabase/server";
 import { Button } from "@/components/ui/button";
 import { FileWarning } from "lucide-react";
 import Dashboard from "@/components/siniestros/Dashboard";
@@ -12,26 +11,7 @@ export const metadata = {
 };
 
 export default async function SiniestrosPage() {
-	const supabase = await createClient();
-
-	// Verificar autenticación
-	const {
-		data: { user },
-	} = await supabase.auth.getUser();
-
-	if (!user) {
-		redirect("/auth/login");
-	}
-
-	// Verificar permisos (solo siniestros, comercial o admin)
-	const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
-
-	if (
-		!profile ||
-		(profile.role !== "siniestros" && profile.role !== "comercial" && profile.role !== "admin")
-	) {
-		redirect("/unauthorized");
-	}
+	await requirePermission("siniestros.ver");
 
 	// Obtener siniestros con estadísticas y flag de atención
 	const result = await obtenerSiniestrosConAtencion();

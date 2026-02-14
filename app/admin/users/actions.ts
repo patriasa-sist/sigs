@@ -2,6 +2,7 @@
 
 import { createClient } from "@/utils/supabase/server";
 import { createAdminClient } from "@/utils/supabase/admin";
+import { checkPermission } from "@/utils/auth/helpers";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 
@@ -20,14 +21,9 @@ export async function deleteUser(userId: string) {
 			return { success: false, error: "Unauthorized access" };
 		}
 
-		// Get current user's profile to check role
-		const { data: currentProfile, error: profileError } = await supabase
-			.from("profiles")
-			.select("role")
-			.eq("id", currentUser.id)
-			.single();
-
-		if (profileError || currentProfile?.role !== "admin") {
+		// Check admin permission
+		const { allowed } = await checkPermission("admin.usuarios");
+		if (!allowed) {
 			return { success: false, error: "Admin privileges required" };
 		}
 
@@ -114,14 +110,9 @@ export async function sendPasswordResetEmail(userId: string) {
 			return { success: false, error: "Acceso no autorizado" };
 		}
 
-		// Get current user's profile to check role
-		const { data: currentProfile, error: profileError } = await supabase
-			.from("profiles")
-			.select("role")
-			.eq("id", currentUser.id)
-			.single();
-
-		if (profileError || currentProfile?.role !== "admin") {
+		// Check admin permission
+		const { allowed } = await checkPermission("admin.usuarios");
+		if (!allowed) {
 			return { success: false, error: "Se requieren privilegios de administrador" };
 		}
 

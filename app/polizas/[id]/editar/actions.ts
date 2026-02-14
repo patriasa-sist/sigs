@@ -100,8 +100,12 @@ async function verifyEditPermission(polizaId: string) {
 		return { supabase, user, profile, canEdit: true };
 	}
 
-	// Only comercial role can have specific permissions
-	if (profile.role !== "comercial") {
+	// Check if user has edit permission
+	const { data: hasEditPerm } = await supabase.rpc("user_has_permission", {
+		p_user_id: profile.id,
+		p_permission_id: "polizas.editar",
+	});
+	if (!hasEditPerm) {
 		throw new Error("No tienes permiso para editar pólizas");
 	}
 

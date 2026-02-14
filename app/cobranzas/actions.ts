@@ -2,6 +2,7 @@
 
 import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
+import { checkPermission } from "@/utils/auth/helpers";
 import { obtenerEstadoReal } from "@/utils/estadoCuota";
 import type {
 	CuotaPago,
@@ -55,26 +56,16 @@ type ClientQueryResult = {
  * Returns authorization status and user information
  */
 async function verificarPermisoCobranza() {
-	const supabase = await createClient();
+	const { allowed, profile } = await checkPermission("cobranzas.ver");
 
-	const {
-		data: { user },
-	} = await supabase.auth.getUser();
-
-	if (!user) {
-		return { authorized: false, error: "No autenticado" as const };
-	}
-
-	const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
-
-	if (!profile || (profile.role !== "cobranza" && profile.role !== "admin")) {
+	if (!allowed || !profile) {
 		return {
 			authorized: false,
 			error: "No tiene permisos para acceder al módulo de cobranzas" as const,
 		};
 	}
 
-	return { authorized: true as const, userId: user.id, role: profile.role };
+	return { authorized: true as const, userId: profile.id, role: profile.role };
 }
 
 /**

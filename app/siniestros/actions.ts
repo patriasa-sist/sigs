@@ -4,6 +4,7 @@
 
 import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
+import { checkPermission } from "@/utils/auth/helpers";
 import type {
 	RegistroSiniestroFormState,
 	GuardarSiniestroResponse,
@@ -39,25 +40,16 @@ import { generarURLWhatsApp } from "@/utils/whatsapp";
  * Verificar permisos de siniestros, comercial o admin
  */
 async function verificarPermisoSiniestros() {
-	const supabase = await createClient();
-	const {
-		data: { user },
-	} = await supabase.auth.getUser();
+	const { allowed, profile } = await checkPermission("siniestros.ver");
 
-	if (!user) {
-		return { authorized: false as const, error: "No autenticado" as const };
-	}
-
-	const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
-
-	if (!profile || (profile.role !== "siniestros" && profile.role !== "comercial" && profile.role !== "admin")) {
+	if (!allowed || !profile) {
 		return {
 			authorized: false as const,
 			error: "No tiene permisos para acceder al módulo de siniestros" as const,
 		};
 	}
 
-	return { authorized: true as const, userId: user.id, role: profile.role };
+	return { authorized: true as const, userId: profile.id, role: profile.role };
 }
 
 /**

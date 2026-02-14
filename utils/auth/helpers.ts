@@ -4,6 +4,37 @@ import { redirect } from "next/navigation";
 
 export type UserRole = "admin" | "usuario" | "agente" | "comercial" | "cobranza" | "siniestros" | "invitado" | "desactivado";
 
+/**
+ * Permisos granulares del sistema.
+ * Cada permiso representa una acción específica dentro de un módulo.
+ * Formato: 'modulo.accion'
+ */
+export type Permission =
+	| "polizas.ver"
+	| "polizas.crear"
+	| "polizas.editar"
+	| "polizas.validar"
+	| "polizas.exportar"
+	| "clientes.ver"
+	| "clientes.crear"
+	| "clientes.editar"
+	| "clientes.trazabilidad"
+	| "cobranzas.ver"
+	| "cobranzas.gestionar"
+	| "siniestros.ver"
+	| "siniestros.crear"
+	| "siniestros.editar"
+	| "vencimientos.ver"
+	| "vencimientos.generar"
+	| "documentos.descartar"
+	| "documentos.restaurar"
+	| "documentos.eliminar"
+	| "admin.usuarios"
+	| "admin.roles"
+	| "admin.invitaciones"
+	| "admin.reportes"
+	| "admin.permisos";
+
 export interface UserProfile {
 	id: string;
 	email: string;
@@ -135,4 +166,112 @@ export async function getCurrentUserProfileClient(): Promise<UserProfile | null>
 export async function hasRoleClient(role: UserRole): Promise<boolean> {
 	const profile = await getCurrentUserProfileClient();
 	return profile?.role === role || false;
+}
+
+// ============================================================================
+// Permission-based authorization (server-side)
+// ============================================================================
+
+/**
+ * Verifica si el usuario actual tiene un permiso específico.
+ * Admin tiene bypass hardcodeado (siempre retorna true).
+ * Para otros roles, consulta role_permissions + user_permissions en BD.
+ */
+export async function hasPermission(permission: Permission): Promise<boolean> {
+	const profile = await getCurrentUserProfile();
+	if (!profile) return false;
+	if (profile.role === "admin") return true;
+
+	const supabase = await createClient();
+	const { data } = await supabase.rpc("user_has_permission", {
+		p_user_id: profile.id,
+		p_permission_id: permission,
+	});
+	return !!data;
+}
+
+/**
+ * Requiere que el usuario tenga un permiso. Redirige a /unauthorized si no lo tiene.
+ * Uso en server components y server actions que necesitan protección.
+ */
+export async function requirePermission(permission: Permission): Promise<UserProfile> {
+	const profile = await getCurrentUserProfile();
+	if (!profile) {
+		redirect("/auth/login");
+	}
+	if (profile.role === "admin") return profile;
+
+	const supabase = await createClient();
+	const { data } = await supabase.rpc("user_has_permission", {
+		p_user_id: profile.id,
+		p_permission_id: permission,
+	});
+
+	if (!data) {
+		redirect("/unauthorized");
+	}
+	return profile;
+}
+
+/**
+ * Verifica permiso sin redirect - retorna resultado booleano.
+ * Útil en server actions donde se quiere retornar error en vez de redirect.
+ */
+export async function checkPermission(permission: Permission): Promise<{ allowed: boolean; profile: UserProfile | null }> {
+	const profile = await getCurrentUserProfile();
+	if (!profile) return { allowed: false, profile: null };
+	if (profile.role === "admin") return { allowed: true, profile };
+
+	const supabase = await createClient();
+	const { data } = await supabase.rpc("user_has_permission", {
+		p_user_id: profile.id,
+		p_permission_id: permission,
+	});
+	return { allowed: !!data, profile };
+}
+
+// ============================================================================
+// Permission helpers for client-side (JWT-based, no DB call)
+// ============================================================================
+
+/**
+ * Extrae los permisos del JWT del usuario actual (client-side).
+ * No hace llamada a BD - lee directamente del token.
+ */
+export async function getPermissionsFromSession(): Promise<string[]> {
+	const supabase = createBrowserClient();
+	const { data: { session } } = await supabase.auth.getSession();
+	if (!session?.access_token) return [];
+
+	try {
+		const payload = session.access_token.split(".")[1];
+		const decoded = JSON.parse(
+			atob(payload.replace(/-/g, "+").replace(/_/g, "/"))
+		);
+		return decoded.user_permissions || [];
+	} catch {
+		return [];
+	}
+}
+
+/**
+ * Verifica un permiso desde el JWT (client-side, sin llamada a BD).
+ * Admin bypass se verifica via user_role en el JWT.
+ */
+export async function hasPermissionClient(permission: Permission): Promise<boolean> {
+	const supabase = createBrowserClient();
+	const { data: { session } } = await supabase.auth.getSession();
+	if (!session?.access_token) return false;
+
+	try {
+		const payload = session.access_token.split(".")[1];
+		const decoded = JSON.parse(
+			atob(payload.replace(/-/g, "+").replace(/_/g, "/"))
+		);
+		if (decoded.user_role === "admin") return true;
+		const permissions: string[] = decoded.user_permissions || [];
+		return permissions.includes(permission);
+	} catch {
+		return false;
+	}
 }

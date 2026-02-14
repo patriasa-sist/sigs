@@ -67,7 +67,13 @@ async function requireAdmin() {
 	const { supabase, user, profile } = await getAuthenticatedUserWithRole();
 
 	if (profile.role !== "admin") {
-		throw new Error("Solo administradores pueden realizar esta acción");
+		const { data: allowed } = await supabase.rpc("user_has_permission", {
+			p_user_id: profile.id,
+			p_permission_id: "admin.permisos",
+		});
+		if (!allowed) {
+			throw new Error("Solo administradores pueden realizar esta acción");
+		}
 	}
 
 	return { supabase, user, profile };

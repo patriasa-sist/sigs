@@ -1,5 +1,4 @@
-import { redirect } from "next/navigation";
-import { createClient } from "@/utils/supabase/server";
+import { requirePermission } from "@/utils/auth/helpers";
 import Dashboard from "@/components/cobranzas/Dashboard";
 import { obtenerPolizasConPendientes } from "./actions";
 
@@ -9,23 +8,7 @@ export const metadata = {
 };
 
 export default async function CobranzasPage() {
-	const supabase = await createClient();
-
-	// Verificar autenticación
-	const {
-		data: { user },
-	} = await supabase.auth.getUser();
-
-	if (!user) {
-		redirect("/auth/login");
-	}
-
-	// Verificar permisos (solo cobranza o admin)
-	const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
-
-	if (!profile || (profile.role !== "cobranza" && profile.role !== "admin")) {
-		redirect("/unauthorized");
-	}
+	await requirePermission("cobranzas.ver");
 
 	// Obtener pólizas con pagos pendientes
 	const result = await obtenerPolizasConPendientes();
