@@ -15,6 +15,7 @@
 "use server";
 
 import { createClient } from "@/utils/supabase/server";
+import { getDataScopeFilter } from "@/utils/auth/helpers";
 import {
 	ClientViewModel,
 	ClientQueryResult,
@@ -125,10 +126,19 @@ export async function getAllClients(options?: {
 
 		console.log(`[getAllClients] User ${user.email} fetching clients (page ${page}, size ${pageSize})`);
 
+		// Verificar si necesita aislamiento de datos
+		const scope = await getDataScopeFilter();
+
 		// Get total count first (lightweight query)
-		const { count: totalRecords, error: countError } = await supabase
+		let countQuery = supabase
 			.from("clients")
 			.select("*", { count: "exact", head: true });
+
+		if (scope.needsScoping) {
+			countQuery = countQuery.in("executive_in_charge", scope.teamMemberIds);
+		}
+
+		const { count: totalRecords, error: countError } = await countQuery;
 
 		if (countError) {
 			console.error("[getAllClients] Error counting clients:", countError);
@@ -141,7 +151,7 @@ export async function getAllClients(options?: {
 
 		// Query base clients with type-specific data (paginated)
 		// Note: executive is fetched separately via profiles_public view for RLS compliance
-		const { data: clientsData, error: clientsError } = await supabase
+		let clientsQuery = supabase
 			.from("clients")
 			.select(
 				`
@@ -153,6 +163,12 @@ export async function getAllClients(options?: {
 			)
 			.order("created_at", { ascending: false })
 			.range(offset, offset + pageSize - 1);
+
+		if (scope.needsScoping) {
+			clientsQuery = clientsQuery.in("executive_in_charge", scope.teamMemberIds);
+		}
+
+		const { data: clientsData, error: clientsError } = await clientsQuery;
 
 		if (clientsError) {
 			console.error("[getAllClients] Error fetching clients:", clientsError);

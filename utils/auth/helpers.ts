@@ -33,7 +33,8 @@ export type Permission =
 	| "admin.roles"
 	| "admin.invitaciones"
 	| "admin.reportes"
-	| "admin.permisos";
+	| "admin.permisos"
+	| "admin.equipos";
 
 export interface UserProfile {
 	id: string;
@@ -258,6 +259,41 @@ export async function getPermissionsFromSession(): Promise<string[]> {
  * Verifica un permiso desde el JWT (client-side, sin llamada a BD).
  * Admin bypass se verifica via user_role en el JWT.
  */
+// ============================================================================
+// Data scoping helpers (server-side)
+// ============================================================================
+
+/**
+ * Determina si el usuario actual necesita aislamiento de datos
+ * y retorna los IDs de sus compañeros de equipo.
+ * Roles sin aislamiento (admin, usuario, cobranza, siniestros): needsScoping = false
+ * Roles con aislamiento (agente, comercial): needsScoping = true + teamMemberIds
+ */
+export async function getDataScopeFilter(): Promise<{
+	needsScoping: boolean;
+	teamMemberIds: string[];
+	userId: string;
+}> {
+	const profile = await getCurrentUserProfile();
+	if (!profile) return { needsScoping: false, teamMemberIds: [], userId: "" };
+
+	// Roles sin aislamiento
+	if (["admin", "usuario", "cobranza", "siniestros"].includes(profile.role)) {
+		return { needsScoping: false, teamMemberIds: [], userId: profile.id };
+	}
+
+	// Agente, comercial: obtener compañeros de equipo
+	const supabase = await createClient();
+	const { data } = await supabase.rpc("get_team_member_ids", {
+		p_user_id: profile.id,
+	});
+	return {
+		needsScoping: true,
+		teamMemberIds: data || [profile.id],
+		userId: profile.id,
+	};
+}
+
 export async function hasPermissionClient(permission: Permission): Promise<boolean> {
 	const supabase = createBrowserClient();
 	const { data: { session } } = await supabase.auth.getSession();

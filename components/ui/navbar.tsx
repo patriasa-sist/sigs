@@ -6,7 +6,7 @@ import { User } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Home, LogOut, User as UserIcon, FileText, CheckSquare, DollarSign, FileWarning, Shield } from "lucide-react";
+import { Home, LogOut, User as UserIcon, FileText, CheckSquare, DollarSign, FileWarning, Shield, Users } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { signOut } from "@/app/auth/login/actions";
@@ -222,6 +222,14 @@ export function Navbar() {
 									<DropdownMenuItem className="cursor-pointer">
 										<Shield className="mr-2 h-4 w-4" />
 										<span>Permisos</span>
+									</DropdownMenuItem>
+								</Link>
+							)}
+							{can("admin.equipos") && (
+								<Link href="/admin/equipos">
+									<DropdownMenuItem className="cursor-pointer">
+										<Users className="mr-2 h-4 w-4" />
+										<span>Equipos</span>
 									</DropdownMenuItem>
 								</Link>
 							)}

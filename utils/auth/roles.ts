@@ -47,6 +47,7 @@ export const ALL_PERMISSIONS: readonly Permission[] = [
 	"admin.invitaciones",
 	"admin.reportes",
 	"admin.permisos",
+	"admin.equipos",
 ] as const;
 
 /**
@@ -81,6 +82,7 @@ export const PERMISSION_ACTION_LABELS: Record<string, string> = {
 	invitaciones: "Invitaciones",
 	reportes: "Reportes",
 	permisos: "Permisos",
+	equipos: "Equipos",
 };
 
 /**

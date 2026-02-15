@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/utils/supabase/server";
+import { getDataScopeFilter } from "@/utils/auth/helpers";
 
 export type PolizaListItem = {
 	id: string;
@@ -89,8 +90,11 @@ export async function obtenerPolizas() {
 			return { success: false, error: "No autenticado" };
 		}
 
+		// Verificar si necesita aislamiento de datos
+		const scope = await getDataScopeFilter();
+
 		// Obtener pólizas con joins
-		const { data: polizas, error } = await supabase
+		let query = supabase
 			.from("polizas")
 			.select(
 				`
@@ -114,6 +118,12 @@ export async function obtenerPolizas() {
 			`
 			)
 			.order("created_at", { ascending: false });
+
+		if (scope.needsScoping) {
+			query = query.in("responsable_id", scope.teamMemberIds);
+		}
+
+		const { data: polizas, error } = await query;
 
 		if (error) {
 			console.error("Error obteniendo pólizas:", error);
@@ -453,8 +463,11 @@ export async function buscarPolizas(query: string) {
 			return { success: false, error: "No autenticado" };
 		}
 
+		// Verificar si necesita aislamiento de datos
+		const scope = await getDataScopeFilter();
+
 		// Buscar por número de póliza (búsqueda más común)
-		const { data: polizas } = await supabase
+		let searchQuery = supabase
 			.from("polizas")
 			.select(
 				`
@@ -480,6 +493,12 @@ export async function buscarPolizas(query: string) {
 			.ilike("numero_poliza", `%${query}%`)
 			.order("created_at", { ascending: false })
 			.limit(50);
+
+		if (scope.needsScoping) {
+			searchQuery = searchQuery.in("responsable_id", scope.teamMemberIds);
+		}
+
+		const { data: polizas } = await searchQuery;
 
 		if (!polizas || polizas.length === 0) {
 			return { success: true, polizas: [] };
