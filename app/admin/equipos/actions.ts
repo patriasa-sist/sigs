@@ -126,7 +126,7 @@ export async function obtenerEquipos(): Promise<ActionResult<Equipo[]>> {
 }
 
 /**
- * Obtiene usuarios disponibles para agregar a equipos (agentes y comerciales)
+ * Obtiene usuarios disponibles para agregar a equipos (agentes, comerciales y siniestros)
  */
 export async function obtenerUsuariosDisponibles(): Promise<ActionResult<UsuarioDisponible[]>> {
 	try {
@@ -136,7 +136,7 @@ export async function obtenerUsuariosDisponibles(): Promise<ActionResult<Usuario
 		const { data, error } = await supabase
 			.from("profiles")
 			.select("id, email, full_name, role")
-			.in("role", ["agente", "comercial"])
+			.in("role", ["agente", "comercial", "siniestros"])
 			.order("role")
 			.order("full_name");
 

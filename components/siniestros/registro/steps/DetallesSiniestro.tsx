@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { AlertCircle, X } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
+import { obtenerUsuariosResponsables } from "@/app/siniestros/actions";
 import type { DetallesSiniestro, ContactoSiniestro, Moneda } from "@/types/siniestro";
 
 interface DetallesSiniestroProps {
@@ -57,7 +58,7 @@ export default function DetallesSiniestroStep({ detalles, onDetallesChange }: De
 		cargarRegionales();
 	}, []);
 
-	// Cargar usuarios responsables (siniestros, admin, comercial) y usuario actual
+	// Cargar usuarios responsables (scoped por equipo) y usuario actual
 	useEffect(() => {
 		async function cargarResponsables() {
 			const supabase = createClient();
@@ -75,15 +76,10 @@ export default function DetallesSiniestroStep({ detalles, onDetallesChange }: De
 				}
 			}
 
-			// Obtener usuarios con roles permitidos
-			const { data } = await supabase
-				.from("profiles")
-				.select("id, full_name, email, role")
-				.in("role", ["siniestros", "admin", "comercial"])
-				.order("full_name");
-
-			if (data) {
-				setResponsables(data);
+			// Obtener usuarios responsables via server action (scoped por equipo)
+			const result = await obtenerUsuariosResponsables();
+			if (result.success) {
+				setResponsables(result.data.usuarios);
 			}
 		}
 

@@ -782,7 +782,7 @@ export async function buscarPolizasActivas(query: string): Promise<BusquedaPoliz
 		const clientIdsEncontrados: string[] = [];
 
 		// 1. Buscar en clientes naturales por CI, nombre o apellido
-		const { data: clientesNaturales } = await supabase
+		const { data: clientesNaturales, error: errNat } = await supabase
 			.from("natural_clients")
 			.select("client_id, numero_documento, primer_nombre, primer_apellido")
 			.or(
@@ -790,20 +790,40 @@ export async function buscarPolizasActivas(query: string): Promise<BusquedaPoliz
 			)
 			.limit(30);
 
+		console.log("[buscarPolizas] query:", query);
+		console.log("[buscarPolizas] natural_clients:", clientesNaturales?.length, "error:", errNat?.message);
+
 		if (clientesNaturales) {
 			clientIdsEncontrados.push(...clientesNaturales.map((c) => c.client_id));
 		}
 
 		// 2. Buscar en clientes jurídicos por NIT o razón social
-		const { data: clientesJuridicos } = await supabase
+		const { data: clientesJuridicos, error: errJur } = await supabase
 			.from("juridic_clients")
 			.select("client_id, nit, razon_social")
 			.or(`nit.ilike.%${query}%,razon_social.ilike.%${query}%`)
 			.limit(30);
 
+		console.log("[buscarPolizas] juridic_clients:", clientesJuridicos?.length, "error:", errJur?.message);
+
 		if (clientesJuridicos) {
 			clientIdsEncontrados.push(...clientesJuridicos.map((c) => c.client_id));
 		}
+
+		// 2b. Buscar en clientes unipersonales por NIT o razón social
+		const { data: clientesUnipersonales, error: errUni } = await supabase
+			.from("unipersonal_clients")
+			.select("client_id, nit, razon_social")
+			.or(`nit.ilike.%${query}%,razon_social.ilike.%${query}%`)
+			.limit(30);
+
+		console.log("[buscarPolizas] unipersonal_clients:", clientesUnipersonales?.length, "error:", errUni?.message);
+
+		if (clientesUnipersonales) {
+			clientIdsEncontrados.push(...clientesUnipersonales.map((c) => c.client_id));
+		}
+
+		console.log("[buscarPolizas] clientIdsEncontrados:", clientIdsEncontrados);
 
 		// 3. Buscar pólizas activas que coincidan con el query (número de póliza) O con los client_ids encontrados
 		let polizasQuery = supabase
@@ -837,6 +857,8 @@ export async function buscarPolizasActivas(query: string): Promise<BusquedaPoliz
 
 		const { data: polizasRaw, error: polizasError } = await polizasQuery.limit(20);
 
+		console.log("[buscarPolizas] polizasRaw:", polizasRaw?.length, "error:", polizasError?.message);
+
 		if (polizasError) throw polizasError;
 
 		// Enriquecer con datos relacionados
@@ -868,7 +890,7 @@ export async function buscarPolizasActivas(query: string): Promise<BusquedaPoliz
 					celularCliente = natural.celular || undefined;
 					correoCliente = natural.correo_electronico || undefined;
 				}
-			} else {
+			} else if (cliente.client_type === "juridica") {
 				const { data: juridico } = await supabase
 					.from("juridic_clients")
 					.select("*")
@@ -879,7 +901,18 @@ export async function buscarPolizasActivas(query: string): Promise<BusquedaPoliz
 					nombreCliente = juridico.razon_social;
 					documentoCliente = juridico.nit;
 					correoCliente = juridico.correo_electronico || undefined;
-					// Clientes jurídicos no tienen celular directo
+				}
+			} else if (cliente.client_type === "unipersonal") {
+				const { data: unipersonal } = await supabase
+					.from("unipersonal_clients")
+					.select("*")
+					.eq("client_id", cliente.id)
+					.single();
+
+				if (unipersonal) {
+					nombreCliente = unipersonal.razon_social;
+					documentoCliente = unipersonal.nit;
+					correoCliente = unipersonal.correo_electronico_comercial || undefined;
 				}
 			}
 
@@ -1012,11 +1045,20 @@ export async function obtenerUsuariosResponsables(): Promise<ObtenerUsuariosResp
 	const supabase = await createClient();
 
 	try {
-		const { data: usuarios, error } = await supabase
+		// Aplicar scoping: rol siniestros solo ve miembros de su equipo
+		const scope = await getDataScopeFilter('siniestros');
+
+		let query = supabase
 			.from("profiles")
 			.select("id, full_name, email, role")
-			.in("role", ["siniestros", "comercial", "admin"])
+			.in("role", ["siniestros", "admin"])
 			.order("full_name");
+
+		if (scope.needsScoping) {
+			query = query.in("id", scope.teamMemberIds);
+		}
+
+		const { data: usuarios, error } = await query;
 
 		if (error) throw error;
 

@@ -14,8 +14,8 @@ interface CoberturasProps {
 	onCoberturasChange: (coberturas: CoberturasStep) => void;
 }
 
-// ID especial para la cobertura de Gestión comercial
-const GESTION_COMERCIAL_ID = "gestion-comercial-special";
+// UUID real de la cobertura "Gestión comercial" en coberturas_catalogo
+const GESTION_COMERCIAL_ID = "a5eb5c20-fcd7-4147-85da-c753956eba81";
 
 export default function CoberturasStepComponent({ ramo, coberturas, onCoberturasChange }: CoberturasProps) {
 	const [gestionComercialSeleccionada, setGestionComercialSeleccionada] = useState(false);

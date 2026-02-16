@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -32,6 +32,7 @@ export default function RegistrarSiniestroForm() {
 	});
 
 	const [guardando, setGuardando] = useState(false);
+	const guardandoRef = useRef(false);
 	const [errores, setErrores] = useState<string[]>([]);
 	const [registroExitoso, setRegistroExitoso] = useState(false);
 	const [nuevoSiniestroId, setNuevoSiniestroId] = useState<string | null>(null);
@@ -89,6 +90,10 @@ export default function RegistrarSiniestroForm() {
 	};
 
 	const handleGuardar = async () => {
+		// Bloqueo inmediato con ref para evitar doble-click
+		if (guardandoRef.current) return;
+		guardandoRef.current = true;
+
 		setErrores([]);
 
 		// Validar formulario completo
@@ -96,6 +101,7 @@ export default function RegistrarSiniestroForm() {
 
 		if (!validacion.valido) {
 			setErrores(validacion.errores);
+			guardandoRef.current = false;
 			return;
 		}
 
@@ -121,6 +127,7 @@ export default function RegistrarSiniestroForm() {
 			setErrores(["Error inesperado al guardar el siniestro"]);
 		} finally {
 			setGuardando(false);
+			guardandoRef.current = false;
 		}
 	};
 
