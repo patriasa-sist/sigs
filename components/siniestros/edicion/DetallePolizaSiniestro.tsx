@@ -18,7 +18,8 @@ import {
 	Calendar,
 	DollarSign,
 	Shield,
-	CreditCard
+	CreditCard,
+	Package,
 } from "lucide-react";
 import { obtenerDetalleCompletoPoliza } from "@/app/siniestros/actions";
 import { generarURLWhatsApp } from "@/utils/whatsapp";
@@ -300,17 +301,25 @@ export default function DetallePolizaSiniestro({ polizaId }: DetallePolizaSinies
 				</CardContent>
 			</Card>
 
-			{/* Bienes Asegurados */}
+			{/* Materia Asegurada */}
 			<Card>
 				<CardHeader>
 					<CardTitle className="text-lg flex items-center gap-2">
-						<Car className="h-5 w-5 text-primary" />
-						Bienes Asegurados
+						{datosRamo.tipo === "automotor" ? (
+							<Car className="h-5 w-5 text-primary" />
+						) : (
+							<Package className="h-5 w-5 text-primary" />
+						)}
+						Materia Asegurada
 					</CardTitle>
 				</CardHeader>
 				<CardContent>
+					<p className="text-sm text-muted-foreground mb-3">
+						Ramo: <span className="font-medium">{poliza.ramo || "N/A"}</span>
+					</p>
+
 					{/* Automotor */}
-					{datosRamo.tipo === "automotor" && (
+					{datosRamo.tipo === "automotor" && datosRamo.vehiculos.length > 0 && (
 						<>
 							<p className="text-sm text-muted-foreground mb-3">
 								Vehículos Asegurados ({datosRamo.vehiculos.length})
@@ -335,22 +344,24 @@ export default function DetallePolizaSiniestro({ polizaId }: DetallePolizaSinies
 					{/* Salud/Vida/AP/Sepelio */}
 					{(datosRamo.tipo === "salud" || datosRamo.tipo === "vida" || datosRamo.tipo === "ap" || datosRamo.tipo === "sepelio") && (
 						<>
-							<p className="text-sm text-muted-foreground mb-3">
-								Asegurados ({datosRamo.asegurados.length})
-							</p>
 							{datosRamo.asegurados.length > 0 ? (
-								<div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-									{datosRamo.asegurados.map((asegurado, idx) => (
-										<div key={idx} className="bg-secondary/30 rounded-lg p-3 border">
-											<p className="font-medium">{asegurado.client_name}</p>
-											<p className="text-sm text-muted-foreground">CI: {asegurado.client_ci}</p>
-											{asegurado.nivel_nombre && (
-												<p className="text-xs text-muted-foreground">Nivel: {asegurado.nivel_nombre}</p>
-											)}
-											{asegurado.cargo && <p className="text-xs text-muted-foreground">Cargo: {asegurado.cargo}</p>}
-										</div>
-									))}
-								</div>
+								<>
+									<p className="text-sm text-muted-foreground mb-3">
+										Asegurados ({datosRamo.asegurados.length})
+									</p>
+									<div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+										{datosRamo.asegurados.map((asegurado, idx) => (
+											<div key={idx} className="bg-secondary/30 rounded-lg p-3 border">
+												<p className="font-medium">{asegurado.client_name}</p>
+												<p className="text-sm text-muted-foreground">CI: {asegurado.client_ci}</p>
+												{asegurado.nivel_nombre && (
+													<p className="text-xs text-muted-foreground">Nivel: {asegurado.nivel_nombre}</p>
+												)}
+												{asegurado.cargo && <p className="text-xs text-muted-foreground">Cargo: {asegurado.cargo}</p>}
+											</div>
+										))}
+									</div>
+								</>
 							) : (
 								<p className="text-sm text-muted-foreground italic">
 									No hay asegurados registrados (datos en proceso de migración)
@@ -362,16 +373,18 @@ export default function DetallePolizaSiniestro({ polizaId }: DetallePolizaSinies
 					{/* Incendio */}
 					{datosRamo.tipo === "incendio" && (
 						<>
-							<p className="text-sm text-muted-foreground mb-3">Ubicaciones Aseguradas</p>
 							{datosRamo.ubicaciones.length > 0 ? (
-								<div className="space-y-2">
-									{datosRamo.ubicaciones.map((ubicacion, idx) => (
-										<div key={idx} className="flex items-center gap-2 text-sm">
-											<MapPin className="h-4 w-4 text-muted-foreground" />
-											<span>{ubicacion}</span>
-										</div>
-									))}
-								</div>
+								<>
+									<p className="text-sm text-muted-foreground mb-3">Ubicaciones Aseguradas</p>
+									<div className="space-y-2">
+										{datosRamo.ubicaciones.map((ubicacion, idx) => (
+											<div key={idx} className="flex items-center gap-2 text-sm">
+												<MapPin className="h-4 w-4 text-muted-foreground" />
+												<span>{ubicacion}</span>
+											</div>
+										))}
+									</div>
+								</>
 							) : (
 								<p className="text-sm text-muted-foreground italic">
 									No hay ubicaciones registradas (datos en proceso de migración)
@@ -380,10 +393,10 @@ export default function DetallePolizaSiniestro({ polizaId }: DetallePolizaSinies
 						</>
 					)}
 
-					{/* Otros */}
-					{datosRamo.tipo === "otros" && (
+					{/* Otros ramos: mostrar prima como referencia */}
+					{datosRamo.tipo === "otros" && poliza.prima_total !== undefined && (
 						<p className="text-sm text-muted-foreground">
-							Ramo: <span className="font-medium">{datosRamo.descripcion}</span>
+							Suma asegurada según prima total: <span className="font-medium">{poliza.moneda || "Bs"} {poliza.prima_total.toLocaleString("es-BO", { minimumFractionDigits: 2 })}</span>
 						</p>
 					)}
 				</CardContent>

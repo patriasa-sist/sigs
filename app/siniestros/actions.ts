@@ -1786,7 +1786,7 @@ export async function obtenerDetalleCompletoPoliza(polizaId: string): Promise<{
 							correo: naturalClient.correo_electronico,
 						};
 					}
-				} else if (client.client_type === "juridic") {
+				} else if (client.client_type === "juridica") {
 					const { data: juridicClient } = await supabase
 						.from("juridic_clients")
 						.select("razon_social, nit, telefono, correo_electronico")
@@ -1800,6 +1800,22 @@ export async function obtenerDetalleCompletoPoliza(polizaId: string): Promise<{
 							telefono: juridicClient.telefono,
 							celular: null,
 							correo: juridicClient.correo_electronico,
+						};
+					}
+				} else if (client.client_type === "unipersonal") {
+					const { data: unipersonalClient } = await supabase
+						.from("unipersonal_clients")
+						.select("razon_social, nit, telefono_comercial, correo_electronico_comercial, nombre_propietario, apellido_propietario")
+						.eq("client_id", clientId)
+						.single();
+
+					if (unipersonalClient) {
+						contacto = {
+							nombre_completo: unipersonalClient.razon_social || "Desconocido",
+							documento: unipersonalClient.nit,
+							telefono: unipersonalClient.telefono_comercial,
+							celular: null,
+							correo: unipersonalClient.correo_electronico_comercial,
 						};
 					}
 				}
