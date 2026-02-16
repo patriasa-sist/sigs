@@ -403,6 +403,15 @@ export async function getClientById(clientId: string): Promise<ActionResult<Clie
 			};
 		}
 
+		// Verificar scoping por equipo
+		const scope = await getDataScopeFilter('clientes');
+		if (scope.needsScoping && clientData.executive_in_charge && !scope.teamMemberIds.includes(clientData.executive_in_charge)) {
+			return {
+				success: false,
+				error: "No tiene acceso a este cliente",
+			};
+		}
+
 		// Fetch executive from profiles_public view (restricted public access)
 		let executiveData: { id: string; full_name: string; email: string } | null = null;
 		if (clientData.executive_in_charge) {

@@ -129,6 +129,19 @@ export async function exportarProduccion(
 			query = query.eq("poliza.compania_aseguradora_id", filtros.compania_id);
 		}
 
+		// Filtrar por equipo si se especifica
+		if (filtros.equipo_id) {
+			const { data: teamMemberIds } = await supabase
+				.from("equipo_miembros")
+				.select("user_id")
+				.eq("equipo_id", filtros.equipo_id);
+
+			if (teamMemberIds && teamMemberIds.length > 0) {
+				const memberIds = teamMemberIds.map((m) => m.user_id);
+				query = query.in("poliza.responsable_id", memberIds);
+			}
+		}
+
 		const { data: pagos, error } = await query
 			.order("poliza_id", { ascending: true })
 			.order("numero_cuota", { ascending: true });
@@ -265,6 +278,31 @@ export async function exportarProduccion(
 			error: error instanceof Error ? error.message : "Error desconocido",
 		};
 	}
+}
+
+/**
+ * Obtiene la lista de equipos para el filtro de reportes
+ */
+export async function obtenerEquiposParaFiltro(): Promise<
+	ProduccionServerResponse<{ id: string; nombre: string }[]>
+> {
+	const permiso = await verificarPermisoAdmin();
+	if (!permiso.authorized) {
+		return { success: false, error: permiso.error };
+	}
+
+	const supabase = await createClient();
+
+	const { data, error } = await supabase
+		.from("equipos")
+		.select("id, nombre")
+		.order("nombre");
+
+	if (error) {
+		return { success: false, error: "Error al obtener equipos" };
+	}
+
+	return { success: true, data: data || [] };
 }
 
 /**

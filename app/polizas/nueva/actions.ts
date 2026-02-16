@@ -2,6 +2,7 @@
 
 import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
+import { getDataScopeFilter } from "@/utils/auth/helpers";
 import type { PolizaFormState } from "@/types/poliza";
 
 /**
@@ -56,6 +57,14 @@ export async function guardarPoliza(formState: PolizaFormState) {
 		// Validar producto_id (obligatorio para nuevas pólizas)
 		if (!formState.datos_basicos.producto_id) {
 			return { success: false, error: "Producto es requerido" };
+		}
+
+		// Validar que agente/comercial solo asigne responsable dentro de su equipo
+		const scope = await getDataScopeFilter('polizas');
+		if (scope.needsScoping && formState.datos_basicos.responsable_id) {
+			if (!scope.teamMemberIds.includes(formState.datos_basicos.responsable_id)) {
+				return { success: false, error: "Solo puede asignar como responsable a un miembro de su equipo" };
+			}
 		}
 
 		// 2. Insertar póliza principal

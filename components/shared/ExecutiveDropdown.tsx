@@ -47,6 +47,20 @@ export function ExecutiveDropdown({
 
 				const supabase = createClient();
 
+				// Obtener usuario actual y su rol
+				const { data: { user } } = await supabase.auth.getUser();
+				let userRole = "";
+				let userId = "";
+				if (user) {
+					userId = user.id;
+					const { data: profileData } = await supabase
+						.from("profiles")
+						.select("role")
+						.eq("id", user.id)
+						.single();
+					userRole = profileData?.role || "";
+				}
+
 				// Intentar usar la función RPC primero, si no existe, usar query directo
 				const result = await supabase.rpc("get_usuarios_comerciales").then(
 					(result) => result,
@@ -67,7 +81,24 @@ export function ExecutiveDropdown({
 					return;
 				}
 
-				setUsers(usersData || []);
+				let filteredUsers: ExecutiveUser[] = usersData || [];
+
+				// Para agente/comercial: filtrar a solo miembros de su equipo
+				if (["agente", "comercial"].includes(userRole) && userId) {
+					const { data: teamIds } = await supabase.rpc("get_team_member_ids", { p_user_id: userId });
+					if (teamIds && teamIds.length > 0) {
+						filteredUsers = filteredUsers.filter((u) => teamIds.includes(u.id));
+					} else {
+						filteredUsers = filteredUsers.filter((u) => u.id === userId);
+					}
+
+					// Auto-seleccionar al usuario actual si no hay valor
+					if (!value && userId) {
+						onValueChange(userId);
+					}
+				}
+
+				setUsers(filteredUsers);
 			} catch (error) {
 				console.error("Error inesperado cargando ejecutivos:", error);
 				setLoadError("Error inesperado al cargar ejecutivos");
@@ -77,6 +108,7 @@ export function ExecutiveDropdown({
 		}
 
 		loadExecutives();
+	// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
 
 	return (

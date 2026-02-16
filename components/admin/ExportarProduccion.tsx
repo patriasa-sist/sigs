@@ -16,6 +16,7 @@ import {
 	exportarProduccion,
 	obtenerRegionales,
 	obtenerCompanias,
+	obtenerEquiposParaFiltro,
 } from "@/app/admin/reportes/actions";
 import * as ExcelJS from "exceljs";
 import type { ExportProduccionFilters } from "@/types/reporte";
@@ -47,19 +48,22 @@ export default function ExportarProduccion() {
 	const [estadoPoliza, setEstadoPoliza] = useState<"activa" | "all">("all");
 	const [regionalId, setRegionalId] = useState<string>("");
 	const [companiaId, setCompaniaId] = useState<string>("");
+	const [equipoId, setEquipoId] = useState<string>("");
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
 	// Datos para los filtros
 	const [regionales, setRegionales] = useState<{ id: string; nombre: string }[]>([]);
 	const [companias, setCompanias] = useState<{ id: string; nombre: string }[]>([]);
+	const [equipos, setEquipos] = useState<{ id: string; nombre: string }[]>([]);
 
-	// Cargar regionales y compañías al montar
+	// Cargar regionales, compañías y equipos al montar
 	useEffect(() => {
 		async function loadFilters() {
-			const [regionalesRes, companiasRes] = await Promise.all([
+			const [regionalesRes, companiasRes, equiposRes] = await Promise.all([
 				obtenerRegionales(),
 				obtenerCompanias(),
+				obtenerEquiposParaFiltro(),
 			]);
 
 			if (regionalesRes.success) {
@@ -67,6 +71,9 @@ export default function ExportarProduccion() {
 			}
 			if (companiasRes.success) {
 				setCompanias(companiasRes.data);
+			}
+			if (equiposRes.success) {
+				setEquipos(equiposRes.data);
 			}
 		}
 		loadFilters();
@@ -83,6 +90,7 @@ export default function ExportarProduccion() {
 				estado_poliza: estadoPoliza,
 				regional_id: regionalId || undefined,
 				compania_id: companiaId || undefined,
+				equipo_id: equipoId || undefined,
 			};
 
 			const result = await exportarProduccion(filtros);
@@ -255,7 +263,7 @@ export default function ExportarProduccion() {
 				<FileSpreadsheet className="h-6 w-6 text-muted-foreground" />
 			</div>
 
-			<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+			<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
 				{/* Mes */}
 				<div className="space-y-2">
 					<Label>Mes</Label>
@@ -349,6 +357,27 @@ export default function ExportarProduccion() {
 							{companias.map((c) => (
 								<SelectItem key={c.id} value={c.id}>
 									{c.nombre}
+								</SelectItem>
+							))}
+						</SelectContent>
+					</Select>
+				</div>
+
+				{/* Equipo */}
+				<div className="space-y-2">
+					<Label>Equipo</Label>
+					<Select
+						value={equipoId || "all"}
+						onValueChange={(value) => setEquipoId(value === "all" ? "" : value)}
+					>
+						<SelectTrigger>
+							<SelectValue placeholder="Todos" />
+						</SelectTrigger>
+						<SelectContent>
+							<SelectItem value="all">Todos</SelectItem>
+							{equipos.map((e) => (
+								<SelectItem key={e.id} value={e.id}>
+									{e.nombre}
 								</SelectItem>
 							))}
 						</SelectContent>

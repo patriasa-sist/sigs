@@ -244,6 +244,12 @@ export async function obtenerDetallePoliza(polizaId: string) {
 			return { success: false, error: "Póliza no encontrada" };
 		}
 
+		// Verificar scoping por equipo
+		const scope = await getDataScopeFilter('polizas');
+		if (scope.needsScoping && !scope.teamMemberIds.includes(poliza.responsable_id)) {
+			return { success: false, error: "No tiene acceso a esta póliza" };
+		}
+
 		// Obtener información del cliente
 		const { data: client } = await supabase.from("clients").select("client_type").eq("id", poliza.client_id).single();
 

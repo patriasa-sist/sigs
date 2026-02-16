@@ -8,6 +8,7 @@ export type ExportProduccionFilters = {
 	estado_poliza?: "activa" | "all";
 	regional_id?: string;
 	compania_id?: string;
+	equipo_id?: string;
 };
 
 export type ExportProduccionRow = {

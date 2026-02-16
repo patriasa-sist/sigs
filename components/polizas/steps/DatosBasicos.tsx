@@ -69,6 +69,21 @@ export function DatosBasicos({ datos, onChange, onSiguiente, onAnterior }: Props
 	const cargarCatalogos = useCallback(async () => {
 		try {
 			const supabase = createClient();
+
+			// Obtener usuario actual y su perfil para determinar rol
+			const { data: { user } } = await supabase.auth.getUser();
+			let userRole = "";
+			let userId = "";
+			if (user) {
+				userId = user.id;
+				const { data: profileData } = await supabase
+					.from("profiles")
+					.select("role")
+					.eq("id", user.id)
+					.single();
+				userRole = profileData?.role || "";
+			}
+
 			const [
 				{ data: companiasData },
 				{ data: regionalesData },
@@ -108,29 +123,37 @@ export function DatosBasicos({ datos, onChange, onSiguiente, onAnterior }: Props
 				console.error("Error cargando usuarios:", usuariosError);
 			}
 
-			console.log("Usuarios cargados:", usuariosData);
-			console.log("Total usuarios:", usuariosData?.length);
-			console.log(
-				"Usuarios por rol:",
-				usuariosData?.reduce((acc: Record<string, number>, u: Usuario) => {
-					acc[u.role] = (acc[u.role] || 0) + 1;
-					return acc;
-				}, {} as Record<string, number>)
-			);
+			let usuariosFiltrados: Usuario[] = usuariosData || [];
+
+			// Para agente/comercial: filtrar a solo miembros de su equipo
+			if (["agente", "comercial"].includes(userRole) && userId) {
+				const { data: teamIds } = await supabase.rpc("get_team_member_ids", { p_user_id: userId });
+				if (teamIds && teamIds.length > 0) {
+					usuariosFiltrados = usuariosFiltrados.filter((u: Usuario) => teamIds.includes(u.id));
+				} else {
+					// Sin equipo: solo se puede asignar a si mismo
+					usuariosFiltrados = usuariosFiltrados.filter((u: Usuario) => u.id === userId);
+				}
+			}
 
 			setCompanias(companiasData || []);
 			setRegionales(regionalesData || []);
 			setCategorias(categoriasData || []);
-			setUsuarios(usuariosData || []);
+			setUsuarios(usuariosFiltrados);
 			// Filtro adicional del lado del cliente para asegurar que solo se muestren ramos activos
 			const tiposActivos = (tiposData || []).filter((tipo) => tipo.activo === true);
 			setTiposSeguros(tiposActivos);
+
+			// Auto-asignar al usuario actual si es agente/comercial y no hay responsable seleccionado
+			if (["agente", "comercial"].includes(userRole) && !datos?.responsable_id) {
+				setFormData(prev => ({ ...prev, responsable_id: userId }));
+			}
 		} catch (error) {
 			console.error("Error cargando catálogos:", error);
 		} finally {
 			setCargandoCatalogos(false);
 		}
-	}, []);
+	}, [datos?.responsable_id]);
 
 	useEffect(() => {
 		cargarCatalogos();

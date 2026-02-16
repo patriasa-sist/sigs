@@ -4,7 +4,7 @@
 
 import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
-import { checkPermission } from "@/utils/auth/helpers";
+import { checkPermission, getDataScopeFilter } from "@/utils/auth/helpers";
 import type {
 	RegistroSiniestroFormState,
 	GuardarSiniestroResponse,
@@ -64,11 +64,25 @@ export async function obtenerSiniestros(): Promise<ObtenerSiniestrosResponse> {
 	const supabase = await createClient();
 
 	try {
-		// Obtener siniestros desde vista
-		const { data: siniestros, error: siniestrosError } = await supabase
+		// Aplicar scoping por equipo
+		const scope = await getDataScopeFilter('siniestros');
+
+		let query = supabase
 			.from("siniestros_vista")
 			.select("*")
 			.order("fecha_siniestro", { ascending: false });
+
+		if (scope.needsScoping) {
+			if (scope.role === "siniestros") {
+				// Rol siniestros: ve los suyos y los de su equipo
+				query = query.in("responsable_id", scope.teamMemberIds);
+			} else {
+				// Comercial/agente: ve siniestros de polizas de su equipo
+				query = query.in("poliza_responsable_id", scope.teamMemberIds);
+			}
+		}
+
+		const { data: siniestros, error: siniestrosError } = await query;
 
 		if (siniestrosError) throw siniestrosError;
 
@@ -268,6 +282,17 @@ export async function obtenerSiniestroDetalle(siniestroId: string): Promise<Obte
 			.single();
 
 		if (siniestroError) throw siniestroError;
+
+		// Verificar scoping por equipo
+		const scope = await getDataScopeFilter('siniestros');
+		if (scope.needsScoping) {
+			const hasAccess = scope.role === "siniestros"
+				? scope.teamMemberIds.includes(siniestroRaw.responsable_id)
+				: scope.teamMemberIds.includes(siniestroRaw.poliza_responsable_id);
+			if (!hasAccess) {
+				return { success: false, error: "No tiene acceso a este siniestro" };
+			}
+		}
 
 		// Calcular requiere_atencion
 		const ahora = new Date();

@@ -266,23 +266,45 @@ export async function getPermissionsFromSession(): Promise<string[]> {
 /**
  * Determina si el usuario actual necesita aislamiento de datos
  * y retorna los IDs de sus compañeros de equipo.
- * Roles sin aislamiento (admin, usuario, cobranza, siniestros): needsScoping = false
- * Roles con aislamiento (agente, comercial): needsScoping = true + teamMemberIds
+ *
+ * @param module - Modulo que solicita el filtro. El rol 'siniestros' solo se
+ *   aisla cuando consulta su propio modulo; para polizas/clientes ve todo.
+ *
+ * Roles sin aislamiento: admin, usuario, cobranza (siempre)
+ * Roles con aislamiento: agente, comercial (siempre), siniestros (solo en modulo siniestros)
  */
-export async function getDataScopeFilter(): Promise<{
+export async function getDataScopeFilter(module?: 'polizas' | 'clientes' | 'siniestros'): Promise<{
 	needsScoping: boolean;
 	teamMemberIds: string[];
 	userId: string;
+	role: string;
 }> {
 	const profile = await getCurrentUserProfile();
-	if (!profile) return { needsScoping: false, teamMemberIds: [], userId: "" };
+	if (!profile) return { needsScoping: false, teamMemberIds: [], userId: "", role: "" };
 
-	// Roles sin aislamiento
-	if (["admin", "usuario", "cobranza", "siniestros"].includes(profile.role)) {
-		return { needsScoping: false, teamMemberIds: [], userId: profile.id };
+	// Roles que nunca necesitan aislamiento
+	if (["admin", "usuario", "cobranza"].includes(profile.role)) {
+		return { needsScoping: false, teamMemberIds: [], userId: profile.id, role: profile.role };
 	}
 
-	// Agente, comercial: obtener compañeros de equipo
+	// Rol siniestros: aislado solo en su modulo, libre en polizas/clientes
+	if (profile.role === "siniestros") {
+		if (module === "siniestros") {
+			const supabase = await createClient();
+			const { data } = await supabase.rpc("get_team_member_ids", {
+				p_user_id: profile.id,
+			});
+			return {
+				needsScoping: true,
+				teamMemberIds: data || [profile.id],
+				userId: profile.id,
+				role: profile.role,
+			};
+		}
+		return { needsScoping: false, teamMemberIds: [], userId: profile.id, role: profile.role };
+	}
+
+	// Agente, comercial: siempre aislados
 	const supabase = await createClient();
 	const { data } = await supabase.rpc("get_team_member_ids", {
 		p_user_id: profile.id,
@@ -291,6 +313,7 @@ export async function getDataScopeFilter(): Promise<{
 		needsScoping: true,
 		teamMemberIds: data || [profile.id],
 		userId: profile.id,
+		role: profile.role,
 	};
 }
 

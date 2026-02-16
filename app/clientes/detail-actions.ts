@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/utils/supabase/server";
+import { getDataScopeFilter } from "@/utils/auth/helpers";
 import type { ClienteDocumento } from "@/types/clienteDocumento";
 import type { NaturalClient, JuridicClient, UnipersonalClient } from "@/types/database/client";
 
@@ -142,6 +143,15 @@ export async function getClientDetailsComplete(
 				success: false,
 				error: "Cliente no encontrado",
 				details: clientError,
+			};
+		}
+
+		// Verificar scoping por equipo
+		const scope = await getDataScopeFilter('clientes');
+		if (scope.needsScoping && clientData.executive_in_charge && !scope.teamMemberIds.includes(clientData.executive_in_charge)) {
+			return {
+				success: false,
+				error: "No tiene acceso a este cliente",
 			};
 		}
 
