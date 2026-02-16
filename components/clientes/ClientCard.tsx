@@ -22,7 +22,7 @@ export function ClientCard({ client, searchMode = false, onClick }: ClientCardPr
 
 	const getStatusColor = (status: string) => {
 		// Import Policy type for proper status typing
-		type PolicyStatus = "pendiente" | "activa" | "vencida" | "cancelada" | "renovada";
+		type PolicyStatus = "pendiente" | "activa" | "vencida" | "cancelada" | "renovada" | "rechazada";
 		const statusInfo = getStatusLabel(status as PolicyStatus);
 		switch (statusInfo.color) {
 			case "green":

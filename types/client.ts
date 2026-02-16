@@ -30,7 +30,7 @@ export type Policy = PolicyViewModel;
  * @deprecated Use PolicyStatus from database layer instead
  * Policy status types - kept for backward compatibility
  */
-export type PolicyStatus = "pendiente" | "activa" | "vencida" | "cancelada" | "renovada";
+export type PolicyStatus = "pendiente" | "activa" | "vencida" | "cancelada" | "renovada" | "rechazada";
 
 /**
  * @deprecated Use specific ramo strings instead

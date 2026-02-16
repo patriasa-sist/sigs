@@ -69,7 +69,7 @@ export type PolizaConPagos = {
 	ramo: string;
 	prima_total: number;
 	moneda: Moneda;
-	estado: "pendiente" | "activa" | "vencida" | "cancelada" | "renovada";
+	estado: "pendiente" | "activa" | "vencida" | "cancelada" | "renovada" | "rechazada";
 	inicio_vigencia: string; // ISO date string
 	fin_vigencia: string; // ISO date string
 	modalidad_pago: "contado" | "credito";

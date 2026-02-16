@@ -74,7 +74,7 @@ export const POLIZA_RULES = {
 	MONEDAS: ["Bs", "USD", "USDT", "UFV"] as const,
 
 	// Estados de póliza
-	ESTADOS: ["pendiente", "activa", "vencida", "cancelada", "renovada"] as const,
+	ESTADOS: ["pendiente", "activa", "vencida", "cancelada", "renovada", "rechazada"] as const,
 
 	// Modalidades de pago
 	MODALIDADES_PAGO: ["contado", "credito"] as const,

@@ -57,6 +57,8 @@ export function getStatusLabel(
 			return { label: "PENDIENTE", color: "yellow" };
 		case "renovada":
 			return { label: "RENOVADA", color: "blue" };
+		case "rechazada":
+			return { label: "RECHAZADA", color: "red" };
 		default:
 			return { label: String(status).toUpperCase(), color: "gray" };
 	}

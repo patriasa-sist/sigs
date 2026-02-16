@@ -31,7 +31,7 @@ export type ClientStatus = z.infer<typeof ClientStatusEnum>;
 /**
  * Policy status enumeration
  */
-export const PolicyStatusEnum = z.enum(["pendiente", "activa", "vencida", "cancelada", "renovada"]);
+export const PolicyStatusEnum = z.enum(["pendiente", "activa", "vencida", "cancelada", "renovada", "rechazada"]);
 export type PolicyStatus = z.infer<typeof PolicyStatusEnum>;
 
 /**

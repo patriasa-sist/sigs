@@ -188,7 +188,7 @@ export async function obtenerPolizasConPendientes(): Promise<ObtenerPolizasConPa
 				ramo: poliza.ramo,
 				prima_total: poliza.prima_total,
 				moneda: poliza.moneda as Moneda,
-				estado: poliza.estado as "pendiente" | "activa" | "vencida" | "cancelada" | "renovada",
+				estado: poliza.estado as "pendiente" | "activa" | "vencida" | "cancelada" | "renovada" | "rechazada",
 				inicio_vigencia: poliza.inicio_vigencia,
 				fin_vigencia: poliza.fin_vigencia,
 				modalidad_pago: poliza.modalidad_pago as "contado" | "credito",
