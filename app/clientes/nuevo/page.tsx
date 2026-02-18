@@ -44,6 +44,80 @@ import { Card } from "@/components/ui/card";
 import { ArrowLeft, Save, X } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 
+// ---------------------------------------------------------------------------
+// Field label maps – used to display human-readable names in validation toasts
+// ---------------------------------------------------------------------------
+const COMMON_FIELD_LABELS: Record<string, string> = {
+	primer_nombre: "Primer nombre",
+	segundo_nombre: "Segundo nombre",
+	primer_apellido: "Primer apellido",
+	segundo_apellido: "Segundo apellido",
+	tipo_documento: "Tipo de documento",
+	numero_documento: "Número de documento",
+	extension_ci: "Extensión CI",
+	nacionalidad: "Nacionalidad",
+	fecha_nacimiento: "Fecha de nacimiento",
+	estado_civil: "Estado civil",
+	direccion: "Dirección",
+	correo_electronico: "Correo electrónico",
+	celular: "Celular",
+	telefono: "Teléfono",
+	profesion_oficio: "Profesión u oficio",
+	actividad_economica: "Actividad económica",
+	lugar_trabajo: "Lugar de trabajo",
+	pais_residencia: "País de residencia",
+	genero: "Género",
+	nivel_ingresos: "Nivel de ingresos",
+	anios_servicio: "Años de servicio",
+	nit: "NIT",
+	domicilio_comercial: "Domicilio comercial",
+	director_cartera_id: "Director de cartera",
+	// Unipersonal commercial
+	razon_social: "Razón social",
+	matricula_comercio: "Matrícula de comercio",
+	telefono_comercial: "Teléfono comercial",
+	actividad_economica_comercial: "Actividad económica comercial",
+	correo_electronico_comercial: "Correo electrónico comercial",
+	// Unipersonal owner
+	nombre_propietario: "Nombre del propietario",
+	apellido_propietario: "Apellido del propietario",
+	ci_propietario: "CI del propietario",
+	// Representative
+	nombre_representante: "Nombre del representante",
+	apellido_representante: "Apellido del representante",
+	ci_representante: "CI del representante",
+	cargo_representante: "Cargo del representante",
+	// Juridic
+	tipo_empresa: "Tipo de empresa",
+	fecha_constitucion: "Fecha de constitución",
+	pais_origen: "País de origen",
+	sitio_web: "Sitio web",
+	tipo_actividad: "Tipo de actividad",
+};
+
+/** Flattens React Hook Form errors into human-readable field labels. */
+function getErrorFieldLabels(
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	errors: Record<string, any>,
+	labelMap: Record<string, string> = COMMON_FIELD_LABELS
+): string[] {
+	const labels: string[] = [];
+
+	function traverse(obj: Record<string, unknown>) {
+		for (const [key, value] of Object.entries(obj)) {
+			if (!value || typeof value !== "object") continue;
+			if ("message" in value) {
+				labels.push(labelMap[key] ?? key);
+			} else {
+				traverse(value as Record<string, unknown>);
+			}
+		}
+	}
+
+	traverse(errors);
+	return [...new Set(labels)];
+}
+
 export default function NuevoClientePage() {
 	const router = useRouter();
 	const supabase = createClient();
@@ -564,7 +638,10 @@ export default function NuevoClientePage() {
 			if (clientType === "natural") {
 				const isValid = await naturalForm.trigger();
 				if (!isValid) {
-					toast.error("Por favor complete todos los campos requeridos");
+					const fields = getErrorFieldLabels(naturalForm.formState.errors);
+					toast.error("Campos incompletos o inválidos", {
+						description: fields.length > 0 ? `Revisar: ${fields.join(", ")}` : "Por favor complete todos los campos requeridos",
+					});
 					setIsSaving(false);
 					return;
 				}
@@ -574,7 +651,10 @@ export default function NuevoClientePage() {
 			} else if (clientType === "unipersonal") {
 				const isValid = await unipersonalForm.trigger();
 				if (!isValid) {
-					toast.error("Por favor complete todos los campos requeridos");
+					const fields = getErrorFieldLabels(unipersonalForm.formState.errors);
+					toast.error("Campos incompletos o inválidos", {
+						description: fields.length > 0 ? `Revisar: ${fields.join(", ")}` : "Por favor complete todos los campos requeridos",
+					});
 					setIsSaving(false);
 					return;
 				}
@@ -584,7 +664,10 @@ export default function NuevoClientePage() {
 			} else if (clientType === "juridica") {
 				const isValid = await juridicForm.trigger();
 				if (!isValid) {
-					toast.error("Por favor complete todos los campos requeridos");
+					const fields = getErrorFieldLabels(juridicForm.formState.errors);
+					toast.error("Campos incompletos o inválidos", {
+						description: fields.length > 0 ? `Revisar: ${fields.join(", ")}` : "Por favor complete todos los campos requeridos",
+					});
 					setIsSaving(false);
 					return;
 				}
