@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { Fragment, useState, useTransition } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
@@ -76,8 +76,8 @@ export default function MatrizPermisos({ permissions, rolePermissions: initialRo
 				</thead>
 				<tbody>
 					{Object.entries(modules).map(([module, perms]) => (
-						<>
-							<tr key={`header-${module}`} className="bg-gray-50">
+						<Fragment key={module}>
+							<tr className="bg-gray-50">
 								<td colSpan={displayRoles.length + 1} className="py-2 px-3 font-semibold text-gray-800">
 									{PERMISSION_MODULES[module] || module}
 								</td>
@@ -109,7 +109,7 @@ export default function MatrizPermisos({ permissions, rolePermissions: initialRo
 									})}
 								</tr>
 							))}
-						</>
+						</Fragment>
 					))}
 				</tbody>
 			</table>
