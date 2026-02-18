@@ -1,6 +1,7 @@
 import { createClient } from "@/utils/supabase/server";
 import { createClient as createBrowserClient } from "@/utils/supabase/client";
 import { redirect } from "next/navigation";
+import { cache } from "react";
 
 export type UserRole = "admin" | "usuario" | "agente" | "comercial" | "cobranza" | "siniestros" | "invitado" | "desactivado";
 
@@ -45,7 +46,13 @@ export interface UserProfile {
 }
 
 // Server-side authentication helpers
-export async function getCurrentUser() {
+
+/**
+ * Obtiene el usuario actual validando el JWT con Supabase.
+ * Cacheado con React cache() para evitar múltiples llamadas getUser()
+ * dentro del mismo Server Component o Server Action.
+ */
+export const getCurrentUser = cache(async () => {
 	const supabase = await createClient();
 	const {
 		data: { user },
@@ -57,7 +64,46 @@ export async function getCurrentUser() {
 	}
 
 	return user;
-}
+});
+
+/**
+ * Lee los claims personalizados del JWT sin consultar la BD.
+ * Debe llamarse después de getCurrentUser() que valida el token.
+ * Cacheado por request para evitar decodificaciones repetidas.
+ *
+ * Claims inyectados por custom_access_token_hook:
+ *   - user_role: rol del usuario
+ *   - user_permissions: permisos efectivos
+ *   - team_member_ids: IDs de compañeros de equipo (Fase 4)
+ */
+const getJWTClaimsServer = cache(async (): Promise<{
+	user_role: string;
+	user_permissions: string[];
+	team_member_ids: string[];
+}> => {
+	const supabase = await createClient();
+	const { data: { session } } = await supabase.auth.getSession();
+	if (!session?.access_token) {
+		return { user_role: "invitado", user_permissions: [], team_member_ids: [] };
+	}
+	try {
+		const payload = JSON.parse(
+			Buffer.from(
+				session.access_token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/"),
+				"base64"
+			).toString("utf-8")
+		);
+		return {
+			user_role: payload.user_role || "invitado",
+			user_permissions: Array.isArray(payload.user_permissions) ? payload.user_permissions : [],
+			team_member_ids: Array.isArray(payload.team_member_ids)
+				? payload.team_member_ids.map(String)
+				: [],
+		};
+	} catch {
+		return { user_role: "invitado", user_permissions: [], team_member_ids: [] };
+	}
+});
 
 export async function getCurrentUserProfile(): Promise<UserProfile | null> {
 	const user = await getCurrentUser();
@@ -120,14 +166,17 @@ export async function requireAuth() {
 }
 
 export async function requireAdmin() {
-	const profile = await getCurrentUserProfile();
-	if (!profile) {
-		redirect("/auth/login");
-	}
-	if (profile.role !== "admin") {
-		redirect("/unauthorized");
-	}
-	return profile;
+	const user = await getCurrentUser();
+	if (!user) redirect("/auth/login");
+	const claims = await getJWTClaimsServer();
+	if (claims.user_role !== "admin") redirect("/unauthorized");
+	return {
+		id: user.id,
+		email: user.email ?? "",
+		role: "admin" as UserRole,
+		created_at: user.created_at,
+		updated_at: user.updated_at ?? user.created_at,
+	} satisfies UserProfile;
 }
 
 export async function hasRole(role: UserRole): Promise<boolean> {
@@ -176,59 +225,55 @@ export async function hasRoleClient(role: UserRole): Promise<boolean> {
 /**
  * Verifica si el usuario actual tiene un permiso específico.
  * Admin tiene bypass hardcodeado (siempre retorna true).
- * Para otros roles, consulta role_permissions + user_permissions en BD.
+ * Fase 4: Lee permisos del JWT, sin consultas a BD.
  */
 export async function hasPermission(permission: Permission): Promise<boolean> {
-	const profile = await getCurrentUserProfile();
-	if (!profile) return false;
-	if (profile.role === "admin") return true;
-
-	const supabase = await createClient();
-	const { data } = await supabase.rpc("user_has_permission", {
-		p_user_id: profile.id,
-		p_permission_id: permission,
-	});
-	return !!data;
+	const user = await getCurrentUser();
+	if (!user) return false;
+	const claims = await getJWTClaimsServer();
+	if (claims.user_role === "admin") return true;
+	return claims.user_permissions.includes(permission);
 }
 
 /**
  * Requiere que el usuario tenga un permiso. Redirige a /unauthorized si no lo tiene.
  * Uso en server components y server actions que necesitan protección.
+ * Fase 4: Lee permisos del JWT, sin consultas a BD.
  */
 export async function requirePermission(permission: Permission): Promise<UserProfile> {
-	const profile = await getCurrentUserProfile();
-	if (!profile) {
-		redirect("/auth/login");
-	}
-	if (profile.role === "admin") return profile;
-
-	const supabase = await createClient();
-	const { data } = await supabase.rpc("user_has_permission", {
-		p_user_id: profile.id,
-		p_permission_id: permission,
-	});
-
-	if (!data) {
-		redirect("/unauthorized");
-	}
+	const user = await getCurrentUser();
+	if (!user) redirect("/auth/login");
+	const claims = await getJWTClaimsServer();
+	const profile: UserProfile = {
+		id: user.id,
+		email: user.email ?? "",
+		role: (claims.user_role as UserRole) || "invitado",
+		created_at: user.created_at,
+		updated_at: user.updated_at ?? user.created_at,
+	};
+	if (claims.user_role === "admin") return profile;
+	if (!claims.user_permissions.includes(permission)) redirect("/unauthorized");
 	return profile;
 }
 
 /**
  * Verifica permiso sin redirect - retorna resultado booleano.
  * Útil en server actions donde se quiere retornar error en vez de redirect.
+ * Fase 4: Lee permisos del JWT, sin consultas a BD.
  */
 export async function checkPermission(permission: Permission): Promise<{ allowed: boolean; profile: UserProfile | null }> {
-	const profile = await getCurrentUserProfile();
-	if (!profile) return { allowed: false, profile: null };
-	if (profile.role === "admin") return { allowed: true, profile };
-
-	const supabase = await createClient();
-	const { data } = await supabase.rpc("user_has_permission", {
-		p_user_id: profile.id,
-		p_permission_id: permission,
-	});
-	return { allowed: !!data, profile };
+	const user = await getCurrentUser();
+	if (!user) return { allowed: false, profile: null };
+	const claims = await getJWTClaimsServer();
+	const profile: UserProfile = {
+		id: user.id,
+		email: user.email ?? "",
+		role: (claims.user_role as UserRole) || "invitado",
+		created_at: user.created_at,
+		updated_at: user.updated_at ?? user.created_at,
+	};
+	if (claims.user_role === "admin") return { allowed: true, profile };
+	return { allowed: claims.user_permissions.includes(permission), profile };
 }
 
 // ============================================================================
@@ -255,10 +300,6 @@ export async function getPermissionsFromSession(): Promise<string[]> {
 	}
 }
 
-/**
- * Verifica un permiso desde el JWT (client-side, sin llamada a BD).
- * Admin bypass se verifica via user_role en el JWT.
- */
 // ============================================================================
 // Data scoping helpers (server-side)
 // ============================================================================
@@ -272,6 +313,9 @@ export async function getPermissionsFromSession(): Promise<string[]> {
  *
  * Roles sin aislamiento: admin, usuario, cobranza (siempre)
  * Roles con aislamiento: agente, comercial (siempre), siniestros (solo en modulo siniestros)
+ *
+ * Fase 4: Lee rol y team_member_ids del JWT, sin consultas a BD.
+ * Fallback al RPC get_team_member_ids() si el JWT es anterior a la migración Fase 4.
  */
 export async function getDataScopeFilter(module?: 'polizas' | 'clientes' | 'siniestros'): Promise<{
 	needsScoping: boolean;
@@ -279,41 +323,43 @@ export async function getDataScopeFilter(module?: 'polizas' | 'clientes' | 'sini
 	userId: string;
 	role: string;
 }> {
-	const profile = await getCurrentUserProfile();
-	if (!profile) return { needsScoping: false, teamMemberIds: [], userId: "", role: "" };
+	const user = await getCurrentUser();
+	if (!user) return { needsScoping: false, teamMemberIds: [], userId: "", role: "" };
+
+	const claims = await getJWTClaimsServer();
+	const role = claims.user_role;
 
 	// Roles que nunca necesitan aislamiento
-	if (["admin", "usuario", "cobranza"].includes(profile.role)) {
-		return { needsScoping: false, teamMemberIds: [], userId: profile.id, role: profile.role };
+	if (["admin", "usuario", "cobranza"].includes(role)) {
+		return { needsScoping: false, teamMemberIds: [], userId: user.id, role };
 	}
 
 	// Rol siniestros: aislado solo en su modulo, libre en polizas/clientes
-	if (profile.role === "siniestros") {
-		if (module === "siniestros") {
-			const supabase = await createClient();
-			const { data } = await supabase.rpc("get_team_member_ids", {
-				p_user_id: profile.id,
-			});
-			return {
-				needsScoping: true,
-				teamMemberIds: data || [profile.id],
-				userId: profile.id,
-				role: profile.role,
-			};
-		}
-		return { needsScoping: false, teamMemberIds: [], userId: profile.id, role: profile.role };
+	if (role === "siniestros" && module !== "siniestros") {
+		return { needsScoping: false, teamMemberIds: [], userId: user.id, role };
 	}
 
-	// Agente, comercial: siempre aislados
+	// Agente, comercial, siniestros (en su módulo): necesitan aislamiento.
+	// Fase 4: usar team_member_ids del JWT si están disponibles (evita RPC).
+	if (claims.team_member_ids.length > 0) {
+		return {
+			needsScoping: true,
+			teamMemberIds: claims.team_member_ids,
+			userId: user.id,
+			role,
+		};
+	}
+
+	// Fallback: JWT antiguo (antes de migración Fase 4) → llamar RPC
 	const supabase = await createClient();
 	const { data } = await supabase.rpc("get_team_member_ids", {
-		p_user_id: profile.id,
+		p_user_id: user.id,
 	});
 	return {
 		needsScoping: true,
-		teamMemberIds: data || [profile.id],
-		userId: profile.id,
-		role: profile.role,
+		teamMemberIds: data || [user.id],
+		userId: user.id,
+		role,
 	};
 }
 

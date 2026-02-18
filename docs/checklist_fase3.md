@@ -18,7 +18,7 @@
    Mostrar solo miembros de su equipo
    Pre-seleccionarse con el usuario actual
 
-5. Transferencia de datos (admin) (pendiente)
+5. Transferencia de datos (admin) (COMPLETADO)
    Login como admin → ir a /admin/transferencias
    Seleccionar un usuario origen → debe mostrar sus pólizas y clientes
    Seleccionar usuario destino → transferir algunas pólizas → verificar que se movieron
@@ -33,3 +33,5 @@
 
 8. Clientes huérfanos (pendiente) (COMPLETADO)
    Login como comercial → verificar que NO ve clientes sin executive_in_charge asignado (ya no debería haber ninguno gracias al SQL que los asignó a la cuenta maestra)
+
+lo que pasa es que estamos tomando al director de cartera como nuestro dato clave para vincular el cliente con el usuario comercial que luego ve sus datos en otros lados, correcto? cuando el director de cartera es un dato de metrica mas, que no tiene relevancia a nival tecnico, deberiamos guiarnos en vez por quien a creado ese cliente creo yo para darle una conexion real, por ejemplo si eliana a creado un cliente, por mas de que el director de cartera sea flavio, el cliente va a estar vinculado a eliana y diego que es parte del equipo de eliana va a poder ver ese cliente y sus datos en cualquier parte de la web.

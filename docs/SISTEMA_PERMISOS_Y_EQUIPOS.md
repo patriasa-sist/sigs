@@ -2,12 +2,12 @@
 
 ## Estado General
 
-| Fase                                | Estado              | Descripcion                          |
-| ----------------------------------- | ------------------- | ------------------------------------ |
-| Fase 1: Permisos Granulares         | Completada          | RBAC con permisos en BD + JWT        |
-| Fase 2: Equipos y Aislamiento       | Completada (codigo) | Pendiente ejecutar SQL en Supabase   |
-| Fase 3: Datos de Agentes en Equipos | Completada (codigo) | Pendiente ejecutar SQL en Supabase   |
-| Fase 4: JWT + Middleware avanzado   | Pendiente           | Optimizacion de performance          |
+| Fase                                | Estado              | Descripcion                        |
+| ----------------------------------- | ------------------- | ---------------------------------- |
+| Fase 1: Permisos Granulares         | Completada          | RBAC con permisos en BD + JWT      |
+| Fase 2: Equipos y Aislamiento       | Completada (codigo) | Pendiente ejecutar SQL en Supabase |
+| Fase 3: Datos de Agentes en Equipos | Completada (codigo) | Pendiente ejecutar SQL en Supabase |
+| Fase 4: JWT + Middleware avanzado   | Completada (codigo) | Pendiente ejecutar SQL en Supabase |
 
 ---
 
@@ -143,7 +143,7 @@ components/ui/navbar.tsx   -- Link "Equipos" en dropdown
 
 ---
 
-## Fase 3: Reglas de Negocio Avanzadas (COMPLETADA - codigo listo)
+## Fase 3: Reglas de Negocio Avanzadas (COMPLETADA)
 
 ### Que se hizo
 
@@ -152,6 +152,7 @@ Scoping avanzado, auto-asignacion, transferencia de datos, y dashboard por equip
 ### Arquitectura
 
 #### 3A - Scoping Critico + Auto-Asignacion
+
 - **NOT NULL constraints**: `clients.executive_in_charge` y `siniestros.responsable_id` ahora son NOT NULL
 - **Scoping en detalle**: `obtenerDetallePoliza()`, `getClientById()`, `getClientDetailsComplete()` verifican equipo
 - **Siniestros scoping**: Rol siniestros ve los suyos y los de su equipo; comercial/agente ve siniestros de polizas de su equipo
@@ -161,46 +162,49 @@ Scoping avanzado, auto-asignacion, transferencia de datos, y dashboard por equip
 - **Validacion server-side**: `guardarPoliza()` valida que responsable_id sea del equipo
 
 #### 3D - Transferencia de Datos
+
 - **Pagina**: `/admin/transferencias` - Admin puede transferir polizas/clientes entre usuarios
 - **Auditoria**: Cada transferencia queda registrada en historial
 - **Seleccion bulk**: Checkboxes para seleccionar multiples polizas/clientes
 
 #### 3E - Reportes Scoped
+
 - **Filtro por equipo**: `exportarProduccion()` acepta `equipo_id` para filtrar por equipo
 - **UI**: Dropdown de equipo en formulario de reportes
 
 #### 3F - Dashboard por Equipo
+
 - **Pagina**: `/admin/dashboard-equipos` - Metricas por equipo
 - **Metricas**: Total polizas, polizas activas, clientes, siniestros abiertos, prima total
 - **Cards**: Vista de tarjetas por equipo con miembros
 
 ### Reglas de visibilidad (actualizadas)
 
-| Rol                              | Polizas/Clientes          | Siniestros                        |
-| -------------------------------- | ------------------------- | --------------------------------- |
-| admin, usuario                   | TODO                      | TODO                              |
-| cobranza                         | TODO                      | TODO                              |
-| siniestros (sin equipo)          | TODO                      | Solo sus propios siniestros       |
-| siniestros (con equipo)          | TODO                      | Sus siniestros + equipo           |
-| agente, comercial (sin equipo)   | Solo sus propios datos    | Siniestros de sus polizas         |
-| agente, comercial (con equipo)   | Datos de su equipo        | Siniestros de polizas del equipo  |
+| Rol                            | Polizas/Clientes       | Siniestros                       |
+| ------------------------------ | ---------------------- | -------------------------------- |
+| admin, usuario                 | TODO                   | TODO                             |
+| cobranza                       | TODO                   | TODO                             |
+| siniestros (sin equipo)        | TODO                   | Solo sus propios siniestros      |
+| siniestros (con equipo)        | TODO                   | Sus siniestros + equipo          |
+| agente, comercial (sin equipo) | Solo sus propios datos | Siniestros de sus polizas        |
+| agente, comercial (con equipo) | Datos de su equipo     | Siniestros de polizas del equipo |
 
 ### RLS actualizado en tablas dependientes
 
-| Tabla                          | Scoping                                     |
-| ------------------------------ | ------------------------------------------- |
-| siniestros                     | Por `responsable_id` (siniestros) o poliza  |
-| natural_clients                | Via `clients.executive_in_charge`            |
-| juridic_clients                | Via `clients.executive_in_charge`            |
-| unipersonal_clients            | Via `clients.executive_in_charge`            |
-| clientes_documentos            | Via `clients.executive_in_charge`            |
-| polizas_documentos             | Via `polizas.responsable_id`                 |
-| clientes_historial_ediciones   | Via `clients.executive_in_charge`            |
-| siniestros_documentos          | Via `siniestros.responsable_id` o poliza     |
-| siniestros_observaciones       | Via `siniestros.responsable_id` o poliza     |
-| siniestros_coberturas          | Via `siniestros.responsable_id` o poliza     |
-| siniestros_historial           | Via `siniestros.responsable_id` o poliza     |
-| siniestros_estados_historial   | Via `siniestros.responsable_id` o poliza     |
+| Tabla                        | Scoping                                    |
+| ---------------------------- | ------------------------------------------ |
+| siniestros                   | Por `responsable_id` (siniestros) o poliza |
+| natural_clients              | Via `clients.executive_in_charge`          |
+| juridic_clients              | Via `clients.executive_in_charge`          |
+| unipersonal_clients          | Via `clients.executive_in_charge`          |
+| clientes_documentos          | Via `clients.executive_in_charge`          |
+| polizas_documentos           | Via `polizas.responsable_id`               |
+| clientes_historial_ediciones | Via `clients.executive_in_charge`          |
+| siniestros_documentos        | Via `siniestros.responsable_id` o poliza   |
+| siniestros_observaciones     | Via `siniestros.responsable_id` o poliza   |
+| siniestros_coberturas        | Via `siniestros.responsable_id` o poliza   |
+| siniestros_historial         | Via `siniestros.responsable_id` o poliza   |
+| siniestros_estados_historial | Via `siniestros.responsable_id` o poliza   |
 
 ### Archivos clave
 
@@ -225,11 +229,11 @@ components/admin/ExportarProduccion.tsx               -- Dropdown equipo en UI r
 types/reporte.ts                                     -- equipo_id en filtros
 ```
 
-### SQL pendiente de ejecutar
+### SQL pendiente de ejecutar (COMPLETADA)
 
 - `docs/migration_fase3_reglas_negocio.sql` - NOT NULL, vistas, RLS siniestros, RLS dependientes
 
-### Orden de ejecucion SQL
+### Orden de ejecucion SQL (COMPLETADA)
 
 **IMPORTANTE**: Ejecutar despues de las migraciones de Fase 1 y Fase 2:
 
@@ -239,26 +243,66 @@ types/reporte.ts                                     -- equipo_id en filtros
 
 ---
 
-## Fase 4: Optimizacion JWT + Middleware (PENDIENTE)
+## Fase 4: Optimizacion JWT + Middleware (COMPLETADA)
 
-### Objetivo
+### Que se hizo
 
-Mejorar performance evitando llamadas RPC innecesarias.
+Eliminacion de consultas a BD en el camino critico de autorizacion y scoping de datos.
 
-### Ideas planificadas
+#### 4A - team_member_ids en JWT
 
-- **team_member_ids en JWT**: Inyectar array de compañeros de equipo en el token para evitar la llamada RPC `get_team_member_ids()` en cada request
-- **Cache de permisos**: Evaluar cache en memoria para `getDataScopeFilter()` dentro de un mismo request
-- **Middleware scoping**: El middleware podria hacer pre-check de equipo ademas de permisos
-- **Token refresh automatico**: Evaluar webhook o mecanismo para invalidar JWT cuando cambian permisos o equipos (actualmente requiere re-login)
+- **SQL**: `custom_access_token_hook` actualizado para inyectar `team_member_ids` al login
+- **Para roles**: `agente`, `comercial`, `siniestros` → array de UUIDs de compañeros
+- **Para otros roles**: array vacio `[]`
+- **Resultado**: `getDataScopeFilter()` ya no llama al RPC `get_team_member_ids()` en cada request
 
-### Cuando implementar
+#### 4B - Cache por request con React cache()
 
-Con 4 agentes y 10 comerciales el impacto de la llamada RPC es minimo. Implementar cuando:
+- **`getCurrentUser()`**: Envuelto con `cache()` para deduplicar `getUser()` dentro del mismo render
+- **`getJWTClaimsServer()`**: Nueva funcion interna cacheada que decodifica JWT sin consulta a BD
 
-- El numero de usuarios crezca significativamente (50+)
-- Se detecten problemas de latencia en las queries scoped
-- Se necesite invalidacion automatica de permisos sin re-login
+#### 4C - Lectura JWT para autorizacion (elimina consulta a profiles)
+
+Las siguientes funciones ya no consultan la tabla `profiles` ni llaman RPC `user_has_permission()`:
+
+| Funcion | Antes (queries BD) | Despues (queries BD) |
+| --- | --- | --- |
+| `hasPermission()` | 2 (profiles + RPC) | 0 (JWT) |
+| `requirePermission()` | 2 (profiles + RPC) | 0 (JWT) |
+| `checkPermission()` | 2 (profiles + RPC) | 0 (JWT) |
+| `requireAdmin()` | 1 (profiles) | 0 (JWT) |
+| `getDataScopeFilter()` sin equipo JWT | 2 (profiles + RPC) | 0 (JWT) |
+| `getDataScopeFilter()` con JWT viejo | 2 (profiles + RPC) | 1 (RPC, fallback) |
+
+#### 4D - Middleware scoping y token refresh automatico (DIFERIDO)
+
+No implementados. El middleware ya verifica permisos desde JWT (sin BD). El refresh automatico requeriria tokens de corta duracion o un sistema de blacklist, complejidad no justificada con el volumen actual de usuarios.
+
+### SQL pendiente de ejecutar
+
+- `docs/migration_fase4_jwt_optimizacion.sql` - Actualiza `custom_access_token_hook` con inyeccion de `team_member_ids`
+
+### Archivos clave
+
+```
+docs/migration_fase4_jwt_optimizacion.sql   -- SQL para ejecutar en Supabase (Fase 4)
+utils/auth/helpers.ts                        -- getCurrentUser() cacheado, getJWTClaimsServer(), funciones de auth actualizadas
+```
+
+### Notas importantes
+
+- **Re-login requerido**: Los usuarios deben hacer logout/login para que `team_member_ids` aparezca en su JWT
+- **Fallback automatico**: Si el JWT no tiene `team_member_ids` (token anterior a la migracion), el codigo cae al RPC como antes
+- **Funciones de display sin cambios**: `getCurrentUserProfile()` y `getDisplayProfile()` siguen consultando la tabla `profiles` (necesario para datos actualizados en la UI)
+
+### Orden de ejecucion SQL (COMPLETADA)
+
+**IMPORTANTE**: Ejecutar despues de las migraciones de Fases 1, 2 y 3:
+
+1. `docs/migration_permissions_system.sql` (Fase 1)
+2. `docs/migration_equipos_system.sql` (Fase 2)
+3. `docs/migration_fase3_reglas_negocio.sql` (Fase 3)
+4. `docs/migration_fase4_jwt_optimizacion.sql` (Fase 4)
 
 ---
 
