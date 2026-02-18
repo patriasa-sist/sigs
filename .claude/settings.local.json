@@ -8,7 +8,8 @@
       "mcp__supabase__get_logs",
       "mcp__supabase__search_docs",
       "Bash(npm run lint:*)",
-      "mcp__supabase__list_storage_buckets"
+      "mcp__supabase__list_storage_buckets",
+      "Bash(npx next lint:*)"
     ]
   },
   "enableAllProjectMcpServers": true,

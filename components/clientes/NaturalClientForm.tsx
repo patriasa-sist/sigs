@@ -17,7 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SameAsCheckbox } from "@/components/ui/same-as-checkbox";
-import { ExecutiveDropdown } from "@/components/shared/ExecutiveDropdown";
+import { DirectorCarteraDropdown } from "@/components/shared/DirectorCarteraDropdown";
 import { ClienteDocumentUpload } from "./ClienteDocumentUpload";
 
 interface NaturalClientFormProps {
@@ -191,20 +191,16 @@ export function NaturalClientForm({ form, partnerForm, onFieldBlur }: NaturalCli
 						)}
 					</div>
 
-					{/* Ejecutivo a Cargo */}
+					{/* Director de cartera */}
 					<div>
 						<Controller
-							name="executive_in_charge"
+							name="director_cartera_id"
 							control={control}
 							render={({ field }) => (
-								<ExecutiveDropdown
+								<DirectorCarteraDropdown
 									value={field.value}
 									onValueChange={field.onChange}
-									error={errors.executive_in_charge?.message}
-									label="Director de cartera"
-									placeholder="Seleccione un director"
-									required={true}
-									showRole={false}
+									error={errors.director_cartera_id?.message}
 								/>
 							)}
 						/>

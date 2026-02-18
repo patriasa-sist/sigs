@@ -70,7 +70,7 @@ export async function obtenerUsuariosConDatos(): Promise<ActionResult<UsuarioCon
 				supabase
 					.from("clients")
 					.select("id", { count: "exact", head: true })
-					.eq("executive_in_charge", profile.id),
+					.eq("commercial_owner_id", profile.id),
 			]);
 
 			usuarios.push({
@@ -150,7 +150,7 @@ export async function obtenerClientesPorUsuario(
 				juridic_clients (razon_social, nit),
 				unipersonal_clients (razon_social, nit)
 			`)
-			.eq("executive_in_charge", userId)
+			.eq("commercial_owner_id", userId)
 			.order("created_at", { ascending: false });
 
 		if (error) throw error;
@@ -273,10 +273,10 @@ export async function transferirClientes(
 			return { success: false, error: "Usuario destino no encontrado" };
 		}
 
-		// Actualizar executive_in_charge
+		// Actualizar commercial_owner_id
 		const { error: updateError, count } = await supabase
 			.from("clients")
-			.update({ executive_in_charge: nuevoEjecutivoId })
+			.update({ commercial_owner_id: nuevoEjecutivoId })
 			.in("id", clientIds);
 
 		if (updateError) throw updateError;
@@ -286,7 +286,7 @@ export async function transferirClientes(
 			client_id: clientId,
 			tabla_modificada: "clients",
 			tipo_cambio: "modificacion",
-			campo_modificado: "executive_in_charge",
+			campo_modificado: "commercial_owner_id",
 			valor_nuevo: `Transferido a ${targetUser.full_name}${motivo ? ` - Motivo: ${motivo}` : ""}`,
 			modificado_por: profile.id,
 		}));

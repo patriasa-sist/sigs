@@ -66,8 +66,8 @@ export type ClienteDetalleCompleto = {
 	id: string;
 	client_type: "natural" | "juridica" | "unipersonal";
 	status: string;
-	executive_in_charge?: string;
-	executive_name?: string;
+	commercial_owner_id?: string;
+	commercial_owner_name?: string;
 	created_at: string;
 	updated_at: string;
 
@@ -127,7 +127,7 @@ export async function getClientDetailsComplete(
         natural_clients (*),
         juridic_clients (*),
         unipersonal_clients (*),
-        executive:profiles!executive_in_charge (
+        commercial_owner:profiles!commercial_owner_id (
           id,
           full_name,
           email
@@ -148,7 +148,7 @@ export async function getClientDetailsComplete(
 
 		// Verificar scoping por equipo
 		const scope = await getDataScopeFilter('clientes');
-		if (scope.needsScoping && clientData.executive_in_charge && !scope.teamMemberIds.includes(clientData.executive_in_charge)) {
+		if (scope.needsScoping && clientData.commercial_owner_id && !scope.teamMemberIds.includes(clientData.commercial_owner_id)) {
 			return {
 				success: false,
 				error: "No tiene acceso a este cliente",
@@ -251,16 +251,16 @@ export async function getClientDetailsComplete(
 		}));
 
 		// Build result
-		const executiveData = Array.isArray(clientData.executive)
-			? clientData.executive[0] ?? null
-			: clientData.executive ?? null;
+		const commercialOwnerData = Array.isArray(clientData.commercial_owner)
+			? clientData.commercial_owner[0] ?? null
+			: clientData.commercial_owner ?? null;
 
 		const result: ClienteDetalleCompleto = {
 			id: clientData.id,
 			client_type: clientData.client_type,
 			status: clientData.status,
-			executive_in_charge: clientData.executive_in_charge,
-			executive_name: executiveData?.full_name,
+			commercial_owner_id: clientData.commercial_owner_id,
+			commercial_owner_name: commercialOwnerData?.full_name,
 			created_at: clientData.created_at,
 			updated_at: clientData.updated_at,
 			natural_data: naturalData,

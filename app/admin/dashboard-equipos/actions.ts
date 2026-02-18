@@ -87,7 +87,7 @@ export async function obtenerMetricasPorEquipo(): Promise<ActionResult<EquipoMet
 				supabase
 					.from("clients")
 					.select("id", { count: "exact", head: true })
-					.in("executive_in_charge", memberIds),
+					.in("commercial_owner_id", memberIds),
 				supabase
 					.from("siniestros")
 					.select("id", { count: "exact", head: true })

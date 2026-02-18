@@ -274,7 +274,8 @@ export default function NuevoClientePage() {
 			.from("clients")
 			.insert({
 				client_type: "natural",
-				executive_in_charge: normalized.executive_in_charge,
+				commercial_owner_id: currentUserId,
+				director_cartera_id: normalized.director_cartera_id ?? null,
 				status: "active",
 				created_by: currentUserId,
 			})
@@ -378,7 +379,8 @@ export default function NuevoClientePage() {
 			.from("clients")
 			.insert({
 				client_type: "unipersonal",
-				executive_in_charge: normalized.executive_in_charge,
+				commercial_owner_id: currentUserId,
+				director_cartera_id: normalized.director_cartera_id ?? null,
 				status: "active",
 				created_by: currentUserId,
 			})
@@ -496,7 +498,8 @@ export default function NuevoClientePage() {
 			.from("clients")
 			.insert({
 				client_type: "juridica",
-				executive_in_charge: normalized.executive_in_charge,
+				commercial_owner_id: currentUserId,
+				director_cartera_id: normalized.director_cartera_id ?? null,
 				status: "active",
 				created_by: currentUserId,
 			})

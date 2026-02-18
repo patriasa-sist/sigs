@@ -401,7 +401,7 @@ export function ClientDetailModal({ clientId, onClose }: Props) {
 							{client.client_type === "natural" && (editData.natural_data || client.natural_data) && (
 								<NaturalClientGeneral
 									data={isEditMode ? (editData.natural_data as NaturalClient) : client.natural_data!}
-									executive={client.executive_name}
+									executive={client.commercial_owner_name}
 									isEditing={isEditMode}
 									onFieldChange={updateNaturalField}
 								/>
@@ -418,7 +418,7 @@ export function ClientDetailModal({ clientId, onClose }: Props) {
 												? (editData.unipersonal_data as UnipersonalClient)
 												: client.unipersonal_data!
 										}
-										executive={client.executive_name}
+										executive={client.commercial_owner_name}
 										isEditing={isEditMode}
 										onNaturalFieldChange={updateNaturalField}
 										onUnipersonalFieldChange={updateUnipersonalField}
@@ -427,7 +427,7 @@ export function ClientDetailModal({ clientId, onClose }: Props) {
 							{client.client_type === "juridica" && (editData.juridic_data || client.juridic_data) && (
 								<JuridicClientGeneral
 									data={isEditMode ? (editData.juridic_data as JuridicClient) : client.juridic_data!}
-									executive={client.executive_name}
+									executive={client.commercial_owner_name}
 									isEditing={isEditMode}
 									onFieldChange={updateJuridicField}
 								/>

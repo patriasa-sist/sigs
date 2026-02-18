@@ -56,7 +56,8 @@ export type Currency = z.infer<typeof CurrencyEnum>;
 export const BaseClientSchema = z.object({
 	id: z.string().uuid("ID de cliente inválido"),
 	client_type: ClientTypeEnum,
-	executive_in_charge: z.string().nullable(),
+	commercial_owner_id: z.string().nullable(),
+	director_cartera_id: z.string().nullable(),
 	status: ClientStatusEnum,
 	notes: z.string().nullable(),
 	created_at: z.coerce.string(),

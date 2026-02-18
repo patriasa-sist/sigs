@@ -127,12 +127,12 @@ export async function updateNaturalClient(
 			};
 		}
 
-		// Update clients table (executive_in_charge)
-		if (data.executive_in_charge) {
+		// Update clients table (director_cartera_id)
+		if (data.director_cartera_id !== undefined) {
 			const { error: updateClientError } = await supabase
 				.from("clients")
 				.update({
-					executive_in_charge: data.executive_in_charge,
+					director_cartera_id: data.director_cartera_id ?? null,
 					updated_by: user.id,
 					updated_at: new Date().toISOString(),
 				})
@@ -223,12 +223,12 @@ export async function updateJuridicClient(
 			};
 		}
 
-		// Update clients table (executive_in_charge)
-		if (data.executive_in_charge) {
+		// Update clients table (director_cartera_id)
+		if (data.director_cartera_id !== undefined) {
 			const { error: updateClientError } = await supabase
 				.from("clients")
 				.update({
-					executive_in_charge: data.executive_in_charge,
+					director_cartera_id: data.director_cartera_id ?? null,
 					updated_by: user.id,
 					updated_at: new Date().toISOString(),
 				})
@@ -306,12 +306,12 @@ export async function updateUnipersonalClient(
 			};
 		}
 
-		// Update clients table (executive_in_charge)
-		if (data.executive_in_charge) {
+		// Update clients table (director_cartera_id)
+		if (data.director_cartera_id !== undefined) {
 			const { error: updateClientError } = await supabase
 				.from("clients")
 				.update({
-					executive_in_charge: data.executive_in_charge,
+					director_cartera_id: data.director_cartera_id ?? null,
 					updated_by: user.id,
 					updated_at: new Date().toISOString(),
 				})

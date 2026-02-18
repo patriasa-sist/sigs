@@ -163,7 +163,7 @@ export interface NaturalClientFormData
   extends NaturalClientPersonalData,
     NaturalClientContactData,
     NaturalClientOtherData {
-  executive_in_charge: string;
+  director_cartera_id?: string | null;
   documentos?: ClienteDocumentoFormState[];
 }
 
@@ -171,7 +171,7 @@ export const naturalClientFormSchema = naturalClientPersonalSchema
   .merge(naturalClientContactSchema)
   .merge(naturalClientOtherSchema)
   .extend({
-    executive_in_charge: z.string().min(1, 'Director de cartera es requerido'),
+    director_cartera_id: z.string().uuid().nullable().optional(),
   });
 
 // ============================================================================
@@ -281,7 +281,7 @@ export interface UnipersonalClientFormData
     UnipersonalCommercialData, // Use required fields from commercial
     UnipersonalOwnerData,
     UnipersonalRepresentativeData {
-  executive_in_charge: string;
+  director_cartera_id?: string | null;
   documentos?: ClienteDocumentoFormState[];
 }
 
@@ -292,7 +292,7 @@ export const unipersonalClientFormSchema = naturalClientPersonalSchema
   .merge(unipersonalOwnerSchema) // Owner fields are required (auto-filled from personal data)
   .merge(unipersonalRepresentativeSchema)
   .extend({
-    executive_in_charge: z.string().min(1, 'Director de cartera es requerido'),
+    director_cartera_id: z.string().uuid().nullable().optional(),
   });
 
 // ============================================================================
@@ -378,7 +378,7 @@ export const legalRepresentativeSchema = z.object({
 export interface JuridicClientFormData
   extends JuridicClientCompanyData,
     JuridicClientContactData {
-  executive_in_charge: string;
+  director_cartera_id?: string | null;
   legal_representatives: LegalRepresentativeData[];
   documentos?: ClienteDocumentoFormState[];
 }
@@ -386,7 +386,7 @@ export interface JuridicClientFormData
 export const juridicClientFormSchema = juridicClientCompanySchema
   .merge(juridicClientContactSchema)
   .extend({
-    executive_in_charge: z.string().min(1, 'Director de cartera es requerido'),
+    director_cartera_id: z.string().uuid().nullable().optional(),
     legal_representatives: z
       .array(legalRepresentativeSchema.omit({ juridic_client_id: true }))
       .min(1, 'Al menos un representante legal es requerido'),
@@ -458,7 +458,8 @@ export interface SameAsState {
 
 export interface ClientBasePayload {
   client_type: ClientType;
-  executive_in_charge: string;
+  commercial_owner_id?: string | null;
+  director_cartera_id?: string | null;
   status: 'active' | 'inactive' | 'suspended';
   notes?: string;
   created_by?: string;

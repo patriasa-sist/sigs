@@ -135,7 +135,7 @@ export async function getAllClients(options?: {
 			.select("*", { count: "exact", head: true });
 
 		if (scope.needsScoping) {
-			countQuery = countQuery.in("executive_in_charge", scope.teamMemberIds);
+			countQuery = countQuery.in("commercial_owner_id", scope.teamMemberIds);
 		}
 
 		const { count: totalRecords, error: countError } = await countQuery;
@@ -165,7 +165,7 @@ export async function getAllClients(options?: {
 			.range(offset, offset + pageSize - 1);
 
 		if (scope.needsScoping) {
-			clientsQuery = clientsQuery.in("executive_in_charge", scope.teamMemberIds);
+			clientsQuery = clientsQuery.in("commercial_owner_id", scope.teamMemberIds);
 		}
 
 		const { data: clientsData, error: clientsError } = await clientsQuery;
@@ -199,7 +199,7 @@ export async function getAllClients(options?: {
 		// Extract unique executive IDs for profiles_public query
 		const executiveIds = [...new Set(
 			clientsData
-				.map((c) => c.executive_in_charge)
+				.map((c) => c.commercial_owner_id)
 				.filter((id): id is string => id !== null)
 		)];
 
@@ -260,8 +260,8 @@ export async function getAllClients(options?: {
 			try {
 				// Prepare query result structure
 				// Handle Supabase returning either object or array for 1:1 relationships
-				const executiveData = clientData.executive_in_charge
-					? executivesMap.get(clientData.executive_in_charge) ?? null
+				const executiveData = clientData.commercial_owner_id
+					? executivesMap.get(clientData.commercial_owner_id) ?? null
 					: null;
 
 				const queryResult: ClientQueryResult = {
@@ -405,20 +405,20 @@ export async function getClientById(clientId: string): Promise<ActionResult<Clie
 
 		// Verificar scoping por equipo
 		const scope = await getDataScopeFilter('clientes');
-		if (scope.needsScoping && clientData.executive_in_charge && !scope.teamMemberIds.includes(clientData.executive_in_charge)) {
+		if (scope.needsScoping && clientData.commercial_owner_id && !scope.teamMemberIds.includes(clientData.commercial_owner_id)) {
 			return {
 				success: false,
 				error: "No tiene acceso a este cliente",
 			};
 		}
 
-		// Fetch executive from profiles_public view (restricted public access)
+		// Fetch commercial owner from profiles_public view (restricted public access)
 		let executiveData: { id: string; full_name: string; email: string } | null = null;
-		if (clientData.executive_in_charge) {
+		if (clientData.commercial_owner_id) {
 			const { data: execData, error: execError } = await supabase
 				.from("profiles_public")
 				.select("id, full_name, email")
-				.eq("id", clientData.executive_in_charge)
+				.eq("id", clientData.commercial_owner_id)
 				.single();
 
 			if (execError) {
