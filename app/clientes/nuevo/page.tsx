@@ -312,6 +312,11 @@ export default function NuevoClientePage() {
 		}
 	};
 
+	// Helper to rollback a clients record if a subsequent insert fails
+	const rollbackClient = async (clientId: string) => {
+		await supabase.from("clients").delete().eq("id", clientId);
+	};
+
 	// Natural client submission
 	const submitNaturalClient = async () => {
 		const formData = naturalForm.getValues();
@@ -386,7 +391,7 @@ export default function NuevoClientePage() {
 			domicilio_comercial: normalized.domicilio_comercial || null,
 		});
 
-		if (naturalError) throw naturalError;
+		if (naturalError) { await rollbackClient(client.id); throw naturalError; }
 
 		// 3. If married, insert partner data
 		if (normalized.estado_civil === "casado") {
@@ -408,7 +413,7 @@ export default function NuevoClientePage() {
 					lugar_trabajo: normalizedPartner.lugar_trabajo,
 				});
 
-				if (partnerError) throw partnerError;
+				if (partnerError) { await rollbackClient(client.id); throw partnerError; }
 			}
 		}
 
@@ -491,7 +496,7 @@ export default function NuevoClientePage() {
 			domicilio_comercial: normalized.domicilio_comercial || null,
 		});
 
-		if (naturalError) throw naturalError;
+		if (naturalError) { await rollbackClient(client.id); throw naturalError; }
 
 		// 3. Insert into unipersonal_clients table (commercial data)
 		// Auto-fill propietario fields from personal data (unipersonal = same person)
@@ -519,7 +524,7 @@ export default function NuevoClientePage() {
 			extension_representante: normalized.extension_representante || null,
 		});
 
-		if (unipersonalError) throw unipersonalError;
+		if (unipersonalError) { await rollbackClient(client.id); throw unipersonalError; }
 
 		// 4. If married, insert partner data
 		if (normalized.estado_civil === "casado") {
@@ -541,7 +546,7 @@ export default function NuevoClientePage() {
 					lugar_trabajo: normalizedPartner.lugar_trabajo,
 				});
 
-				if (partnerError) throw partnerError;
+				if (partnerError) { await rollbackClient(client.id); throw partnerError; }
 			}
 		}
 
@@ -597,7 +602,7 @@ export default function NuevoClientePage() {
 			telefono: normalized.telefono || null,
 		});
 
-		if (juridicError) throw juridicError;
+		if (juridicError) { await rollbackClient(client.id); throw juridicError; }
 
 		// 3. Insert legal representatives
 		if (formData.legal_representatives && formData.legal_representatives.length > 0) {
@@ -621,7 +626,7 @@ export default function NuevoClientePage() {
 
 			const { error: repsError } = await supabase.from("legal_representatives").insert(representatives);
 
-			if (repsError) throw repsError;
+			if (repsError) { await rollbackClient(client.id); throw repsError; }
 		}
 
 		// 3. Upload client documents
