@@ -405,7 +405,9 @@ export function UnipersonalClientForm({ form, partnerForm, onFieldBlur }: Uniper
 					</div>
 
 					<div>
-						<Label htmlFor="matricula_comercio">Matrícula de Comercio SEPREC</Label>
+						<Label htmlFor="matricula_comercio">
+						Matrícula de Comercio SEPREC <span className="text-red-500">*</span>
+					</Label>
 						<Input
 							id="matricula_comercio"
 							{...register("matricula_comercio")}
