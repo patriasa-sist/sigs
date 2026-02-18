@@ -11,7 +11,8 @@
       "mcp__supabase__list_storage_buckets",
       "Bash(npx next lint:*)",
       "mcp__supabase__get_advisors",
-      "Bash(python:*)"
+      "Bash(python:*)",
+      "Bash(python3:*)"
     ]
   },
   "enableAllProjectMcpServers": true,

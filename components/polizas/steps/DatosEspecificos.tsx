@@ -20,13 +20,14 @@ import { AccidentesPersonalesForm } from "../ramos/AccidentesPersonalesForm";
 type Props = {
 	ramo: string;
 	datos: DatosEspecificosPoliza | null;
+	moneda?: string;
 	regionales: Array<{ id: string; nombre: string }>;
 	onChange: (datos: DatosEspecificosPoliza) => void;
 	onSiguiente: () => void;
 	onAnterior: () => void;
 };
 
-export function DatosEspecificos({ ramo, datos, regionales, onChange, onSiguiente, onAnterior }: Props) {
+export function DatosEspecificos({ ramo, datos, moneda = "Bs", regionales, onChange, onSiguiente, onAnterior }: Props) {
 	// Normalizar nombre del ramo (case-insensitive)
 	const ramoNormalizado = ramo.toLowerCase().trim();
 
@@ -54,6 +55,7 @@ export function DatosEspecificos({ ramo, datos, regionales, onChange, onSiguient
 			return (
 				<SaludForm
 					datos={datos?.tipo_ramo === "Salud" ? datos.datos : null}
+					moneda={moneda}
 					regionales={regionales}
 					onChange={(datosSalud) => {
 						onChange({
@@ -194,6 +196,7 @@ export function DatosEspecificos({ ramo, datos, regionales, onChange, onSiguient
 			return (
 				<AccidentesPersonalesForm
 					datos={datos?.tipo_ramo === "Accidentes Personales" ? datos.datos : null}
+					moneda={moneda}
 					regionales={regionales}
 					onChange={(datosAccidentesPersonales) => {
 						onChange({

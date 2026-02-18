@@ -24,6 +24,7 @@ import { BeneficiarioModal } from "./BeneficiarioModal";
 
 type Props = {
 	datos: DatosSalud | null;
+	moneda?: string;
 	regionales: Array<{ id: string; nombre: string }>;
 	onChange: (datos: DatosSalud) => void;
 	onSiguiente: () => void;
@@ -33,7 +34,7 @@ type Props = {
 // Sub-paso interno: 2.1 o 3
 type SubPaso = "niveles" | "principal";
 
-export function SaludForm({ datos, regionales, onChange, onSiguiente, onAnterior }: Props) {
+export function SaludForm({ datos, moneda = "Bs", regionales, onChange, onSiguiente, onAnterior }: Props) {
 	// Estado del sub-paso actual
 	const [subPaso, setSubPaso] = useState<SubPaso>(
 		datos?.niveles && datos.niveles.length > 0 ? "principal" : "niveles"
@@ -297,7 +298,7 @@ export function SaludForm({ datos, regionales, onChange, onSiguiente, onAnterior
 								<div key={nivel.id} className="flex items-center justify-between p-4 border rounded-lg">
 									<div className="flex-1">
 										<p className="font-medium text-gray-900">{nivel.nombre}</p>
-										<p className="text-sm text-gray-600">Cobertura: Bs {nivel.monto.toLocaleString()}</p>
+										<p className="text-sm text-gray-600">Cobertura: {moneda} {nivel.monto.toLocaleString()}</p>
 									</div>
 									<div className="flex gap-2">
 										<Button
@@ -712,7 +713,7 @@ export function SaludForm({ datos, regionales, onChange, onSiguiente, onAnterior
 												<SelectContent>
 													{niveles.map((nivel) => (
 														<SelectItem key={nivel.id} value={nivel.id}>
-															{nivel.nombre} - Bs {nivel.monto.toLocaleString()}
+															{nivel.nombre} - {moneda} {nivel.monto.toLocaleString()}
 														</SelectItem>
 													))}
 												</SelectContent>
@@ -772,6 +773,7 @@ export function SaludForm({ datos, regionales, onChange, onSiguiente, onAnterior
 			{mostrarModalBeneficiario && (
 				<BeneficiarioModal
 					beneficiario={beneficiarioEditando}
+					moneda={moneda}
 					niveles={niveles}
 					onGuardar={guardarBeneficiario}
 					onCancelar={() => {

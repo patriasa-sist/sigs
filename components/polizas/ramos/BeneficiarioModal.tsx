@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 type Props = {
 	beneficiario: BeneficiarioSalud | null;
+	moneda?: string;
 	niveles: NivelSalud[];
 	onGuardar: (beneficiario: BeneficiarioSalud) => void;
 	onCancelar: () => void;
@@ -24,7 +25,7 @@ type ErroresBeneficiario = {
 	rol?: string;
 };
 
-export function BeneficiarioModal({ beneficiario, niveles, onGuardar, onCancelar }: Props) {
+export function BeneficiarioModal({ beneficiario, moneda = "Bs", niveles, onGuardar, onCancelar }: Props) {
 	const [formData, setFormData] = useState<Partial<BeneficiarioSalud>>(
 		beneficiario || {
 			id: crypto.randomUUID(),
@@ -241,7 +242,7 @@ export function BeneficiarioModal({ beneficiario, niveles, onGuardar, onCancelar
 									<SelectContent>
 										{niveles.map((nivel) => (
 											<SelectItem key={nivel.id} value={nivel.id}>
-												{nivel.nombre} - Bs {nivel.monto.toLocaleString()}
+												{nivel.nombre} - {moneda} {nivel.monto.toLocaleString()}
 											</SelectItem>
 										))}
 									</SelectContent>

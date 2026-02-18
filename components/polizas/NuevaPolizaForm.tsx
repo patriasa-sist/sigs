@@ -327,6 +327,7 @@ export function NuevaPolizaForm({ mode = "create", polizaId, initialData }: Nuev
 					<DatosEspecificos
 						ramo={formState.datos_basicos.ramo}
 						datos={formState.datos_especificos}
+						moneda={formState.datos_basicos.moneda}
 					regionales={regionales}
 						onChange={(datos) => {
 							setFormState((prev) => ({

@@ -21,6 +21,7 @@ import { BuscadorClientes } from "../BuscadorClientes";
 
 type Props = {
 	datos: DatosAccidentesPersonales | null;
+	moneda?: string;
 	regionales: Array<{ id: string; nombre: string }>;
 	onChange: (datos: DatosAccidentesPersonales) => void;
 	onSiguiente: () => void;
@@ -30,7 +31,7 @@ type Props = {
 // Sub-paso interno: 2.1 o 3
 type SubPaso = "niveles" | "principal";
 
-export function AccidentesPersonalesForm({ datos, regionales, onChange, onSiguiente, onAnterior }: Props) {
+export function AccidentesPersonalesForm({ datos, moneda = "Bs", regionales, onChange, onSiguiente, onAnterior }: Props) {
 	// Estado del sub-paso actual
 	const [subPaso, setSubPaso] = useState<SubPaso>(
 		datos?.niveles && datos.niveles.length > 0 ? "principal" : "niveles"
@@ -261,7 +262,7 @@ export function AccidentesPersonalesForm({ datos, regionales, onChange, onSiguie
 												<p className="font-medium text-gray-900">{nivel.nombre}</p>
 												{nivel.prima_nivel && (
 													<span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
-														Prima: Bs {nivel.prima_nivel.toLocaleString()}
+														Prima: {moneda} {nivel.prima_nivel.toLocaleString()}
 													</span>
 												)}
 											</div>
