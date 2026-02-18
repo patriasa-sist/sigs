@@ -409,8 +409,8 @@ export default function NuevoClientePage() {
 					celular: normalizedPartner.celular,
 					correo_electronico: normalizedPartner.correo_electronico,
 					profesion_oficio: normalizedPartner.profesion_oficio,
-					actividad_economica: normalizedPartner.actividad_economica,
-					lugar_trabajo: normalizedPartner.lugar_trabajo,
+					actividad_economica: normalizedPartner.actividad_economica || null,
+					lugar_trabajo: normalizedPartner.lugar_trabajo || null,
 				});
 
 				if (partnerError) { await rollbackClient(client.id); throw partnerError; }
@@ -542,8 +542,8 @@ export default function NuevoClientePage() {
 					celular: normalizedPartner.celular,
 					correo_electronico: normalizedPartner.correo_electronico,
 					profesion_oficio: normalizedPartner.profesion_oficio,
-					actividad_economica: normalizedPartner.actividad_economica,
-					lugar_trabajo: normalizedPartner.lugar_trabajo,
+					actividad_economica: normalizedPartner.actividad_economica || null,
+					lugar_trabajo: normalizedPartner.lugar_trabajo || null,
 				});
 
 				if (partnerError) { await rollbackClient(client.id); throw partnerError; }

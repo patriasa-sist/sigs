@@ -189,8 +189,8 @@ export interface ClientPartnerData {
   celular: string;
   correo_electronico: string;
   profesion_oficio: string;
-  actividad_economica: string;
-  lugar_trabajo: string;
+  actividad_economica?: string;
+  lugar_trabajo?: string;
 }
 
 export const clientPartnerSchema = z.object({
@@ -204,8 +204,8 @@ export const clientPartnerSchema = z.object({
   celular: phoneValidation,
   correo_electronico: emailValidation,
   profesion_oficio: z.string().min(1, 'Profesión u oficio es requerido'),
-  actividad_economica: z.string().min(1, 'Actividad económica es requerida'),
-  lugar_trabajo: z.string().min(1, 'Lugar de trabajo es requerido'),
+  actividad_economica: z.string().optional(),
+  lugar_trabajo: z.string().optional(),
 });
 
 // ============================================================================

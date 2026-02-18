@@ -705,7 +705,7 @@ function PartnerFields({ form, onFieldBlur }: { form: UseFormReturn<ClientPartne
 
 			<div>
 				<Label htmlFor="partner_actividad_economica">
-					Actividad Económica <span className="text-red-500">*</span>
+					Actividad Económica
 				</Label>
 				<Input id="partner_actividad_economica" {...register("actividad_economica")} onBlur={onFieldBlur} />
 				{errors.actividad_economica && (
@@ -715,7 +715,7 @@ function PartnerFields({ form, onFieldBlur }: { form: UseFormReturn<ClientPartne
 
 			<div>
 				<Label htmlFor="partner_lugar_trabajo">
-					Lugar de Trabajo <span className="text-red-500">*</span>
+					Lugar de Trabajo
 				</Label>
 				<Input id="partner_lugar_trabajo" {...register("lugar_trabajo")} onBlur={onFieldBlur} />
 				{errors.lugar_trabajo && <p className="text-sm text-red-500 mt-1">{errors.lugar_trabajo.message}</p>}
