@@ -3,6 +3,7 @@
 import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
 import { checkPermission } from "@/utils/auth/helpers";
+import { enviarEmailRechazoPoliza } from "@/utils/resend";
 
 /**
  * Obtiene todas las pólizas pendientes de validación
@@ -170,10 +171,19 @@ export async function rechazarPoliza(polizaId: string, motivo: string) {
 			return { success: false, error: "No tiene permisos para validar pólizas" };
 		}
 
-		// Verificar que la póliza exista y esté pendiente
+		// Verificar que la póliza exista, esté pendiente y traer datos para el email
 		const { data: poliza } = await supabase
 			.from("polizas")
-			.select("id, estado")
+			.select(`
+				id,
+				estado,
+				numero_poliza,
+				ramo,
+				responsable:profiles!responsable_id (
+					full_name,
+					email
+				)
+			`)
 			.eq("id", polizaId)
 			.single();
 
@@ -214,6 +224,31 @@ export async function rechazarPoliza(polizaId: string, motivo: string) {
 			descripcion: `Póliza rechazada por gerencia. Motivo: ${motivo.trim()}`,
 			campos_modificados: ["estado", "motivo_rechazo", "rechazado_por", "fecha_rechazo", "puede_editar_hasta"],
 		});
+
+		// Obtener nombre del que rechaza para el email
+		const { data: rejector } = await supabase
+			.from("profiles")
+			.select("full_name")
+			.eq("id", user.id)
+			.single();
+
+		// Enviar email de notificación al responsable (sin bloquear el flujo)
+		const responsable = poliza.responsable as unknown as { full_name: string; email: string } | null;
+		if (responsable?.email) {
+			enviarEmailRechazoPoliza({
+				destinatario: {
+					nombre: responsable.full_name,
+					email: responsable.email,
+				},
+				poliza: {
+					numero: poliza.numero_poliza,
+					ramo: poliza.ramo,
+				},
+				rechazadoPor: rejector?.full_name ?? "Gerencia",
+				motivo: motivo.trim(),
+				puedeEditarHasta,
+			}).catch((err) => console.error("Fallo al enviar email de rechazo:", err));
+		}
 
 		// Revalidar rutas
 		revalidatePath("/gerencia/validacion");
