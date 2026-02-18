@@ -13,6 +13,7 @@ import {
 	Layers,
 	Tag,
 	Package,
+	UserCircle,
 } from "lucide-react";
 
 const adminSections = [
@@ -105,6 +106,17 @@ const adminSections = [
 				icon: Package,
 				label: "Productos",
 				description: "Productos por aseguradora y ramo",
+			},
+		],
+	},
+	{
+		title: "Gestión Comercial",
+		items: [
+			{
+				href: "/admin/directores-cartera",
+				icon: UserCircle,
+				label: "Directores de Cartera",
+				description: "Gestionar directores asignables a clientes",
 			},
 		],
 	},
