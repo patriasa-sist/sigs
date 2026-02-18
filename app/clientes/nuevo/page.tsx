@@ -608,10 +608,12 @@ export default function NuevoClientePage() {
 		if (formData.legal_representatives && formData.legal_representatives.length > 0) {
 			const representatives = formData.legal_representatives.map((rep, index) => {
 				const normalizedRep = normalizeLegalRepresentativeData(rep);
+				const nombre = [normalizedRep.primer_nombre, normalizedRep.segundo_nombre]
+					.filter(Boolean)
+					.join(" ");
 				return {
 					juridic_client_id: client.id,
-					primer_nombre: normalizedRep.primer_nombre,
-					segundo_nombre: normalizedRep.segundo_nombre || null,
+					nombre,
 					primer_apellido: normalizedRep.primer_apellido,
 					segundo_apellido: normalizedRep.segundo_apellido || null,
 					tipo_documento: normalizedRep.tipo_documento,
