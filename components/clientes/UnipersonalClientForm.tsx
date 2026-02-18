@@ -216,6 +216,7 @@ export function UnipersonalClientForm({ form, partnerForm, onFieldBlur }: Uniper
 									value={field.value}
 									onValueChange={field.onChange}
 									error={errors.director_cartera_id?.message}
+								required
 								/>
 							)}
 						/>

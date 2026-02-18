@@ -19,6 +19,7 @@ type DirectorCarteraDropdownProps = {
 	placeholder?: string;
 	disabled?: boolean;
 	className?: string;
+	required?: boolean;
 };
 
 export function DirectorCarteraDropdown({
@@ -26,10 +27,12 @@ export function DirectorCarteraDropdown({
 	onValueChange,
 	error,
 	label = "Director de cartera",
-	placeholder = "Sin director asignado",
+	placeholder,
 	disabled = false,
 	className,
+	required = false,
 }: DirectorCarteraDropdownProps) {
+	const resolvedPlaceholder = placeholder ?? (required ? "Seleccionar director" : "Sin director asignado");
 	const [directores, setDirectores] = useState<DirectorCartera[]>([]);
 	const [isLoading, setIsLoading] = useState(true);
 	const [loadError, setLoadError] = useState<string | null>(null);
@@ -69,7 +72,12 @@ export function DirectorCarteraDropdown({
 
 	return (
 		<div className={`space-y-2 ${className || ""}`}>
-			{label && <Label>{label}</Label>}
+			{label && (
+				<Label>
+					{label}
+					{required && <span className="text-red-500 ml-0.5">*</span>}
+				</Label>
+			)}
 			<Select
 				value={selectValue}
 				onValueChange={(v) => onValueChange(v === "none" ? null : v)}
@@ -78,12 +86,12 @@ export function DirectorCarteraDropdown({
 				<SelectTrigger className={error ? "border-red-500" : ""}>
 					<SelectValue
 						placeholder={
-							isLoading ? "Cargando..." : loadError ? "Error al cargar" : placeholder
+							isLoading ? "Cargando..." : loadError ? "Error al cargar" : resolvedPlaceholder
 						}
 					/>
 				</SelectTrigger>
 				<SelectContent>
-					<SelectItem value="none">{placeholder}</SelectItem>
+					{!required && <SelectItem value="none">{resolvedPlaceholder}</SelectItem>}
 					{directores.map((d) => (
 						<SelectItem key={d.id} value={d.id}>
 							{d.nombre}{d.apellidos ? ` ${d.apellidos}` : ""}

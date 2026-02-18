@@ -649,6 +649,16 @@ export default function NuevoClientePage() {
 				await submitNaturalClient();
 				toast.success("Cliente natural creado exitosamente");
 			} else if (clientType === "unipersonal") {
+				// Pre-populate owner fields (auto-filled from personal data, no visible inputs)
+				// so Zod validation does not reject them as empty.
+				const personal = unipersonalForm.getValues();
+				const nombrePropietario = [personal.primer_nombre, personal.segundo_nombre].filter(Boolean).join(" ");
+				const apellidoPropietario = [personal.primer_apellido, personal.segundo_apellido].filter(Boolean).join(" ");
+				unipersonalForm.setValue("nombre_propietario", nombrePropietario);
+				unipersonalForm.setValue("apellido_propietario", apellidoPropietario);
+				unipersonalForm.setValue("documento_propietario", (personal.numero_documento ?? "").replace(/\D/g, ""));
+				unipersonalForm.setValue("nacionalidad_propietario", personal.nacionalidad ?? "");
+
 				const isValid = await unipersonalForm.trigger();
 				if (!isValid) {
 					const fields = getErrorFieldLabels(unipersonalForm.formState.errors);
@@ -680,8 +690,35 @@ export default function NuevoClientePage() {
 			router.push("/clientes");
 		} catch (error: unknown) {
 			console.error("Error saving client:", error);
-			const errorMessage = error instanceof Error ? error.message : "Error al guardar el cliente";
-			toast.error(errorMessage);
+			let errorMessage = "Error al guardar el cliente";
+			let errorDetail: string | undefined;
+			if (error instanceof Error) {
+				errorMessage = error.message;
+			} else if (error && typeof error === "object" && "message" in error) {
+				// Supabase PostgrestError: has message, details, hint, code
+				const pgError = error as Record<string, unknown>;
+				const code = String(pgError.code ?? "");
+				if (code === "23505") {
+					// Unique constraint violation — determine which field
+					const constraint = String(pgError.message ?? "");
+					if (constraint.includes("documento")) {
+						errorMessage = "Ya existe un cliente con ese número de documento";
+					} else if (constraint.includes("email")) {
+						errorMessage = "Ya existe un cliente con ese correo electrónico";
+					} else if (constraint.includes("nit")) {
+						errorMessage = "Ya existe una empresa con ese NIT";
+					} else {
+						errorMessage = "Ya existe un registro con esos datos";
+					}
+				} else {
+					errorMessage = String(pgError.message);
+					const detail = pgError.details;
+					const hint = pgError.hint;
+					if (detail) errorDetail = String(detail);
+					else if (hint) errorDetail = String(hint);
+				}
+			}
+			toast.error(errorMessage, { description: errorDetail });
 		} finally {
 			setIsSaving(false);
 		}

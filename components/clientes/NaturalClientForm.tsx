@@ -201,6 +201,7 @@ export function NaturalClientForm({ form, partnerForm, onFieldBlur }: NaturalCli
 									value={field.value}
 									onValueChange={field.onChange}
 									error={errors.director_cartera_id?.message}
+								required
 								/>
 							)}
 						/>

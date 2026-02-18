@@ -153,6 +153,7 @@ export function JuridicClientForm({ form, onFieldBlur }: JuridicClientFormProps)
 									value={field.value}
 									onValueChange={field.onChange}
 									error={errors.director_cartera_id?.message}
+								required
 								/>
 							)}
 						/>

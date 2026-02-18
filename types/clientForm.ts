@@ -163,7 +163,7 @@ export interface NaturalClientFormData
   extends NaturalClientPersonalData,
     NaturalClientContactData,
     NaturalClientOtherData {
-  director_cartera_id?: string | null;
+  director_cartera_id: string;
   documentos?: ClienteDocumentoFormState[];
 }
 
@@ -171,7 +171,7 @@ export const naturalClientFormSchema = naturalClientPersonalSchema
   .merge(naturalClientContactSchema)
   .merge(naturalClientOtherSchema)
   .extend({
-    director_cartera_id: z.string().uuid().nullable().optional(),
+    director_cartera_id: z.string('Director de cartera es requerido').uuid('Director de cartera es requerido'),
   });
 
 // ============================================================================
@@ -281,7 +281,7 @@ export interface UnipersonalClientFormData
     UnipersonalCommercialData, // Use required fields from commercial
     UnipersonalOwnerData,
     UnipersonalRepresentativeData {
-  director_cartera_id?: string | null;
+  director_cartera_id: string;
   documentos?: ClienteDocumentoFormState[];
 }
 
@@ -292,7 +292,7 @@ export const unipersonalClientFormSchema = naturalClientPersonalSchema
   .merge(unipersonalOwnerSchema) // Owner fields are required (auto-filled from personal data)
   .merge(unipersonalRepresentativeSchema)
   .extend({
-    director_cartera_id: z.string().uuid().nullable().optional(),
+    director_cartera_id: z.string('Director de cartera es requerido').uuid('Director de cartera es requerido'),
   });
 
 // ============================================================================
@@ -378,7 +378,7 @@ export const legalRepresentativeSchema = z.object({
 export interface JuridicClientFormData
   extends JuridicClientCompanyData,
     JuridicClientContactData {
-  director_cartera_id?: string | null;
+  director_cartera_id: string;
   legal_representatives: LegalRepresentativeData[];
   documentos?: ClienteDocumentoFormState[];
 }
@@ -386,7 +386,7 @@ export interface JuridicClientFormData
 export const juridicClientFormSchema = juridicClientCompanySchema
   .merge(juridicClientContactSchema)
   .extend({
-    director_cartera_id: z.string().uuid().nullable().optional(),
+    director_cartera_id: z.string('Director de cartera es requerido').uuid('Director de cartera es requerido'),
     legal_representatives: z
       .array(legalRepresentativeSchema.omit({ juridic_client_id: true }))
       .min(1, 'Al menos un representante legal es requerido'),
