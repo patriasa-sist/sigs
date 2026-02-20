@@ -2,7 +2,7 @@
 
 import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
-import { checkPermission } from "@/utils/auth/helpers";
+import { checkPermission, getDataScopeFilter } from "@/utils/auth/helpers";
 import { enviarEmailRechazoPoliza } from "@/utils/resend";
 
 /**
@@ -26,8 +26,10 @@ export async function obtenerPolizasPendientes() {
 			return { success: false, error: "No tiene permisos para validar pólizas" };
 		}
 
+		const { needsScoping, teamMemberIds } = await getDataScopeFilter("polizas");
+
 		// Obtener pólizas pendientes con joins
-		const { data: polizas, error } = await supabase
+		let query = supabase
 			.from("polizas")
 			.select(`
 				*,
@@ -63,6 +65,12 @@ export async function obtenerPolizasPendientes() {
 			`)
 			.eq("estado", "pendiente")
 			.order("created_at", { ascending: false });
+
+		if (needsScoping && teamMemberIds.length > 0) {
+			query = query.in("responsable_id", teamMemberIds);
+		}
+
+		const { data: polizas, error } = await query;
 
 		if (error) {
 			console.error("Error obteniendo pólizas pendientes:", error);
@@ -100,15 +108,21 @@ export async function validarPoliza(polizaId: string) {
 			return { success: false, error: "No tiene permisos para validar pólizas" };
 		}
 
+		const { needsScoping, teamMemberIds } = await getDataScopeFilter("polizas");
+
 		// Verificar que la póliza exista y esté pendiente
 		const { data: poliza } = await supabase
 			.from("polizas")
-			.select("id, estado")
+			.select("id, estado, responsable_id")
 			.eq("id", polizaId)
 			.single();
 
 		if (!poliza) {
 			return { success: false, error: "Póliza no encontrada" };
+		}
+
+		if (needsScoping && (!poliza.responsable_id || !teamMemberIds.includes(poliza.responsable_id))) {
+			return { success: false, error: "No tiene permisos para validar esta póliza" };
 		}
 
 		if (poliza.estado !== "pendiente") {
@@ -171,6 +185,8 @@ export async function rechazarPoliza(polizaId: string, motivo: string) {
 			return { success: false, error: "No tiene permisos para validar pólizas" };
 		}
 
+		const { needsScoping, teamMemberIds } = await getDataScopeFilter("polizas");
+
 		// Verificar que la póliza exista, esté pendiente y traer datos para el email
 		const { data: poliza } = await supabase
 			.from("polizas")
@@ -179,6 +195,7 @@ export async function rechazarPoliza(polizaId: string, motivo: string) {
 				estado,
 				numero_poliza,
 				ramo,
+				responsable_id,
 				responsable:profiles!responsable_id (
 					full_name,
 					email
@@ -189,6 +206,10 @@ export async function rechazarPoliza(polizaId: string, motivo: string) {
 
 		if (!poliza) {
 			return { success: false, error: "Póliza no encontrada" };
+		}
+
+		if (needsScoping && (!poliza.responsable_id || !teamMemberIds.includes(poliza.responsable_id))) {
+			return { success: false, error: "No tiene permisos para rechazar esta póliza" };
 		}
 
 		if (poliza.estado !== "pendiente") {
