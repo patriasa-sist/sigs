@@ -61,15 +61,25 @@ export function ExecutiveDropdown({
 					userRole = profileData?.role || "";
 				}
 
-				// Intentar usar la función RPC primero, si no existe, usar query directo
+				// Intentar usar la función RPC primero, fallback a query directo si falla
 				const result = await supabase.rpc("get_usuarios_comerciales").then(
-					(result) => result,
-					// Fallback a query directo si la función no existe
+					(result) => {
+						// Si el RPC falla (ej: permisos), usar query directo
+						if (result.error) {
+							return supabase
+								.from("profiles")
+								.select("id, full_name, email, role")
+								.in("role", ["comercial", "admin", "agente", "usuario"])
+								.order("full_name");
+						}
+						return result;
+					},
+					// Fallback si la función no existe
 					() =>
 						supabase
 							.from("profiles")
 							.select("id, full_name, email, role")
-							.in("role", ["comercial", "admin", "usuario"])
+							.in("role", ["comercial", "admin", "agente", "usuario"])
 							.order("full_name")
 				);
 

@@ -21,7 +21,7 @@ type Props = {
 type Usuario = {
 	id: string;
 	full_name: string;
-	email: string;
+	email?: string;
 	role: string;
 };
 
@@ -94,15 +94,25 @@ export function DatosBasicos({ datos, onChange, onSiguiente, onAnterior }: Props
 				supabase.from("companias_aseguradoras").select("*").eq("activo", true).order("nombre"),
 				supabase.from("regionales").select("*").eq("activo", true).order("nombre"),
 				supabase.from("categorias").select("*").eq("activo", true).order("nombre"),
-				// Intentar usar la función RPC primero, si no existe, usar query directo
+				// Intentar usar la función RPC primero, fallback a query directo si falla
 				supabase.rpc("get_usuarios_comerciales").then(
-					(result) => result,
-					// Fallback a query directo si la función no existe
+					(result) => {
+						// Si el RPC falla (ej: permisos), usar query directo
+						if (result.error) {
+							return supabase
+								.from("profiles")
+								.select("id, full_name, role")
+								.in("role", ["comercial", "admin", "agente", "usuario"])
+								.order("full_name");
+						}
+						return result;
+					},
+					// Fallback si la función no existe
 					() =>
 						supabase
 							.from("profiles")
 							.select("id, full_name, role")
-							.in("role", ["comercial", "admin"])
+							.in("role", ["comercial", "admin", "agente", "usuario"])
 							.order("full_name")
 				),
 				supabase
