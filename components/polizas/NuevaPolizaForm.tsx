@@ -26,6 +26,65 @@ import { ModalidadPago } from "./steps/ModalidadPago";
 import { CargarDocumentos } from "./steps/CargarDocumentos";
 import { Resumen } from "./steps/Resumen";
 
+/**
+ * Parsea el mensaje de error devuelto por el server action y retorna título
+ * y descripción adecuados para el toast, similar al patrón usado en clientes.
+ */
+function parsePolizaError(
+	error: string | undefined,
+	action: "guardar" | "editar"
+): { title: string; description?: string } {
+	const actionLabel = action === "editar" ? "actualizar" : "guardar";
+	if (!error) {
+		return { title: `Error al ${actionLabel} la póliza`, description: "Por favor intente nuevamente." };
+	}
+
+	// Número de póliza duplicado
+	if (error.includes("número de póliza") || error.includes("numero_poliza")) {
+		return {
+			title: "Número de póliza duplicado",
+			description: "Ya existe una póliza registrada con ese número. Verifique el número ingresado.",
+		};
+	}
+
+	// Referencia inválida (FK)
+	if (error.includes("referencia inválida")) {
+		return {
+			title: "Referencia inválida",
+			description: error,
+		};
+	}
+
+	// Sin permisos
+	if (error.includes("sin permisos") || error.includes("Sin permisos") || error.includes("No tiene permisos") || error.includes("No autenticado")) {
+		return {
+			title: "Sin permisos",
+			description: error,
+		};
+	}
+
+	// Error en vehículos
+	if (error.includes("vehículos")) {
+		return { title: "Error al guardar vehículos", description: error };
+	}
+
+	// Error en cuotas / pagos
+	if (error.includes("cuota") || error.includes("pago")) {
+		return { title: "Error al guardar pagos", description: error };
+	}
+
+	// Error en beneficiarios
+	if (error.includes("beneficiario")) {
+		return { title: "Error al guardar beneficiarios", description: error };
+	}
+
+	// Error genérico con detalle
+	return {
+		title: `Error al ${actionLabel} la póliza`,
+		description: error,
+	};
+}
+
 interface NuevaPolizaFormProps {
 	mode?: "create" | "edit";
 	polizaId?: string;
@@ -260,9 +319,8 @@ export function NuevaPolizaForm({ mode = "create", polizaId, initialData }: Nuev
 					});
 					router.push(`/polizas/${polizaId}`);
 				} else {
-					toast.error("Error al actualizar la póliza", {
-						description: resultado.error
-					});
+					const { title, description } = parsePolizaError(resultado.error, "editar");
+					toast.error(title, { description });
 				}
 			} else {
 				// Modo creación - usar guardarPoliza
@@ -274,15 +332,18 @@ export function NuevaPolizaForm({ mode = "create", polizaId, initialData }: Nuev
 					});
 					router.push("/polizas");
 				} else {
-					toast.error("Error al guardar la póliza", {
-						description: resultado.error
-					});
+					const { title, description } = parsePolizaError(resultado.error, "guardar");
+					toast.error(title, { description });
 				}
 			}
 		} catch (error) {
 			console.error("Error guardando póliza:", error);
-			toast.error("Error al guardar la póliza", {
-				description: "Por favor intente nuevamente."
+			let errorDescription = "Por favor intente nuevamente.";
+			if (error instanceof Error) {
+				errorDescription = error.message;
+			}
+			toast.error("Error inesperado al guardar la póliza", {
+				description: errorDescription,
 			});
 		} finally {
 			setGuardando(false);

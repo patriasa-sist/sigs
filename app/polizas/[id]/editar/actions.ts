@@ -25,6 +25,38 @@ import type {
 } from "@/types/poliza";
 import type { ActionResult } from "@/types/policyPermission";
 
+/**
+ * Mapea errores de Supabase/PostgreSQL a mensajes legibles para el usuario.
+ */
+function mapSupabaseError(
+	error: { code?: string; message?: string; details?: string; hint?: string } | null | undefined,
+	context: string
+): string {
+	if (!error) return context;
+
+	const code = error.code ?? "";
+	const detail = error.details || error.hint || "";
+	const msg = error.message || "";
+
+	switch (code) {
+		case "23505": {
+			const target = msg + detail;
+			if (target.includes("numero_poliza")) {
+				return "Ya existe una póliza con ese número de póliza. Verifique el número ingresado.";
+			}
+			return `${context}: dato duplicado${detail ? ` — ${detail}` : ""}`;
+		}
+		case "23503":
+			return `${context}: referencia inválida${detail ? ` — ${detail}` : ""}. Verifique compañía, regional, responsable o producto.`;
+		case "23514":
+			return `${context}: valor no permitido${detail ? ` — ${detail}` : ""}`;
+		case "42501":
+			return `${context}: sin permisos para realizar esta operación`;
+		default:
+			return `${context}: ${msg || "error desconocido"}${detail ? ` (${detail})` : ""}`;
+	}
+}
+
 // ============================================
 // HELPER FUNCTIONS
 // ============================================
@@ -478,7 +510,7 @@ export async function actualizarPoliza(
 
 		if (updateError) {
 			console.error("[actualizarPoliza] Update error:", updateError);
-			return { success: false, error: "Error al actualizar la póliza" };
+			return { success: false, error: mapSupabaseError(updateError, "Error al actualizar la póliza") };
 		}
 
 		// 2. Update payments - usar UPDATE para cuotas existentes (evita problemas de constraint único)

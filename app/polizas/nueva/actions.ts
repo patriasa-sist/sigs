@@ -6,6 +6,39 @@ import { getDataScopeFilter } from "@/utils/auth/helpers";
 import type { PolizaFormState } from "@/types/poliza";
 
 /**
+ * Mapea errores de Supabase/PostgreSQL a mensajes legibles para el usuario.
+ */
+function mapSupabaseError(
+	error: { code?: string; message?: string; details?: string; hint?: string } | null | undefined,
+	context: string
+): string {
+	if (!error) return context;
+
+	const code = error.code ?? "";
+	const detail = error.details || error.hint || "";
+	const msg = error.message || "";
+
+	switch (code) {
+		case "23505": {
+			// Unique constraint violation
+			const target = msg + detail;
+			if (target.includes("numero_poliza")) {
+				return "Ya existe una póliza con ese número de póliza. Verifique el número ingresado.";
+			}
+			return `${context}: dato duplicado${detail ? ` — ${detail}` : ""}`;
+		}
+		case "23503":
+			return `${context}: referencia inválida${detail ? ` — ${detail}` : ""}. Verifique compañía, regional, responsable o producto.`;
+		case "23514":
+			return `${context}: valor no permitido${detail ? ` — ${detail}` : ""}`;
+		case "42501":
+			return `${context}: sin permisos para realizar esta operación`;
+		default:
+			return `${context}: ${msg || "error desconocido"}${detail ? ` (${detail})` : ""}`;
+	}
+}
+
+/**
  * Sanitiza un nombre de archivo para que sea compatible con Supabase Storage
  * - Reemplaza espacios por guiones bajos
  * - Elimina o reemplaza caracteres especiales
@@ -99,7 +132,7 @@ export async function guardarPoliza(formState: PolizaFormState) {
 
 		if (errorPoliza || !poliza) {
 			console.error("Error insertando póliza:", errorPoliza);
-			return { success: false, error: "Error al guardar la póliza" };
+			return { success: false, error: mapSupabaseError(errorPoliza, "Error al guardar la póliza") };
 		}
 
 		// 3. Insertar cuotas de pago
@@ -115,7 +148,7 @@ export async function guardarPoliza(formState: PolizaFormState) {
 
 			if (errorPago) {
 				console.error("Error insertando pago contado:", errorPago);
-				return { success: false, error: "Error al guardar el pago: " + errorPago.message };
+				return { success: false, error: mapSupabaseError(errorPago, "Error al guardar el pago") };
 			}
 		} else {
 			// Insertar cuota inicial si existe
@@ -169,7 +202,7 @@ export async function guardarPoliza(formState: PolizaFormState) {
 
 			if (errorCuotas) {
 				console.error("Error insertando cuotas:", errorCuotas);
-				return { success: false, error: "Error al guardar las cuotas de pago: " + errorCuotas.message };
+				return { success: false, error: mapSupabaseError(errorCuotas, "Error al guardar las cuotas de pago") };
 			}
 		}
 
@@ -197,6 +230,7 @@ export async function guardarPoliza(formState: PolizaFormState) {
 
 			if (errorVehiculos) {
 				console.error("Error insertando vehículos:", errorVehiculos);
+				return { success: false, error: mapSupabaseError(errorVehiculos, "Error al guardar los vehículos") };
 			}
 		}
 
@@ -221,6 +255,7 @@ export async function guardarPoliza(formState: PolizaFormState) {
 
 				if (errorBeneficiarios) {
 					console.error("Error insertando beneficiarios de salud:", errorBeneficiarios);
+					return { success: false, error: mapSupabaseError(errorBeneficiarios, "Error al guardar los beneficiarios de salud") };
 				}
 			}
 		}
