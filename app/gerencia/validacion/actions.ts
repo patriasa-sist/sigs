@@ -6,6 +6,35 @@ import { checkPermission, getDataScopeFilter } from "@/utils/auth/helpers";
 import { enviarEmailRechazoPoliza } from "@/utils/resend";
 
 /**
+ * Verifica si un usuario es líder de equipo para un responsable dado.
+ * Retorna true si el usuario tiene rol_equipo='lider' en algún equipo
+ * que también contenga al responsable_id.
+ */
+async function checkTeamLeaderForPolicy(
+	supabase: Awaited<ReturnType<typeof createClient>>,
+	userId: string,
+	responsableId: string
+): Promise<boolean> {
+	const { data: leaderTeams } = await supabase
+		.from("equipo_miembros")
+		.select("equipo_id")
+		.eq("user_id", userId)
+		.eq("rol_equipo", "lider");
+
+	if (!leaderTeams || leaderTeams.length === 0) return false;
+
+	const teamIds = leaderTeams.map((t: { equipo_id: string }) => t.equipo_id);
+
+	const { count } = await supabase
+		.from("equipo_miembros")
+		.select("*", { count: "exact", head: true })
+		.eq("user_id", responsableId)
+		.in("equipo_id", teamIds);
+
+	return (count ?? 0) > 0;
+}
+
+/**
  * Obtiene todas las pólizas pendientes de validación
  */
 export async function obtenerPolizasPendientes() {
@@ -104,9 +133,6 @@ export async function validarPoliza(polizaId: string) {
 		}
 
 		const { allowed } = await checkPermission("polizas.validar");
-		if (!allowed) {
-			return { success: false, error: "No tiene permisos para validar pólizas" };
-		}
 
 		const { needsScoping, teamMemberIds } = await getDataScopeFilter("polizas");
 
@@ -121,8 +147,21 @@ export async function validarPoliza(polizaId: string) {
 			return { success: false, error: "Póliza no encontrada" };
 		}
 
+		// Si no tiene permiso JWT, verificar si es líder de equipo para esta póliza
+		if (!allowed) {
+			const esLider = poliza.responsable_id
+				? await checkTeamLeaderForPolicy(supabase, user.id, poliza.responsable_id)
+				: false;
+			if (!esLider) {
+				return { success: false, error: "No tiene permisos para validar pólizas" };
+			}
+		}
+
 		if (needsScoping && (!poliza.responsable_id || !teamMemberIds.includes(poliza.responsable_id))) {
-			return { success: false, error: "No tiene permisos para validar esta póliza" };
+			// Allow team leaders even when needsScoping - they already passed the esLider check above
+			if (allowed) {
+				return { success: false, error: "No tiene permisos para validar esta póliza" };
+			}
 		}
 
 		if (poliza.estado !== "pendiente") {
@@ -181,9 +220,6 @@ export async function rechazarPoliza(polizaId: string, motivo: string) {
 		}
 
 		const { allowed } = await checkPermission("polizas.validar");
-		if (!allowed) {
-			return { success: false, error: "No tiene permisos para validar pólizas" };
-		}
 
 		const { needsScoping, teamMemberIds } = await getDataScopeFilter("polizas");
 
@@ -208,8 +244,20 @@ export async function rechazarPoliza(polizaId: string, motivo: string) {
 			return { success: false, error: "Póliza no encontrada" };
 		}
 
+		// Si no tiene permiso JWT, verificar si es líder de equipo para esta póliza
+		if (!allowed) {
+			const esLider = poliza.responsable_id
+				? await checkTeamLeaderForPolicy(supabase, user.id, poliza.responsable_id)
+				: false;
+			if (!esLider) {
+				return { success: false, error: "No tiene permisos para rechazar pólizas" };
+			}
+		}
+
 		if (needsScoping && (!poliza.responsable_id || !teamMemberIds.includes(poliza.responsable_id))) {
-			return { success: false, error: "No tiene permisos para rechazar esta póliza" };
+			if (allowed) {
+				return { success: false, error: "No tiene permisos para rechazar esta póliza" };
+			}
 		}
 
 		if (poliza.estado !== "pendiente") {

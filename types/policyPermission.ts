@@ -59,6 +59,7 @@ export interface PolicyPermissionCheckResult {
 	canEdit: boolean;
 	reason: string;
 	isAdmin: boolean;
+	isTeamLeader?: boolean;
 	permission?: {
 		id: string;
 		expires_at: string | null;

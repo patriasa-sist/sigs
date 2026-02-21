@@ -40,6 +40,7 @@ export default function PolizaDetallePage() {
 	// Edit permission state
 	const [canEdit, setCanEdit] = useState(false);
 	const [isAdmin, setIsAdmin] = useState(false);
+	const [isTeamLeader, setIsTeamLeader] = useState(false);
 	const [showPermissionsModal, setShowPermissionsModal] = useState(false);
 	// Rejection modal state
 	const [showRechazoModal, setShowRechazoModal] = useState(false);
@@ -60,6 +61,7 @@ export default function PolizaDetallePage() {
 			if (permResult.success) {
 				setCanEdit(permResult.data.canEdit);
 				setIsAdmin(permResult.data.isAdmin);
+				setIsTeamLeader(permResult.data.isTeamLeader ?? false);
 			}
 		} else {
 			setError(resultado.error || "Error al cargar la póliza");
@@ -95,8 +97,8 @@ export default function PolizaDetallePage() {
 		return labels[estado as keyof typeof labels] || estado;
 	};
 
-	// Verificar si el usuario puede validar (admin o usuario con póliza pendiente)
-	const puedeValidar = (userRole === "admin" || userRole === "usuario") && poliza?.estado === "pendiente";
+	// Verificar si el usuario puede validar (admin, usuario o líder de equipo con póliza pendiente)
+	const puedeValidar = (userRole === "admin" || userRole === "usuario" || isTeamLeader) && poliza?.estado === "pendiente";
 
 	// Manejar validación
 	const handleValidar = async () => {
@@ -216,8 +218,8 @@ export default function PolizaDetallePage() {
 							</Button>
 						)}
 
-						{/* Permissions button - admin only */}
-						{isAdmin && (
+						{/* Permissions button - admin or team leader */}
+						{(isAdmin || isTeamLeader) && (
 							<Button
 								variant="ghost"
 								size="sm"

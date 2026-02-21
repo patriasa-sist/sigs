@@ -26,6 +26,37 @@ import type {
 // ============================================
 
 /**
+ * Checks if a user is a team leader for a policy's responsable.
+ * Returns true if the user has rol_equipo='lider' in any team
+ * that also contains the policy's responsable_id.
+ */
+async function isUserTeamLeaderForResponsable(
+	supabase: Awaited<ReturnType<typeof import("@/utils/supabase/server").createClient>>,
+	userId: string,
+	responsableId: string
+): Promise<boolean> {
+	// Get all teams where current user is a leader
+	const { data: leaderTeams } = await supabase
+		.from("equipo_miembros")
+		.select("equipo_id")
+		.eq("user_id", userId)
+		.eq("rol_equipo", "lider");
+
+	if (!leaderTeams || leaderTeams.length === 0) return false;
+
+	const teamIds = leaderTeams.map((t: { equipo_id: string }) => t.equipo_id);
+
+	// Check if responsable belongs to any of those teams
+	const { count } = await supabase
+		.from("equipo_miembros")
+		.select("*", { count: "exact", head: true })
+		.eq("user_id", responsableId)
+		.in("equipo_id", teamIds);
+
+	return (count ?? 0) > 0;
+}
+
+/**
  * Get authenticated user with profile
  */
 async function getAuthenticatedUserWithRole() {
@@ -54,22 +85,40 @@ async function getAuthenticatedUserWithRole() {
 }
 
 /**
- * Verify the current user is an admin
+ * Verify the current user is an admin OR a team leader for the given policy.
+ * Returns isTeamLeader flag to allow downstream scope filtering.
  */
-async function requireAdmin() {
+async function requireAdminOrTeamLeaderForPolicy(polizaId: string) {
 	const { supabase, user, profile } = await getAuthenticatedUserWithRole();
 
-	if (profile.role !== "admin") {
-		const { data: allowed } = await supabase.rpc("user_has_permission", {
-			p_user_id: profile.id,
-			p_permission_id: "admin.permisos",
-		});
-		if (!allowed) {
-			throw new Error("Solo administradores pueden realizar esta acción");
+	if (profile.role === "admin") {
+		return { supabase, user, profile, isTeamLeader: false };
+	}
+
+	// Check admin.permisos permission (non-admin users with explicit admin permissions)
+	const { data: allowed } = await supabase.rpc("user_has_permission", {
+		p_user_id: profile.id,
+		p_permission_id: "admin.permisos",
+	});
+	if (allowed) {
+		return { supabase, user, profile, isTeamLeader: false };
+	}
+
+	// Check if team leader for this policy
+	const { data: poliza } = await supabase
+		.from("polizas")
+		.select("responsable_id")
+		.eq("id", polizaId)
+		.single();
+
+	if (poliza?.responsable_id) {
+		const isLeader = await isUserTeamLeaderForResponsable(supabase, user.id, poliza.responsable_id);
+		if (isLeader) {
+			return { supabase, user, profile, isTeamLeader: true };
 		}
 	}
 
-	return { supabase, user, profile };
+	throw new Error("Sin permisos para gestionar permisos de esta póliza");
 }
 
 // ============================================
@@ -96,25 +145,26 @@ export async function checkPolicyEditPermission(
 					canEdit: true,
 					reason: "Administrador",
 					isAdmin: true,
+					isTeamLeader: false,
 				},
 			};
 		}
 
-		// Check if user is the creator of a rejected policy within edit window
-		const { data: polizaRechazada } = await supabase
+		// Fetch policy data for multiple checks (rejection window + team leader)
+		const { data: polizaData } = await supabase
 			.from("polizas")
-			.select("created_by, estado, puede_editar_hasta")
+			.select("created_by, estado, puede_editar_hasta, responsable_id")
 			.eq("id", polizaId)
 			.single();
 
+		// Check if user is the creator of a rejected policy within edit window
 		if (
-			polizaRechazada?.estado === "rechazada" &&
-			polizaRechazada.created_by === user.id &&
-			polizaRechazada.puede_editar_hasta &&
-			new Date(polizaRechazada.puede_editar_hasta) > new Date()
+			polizaData?.estado === "rechazada" &&
+			polizaData.created_by === user.id &&
+			polizaData.puede_editar_hasta &&
+			new Date(polizaData.puede_editar_hasta) > new Date()
 		) {
-			// Calculate remaining time
-			const expiresAt = new Date(polizaRechazada.puede_editar_hasta);
+			const expiresAt = new Date(polizaData.puede_editar_hasta);
 			const now = new Date();
 			const hoursRemaining = Math.ceil((expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60));
 
@@ -124,23 +174,45 @@ export async function checkPolicyEditPermission(
 					canEdit: true,
 					reason: `Ventana de edicion por rechazo (${hoursRemaining}h restantes)`,
 					isAdmin: false,
+					isTeamLeader: false,
 					permission: {
 						id: "rejection-window",
-						expires_at: polizaRechazada.puede_editar_hasta,
+						expires_at: polizaData.puede_editar_hasta,
 						granted_by_name: "Sistema (Rechazo)",
 					},
 				},
 			};
 		}
 
-		// Only comercial role can have specific permissions
-		if (profile.role !== "comercial") {
+		// Check if user is a team leader for this policy
+		if (polizaData?.responsable_id) {
+			const teamLeader = await isUserTeamLeaderForResponsable(
+				supabase,
+				user.id,
+				polizaData.responsable_id
+			);
+			if (teamLeader) {
+				return {
+					success: true,
+					data: {
+						canEdit: true,
+						reason: "Líder de equipo",
+						isAdmin: false,
+						isTeamLeader: true,
+					},
+				};
+			}
+		}
+
+		// Only comercial and agente roles can have explicit per-policy permissions
+		if (profile.role !== "comercial" && profile.role !== "agente") {
 			return {
 				success: true,
 				data: {
 					canEdit: false,
 					reason: "Rol no autorizado para editar pólizas",
 					isAdmin: false,
+					isTeamLeader: false,
 				},
 			};
 		}
@@ -168,6 +240,7 @@ export async function checkPolicyEditPermission(
 					canEdit: false,
 					reason: "Sin permiso asignado para esta póliza",
 					isAdmin: false,
+					isTeamLeader: false,
 				},
 			};
 		}
@@ -180,6 +253,7 @@ export async function checkPolicyEditPermission(
 					canEdit: false,
 					reason: "Permiso expirado",
 					isAdmin: false,
+					isTeamLeader: false,
 				},
 			};
 		}
@@ -194,6 +268,7 @@ export async function checkPolicyEditPermission(
 				canEdit: true,
 				reason: "Permiso activo",
 				isAdmin: false,
+				isTeamLeader: false,
 				permission: {
 					id: permission.id,
 					expires_at: permission.expires_at,
@@ -211,11 +286,13 @@ export async function checkPolicyEditPermission(
 }
 
 // ============================================
-// GRANT PERMISSION (Admin only)
+// GRANT PERMISSION (Admin or Team Leader)
 // ============================================
 
 /**
- * Grant edit permission to a comercial user for a specific policy
+ * Grant edit permission to a comercial user for a specific policy.
+ * Admins can grant to any comercial user.
+ * Team leaders can only grant to comercial members of their team.
  *
  * @param input - Permission grant input (poliza_id, user_id, optional expires_at and notes)
  * @returns Result with the new permission ID
@@ -224,7 +301,7 @@ export async function grantPolicyEditPermission(
 	input: GrantPolicyPermissionInput
 ): Promise<ActionResult<{ id: string }>> {
 	try {
-		const { supabase, user } = await requireAdmin();
+		const { supabase, user, isTeamLeader } = await requireAdminOrTeamLeaderForPolicy(input.poliza_id);
 
 		// Verify target user exists and is comercial
 		const { data: targetProfile, error: targetError } = await supabase
@@ -237,11 +314,35 @@ export async function grantPolicyEditPermission(
 			return { success: false, error: "Usuario no encontrado" };
 		}
 
-		if (targetProfile.role !== "comercial") {
+		if (targetProfile.role !== "comercial" && targetProfile.role !== "agente") {
 			return {
 				success: false,
-				error: "Solo se pueden otorgar permisos a usuarios con rol comercial",
+				error: "Solo se pueden otorgar permisos a usuarios con rol comercial o agente",
 			};
+		}
+
+		// Team leaders can only grant permissions to members of their team
+		if (isTeamLeader) {
+			const { data: leaderTeams } = await supabase
+				.from("equipo_miembros")
+				.select("equipo_id")
+				.eq("user_id", user.id)
+				.eq("rol_equipo", "lider");
+
+			const teamIds = (leaderTeams ?? []).map((t: { equipo_id: string }) => t.equipo_id);
+
+			const { count } = await supabase
+				.from("equipo_miembros")
+				.select("*", { count: "exact", head: true })
+				.eq("user_id", input.user_id)
+				.in("equipo_id", teamIds);
+
+			if ((count ?? 0) === 0) {
+				return {
+					success: false,
+					error: "Solo puedes otorgar permisos a miembros de tu equipo",
+				};
+			}
 		}
 
 		// Verify policy exists
@@ -301,11 +402,13 @@ export async function grantPolicyEditPermission(
 }
 
 // ============================================
-// REVOKE PERMISSION (Admin only)
+// REVOKE PERMISSION (Admin or Team Leader)
 // ============================================
 
 /**
- * Revoke an existing edit permission
+ * Revoke an existing edit permission.
+ * Admins can revoke any permission.
+ * Team leaders can revoke permissions for policies in their team.
  *
  * @param permissionId - UUID of the permission to revoke
  * @param notes - Optional reason for revocation
@@ -316,7 +419,7 @@ export async function revokePolicyEditPermission(
 	notes?: string
 ): Promise<ActionResult<void>> {
 	try {
-		const { supabase, user } = await requireAdmin();
+		const { supabase, user, profile } = await getAuthenticatedUserWithRole();
 
 		// Verify permission exists and is active
 		const { data: existing, error: findError } = await supabase
@@ -333,6 +436,28 @@ export async function revokePolicyEditPermission(
 			return { success: false, error: "El permiso ya fue revocado" };
 		}
 
+		// Verify user has rights: admin, or team leader for this policy
+		if (profile.role !== "admin") {
+			const { data: adminPerm } = await supabase.rpc("user_has_permission", {
+				p_user_id: profile.id,
+				p_permission_id: "admin.permisos",
+			});
+			if (!adminPerm) {
+				// Check if team leader for this policy
+				const { data: polizaForCheck } = await supabase
+					.from("polizas")
+					.select("responsable_id")
+					.eq("id", existing.poliza_id)
+					.single();
+				const isLeader = polizaForCheck?.responsable_id
+					? await isUserTeamLeaderForResponsable(supabase, user.id, polizaForCheck.responsable_id)
+					: false;
+				if (!isLeader) {
+					return { success: false, error: "Sin permisos para revocar este permiso" };
+				}
+			}
+		}
+
 		// Soft delete: set revoked_at timestamp
 		const { error } = await supabase
 			.from("policy_edit_permissions")
@@ -341,7 +466,7 @@ export async function revokePolicyEditPermission(
 				revoked_by: user.id,
 				notes: notes
 					? `Revocado: ${notes}`
-					: "Revocado por administrador",
+					: "Revocado",
 			})
 			.eq("id", permissionId);
 
@@ -362,11 +487,12 @@ export async function revokePolicyEditPermission(
 }
 
 // ============================================
-// GET POLICY PERMISSIONS (Admin only)
+// GET POLICY PERMISSIONS (Admin or Team Leader)
 // ============================================
 
 /**
- * Get all active permissions for a specific policy
+ * Get all active permissions for a specific policy.
+ * Accessible by admins and team leaders for their team's policies.
  *
  * @param polizaId - UUID of the policy
  * @returns List of active permissions with user info
@@ -375,7 +501,7 @@ export async function getPolicyPermissions(
 	polizaId: string
 ): Promise<ActionResult<PolicyEditPermissionViewModel[]>> {
 	try {
-		const { supabase } = await requireAdmin();
+		const { supabase } = await requireAdminOrTeamLeaderForPolicy(polizaId);
 
 		const { data, error } = await supabase
 			.from("policy_edit_permissions")
@@ -440,11 +566,13 @@ export async function getPolicyPermissions(
 }
 
 // ============================================
-// GET COMERCIAL USERS (Admin only)
+// GET COMERCIAL USERS (Admin or Team Leader)
 // ============================================
 
 /**
- * Get all users with comercial role for permission granting dropdown
+ * Get comercial users for permission granting dropdown.
+ * Admins see all comercial users.
+ * Team leaders see only comercial users in their team(s).
  *
  * @returns List of comercial users
  */
@@ -452,12 +580,62 @@ export async function getComercialUsers(): Promise<
 	ActionResult<ComercialUser[]>
 > {
 	try {
-		const { supabase } = await requireAdmin();
+		const { supabase, user, profile } = await getAuthenticatedUserWithRole();
+
+		// Check if admin or has admin.permisos permission
+		let isAdmin = profile.role === "admin";
+		if (!isAdmin) {
+			const { data: adminPerm } = await supabase.rpc("user_has_permission", {
+				p_user_id: profile.id,
+				p_permission_id: "admin.permisos",
+			});
+			isAdmin = !!adminPerm;
+		}
+
+		if (isAdmin) {
+			// Admin: return all comercial and agente users
+			const { data, error } = await supabase
+				.from("profiles")
+				.select("id, full_name, email")
+				.in("role", ["comercial", "agente"])
+				.order("full_name");
+
+			if (error) {
+				console.error("[getComercialUsers] Query error:", error);
+				return { success: false, error: "Error al obtener usuarios" };
+			}
+			return { success: true, data: data || [] };
+		}
+
+		// Check if team leader: return only comercial users in their team(s)
+		const { data: leaderTeams } = await supabase
+			.from("equipo_miembros")
+			.select("equipo_id")
+			.eq("user_id", user.id)
+			.eq("rol_equipo", "lider");
+
+		if (!leaderTeams || leaderTeams.length === 0) {
+			throw new Error("Sin permisos para gestionar permisos de edición");
+		}
+
+		const teamIds = leaderTeams.map((t: { equipo_id: string }) => t.equipo_id);
+
+		const { data: teamMembers } = await supabase
+			.from("equipo_miembros")
+			.select("user_id")
+			.in("equipo_id", teamIds);
+
+		const memberIds = (teamMembers ?? []).map((m: { user_id: string }) => m.user_id);
+
+		if (memberIds.length === 0) {
+			return { success: true, data: [] };
+		}
 
 		const { data, error } = await supabase
 			.from("profiles")
 			.select("id, full_name, email")
-			.eq("role", "comercial")
+			.in("role", ["comercial", "agente"])
+			.in("id", memberIds)
 			.order("full_name");
 
 		if (error) {

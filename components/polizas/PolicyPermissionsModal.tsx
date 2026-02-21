@@ -226,10 +226,7 @@ export function PolicyPermissionsModal({
 															</span>
 														)}
 													</div>
-													<p className="text-sm text-gray-600">
-														{perm.user_email}
-													</p>
-													<div className="flex items-center gap-4 mt-1 text-xs text-gray-500">
+														<div className="flex items-center gap-4 mt-1 text-xs text-gray-500">
 														<span>
 															Otorgado: {formatDate(perm.granted_at)}
 														</span>
@@ -285,7 +282,7 @@ export function PolicyPermissionsModal({
 									<div className="space-y-4">
 										{/* User Select */}
 										<div className="space-y-2">
-											<Label>Usuario Comercial</Label>
+											<Label>Usuario</Label>
 											<Select
 												value={selectedUserId}
 												onValueChange={setSelectedUserId}
@@ -296,7 +293,7 @@ export function PolicyPermissionsModal({
 												<SelectContent>
 													{availableUsers.map((user) => (
 														<SelectItem key={user.id} value={user.id}>
-															{user.full_name} ({user.email})
+															{user.full_name}
 														</SelectItem>
 													))}
 												</SelectContent>

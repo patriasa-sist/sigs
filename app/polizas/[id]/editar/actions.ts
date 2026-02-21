@@ -77,6 +77,33 @@ function sanitizarNombreArchivo(nombreArchivo: string): string {
 }
 
 /**
+ * Verifica si un usuario es líder de equipo para el responsable de una póliza.
+ */
+async function isTeamLeaderForResponsable(
+	supabase: Awaited<ReturnType<typeof createClient>>,
+	userId: string,
+	responsableId: string
+): Promise<boolean> {
+	const { data: leaderTeams } = await supabase
+		.from("equipo_miembros")
+		.select("equipo_id")
+		.eq("user_id", userId)
+		.eq("rol_equipo", "lider");
+
+	if (!leaderTeams || leaderTeams.length === 0) return false;
+
+	const teamIds = leaderTeams.map((t: { equipo_id: string }) => t.equipo_id);
+
+	const { count } = await supabase
+		.from("equipo_miembros")
+		.select("*", { count: "exact", head: true })
+		.eq("user_id", responsableId)
+		.in("equipo_id", teamIds);
+
+	return (count ?? 0) > 0;
+}
+
+/**
  * Get authenticated user with profile
  */
 async function getAuthenticatedUserWithRole() {
@@ -115,24 +142,32 @@ async function verifyEditPermission(polizaId: string) {
 		return { supabase, user, profile, canEdit: true };
 	}
 
-	// Check if user is the creator of a rejected policy within edit window
-	const { data: polizaRechazada } = await supabase
+	// Fetch policy data for multiple checks
+	const { data: polizaData } = await supabase
 		.from("polizas")
-		.select("created_by, estado, puede_editar_hasta")
+		.select("created_by, estado, puede_editar_hasta, responsable_id")
 		.eq("id", polizaId)
 		.single();
 
+	// Check if user is the creator of a rejected policy within edit window
 	if (
-		polizaRechazada?.estado === "rechazada" &&
-		polizaRechazada.created_by === user.id &&
-		polizaRechazada.puede_editar_hasta &&
-		new Date(polizaRechazada.puede_editar_hasta) > new Date()
+		polizaData?.estado === "rechazada" &&
+		polizaData.created_by === user.id &&
+		polizaData.puede_editar_hasta &&
+		new Date(polizaData.puede_editar_hasta) > new Date()
 	) {
-		// User is the creator and within the rejection edit window
 		return { supabase, user, profile, canEdit: true };
 	}
 
-	// Check if user has edit permission
+	// Check if user is a team leader for this policy
+	if (polizaData?.responsable_id) {
+		const esLider = await isTeamLeaderForResponsable(supabase, user.id, polizaData.responsable_id);
+		if (esLider) {
+			return { supabase, user, profile, canEdit: true };
+		}
+	}
+
+	// Check if user has the module-level edit permission
 	const { data: hasEditPerm } = await supabase.rpc("user_has_permission", {
 		p_user_id: profile.id,
 		p_permission_id: "polizas.editar",
@@ -141,7 +176,20 @@ async function verifyEditPermission(polizaId: string) {
 		throw new Error("No tienes permiso para editar pólizas");
 	}
 
-	// Check using database function for explicit permissions
+	// Check explicit permission record (works for agente and comercial roles)
+	const { data: explicitPerm } = await supabase
+		.from("policy_edit_permissions")
+		.select("id, expires_at")
+		.eq("poliza_id", polizaId)
+		.eq("user_id", user.id)
+		.is("revoked_at", null)
+		.maybeSingle();
+
+	if (explicitPerm && (!explicitPerm.expires_at || new Date(explicitPerm.expires_at) > new Date())) {
+		return { supabase, user, profile, canEdit: true };
+	}
+
+	// Fallback: check using database RPC (handles comercial role backward compatibility)
 	const { data: canEdit, error } = await supabase.rpc("can_edit_policy", {
 		p_poliza_id: polizaId,
 		p_user_id: user.id,
