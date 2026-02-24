@@ -1,7 +1,7 @@
 /**
  * Poliza Form Draft Storage Utility
  * Manages form state persistence in browser localStorage (no DB usage)
- * Documents with File objects are excluded (not serializable) - only metadata is saved
+ * Only documents with successful uploads are persisted in drafts
  */
 
 import type { PolizaFormState } from "@/types/poliza";
@@ -15,14 +15,15 @@ export { formatDraftAge };
 
 /**
  * Save poliza form draft to localStorage
- * Filters out File objects from documentos (not serializable)
+ * Only persists documents that were successfully uploaded to Storage
  */
 export function savePolizaDraft(formState: PolizaFormState): void {
 	try {
-		// Strip File objects from documentos before serializing
 		const stateToSave = {
 			...formState,
-			documentos: formState.documentos.map(({ file, ...rest }) => rest),
+			documentos: formState.documentos.filter(
+				(d) => d.upload_status === "uploaded" && d.storage_path
+			),
 		};
 
 		const serialized = JSON.stringify(stateToSave, (_key, value) => {

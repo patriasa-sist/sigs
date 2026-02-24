@@ -118,10 +118,19 @@ export function NuevaPolizaForm({ mode = "create", polizaId, initialData }: Nuev
 	const [productoSeleccionado, setProductoSeleccionado] = useState<ProductoAseguradora | null>(null);
 	const [porcentajeComisionUsuario, setPorcentajeComisionUsuario] = useState<number>(0.5);
 
-	// Cargar regionales al montar el componente
+	// userId para uploads client-side
+	const [userId, setUserId] = useState<string | null>(null);
+
+	// Cargar regionales y userId al montar el componente
 	useEffect(() => {
-		const cargarRegionales = async () => {
+		const cargarDatosIniciales = async () => {
 			const supabase = createClient();
+
+			// Cargar userId para uploads client-side
+			const { data: { user } } = await supabase.auth.getUser();
+			if (user) setUserId(user.id);
+
+			// Cargar regionales
 			const { data } = await supabase
 				.from("regionales")
 				.select("id, nombre")
@@ -133,7 +142,7 @@ export function NuevaPolizaForm({ mode = "create", polizaId, initialData }: Nuev
 			}
 		};
 
-		cargarRegionales();
+		cargarDatosIniciales();
 	}, []);
 
 	// Cargar producto cuando cambia producto_id en datos_basicos
@@ -211,18 +220,20 @@ export function NuevaPolizaForm({ mode = "create", polizaId, initialData }: Nuev
 		);
 
 		if (shouldRestore) {
-			setFormState(draft);
+			// Filtrar documentos: conservar los que tienen storage_path (ya subidos a Storage)
+			const docsRestaurables = draft.documentos.filter(
+				(d) => d.storage_path && d.upload_status === "uploaded"
+			);
+			setFormState({ ...draft, documentos: docsRestaurables });
 
-			const hadDocuments = draft.documentos.length > 0;
-			if (hadDocuments) {
+			if (draft.documentos.length > 0 && docsRestaurables.length === 0) {
 				toast.success("Borrador restaurado", {
 					description: "Los documentos adjuntos deben volver a cargarse.",
 				});
-				// Limpiar documentos sin archivo (solo tenían metadata)
-				setFormState((prev) => ({
-					...prev,
-					documentos: [],
-				}));
+			} else if (docsRestaurables.length > 0) {
+				toast.success("Borrador restaurado", {
+					description: `${docsRestaurables.length} documento(s) recuperado(s).`,
+				});
 			} else {
 				toast.success("Borrador restaurado");
 			}
@@ -257,12 +268,26 @@ export function NuevaPolizaForm({ mode = "create", polizaId, initialData }: Nuev
 	}, [formState, mode, debouncedSave]);
 
 	// Navegación
-	const handleCancelar = () => {
+	const handleCancelar = async () => {
 		const mensaje = mode === "edit"
 			? "¿Está seguro de cancelar? Se perderán los cambios no guardados."
 			: "¿Está seguro de cancelar? Se perderán todos los datos ingresados.";
 
 		if (confirm(mensaje)) {
+			// Limpiar archivos temporales subidos a Storage (best-effort)
+			const tempPaths = formState.documentos
+				.filter((d) => d.storage_path?.startsWith("temp/") && !d.id)
+				.map((d) => d.storage_path!);
+
+			if (tempPaths.length > 0) {
+				try {
+					const supabase = createClient();
+					await supabase.storage.from("polizas-documentos").remove(tempPaths);
+				} catch {
+					// Best-effort: archivos huérfanos se limpian en purga semestral
+				}
+			}
+
 			if (mode === "create") {
 				clearPolizaDraft();
 			}
@@ -433,6 +458,7 @@ export function NuevaPolizaForm({ mode = "create", polizaId, initialData }: Nuev
 					}}
 					onSiguiente={handleSiguientePaso}
 					onAnterior={handlePasoAnterior}
+					userId={userId}
 				/>
 			)}
 

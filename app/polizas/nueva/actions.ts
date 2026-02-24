@@ -3,6 +3,7 @@
 import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
 import { getDataScopeFilter } from "@/utils/auth/helpers";
+import { generateFinalStoragePath } from "@/utils/fileUpload";
 import type { PolizaFormState } from "@/types/poliza";
 
 /**
@@ -36,29 +37,6 @@ function mapSupabaseError(
 		default:
 			return `${context}: ${msg || "error desconocido"}${detail ? ` (${detail})` : ""}`;
 	}
-}
-
-/**
- * Sanitiza un nombre de archivo para que sea compatible con Supabase Storage
- * - Reemplaza espacios por guiones bajos
- * - Elimina o reemplaza caracteres especiales
- * - Normaliza caracteres acentuados
- */
-function sanitizarNombreArchivo(nombreArchivo: string): string {
-	return (
-		nombreArchivo
-			// Normalizar caracteres acentuados (á -> a, ñ -> n, etc.)
-			.normalize("NFD")
-			.replace(/[\u0300-\u036f]/g, "")
-			// Reemplazar espacios por guiones bajos
-			.replace(/\s+/g, "_")
-			// Eliminar caracteres especiales excepto: letras, números, puntos, guiones y guiones bajos
-			.replace(/[^a-zA-Z0-9._-]/g, "")
-			// Reemplazar múltiples guiones bajos consecutivos por uno solo
-			.replace(/_+/g, "_")
-			// Convertir a minúsculas para consistencia
-			.toLowerCase()
-	);
 }
 
 export async function guardarPoliza(formState: PolizaFormState) {
@@ -260,56 +238,35 @@ export async function guardarPoliza(formState: PolizaFormState) {
 			}
 		}
 
-		// 5. Subir documentos a Supabase Storage y registrar en base de datos
-		if (formState.documentos.length > 0) {
-			console.log(`[DOCS] Procesando ${formState.documentos.length} documentos`);
+		// 5. Mover documentos de temp/ a {poliza_id}/ y registrar en base de datos
+		// Los archivos ya fueron subidos client-side a temp/{userId}/{sessionId}/
+		const docsSubidos = formState.documentos.filter(
+			(d) => d.storage_path && d.upload_status === "uploaded"
+		);
 
-			for (const documento of formState.documentos) {
-				if (!documento.file) {
-					console.warn("[DOCS] Documento sin archivo, saltando:", documento.nombre_archivo);
-					continue;
-				}
+		if (docsSubidos.length > 0) {
+			console.log(`[DOCS] Procesando ${docsSubidos.length} documentos subidos`);
 
-				console.log("[DOCS] Procesando documento:", {
-					nombre: documento.nombre_archivo,
-					tipo: documento.tipo_documento,
-					tamaño: documento.tamano_bytes,
-					fileType: documento.file.type,
-				});
+			for (const documento of docsSubidos) {
+				const tempPath = documento.storage_path!;
+				const finalPath = generateFinalStoragePath(poliza.id, documento.nombre_archivo);
 
-				// Sanitizar el nombre del archivo
-				const nombreSanitizado = sanitizarNombreArchivo(documento.nombre_archivo);
-
-				// Generar nombre único para el archivo
-				const timestamp = Date.now();
-				const nombreArchivo = `${poliza.id}/${timestamp}-${nombreSanitizado}`;
-
-				console.log("[DOCS] Nombre original:", documento.nombre_archivo);
-				console.log("[DOCS] Nombre sanitizado:", nombreSanitizado);
-
-				// Subir a Storage
-				console.log("[DOCS] Subiendo a Storage:", nombreArchivo);
-				const { data: uploadData, error: uploadError } = await supabase.storage
+				// Mover archivo de temp/ a {poliza_id}/
+				let usedPath = finalPath;
+				const { error: moveError } = await supabase.storage
 					.from("polizas-documentos")
-					.upload(nombreArchivo, documento.file);
+					.move(tempPath, finalPath);
 
-				if (uploadError) {
-					console.error("[DOCS] Error subiendo documento:", uploadError);
-					console.error("[DOCS] Detalles del error:", {
-						message: uploadError.message,
-						error: uploadError,
-					});
-					continue; // Continuar con el siguiente documento
+				if (moveError) {
+					console.error("[DOCS] Error moviendo documento, usando ruta temporal:", moveError);
+					// Fallback: usar la ruta temporal (el archivo sigue accesible)
+					usedPath = tempPath;
 				}
 
-				console.log("[DOCS] Documento subido exitosamente:", uploadData);
-
-				// Obtener URL pública
+				// Obtener URL pública de la ruta usada
 				const {
 					data: { publicUrl },
-				} = supabase.storage.from("polizas-documentos").getPublicUrl(nombreArchivo);
-
-				console.log("[DOCS] URL pública generada:", publicUrl);
+				} = supabase.storage.from("polizas-documentos").getPublicUrl(usedPath);
 
 				// Registrar en base de datos
 				const { error: errorDoc } = await supabase.from("polizas_documentos").insert({
@@ -323,8 +280,6 @@ export async function guardarPoliza(formState: PolizaFormState) {
 
 				if (errorDoc) {
 					console.error("[DOCS] Error registrando documento en BD:", errorDoc);
-				} else {
-					console.log("[DOCS] Documento registrado exitosamente en BD");
 				}
 			}
 

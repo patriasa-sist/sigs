@@ -553,7 +553,9 @@ export type DocumentoPoliza = {
 	nombre_archivo: string;
 	archivo_url?: string; // URL en Supabase Storage después de subir
 	tamano_bytes?: number;
-	file?: File; // Archivo en memoria antes de subir
+	storage_path?: string; // Ruta en bucket Storage (temp o final)
+	upload_status?: "uploading" | "uploaded" | "error"; // Estado de subida client-side
+	upload_error?: string; // Mensaje de error si la subida falló
 	estado?: "activo" | "descartado"; // Estado del documento (soft delete)
 };
 

@@ -14,6 +14,7 @@
 
 import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
+import { generateFinalStoragePath } from "@/utils/fileUpload";
 import type {
 	PolizaFormState,
 	AseguradoSeleccionado,
@@ -60,21 +61,6 @@ function mapSupabaseError(
 // ============================================
 // HELPER FUNCTIONS
 // ============================================
-
-/**
- * Sanitiza un nombre de archivo para que sea compatible con Supabase Storage
- */
-function sanitizarNombreArchivo(nombreArchivo: string): string {
-	return (
-		nombreArchivo
-			.normalize("NFD")
-			.replace(/[\u0300-\u036f]/g, "")
-			.replace(/\s+/g, "_")
-			.replace(/[^a-zA-Z0-9._-]/g, "")
-			.replace(/_+/g, "_")
-			.toLowerCase()
-	);
-}
 
 /**
  * Verifica si un usuario es líder de equipo para el responsable de una póliza.
@@ -710,28 +696,29 @@ export async function actualizarPoliza(
 			}
 		}
 
-		// 4. Handle new documents (documents with file property)
-		const newDocuments = formState.documentos.filter((d) => d.file);
+		// 4. Handle new documents (uploaded client-side to temp/)
+		const newDocuments = formState.documentos.filter(
+			(d) => d.storage_path && d.upload_status === "uploaded" && !d.id
+		);
 
 		for (const documento of newDocuments) {
-			if (!documento.file) continue;
+			const tempPath = documento.storage_path!;
+			const finalPath = generateFinalStoragePath(polizaId, documento.nombre_archivo);
 
-			const nombreSanitizado = sanitizarNombreArchivo(documento.nombre_archivo);
-			const timestamp = Date.now();
-			const nombreArchivo = `${polizaId}/${timestamp}-${nombreSanitizado}`;
-
-			const { error: uploadError } = await supabase.storage
+			// Mover archivo de temp/ a {polizaId}/
+			let usedPath = finalPath;
+			const { error: moveError } = await supabase.storage
 				.from("polizas-documentos")
-				.upload(nombreArchivo, documento.file);
+				.move(tempPath, finalPath);
 
-			if (uploadError) {
-				console.error("[actualizarPoliza] Document upload error:", uploadError);
-				continue;
+			if (moveError) {
+				console.error("[actualizarPoliza] Error moviendo documento, usando ruta temporal:", moveError);
+				usedPath = tempPath;
 			}
 
 			const {
 				data: { publicUrl },
-			} = supabase.storage.from("polizas-documentos").getPublicUrl(nombreArchivo);
+			} = supabase.storage.from("polizas-documentos").getPublicUrl(usedPath);
 
 			await supabase.from("polizas_documentos").insert({
 				poliza_id: polizaId,

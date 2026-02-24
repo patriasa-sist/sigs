@@ -1,19 +1,22 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { useDropzone } from "react-dropzone";
-import { ChevronRight, ChevronLeft, CheckCircle2, Upload, FileText, X, AlertCircle } from "lucide-react";
+import { ChevronRight, ChevronLeft, CheckCircle2, Upload, FileText, X, AlertCircle, Loader2 } from "lucide-react";
 import type { DocumentoPoliza } from "@/types/poliza";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { createClient } from "@/utils/supabase/client";
+import { generateTempStoragePath } from "@/utils/fileUpload";
 
 type Props = {
 	documentos: DocumentoPoliza[];
 	onChange: (documentos: DocumentoPoliza[]) => void;
 	onSiguiente: () => void;
 	onAnterior: () => void;
+	userId: string | null;
 };
 
 // Tipos de documentos sugeridos para pólizas
@@ -26,10 +29,13 @@ const TIPOS_DOCUMENTO = [
 	"Otro",
 ] as const;
 
-export function CargarDocumentos({ documentos, onChange, onSiguiente, onAnterior }: Props) {
+const BUCKET = "polizas-documentos";
+
+export function CargarDocumentos({ documentos, onChange, onSiguiente, onAnterior, userId }: Props) {
 	const [tipoSeleccionado, setTipoSeleccionado] = useState<string>("");
 	const [tipoPersonalizado, setTipoPersonalizado] = useState<string>("");
 	const [error, setError] = useState<string | null>(null);
+	const sessionIdRef = useRef(crypto.randomUUID());
 
 	// Validar archivo
 	const validarArchivo = (file: File): string | null => {
@@ -62,9 +68,55 @@ export function CargarDocumentos({ documentos, onChange, onSiguiente, onAnterior
 		return null;
 	};
 
+	// Subir archivo a Supabase Storage (client-side)
+	const subirArchivo = async (file: File, tipoDocumento: string): Promise<DocumentoPoliza> => {
+		if (!userId) {
+			return {
+				tipo_documento: tipoDocumento,
+				nombre_archivo: file.name,
+				tamano_bytes: file.size,
+				upload_status: "error",
+				upload_error: "No autenticado",
+			};
+		}
+
+		const storagePath = generateTempStoragePath(userId, sessionIdRef.current, file.name);
+		const supabase = createClient();
+
+		const { error: uploadError } = await supabase.storage
+			.from(BUCKET)
+			.upload(storagePath, file, {
+				cacheControl: "3600",
+				upsert: false,
+			});
+
+		if (uploadError) {
+			return {
+				tipo_documento: tipoDocumento,
+				nombre_archivo: file.name,
+				tamano_bytes: file.size,
+				upload_status: "error",
+				upload_error: uploadError.message,
+			};
+		}
+
+		const {
+			data: { publicUrl },
+		} = supabase.storage.from(BUCKET).getPublicUrl(storagePath);
+
+		return {
+			tipo_documento: tipoDocumento,
+			nombre_archivo: file.name,
+			tamano_bytes: file.size,
+			archivo_url: publicUrl,
+			storage_path: storagePath,
+			upload_status: "uploaded",
+		};
+	};
+
 	// Handle file drop con react-dropzone
 	const onDrop = useCallback(
-		(acceptedFiles: File[]) => {
+		async (acceptedFiles: File[]) => {
 			setError(null);
 
 			if (!tipoSeleccionado) {
@@ -77,40 +129,72 @@ export function CargarDocumentos({ documentos, onChange, onSiguiente, onAnterior
 				return;
 			}
 
-			const nuevosDocumentos: DocumentoPoliza[] = [];
+			if (!userId) {
+				setError("Error de autenticación. Recargue la página e intente nuevamente.");
+				return;
+			}
 
+			// Determinar el tipo de documento
+			const tipoDoc = tipoSeleccionado === "Otro" ? tipoPersonalizado : tipoSeleccionado;
+
+			if (!tipoDoc || tipoDoc.trim() === "") {
+				setError("Debe especificar un tipo de documento personalizado");
+				return;
+			}
+
+			// Validar todos los archivos primero
+			const archivosValidos: File[] = [];
 			for (const file of acceptedFiles) {
-				// Validar archivo
 				const errorValidacion = validarArchivo(file);
 				if (errorValidacion) {
 					setError(errorValidacion);
 					continue;
 				}
-
-				// Determinar el tipo de documento
-				const tipoDoc = tipoSeleccionado === "Otro" ? tipoPersonalizado : tipoSeleccionado;
-
-				if (!tipoDoc || tipoDoc.trim() === "") {
-					setError("Debe especificar un tipo de documento personalizado");
-					continue;
-				}
-
-				// Crear documento
-				nuevosDocumentos.push({
-					tipo_documento: tipoDoc,
-					nombre_archivo: file.name,
-					tamano_bytes: file.size,
-					file: file,
-				});
+				archivosValidos.push(file);
 			}
 
-			if (nuevosDocumentos.length > 0) {
-				onChange([...documentos, ...nuevosDocumentos]);
-				setTipoSeleccionado("");
-				setTipoPersonalizado("");
+			if (archivosValidos.length === 0) return;
+
+			// Agregar placeholders "uploading" inmediatamente
+			const placeholders: DocumentoPoliza[] = archivosValidos.map((file) => ({
+				tipo_documento: tipoDoc,
+				nombre_archivo: file.name,
+				tamano_bytes: file.size,
+				upload_status: "uploading" as const,
+			}));
+
+			const documentosConPlaceholders = [...documentos, ...placeholders];
+			onChange(documentosConPlaceholders);
+
+			// Resetear selección
+			setTipoSeleccionado("");
+			setTipoPersonalizado("");
+
+			// Subir cada archivo y reemplazar placeholder con resultado
+			const resultados = await Promise.all(
+				archivosValidos.map((file) => subirArchivo(file, tipoDoc))
+			);
+
+			// Reemplazar placeholders con resultados reales
+			// Usamos el índice para mapear: los placeholders empiezan en documentos.length
+			const startIndex = documentos.length;
+			const documentosActualizados = [...documentosConPlaceholders];
+			for (let i = 0; i < resultados.length; i++) {
+				documentosActualizados[startIndex + i] = resultados[i];
+			}
+
+			onChange(documentosActualizados);
+
+			// Mostrar error si algún archivo falló
+			const fallidos = resultados.filter((r) => r.upload_status === "error");
+			if (fallidos.length > 0) {
+				setError(
+					`Error al subir ${fallidos.length} archivo(s): ${fallidos.map((f) => f.upload_error).join(", ")}`
+				);
 			}
 		},
-		[tipoSeleccionado, tipoPersonalizado, documentos, onChange]
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+		[tipoSeleccionado, tipoPersonalizado, documentos, onChange, userId]
 	);
 
 	const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -128,7 +212,20 @@ export function CargarDocumentos({ documentos, onChange, onSiguiente, onAnterior
 		multiple: true,
 	});
 
-	const handleEliminarDocumento = (index: number) => {
+	const handleEliminarDocumento = async (index: number) => {
+		const doc = documentos[index];
+
+		// Si el archivo está subido en temp y no está en BD, eliminarlo de Storage
+		if (doc.storage_path && !doc.id) {
+			try {
+				const supabase = createClient();
+				await supabase.storage.from(BUCKET).remove([doc.storage_path]);
+			} catch {
+				// Best-effort: si falla la eliminación, el archivo queda huérfano en temp/
+				console.warn("[DOCS] No se pudo eliminar archivo temporal:", doc.storage_path);
+			}
+		}
+
 		const nuevosDocumentos = documentos.filter((_, i) => i !== index);
 		onChange(nuevosDocumentos);
 	};
@@ -145,6 +242,7 @@ export function CargarDocumentos({ documentos, onChange, onSiguiente, onAnterior
 	const availableDocTypes = Array.from(TIPOS_DOCUMENTO);
 
 	const tieneDocumentos = documentos.length > 0;
+	const haySubiendo = documentos.some((d) => d.upload_status === "uploading");
 
 	return (
 		<div className="bg-white rounded-lg shadow-sm border p-6">
@@ -161,7 +259,8 @@ export function CargarDocumentos({ documentos, onChange, onSiguiente, onAnterior
 					<div className="flex items-center gap-2 text-green-600">
 						<CheckCircle2 className="h-5 w-5" />
 						<span className="text-sm font-medium">
-							{documentos.length} documento{documentos.length !== 1 ? "s" : ""}
+							{documentos.filter((d) => d.upload_status === "uploaded" || d.id).length} documento
+							{documentos.filter((d) => d.upload_status === "uploaded" || d.id).length !== 1 ? "s" : ""}
 						</span>
 					</div>
 				)}
@@ -211,10 +310,10 @@ export function CargarDocumentos({ documentos, onChange, onSiguiente, onAnterior
 					className={`
             border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors
             ${isDragActive ? "border-primary bg-primary/5" : "border-gray-300 hover:border-primary/50"}
-            ${!tipoSeleccionado ? "opacity-50 cursor-not-allowed" : ""}
+            ${!tipoSeleccionado || haySubiendo ? "opacity-50 cursor-not-allowed" : ""}
           `}
 				>
-					<input {...getInputProps()} disabled={!tipoSeleccionado} />
+					<input {...getInputProps()} disabled={!tipoSeleccionado || haySubiendo} />
 					<Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
 
 					{isDragActive ? (
@@ -250,18 +349,38 @@ export function CargarDocumentos({ documentos, onChange, onSiguiente, onAnterior
 						{documentos.map((doc, index) => (
 							<div key={index} className="p-4 hover:bg-gray-50 transition-colors">
 								<div className="flex items-start gap-3">
-									<FileText className="h-10 w-10 text-primary flex-shrink-0" />
+									{/* Icono según estado */}
+									{doc.upload_status === "uploading" ? (
+										<Loader2 className="h-10 w-10 text-blue-500 flex-shrink-0 animate-spin" />
+									) : doc.upload_status === "error" ? (
+										<AlertCircle className="h-10 w-10 text-red-500 flex-shrink-0" />
+									) : (
+										<FileText className="h-10 w-10 text-primary flex-shrink-0" />
+									)}
 
 									<div className="flex-1 min-w-0">
 										<div className="flex items-start justify-between gap-2">
 											<div className="flex-1">
 												<p className="font-medium text-gray-900">{doc.tipo_documento}</p>
 												<p className="text-sm text-gray-600 truncate">{doc.nombre_archivo}</p>
-												{doc.tamano_bytes !== undefined && (
-													<p className="text-xs text-gray-500 mt-1">
-														{formatearTamano(doc.tamano_bytes)}
-													</p>
-												)}
+												<div className="flex items-center gap-2 mt-1">
+													{doc.tamano_bytes !== undefined && (
+														<p className="text-xs text-gray-500">
+															{formatearTamano(doc.tamano_bytes)}
+														</p>
+													)}
+													{doc.upload_status === "uploading" && (
+														<span className="text-xs text-blue-600 font-medium">Subiendo...</span>
+													)}
+													{doc.upload_status === "error" && (
+														<span className="text-xs text-red-600 font-medium">
+															Error: {doc.upload_error || "Error desconocido"}
+														</span>
+													)}
+													{doc.upload_status === "uploaded" && (
+														<span className="text-xs text-green-600 font-medium">Subido</span>
+													)}
+												</div>
 											</div>
 
 											<Button
@@ -269,6 +388,7 @@ export function CargarDocumentos({ documentos, onChange, onSiguiente, onAnterior
 												size="sm"
 												onClick={() => handleEliminarDocumento(index)}
 												className="flex-shrink-0"
+												disabled={doc.upload_status === "uploading"}
 											>
 												<X className="h-4 w-4" />
 											</Button>
@@ -297,9 +417,18 @@ export function CargarDocumentos({ documentos, onChange, onSiguiente, onAnterior
 					Anterior
 				</Button>
 
-				<Button onClick={onSiguiente}>
-					Continuar al Resumen
-					<ChevronRight className="ml-2 h-5 w-5" />
+				<Button onClick={onSiguiente} disabled={haySubiendo}>
+					{haySubiendo ? (
+						<>
+							<Loader2 className="mr-2 h-5 w-5 animate-spin" />
+							Subiendo archivos...
+						</>
+					) : (
+						<>
+							Continuar al Resumen
+							<ChevronRight className="ml-2 h-5 w-5" />
+						</>
+					)}
 				</Button>
 			</div>
 		</div>
