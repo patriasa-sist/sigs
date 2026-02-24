@@ -382,13 +382,13 @@ export function ClientDetailModal({ clientId, onClose }: Props) {
 							<TabsTrigger value="documentos" className="flex-1">
 								Documentos ({client.documents?.length || 0})
 							</TabsTrigger>
-							{permission?.isAdmin && (
+							{(permission?.isAdmin || permission?.isTeamLeader) && (
 								<TabsTrigger value="permisos" className="flex-1">
 									<Shield className="h-4 w-4 mr-1" />
 									Permisos
 								</TabsTrigger>
 							)}
-							{permission?.isAdmin && (
+							{(permission?.isAdmin || permission?.isTeamLeader || permission?.isTeamMember) && (
 								<TabsTrigger value="trazabilidad" className="flex-1">
 									<FileText className="h-4 w-4 mr-1" />
 									Trazabilidad
@@ -483,15 +483,15 @@ export function ClientDetailModal({ clientId, onClose }: Props) {
 							)}
 						</TabsContent>
 
-						{/* PERMISOS TAB (Admin only) */}
-						{permission?.isAdmin && (
+						{/* PERMISOS TAB (Admin or Team Leader) */}
+						{(permission?.isAdmin || permission?.isTeamLeader) && (
 							<TabsContent value="permisos" className="space-y-6">
 								<ClientPermissionsPanel clientId={clientId} clientName={getClientName()} />
 							</TabsContent>
 						)}
 
-						{/* TRAZABILIDAD TAB (Admin only) */}
-						{permission?.isAdmin && (
+						{/* TRAZABILIDAD TAB (Admin, Team Leader, or Team Member) */}
+						{(permission?.isAdmin || permission?.isTeamLeader || permission?.isTeamMember) && (
 							<TabsContent value="trazabilidad" className="space-y-6">
 								<ClientAuditTrailPanel clientId={clientId} />
 							</TabsContent>

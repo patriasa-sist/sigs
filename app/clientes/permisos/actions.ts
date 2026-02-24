@@ -4,8 +4,9 @@
  * @description Server-side actions for managing client edit permissions
  *
  * Security:
- * - Only admins can grant/revoke permissions
- * - Only comercial role users can receive permissions
+ * - Admins and team leaders can grant/revoke permissions
+ * - Team leaders can only grant to members of their team(s)
+ * - Only comercial/agente role users can receive permissions
  * - Users can check their own permissions
  */
 
@@ -13,6 +14,7 @@
 
 import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
+import { getDataScopeFilter } from "@/utils/auth/helpers";
 import type {
 	ClientEditPermissionViewModel,
 	GrantPermissionInput,
@@ -61,22 +63,75 @@ async function getAuthenticatedUserWithRole() {
 }
 
 /**
- * Verify the current user is an admin
+ * Checks if a user is a team leader for a client's commercial_owner.
+ * Returns true if the user has rol_equipo='lider' in any team
+ * that also contains the client's commercial_owner_id.
  */
-async function requireAdmin() {
+async function isUserTeamLeaderForCommercialOwner(
+	supabase: Awaited<ReturnType<typeof import("@/utils/supabase/server").createClient>>,
+	userId: string,
+	commercialOwnerId: string
+): Promise<boolean> {
+	// Get all teams where current user is a leader
+	const { data: leaderTeams } = await supabase
+		.from("equipo_miembros")
+		.select("equipo_id")
+		.eq("user_id", userId)
+		.eq("rol_equipo", "lider");
+
+	if (!leaderTeams || leaderTeams.length === 0) return false;
+
+	const teamIds = leaderTeams.map((t: { equipo_id: string }) => t.equipo_id);
+
+	// Check if commercial_owner belongs to any of those teams
+	const { count } = await supabase
+		.from("equipo_miembros")
+		.select("*", { count: "exact", head: true })
+		.eq("user_id", commercialOwnerId)
+		.in("equipo_id", teamIds);
+
+	return (count ?? 0) > 0;
+}
+
+/**
+ * Verify the current user is an admin OR a team leader for the given client.
+ * Returns isTeamLeader flag to allow downstream scope filtering.
+ */
+async function requireAdminOrTeamLeaderForClient(clientId: string) {
 	const { supabase, user, profile } = await getAuthenticatedUserWithRole();
 
-	if (profile.role !== "admin") {
-		const { data: allowed } = await supabase.rpc("user_has_permission", {
-			p_user_id: profile.id,
-			p_permission_id: "admin.permisos",
-		});
-		if (!allowed) {
-			throw new Error("Solo administradores pueden realizar esta acción");
+	if (profile.role === "admin") {
+		return { supabase, user, profile, isTeamLeader: false };
+	}
+
+	// Check admin.permisos permission (non-admin users with explicit admin permissions)
+	const { data: allowed } = await supabase.rpc("user_has_permission", {
+		p_user_id: profile.id,
+		p_permission_id: "admin.permisos",
+	});
+	if (allowed) {
+		return { supabase, user, profile, isTeamLeader: false };
+	}
+
+	// Check if team leader for this client
+	const { data: clientData } = await supabase
+		.from("clients")
+		.select("commercial_owner_id")
+		.eq("id", clientId)
+		.single();
+
+	if (clientData?.commercial_owner_id) {
+		const isLeader = await isUserTeamLeaderForCommercialOwner(
+			supabase,
+			user.id,
+			clientData.commercial_owner_id
+		);
+		if (isLeader) {
+			return { supabase, user, profile, isTeamLeader: true };
 		}
 	}
 
-	return { supabase, user, profile };
+	throw new Error("Sin permisos para gestionar permisos de este cliente");
 }
 
 // ============================================
@@ -103,23 +158,67 @@ export async function checkEditPermission(
 					canEdit: true,
 					reason: "Administrador",
 					isAdmin: true,
+					isTeamLeader: false,
+					isTeamMember: false,
 				},
 			};
 		}
 
-		// Only comercial role can have specific permissions
-		if (profile.role !== "comercial") {
+		// Fetch client data for team checks
+		const { data: clientData } = await supabase
+			.from("clients")
+			.select("commercial_owner_id")
+			.eq("id", clientId)
+			.single();
+
+		// Check if user is a team leader for this client
+		if (clientData?.commercial_owner_id) {
+			const isLeader = await isUserTeamLeaderForCommercialOwner(
+				supabase,
+				user.id,
+				clientData.commercial_owner_id
+			);
+			if (isLeader) {
+				return {
+					success: true,
+					data: {
+						canEdit: true,
+						reason: "Líder de equipo",
+						isAdmin: false,
+						isTeamLeader: true,
+						isTeamMember: true,
+					},
+				};
+			}
+		}
+
+		// Check if user is a team member (for traceability visibility)
+		let isTeamMember = false;
+		if (clientData?.commercial_owner_id) {
+			const scope = await getDataScopeFilter("clientes");
+			if (!scope.needsScoping) {
+				// Roles like usuario, cobranza see everything
+				isTeamMember = true;
+			} else if (scope.teamMemberIds.includes(clientData.commercial_owner_id)) {
+				isTeamMember = true;
+			}
+		}
+
+		// Only comercial and agente roles can have explicit per-client permissions
+		if (profile.role !== "comercial" && profile.role !== "agente") {
 			return {
 				success: true,
 				data: {
 					canEdit: false,
 					reason: "Rol no autorizado para editar clientes",
 					isAdmin: false,
+					isTeamLeader: false,
+					isTeamMember,
 				},
 			};
 		}
 
-		// Check specific permission for comercial user
+		// Check specific permission for comercial/agente user
 		const { data: permission, error } = await supabase
 			.from("client_edit_permissions")
 			.select(
@@ -142,6 +241,8 @@ export async function checkEditPermission(
 					canEdit: false,
 					reason: "Sin permiso asignado para este cliente",
 					isAdmin: false,
+					isTeamLeader: false,
+					isTeamMember,
 				},
 			};
 		}
@@ -154,6 +255,8 @@ export async function checkEditPermission(
 					canEdit: false,
 					reason: "Permiso expirado",
 					isAdmin: false,
+					isTeamLeader: false,
+					isTeamMember,
 				},
 			};
 		}
@@ -168,6 +271,8 @@ export async function checkEditPermission(
 				canEdit: true,
 				reason: "Permiso activo",
 				isAdmin: false,
+				isTeamLeader: false,
+				isTeamMember,
 				permission: {
 					id: permission.id,
 					expires_at: permission.expires_at,
@@ -185,11 +290,13 @@ export async function checkEditPermission(
 }
 
 // ============================================
-// GRANT PERMISSION (Admin only)
+// GRANT PERMISSION (Admin or Team Leader)
 // ============================================
 
 /**
- * Grant edit permission to a comercial user for a specific client
+ * Grant edit permission to a comercial/agente user for a specific client.
+ * Admins can grant to any comercial/agente user.
+ * Team leaders can only grant to comercial/agente members of their team.
  *
  * @param input - Permission grant input (client_id, user_id, optional expires_at and notes)
  * @returns Result with the new permission ID
@@ -198,9 +305,9 @@ export async function grantEditPermission(
 	input: GrantPermissionInput
 ): Promise<ActionResult<{ id: string }>> {
 	try {
-		const { supabase, user } = await requireAdmin();
+		const { supabase, user, isTeamLeader } = await requireAdminOrTeamLeaderForClient(input.client_id);
 
-		// Verify target user exists and is comercial
+		// Verify target user exists and is comercial/agente
 		const { data: targetProfile, error: targetError } = await supabase
 			.from("profiles")
 			.select("id, role, full_name")
@@ -211,11 +318,35 @@ export async function grantEditPermission(
 			return { success: false, error: "Usuario no encontrado" };
 		}
 
-		if (targetProfile.role !== "comercial") {
+		if (targetProfile.role !== "comercial" && targetProfile.role !== "agente") {
 			return {
 				success: false,
-				error: "Solo se pueden otorgar permisos a usuarios con rol comercial",
+				error: "Solo se pueden otorgar permisos a usuarios con rol comercial o agente",
 			};
+		}
+
+		// Team leaders can only grant permissions to members of their team
+		if (isTeamLeader) {
+			const { data: leaderTeams } = await supabase
+				.from("equipo_miembros")
+				.select("equipo_id")
+				.eq("user_id", user.id)
+				.eq("rol_equipo", "lider");
+
+			const teamIds = (leaderTeams ?? []).map((t: { equipo_id: string }) => t.equipo_id);
+
+			const { count } = await supabase
+				.from("equipo_miembros")
+				.select("*", { count: "exact", head: true })
+				.eq("user_id", input.user_id)
+				.in("equipo_id", teamIds);
+
+			if ((count ?? 0) === 0) {
+				return {
+					success: false,
+					error: "Solo puedes otorgar permisos a miembros de tu equipo",
+				};
+			}
 		}
 
 		// Verify client exists
@@ -275,11 +406,13 @@ export async function grantEditPermission(
 }
 
 // ============================================
-// REVOKE PERMISSION (Admin only)
+// REVOKE PERMISSION (Admin or Team Leader)
 // ============================================
 
 /**
- * Revoke an existing edit permission
+ * Revoke an existing edit permission.
+ * Admins can revoke any permission.
+ * Team leaders can revoke permissions for clients in their team.
  *
  * @param permissionId - UUID of the permission to revoke
  * @param notes - Optional reason for revocation
@@ -290,12 +423,12 @@ export async function revokeEditPermission(
 	notes?: string
 ): Promise<ActionResult<void>> {
 	try {
-		const { supabase, user } = await requireAdmin();
+		const { supabase, user, profile } = await getAuthenticatedUserWithRole();
 
 		// Verify permission exists and is active
 		const { data: existing, error: findError } = await supabase
 			.from("client_edit_permissions")
-			.select("id, revoked_at")
+			.select("id, revoked_at, client_id")
 			.eq("id", permissionId)
 			.single();
 
@@ -307,6 +440,28 @@ export async function revokeEditPermission(
 			return { success: false, error: "El permiso ya fue revocado" };
 		}
 
+		// Verify user has rights: admin, or team leader for this client
+		if (profile.role !== "admin") {
+			const { data: adminPerm } = await supabase.rpc("user_has_permission", {
+				p_user_id: profile.id,
+				p_permission_id: "admin.permisos",
+			});
+			if (!adminPerm) {
+				// Check if team leader for this client
+				const { data: clientForCheck } = await supabase
+					.from("clients")
+					.select("commercial_owner_id")
+					.eq("id", existing.client_id)
+					.single();
+				const isLeader = clientForCheck?.commercial_owner_id
+					? await isUserTeamLeaderForCommercialOwner(supabase, user.id, clientForCheck.commercial_owner_id)
+					: false;
+				if (!isLeader) {
+					return { success: false, error: "Sin permisos para revocar este permiso" };
+				}
+			}
+		}
+
 		// Soft delete: set revoked_at timestamp
 		const { error } = await supabase
 			.from("client_edit_permissions")
@@ -315,7 +470,7 @@ export async function revokeEditPermission(
 				revoked_by: user.id,
 				notes: notes
 					? `Revocado: ${notes}`
-					: "Revocado por administrador",
+					: "Revocado",
 			})
 			.eq("id", permissionId);
 
@@ -336,11 +491,12 @@ export async function revokeEditPermission(
 }
 
 // ============================================
-// GET CLIENT PERMISSIONS (Admin only)
+// GET CLIENT PERMISSIONS (Admin or Team Leader)
 // ============================================
 
 /**
- * Get all active permissions for a specific client
+ * Get all active permissions for a specific client.
+ * Accessible by admins and team leaders for their team's clients.
  *
  * @param clientId - UUID of the client
  * @returns List of active permissions with user info
@@ -349,7 +505,7 @@ export async function getClientPermissions(
 	clientId: string
 ): Promise<ActionResult<ClientEditPermissionViewModel[]>> {
 	try {
-		const { supabase } = await requireAdmin();
+		const { supabase } = await requireAdminOrTeamLeaderForClient(clientId);
 
 		const { data, error } = await supabase
 			.from("client_edit_permissions")
@@ -414,24 +570,76 @@ export async function getClientPermissions(
 }
 
 // ============================================
-// GET COMERCIAL USERS (Admin only)
+// GET COMERCIAL USERS (Admin or Team Leader)
 // ============================================
 
 /**
- * Get all users with comercial role for permission granting dropdown
+ * Get comercial/agente users for permission granting dropdown.
+ * Admins see all comercial/agente users.
+ * Team leaders see only comercial/agente users in their team(s).
  *
- * @returns List of comercial users
+ * @returns List of comercial/agente users
  */
 export async function getComercialUsers(): Promise<
 	ActionResult<ComercialUser[]>
 > {
 	try {
-		const { supabase } = await requireAdmin();
+		const { supabase, user, profile } = await getAuthenticatedUserWithRole();
+
+		// Check if admin or has admin.permisos permission
+		let isAdmin = profile.role === "admin";
+		if (!isAdmin) {
+			const { data: adminPerm } = await supabase.rpc("user_has_permission", {
+				p_user_id: profile.id,
+				p_permission_id: "admin.permisos",
+			});
+			isAdmin = !!adminPerm;
+		}
+
+		if (isAdmin) {
+			// Admin: return all comercial and agente users
+			const { data, error } = await supabase
+				.from("profiles")
+				.select("id, full_name, email")
+				.in("role", ["comercial", "agente"])
+				.order("full_name");
+
+			if (error) {
+				console.error("[getComercialUsers] Query error:", error);
+				return { success: false, error: "Error al obtener usuarios" };
+			}
+			return { success: true, data: data || [] };
+		}
+
+		// Check if team leader: return only comercial/agente users in their team(s)
+		const { data: leaderTeams } = await supabase
+			.from("equipo_miembros")
+			.select("equipo_id")
+			.eq("user_id", user.id)
+			.eq("rol_equipo", "lider");
+
+		if (!leaderTeams || leaderTeams.length === 0) {
+			throw new Error("Sin permisos para gestionar permisos de edición");
+		}
+
+		const teamIds = leaderTeams.map((t: { equipo_id: string }) => t.equipo_id);
+
+		const { data: teamMembers } = await supabase
+			.from("equipo_miembros")
+			.select("user_id")
+			.in("equipo_id", teamIds);
+
+		const memberIds = (teamMembers ?? []).map((m: { user_id: string }) => m.user_id);
+
+		if (memberIds.length === 0) {
+			return { success: true, data: [] };
+		}
 
 		const { data, error } = await supabase
 			.from("profiles")
 			.select("id, full_name, email")
-			.eq("role", "comercial")
+			.in("role", ["comercial", "agente"])
+			.in("id", memberIds)
 			.order("full_name");
 
 		if (error) {
@@ -473,8 +681,8 @@ export async function getMyEditPermissions(): Promise<
 			};
 		}
 
-		// Only comercial role has permissions
-		if (profile.role !== "comercial") {
+		// Only comercial/agente roles have permissions
+		if (profile.role !== "comercial" && profile.role !== "agente") {
 			return { success: true, data: [] };
 		}
 

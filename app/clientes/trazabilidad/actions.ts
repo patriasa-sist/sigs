@@ -13,7 +13,7 @@
 "use server";
 
 import { createClient } from "@/utils/supabase/server";
-import { checkPermission } from "@/utils/auth/helpers";
+import { checkPermission, getDataScopeFilter } from "@/utils/auth/helpers";
 
 // ============================================
 // TYPES
@@ -118,10 +118,29 @@ export async function getClientAuditTrail(
 			return { success: false, error: "No autenticado" };
 		}
 
-		// Check permission for audit trail
+		// Check permission for audit trail:
+		// 1. Admin or users with clientes.trazabilidad permission can see all
+		// 2. Team members (leader + members) can see audit trail for their team's clients
 		const { allowed } = await checkPermission("clientes.trazabilidad");
 		if (!allowed) {
-			return { success: false, error: "Solo administradores pueden ver la trazabilidad" };
+			// Check if user is a team member for this client
+			const { data: clientCheck } = await supabase
+				.from("clients")
+				.select("commercial_owner_id")
+				.eq("id", clientId)
+				.single();
+
+			if (!clientCheck?.commercial_owner_id) {
+				return { success: false, error: "Cliente no encontrado" };
+			}
+
+			const scope = await getDataScopeFilter("clientes");
+			const isTeamMember = !scope.needsScoping ||
+				scope.teamMemberIds.includes(clientCheck.commercial_owner_id);
+
+			if (!isTeamMember) {
+				return { success: false, error: "Sin permisos para ver la trazabilidad de este cliente" };
+			}
 		}
 
 		// 1. Get base client data with creator info

@@ -75,6 +75,8 @@ export interface PermissionCheckResult {
 	canEdit: boolean;
 	reason: string;
 	isAdmin: boolean;
+	isTeamLeader?: boolean;
+	isTeamMember?: boolean;
 	permission?: {
 		id: string;
 		expires_at: string | null;

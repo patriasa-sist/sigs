@@ -129,7 +129,7 @@ export function ClientPermissionsPanel({ clientId, clientName }: Props) {
 						No hay permisos de edición otorgados
 					</p>
 					<p className="text-sm text-gray-500">
-						Solo los administradores pueden editar este cliente
+						Solo los administradores y líderes de equipo pueden editar este cliente
 					</p>
 				</div>
 			) : (
@@ -225,9 +225,9 @@ export function ClientPermissionsPanel({ clientId, clientName }: Props) {
 			{/* Info box */}
 			<div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
 				<p className="text-sm text-blue-700">
-					<strong>Nota:</strong> Los administradores siempre pueden editar
-					cualquier cliente. Los permisos aquí listados aplican solo para
-					usuarios con rol comercial.
+					<strong>Nota:</strong> Los administradores y líderes de equipo
+					siempre pueden editar los clientes de su equipo. Los permisos aquí
+					listados aplican para usuarios con rol comercial o agente.
 				</p>
 			</div>
 
