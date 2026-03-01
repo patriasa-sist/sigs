@@ -28,8 +28,12 @@ type Props = {
 };
 
 export function DatosEspecificos({ ramo, datos, moneda = "Bs", regionales, onChange, onSiguiente, onAnterior }: Props) {
-	// Normalizar nombre del ramo (case-insensitive)
-	const ramoNormalizado = ramo.toLowerCase().trim();
+	// Normalizar nombre del ramo (case-insensitive, sin tildes)
+	const ramoNormalizado = ramo
+		.toLowerCase()
+		.trim()
+		.normalize("NFD")
+		.replace(/[\u0300-\u036f]/g, "");
 
 	// Determinar qué componente renderizar según el ramo
 	const renderFormularioEspecifico = () => {
@@ -157,7 +161,7 @@ export function DatosEspecificos({ ramo, datos, moneda = "Bs", regionales, onCha
 		}
 
 		// Aeronavegación
-		if (ramoNormalizado.includes("aeronavegacion") || ramoNormalizado.includes("aeronavegación")) {
+		if (ramoNormalizado.includes("aeronavegacion")) {
 			return (
 				<AeronavegacionForm
 					datos={datos?.tipo_ramo === "Aeronavegación" ? datos.datos : null}
@@ -175,7 +179,7 @@ export function DatosEspecificos({ ramo, datos, moneda = "Bs", regionales, onCha
 		}
 
 		// Naves o Embarcaciones
-		if (ramoNormalizado.includes("nave") || ramoNormalizado.includes("embarcacion") || ramoNormalizado.includes("embarcación")) {
+		if (ramoNormalizado.includes("nave") || ramoNormalizado.includes("embarcacion")) {
 			return (
 				<AeronavegacionForm
 					datos={datos?.tipo_ramo === "Naves o embarcaciones" ? datos.datos : null}
@@ -230,7 +234,7 @@ export function DatosEspecificos({ ramo, datos, moneda = "Bs", regionales, onCha
 		}
 
 		// Sepelio - Con paso 2.1 de niveles de cobertura
-		if (ramoNormalizado.includes("sepelio") || ramoNormalizado.includes("defuncion") || ramoNormalizado.includes("defunción")) {
+		if (ramoNormalizado.includes("sepelio") || ramoNormalizado.includes("defuncion")) {
 			return (
 				<SepelioForm
 					datos={datos?.tipo_ramo === "Sepelio" ? datos.datos : null}
