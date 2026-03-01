@@ -38,6 +38,9 @@ export type PolizaDetalle = PolizaListItem & {
 	fecha_rechazo: string | null;
 	rechazador_nombre: string | null;
 	puede_editar_hasta: string | null;
+	// Renewal fields
+	es_renovacion: boolean;
+	nro_poliza_anterior: string | null;
 	pagos: Array<{
 		id: string;
 		numero_cuota: number;
@@ -610,6 +613,8 @@ export async function obtenerDetallePoliza(polizaId: string) {
 			fecha_rechazo: poliza.fecha_rechazo || null,
 			rechazador_nombre,
 			puede_editar_hasta: poliza.puede_editar_hasta || null,
+			es_renovacion: poliza.es_renovacion || false,
+			nro_poliza_anterior: poliza.nro_poliza_anterior || null,
 			pagos: pagos || [],
 			vehiculos,
 			beneficiarios_salud,

@@ -104,6 +104,8 @@ export async function guardarPoliza(formState: PolizaFormState) {
 				comision_empresa: pagoData.comision_empresa || null,
 				comision_encargado: pagoData.comision_encargado || null,
 				estado: "pendiente",
+				es_renovacion: formState.datos_basicos.es_renovacion || false,
+				nro_poliza_anterior: formState.datos_basicos.es_renovacion ? (formState.datos_basicos.nro_poliza_anterior || null) : null,
 			})
 			.select()
 			.single();

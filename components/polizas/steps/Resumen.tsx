@@ -251,6 +251,13 @@ export function Resumen({ formState, onAnterior, onEditarPaso, onGuardar, guarda
 								</div>
 								{datos_basicos && (
 									<div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2 text-sm text-gray-600">
+										{datos_basicos.es_renovacion && (
+											<div className="col-span-2 mb-1">
+												<span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800">
+													Renovación de póliza Nº {datos_basicos.nro_poliza_anterior}
+												</span>
+											</div>
+										)}
 										<div>
 											<span className="font-medium text-gray-700">Nº Póliza:</span>{" "}
 											{datos_basicos.numero_poliza}

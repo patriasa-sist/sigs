@@ -199,7 +199,14 @@ export default function PolizaDetallePage() {
 							<FileText className="h-8 w-8 text-primary" />
 							<h1 className="text-3xl font-bold text-gray-900">{poliza.numero_poliza}</h1>
 						</div>
-						<p className="text-gray-600 ml-11">Detalles completos de la póliza</p>
+						<p className="text-gray-600 ml-11">
+							Detalles completos de la póliza
+							{poliza.es_renovacion && (
+								<span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800">
+									Renovación de Nº {poliza.nro_poliza_anterior}
+								</span>
+							)}
+						</p>
 					</div>
 					<div className="flex items-center gap-3">
 						<span

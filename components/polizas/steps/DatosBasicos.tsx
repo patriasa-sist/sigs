@@ -2,12 +2,21 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { ChevronRight, ChevronLeft, CheckCircle2 } from "lucide-react";
-import type { DatosBasicosPoliza, CompaniaAseguradora, Regional, Categoria, GrupoProduccion, Moneda, ProductoAseguradora } from "@/types/poliza";
+import type {
+	DatosBasicosPoliza,
+	CompaniaAseguradora,
+	Regional,
+	Categoria,
+	GrupoProduccion,
+	Moneda,
+	ProductoAseguradora,
+} from "@/types/poliza";
 import { validarDatosBasicos } from "@/utils/polizaValidation";
 import { POLIZA_RULES } from "@/utils/validationConstants";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { createClient } from "@/utils/supabase/client";
 
@@ -48,7 +57,9 @@ export function DatosBasicos({ datos, onChange, onSiguiente, onAnterior }: Props
 			categoria_id: undefined,
 			grupo_produccion: "generales",
 			moneda: "Bs",
-		}
+			es_renovacion: false,
+			nro_poliza_anterior: "",
+		},
 	);
 
 	// Catálogos
@@ -71,16 +82,14 @@ export function DatosBasicos({ datos, onChange, onSiguiente, onAnterior }: Props
 			const supabase = createClient();
 
 			// Obtener usuario actual y su perfil para determinar rol
-			const { data: { user } } = await supabase.auth.getUser();
+			const {
+				data: { user },
+			} = await supabase.auth.getUser();
 			let userRole = "";
 			let userId = "";
 			if (user) {
 				userId = user.id;
-				const { data: profileData } = await supabase
-					.from("profiles")
-					.select("role")
-					.eq("id", user.id)
-					.single();
+				const { data: profileData } = await supabase.from("profiles").select("role").eq("id", user.id).single();
 				userRole = profileData?.role || "";
 			}
 
@@ -113,7 +122,7 @@ export function DatosBasicos({ datos, onChange, onSiguiente, onAnterior }: Props
 							.from("profiles")
 							.select("id, full_name, role")
 							.in("role", ["comercial", "admin", "agente", "usuario"])
-							.order("full_name")
+							.order("full_name"),
 				),
 				supabase
 					.from("tipos_seguros")
@@ -156,7 +165,7 @@ export function DatosBasicos({ datos, onChange, onSiguiente, onAnterior }: Props
 
 			// Auto-asignar al usuario actual si es agente/comercial y no hay responsable seleccionado
 			if (["agente", "comercial"].includes(userRole) && !datos?.responsable_id) {
-				setFormData(prev => ({ ...prev, responsable_id: userId }));
+				setFormData((prev) => ({ ...prev, responsable_id: userId }));
 			}
 		} catch (error) {
 			console.error("Error cargando catálogos:", error);
@@ -223,7 +232,7 @@ export function DatosBasicos({ datos, onChange, onSiguiente, onAnterior }: Props
 				// Si no hay productos disponibles, mostrar error
 				if (!productosData || productosData.length === 0) {
 					setErrorProductos(
-						"No hay productos configurados para esta combinación de compañía y ramo. Contacte al administrador."
+						"No hay productos configurados para esta combinación de compañía y ramo. Contacte al administrador.",
 					);
 				}
 
@@ -340,6 +349,59 @@ export function DatosBasicos({ datos, onChange, onSiguiente, onAnterior }: Props
 				)}
 			</div>
 
+			{/* Renovación de póliza */}
+			<div className="mb-6 p-4 border rounded-lg bg-gray-50">
+				<div className="flex items-center gap-3">
+					<Checkbox
+						id="es_renovacion"
+						checked={formData.es_renovacion || false}
+						onCheckedChange={(checked) => {
+							const esRenovacion = checked === true;
+							setFormData((prev) => ({
+								...prev,
+								es_renovacion: esRenovacion,
+								nro_poliza_anterior: esRenovacion ? prev.nro_poliza_anterior : "",
+							}));
+							if (!esRenovacion && errores.nro_poliza_anterior) {
+								const nuevosErrores = { ...errores };
+								delete nuevosErrores.nro_poliza_anterior;
+								setErrores(nuevosErrores);
+							}
+						}}
+					/>
+					<Label htmlFor="es_renovacion" className="cursor-pointer font-medium text-gray-900">
+						Esta póliza es una renovación
+					</Label>
+				</div>
+				{formData.es_renovacion && (
+					<div className="mt-3 ml-7">
+						<Label htmlFor="nro_poliza_anterior">
+							Nº de Póliza anterior <span className="text-red-500">*</span>
+						</Label>
+						<Input
+							id="nro_poliza_anterior"
+							value={formData.nro_poliza_anterior || ""}
+							onChange={(e) => {
+								setFormData((prev) => ({ ...prev, nro_poliza_anterior: e.target.value }));
+								if (errores.nro_poliza_anterior) {
+									const nuevosErrores = { ...errores };
+									delete nuevosErrores.nro_poliza_anterior;
+									setErrores(nuevosErrores);
+								}
+							}}
+							placeholder="Ingrese el número de la póliza que se renueva"
+							className={`mt-1 max-w-md ${errores.nro_poliza_anterior ? "border-red-500" : ""}`}
+						/>
+						{errores.nro_poliza_anterior && (
+							<p className="text-sm text-red-600 mt-1">{errores.nro_poliza_anterior}</p>
+						)}
+						<p className="text-xs text-gray-500 mt-1">
+							Puede ser una póliza registrada en el sistema o de terceros
+						</p>
+					</div>
+				)}
+			</div>
+
 			<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 				{/* Número de Póliza */}
 				<div className="space-y-2">
@@ -423,26 +485,26 @@ export function DatosBasicos({ datos, onChange, onSiguiente, onAnterior }: Props
 									cargandoProductos
 										? "Cargando productos..."
 										: !formData.compania_aseguradora_id || !formData.ramo
-										? "Seleccione compañía y ramo primero"
-										: productos.length === 0
-										? "No hay productos disponibles"
-										: "Seleccione un producto"
+											? "Seleccione compañía y ramo primero"
+											: productos.length === 0
+												? "No hay productos disponibles"
+												: "Seleccione un producto"
 								}
 							/>
 						</SelectTrigger>
 						<SelectContent>
 							{productos.map((producto) => (
 								<SelectItem key={producto.id} value={producto.id}>
-									<span className="font-mono text-xs text-gray-500">({producto.codigo_producto})</span>{" "}
+									<span className="font-mono text-xs text-gray-500">
+										({producto.codigo_producto})
+									</span>{" "}
 									{producto.nombre_producto}
 								</SelectItem>
 							))}
 						</SelectContent>
 					</Select>
 					{errores.producto_id && <p className="text-sm text-red-600">{errores.producto_id}</p>}
-					{errorProductos && !errores.producto_id && (
-						<p className="text-sm text-red-600">{errorProductos}</p>
-					)}
+					{errorProductos && !errores.producto_id && <p className="text-sm text-red-600">{errorProductos}</p>}
 				</div>
 
 				{/* Ejecutivo comercial */}

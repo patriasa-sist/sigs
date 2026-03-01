@@ -97,6 +97,14 @@ export function validarDatosBasicos(datos: Partial<DatosBasicosPoliza>): Validat
 		});
 	}
 
+	// Validar nro_poliza_anterior si es renovación
+	if (datos.es_renovacion && (!datos.nro_poliza_anterior || datos.nro_poliza_anterior.trim() === "")) {
+		errores.push({
+			campo: "nro_poliza_anterior",
+			mensaje: "Debe ingresar el número de la póliza anterior al marcar como renovación",
+		});
+	}
+
 	return {
 		valido: errores.length === 0,
 		errores,

@@ -300,6 +300,8 @@ export async function obtenerPolizaParaEdicion(
 			categoria_id: poliza.categoria_id || undefined,
 			grupo_produccion: poliza.grupo_produccion || "generales",
 			moneda: poliza.moneda,
+			es_renovacion: poliza.es_renovacion || false,
+			nro_poliza_anterior: poliza.nro_poliza_anterior || "",
 		};
 
 		// 4. Get payment data and build modalidad_pago
@@ -520,6 +522,8 @@ export async function actualizarPoliza(
 			comision: pagoData.comision_empresa || pagoData.comision || null,
 			comision_empresa: pagoData.comision_empresa || null,
 			comision_encargado: pagoData.comision_encargado || null,
+			es_renovacion: formState.datos_basicos.es_renovacion || false,
+			nro_poliza_anterior: formState.datos_basicos.es_renovacion ? (formState.datos_basicos.nro_poliza_anterior || null) : null,
 		};
 
 		// If policy was active or rejected, reset to pending and clear validation/rejection

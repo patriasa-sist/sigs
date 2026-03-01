@@ -153,6 +153,8 @@ export type DatosBasicosPoliza = {
 	categoria_id?: string; // Ahora es opcional (grupo de negocios)
 	grupo_produccion: GrupoProduccion; // NUEVO: generales o personales
 	moneda: Moneda; // NUEVO: Moneda se define a nivel de póliza
+	es_renovacion: boolean; // Indica si la póliza es una renovación de otra
+	nro_poliza_anterior?: string; // Número de la póliza que se renueva (texto libre)
 };
 
 // ============================================
@@ -646,6 +648,8 @@ export type PolizaDB = {
 	rechazado_por?: string; // UUID del gerente/admin que rechazó
 	fecha_rechazo?: string; // Fecha y hora del rechazo
 	puede_editar_hasta?: string; // Ventana de edición permitida (1 día desde rechazo)
+	es_renovacion?: boolean; // Indica si es renovación de otra póliza
+	nro_poliza_anterior?: string; // Número de la póliza anterior (texto libre)
 	created_at: string;
 	updated_at: string;
 	created_by?: string;
