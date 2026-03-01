@@ -1,11 +1,19 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { obtenerPolizas, buscarPolizas, type PolizaListItem } from "./actions";
-import { SearchBar } from "@/components/clientes/SearchBar";
+import { obtenerPolizas, type PolizaListItem } from "./actions";
 import { Button } from "@/components/ui/button";
-import { FileText, Plus, X, Calendar, DollarSign, Building2, User } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
+import { FileText, Plus, X, Calendar, DollarSign, Building2, User, Search, FilterX } from "lucide-react";
 import { formatCurrency, formatDate } from "@/utils/formatters";
 
 export default function PolizasPage() {
@@ -13,12 +21,20 @@ export default function PolizasPage() {
 
 	// State management
 	const [polizas, setPolizas] = useState<PolizaListItem[]>([]);
-	const [filteredPolizas, setFilteredPolizas] = useState<PolizaListItem[]>([]);
-	const [isSearchMode, setIsSearchMode] = useState(false);
 	const [selectedPoliza, setSelectedPoliza] = useState<PolizaListItem | null>(null);
 	const [currentPage, setCurrentPage] = useState(1);
 	const [pageSize] = useState(20);
 	const [isLoading, setIsLoading] = useState(true);
+
+	// Search & filters
+	const [searchQuery, setSearchQuery] = useState("");
+	const ALL = "__all__";
+	const [filters, setFilters] = useState({
+		ramo: ALL,
+		compania: ALL,
+		estado: ALL,
+		ejecutivo: ALL,
+	});
 
 	// Load data on mount
 	useEffect(() => {
@@ -30,28 +46,62 @@ export default function PolizasPage() {
 		const resultado = await obtenerPolizas();
 		if (resultado.success && resultado.polizas) {
 			setPolizas(resultado.polizas);
-			setFilteredPolizas(resultado.polizas);
 		}
 		setIsLoading(false);
 	};
 
-	// Handle search
-	const handleSearch = async (query: string) => {
-		if (!query.trim()) {
-			setFilteredPolizas(polizas);
-			setIsSearchMode(false);
-			setCurrentPage(1);
-			return;
+	// Derive unique filter options from loaded data
+	const filterOptions = useMemo(() => ({
+		ramos: [...new Set(polizas.map((p) => p.ramo))].filter(Boolean).sort(),
+		companias: [...new Set(polizas.map((p) => p.compania_nombre))].filter((v) => v !== "-").sort(),
+		estados: [...new Set(polizas.map((p) => p.estado))].filter(Boolean).sort(),
+		ejecutivos: [...new Set(polizas.map((p) => p.responsable_nombre))].filter((v) => v !== "-").sort(),
+	}), [polizas]);
+
+	// Client-side filtering
+	const filteredPolizas = useMemo(() => {
+		let result = polizas;
+
+		// Text search across multiple fields
+		if (searchQuery.trim()) {
+			const q = searchQuery.toLowerCase().trim();
+			result = result.filter(
+				(p) =>
+					p.numero_poliza.toLowerCase().includes(q) ||
+					p.client_name.toLowerCase().includes(q) ||
+					p.client_ci.toLowerCase().includes(q)
+			);
 		}
 
-		setIsLoading(true);
-		const resultado = await buscarPolizas(query);
-		if (resultado.success && resultado.polizas) {
-			setFilteredPolizas(resultado.polizas);
-			setIsSearchMode(true);
-			setCurrentPage(1);
-		}
-		setIsLoading(false);
+		// Apply dropdown filters
+		if (filters.ramo !== ALL) result = result.filter((p) => p.ramo === filters.ramo);
+		if (filters.compania !== ALL) result = result.filter((p) => p.compania_nombre === filters.compania);
+		if (filters.estado !== ALL) result = result.filter((p) => p.estado === filters.estado);
+		if (filters.ejecutivo !== ALL) result = result.filter((p) => p.responsable_nombre === filters.ejecutivo);
+
+		return result;
+	}, [polizas, searchQuery, filters]);
+
+	// Reset page when filters change
+	useEffect(() => {
+		setCurrentPage(1);
+	}, [searchQuery, filters]);
+
+	const hasActiveFilters = searchQuery.trim() !== "" || Object.values(filters).some((v) => v !== ALL);
+
+	const activeFilterLabels: { key: string; label: string; value: string }[] = [];
+	if (filters.ramo !== ALL) activeFilterLabels.push({ key: "ramo", label: "Ramo", value: filters.ramo });
+	if (filters.compania !== ALL) activeFilterLabels.push({ key: "compania", label: "Compañía", value: filters.compania });
+	if (filters.estado !== ALL) activeFilterLabels.push({ key: "estado", label: "Estado", value: filters.estado });
+	if (filters.ejecutivo !== ALL) activeFilterLabels.push({ key: "ejecutivo", label: "Ejecutivo", value: filters.ejecutivo });
+
+	const clearFilter = (key: string) => {
+		setFilters((prev) => ({ ...prev, [key]: ALL }));
+	};
+
+	const clearAllFilters = () => {
+		setSearchQuery("");
+		setFilters({ ramo: ALL, compania: ALL, estado: ALL, ejecutivo: ALL });
 	};
 
 	// Handle page change
@@ -127,17 +177,98 @@ export default function PolizasPage() {
 			</div>
 
 			{/* Search Bar */}
-			<div className="mb-6">
-				<SearchBar onSearch={handleSearch} placeholder="Buscar por Nº póliza..." />
+			<div className="mb-4">
+				<div className="relative">
+					<Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+					<Input
+						type="text"
+						placeholder="Buscar por Nº póliza, cliente, CI/NIT..."
+						value={searchQuery}
+						onChange={(e) => setSearchQuery(e.target.value)}
+						className="w-full pl-10 pr-10 text-base h-11"
+					/>
+					{searchQuery && (
+						<button
+							onClick={() => setSearchQuery("")}
+							className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+						>
+							<X className="h-4 w-4" />
+						</button>
+					)}
+				</div>
 			</div>
 
-			{/* Results Count */}
-			<div className="flex items-center justify-between mb-6">
+			{/* Filters Row */}
+			<div className="flex flex-wrap items-center gap-3 mb-4">
+				<Select value={filters.ramo} onValueChange={(v) => setFilters((prev) => ({ ...prev, ramo: v }))}>
+					<SelectTrigger size="sm"><SelectValue placeholder="Ramo" /></SelectTrigger>
+					<SelectContent>
+						<SelectItem value={ALL}>Todos los ramos</SelectItem>
+						{filterOptions.ramos.map((r) => (
+							<SelectItem key={r} value={r}>{r}</SelectItem>
+						))}
+					</SelectContent>
+				</Select>
+
+				<Select value={filters.compania} onValueChange={(v) => setFilters((prev) => ({ ...prev, compania: v }))}>
+					<SelectTrigger size="sm"><SelectValue placeholder="Compañía" /></SelectTrigger>
+					<SelectContent>
+						<SelectItem value={ALL}>Todas las compañías</SelectItem>
+						{filterOptions.companias.map((c) => (
+							<SelectItem key={c} value={c}>{c}</SelectItem>
+						))}
+					</SelectContent>
+				</Select>
+
+				<Select value={filters.estado} onValueChange={(v) => setFilters((prev) => ({ ...prev, estado: v }))}>
+					<SelectTrigger size="sm"><SelectValue placeholder="Estado" /></SelectTrigger>
+					<SelectContent>
+						<SelectItem value={ALL}>Todos los estados</SelectItem>
+						{filterOptions.estados.map((e) => (
+							<SelectItem key={e} value={e} className="capitalize">{e}</SelectItem>
+						))}
+					</SelectContent>
+				</Select>
+
+				<Select value={filters.ejecutivo} onValueChange={(v) => setFilters((prev) => ({ ...prev, ejecutivo: v }))}>
+					<SelectTrigger size="sm"><SelectValue placeholder="Ejecutivo" /></SelectTrigger>
+					<SelectContent>
+						<SelectItem value={ALL}>Todos los ejecutivos</SelectItem>
+						{filterOptions.ejecutivos.map((ej) => (
+							<SelectItem key={ej} value={ej}>{ej}</SelectItem>
+						))}
+					</SelectContent>
+				</Select>
+
+				{hasActiveFilters && (
+					<Button variant="ghost" size="sm" onClick={clearAllFilters} className="text-muted-foreground hover:text-foreground gap-1">
+						<FilterX className="h-4 w-4" />
+						Limpiar
+					</Button>
+				)}
+			</div>
+
+			{/* Active Filter Chips + Results Count */}
+			<div className="flex flex-wrap items-center justify-between gap-2 mb-6">
+				<div className="flex flex-wrap items-center gap-2">
+					{activeFilterLabels.map((f) => (
+						<Badge key={f.key} variant="secondary" className="gap-1 pr-1">
+							{f.label}: {f.value}
+							<button
+								onClick={() => clearFilter(f.key)}
+								className="ml-1 rounded-full hover:bg-muted p-0.5"
+							>
+								<X className="h-3 w-3" />
+							</button>
+						</Badge>
+					))}
+				</div>
 				<div className="text-sm text-gray-600">
-					{isSearchMode ? (
+					{hasActiveFilters ? (
 						<span>
 							<span className="font-semibold text-primary">{filteredPolizas.length}</span>{" "}
-							{filteredPolizas.length === 1 ? "resultado encontrado" : "resultados encontrados"}
+							{filteredPolizas.length === 1 ? "resultado" : "resultados"} de{" "}
+							<span className="font-semibold">{polizas.length}</span>
 						</span>
 					) : (
 						<span>
@@ -154,7 +285,7 @@ export default function PolizasPage() {
 						<FileText className="h-16 w-16 text-gray-300 mb-4" />
 						<h3 className="text-lg font-semibold text-gray-700 mb-2">No se encontraron pólizas</h3>
 						<p className="text-sm text-gray-500 text-center max-w-md">
-							{isSearchMode
+							{hasActiveFilters
 								? "No hay pólizas que coincidan con tu búsqueda."
 								: "Aún no hay pólizas registradas. Crea la primera póliza."}
 						</p>
