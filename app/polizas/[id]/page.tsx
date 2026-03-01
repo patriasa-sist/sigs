@@ -23,6 +23,10 @@ import {
 	CheckCircle,
 	Pencil,
 	Shield,
+	Heart,
+	Truck,
+	Ship,
+	Wrench,
 } from "lucide-react";
 import { formatCurrency, formatDate } from "@/utils/formatters";
 
@@ -325,12 +329,12 @@ export default function PolizaDetallePage() {
 						</div>
 					</div>
 
-					{/* Vehículos (si aplica) */}
+					{/* Vehículos Asegurados (Automotor) */}
 					{poliza.vehiculos && poliza.vehiculos.length > 0 && (
 						<div className="bg-white rounded-lg shadow-sm border p-6">
 							<h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
 								<Car className="h-5 w-5" />
-								Vehículos Asegurados
+								Vehículos Asegurados ({poliza.vehiculos.length})
 							</h2>
 							<div className="space-y-4">
 								{poliza.vehiculos.map((vehiculo) => (
@@ -338,20 +342,14 @@ export default function PolizaDetallePage() {
 										<div className="grid grid-cols-3 gap-4">
 											<div>
 												<label className="text-sm font-medium text-gray-600">Placa</label>
-												<p className="text-base font-semibold text-gray-900">
-													{vehiculo.placa}
-												</p>
+												<p className="text-base font-semibold text-gray-900">{vehiculo.placa}</p>
 											</div>
 											<div>
 												<label className="text-sm font-medium text-gray-600">Tipo</label>
-												<p className="text-base text-gray-900">
-													{vehiculo.tipo_vehiculo || "-"}
-												</p>
+												<p className="text-base text-gray-900">{vehiculo.tipo_vehiculo || "-"}</p>
 											</div>
 											<div>
-												<label className="text-sm font-medium text-gray-600">
-													Marca/Modelo
-												</label>
+												<label className="text-sm font-medium text-gray-600">Marca/Modelo</label>
 												<p className="text-base text-gray-900">
 													{vehiculo.marca || "-"} {vehiculo.modelo || ""}
 												</p>
@@ -361,9 +359,15 @@ export default function PolizaDetallePage() {
 												<p className="text-base text-gray-900">{vehiculo.ano || "-"}</p>
 											</div>
 											<div>
-												<label className="text-sm font-medium text-gray-600">
-													Valor Asegurado
-												</label>
+												<label className="text-sm font-medium text-gray-600">Color</label>
+												<p className="text-base text-gray-900">{vehiculo.color || "-"}</p>
+											</div>
+											<div>
+												<label className="text-sm font-medium text-gray-600">Uso</label>
+												<p className="text-base text-gray-900 capitalize">{vehiculo.uso || "-"}</p>
+											</div>
+											<div>
+												<label className="text-sm font-medium text-gray-600">Valor Asegurado</label>
 												<p className="text-base font-semibold text-gray-900">
 													{formatCurrency(vehiculo.valor_asegurado, poliza.moneda)}
 												</p>
@@ -374,6 +378,320 @@ export default function PolizaDetallePage() {
 													{formatCurrency(vehiculo.franquicia, poliza.moneda)}
 												</p>
 											</div>
+											<div>
+												<label className="text-sm font-medium text-gray-600">Coaseguro</label>
+												<p className="text-base text-gray-900">
+													{vehiculo.coaseguro != null ? `${vehiculo.coaseguro}%` : "-"}
+												</p>
+											</div>
+											<div>
+												<label className="text-sm font-medium text-gray-600">Nro. Chasis</label>
+												<p className="text-base text-gray-900">{vehiculo.nro_chasis || "-"}</p>
+											</div>
+											<div>
+												<label className="text-sm font-medium text-gray-600">Nro. Motor</label>
+												<p className="text-base text-gray-900">{vehiculo.nro_motor || "-"}</p>
+											</div>
+											{vehiculo.ejes != null && (
+												<div>
+													<label className="text-sm font-medium text-gray-600">Ejes</label>
+													<p className="text-base text-gray-900">{vehiculo.ejes}</p>
+												</div>
+											)}
+											{vehiculo.nro_asientos != null && (
+												<div>
+													<label className="text-sm font-medium text-gray-600">Asientos</label>
+													<p className="text-base text-gray-900">{vehiculo.nro_asientos}</p>
+												</div>
+											)}
+											{vehiculo.plaza_circulacion && (
+												<div>
+													<label className="text-sm font-medium text-gray-600">Plaza de Circulación</label>
+													<p className="text-base text-gray-900">{vehiculo.plaza_circulacion}</p>
+												</div>
+											)}
+										</div>
+									</div>
+								))}
+							</div>
+						</div>
+					)}
+
+					{/* Beneficiarios Salud */}
+					{poliza.beneficiarios_salud && poliza.beneficiarios_salud.length > 0 && (
+						<div className="bg-white rounded-lg shadow-sm border p-6">
+							<h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
+								<Heart className="h-5 w-5" />
+								Beneficiarios ({poliza.beneficiarios_salud.length})
+							</h2>
+							<div className="overflow-x-auto">
+								<table className="w-full">
+									<thead className="bg-gray-50 border-b">
+										<tr>
+											<th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Nombre</th>
+											<th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Carnet</th>
+											<th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Fecha Nac.</th>
+											<th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Género</th>
+											<th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Rol</th>
+										</tr>
+									</thead>
+									<tbody className="divide-y">
+										{poliza.beneficiarios_salud.map((b) => (
+											<tr key={b.id} className="hover:bg-gray-50">
+												<td className="px-4 py-3 text-sm font-medium text-gray-900">{b.nombre_completo}</td>
+												<td className="px-4 py-3 text-sm text-gray-900">{b.carnet}</td>
+												<td className="px-4 py-3 text-sm text-gray-900">{formatDate(b.fecha_nacimiento)}</td>
+												<td className="px-4 py-3 text-sm text-gray-900">{b.genero}</td>
+												<td className="px-4 py-3 text-sm text-gray-900 capitalize">{b.rol}</td>
+											</tr>
+										))}
+									</tbody>
+								</table>
+							</div>
+						</div>
+					)}
+
+					{/* Datos de Transporte */}
+					{poliza.transporte && (
+						<div className="bg-white rounded-lg shadow-sm border p-6">
+							<h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
+								<Truck className="h-5 w-5" />
+								Datos de Transporte
+							</h2>
+							<div className="grid grid-cols-2 gap-6">
+								<div className="col-span-2">
+									<label className="text-sm font-medium text-gray-600">Materia Asegurada</label>
+									<p className="text-base text-gray-900 mt-1">{poliza.transporte.materia_asegurada}</p>
+								</div>
+								<div>
+									<label className="text-sm font-medium text-gray-600">Tipo de Transporte</label>
+									<p className="text-base text-gray-900 mt-1 capitalize">{poliza.transporte.tipo_transporte}</p>
+								</div>
+								<div>
+									<label className="text-sm font-medium text-gray-600">Tipo de Embalaje</label>
+									<p className="text-base text-gray-900 mt-1">{poliza.transporte.tipo_embalaje}</p>
+								</div>
+								<div>
+									<label className="text-sm font-medium text-gray-600">Origen</label>
+									<p className="text-base text-gray-900 mt-1">
+										{poliza.transporte.ciudad_origen}, {poliza.transporte.pais_origen}
+									</p>
+								</div>
+								<div>
+									<label className="text-sm font-medium text-gray-600">Destino</label>
+									<p className="text-base text-gray-900 mt-1">
+										{poliza.transporte.ciudad_destino}, {poliza.transporte.pais_destino}
+									</p>
+								</div>
+								<div>
+									<label className="text-sm font-medium text-gray-600">Fecha de Embarque</label>
+									<p className="text-base text-gray-900 mt-1">{formatDate(poliza.transporte.fecha_embarque)}</p>
+								</div>
+								<div>
+									<label className="text-sm font-medium text-gray-600">Valor Asegurado</label>
+									<p className="text-base font-semibold text-gray-900 mt-1">
+										{formatCurrency(poliza.transporte.valor_asegurado, poliza.moneda)}
+									</p>
+								</div>
+								<div>
+									<label className="text-sm font-medium text-gray-600">Factura</label>
+									<p className="text-base text-gray-900 mt-1">{poliza.transporte.factura}</p>
+								</div>
+								<div>
+									<label className="text-sm font-medium text-gray-600">Fecha Factura</label>
+									<p className="text-base text-gray-900 mt-1">{formatDate(poliza.transporte.fecha_factura)}</p>
+								</div>
+								<div>
+									<label className="text-sm font-medium text-gray-600">Modalidad</label>
+									<p className="text-base text-gray-900 mt-1 capitalize">{poliza.transporte.modalidad.replace(/_/g, " ")}</p>
+								</div>
+								<div>
+									<label className="text-sm font-medium text-gray-600">Coberturas</label>
+									<div className="flex gap-2 mt-1">
+										{poliza.transporte.cobertura_a && (
+											<span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200">
+												Cobertura A (Todo Riesgo)
+											</span>
+										)}
+										{poliza.transporte.cobertura_c && (
+											<span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">
+												Cobertura C (Riesgos Nombrados)
+											</span>
+										)}
+									</div>
+								</div>
+							</div>
+						</div>
+					)}
+
+					{/* Naves / Aeronaves */}
+					{poliza.naves && poliza.naves.length > 0 && (
+						<div className="bg-white rounded-lg shadow-sm border p-6">
+							<h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
+								<Ship className="h-5 w-5" />
+								Naves / Aeronaves ({poliza.naves.length})
+							</h2>
+
+							{/* Niveles AP si existen */}
+							{poliza.niveles_ap_naves && poliza.niveles_ap_naves.length > 0 && (
+								<div className="mb-4 p-4 bg-gray-50 rounded-lg">
+									<h3 className="text-sm font-semibold text-gray-700 mb-2">Niveles de Accidentes Personales</h3>
+									<div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+										{poliza.niveles_ap_naves.map((nivel) => (
+											<div key={nivel.id} className="bg-white border rounded p-3 text-sm">
+												<p className="font-medium text-gray-900 mb-1">{nivel.nombre}</p>
+												<div className="grid grid-cols-3 gap-2 text-xs text-gray-600">
+													<div>
+														<span className="block">Muerte Acc.</span>
+														<span className="font-medium text-gray-900">{formatCurrency(nivel.monto_muerte_accidental, poliza.moneda)}</span>
+													</div>
+													<div>
+														<span className="block">Invalidez</span>
+														<span className="font-medium text-gray-900">{formatCurrency(nivel.monto_invalidez, poliza.moneda)}</span>
+													</div>
+													<div>
+														<span className="block">Gastos Méd.</span>
+														<span className="font-medium text-gray-900">{formatCurrency(nivel.monto_gastos_medicos, poliza.moneda)}</span>
+													</div>
+												</div>
+											</div>
+										))}
+									</div>
+								</div>
+							)}
+
+							<div className="space-y-4">
+								{poliza.naves.map((nave) => (
+									<div key={nave.id} className="border rounded-lg p-4">
+										<div className="grid grid-cols-3 gap-4">
+											<div>
+												<label className="text-sm font-medium text-gray-600">Matrícula</label>
+												<p className="text-base font-semibold text-gray-900">{nave.matricula}</p>
+											</div>
+											<div>
+												<label className="text-sm font-medium text-gray-600">Marca/Modelo</label>
+												<p className="text-base text-gray-900">{nave.marca} {nave.modelo}</p>
+											</div>
+											<div>
+												<label className="text-sm font-medium text-gray-600">Año</label>
+												<p className="text-base text-gray-900">{nave.ano}</p>
+											</div>
+											<div>
+												<label className="text-sm font-medium text-gray-600">Serie</label>
+												<p className="text-base text-gray-900">{nave.serie}</p>
+											</div>
+											<div>
+												<label className="text-sm font-medium text-gray-600">Uso</label>
+												<p className="text-base text-gray-900 capitalize">{nave.uso}</p>
+											</div>
+											<div>
+												<label className="text-sm font-medium text-gray-600">Pasajeros / Tripulantes</label>
+												<p className="text-base text-gray-900">{nave.nro_pasajeros} / {nave.nro_tripulantes}</p>
+											</div>
+											<div>
+												<label className="text-sm font-medium text-gray-600">Valor Casco</label>
+												<p className="text-base font-semibold text-gray-900">
+													{formatCurrency(nave.valor_casco, poliza.moneda)}
+												</p>
+											</div>
+											<div>
+												<label className="text-sm font-medium text-gray-600">Resp. Civil</label>
+												<p className="text-base font-semibold text-gray-900">
+													{formatCurrency(nave.valor_responsabilidad_civil, poliza.moneda)}
+												</p>
+											</div>
+											{nave.nivel_ap_nombre && (
+												<div>
+													<label className="text-sm font-medium text-gray-600">Nivel AP</label>
+													<p className="text-base text-gray-900">{nave.nivel_ap_nombre}</p>
+												</div>
+											)}
+										</div>
+									</div>
+								))}
+							</div>
+						</div>
+					)}
+
+					{/* Equipos Industriales (Ramos Técnicos) */}
+					{poliza.equipos && poliza.equipos.length > 0 && (
+						<div className="bg-white rounded-lg shadow-sm border p-6">
+							<h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
+								<Wrench className="h-5 w-5" />
+								Equipos Industriales ({poliza.equipos.length})
+							</h2>
+							<div className="space-y-4">
+								{poliza.equipos.map((equipo) => (
+									<div key={equipo.id} className="border rounded-lg p-4">
+										<div className="grid grid-cols-3 gap-4">
+											<div>
+												<label className="text-sm font-medium text-gray-600">Nro. Serie</label>
+												<p className="text-base font-semibold text-gray-900">{equipo.nro_serie}</p>
+											</div>
+											{equipo.placa && (
+												<div>
+													<label className="text-sm font-medium text-gray-600">Placa</label>
+													<p className="text-base text-gray-900">{equipo.placa}</p>
+												</div>
+											)}
+											<div>
+												<label className="text-sm font-medium text-gray-600">Tipo</label>
+												<p className="text-base text-gray-900">{equipo.tipo_equipo || "-"}</p>
+											</div>
+											<div>
+												<label className="text-sm font-medium text-gray-600">Marca/Modelo</label>
+												<p className="text-base text-gray-900">
+													{equipo.marca_equipo || "-"} {equipo.modelo || ""}
+												</p>
+											</div>
+											{equipo.ano != null && (
+												<div>
+													<label className="text-sm font-medium text-gray-600">Año</label>
+													<p className="text-base text-gray-900">{equipo.ano}</p>
+												</div>
+											)}
+											{equipo.color && (
+												<div>
+													<label className="text-sm font-medium text-gray-600">Color</label>
+													<p className="text-base text-gray-900">{equipo.color}</p>
+												</div>
+											)}
+											<div>
+												<label className="text-sm font-medium text-gray-600">Uso</label>
+												<p className="text-base text-gray-900 capitalize">{equipo.uso}</p>
+											</div>
+											<div>
+												<label className="text-sm font-medium text-gray-600">Valor Asegurado</label>
+												<p className="text-base font-semibold text-gray-900">
+													{formatCurrency(equipo.valor_asegurado, poliza.moneda)}
+												</p>
+											</div>
+											<div>
+												<label className="text-sm font-medium text-gray-600">Franquicia</label>
+												<p className="text-base text-gray-900">
+													{formatCurrency(equipo.franquicia, poliza.moneda)}
+												</p>
+											</div>
+											<div>
+												<label className="text-sm font-medium text-gray-600">Coaseguro</label>
+												<p className="text-base text-gray-900">{equipo.coaseguro}%</p>
+											</div>
+											<div>
+												<label className="text-sm font-medium text-gray-600">Nro. Chasis</label>
+												<p className="text-base text-gray-900">{equipo.nro_chasis}</p>
+											</div>
+											{equipo.nro_motor && (
+												<div>
+													<label className="text-sm font-medium text-gray-600">Nro. Motor</label>
+													<p className="text-base text-gray-900">{equipo.nro_motor}</p>
+												</div>
+											)}
+											{equipo.plaza_circulacion && (
+												<div>
+													<label className="text-sm font-medium text-gray-600">Plaza de Circulación</label>
+													<p className="text-base text-gray-900">{equipo.plaza_circulacion}</p>
+												</div>
+											)}
 										</div>
 									</div>
 								))}

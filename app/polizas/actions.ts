@@ -56,6 +56,76 @@ export type PolizaDetalle = PolizaListItem & {
 		marca: string | null;
 		modelo: string | null;
 		ano: string | null;
+		nro_chasis: string | null;
+		uso: string | null;
+		coaseguro: number | null;
+		color: string | null;
+		ejes: number | null;
+		nro_motor: string | null;
+		nro_asientos: number | null;
+		plaza_circulacion: string | null;
+	}>;
+	beneficiarios_salud?: Array<{
+		id: string;
+		nombre_completo: string;
+		carnet: string;
+		fecha_nacimiento: string;
+		genero: string;
+		rol: string;
+	}>;
+	transporte?: {
+		materia_asegurada: string;
+		tipo_embalaje: string;
+		fecha_embarque: string;
+		tipo_transporte: string;
+		ciudad_origen: string;
+		pais_origen: string;
+		ciudad_destino: string;
+		pais_destino: string;
+		valor_asegurado: number;
+		factura: string;
+		fecha_factura: string;
+		cobertura_a: boolean;
+		cobertura_c: boolean;
+		modalidad: string;
+	};
+	naves?: Array<{
+		id: string;
+		matricula: string;
+		marca: string;
+		modelo: string;
+		ano: number;
+		serie: string;
+		uso: string;
+		nro_pasajeros: number;
+		nro_tripulantes: number;
+		valor_casco: number;
+		valor_responsabilidad_civil: number;
+		nivel_ap_nombre: string | null;
+	}>;
+	niveles_ap_naves?: Array<{
+		id: string;
+		nombre: string;
+		monto_muerte_accidental: number;
+		monto_invalidez: number;
+		monto_gastos_medicos: number;
+	}>;
+	equipos?: Array<{
+		id: string;
+		nro_serie: string;
+		placa: string | null;
+		valor_asegurado: number;
+		franquicia: number;
+		nro_chasis: string;
+		uso: string;
+		coaseguro: number;
+		tipo_equipo: string | null;
+		marca_equipo: string | null;
+		modelo: string | null;
+		ano: number | null;
+		color: string | null;
+		nro_motor: string | null;
+		plaza_circulacion: string | null;
 	}>;
 	documentos: Array<{
 		id: string;
@@ -289,28 +359,18 @@ export async function obtenerDetallePoliza(polizaId: string) {
 			.eq("poliza_id", polizaId)
 			.order("numero_cuota", { ascending: true });
 
-		// Obtener vehículos si es ramo automotor
-		let vehiculos: Array<{
-			id: string;
-			placa: string;
-			valor_asegurado: number;
-			franquicia: number;
-			tipo_vehiculo: string | null;
-			marca: string | null;
-			modelo: string | null;
-			ano: number | null;
-		}> = [];
-		if (poliza.ramo.toLowerCase().includes("automotor")) {
+		// Obtener datos específicos por ramo
+		const ramoLower = (poliza.ramo || "").toLowerCase();
+
+		// --- AUTOMOTOR ---
+		let vehiculos: PolizaDetalle["vehiculos"];
+		if (ramoLower.includes("automotor")) {
 			const { data: vehiculosData } = await supabase
 				.from("polizas_automotor_vehiculos")
 				.select(
 					`
-					id,
-					placa,
-					valor_asegurado,
-					franquicia,
-					modelo,
-					ano,
+					id, placa, valor_asegurado, franquicia, nro_chasis, uso, coaseguro,
+					modelo, ano, color, ejes, nro_motor, nro_asientos, plaza_circulacion,
 					tipos_vehiculo (nombre),
 					marcas_vehiculo (nombre)
 				`
@@ -327,7 +387,130 @@ export async function obtenerDetallePoliza(polizaId: string) {
 					marca: (v.marcas_vehiculo as { nombre?: string } | null)?.nombre || null,
 					modelo: v.modelo,
 					ano: v.ano?.toString() || null,
+					nro_chasis: v.nro_chasis || null,
+					uso: v.uso || null,
+					coaseguro: v.coaseguro ?? null,
+					color: v.color || null,
+					ejes: v.ejes ?? null,
+					nro_motor: v.nro_motor || null,
+					nro_asientos: v.nro_asientos ?? null,
+					plaza_circulacion: v.plaza_circulacion || null,
 				})) || [];
+			if (vehiculos.length === 0) vehiculos = undefined;
+		}
+
+		// --- SALUD (Beneficiarios) ---
+		let beneficiarios_salud: PolizaDetalle["beneficiarios_salud"];
+		if (ramoLower.includes("salud")) {
+			const { data: beneficiariosData } = await supabase
+				.from("polizas_salud_beneficiarios")
+				.select("id, nombre_completo, carnet, fecha_nacimiento, genero, rol")
+				.eq("poliza_id", polizaId);
+
+			if (beneficiariosData && beneficiariosData.length > 0) {
+				beneficiarios_salud = beneficiariosData;
+			}
+		}
+
+		// --- TRANSPORTE ---
+		let transporte: PolizaDetalle["transporte"];
+		if (ramoLower.includes("transporte")) {
+			const { data: transporteData } = await supabase
+				.from("polizas_transporte")
+				.select(
+					`
+					materia_asegurada, tipo_embalaje, fecha_embarque, tipo_transporte,
+					ciudad_origen, ciudad_destino, valor_asegurado, factura, fecha_factura,
+					cobertura_a, cobertura_c, modalidad,
+					pais_origen:paises!polizas_transporte_pais_origen_id_fkey (nombre),
+					pais_destino:paises!polizas_transporte_pais_destino_id_fkey (nombre)
+				`
+				)
+				.eq("poliza_id", polizaId)
+				.single();
+
+			if (transporteData) {
+				transporte = {
+					materia_asegurada: transporteData.materia_asegurada,
+					tipo_embalaje: transporteData.tipo_embalaje,
+					fecha_embarque: transporteData.fecha_embarque,
+					tipo_transporte: transporteData.tipo_transporte,
+					ciudad_origen: transporteData.ciudad_origen,
+					pais_origen: (transporteData.pais_origen as { nombre?: string } | null)?.nombre || "-",
+					ciudad_destino: transporteData.ciudad_destino,
+					pais_destino: (transporteData.pais_destino as { nombre?: string } | null)?.nombre || "-",
+					valor_asegurado: transporteData.valor_asegurado,
+					factura: transporteData.factura,
+					fecha_factura: transporteData.fecha_factura,
+					cobertura_a: transporteData.cobertura_a ?? false,
+					cobertura_c: transporteData.cobertura_c ?? false,
+					modalidad: transporteData.modalidad,
+				};
+			}
+		}
+
+		// --- AERONAVEGACIÓN / NAVES ---
+		let naves: PolizaDetalle["naves"];
+		let niveles_ap_naves: PolizaDetalle["niveles_ap_naves"];
+		if (ramoLower.includes("aeronavegacion") || ramoLower.includes("aeronavegación") || ramoLower.includes("naves") || ramoLower.includes("embarcacion")) {
+			const { data: navelesAP } = await supabase
+				.from("polizas_aeronavegacion_niveles_ap")
+				.select("id, nombre, monto_muerte_accidental, monto_invalidez, monto_gastos_medicos")
+				.eq("poliza_id", polizaId);
+
+			if (navelesAP && navelesAP.length > 0) {
+				niveles_ap_naves = navelesAP;
+			}
+
+			const nivelesMap = new Map(navelesAP?.map(n => [n.id, n.nombre]) || []);
+
+			const { data: navesData } = await supabase
+				.from("polizas_aeronavegacion_naves")
+				.select("id, matricula, marca, modelo, ano, serie, uso, nro_pasajeros, nro_tripulantes, valor_casco, valor_responsabilidad_civil, nivel_ap_id")
+				.eq("poliza_id", polizaId);
+
+			if (navesData && navesData.length > 0) {
+				naves = navesData.map((n) => ({
+					...n,
+					nivel_ap_nombre: n.nivel_ap_id ? nivelesMap.get(n.nivel_ap_id) || null : null,
+				}));
+			}
+		}
+
+		// --- RAMOS TÉCNICOS (Equipos Industriales) ---
+		let equipos: PolizaDetalle["equipos"];
+		if (ramoLower.includes("técnicos") || ramoLower.includes("tecnicos")) {
+			const { data: equiposData } = await supabase
+				.from("polizas_ramos_tecnicos_equipos")
+				.select(
+					`
+					id, nro_serie, placa, valor_asegurado, franquicia, nro_chasis, uso, coaseguro,
+					modelo, ano, color, nro_motor, plaza_circulacion,
+					tipos_equipo (nombre),
+					marcas_equipo (nombre)
+				`
+				)
+				.eq("poliza_id", polizaId);
+
+			if (equiposData && equiposData.length > 0) {
+				equipos = equiposData.map((e) => ({
+					id: e.id,
+					nro_serie: e.nro_serie,
+					placa: e.placa || null,
+					valor_asegurado: e.valor_asegurado,
+					franquicia: e.franquicia,
+					nro_chasis: e.nro_chasis,
+					uso: e.uso,
+					coaseguro: e.coaseguro,
+					tipo_equipo: (e.tipos_equipo as { nombre?: string } | null)?.nombre || null,
+					marca_equipo: (e.marcas_equipo as { nombre?: string } | null)?.nombre || null,
+					modelo: e.modelo || null,
+					ano: e.ano ?? null,
+					color: e.color || null,
+					nro_motor: e.nro_motor || null,
+					plaza_circulacion: e.plaza_circulacion || null,
+				}));
+			}
 		}
 
 		// Obtener documentos (solo activos)
@@ -428,7 +611,12 @@ export async function obtenerDetallePoliza(polizaId: string) {
 			rechazador_nombre,
 			puede_editar_hasta: poliza.puede_editar_hasta || null,
 			pagos: pagos || [],
-			vehiculos: vehiculos.length > 0 ? (vehiculos as PolizaDetalle["vehiculos"]) : undefined,
+			vehiculos,
+			beneficiarios_salud,
+			transporte,
+			naves,
+			niveles_ap_naves,
+			equipos,
 			documentos: documentos || [],
 			historial,
 		};
