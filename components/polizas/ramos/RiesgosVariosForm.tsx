@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ChevronRight, ChevronLeft, CheckCircle2, Plus, Trash2, Users, AlertCircle } from "lucide-react";
-import type { DatosRiesgosVarios, AseguradoRiesgosVarios, ConvenioRiesgosVarios } from "@/types/poliza";
+import { ChevronRight, ChevronLeft, CheckCircle2, Plus, Trash2, Users, Home, Edit2, AlertCircle } from "lucide-react";
+import type { DatosRiesgosVarios, BienAseguradoRiesgosVarios, AseguradoRiesgosVarios, ItemRiesgosVarios } from "@/types/poliza";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,54 +11,128 @@ import { BuscadorClientes } from "../BuscadorClientes";
 
 type Props = {
 	datos: DatosRiesgosVarios | null;
+	moneda?: string;
 	onChange: (datos: DatosRiesgosVarios) => void;
 	onSiguiente: () => void;
 	onAnterior: () => void;
 };
 
-export function RiesgosVariosForm({ datos, onChange, onSiguiente, onAnterior }: Props) {
-	// Convertir datos antiguos (number) a nueva estructura (ConvenioRiesgosVarios)
-	const inicializarConvenio = (valor: unknown): ConvenioRiesgosVarios => {
-		if (typeof valor === 'object' && valor !== null && 'habilitado' in valor) {
-			return valor as ConvenioRiesgosVarios;
-		}
-		// Si es un número (datos antiguos), convertir a nueva estructura
-		const monto = typeof valor === 'number' ? valor : 0;
-		return { habilitado: monto > 0, monto };
-	};
+const ITEMS_DISPONIBLES: ItemRiesgosVarios["nombre"][] = [
+	"Edificaciones, instalaciones en general",
+	"Activos fijos en general (muebles y enseres)",
+	"Equipos electronicos",
+	"Maquinaria fija",
+	"Bienes de terceros",
+	"Existencias de mercaderias",
+	"Dinero y valores dentro del predio",
+	"Vidrios y cristales",
+	"Letreros",
+	"Perdida de beneficios",
+];
 
-	const [convenio1, setConvenio1] = useState<ConvenioRiesgosVarios>(
-		inicializarConvenio(datos?.convenio_1_infidelidad_empleados)
-	);
-	const [convenio2, setConvenio2] = useState<ConvenioRiesgosVarios>(
-		inicializarConvenio(datos?.convenio_2_perdidas_dentro_local)
-	);
-	const [convenio3, setConvenio3] = useState<ConvenioRiesgosVarios>(
-		inicializarConvenio(datos?.convenio_3_perdidas_fuera_local)
-	);
-	const [convenio4, setConvenio4] = useState<ConvenioRiesgosVarios>(
-		inicializarConvenio(datos?.convenio_4_pendiente) || { habilitado: false, monto: 0 }
-	);
-	const [convenio5, setConvenio5] = useState<ConvenioRiesgosVarios>(
-		inicializarConvenio(datos?.convenio_5_pendiente) || { habilitado: false, monto: 0 }
-	);
-	const [valorTotal, setValorTotal] = useState<number>(datos?.valor_total_asegurado || 0);
+export function RiesgosVariosForm({ datos, moneda, onChange, onSiguiente, onAnterior }: Props) {
+	const [bienes, setBienes] = useState<BienAseguradoRiesgosVarios[]>(datos?.bienes || []);
 	const [asegurados, setAsegurados] = useState<AseguradoRiesgosVarios[]>(datos?.asegurados || []);
+
+	// Estados para modal de bien
+	const [mostrarModalBien, setMostrarModalBien] = useState(false);
+	const [bienEditando, setBienEditando] = useState<number | null>(null);
+	const [direccionBien, setDireccionBien] = useState("");
+	const [itemsBien, setItemsBien] = useState<ItemRiesgosVarios[]>([]);
+	const [valorTotalDeclarado, setValorTotalDeclarado] = useState<number>(0);
+	const [esPrimerRiesgo, setEsPrimerRiesgo] = useState(false);
+
 	const [mostrarBuscador, setMostrarBuscador] = useState(false);
 	const [errores, setErrores] = useState<Record<string, string>>({});
 
-	// Calcular valor total automáticamente (solo convenios habilitados)
+	// Calcular valor total cuando cambian los items del modal
 	useEffect(() => {
-		const total = [convenio1, convenio2, convenio3, convenio4, convenio5]
-			.filter(c => c.habilitado)
-			.reduce((sum, c) => sum + c.monto, 0);
-		setValorTotal(total);
-	}, [convenio1, convenio2, convenio3, convenio4, convenio5]);
+		const total = itemsBien.reduce((sum, item) => sum + item.monto, 0);
+		setValorTotalDeclarado(total);
+	}, [itemsBien]);
 
-	const agregarAsegurado = (cliente: { id: string; nombre: string; ci: string }) => {
-		if (asegurados.some((a) => a.client_id === cliente.id)) {
+	// Calcular valor asegurado total (suma de todos los bienes)
+	const valorAseguradoTotal = bienes.reduce((sum, bien) => sum + bien.valor_total_declarado, 0);
+
+	const abrirModalBien = (index?: number) => {
+		if (index !== undefined) {
+			const bien = bienes[index];
+			setBienEditando(index);
+			setDireccionBien(bien.direccion);
+			setItemsBien(bien.items);
+			setValorTotalDeclarado(bien.valor_total_declarado);
+			setEsPrimerRiesgo(bien.es_primer_riesgo);
+		} else {
+			setBienEditando(null);
+			setDireccionBien("");
+			setItemsBien([]);
+			setValorTotalDeclarado(0);
+			setEsPrimerRiesgo(false);
+		}
+		setMostrarModalBien(true);
+	};
+
+	const agregarItem = (nombreItem: ItemRiesgosVarios["nombre"]) => {
+		if (itemsBien.some((item) => item.nombre === nombreItem)) return;
+		setItemsBien([...itemsBien, { nombre: nombreItem, monto: 0 }]);
+	};
+
+	const actualizarMontoItem = (nombreItem: ItemRiesgosVarios["nombre"], nuevoMonto: number) => {
+		setItemsBien(
+			itemsBien.map((item) =>
+				item.nombre === nombreItem ? { ...item, monto: nuevoMonto } : item
+			)
+		);
+	};
+
+	const eliminarItem = (nombreItem: ItemRiesgosVarios["nombre"]) => {
+		setItemsBien(itemsBien.filter((item) => item.nombre !== nombreItem));
+	};
+
+	const guardarBien = () => {
+		if (!direccionBien.trim()) {
+			alert("Debe ingresar una dirección");
 			return;
 		}
+		if (itemsBien.length === 0) {
+			alert("Debe agregar al menos un item asegurado");
+			return;
+		}
+		if (valorTotalDeclarado <= 0) {
+			alert("El valor total declarado debe ser mayor a 0");
+			return;
+		}
+
+		const nuevoBien: BienAseguradoRiesgosVarios = {
+			direccion: direccionBien,
+			items: itemsBien,
+			valor_total_declarado: valorTotalDeclarado,
+			es_primer_riesgo: esPrimerRiesgo,
+		};
+
+		if (bienEditando !== null) {
+			const nuevosBienes = [...bienes];
+			nuevosBienes[bienEditando] = nuevoBien;
+			setBienes(nuevosBienes);
+		} else {
+			if (esPrimerRiesgo) {
+				setBienes([...bienes.map((b) => ({ ...b, es_primer_riesgo: false })), nuevoBien]);
+			} else {
+				setBienes([...bienes, nuevoBien]);
+			}
+		}
+
+		setMostrarModalBien(false);
+	};
+
+	const eliminarBien = (index: number) => {
+		if (confirm("¿Está seguro de eliminar este bien?")) {
+			setBienes(bienes.filter((_, i) => i !== index));
+		}
+	};
+
+	const agregarAsegurado = (cliente: { id: string; nombre: string; ci: string }) => {
+		if (asegurados.some((a) => a.client_id === cliente.id)) return;
 
 		setAsegurados([
 			...asegurados,
@@ -78,23 +152,8 @@ export function RiesgosVariosForm({ datos, onChange, onSiguiente, onAnterior }: 
 	const handleContinuar = () => {
 		const nuevosErrores: Record<string, string> = {};
 
-		// Validar que convenios habilitados tengan monto > 0
-		const convenios = [
-			{ nombre: 'convenio1', convenio: convenio1 },
-			{ nombre: 'convenio2', convenio: convenio2 },
-			{ nombre: 'convenio3', convenio: convenio3 },
-			{ nombre: 'convenio4', convenio: convenio4 },
-			{ nombre: 'convenio5', convenio: convenio5 },
-		];
-
-		convenios.forEach(({ nombre, convenio }) => {
-			if (convenio.habilitado && convenio.monto <= 0) {
-				nuevosErrores[nombre] = "El convenio habilitado debe tener un monto mayor a 0";
-			}
-		});
-
-		if (valorTotal <= 0) {
-			nuevosErrores.valor_total = "El valor total debe ser mayor a 0. Habilite al menos un convenio.";
+		if (bienes.length === 0) {
+			nuevosErrores.bienes = "Debe agregar al menos un bien asegurado";
 		}
 
 		if (asegurados.length === 0) {
@@ -107,19 +166,16 @@ export function RiesgosVariosForm({ datos, onChange, onSiguiente, onAnterior }: 
 		}
 
 		onChange({
-			convenio_1_infidelidad_empleados: convenio1,
-			convenio_2_perdidas_dentro_local: convenio2,
-			convenio_3_perdidas_fuera_local: convenio3,
-			convenio_4_pendiente: convenio4,
-			convenio_5_pendiente: convenio5,
-			valor_total_asegurado: valorTotal,
+			valor_total_asegurado: valorAseguradoTotal,
+			bienes,
 			asegurados,
 		});
 
 		onSiguiente();
 	};
 
-	const tieneDatos = valorTotal > 0 && asegurados.length > 0;
+	const tieneDatos = valorAseguradoTotal > 0 && bienes.length > 0 && asegurados.length > 0;
+	const monedaLabel = moneda || "Bs";
 
 	return (
 		<div className="bg-white rounded-lg shadow-sm border p-6">
@@ -128,248 +184,103 @@ export function RiesgosVariosForm({ datos, onChange, onSiguiente, onAnterior }: 
 					<h2 className="text-xl font-semibold text-gray-900">
 						Paso 3: Datos Específicos - Riesgos Varios Misceláneos
 					</h2>
-					<p className="text-sm text-gray-600 mt-1">Configure las coberturas y asegurados</p>
+					<p className="text-sm text-gray-600 mt-1">Configure los bienes y asegurados</p>
 				</div>
 
 				{tieneDatos && (
 					<div className="flex items-center gap-2 text-green-600">
 						<CheckCircle2 className="h-5 w-5" />
-						<span className="text-sm font-medium">{asegurados.length} asegurado(s)</span>
+						<span className="text-sm font-medium">
+							{bienes.length} bien(es), {asegurados.length} asegurado(s)
+						</span>
 					</div>
 				)}
 			</div>
 
 			<div className="space-y-6">
-				{/* Información sobre coberturas */}
+				{/* Valor Total Asegurado (Calculado) */}
+				<div className="bg-gray-50 border rounded-lg p-4">
+					<Label className="text-base font-semibold">Valor Total Asegurado (Calculado)</Label>
+					<p className="text-2xl font-bold text-gray-900 mt-2">
+						{monedaLabel} {valorAseguradoTotal.toLocaleString("es-BO", { minimumFractionDigits: 2 })}
+					</p>
+					<p className="text-xs text-gray-500 mt-1">Suma de todos los bienes declarados</p>
+				</div>
+
+				{/* Info sobre items */}
 				<div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
 					<div className="flex gap-3">
 						<AlertCircle className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
 						<div className="text-sm text-blue-900">
-							<p className="font-medium mb-2">Coberturas disponibles:</p>
+							<p className="font-medium mb-2">Sistema de Items por Ubicación:</p>
 							<ul className="space-y-1 text-xs">
-								<li>• <strong>Convenio 1:</strong> Infidelidad de empleados</li>
-								<li>• <strong>Convenio 2:</strong> Pérdidas dentro del local</li>
-								<li>• <strong>Convenio 3:</strong> Pérdidas fuera del local</li>
-								<li>• <strong>Convenio 4:</strong> Pendiente</li>
-								<li>• <strong>Convenio 5:</strong> Pendiente</li>
+								<li>• Cada bien asegurado puede tener múltiples items con montos individuales</li>
+								<li>• Items disponibles: edificaciones, activos fijos, equipos electrónicos, maquinaria, bienes de terceros, existencias, dinero y valores, vidrios, letreros, pérdida de beneficios</li>
+								<li>• El valor total se calcula automáticamente sumando todos los items</li>
+								<li>• Puede marcar un bien como &quot;primer riesgo&quot; si corresponde</li>
 							</ul>
-							<p className="mt-2 text-xs text-blue-700">
-								Habilite los convenios necesarios. El valor total se calcula sumando solo los convenios habilitados.
-							</p>
-							<p className="mt-1 text-xs text-gray-600">
-								La moneda se toma de los datos básicos de la póliza (Paso 2).
-							</p>
 						</div>
 					</div>
 				</div>
 
-				{/* Coberturas */}
-				<div className="space-y-4">
-					<h3 className="text-sm font-semibold text-gray-900 uppercase">Coberturas</h3>
-
-					{/* Convenio 1 */}
-					<div className="flex items-start gap-4 p-3 border rounded-lg bg-white">
-						<div className="flex items-center pt-2">
-							<Checkbox
-								id="conv1_habilitado"
-								checked={convenio1.habilitado}
-								onCheckedChange={(checked) => setConvenio1({ ...convenio1, habilitado: !!checked })}
-							/>
-						</div>
-						<div className="flex-1 space-y-2">
-							<Label htmlFor="convenio1" className="font-medium">
-								Convenio 1: Infidelidad de Empleados
-							</Label>
-							{convenio1.habilitado && (
-								<>
-									<Input
-										id="convenio1"
-										type="number"
-										min="0"
-										step="0.01"
-										value={convenio1.monto || ""}
-										onChange={(e) => {
-											setConvenio1({ ...convenio1, monto: parseFloat(e.target.value) || 0 });
-											if (errores.convenio1) {
-												// eslint-disable-next-line @typescript-eslint/no-unused-vars
-												const { convenio1: _removed, ...rest } = errores;
-												setErrores(rest);
-											}
-										}}
-										placeholder="0.00"
-										className={errores.convenio1 ? "border-red-500" : ""}
-									/>
-									{errores.convenio1 && <p className="text-sm text-red-600">{errores.convenio1}</p>}
-								</>
-							)}
-						</div>
-					</div>
-
-					{/* Convenio 2 */}
-					<div className="flex items-start gap-4 p-3 border rounded-lg bg-white">
-						<div className="flex items-center pt-2">
-							<Checkbox
-								id="conv2_habilitado"
-								checked={convenio2.habilitado}
-								onCheckedChange={(checked) => setConvenio2({ ...convenio2, habilitado: !!checked })}
-							/>
-						</div>
-						<div className="flex-1 space-y-2">
-							<Label htmlFor="convenio2" className="font-medium">
-								Convenio 2: Pérdidas Dentro del Local
-							</Label>
-							{convenio2.habilitado && (
-								<>
-									<Input
-										id="convenio2"
-										type="number"
-										min="0"
-										step="0.01"
-										value={convenio2.monto || ""}
-										onChange={(e) => {
-											setConvenio2({ ...convenio2, monto: parseFloat(e.target.value) || 0 });
-											if (errores.convenio2) {
-												// eslint-disable-next-line @typescript-eslint/no-unused-vars
-												const { convenio2: _removed, ...rest } = errores;
-												setErrores(rest);
-											}
-										}}
-										placeholder="0.00"
-										className={errores.convenio2 ? "border-red-500" : ""}
-									/>
-									{errores.convenio2 && <p className="text-sm text-red-600">{errores.convenio2}</p>}
-								</>
-							)}
-						</div>
-					</div>
-
-					{/* Convenio 3 */}
-					<div className="flex items-start gap-4 p-3 border rounded-lg bg-white">
-						<div className="flex items-center pt-2">
-							<Checkbox
-								id="conv3_habilitado"
-								checked={convenio3.habilitado}
-								onCheckedChange={(checked) => setConvenio3({ ...convenio3, habilitado: !!checked })}
-							/>
-						</div>
-						<div className="flex-1 space-y-2">
-							<Label htmlFor="convenio3" className="font-medium">
-								Convenio 3: Pérdidas Fuera del Local
-							</Label>
-							{convenio3.habilitado && (
-								<>
-									<Input
-										id="convenio3"
-										type="number"
-										min="0"
-										step="0.01"
-										value={convenio3.monto || ""}
-										onChange={(e) => {
-											setConvenio3({ ...convenio3, monto: parseFloat(e.target.value) || 0 });
-											if (errores.convenio3) {
-												// eslint-disable-next-line @typescript-eslint/no-unused-vars
-												const { convenio3: _removed, ...rest } = errores;
-												setErrores(rest);
-											}
-										}}
-										placeholder="0.00"
-										className={errores.convenio3 ? "border-red-500" : ""}
-									/>
-									{errores.convenio3 && <p className="text-sm text-red-600">{errores.convenio3}</p>}
-								</>
-							)}
-						</div>
-					</div>
-
-					{/* Convenio 4 - NUEVO */}
-					<div className="flex items-start gap-4 p-3 border rounded-lg bg-white">
-						<div className="flex items-center pt-2">
-							<Checkbox
-								id="conv4_habilitado"
-								checked={convenio4.habilitado}
-								onCheckedChange={(checked) => setConvenio4({ ...convenio4, habilitado: !!checked })}
-							/>
-						</div>
-						<div className="flex-1 space-y-2">
-							<Label htmlFor="convenio4" className="font-medium">
-								Convenio 4: Pendiente
-							</Label>
-							{convenio4.habilitado && (
-								<>
-									<Input
-										id="convenio4"
-										type="number"
-										min="0"
-										step="0.01"
-										value={convenio4.monto || ""}
-										onChange={(e) => {
-											setConvenio4({ ...convenio4, monto: parseFloat(e.target.value) || 0 });
-											if (errores.convenio4) {
-												// eslint-disable-next-line @typescript-eslint/no-unused-vars
-												const { convenio4: _removed, ...rest } = errores;
-												setErrores(rest);
-											}
-										}}
-										placeholder="0.00"
-										className={errores.convenio4 ? "border-red-500" : ""}
-									/>
-									{errores.convenio4 && <p className="text-sm text-red-600">{errores.convenio4}</p>}
-								</>
-							)}
-						</div>
-					</div>
-
-					{/* Convenio 5 - NUEVO */}
-					<div className="flex items-start gap-4 p-3 border rounded-lg bg-white">
-						<div className="flex items-center pt-2">
-							<Checkbox
-								id="conv5_habilitado"
-								checked={convenio5.habilitado}
-								onCheckedChange={(checked) => setConvenio5({ ...convenio5, habilitado: !!checked })}
-							/>
-						</div>
-						<div className="flex-1 space-y-2">
-							<Label htmlFor="convenio5" className="font-medium">
-								Convenio 5: Pendiente
-							</Label>
-							{convenio5.habilitado && (
-								<>
-									<Input
-										id="convenio5"
-										type="number"
-										min="0"
-										step="0.01"
-										value={convenio5.monto || ""}
-										onChange={(e) => {
-											setConvenio5({ ...convenio5, monto: parseFloat(e.target.value) || 0 });
-											if (errores.convenio5) {
-												// eslint-disable-next-line @typescript-eslint/no-unused-vars
-												const { convenio5: _removed, ...rest } = errores;
-												setErrores(rest);
-											}
-										}}
-										placeholder="0.00"
-										className={errores.convenio5 ? "border-red-500" : ""}
-									/>
-									{errores.convenio5 && <p className="text-sm text-red-600">{errores.convenio5}</p>}
-								</>
-							)}
-						</div>
-					</div>
-
-					{/* Valor Total (calculado) */}
-					<div className="bg-gray-50 border rounded-lg p-4">
-						<Label htmlFor="valor_total" className="text-base font-semibold">
-							Valor Total Asegurado (Calculado)
+				{/* Lista de Bienes */}
+				<div className="space-y-3">
+					<div className="flex items-center justify-between">
+						<Label className="text-base">
+							Bienes Asegurados <span className="text-red-500">*</span>
 						</Label>
-						<p className="text-2xl font-bold text-gray-900 mt-2">
-							{valorTotal.toLocaleString("es-BO", { minimumFractionDigits: 2 })}
-						</p>
-						<p className="text-xs text-gray-500 mt-1">
-							Suma de convenios habilitados
-						</p>
-						{errores.valor_total && <p className="text-sm text-red-600 mt-2">{errores.valor_total}</p>}
+						<Button onClick={() => abrirModalBien()} size="sm">
+							<Plus className="mr-2 h-4 w-4" />
+							Agregar Bien
+						</Button>
 					</div>
+
+					{errores.bienes && <p className="text-sm text-red-600">{errores.bienes}</p>}
+
+					{bienes.length === 0 ? (
+						<div className="border-2 border-dashed rounded-lg p-8 text-center">
+							<Home className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+							<p className="text-sm text-gray-600">No hay bienes asegurados</p>
+							<p className="text-xs text-gray-500 mt-1">Haga clic en &quot;Agregar Bien&quot; para comenzar</p>
+						</div>
+					) : (
+						<div className="border rounded-lg divide-y">
+							{bienes.map((bien, index) => (
+								<div key={index} className="p-4">
+									<div className="flex items-start justify-between mb-2">
+										<div className="flex-1">
+											<p className="font-medium text-gray-900">{bien.direccion}</p>
+											<p className="text-sm text-gray-600">
+												Valor Total: {monedaLabel} {bien.valor_total_declarado.toLocaleString("es-BO", { minimumFractionDigits: 2 })}
+											</p>
+											{bien.es_primer_riesgo && (
+												<span className="inline-block mt-1 px-2 py-1 bg-purple-100 text-purple-700 text-xs font-medium rounded">
+													Primer Riesgo
+												</span>
+											)}
+										</div>
+										<div className="flex gap-2">
+											<Button variant="outline" size="sm" onClick={() => abrirModalBien(index)}>
+												<Edit2 className="h-4 w-4" />
+											</Button>
+											<Button variant="ghost" size="sm" onClick={() => eliminarBien(index)}>
+												<Trash2 className="h-4 w-4 text-red-600" />
+											</Button>
+										</div>
+									</div>
+									<div className="mt-3 space-y-1 text-xs text-gray-600">
+										<p className="font-medium">Items:</p>
+										{bien.items.map((item, i) => (
+											<div key={i} className="flex justify-between pl-4">
+												<span>• {item.nombre}</span>
+												<span>{monedaLabel} {item.monto.toLocaleString()}</span>
+											</div>
+										))}
+									</div>
+								</div>
+							))}
+						</div>
+					)}
 				</div>
 
 				{/* Lista de Asegurados */}
@@ -414,6 +325,112 @@ export function RiesgosVariosForm({ datos, onChange, onSiguiente, onAnterior }: 
 					)}
 				</div>
 			</div>
+
+			{/* Modal de Bien */}
+			{mostrarModalBien && (
+				<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+					<div className="bg-white rounded-lg p-6 max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+						<h3 className="text-lg font-semibold text-gray-900 mb-4">
+							{bienEditando !== null ? "Editar" : "Agregar"} Bien Asegurado
+						</h3>
+
+						<div className="space-y-4">
+							{/* Dirección */}
+							<div className="space-y-2">
+								<Label htmlFor="direccion_bien_rv">
+									Dirección/Ubicación <span className="text-red-500">*</span>
+								</Label>
+								<Input
+									id="direccion_bien_rv"
+									value={direccionBien}
+									onChange={(e) => setDireccionBien(e.target.value)}
+									placeholder="Ej: Av. Ejemplo #123, La Paz"
+								/>
+							</div>
+
+							{/* Items Asegurables */}
+							<div className="space-y-3">
+								<Label className="text-base">Items Asegurables</Label>
+
+								{/* Selector de items */}
+								<div className="flex gap-2 flex-wrap">
+									{ITEMS_DISPONIBLES.filter(nombre => !itemsBien.some(item => item.nombre === nombre)).map((nombreItem) => (
+										<Button
+											key={nombreItem}
+											type="button"
+											variant="outline"
+											size="sm"
+											onClick={() => agregarItem(nombreItem)}
+										>
+											<Plus className="mr-1 h-3 w-3" />
+											{nombreItem}
+										</Button>
+									))}
+								</div>
+
+								{/* Items agregados */}
+								{itemsBien.length > 0 && (
+									<div className="space-y-2 mt-3">
+										{itemsBien.map((item) => (
+											<div key={item.nombre} className="flex items-center gap-2 p-3 border rounded-lg">
+												<div className="flex-1">
+													<Label className="text-sm font-medium">{item.nombre}</Label>
+													<Input
+														type="number"
+														min="0"
+														step="0.01"
+														value={item.monto || ""}
+														onChange={(e) =>
+															actualizarMontoItem(item.nombre, parseFloat(e.target.value) || 0)
+														}
+														placeholder="0.00"
+														className="mt-1"
+													/>
+												</div>
+												<Button
+													type="button"
+													variant="ghost"
+													size="sm"
+													onClick={() => eliminarItem(item.nombre)}
+												>
+													<Trash2 className="h-4 w-4 text-red-600" />
+												</Button>
+											</div>
+										))}
+									</div>
+								)}
+							</div>
+
+							{/* Valor Total Declarado (Calculado) */}
+							<div className="bg-gray-50 border rounded-lg p-3">
+								<Label className="text-sm font-medium">Valor Total Declarado (Calculado)</Label>
+								<p className="text-xl font-bold text-gray-900 mt-1">
+									{monedaLabel} {valorTotalDeclarado.toLocaleString("es-BO", { minimumFractionDigits: 2 })}
+								</p>
+							</div>
+
+							{/* Primer Riesgo */}
+							<div className="flex items-center space-x-2">
+								<Checkbox
+									id="es_primer_riesgo_rv"
+									checked={esPrimerRiesgo}
+									onCheckedChange={(checked) => setEsPrimerRiesgo(!!checked)}
+								/>
+								<Label htmlFor="es_primer_riesgo_rv" className="cursor-pointer">
+									¿Es Primer Riesgo?
+								</Label>
+							</div>
+						</div>
+
+						<div className="flex justify-end gap-2 mt-6">
+							<Button variant="outline" onClick={() => setMostrarModalBien(false)}>
+								Cancelar
+							</Button>
+							<Button onClick={guardarBien}>Guardar</Button>
+						</div>
+					</div>
+				</div>
+			)}
 
 			{/* Buscador de Clientes Modal */}
 			{mostrarBuscador && (

@@ -109,6 +109,7 @@ export function DatosEspecificos({ ramo, datos, moneda = "Bs", regionales, onCha
 			return (
 				<RiesgosVariosForm
 					datos={datos?.tipo_ramo === "Riesgos Varios Misceláneos" ? datos.datos : null}
+					moneda={moneda}
 					onChange={(datosRV) => {
 						onChange({
 							tipo_ramo: "Riesgos Varios Misceláneos",

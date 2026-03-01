@@ -281,10 +281,28 @@ export type DatosResponsabilidadCivil = {
 };
 
 // --- RIESGOS VARIOS MISCELÁNEOS ---
-// NUEVO: Estructura para convenios con habilitación individual
-export type ConvenioRiesgosVarios = {
-	habilitado: boolean; // Si el convenio está habilitado
-	monto: number; // Monto asegurado (solo aplicable si habilitado)
+// Sistema de bienes por ubicación con items asegurables (mismo patrón que Incendio)
+
+export type ItemRiesgosVarios = {
+	nombre:
+		| "Edificaciones, instalaciones en general"
+		| "Activos fijos en general (muebles y enseres)"
+		| "Equipos electronicos"
+		| "Maquinaria fija"
+		| "Bienes de terceros"
+		| "Existencias de mercaderias"
+		| "Dinero y valores dentro del predio"
+		| "Vidrios y cristales"
+		| "Letreros"
+		| "Perdida de beneficios";
+	monto: number;
+};
+
+export type BienAseguradoRiesgosVarios = {
+	direccion: string;
+	items: ItemRiesgosVarios[];
+	valor_total_declarado: number; // Suma de todos los items (calculado automáticamente)
+	es_primer_riesgo: boolean;
 };
 
 export type AseguradoRiesgosVarios = {
@@ -294,14 +312,9 @@ export type AseguradoRiesgosVarios = {
 };
 
 export type DatosRiesgosVarios = {
-	convenio_1_infidelidad_empleados: ConvenioRiesgosVarios; // MODIFICADO: Ahora es objeto con habilitado/monto
-	convenio_2_perdidas_dentro_local: ConvenioRiesgosVarios; // MODIFICADO: Ahora es objeto con habilitado/monto
-	convenio_3_perdidas_fuera_local: ConvenioRiesgosVarios; // MODIFICADO: Ahora es objeto con habilitado/monto
-	convenio_4_pendiente: ConvenioRiesgosVarios; // NUEVO: Convenio 4 (temporal: "pendiente")
-	convenio_5_pendiente: ConvenioRiesgosVarios; // NUEVO: Convenio 5 (temporal: "pendiente")
-	valor_total_asegurado: number; // MODIFICADO: Suma solo de convenios habilitados
+	valor_total_asegurado: number; // Suma de todos los bienes
+	bienes: BienAseguradoRiesgosVarios[];
 	asegurados: AseguradoRiesgosVarios[];
-	// REMOVED: moneda (usa la moneda de toda la póliza definida en paso 2)
 };
 
 // --- RAMOS TÉCNICOS (Equipos Industriales) ---

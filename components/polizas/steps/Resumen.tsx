@@ -492,6 +492,10 @@ export function Resumen({ formState, onAnterior, onEditarPaso, onGuardar, guarda
 											{(datos_especificos.datos as DatosRiesgosVarios).valor_total_asegurado.toLocaleString("es-BO")} {modalidad_pago?.moneda || "Bs"}
 										</div>
 										<div>
+											<span className="font-medium text-gray-700">Bienes Asegurados:</span>{" "}
+											{(datos_especificos.datos as DatosRiesgosVarios).bienes?.length || 0} bien(es)
+										</div>
+										<div>
 											<span className="font-medium text-gray-700">Asegurados:</span>{" "}
 											{(datos_especificos.datos as DatosRiesgosVarios).asegurados.length} asegurado(s)
 										</div>
