@@ -393,7 +393,7 @@ export function NaturalClientForm({ form, partnerForm, onFieldBlur }: NaturalCli
 			{showPartnerSection && partnerForm && (
 				<FormSection
 					title="Datos del Cónyuge"
-					description="Información del cónyuge (requerido para clientes casados)"
+					description="Información del cónyuge (todos los campos son opcionales)"
 				>
 					<PartnerFields form={partnerForm} onFieldBlur={onFieldBlur} />
 				</FormSection>
@@ -427,9 +427,7 @@ function PartnerFields({ form, onFieldBlur }: { form: UseFormReturn<ClientPartne
 	return (
 		<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 			<div>
-				<Label htmlFor="partner_primer_nombre">
-					Primer Nombre <span className="text-red-500">*</span>
-				</Label>
+				<Label htmlFor="partner_primer_nombre">Primer Nombre</Label>
 				<Input id="partner_primer_nombre" {...register("primer_nombre")} onBlur={onFieldBlur} />
 				{errors.primer_nombre && <p className="text-sm text-red-500 mt-1">{errors.primer_nombre.message}</p>}
 			</div>
@@ -440,9 +438,7 @@ function PartnerFields({ form, onFieldBlur }: { form: UseFormReturn<ClientPartne
 			</div>
 
 			<div>
-				<Label htmlFor="partner_primer_apellido">
-					Primer Apellido <span className="text-red-500">*</span>
-				</Label>
+				<Label htmlFor="partner_primer_apellido">Primer Apellido</Label>
 				<Input id="partner_primer_apellido" {...register("primer_apellido")} onBlur={onFieldBlur} />
 				{errors.primer_apellido && (
 					<p className="text-sm text-red-500 mt-1">{errors.primer_apellido.message}</p>
@@ -455,25 +451,19 @@ function PartnerFields({ form, onFieldBlur }: { form: UseFormReturn<ClientPartne
 			</div>
 
 			<div className="md:col-span-2">
-				<Label htmlFor="partner_direccion">
-					Dirección <span className="text-red-500">*</span>
-				</Label>
+				<Label htmlFor="partner_direccion">Dirección</Label>
 				<Input id="partner_direccion" {...register("direccion")} onBlur={onFieldBlur} />
 				{errors.direccion && <p className="text-sm text-red-500 mt-1">{errors.direccion.message}</p>}
 			</div>
 
 			<div>
-				<Label htmlFor="partner_celular">
-					Celular <span className="text-red-500">*</span>
-				</Label>
+				<Label htmlFor="partner_celular">Celular</Label>
 				<Input id="partner_celular" {...register("celular")} onBlur={onFieldBlur} placeholder="Solo números" />
 				{errors.celular && <p className="text-sm text-red-500 mt-1">{errors.celular.message}</p>}
 			</div>
 
 			<div>
-				<Label htmlFor="partner_correo_electronico">
-					Correo Electrónico <span className="text-red-500">*</span>
-				</Label>
+				<Label htmlFor="partner_correo_electronico">Correo Electrónico</Label>
 				<Input
 					id="partner_correo_electronico"
 					type="email"
@@ -486,9 +476,7 @@ function PartnerFields({ form, onFieldBlur }: { form: UseFormReturn<ClientPartne
 			</div>
 
 			<div>
-				<Label htmlFor="partner_profesion_oficio">
-					Profesión u Oficio <span className="text-red-500">*</span>
-				</Label>
+				<Label htmlFor="partner_profesion_oficio">Profesión u Oficio</Label>
 				<Input id="partner_profesion_oficio" {...register("profesion_oficio")} onBlur={onFieldBlur} />
 				{errors.profesion_oficio && (
 					<p className="text-sm text-red-500 mt-1">{errors.profesion_oficio.message}</p>

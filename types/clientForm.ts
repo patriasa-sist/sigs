@@ -181,14 +181,14 @@ export const naturalClientFormSchema = naturalClientPersonalSchema
 export interface ClientPartnerData {
   id?: string;
   client_id: string;
-  primer_nombre: string;
+  primer_nombre?: string;
   segundo_nombre?: string;
-  primer_apellido: string;
+  primer_apellido?: string;
   segundo_apellido?: string;
-  direccion: string;
-  celular: string;
-  correo_electronico: string;
-  profesion_oficio: string;
+  direccion?: string;
+  celular?: string;
+  correo_electronico?: string;
+  profesion_oficio?: string;
   actividad_economica?: string;
   lugar_trabajo?: string;
 }
@@ -196,14 +196,14 @@ export interface ClientPartnerData {
 export const clientPartnerSchema = z.object({
   id: z.string().optional(),
   client_id: z.string(),
-  primer_nombre: z.string().min(1, 'Primer nombre es requerido'),
+  primer_nombre: z.string().optional(),
   segundo_nombre: z.string().optional(),
-  primer_apellido: z.string().min(1, 'Primer apellido es requerido'),
+  primer_apellido: z.string().optional(),
   segundo_apellido: z.string().optional(),
-  direccion: z.string().min(1, 'Dirección es requerida'),
-  celular: phoneValidation,
-  correo_electronico: emailValidation,
-  profesion_oficio: z.string().min(1, 'Profesión u oficio es requerido'),
+  direccion: z.string().optional(),
+  celular: z.string().regex(/^[0-9]{5,}$/, 'Mínimo 5 dígitos').optional().or(z.literal('')),
+  correo_electronico: z.string().email('Email inválido').optional().or(z.literal('')),
+  profesion_oficio: z.string().optional(),
   actividad_economica: z.string().optional(),
   lugar_trabajo: z.string().optional(),
 });

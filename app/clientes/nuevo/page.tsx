@@ -396,19 +396,20 @@ export default function NuevoClientePage() {
 		// 3. If married, insert partner data
 		if (normalized.estado_civil === "casado") {
 			const partnerData = partnerForm.getValues();
-			if (partnerData && partnerData.primer_nombre) {
+			const hasPartnerData = partnerData && Object.values(partnerData).some(v => v && v !== partnerData.client_id);
+			if (hasPartnerData) {
 				const normalizedPartner = normalizePartnerData(partnerData);
 
 				const { error: partnerError } = await supabase.from("client_partners").insert({
 					client_id: client.id,
-					primer_nombre: normalizedPartner.primer_nombre,
+					primer_nombre: normalizedPartner.primer_nombre || null,
 					segundo_nombre: normalizedPartner.segundo_nombre || null,
-					primer_apellido: normalizedPartner.primer_apellido,
+					primer_apellido: normalizedPartner.primer_apellido || null,
 					segundo_apellido: normalizedPartner.segundo_apellido || null,
-					direccion: normalizedPartner.direccion,
-					celular: normalizedPartner.celular,
-					correo_electronico: normalizedPartner.correo_electronico,
-					profesion_oficio: normalizedPartner.profesion_oficio,
+					direccion: normalizedPartner.direccion || null,
+					celular: normalizedPartner.celular || null,
+					correo_electronico: normalizedPartner.correo_electronico || null,
+					profesion_oficio: normalizedPartner.profesion_oficio || null,
 					actividad_economica: normalizedPartner.actividad_economica || null,
 					lugar_trabajo: normalizedPartner.lugar_trabajo || null,
 				});
@@ -529,19 +530,20 @@ export default function NuevoClientePage() {
 		// 4. If married, insert partner data
 		if (normalized.estado_civil === "casado") {
 			const partnerData = partnerForm.getValues();
-			if (partnerData && partnerData.primer_nombre) {
+			const hasPartnerData = partnerData && Object.values(partnerData).some(v => v && v !== partnerData.client_id);
+			if (hasPartnerData) {
 				const normalizedPartner = normalizePartnerData(partnerData);
 
 				const { error: partnerError } = await supabase.from("client_partners").insert({
 					client_id: client.id,
-					primer_nombre: normalizedPartner.primer_nombre,
+					primer_nombre: normalizedPartner.primer_nombre || null,
 					segundo_nombre: normalizedPartner.segundo_nombre || null,
-					primer_apellido: normalizedPartner.primer_apellido,
+					primer_apellido: normalizedPartner.primer_apellido || null,
 					segundo_apellido: normalizedPartner.segundo_apellido || null,
-					direccion: normalizedPartner.direccion,
-					celular: normalizedPartner.celular,
-					correo_electronico: normalizedPartner.correo_electronico,
-					profesion_oficio: normalizedPartner.profesion_oficio,
+					direccion: normalizedPartner.direccion || null,
+					celular: normalizedPartner.celular || null,
+					correo_electronico: normalizedPartner.correo_electronico || null,
+					profesion_oficio: normalizedPartner.profesion_oficio || null,
 					actividad_economica: normalizedPartner.actividad_economica || null,
 					lugar_trabajo: normalizedPartner.lugar_trabajo || null,
 				});

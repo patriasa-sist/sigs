@@ -39,17 +39,17 @@ import { CIVIL_STATUS, DOCUMENT_TYPES, GENDER_OPTIONS, COMPANY_TYPES } from "@/t
 type PartnerData = {
 	id: string;
 	client_id: string;
-	primer_nombre: string;
+	primer_nombre: string | null;
 	segundo_nombre: string | null;
-	primer_apellido: string;
+	primer_apellido: string | null;
 	segundo_apellido: string | null;
 	tipo_documento: string;
 	numero_documento: string;
 	fecha_nacimiento: string;
 	nacionalidad: string;
-	direccion: string;
-	celular: string;
-	correo_electronico: string;
+	direccion: string | null;
+	celular: string | null;
+	correo_electronico: string | null;
 	profesion_oficio: string | null;
 	actividad_economica: string | null;
 	lugar_trabajo: string | null;

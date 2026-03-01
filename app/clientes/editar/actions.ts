@@ -427,13 +427,13 @@ export async function updatePartnerData(
 			const { error: updateError } = await supabase
 				.from("client_partners")
 				.update({
-					primer_nombre: data.primer_nombre,
+					primer_nombre: data.primer_nombre || null,
 					segundo_nombre: data.segundo_nombre || null,
-					primer_apellido: data.primer_apellido,
+					primer_apellido: data.primer_apellido || null,
 					segundo_apellido: data.segundo_apellido || null,
-					direccion: data.direccion,
-					celular: data.celular,
-					correo_electronico: data.correo_electronico,
+					direccion: data.direccion || null,
+					celular: data.celular || null,
+					correo_electronico: data.correo_electronico || null,
 					profesion_oficio: data.profesion_oficio || null,
 					actividad_economica: data.actividad_economica || null,
 					lugar_trabajo: data.lugar_trabajo || null,
@@ -451,13 +451,13 @@ export async function updatePartnerData(
 				.from("client_partners")
 				.insert({
 					client_id: clientId,
-					primer_nombre: data.primer_nombre,
+					primer_nombre: data.primer_nombre || null,
 					segundo_nombre: data.segundo_nombre || null,
-					primer_apellido: data.primer_apellido,
+					primer_apellido: data.primer_apellido || null,
 					segundo_apellido: data.segundo_apellido || null,
-					direccion: data.direccion,
-					celular: data.celular,
-					correo_electronico: data.correo_electronico,
+					direccion: data.direccion || null,
+					celular: data.celular || null,
+					correo_electronico: data.correo_electronico || null,
 					profesion_oficio: data.profesion_oficio || null,
 					actividad_economica: data.actividad_economica || null,
 					lugar_trabajo: data.lugar_trabajo || null,
