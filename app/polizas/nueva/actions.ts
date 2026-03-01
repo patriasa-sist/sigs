@@ -212,10 +212,12 @@ export async function guardarPoliza(formState: PolizaFormState) {
 			}
 		}
 
-		// Insertar beneficiarios para ramo Salud
+		// Insertar datos para ramo Salud (beneficiarios + niveles + asegurados_ramo)
 		if (formState.datos_especificos?.tipo_ramo === "Salud") {
-			const beneficiarios = formState.datos_especificos.datos.beneficiarios || [];
+			const datosSalud = formState.datos_especificos.datos;
 
+			// Beneficiarios (ya existía)
+			const beneficiarios = datosSalud.beneficiarios || [];
 			if (beneficiarios.length > 0) {
 				const beneficiariosParaInsertar = beneficiarios.map((beneficiario) => ({
 					poliza_id: poliza.id,
@@ -234,6 +236,372 @@ export async function guardarPoliza(formState: PolizaFormState) {
 				if (errorBeneficiarios) {
 					console.error("Error insertando beneficiarios de salud:", errorBeneficiarios);
 					return { success: false, error: mapSupabaseError(errorBeneficiarios, "Error al guardar los beneficiarios de salud") };
+				}
+			}
+
+			// Niveles de cobertura
+			const niveles = datosSalud.niveles || [];
+			if (niveles.length > 0) {
+				const nivelesParaInsertar = niveles.map((nivel) => ({
+					poliza_id: poliza.id,
+					nombre: nivel.nombre,
+					monto: nivel.monto,
+				}));
+
+				const { error: errorNiveles } = await supabase
+					.from("polizas_salud_niveles")
+					.insert(nivelesParaInsertar);
+
+				if (errorNiveles) {
+					console.error("Error insertando niveles de salud:", errorNiveles);
+				}
+			}
+
+			// Asegurados del ramo (clientes registrados con nivel y rol)
+			const asegurados = datosSalud.asegurados || [];
+			if (asegurados.length > 0) {
+				const aseguradosParaInsertar = asegurados.map((asegurado) => ({
+					poliza_id: poliza.id,
+					client_id: asegurado.client_id,
+					nivel_id: asegurado.nivel_id,
+					rol: asegurado.rol,
+				}));
+
+				const { error: errorAsegurados } = await supabase
+					.from("polizas_salud_asegurados")
+					.insert(aseguradosParaInsertar);
+
+				if (errorAsegurados) {
+					console.error("Error insertando asegurados de salud:", errorAsegurados);
+				}
+			}
+		}
+
+		// Insertar datos para ramo Transportes
+		if (formState.datos_especificos?.tipo_ramo === "Transportes") {
+			const datosTransporte = formState.datos_especificos.datos;
+
+			const { error: errorTransporte } = await supabase
+				.from("polizas_transporte")
+				.insert({
+					poliza_id: poliza.id,
+					materia_asegurada: datosTransporte.materia_asegurada,
+					tipo_embalaje: datosTransporte.tipo_embalaje,
+					fecha_embarque: datosTransporte.fecha_embarque,
+					tipo_transporte: datosTransporte.tipo_transporte,
+					pais_origen_id: datosTransporte.pais_origen_id,
+					ciudad_origen: datosTransporte.ciudad_origen,
+					pais_destino_id: datosTransporte.pais_destino_id,
+					ciudad_destino: datosTransporte.ciudad_destino,
+					valor_asegurado: datosTransporte.valor_asegurado,
+					factura: datosTransporte.factura,
+					fecha_factura: datosTransporte.fecha_factura,
+					cobertura_a: datosTransporte.cobertura_a,
+					cobertura_c: datosTransporte.cobertura_c,
+					modalidad: datosTransporte.modalidad,
+				});
+
+			if (errorTransporte) {
+				console.error("Error insertando datos de transporte:", errorTransporte);
+				return { success: false, error: mapSupabaseError(errorTransporte, "Error al guardar datos de transporte") };
+			}
+		}
+
+		// Insertar datos para ramo Aeronavegación / Naves o embarcaciones
+		if (formState.datos_especificos?.tipo_ramo === "Aeronavegación" || formState.datos_especificos?.tipo_ramo === "Naves o embarcaciones") {
+			const datosAero = formState.datos_especificos.datos;
+
+			// 1. Insertar niveles AP y obtener mapeo de IDs temporales → reales
+			const nivelesAP = datosAero.niveles_ap || [];
+			const nivelIdMap = new Map<string, string>(); // temporal_id → db_id
+
+			if (nivelesAP.length > 0) {
+				for (const nivel of nivelesAP) {
+					const { data: nivelDB, error: errorNivel } = await supabase
+						.from("polizas_aeronavegacion_niveles_ap")
+						.insert({
+							poliza_id: poliza.id,
+							nombre: nivel.nombre,
+							monto_muerte_accidental: nivel.monto_muerte_accidental,
+							monto_invalidez: nivel.monto_invalidez,
+							monto_gastos_medicos: nivel.monto_gastos_medicos,
+						})
+						.select("id")
+						.single();
+
+					if (errorNivel) {
+						console.error("Error insertando nivel AP:", errorNivel);
+					} else if (nivelDB) {
+						nivelIdMap.set(nivel.id, nivelDB.id);
+					}
+				}
+			}
+
+			// 2. Insertar naves con nivel_ap_id mapeado
+			const naves = datosAero.naves || [];
+			if (naves.length > 0) {
+				const navesParaInsertar = naves.map((nave) => ({
+					poliza_id: poliza.id,
+					matricula: nave.matricula,
+					marca: nave.marca,
+					modelo: nave.modelo,
+					ano: nave.ano,
+					serie: nave.serie || "",
+					uso: nave.uso,
+					nro_pasajeros: nave.nro_pasajeros,
+					nro_tripulantes: nave.nro_tripulantes,
+					valor_casco: nave.valor_casco,
+					valor_responsabilidad_civil: nave.valor_responsabilidad_civil,
+					nivel_ap_id: nave.nivel_ap_id ? (nivelIdMap.get(nave.nivel_ap_id) || null) : null,
+				}));
+
+				const { error: errorNaves } = await supabase
+					.from("polizas_aeronavegacion_naves")
+					.insert(navesParaInsertar);
+
+				if (errorNaves) {
+					console.error("Error insertando naves:", errorNaves);
+					return { success: false, error: mapSupabaseError(errorNaves, "Error al guardar las naves/embarcaciones") };
+				}
+			}
+
+			// 3. Insertar asegurados adicionales
+			const aseguradosAdicionales = datosAero.asegurados_adicionales || [];
+			if (aseguradosAdicionales.length > 0) {
+				const aseguradosParaInsertar = aseguradosAdicionales.map((asegurado) => ({
+					poliza_id: poliza.id,
+					client_id: asegurado.client_id,
+				}));
+
+				const { error: errorAsegurados } = await supabase
+					.from("polizas_aeronavegacion_asegurados")
+					.insert(aseguradosParaInsertar);
+
+				if (errorAsegurados) {
+					console.error("Error insertando asegurados de aeronavegación:", errorAsegurados);
+				}
+			}
+		}
+
+		// Insertar datos para Ramos Técnicos (equipos industriales)
+		if (formState.datos_especificos?.tipo_ramo === "Ramos técnicos") {
+			const datosRT = formState.datos_especificos.datos;
+			const equipos = datosRT.equipos || [];
+
+			if (equipos.length > 0) {
+				const equiposParaInsertar = equipos.map((equipo) => ({
+					poliza_id: poliza.id,
+					nro_serie: equipo.nro_serie,
+					valor_asegurado: equipo.valor_asegurado,
+					franquicia: equipo.franquicia,
+					nro_chasis: equipo.nro_chasis,
+					uso: equipo.uso,
+					coaseguro: equipo.coaseguro,
+					placa: equipo.placa || null,
+					tipo_equipo_id: equipo.tipo_equipo_id || null,
+					marca_equipo_id: equipo.marca_equipo_id || null,
+					modelo: equipo.modelo || null,
+					ano: equipo.ano || null,
+					color: equipo.color || null,
+					nro_motor: equipo.nro_motor || null,
+					plaza_circulacion: equipo.plaza_circulacion || null,
+				}));
+
+				const { error: errorEquipos } = await supabase
+					.from("polizas_ramos_tecnicos_equipos")
+					.insert(equiposParaInsertar);
+
+				if (errorEquipos) {
+					console.error("Error insertando equipos:", errorEquipos);
+					return { success: false, error: mapSupabaseError(errorEquipos, "Error al guardar los equipos") };
+				}
+			}
+		}
+
+		// Insertar datos para Incendio y Aliados (bienes + items + asegurados)
+		if (formState.datos_especificos?.tipo_ramo === "Incendio y Aliados") {
+			const datosIncendio = formState.datos_especificos.datos;
+
+			// Insertar bienes y sus items
+			for (const bien of datosIncendio.bienes) {
+				const { data: bienDB, error: errorBien } = await supabase
+					.from("polizas_incendio_bienes")
+					.insert({
+						poliza_id: poliza.id,
+						direccion: bien.direccion,
+						valor_total_declarado: bien.valor_total_declarado,
+						es_primer_riesgo: bien.es_primer_riesgo,
+					})
+					.select("id")
+					.single();
+
+				if (errorBien || !bienDB) {
+					console.error("Error insertando bien de incendio:", errorBien);
+					return { success: false, error: mapSupabaseError(errorBien, "Error al guardar los bienes de incendio") };
+				}
+
+				// Insertar items del bien
+				if (bien.items.length > 0) {
+					const itemsParaInsertar = bien.items.map((item) => ({
+						bien_id: bienDB.id,
+						nombre: item.nombre,
+						monto: item.monto,
+					}));
+
+					const { error: errorItems } = await supabase
+						.from("polizas_incendio_items")
+						.insert(itemsParaInsertar);
+
+					if (errorItems) {
+						console.error("Error insertando items de incendio:", errorItems);
+					}
+				}
+			}
+
+			// Insertar asegurados del ramo
+			const aseguradosIncendio = datosIncendio.asegurados || [];
+			if (aseguradosIncendio.length > 0) {
+				const aseguradosParaInsertar = aseguradosIncendio.map((asegurado) => ({
+					poliza_id: poliza.id,
+					client_id: asegurado.client_id,
+				}));
+
+				const { error: errorAsegurados } = await supabase
+					.from("polizas_incendio_asegurados")
+					.insert(aseguradosParaInsertar);
+
+				if (errorAsegurados) {
+					console.error("Error insertando asegurados de incendio:", errorAsegurados);
+				}
+			}
+		}
+
+		// Insertar datos para Riesgos Varios Misceláneos (bienes + items + asegurados)
+		if (formState.datos_especificos?.tipo_ramo === "Riesgos Varios Misceláneos") {
+			const datosRV = formState.datos_especificos.datos;
+
+			// Insertar bienes y sus items
+			for (const bien of datosRV.bienes) {
+				const { data: bienDB, error: errorBien } = await supabase
+					.from("polizas_riesgos_varios_bienes")
+					.insert({
+						poliza_id: poliza.id,
+						direccion: bien.direccion,
+						valor_total_declarado: bien.valor_total_declarado,
+						es_primer_riesgo: bien.es_primer_riesgo,
+					})
+					.select("id")
+					.single();
+
+				if (errorBien || !bienDB) {
+					console.error("Error insertando bien de riesgos varios:", errorBien);
+					return { success: false, error: mapSupabaseError(errorBien, "Error al guardar los bienes de riesgos varios") };
+				}
+
+				// Insertar items del bien
+				if (bien.items.length > 0) {
+					const itemsParaInsertar = bien.items.map((item) => ({
+						bien_id: bienDB.id,
+						nombre: item.nombre,
+						monto: item.monto,
+					}));
+
+					const { error: errorItems } = await supabase
+						.from("polizas_riesgos_varios_items")
+						.insert(itemsParaInsertar);
+
+					if (errorItems) {
+						console.error("Error insertando items de riesgos varios:", errorItems);
+					}
+				}
+			}
+
+			// Insertar asegurados del ramo
+			const aseguradosRV = datosRV.asegurados || [];
+			if (aseguradosRV.length > 0) {
+				const aseguradosParaInsertar = aseguradosRV.map((asegurado) => ({
+					poliza_id: poliza.id,
+					client_id: asegurado.client_id,
+				}));
+
+				const { error: errorAsegurados } = await supabase
+					.from("polizas_riesgos_varios_asegurados")
+					.insert(aseguradosParaInsertar);
+
+				if (errorAsegurados) {
+					console.error("Error insertando asegurados de riesgos varios:", errorAsegurados);
+				}
+			}
+		}
+
+		// Insertar datos para Responsabilidad Civil
+		if (formState.datos_especificos?.tipo_ramo === "Responsabilidad Civil") {
+			const datosRC = formState.datos_especificos.datos;
+
+			const { error: errorRC } = await supabase
+				.from("polizas_responsabilidad_civil")
+				.insert({
+					poliza_id: poliza.id,
+					tipo_poliza: datosRC.tipo_poliza,
+					valor_asegurado: datosRC.valor_asegurado,
+				});
+
+			if (errorRC) {
+				console.error("Error insertando datos de responsabilidad civil:", errorRC);
+				return { success: false, error: mapSupabaseError(errorRC, "Error al guardar datos de responsabilidad civil") };
+			}
+		}
+
+		// Insertar datos para ramos con niveles compartidos (Vida, Sepelio, Accidentes Personales)
+		if (
+			formState.datos_especificos?.tipo_ramo === "Vida" ||
+			formState.datos_especificos?.tipo_ramo === "Sepelio" ||
+			formState.datos_especificos?.tipo_ramo === "Accidentes Personales"
+		) {
+			const datosNivel = formState.datos_especificos.datos;
+			const nivelIdMap = new Map<string, string>(); // temporal_id → db_id
+
+			// 1. Insertar niveles con coberturas
+			const niveles = datosNivel.niveles || [];
+			for (const nivel of niveles) {
+				const { data: nivelDB, error: errorNivel } = await supabase
+					.from("polizas_niveles")
+					.insert({
+						poliza_id: poliza.id,
+						nombre: nivel.nombre,
+						prima_nivel: nivel.prima_nivel || null,
+						coberturas: nivel.coberturas,
+					})
+					.select("id")
+					.single();
+
+				if (errorNivel) {
+					console.error("Error insertando nivel:", errorNivel);
+				} else if (nivelDB) {
+					nivelIdMap.set(nivel.id, nivelDB.id);
+				}
+			}
+
+			// 2. Insertar asegurados con referencia al nivel real
+			const asegurados = datosNivel.asegurados || [];
+			if (asegurados.length > 0) {
+				const aseguradosParaInsertar = asegurados
+					.filter((a) => nivelIdMap.has(a.nivel_id))
+					.map((asegurado) => ({
+						poliza_id: poliza.id,
+						client_id: asegurado.client_id,
+						nivel_id: nivelIdMap.get(asegurado.nivel_id)!,
+						cargo: asegurado.cargo || null,
+					}));
+
+				if (aseguradosParaInsertar.length > 0) {
+					const { error: errorAsegurados } = await supabase
+						.from("polizas_asegurados_nivel")
+						.insert(aseguradosParaInsertar);
+
+					if (errorAsegurados) {
+						console.error("Error insertando asegurados con nivel:", errorAsegurados);
+					}
 				}
 			}
 		}
