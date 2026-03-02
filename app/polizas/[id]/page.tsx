@@ -8,6 +8,7 @@ import { checkPolicyEditPermission } from "@/app/polizas/permisos/actions";
 import { RechazoPolizaModal } from "@/components/gerencia/RechazoPolizaModal";
 import { Button } from "@/components/ui/button";
 import { PolicyPermissionsModal } from "@/components/polizas/PolicyPermissionsModal";
+import AnexoDetalleSection from "@/components/polizas/anexos/AnexoDetalleSection";
 import {
 	FileText,
 	ArrowLeft,
@@ -27,6 +28,7 @@ import {
 	Truck,
 	Ship,
 	Wrench,
+	Plus,
 } from "lucide-react";
 import { formatCurrency, formatDate } from "@/utils/formatters";
 
@@ -85,6 +87,7 @@ export default function PolizaDetallePage() {
 			cancelada: "bg-gray-100 text-gray-800 border-gray-200",
 			renovada: "bg-blue-100 text-blue-800 border-blue-200",
 			rechazada: "bg-orange-100 text-orange-800 border-orange-200",
+			anulada: "bg-red-200 text-red-900 border-red-300",
 		};
 		return styles[estado as keyof typeof styles] || "bg-gray-100 text-gray-800 border-gray-200";
 	};
@@ -97,6 +100,7 @@ export default function PolizaDetallePage() {
 			cancelada: "Cancelada",
 			renovada: "Renovada",
 			rechazada: "Rechazada",
+			anulada: "Anulada",
 		};
 		return labels[estado as keyof typeof labels] || estado;
 	};
@@ -226,6 +230,18 @@ export default function PolizaDetallePage() {
 							>
 								<Pencil className="h-4 w-4 mr-1" />
 								Editar
+							</Button>
+						)}
+
+						{/* Nuevo Anexo button - only for active policies */}
+						{poliza.estado === "activa" && (
+							<Button
+								variant="outline"
+								size="sm"
+								onClick={() => router.push(`/polizas/anexos/nuevo?polizaId=${polizaId}`)}
+							>
+								<Plus className="h-4 w-4 mr-1" />
+								Nuevo Anexo
 							</Button>
 						)}
 
@@ -1022,6 +1038,13 @@ export default function PolizaDetallePage() {
 						</div>
 					</div>
 				</div>
+				{/* Anexos Section - full width */}
+				<AnexoDetalleSection
+					polizaId={polizaId}
+					moneda={poliza.moneda}
+					puedeValidar={userRole === "admin" || userRole === "usuario" || isTeamLeader}
+					onAnexoValidado={cargarDetalle}
+				/>
 			</div>
 
 			{/* Permissions Modal */}

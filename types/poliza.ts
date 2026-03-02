@@ -640,7 +640,7 @@ export type PolizaDB = {
 	comision: number;
 	comision_empresa?: number; // Comisión calculada para la empresa
 	comision_encargado?: number; // Comisión calculada para el encargado
-	estado: "pendiente" | "activa" | "vencida" | "cancelada" | "renovada" | "rechazada";
+	estado: "pendiente" | "activa" | "vencida" | "cancelada" | "renovada" | "rechazada" | "anulada";
 	validado_por?: string; // Usuario gerente que validó la póliza
 	fecha_validacion?: string; // Fecha de validación gerencial
 	// Campos de rechazo

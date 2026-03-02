@@ -564,8 +564,17 @@ export default function PolizasPage() {
 				</div>
 			)}
 
-			{/* Floating Action Button - New Policy */}
-			<div className="fixed bottom-8 right-8 z-50">
+			{/* Floating Action Buttons */}
+			<div className="fixed bottom-8 right-8 z-50 flex flex-col gap-3">
+				<Button
+					onClick={() => router.push("/polizas/anexos/nuevo")}
+					size="lg"
+					variant="outline"
+					className="h-12 px-6 text-sm font-semibold shadow-lg hover:shadow-xl transition-all cursor-pointer bg-white"
+				>
+					<Plus className="mr-2 h-4 w-4" />
+					NUEVO ANEXO
+				</Button>
 				<Button
 					onClick={handleNewPolicy}
 					size="lg"

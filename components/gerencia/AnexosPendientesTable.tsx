@@ -1,0 +1,253 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { CheckCircle, XCircle, Eye, AlertTriangle, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { toast } from "sonner";
+import { validarAnexo, rechazarAnexo, type AnexoPendiente } from "@/app/gerencia/validacion-anexos/actions";
+import { formatDate } from "@/utils/formatters";
+
+type Props = {
+	anexos: AnexoPendiente[];
+};
+
+const TIPO_BADGE = {
+	inclusion: { label: "Inclusión", className: "bg-green-100 text-green-700 border-green-200" },
+	exclusion: { label: "Exclusión", className: "bg-orange-100 text-orange-700 border-orange-200" },
+	anulacion: { label: "Anulación", className: "bg-red-100 text-red-700 border-red-200" },
+};
+
+export default function AnexosPendientesTable({ anexos: initialAnexos }: Props) {
+	const router = useRouter();
+	const [anexos, setAnexos] = useState(initialAnexos);
+	const [loading, setLoading] = useState<string | null>(null);
+
+	// Dialog states
+	const [dialogOpen, setDialogOpen] = useState(false);
+	const [selectedAnexo, setSelectedAnexo] = useState<AnexoPendiente | null>(null);
+	const [dialogType, setDialogType] = useState<"validar" | "rechazar">("validar");
+	const [motivoRechazo, setMotivoRechazo] = useState("");
+
+	const openDialog = (anexo: AnexoPendiente, type: "validar" | "rechazar") => {
+		setSelectedAnexo(anexo);
+		setDialogType(type);
+		setMotivoRechazo("");
+		setDialogOpen(true);
+	};
+
+	const handleValidar = async () => {
+		if (!selectedAnexo) return;
+		setLoading(selectedAnexo.id);
+		setDialogOpen(false);
+
+		const result = await validarAnexo(selectedAnexo.id);
+		if (result.success) {
+			setAnexos((prev) => prev.filter((a) => a.id !== selectedAnexo.id));
+			toast.success("Anexo validado exitosamente", {
+				description: selectedAnexo.tipo_anexo === "anulacion"
+					? "La póliza ha sido anulada"
+					: `Anexo ${selectedAnexo.numero_anexo} activado`,
+			});
+		} else {
+			toast.error("Error al validar", { description: result.error });
+		}
+		setLoading(null);
+	};
+
+	const handleRechazar = async () => {
+		if (!selectedAnexo) return;
+		if (motivoRechazo.trim().length < 10) {
+			toast.error("Motivo insuficiente", { description: "El motivo debe tener al menos 10 caracteres" });
+			return;
+		}
+
+		setLoading(selectedAnexo.id);
+		setDialogOpen(false);
+
+		const result = await rechazarAnexo(selectedAnexo.id, motivoRechazo);
+		if (result.success) {
+			setAnexos((prev) => prev.filter((a) => a.id !== selectedAnexo.id));
+			toast.success("Anexo rechazado");
+		} else {
+			toast.error("Error al rechazar", { description: result.error });
+		}
+		setLoading(null);
+	};
+
+	if (anexos.length === 0) {
+		return (
+			<div className="text-center py-12 text-gray-500">
+				<CheckCircle className="h-12 w-12 mx-auto mb-4 text-green-300" />
+				<p className="text-lg font-medium">No hay anexos pendientes</p>
+				<p className="text-sm">Todos los anexos han sido procesados</p>
+			</div>
+		);
+	}
+
+	return (
+		<>
+			<div className="border rounded-lg overflow-hidden">
+				<table className="w-full text-sm">
+					<thead className="bg-gray-50">
+						<tr>
+							<th className="text-left px-4 py-3 font-medium">Nro. Anexo</th>
+							<th className="text-left px-4 py-3 font-medium">Tipo</th>
+							<th className="text-left px-4 py-3 font-medium">Póliza</th>
+							<th className="text-left px-4 py-3 font-medium">Ramo</th>
+							<th className="text-left px-4 py-3 font-medium">Asegurado</th>
+							<th className="text-right px-4 py-3 font-medium">Ajuste</th>
+							<th className="text-left px-4 py-3 font-medium">Creado por</th>
+							<th className="text-left px-4 py-3 font-medium">Fecha</th>
+							<th className="text-center px-4 py-3 font-medium">Acciones</th>
+						</tr>
+					</thead>
+					<tbody className="divide-y">
+						{anexos.map((anexo) => {
+							const tipoBadge = TIPO_BADGE[anexo.tipo_anexo];
+							const isLoading = loading === anexo.id;
+
+							return (
+								<tr key={anexo.id} className="hover:bg-gray-50">
+									<td className="px-4 py-3 font-medium">{anexo.numero_anexo}</td>
+									<td className="px-4 py-3">
+										<Badge variant="outline" className={tipoBadge.className}>
+											{tipoBadge.label}
+										</Badge>
+									</td>
+									<td className="px-4 py-3">{anexo.numero_poliza}</td>
+									<td className="px-4 py-3">{anexo.ramo}</td>
+									<td className="px-4 py-3">{anexo.client_name}</td>
+									<td className="px-4 py-3 text-right">
+										{anexo.monto_ajuste_total !== 0 ? (
+											<span className={anexo.monto_ajuste_total >= 0 ? "text-green-600" : "text-red-600"}>
+												{anexo.monto_ajuste_total >= 0 ? "+" : ""}
+												{anexo.monto_ajuste_total.toLocaleString("es-BO", { minimumFractionDigits: 2 })}
+											</span>
+										) : (
+											<span className="text-gray-400">-</span>
+										)}
+									</td>
+									<td className="px-4 py-3">
+										<div>{anexo.creado_por_nombre || "-"}</div>
+										<div className="text-xs text-gray-500">{formatDate(anexo.created_at)}</div>
+									</td>
+									<td className="px-4 py-3">{formatDate(anexo.fecha_anexo)}</td>
+									<td className="px-4 py-3">
+										<div className="flex justify-center gap-1">
+											<Button
+												variant="ghost"
+												size="sm"
+												onClick={() => router.push(`/polizas/${anexo.poliza_id}#anexo-${anexo.id}`)}
+												title="Ver en póliza"
+											>
+												<Eye className="h-4 w-4" />
+											</Button>
+											<Button
+												variant="ghost"
+												size="sm"
+												disabled={isLoading}
+												onClick={() => openDialog(anexo, "validar")}
+												className="text-green-600 hover:text-green-700 hover:bg-green-50"
+												title="Validar"
+											>
+												{isLoading ? (
+													<Loader2 className="h-4 w-4 animate-spin" />
+												) : (
+													<CheckCircle className="h-4 w-4" />
+												)}
+											</Button>
+											<Button
+												variant="ghost"
+												size="sm"
+												disabled={isLoading}
+												onClick={() => openDialog(anexo, "rechazar")}
+												className="text-red-600 hover:text-red-700 hover:bg-red-50"
+												title="Rechazar"
+											>
+												<XCircle className="h-4 w-4" />
+											</Button>
+										</div>
+									</td>
+								</tr>
+							);
+						})}
+					</tbody>
+				</table>
+			</div>
+
+			{/* Dialog de confirmación */}
+			<Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+				<DialogContent>
+					<DialogHeader>
+						<DialogTitle>
+							{dialogType === "validar" ? "Validar Anexo" : "Rechazar Anexo"}
+						</DialogTitle>
+						<DialogDescription>
+							{dialogType === "validar" ? (
+								<>
+									¿Confirma la validación del anexo{" "}
+									<strong>{selectedAnexo?.numero_anexo}</strong>?
+									{selectedAnexo?.tipo_anexo === "anulacion" && (
+										<span className="block mt-2 text-red-600 font-medium">
+											<AlertTriangle className="h-4 w-4 inline mr-1" />
+											Esto anulará la póliza permanentemente
+										</span>
+									)}
+								</>
+							) : (
+								<>
+									Ingrese el motivo del rechazo del anexo{" "}
+									<strong>{selectedAnexo?.numero_anexo}</strong>
+								</>
+							)}
+						</DialogDescription>
+					</DialogHeader>
+
+					{dialogType === "rechazar" && (
+						<Textarea
+							value={motivoRechazo}
+							onChange={(e) => setMotivoRechazo(e.target.value)}
+							placeholder="Motivo del rechazo (mínimo 10 caracteres)..."
+							rows={4}
+						/>
+					)}
+
+					<DialogFooter>
+						<Button variant="outline" onClick={() => setDialogOpen(false)}>
+							Cancelar
+						</Button>
+						{dialogType === "validar" ? (
+							<Button
+								onClick={handleValidar}
+								className="bg-green-600 hover:bg-green-700"
+							>
+								<CheckCircle className="h-4 w-4 mr-1" />
+								Validar
+							</Button>
+						) : (
+							<Button
+								onClick={handleRechazar}
+								variant="destructive"
+								disabled={motivoRechazo.trim().length < 10}
+							>
+								<XCircle className="h-4 w-4 mr-1" />
+								Rechazar
+							</Button>
+						)}
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
+		</>
+	);
+}
