@@ -286,4 +286,13 @@ export const excecutives = [
 		mail: "carlos.aguilar@patria-sa.com",
 		signature: "/images/firma_carlos.png",
 	},
+	{
+		user: "Serly Sanchez",
+		name: "Serly Fabiola Sanchez Colón",
+		glyph: "SFS",
+		charge: "Ejecutiva de Cuentas",
+		telf: "69189347",
+		mail: "comercial5@patria-sa.com",
+		signature: "/images/firma_serly.png",
+	},
 ];
