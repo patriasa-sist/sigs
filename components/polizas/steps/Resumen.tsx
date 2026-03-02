@@ -55,12 +55,17 @@ export function Resumen({ formState, onAnterior, onEditarPaso, onGuardar, guarda
 			}
 		}
 
-		// Advertencias sobre documentos faltantes
-		if (formState.documentos.length === 0) {
+		// Advertencias sobre documentos obligatorios faltantes
+		const docsSubidos = formState.documentos.filter((d) => d.upload_status === "uploaded" || d.id);
+		const docObligatorios = ["Póliza", "Plan de pago CLIENTE"];
+		const docsFaltantes = docObligatorios.filter(
+			(tipo) => !docsSubidos.some((d) => d.tipo_documento === tipo)
+		);
+		if (docsFaltantes.length > 0) {
 			nuevasAdvertencias.push({
-				tipo: "info",
+				tipo: "error",
 				campo: "documentos",
-				mensaje: "No se han cargado documentos. Se recomienda adjuntar al menos la póliza firmada.",
+				mensaje: `Documentos obligatorios faltantes: ${docsFaltantes.join(", ")}`,
 			});
 		}
 

@@ -22,12 +22,14 @@ type Props = {
 // Tipos de documentos sugeridos para pólizas
 const TIPOS_DOCUMENTO = [
 	"Póliza",
-	"Plan de pago BROKER",
 	"Plan de pago CLIENTE",
-	"Anexos",
+	"Plan de pago BROKER",
 	"Condicionado general",
 	"Otro",
 ] as const;
+
+// Tipos de documentos obligatorios para continuar al siguiente paso
+const DOCUMENTOS_OBLIGATORIOS = ["Póliza", "Plan de pago CLIENTE"] as const;
 
 const BUCKET = "polizas-documentos";
 
@@ -244,6 +246,13 @@ export function CargarDocumentos({ documentos, onChange, onSiguiente, onAnterior
 	const tieneDocumentos = documentos.length > 0;
 	const haySubiendo = documentos.some((d) => d.upload_status === "uploading");
 
+	// Verificar documentos obligatorios (solo cuentan los subidos exitosamente)
+	const documentosSubidos = documentos.filter((d) => d.upload_status === "uploaded" || d.id);
+	const documentosFaltantes = DOCUMENTOS_OBLIGATORIOS.filter(
+		(tipo) => !documentosSubidos.some((d) => d.tipo_documento === tipo)
+	);
+	const cumpleObligatorios = documentosFaltantes.length === 0;
+
 	return (
 		<div className="bg-white rounded-lg shadow-sm border p-6">
 			{/* Header */}
@@ -251,7 +260,7 @@ export function CargarDocumentos({ documentos, onChange, onSiguiente, onAnterior
 				<div>
 					<h2 className="text-xl font-semibold text-gray-900">Paso 5: Cargar Documentos</h2>
 					<p className="text-sm text-gray-600 mt-1">
-						Adjunte los documentos relacionados con la póliza (opcional)
+						Adjunte los documentos relacionados con la póliza
 					</p>
 				</div>
 
@@ -283,6 +292,9 @@ export function CargarDocumentos({ documentos, onChange, onSiguiente, onAnterior
 									availableDocTypes.map((tipo) => (
 										<SelectItem key={tipo} value={tipo}>
 											{tipo}
+											{(DOCUMENTOS_OBLIGATORIOS as readonly string[]).includes(tipo) && (
+												<span className="text-red-500 ml-1">*</span>
+											)}
 										</SelectItem>
 									))
 								)}
@@ -406,7 +418,22 @@ export function CargarDocumentos({ documentos, onChange, onSiguiente, onAnterior
 				<div className="text-center py-8 text-gray-500 border border-dashed border-gray-300 rounded-lg mb-6">
 					<FileText className="h-12 w-12 text-gray-400 mx-auto mb-3" />
 					<p className="text-sm">No se han cargado documentos todavía</p>
-					<p className="text-xs mt-1">Los documentos son opcionales pero recomendados</p>
+					<p className="text-xs mt-1">Debe cargar al menos: Póliza y Plan de pago CLIENTE</p>
+				</div>
+			)}
+
+			{/* Indicador de documentos obligatorios faltantes */}
+			{!cumpleObligatorios && documentos.length > 0 && (
+				<div className="flex items-start gap-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg mb-6">
+					<AlertCircle className="h-5 w-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+					<div>
+						<p className="text-sm font-medium text-yellow-800">Documentos obligatorios faltantes:</p>
+						<ul className="text-sm text-yellow-700 mt-1">
+							{documentosFaltantes.map((tipo) => (
+								<li key={tipo}>• {tipo}</li>
+							))}
+						</ul>
+					</div>
 				</div>
 			)}
 
@@ -417,7 +444,7 @@ export function CargarDocumentos({ documentos, onChange, onSiguiente, onAnterior
 					Anterior
 				</Button>
 
-				<Button onClick={onSiguiente} disabled={haySubiendo}>
+				<Button onClick={onSiguiente} disabled={haySubiendo || !cumpleObligatorios}>
 					{haySubiendo ? (
 						<>
 							<Loader2 className="mr-2 h-5 w-5 animate-spin" />
