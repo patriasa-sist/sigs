@@ -256,8 +256,9 @@ export async function obtenerDatosParaAnexo(polizaId: string): Promise<{
 
 		const compania = poliza.companias_aseguradoras as unknown as { nombre: string } | null;
 
-		// Cargar items actuales del ramo
-		const itemsActuales = await cargarItemsActualesRamo(supabase, polizaId, poliza.ramo);
+		// Cargar items actuales del ramo (originales + incluidos por anexos activos, menos excluidos)
+		const anexosActivos = (anexosResult.data || []).filter((a) => a.estado === "activo");
+		const itemsActuales = await cargarItemsActualesRamo(supabase, polizaId, poliza.ramo, anexosActivos);
 
 		const datos: DatosPolizaParaAnexo = {
 			poliza: {
@@ -308,22 +309,55 @@ export async function obtenerDatosParaAnexo(polizaId: string): Promise<{
 }
 
 /**
- * Carga los items actuales del ramo de una póliza para mostrar como contexto
+ * Carga los items actuales del ramo de una póliza para mostrar como contexto.
+ * Incluye items originales + items agregados por anexos de inclusión activos,
+ * y excluye items removidos por anexos de exclusión activos.
  */
 async function cargarItemsActualesRamo(
 	supabase: Awaited<ReturnType<typeof createClient>>,
 	polizaId: string,
-	ramo: string
+	ramo: string,
+	anexosActivos: { id: string; tipo_anexo: string }[]
 ) {
 	const ramoLower = ramo.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+	const inclusionIds = anexosActivos.filter((a) => a.tipo_anexo === "inclusion").map((a) => a.id);
+	const exclusionIds = anexosActivos.filter((a) => a.tipo_anexo === "exclusion").map((a) => a.id);
 
 	if (ramoLower.includes("automotor")) {
 		const { data } = await supabase
 			.from("polizas_automotor_vehiculos")
 			.select("*")
 			.eq("poliza_id", polizaId);
-		if (data && data.length > 0) {
-			return { tipo_ramo: "Automotores" as const, vehiculos: data };
+		let vehiculos = data || [];
+
+		// Agregar vehículos incluidos por anexos activos
+		if (inclusionIds.length > 0) {
+			const { data: incluidos } = await supabase
+				.from("polizas_anexos_automotor_vehiculos")
+				.select("*")
+				.in("anexo_id", inclusionIds)
+				.eq("accion", "inclusion");
+			if (incluidos) {
+				vehiculos = [...vehiculos, ...incluidos.map((v) => ({ ...v, _origen_anexo: v.anexo_id }))];
+			}
+		}
+
+		// Quitar vehículos excluidos por anexos activos
+		if (exclusionIds.length > 0) {
+			const { data: excluidos } = await supabase
+				.from("polizas_anexos_automotor_vehiculos")
+				.select("original_item_id")
+				.in("anexo_id", exclusionIds)
+				.eq("accion", "exclusion");
+			if (excluidos) {
+				const idsExcluidos = new Set(excluidos.map((e) => e.original_item_id));
+				vehiculos = vehiculos.filter((v) => !idsExcluidos.has(v.id));
+			}
+		}
+
+		if (vehiculos.length > 0) {
+			return { tipo_ramo: "Automotores" as const, vehiculos };
 		}
 	}
 
@@ -332,10 +366,37 @@ async function cargarItemsActualesRamo(
 			supabase.from("polizas_salud_asegurados").select("*").eq("poliza_id", polizaId),
 			supabase.from("polizas_salud_beneficiarios").select("*").eq("poliza_id", polizaId),
 		]);
+		let aseguradosList = asegurados || [];
+		let beneficiariosList = beneficiarios || [];
+
+		if (inclusionIds.length > 0) {
+			const [{ data: asegInc }, { data: benInc }] = await Promise.all([
+				supabase.from("polizas_anexos_salud_asegurados").select("*").in("anexo_id", inclusionIds).eq("accion", "inclusion"),
+				supabase.from("polizas_anexos_salud_beneficiarios").select("*").in("anexo_id", inclusionIds).eq("accion", "inclusion"),
+			]);
+			if (asegInc) aseguradosList = [...aseguradosList, ...asegInc.map((a) => ({ ...a, _origen_anexo: a.anexo_id }))];
+			if (benInc) beneficiariosList = [...beneficiariosList, ...benInc.map((b) => ({ ...b, _origen_anexo: b.anexo_id }))];
+		}
+
+		if (exclusionIds.length > 0) {
+			const [{ data: asegExc }, { data: benExc }] = await Promise.all([
+				supabase.from("polizas_anexos_salud_asegurados").select("original_item_id").in("anexo_id", exclusionIds).eq("accion", "exclusion"),
+				supabase.from("polizas_anexos_salud_beneficiarios").select("original_item_id").in("anexo_id", exclusionIds).eq("accion", "exclusion"),
+			]);
+			if (asegExc) {
+				const ids = new Set(asegExc.map((e) => e.original_item_id));
+				aseguradosList = aseguradosList.filter((a) => !ids.has(a.id));
+			}
+			if (benExc) {
+				const ids = new Set(benExc.map((e) => e.original_item_id));
+				beneficiariosList = beneficiariosList.filter((b) => !ids.has(b.id));
+			}
+		}
+
 		return {
 			tipo_ramo: "Salud" as const,
-			asegurados: asegurados || [],
-			beneficiarios: beneficiarios || [],
+			asegurados: aseguradosList,
+			beneficiarios: beneficiariosList,
 		};
 	}
 
@@ -344,8 +405,30 @@ async function cargarItemsActualesRamo(
 			.from("polizas_ramos_tecnicos_equipos")
 			.select("*")
 			.eq("poliza_id", polizaId);
-		if (data && data.length > 0) {
-			return { tipo_ramo: "Ramos técnicos" as const, equipos: data };
+		let equipos = data || [];
+
+		if (inclusionIds.length > 0) {
+			const { data: incluidos } = await supabase
+				.from("polizas_anexos_ramos_tecnicos_equipos")
+				.select("*")
+				.in("anexo_id", inclusionIds)
+				.eq("accion", "inclusion");
+			if (incluidos) equipos = [...equipos, ...incluidos.map((e) => ({ ...e, _origen_anexo: e.anexo_id }))];
+		}
+		if (exclusionIds.length > 0) {
+			const { data: excluidos } = await supabase
+				.from("polizas_anexos_ramos_tecnicos_equipos")
+				.select("original_item_id")
+				.in("anexo_id", exclusionIds)
+				.eq("accion", "exclusion");
+			if (excluidos) {
+				const ids = new Set(excluidos.map((e) => e.original_item_id));
+				equipos = equipos.filter((e) => !ids.has(e.id));
+			}
+		}
+
+		if (equipos.length > 0) {
+			return { tipo_ramo: "Ramos técnicos" as const, equipos };
 		}
 	}
 
@@ -357,8 +440,30 @@ async function cargarItemsActualesRamo(
 		const tipoRamo = ramoLower.includes("naves") || ramoLower.includes("embarcacion")
 			? "Naves o embarcaciones" as const
 			: "Aeronavegación" as const;
-		if (data && data.length > 0) {
-			return { tipo_ramo: tipoRamo, naves: data };
+		let naves = data || [];
+
+		if (inclusionIds.length > 0) {
+			const { data: incluidos } = await supabase
+				.from("polizas_anexos_aeronavegacion_naves")
+				.select("*")
+				.in("anexo_id", inclusionIds)
+				.eq("accion", "inclusion");
+			if (incluidos) naves = [...naves, ...incluidos.map((n) => ({ ...n, _origen_anexo: n.anexo_id }))];
+		}
+		if (exclusionIds.length > 0) {
+			const { data: excluidos } = await supabase
+				.from("polizas_anexos_aeronavegacion_naves")
+				.select("original_item_id")
+				.in("anexo_id", exclusionIds)
+				.eq("accion", "exclusion");
+			if (excluidos) {
+				const ids = new Set(excluidos.map((e) => e.original_item_id));
+				naves = naves.filter((n) => !ids.has(n.id));
+			}
+		}
+
+		if (naves.length > 0) {
+			return { tipo_ramo: tipoRamo, naves };
 		}
 	}
 
@@ -367,8 +472,30 @@ async function cargarItemsActualesRamo(
 			.from("polizas_incendio_bienes")
 			.select("*")
 			.eq("poliza_id", polizaId);
-		if (data && data.length > 0) {
-			return { tipo_ramo: "Incendio y Aliados" as const, bienes: data };
+		let bienes = data || [];
+
+		if (inclusionIds.length > 0) {
+			const { data: incluidos } = await supabase
+				.from("polizas_anexos_incendio_bienes")
+				.select("*")
+				.in("anexo_id", inclusionIds)
+				.eq("accion", "inclusion");
+			if (incluidos) bienes = [...bienes, ...incluidos.map((b) => ({ ...b, _origen_anexo: b.anexo_id }))];
+		}
+		if (exclusionIds.length > 0) {
+			const { data: excluidos } = await supabase
+				.from("polizas_anexos_incendio_bienes")
+				.select("original_item_id")
+				.in("anexo_id", exclusionIds)
+				.eq("accion", "exclusion");
+			if (excluidos) {
+				const ids = new Set(excluidos.map((e) => e.original_item_id));
+				bienes = bienes.filter((b) => !ids.has(b.id));
+			}
+		}
+
+		if (bienes.length > 0) {
+			return { tipo_ramo: "Incendio y Aliados" as const, bienes };
 		}
 	}
 
@@ -377,8 +504,30 @@ async function cargarItemsActualesRamo(
 			.from("polizas_riesgos_varios_bienes")
 			.select("*")
 			.eq("poliza_id", polizaId);
-		if (data && data.length > 0) {
-			return { tipo_ramo: "Riesgos Varios Misceláneos" as const, bienes: data };
+		let bienes = data || [];
+
+		if (inclusionIds.length > 0) {
+			const { data: incluidos } = await supabase
+				.from("polizas_anexos_riesgos_varios_bienes")
+				.select("*")
+				.in("anexo_id", inclusionIds)
+				.eq("accion", "inclusion");
+			if (incluidos) bienes = [...bienes, ...incluidos.map((b) => ({ ...b, _origen_anexo: b.anexo_id }))];
+		}
+		if (exclusionIds.length > 0) {
+			const { data: excluidos } = await supabase
+				.from("polizas_anexos_riesgos_varios_bienes")
+				.select("original_item_id")
+				.in("anexo_id", exclusionIds)
+				.eq("accion", "exclusion");
+			if (excluidos) {
+				const ids = new Set(excluidos.map((e) => e.original_item_id));
+				bienes = bienes.filter((b) => !ids.has(b.id));
+			}
+		}
+
+		if (bienes.length > 0) {
+			return { tipo_ramo: "Riesgos Varios Misceláneos" as const, bienes };
 		}
 	}
 
@@ -390,8 +539,30 @@ async function cargarItemsActualesRamo(
 		let tipoRamo: "Accidentes Personales" | "Vida" | "Sepelio" = "Accidentes Personales";
 		if (ramoLower.includes("vida")) tipoRamo = "Vida";
 		else if (ramoLower.includes("sepelio")) tipoRamo = "Sepelio";
-		if (data && data.length > 0) {
-			return { tipo_ramo: tipoRamo, asegurados: data };
+		let asegurados = data || [];
+
+		if (inclusionIds.length > 0) {
+			const { data: incluidos } = await supabase
+				.from("polizas_anexos_asegurados_nivel")
+				.select("*")
+				.in("anexo_id", inclusionIds)
+				.eq("accion", "inclusion");
+			if (incluidos) asegurados = [...asegurados, ...incluidos.map((a) => ({ ...a, _origen_anexo: a.anexo_id }))];
+		}
+		if (exclusionIds.length > 0) {
+			const { data: excluidos } = await supabase
+				.from("polizas_anexos_asegurados_nivel")
+				.select("original_item_id")
+				.in("anexo_id", exclusionIds)
+				.eq("accion", "exclusion");
+			if (excluidos) {
+				const ids = new Set(excluidos.map((e) => e.original_item_id));
+				asegurados = asegurados.filter((a) => !ids.has(a.id));
+			}
+		}
+
+		if (asegurados.length > 0) {
+			return { tipo_ramo: tipoRamo, asegurados };
 		}
 	}
 
