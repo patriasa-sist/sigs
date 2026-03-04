@@ -97,10 +97,9 @@ export async function eliminarDocumentoPermanente(documentoId: string, archivoUr
 			return { success: false, error: "No autenticado" };
 		}
 
-		// Extraer el path del archivo de la URL
-		// Ejemplo URL: https://xxx.supabase.co/storage/v1/object/public/polizas-documentos/path/file.pdf
-		const urlParts = archivoUrl.split("/polizas-documentos/");
-		const filePath = urlParts.length > 1 ? urlParts[1] : null;
+		// Extraer ruta relativa del storage (soporta URL completa o ruta relativa)
+		const { extractStoragePath } = await import("@/utils/storage");
+		const filePath = extractStoragePath(archivoUrl, "polizas-documentos");
 
 		if (!filePath) {
 			return { success: false, error: "URL de archivo inválida" };

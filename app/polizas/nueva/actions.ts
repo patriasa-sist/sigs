@@ -633,17 +633,12 @@ export async function guardarPoliza(formState: PolizaFormState) {
 					usedPath = tempPath;
 				}
 
-				// Obtener URL pública de la ruta usada
-				const {
-					data: { publicUrl },
-				} = supabase.storage.from("polizas-documentos").getPublicUrl(usedPath);
-
-				// Registrar en base de datos
+				// Registrar en base de datos con ruta relativa (no URL pública)
 				const { error: errorDoc } = await supabase.from("polizas_documentos").insert({
 					poliza_id: poliza.id,
 					tipo_documento: documento.tipo_documento,
 					nombre_archivo: documento.nombre_archivo,
-					archivo_url: publicUrl,
+					archivo_url: usedPath,
 					tamano_bytes: documento.tamano_bytes,
 					estado: "activo",
 				});

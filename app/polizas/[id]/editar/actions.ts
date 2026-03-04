@@ -720,15 +720,11 @@ export async function actualizarPoliza(
 				usedPath = tempPath;
 			}
 
-			const {
-				data: { publicUrl },
-			} = supabase.storage.from("polizas-documentos").getPublicUrl(usedPath);
-
 			await supabase.from("polizas_documentos").insert({
 				poliza_id: polizaId,
 				tipo_documento: documento.tipo_documento,
 				nombre_archivo: documento.nombre_archivo,
-				archivo_url: publicUrl,
+				archivo_url: usedPath,
 				tamano_bytes: documento.tamano_bytes,
 				estado: "activo",
 			});

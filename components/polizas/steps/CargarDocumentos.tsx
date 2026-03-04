@@ -102,15 +102,11 @@ export function CargarDocumentos({ documentos, onChange, onSiguiente, onAnterior
 			};
 		}
 
-		const {
-			data: { publicUrl },
-		} = supabase.storage.from(BUCKET).getPublicUrl(storagePath);
-
 		return {
 			tipo_documento: tipoDocumento,
 			nombre_archivo: file.name,
 			tamano_bytes: file.size,
-			archivo_url: publicUrl,
+			archivo_url: storagePath,
 			storage_path: storagePath,
 			upload_status: "uploaded",
 		};

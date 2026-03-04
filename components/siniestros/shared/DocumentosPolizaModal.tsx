@@ -47,20 +47,19 @@ export default function DocumentosPolizaModal({
 		return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
 	};
 
-	const getFileUrl = (doc: DocumentoPoliza): string => {
-		// Si archivo_url ya es una URL completa, usarla directamente
-		if (doc.archivo_url.startsWith("http")) {
-			return doc.archivo_url;
+	const handleOpenInNewTab = async (doc: DocumentoPoliza) => {
+		const { createClient } = await import("@/utils/supabase/client");
+		const supabase = createClient();
+		const { extractStoragePath } = await import("@/utils/storage");
+
+		const storagePath = extractStoragePath(doc.archivo_url, "polizas-documentos");
+		const { data } = await supabase.storage
+			.from("polizas-documentos")
+			.createSignedUrl(storagePath, 3600);
+
+		if (data?.signedUrl) {
+			window.open(data.signedUrl, "_blank");
 		}
-
-		// Si es una ruta relativa, construir la URL completa
-		const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-		return `${supabaseUrl}/storage/v1/object/public/polizas-documentos/${doc.archivo_url}`;
-	};
-
-	const handleOpenInNewTab = (doc: DocumentoPoliza) => {
-		const fileUrl = getFileUrl(doc);
-		window.open(fileUrl, "_blank");
 	};
 
 	return (

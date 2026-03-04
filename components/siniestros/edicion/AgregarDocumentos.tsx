@@ -161,23 +161,20 @@ export default function AgregarDocumentos({
 		return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
 	};
 
-	const getFileUrl = (doc: DocumentoSiniestro): string => {
-		if (!doc.archivo_url) return "";
+	const handleOpenInNewTab = async (doc: DocumentoSiniestro) => {
+		if (!doc.archivo_url) return;
 
-		// Si archivo_url ya es una URL completa, usarla directamente
-		if (doc.archivo_url.startsWith("http")) {
-			return doc.archivo_url;
-		}
+		const { createClient } = await import("@/utils/supabase/client");
+		const supabase = createClient();
+		const { extractStoragePath } = await import("@/utils/storage");
 
-		// Si es una ruta relativa, construir la URL completa
-		const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-		return `${supabaseUrl}/storage/v1/object/public/siniestros-documentos/${doc.archivo_url}`;
-	};
+		const storagePath = extractStoragePath(doc.archivo_url, "siniestros-documentos");
+		const { data } = await supabase.storage
+			.from("siniestros-documentos")
+			.createSignedUrl(storagePath, 3600);
 
-	const handleOpenInNewTab = (doc: DocumentoSiniestro) => {
-		const fileUrl = getFileUrl(doc);
-		if (fileUrl) {
-			window.open(fileUrl, "_blank");
+		if (data?.signedUrl) {
+			window.open(data.signedUrl, "_blank");
 		}
 	};
 

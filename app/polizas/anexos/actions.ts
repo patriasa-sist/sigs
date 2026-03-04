@@ -727,15 +727,11 @@ export async function guardarAnexo(formState: AnexoFormState): Promise<{
 
 			const usedPath = moveError ? tempPath : finalPath;
 
-			const { data: publicUrl } = supabase.storage
-				.from("polizas-documentos")
-				.getPublicUrl(usedPath);
-
 			await supabase.from("polizas_anexos_documentos").insert({
 				anexo_id: anexo.id,
 				tipo_documento: doc.tipo_documento || "Documento de Anexo",
 				nombre_archivo: doc.nombre_archivo,
-				archivo_url: publicUrl.publicUrl,
+				archivo_url: usedPath,
 				tamano_bytes: doc.tamano_bytes || null,
 				uploaded_by: user.id,
 			});

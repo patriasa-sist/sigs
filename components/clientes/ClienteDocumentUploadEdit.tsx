@@ -274,10 +274,12 @@ export function ClienteDocumentUploadEdit({ clientId, clientType, isAdmin = fals
 			const { createClient } = await import("@/utils/supabase/client");
 			const supabase = createClient();
 
-			const { data } = supabase.storage.from("clientes-documentos").getPublicUrl(storagePath);
+			const { data } = await supabase.storage
+				.from("clientes-documentos")
+				.createSignedUrl(storagePath, 3600);
 
-			if (data?.publicUrl) {
-				window.open(data.publicUrl, "_blank");
+			if (data?.signedUrl) {
+				window.open(data.signedUrl, "_blank");
 			}
 		} catch (err) {
 			console.error("Error downloading document:", err);

@@ -290,13 +290,6 @@ export function generateStoragePath(clientId: string, fileName: string): string 
 	return `${clientId}/${timestamp}_${sanitizedFileName}`;
 }
 
-/**
- * Get public URL for document (from storage)
- */
-export function getDocumentPublicUrl(storagePath: string, supabaseUrl: string): string {
-	return `${supabaseUrl}/storage/v1/object/public/clientes-documentos/${storagePath}`;
-}
-
 // ================================================
 // FORM HELPER TYPES
 // ================================================

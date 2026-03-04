@@ -252,14 +252,15 @@ export function ClientDetailModal({ clientId, onClose }: Props) {
 			const { createClient } = await import("@/utils/supabase/client");
 			const supabase = createClient();
 
-			// Obtener URL pública del documento
-			const { data } = supabase.storage.from("clientes-documentos").getPublicUrl(storagePath);
+			// Generar URL firmada para acceder al documento (bucket privado)
+			const { data, error } = await supabase.storage
+				.from("clientes-documentos")
+				.createSignedUrl(storagePath, 3600);
 
-			if (data?.publicUrl) {
-				// Abrir en nueva ventana
-				window.open(data.publicUrl, "_blank");
+			if (data?.signedUrl) {
+				window.open(data.signedUrl, "_blank");
 			} else {
-				console.error("No se pudo obtener la URL del documento");
+				console.error("No se pudo obtener la URL del documento", error);
 				alert("Error al abrir el documento");
 			}
 		} catch (error) {

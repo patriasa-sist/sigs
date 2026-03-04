@@ -1027,7 +1027,14 @@ export default function PolizaDetallePage() {
 										<Button
 											variant="ghost"
 											size="sm"
-											onClick={() => window.open(doc.archivo_url, "_blank")}
+											onClick={async () => {
+												const { createClient } = await import("@/utils/supabase/client");
+												const supabase = createClient();
+												const { extractStoragePath } = await import("@/utils/storage");
+												const path = extractStoragePath(doc.archivo_url, "polizas-documentos");
+												const { data } = await supabase.storage.from("polizas-documentos").createSignedUrl(path, 3600);
+												if (data?.signedUrl) window.open(data.signedUrl, "_blank");
+											}}
 										>
 											<FileDown className="h-4 w-4" />
 										</Button>

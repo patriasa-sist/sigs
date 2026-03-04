@@ -1012,18 +1012,13 @@ export async function subirComprobantePago(pagoId: string, fileData: FormData): 
 			return { success: false, error: `Error al subir archivo: ${uploadError.message}` };
 		}
 
-		// Get public URL
-		const {
-			data: { publicUrl },
-		} = supabase.storage.from("pagos-comprobantes").getPublicUrl(uploadData.path);
-
-		// Create record in database
+		// Create record in database with relative storage path (not public URL)
 		const { data: comprobante, error: dbError } = await supabase
 			.from("polizas_pagos_comprobantes")
 			.insert({
 				pago_id: pagoId,
 				nombre_archivo: file.name,
-				archivo_url: publicUrl,
+				archivo_url: uploadData.path,
 				tamano_bytes: file.size,
 				tipo_archivo: tipoArchivo,
 				uploaded_by: user.id,
@@ -1042,7 +1037,7 @@ export async function subirComprobantePago(pagoId: string, fileData: FormData): 
 			success: true,
 			data: {
 				comprobante_id: comprobante.id,
-				archivo_url: publicUrl,
+				archivo_url: uploadData.path,
 			},
 		};
 	} catch (error) {

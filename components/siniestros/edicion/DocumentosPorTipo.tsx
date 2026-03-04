@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FileText, Trash2, ExternalLink, Loader2, RotateCcw } from "lucide-react";
@@ -175,18 +175,45 @@ export default function DocumentosPorTipo({
 		return ["jpg", "jpeg", "png", "gif", "webp"].includes(ext || "");
 	};
 
-	// Construir URL completa del archivo desde Supabase Storage
+	// Mapa de URLs firmadas para documentos (async)
+	const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
+
+	useEffect(() => {
+		const loadSignedUrls = async () => {
+			const docsToLoad = documentosFiltrados.filter(
+				(doc) => doc.archivo_url && !signedUrls[doc.archivo_url]
+			);
+			if (docsToLoad.length === 0) return;
+
+			const { createClient } = await import("@/utils/supabase/client");
+			const supabase = createClient();
+			const { extractStoragePath } = await import("@/utils/storage");
+
+			const paths = docsToLoad.map((doc) =>
+				extractStoragePath(doc.archivo_url!, "siniestros-documentos")
+			);
+
+			const { data } = await supabase.storage
+				.from("siniestros-documentos")
+				.createSignedUrls(paths, 3600);
+
+			if (data) {
+				const newUrls: Record<string, string> = {};
+				data.forEach((item, idx) => {
+					if (item.signedUrl) {
+						newUrls[docsToLoad[idx].archivo_url!] = item.signedUrl;
+					}
+				});
+				setSignedUrls((prev) => ({ ...prev, ...newUrls }));
+			}
+		};
+		loadSignedUrls();
+	// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [documentosFiltrados]);
+
 	const obtenerUrlArchivo = (archivoUrl: string | undefined) => {
 		if (!archivoUrl) return "";
-
-		// Si archivo_url ya es una URL completa, usarla directamente
-		if (archivoUrl.startsWith("http")) {
-			return archivoUrl;
-		}
-
-		// Si es una ruta relativa, construir la URL completa
-		const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-		return `${supabaseUrl}/storage/v1/object/public/siniestros-documentos/${archivoUrl}`;
+		return signedUrls[archivoUrl] || "";
 	};
 
 	const puedeAgregarDocumentos = estadoSiniestro === "abierto";

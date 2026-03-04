@@ -114,13 +114,8 @@ export async function eliminarDocumentoSiniestroPermanente(
 
 		// Si se eliminó de BD exitosamente, eliminar de Storage
 		try {
-			// Extraer el path del storage desde archivo_url
-			// archivo_url puede ser: "siniestro_id/timestamp-filename.ext" o una URL completa
-			let storagePath = archivoUrl;
-
-			if (archivoUrl.includes("/storage/v1/object/public/siniestros-documentos/")) {
-				storagePath = archivoUrl.split("/storage/v1/object/public/siniestros-documentos/")[1];
-			}
+			const { extractStoragePath } = await import("@/utils/storage");
+			const storagePath = extractStoragePath(archivoUrl, "siniestros-documentos");
 
 			const { error: storageError } = await supabase.storage
 				.from("siniestros-documentos")
