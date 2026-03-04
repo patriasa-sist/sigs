@@ -357,15 +357,44 @@ export default function PolizaDetallePage() {
 						<div className="bg-white rounded-lg shadow-sm border p-6">
 							<h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
 								<Car className="h-5 w-5" />
-								Vehículos Asegurados ({poliza.vehiculos.length})
+								Vehículos Asegurados ({poliza.vehiculos.filter((v) => !v._excluido_por).length})
+								{poliza.vehiculos.some((v) => v._excluido_por) && (
+									<span className="text-sm font-normal text-gray-500">
+										({poliza.vehiculos.filter((v) => v._excluido_por).length} excluido{poliza.vehiculos.filter((v) => v._excluido_por).length > 1 ? "s" : ""})
+									</span>
+								)}
 							</h2>
 							<div className="space-y-4">
 								{poliza.vehiculos.map((vehiculo) => (
-									<div key={vehiculo.id} className="border rounded-lg p-4">
+									<div
+										key={vehiculo.id}
+										className={`border rounded-lg p-4 ${
+											vehiculo._excluido_por
+												? "opacity-50 border-red-200 bg-red-50/30"
+												: vehiculo._origen_anexo
+													? "border-green-200 bg-green-50/30"
+													: ""
+										}`}
+									>
+										{/* Anexo badge */}
+										{(vehiculo._origen_anexo || vehiculo._excluido_por) && (
+											<div className="mb-3">
+												{vehiculo._origen_anexo && (
+													<span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-700 border border-green-200">
+														Incluido por {vehiculo._origen_anexo}
+													</span>
+												)}
+												{vehiculo._excluido_por && (
+													<span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-700 border border-red-200">
+														Excluido por {vehiculo._excluido_por}
+													</span>
+												)}
+											</div>
+										)}
 										<div className="grid grid-cols-3 gap-4">
 											<div>
 												<label className="text-sm font-medium text-gray-600">Placa</label>
-												<p className="text-base font-semibold text-gray-900">{vehiculo.placa}</p>
+												<p className={`text-base font-semibold text-gray-900 ${vehiculo._excluido_por ? "line-through" : ""}`}>{vehiculo.placa}</p>
 											</div>
 											<div>
 												<label className="text-sm font-medium text-gray-600">Tipo</label>
@@ -445,7 +474,7 @@ export default function PolizaDetallePage() {
 						<div className="bg-white rounded-lg shadow-sm border p-6">
 							<h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
 								<Heart className="h-5 w-5" />
-								Beneficiarios ({poliza.beneficiarios_salud.length})
+								Beneficiarios ({poliza.beneficiarios_salud.filter((b) => !b._excluido_por).length})
 							</h2>
 							<div className="overflow-x-auto">
 								<table className="w-full">
@@ -456,16 +485,38 @@ export default function PolizaDetallePage() {
 											<th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Fecha Nac.</th>
 											<th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Género</th>
 											<th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Rol</th>
+											{poliza.tiene_anexos_activos && (
+												<th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Estado</th>
+											)}
 										</tr>
 									</thead>
 									<tbody className="divide-y">
 										{poliza.beneficiarios_salud.map((b) => (
-											<tr key={b.id} className="hover:bg-gray-50">
-												<td className="px-4 py-3 text-sm font-medium text-gray-900">{b.nombre_completo}</td>
+											<tr
+												key={b.id}
+												className={`hover:bg-gray-50 ${
+													b._excluido_por ? "opacity-50 bg-red-50/30" : b._origen_anexo ? "bg-green-50/30" : ""
+												}`}
+											>
+												<td className={`px-4 py-3 text-sm font-medium text-gray-900 ${b._excluido_por ? "line-through" : ""}`}>{b.nombre_completo}</td>
 												<td className="px-4 py-3 text-sm text-gray-900">{b.carnet}</td>
 												<td className="px-4 py-3 text-sm text-gray-900">{formatDate(b.fecha_nacimiento)}</td>
 												<td className="px-4 py-3 text-sm text-gray-900">{b.genero}</td>
 												<td className="px-4 py-3 text-sm text-gray-900 capitalize">{b.rol}</td>
+												{poliza.tiene_anexos_activos && (
+													<td className="px-4 py-3">
+														{b._origen_anexo && (
+															<span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-700">
+																+{b._origen_anexo}
+															</span>
+														)}
+														{b._excluido_por && (
+															<span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-700">
+																-{b._excluido_por}
+															</span>
+														)}
+													</td>
+												)}
 											</tr>
 										))}
 									</tbody>
@@ -552,7 +603,7 @@ export default function PolizaDetallePage() {
 						<div className="bg-white rounded-lg shadow-sm border p-6">
 							<h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
 								<Ship className="h-5 w-5" />
-								Naves / Aeronaves ({poliza.naves.length})
+								Naves / Aeronaves ({poliza.naves.filter((n) => !n._excluido_por).length})
 							</h2>
 
 							{/* Niveles AP si existen */}
@@ -585,11 +636,34 @@ export default function PolizaDetallePage() {
 
 							<div className="space-y-4">
 								{poliza.naves.map((nave) => (
-									<div key={nave.id} className="border rounded-lg p-4">
+									<div
+										key={nave.id}
+										className={`border rounded-lg p-4 ${
+											nave._excluido_por
+												? "opacity-50 border-red-200 bg-red-50/30"
+												: nave._origen_anexo
+													? "border-green-200 bg-green-50/30"
+													: ""
+										}`}
+									>
+										{(nave._origen_anexo || nave._excluido_por) && (
+											<div className="mb-3">
+												{nave._origen_anexo && (
+													<span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-700 border border-green-200">
+														Incluido por {nave._origen_anexo}
+													</span>
+												)}
+												{nave._excluido_por && (
+													<span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-700 border border-red-200">
+														Excluido por {nave._excluido_por}
+													</span>
+												)}
+											</div>
+										)}
 										<div className="grid grid-cols-3 gap-4">
 											<div>
 												<label className="text-sm font-medium text-gray-600">Matrícula</label>
-												<p className="text-base font-semibold text-gray-900">{nave.matricula}</p>
+												<p className={`text-base font-semibold text-gray-900 ${nave._excluido_por ? "line-through" : ""}`}>{nave.matricula}</p>
 											</div>
 											<div>
 												<label className="text-sm font-medium text-gray-600">Marca/Modelo</label>
@@ -641,15 +715,38 @@ export default function PolizaDetallePage() {
 						<div className="bg-white rounded-lg shadow-sm border p-6">
 							<h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
 								<Wrench className="h-5 w-5" />
-								Equipos Industriales ({poliza.equipos.length})
+								Equipos Industriales ({poliza.equipos.filter((e) => !e._excluido_por).length})
 							</h2>
 							<div className="space-y-4">
 								{poliza.equipos.map((equipo) => (
-									<div key={equipo.id} className="border rounded-lg p-4">
+									<div
+										key={equipo.id}
+										className={`border rounded-lg p-4 ${
+											equipo._excluido_por
+												? "opacity-50 border-red-200 bg-red-50/30"
+												: equipo._origen_anexo
+													? "border-green-200 bg-green-50/30"
+													: ""
+										}`}
+									>
+										{(equipo._origen_anexo || equipo._excluido_por) && (
+											<div className="mb-3">
+												{equipo._origen_anexo && (
+													<span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-700 border border-green-200">
+														Incluido por {equipo._origen_anexo}
+													</span>
+												)}
+												{equipo._excluido_por && (
+													<span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-700 border border-red-200">
+														Excluido por {equipo._excluido_por}
+													</span>
+												)}
+											</div>
+										)}
 										<div className="grid grid-cols-3 gap-4">
 											<div>
 												<label className="text-sm font-medium text-gray-600">Nro. Serie</label>
-												<p className="text-base font-semibold text-gray-900">{equipo.nro_serie}</p>
+												<p className={`text-base font-semibold text-gray-900 ${equipo._excluido_por ? "line-through" : ""}`}>{equipo.nro_serie}</p>
 											</div>
 											{equipo.placa && (
 												<div>
@@ -727,6 +824,9 @@ export default function PolizaDetallePage() {
 						<h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
 							<CreditCard className="h-5 w-5" />
 							Plan de Pagos
+							{poliza.tiene_anexos_activos && (
+								<span className="text-sm font-normal text-blue-600">(consolidado)</span>
+							)}
 						</h2>
 
 						{/* Resumen de Pagos */}
@@ -757,8 +857,18 @@ export default function PolizaDetallePage() {
 											Vencimiento
 										</th>
 										<th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">
-											Monto
+											{poliza.cuotas_consolidadas ? "Original" : "Monto"}
 										</th>
+										{poliza.cuotas_consolidadas && (
+											<>
+												<th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">
+													Ajuste
+												</th>
+												<th className="px-4 py-3 text-right text-xs font-semibold text-blue-700 uppercase bg-blue-50">
+													Consolidado
+												</th>
+											</>
+										)}
 										<th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">
 											Fecha Pago
 										</th>
@@ -768,44 +878,121 @@ export default function PolizaDetallePage() {
 									</tr>
 								</thead>
 								<tbody className="divide-y">
-									{poliza.pagos.map((pago) => {
-										// Detectar si es cuota inicial por observaciones o si es la primera y tiene monto diferente
-										const esCuotaInicial =
-											pago.observaciones?.includes("inicial") ||
-											pago.observaciones?.includes("Inicial");
-										const etiquetaCuota = esCuotaInicial ? "Inicial" : `${pago.numero_cuota}`;
-
-										return (
-											<tr
-												key={pago.id}
-												className={`hover:bg-gray-50 ${esCuotaInicial ? "bg-blue-50" : ""}`}
-											>
-												<td className="px-4 py-3 text-sm font-medium text-gray-900">
-													Cuota {etiquetaCuota}
-												</td>
-												<td className="px-4 py-3 text-sm text-gray-900">
-													{formatDate(pago.fecha_vencimiento)}
-												</td>
-												<td className="px-4 py-3 text-sm font-semibold text-gray-900 text-right">
-													{formatCurrency(pago.monto, poliza.moneda)}
-												</td>
-												<td className="px-4 py-3 text-sm text-gray-600">
-													{pago.fecha_pago ? formatDate(pago.fecha_pago) : "-"}
-												</td>
-												<td className="px-4 py-3">
-													<div className="flex justify-center">
-														<span
-															className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getEstadoPagoStyle(
-																pago.estado
-															)}`}
-														>
-															{getEstadoPagoLabel(pago.estado)}
+									{poliza.cuotas_consolidadas ? (
+										<>
+											{poliza.cuotas_consolidadas.map((cuota) => {
+												const esCuotaInicial = cuota.numero_cuota === 0;
+												const etiquetaCuota = esCuotaInicial ? "Inicial" : `${cuota.numero_cuota}`;
+												return (
+													<tr
+														key={cuota.cuota_original_id}
+														className={`hover:bg-gray-50 ${esCuotaInicial ? "bg-blue-50" : ""}`}
+													>
+														<td className="px-4 py-3 text-sm font-medium text-gray-900">
+															Cuota {etiquetaCuota}
+														</td>
+														<td className="px-4 py-3 text-sm text-gray-900">
+															{formatDate(cuota.fecha_vencimiento)}
+														</td>
+														<td className="px-4 py-3 text-sm text-gray-500 text-right">
+															{formatCurrency(cuota.monto_original, poliza.moneda)}
+														</td>
+														<td className="px-4 py-3 text-sm text-right">
+															{cuota.monto_ajustes !== 0 ? (
+																<span className={cuota.monto_ajustes >= 0 ? "text-green-600 font-medium" : "text-red-600 font-medium"}>
+																	{cuota.monto_ajustes >= 0 ? "+" : ""}
+																	{formatCurrency(cuota.monto_ajustes, poliza.moneda)}
+																</span>
+															) : (
+																<span className="text-gray-400">-</span>
+															)}
+														</td>
+														<td className="px-4 py-3 text-sm font-semibold text-blue-900 text-right bg-blue-50/50">
+															{formatCurrency(cuota.monto_consolidado, poliza.moneda)}
+														</td>
+														<td className="px-4 py-3 text-sm text-gray-600">
+															{cuota.fecha_pago ? formatDate(cuota.fecha_pago) : "-"}
+														</td>
+														<td className="px-4 py-3">
+															<div className="flex justify-center">
+																<span
+																	className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getEstadoPagoStyle(
+																		cuota.estado
+																	)}`}
+																>
+																	{getEstadoPagoLabel(cuota.estado)}
+																</span>
+															</div>
+														</td>
+													</tr>
+												);
+											})}
+											{/* Vigencia Corrida rows */}
+											{poliza.vigencia_corrida?.map((vc) => (
+												<tr key={`vc-${vc.anexo_id}`} className="bg-purple-50/50 hover:bg-purple-50">
+													<td className="px-4 py-3 text-sm font-medium text-purple-800" colSpan={2}>
+														<span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-700 border border-purple-200 mr-2">
+															Vigencia Corrida
 														</span>
-													</div>
-												</td>
-											</tr>
-										);
-									})}
+														{vc.numero_anexo}
+													</td>
+													<td className="px-4 py-3" />
+													<td className="px-4 py-3" />
+													<td className="px-4 py-3 text-sm font-semibold text-purple-900 text-right">
+														{formatCurrency(vc.monto, poliza.moneda)}
+													</td>
+													<td className="px-4 py-3 text-sm text-gray-600">
+														{vc.fecha_vencimiento ? formatDate(vc.fecha_vencimiento) : "-"}
+													</td>
+													<td className="px-4 py-3">
+														<div className="flex justify-center">
+															<span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getEstadoPagoStyle(vc.estado)}`}>
+																{getEstadoPagoLabel(vc.estado)}
+															</span>
+														</div>
+													</td>
+												</tr>
+											))}
+										</>
+									) : (
+										poliza.pagos.map((pago) => {
+											const esCuotaInicial =
+												pago.observaciones?.includes("inicial") ||
+												pago.observaciones?.includes("Inicial");
+											const etiquetaCuota = esCuotaInicial ? "Inicial" : `${pago.numero_cuota}`;
+
+											return (
+												<tr
+													key={pago.id}
+													className={`hover:bg-gray-50 ${esCuotaInicial ? "bg-blue-50" : ""}`}
+												>
+													<td className="px-4 py-3 text-sm font-medium text-gray-900">
+														Cuota {etiquetaCuota}
+													</td>
+													<td className="px-4 py-3 text-sm text-gray-900">
+														{formatDate(pago.fecha_vencimiento)}
+													</td>
+													<td className="px-4 py-3 text-sm font-semibold text-gray-900 text-right">
+														{formatCurrency(pago.monto, poliza.moneda)}
+													</td>
+													<td className="px-4 py-3 text-sm text-gray-600">
+														{pago.fecha_pago ? formatDate(pago.fecha_pago) : "-"}
+													</td>
+													<td className="px-4 py-3">
+														<div className="flex justify-center">
+															<span
+																className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getEstadoPagoStyle(
+																	pago.estado
+																)}`}
+															>
+																{getEstadoPagoLabel(pago.estado)}
+															</span>
+														</div>
+													</td>
+												</tr>
+											);
+										})
+									)}
 								</tbody>
 							</table>
 						</div>
@@ -869,6 +1056,19 @@ export default function PolizaDetallePage() {
 									Modalidad: {poliza.modalidad_pago}
 								</p>
 							</div>
+							{poliza.monto_ajustes_total != null && poliza.monto_ajustes_total !== 0 && (
+								<div className="pt-4 border-t border-blue-200 bg-blue-50 -mx-6 px-6 py-3">
+									<label className="text-sm font-medium text-blue-700">Ajustes por Anexos</label>
+									<p className={`text-lg font-semibold mt-1 ${poliza.monto_ajustes_total >= 0 ? "text-green-600" : "text-red-600"}`}>
+										{poliza.monto_ajustes_total >= 0 ? "+" : ""}
+										{formatCurrency(poliza.monto_ajustes_total, poliza.moneda)}
+									</p>
+									<label className="text-sm font-medium text-blue-800 mt-2 block">Prima Consolidada</label>
+									<p className="text-xl font-bold text-blue-900 mt-1">
+										{formatCurrency(poliza.prima_total + poliza.monto_ajustes_total, poliza.moneda)}
+									</p>
+								</div>
+							)}
 							<div className="pt-4 border-t">
 								<label className="text-sm font-medium text-gray-600">Prima Neta</label>
 								<p className="text-lg font-semibold text-gray-900 mt-1">
@@ -1023,6 +1223,16 @@ export default function PolizaDetallePage() {
 										<label className="font-medium text-gray-600 mb-2 block">Historial</label>
 										<div className="space-y-2 max-h-48 overflow-y-auto">
 											{edicionesRelevantes.map((item) => {
+												const isAnexo = item.accion.startsWith("anexo_");
+												if (isAnexo) {
+													const color = item.accion === "anexo_validacion" ? "text-green-700" : item.accion === "anexo_rechazo" ? "text-red-700" : "text-blue-700";
+													return (
+														<p key={item.id} className={`text-xs ${color}`}>
+															{formatDate(item.timestamp)} - {item.descripcion}
+															{item.usuario_nombre && <span className="text-gray-500"> por {item.usuario_nombre}</span>}
+														</p>
+													);
+												}
 												const camposTexto = formatCampos(item.campos_modificados);
 												return (
 													<p key={item.id} className="text-xs text-gray-600">

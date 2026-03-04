@@ -2,6 +2,7 @@
 
 import { createClient } from "@/utils/supabase/server";
 import { getDataScopeFilter } from "@/utils/auth/helpers";
+import type { CuotaConsolidada, CuotaVigenciaCorrida } from "@/types/anexo";
 
 export type PolizaListItem = {
 	id: string;
@@ -67,6 +68,8 @@ export type PolizaDetalle = PolizaListItem & {
 		nro_motor: string | null;
 		nro_asientos: number | null;
 		plaza_circulacion: string | null;
+		_origen_anexo?: string;
+		_excluido_por?: string;
 	}>;
 	beneficiarios_salud?: Array<{
 		id: string;
@@ -75,6 +78,8 @@ export type PolizaDetalle = PolizaListItem & {
 		fecha_nacimiento: string;
 		genero: string;
 		rol: string;
+		_origen_anexo?: string;
+		_excluido_por?: string;
 	}>;
 	transporte?: {
 		materia_asegurada: string;
@@ -105,6 +110,8 @@ export type PolizaDetalle = PolizaListItem & {
 		valor_casco: number;
 		valor_responsabilidad_civil: number;
 		nivel_ap_nombre: string | null;
+		_origen_anexo?: string;
+		_excluido_por?: string;
 	}>;
 	niveles_ap_naves?: Array<{
 		id: string;
@@ -129,6 +136,8 @@ export type PolizaDetalle = PolizaListItem & {
 		color: string | null;
 		nro_motor: string | null;
 		plaza_circulacion: string | null;
+		_origen_anexo?: string;
+		_excluido_por?: string;
 	}>;
 	documentos: Array<{
 		id: string;
@@ -145,6 +154,11 @@ export type PolizaDetalle = PolizaListItem & {
 		descripcion: string | null;
 		timestamp: string;
 	}>;
+	// Consolidación de anexos activos
+	tiene_anexos_activos: boolean;
+	cuotas_consolidadas?: CuotaConsolidada[];
+	vigencia_corrida?: CuotaVigenciaCorrida[];
+	monto_ajustes_total?: number;
 };
 
 /**
@@ -582,6 +596,271 @@ export async function obtenerDetallePoliza(polizaId: string) {
 			timestamp: h.timestamp,
 		})) || [];
 
+		// ============================================
+		// CONSOLIDACIÓN DE ANEXOS ACTIVOS
+		// ============================================
+		const { data: anexosActivos } = await supabase
+			.from("polizas_anexos")
+			.select(`
+				id, numero_anexo, tipo_anexo, estado, created_at,
+				fecha_validacion, fecha_rechazo, motivo_rechazo,
+				creador:profiles!created_by (full_name),
+				validador:profiles!validado_por (full_name),
+				rechazador:profiles!rechazado_por (full_name)
+			`)
+			.eq("poliza_id", polizaId)
+			.order("created_at", { ascending: false });
+
+		const anexosActivosFiltrados = (anexosActivos || []).filter((a) => a.estado === "activo");
+		const tiene_anexos_activos = anexosActivosFiltrados.length > 0;
+		let cuotas_consolidadas: CuotaConsolidada[] | undefined;
+		let vigencia_corrida: CuotaVigenciaCorrida[] | undefined;
+		let monto_ajustes_total: number | undefined;
+
+		if (tiene_anexos_activos) {
+			// Merge items del ramo
+			const anexoIds = anexosActivosFiltrados.map((a) => a.id);
+			const anexoNumeroMap = new Map(anexosActivosFiltrados.map((a) => [a.id, a.numero_anexo]));
+
+			// Automotor
+			if (vehiculos) {
+				const { data: anexoVehiculos } = await supabase
+					.from("polizas_anexos_automotor_vehiculos")
+					.select("id, anexo_id, accion, original_item_id, placa, valor_asegurado, franquicia, nro_chasis, uso, coaseguro, modelo, ano, color, ejes, nro_motor, nro_asientos, plaza_circulacion")
+					.in("anexo_id", anexoIds);
+
+				for (const av of anexoVehiculos || []) {
+					const nroAnexo = anexoNumeroMap.get(av.anexo_id) || "?";
+					if (av.accion === "exclusion" && av.original_item_id) {
+						const original = vehiculos.find((v) => v.id === av.original_item_id);
+						if (original) original._excluido_por = nroAnexo;
+					} else if (av.accion === "inclusion") {
+						vehiculos.push({
+							id: av.id,
+							placa: av.placa,
+							valor_asegurado: Number(av.valor_asegurado),
+							franquicia: Number(av.franquicia),
+							tipo_vehiculo: null,
+							marca: null,
+							modelo: av.modelo,
+							ano: av.ano?.toString() || null,
+							nro_chasis: av.nro_chasis,
+							uso: av.uso,
+							coaseguro: av.coaseguro != null ? Number(av.coaseguro) : null,
+							color: av.color,
+							ejes: av.ejes,
+							nro_motor: av.nro_motor,
+							nro_asientos: av.nro_asientos,
+							plaza_circulacion: av.plaza_circulacion,
+							_origen_anexo: nroAnexo,
+						});
+					}
+				}
+			}
+
+			// Ramos técnicos
+			if (equipos) {
+				const { data: anexoEquipos } = await supabase
+					.from("polizas_anexos_ramos_tecnicos_equipos")
+					.select("id, anexo_id, accion, original_item_id, nro_serie, placa, valor_asegurado, franquicia, nro_chasis, uso, coaseguro, modelo, ano, color, nro_motor, plaza_circulacion")
+					.in("anexo_id", anexoIds);
+
+				for (const ae of anexoEquipos || []) {
+					const nroAnexo = anexoNumeroMap.get(ae.anexo_id) || "?";
+					if (ae.accion === "exclusion" && ae.original_item_id) {
+						const original = equipos.find((e) => e.id === ae.original_item_id);
+						if (original) original._excluido_por = nroAnexo;
+					} else if (ae.accion === "inclusion") {
+						equipos.push({
+							id: ae.id,
+							nro_serie: ae.nro_serie,
+							placa: ae.placa,
+							valor_asegurado: Number(ae.valor_asegurado),
+							franquicia: Number(ae.franquicia),
+							nro_chasis: ae.nro_chasis,
+							uso: ae.uso,
+							coaseguro: Number(ae.coaseguro || 0),
+							tipo_equipo: null,
+							marca_equipo: null,
+							modelo: ae.modelo,
+							ano: ae.ano,
+							color: ae.color,
+							nro_motor: ae.nro_motor,
+							plaza_circulacion: ae.plaza_circulacion,
+							_origen_anexo: nroAnexo,
+						});
+					}
+				}
+			}
+
+			// Aeronavegación/Naves
+			if (naves) {
+				const { data: anexoNaves } = await supabase
+					.from("polizas_anexos_aeronavegacion_naves")
+					.select("id, anexo_id, accion, original_item_id, matricula, marca, modelo, ano, serie, uso, nro_pasajeros, nro_tripulantes, valor_casco, valor_responsabilidad_civil")
+					.in("anexo_id", anexoIds);
+
+				for (const an of anexoNaves || []) {
+					const nroAnexo = anexoNumeroMap.get(an.anexo_id) || "?";
+					if (an.accion === "exclusion" && an.original_item_id) {
+						const original = naves.find((n) => n.id === an.original_item_id);
+						if (original) original._excluido_por = nroAnexo;
+					} else if (an.accion === "inclusion") {
+						naves.push({
+							id: an.id,
+							matricula: an.matricula,
+							marca: an.marca,
+							modelo: an.modelo,
+							ano: an.ano,
+							serie: an.serie,
+							uso: an.uso,
+							nro_pasajeros: an.nro_pasajeros,
+							nro_tripulantes: an.nro_tripulantes,
+							valor_casco: Number(an.valor_casco),
+							valor_responsabilidad_civil: Number(an.valor_responsabilidad_civil),
+							nivel_ap_nombre: null,
+							_origen_anexo: nroAnexo,
+						});
+					}
+				}
+			}
+
+			// Beneficiarios salud
+			if (beneficiarios_salud) {
+				const { data: anexoBenef } = await supabase
+					.from("polizas_anexos_salud_beneficiarios")
+					.select("id, anexo_id, accion, original_item_id, nombre_completo, carnet, fecha_nacimiento, genero, rol")
+					.in("anexo_id", anexoIds);
+
+				for (const ab of anexoBenef || []) {
+					const nroAnexo = anexoNumeroMap.get(ab.anexo_id) || "?";
+					if (ab.accion === "exclusion" && ab.original_item_id) {
+						const original = beneficiarios_salud.find((b) => b.id === ab.original_item_id);
+						if (original) original._excluido_por = nroAnexo;
+					} else if (ab.accion === "inclusion") {
+						beneficiarios_salud.push({
+							id: ab.id,
+							nombre_completo: ab.nombre_completo,
+							carnet: ab.carnet,
+							fecha_nacimiento: ab.fecha_nacimiento,
+							genero: ab.genero,
+							rol: ab.rol,
+							_origen_anexo: nroAnexo,
+						});
+					}
+				}
+			}
+
+			// Cuotas consolidadas
+			const { data: cuotasConsolResult } = await supabase
+				.from("polizas_anexos_pagos")
+				.select(`
+					id, anexo_id, cuota_original_id, tipo, numero_cuota,
+					monto, fecha_vencimiento, estado, observaciones,
+					polizas_anexos!inner (id, numero_anexo, tipo_anexo, estado)
+				`)
+				.in("anexo_id", anexoIds);
+
+			if (cuotasConsolResult && cuotasConsolResult.length > 0) {
+				const ajustes = cuotasConsolResult.filter((p) => p.tipo === "ajuste");
+				const vc = cuotasConsolResult.filter((p) => p.tipo === "vigencia_corrida");
+
+				// Build consolidated cuotas
+				const ajustesPorCuota = new Map<string, typeof ajustes>();
+				for (const a of ajustes) {
+					if (!a.cuota_original_id) continue;
+					const arr = ajustesPorCuota.get(a.cuota_original_id) || [];
+					arr.push(a);
+					ajustesPorCuota.set(a.cuota_original_id, arr);
+				}
+
+				cuotas_consolidadas = (pagos || []).map((cuota) => {
+					const cuotaAjustes = ajustesPorCuota.get(cuota.id) || [];
+					const montoAjustes = cuotaAjustes.reduce((sum, a) => sum + Number(a.monto), 0);
+					return {
+						cuota_original_id: cuota.id,
+						numero_cuota: cuota.numero_cuota,
+						monto_original: Number(cuota.monto),
+						monto_ajustes: montoAjustes,
+						monto_consolidado: Number(cuota.monto) + montoAjustes,
+						fecha_vencimiento: cuota.fecha_vencimiento,
+						estado: cuota.estado || "pendiente",
+						fecha_pago: cuota.fecha_pago || undefined,
+						ajustes: cuotaAjustes.map((a) => {
+							const anexoInfo = a.polizas_anexos as unknown as { id: string; numero_anexo: string; tipo_anexo: string };
+							return {
+								anexo_id: anexoInfo.id,
+								numero_anexo: anexoInfo.numero_anexo,
+								tipo_anexo: anexoInfo.tipo_anexo as "inclusion" | "exclusion" | "anulacion",
+								monto_delta: Number(a.monto),
+							};
+						}),
+					};
+				});
+
+				vigencia_corrida = vc.map((p) => {
+					const anexoInfo = p.polizas_anexos as unknown as { id: string; numero_anexo: string };
+					return {
+						anexo_id: anexoInfo.id,
+						numero_anexo: anexoInfo.numero_anexo,
+						monto: Number(p.monto),
+						fecha_vencimiento: p.fecha_vencimiento || "",
+						estado: p.estado || "pendiente",
+						observaciones: p.observaciones || undefined,
+					};
+				});
+
+				monto_ajustes_total = cuotasConsolResult.reduce((sum, p) => sum + Number(p.monto), 0);
+			}
+		}
+
+		// Historial de anexos (todos, no solo activos)
+		const anexoHistorial = (anexosActivos || []).flatMap((a) => {
+			const creador = (a.creador as unknown as { full_name: string } | null)?.full_name || null;
+			const validador = (a.validador as unknown as { full_name: string } | null)?.full_name || null;
+			const rechazador = (a.rechazador as unknown as { full_name: string } | null)?.full_name || null;
+			const tipoLabel = a.tipo_anexo === "inclusion" ? "inclusión" : a.tipo_anexo === "exclusion" ? "exclusión" : "anulación";
+			const entries: typeof historial = [];
+
+			entries.push({
+				id: `anexo-created-${a.id}`,
+				accion: "anexo_creacion",
+				usuario_nombre: creador,
+				campos_modificados: null,
+				descripcion: `Anexo ${a.numero_anexo} (${tipoLabel}) creado`,
+				timestamp: a.created_at,
+			});
+
+			if (a.fecha_validacion) {
+				entries.push({
+					id: `anexo-validated-${a.id}`,
+					accion: "anexo_validacion",
+					usuario_nombre: validador,
+					campos_modificados: null,
+					descripcion: `Anexo ${a.numero_anexo} (${tipoLabel}) validado`,
+					timestamp: a.fecha_validacion,
+				});
+			}
+
+			if (a.fecha_rechazo) {
+				entries.push({
+					id: `anexo-rejected-${a.id}`,
+					accion: "anexo_rechazo",
+					usuario_nombre: rechazador,
+					campos_modificados: null,
+					descripcion: `Anexo ${a.numero_anexo} rechazado: ${a.motivo_rechazo || ""}`,
+					timestamp: a.fecha_rechazo,
+				});
+			}
+
+			return entries;
+		});
+
+		// Merge and sort all historial chronologically
+		const historialCompleto = [...historial, ...anexoHistorial]
+			.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+			.slice(0, 30);
+
 		const polizaDetalle: PolizaDetalle = {
 			id: poliza.id,
 			numero_poliza: poliza.numero_poliza,
@@ -623,7 +902,11 @@ export async function obtenerDetallePoliza(polizaId: string) {
 			niveles_ap_naves,
 			equipos,
 			documentos: documentos || [],
-			historial,
+			historial: historialCompleto,
+			tiene_anexos_activos,
+			cuotas_consolidadas,
+			vigencia_corrida,
+			monto_ajustes_total,
 		};
 
 		// Obtener rol del usuario actual
