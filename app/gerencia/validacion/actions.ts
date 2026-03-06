@@ -301,7 +301,34 @@ export async function rechazarPoliza(polizaId: string, motivo: string) {
 			.eq("id", user.id)
 			.single();
 
-		// Enviar email de notificación al responsable (sin bloquear el flujo)
+		// Obtener email del líder del equipo del responsable para CC
+		let ccLider: string | undefined;
+		if (poliza.responsable_id) {
+			const { data: equipoDelResponsable } = await supabase
+				.from("equipo_miembros")
+				.select("equipo_id")
+				.eq("user_id", poliza.responsable_id)
+				.limit(1)
+				.single();
+
+			if (equipoDelResponsable) {
+				const { data: lider } = await supabase
+					.from("equipo_miembros")
+					.select("user:profiles!user_id(email)")
+					.eq("equipo_id", equipoDelResponsable.equipo_id)
+					.eq("rol_equipo", "lider")
+					.limit(1)
+					.single();
+
+				const liderEmail = (lider?.user as unknown as { email: string } | null)?.email;
+				const responsableEmail = (poliza.responsable as unknown as { email: string } | null)?.email;
+				if (liderEmail && liderEmail !== responsableEmail) {
+					ccLider = liderEmail;
+				}
+			}
+		}
+
+		// Enviar email de notificación al responsable con CC al líder (sin bloquear el flujo)
 		const responsable = poliza.responsable as unknown as { full_name: string; email: string } | null;
 		if (responsable?.email) {
 			enviarEmailRechazoPoliza({
@@ -316,6 +343,7 @@ export async function rechazarPoliza(polizaId: string, motivo: string) {
 				rechazadoPor: rejector?.full_name ?? "Gerencia",
 				motivo: motivo.trim(),
 				puedeEditarHasta,
+				ccLider,
 			}).catch((err) => console.error("Fallo al enviar email de rechazo:", err));
 		}
 

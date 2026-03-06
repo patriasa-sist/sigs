@@ -2,7 +2,7 @@ import { Resend } from "resend";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-const FROM_EMAIL = "notificaciones@patria-sa.com";
+const FROM_EMAIL = "notificaciones@patria-sigs.com";
 const APP_NAME = "SIGS - PATRIA S.A.";
 
 export interface EnvioRechazoPolizaParams {
@@ -17,10 +17,11 @@ export interface EnvioRechazoPolizaParams {
 	rechazadoPor: string;
 	motivo: string;
 	puedeEditarHasta: Date;
+	ccLider?: string;
 }
 
 export async function enviarEmailRechazoPoliza(params: EnvioRechazoPolizaParams): Promise<void> {
-	const { destinatario, poliza, rechazadoPor, motivo, puedeEditarHasta } = params;
+	const { destinatario, poliza, rechazadoPor, motivo, puedeEditarHasta, ccLider } = params;
 
 	const fechaLimite = puedeEditarHasta.toLocaleString("es-BO", {
 		timeZone: "America/La_Paz",
@@ -109,6 +110,7 @@ ${APP_NAME}`;
 	const { error } = await resend.emails.send({
 		from: `${APP_NAME} <${FROM_EMAIL}>`,
 		to: [destinatario.email],
+		...(ccLider ? { cc: [ccLider] } : {}),
 		subject: `Póliza N° ${poliza.numero} rechazada — Tienes 24 horas para corregirla`,
 		html,
 		text,
