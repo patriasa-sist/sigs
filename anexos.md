@@ -36,3 +36,5 @@ AN-234 (pendiente) [editar] [permisos] [validar] [rechazar] |
 {{documentos}}
 
 Siguiente iteración: Los datos del anexo validado se "fusionan" visualmente con los datos originales de la póliza (vista consolidada), y el historial refleja la creación/validación de anexos
+
+test.
