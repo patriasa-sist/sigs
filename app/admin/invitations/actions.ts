@@ -3,6 +3,31 @@
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { revalidatePath } from "next/cache";
 
+export async function marcarInvitacionUsada(email: string) {
+	try {
+		const supabaseAdmin = createAdminClient(
+			process.env.NEXT_PUBLIC_SUPABASE_URL!,
+			process.env.SUPABASE_SERVICE_ROLE_KEY!
+		);
+
+		const { error } = await supabaseAdmin
+			.from("invitations")
+			.update({ used_at: new Date().toISOString() })
+			.eq("email", email)
+			.is("used_at", null);
+
+		if (error) {
+			console.error("Error marking invitation as used:", error);
+			return { success: false, error: error.message };
+		}
+
+		return { success: true };
+	} catch (error) {
+		console.error("Unexpected error marking invitation:", error);
+		return { success: false, error: "Unexpected error" };
+	}
+}
+
 export async function deleteInvitationAndUser(invitationId: string, email: string) {
 	try {
 		// Use admin client to bypass RLS for deletion

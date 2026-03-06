@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { createClient } from "@/utils/supabase/client";
+import { marcarInvitacionUsada } from "@/app/admin/invitations/actions";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, Suspense } from "react";
 import { Loader2, AlertTriangle } from "lucide-react";
@@ -181,15 +182,12 @@ function SignUpContent() {
 				}
 			}
 
-			// Mark invitation as used in the custom invitations table
-			const { error: updateError } = await supabase
-				.from("invitations")
-				.update({ used_at: new Date().toISOString() })
-				.eq("email", emailParam);
-
-			if (updateError) {
-				console.error("Failed to mark invitation as used:", updateError);
-				// Don't throw here as the user password is already set
+			// Mark invitation as used via server action (bypasses RLS)
+			if (emailParam) {
+				const result = await marcarInvitacionUsada(emailParam);
+				if (!result.success) {
+					console.error("Failed to mark invitation as used:", result.error);
+				}
 			}
 
 			toast.success("Contraseña actualizada exitosamente. Ahora puedes iniciar sesión.");

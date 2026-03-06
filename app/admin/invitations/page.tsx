@@ -32,8 +32,8 @@ export default async function ManageInvitationsPage() {
 	}));
 
 
-	const getStatusInfo = (invitation: { used_at: string | null; expires_at: string }) => {
-		if (invitation.used_at) {
+	const getStatusInfo = (invitation: { used_at: string | null; expires_at: string; profile_role: string | null }) => {
+		if (invitation.used_at || invitation.profile_role) {
 			return {
 				label: "Usada",
 				variant: "secondary" as const,
