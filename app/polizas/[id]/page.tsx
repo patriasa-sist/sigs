@@ -29,6 +29,9 @@ import {
 	Ship,
 	Wrench,
 	Plus,
+	Flame,
+	ShieldAlert,
+	Users,
 } from "lucide-react";
 import { formatCurrency, formatDate } from "@/utils/formatters";
 
@@ -469,59 +472,414 @@ export default function PolizaDetallePage() {
 						</div>
 					)}
 
-					{/* Beneficiarios Salud */}
-					{poliza.beneficiarios_salud && poliza.beneficiarios_salud.length > 0 && (
+					{/* Salud: Asegurados + Niveles + Beneficiarios */}
+					{(poliza.asegurados_salud || poliza.niveles_salud || poliza.beneficiarios_salud) && (
 						<div className="bg-white rounded-lg shadow-sm border p-6">
 							<h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
 								<Heart className="h-5 w-5" />
-								Beneficiarios ({poliza.beneficiarios_salud.filter((b) => !b._excluido_por).length})
+								Datos de Salud
 							</h2>
-							<div className="overflow-x-auto">
-								<table className="w-full">
-									<thead className="bg-gray-50 border-b">
-										<tr>
-											<th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Nombre</th>
-											<th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Carnet</th>
-											<th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Fecha Nac.</th>
-											<th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Género</th>
-											<th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Rol</th>
-											{poliza.tiene_anexos_activos && (
-												<th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Estado</th>
-											)}
-										</tr>
-									</thead>
-									<tbody className="divide-y">
-										{poliza.beneficiarios_salud.map((b) => (
-											<tr
-												key={b.id}
-												className={`hover:bg-gray-50 ${
-													b._excluido_por ? "opacity-50 bg-red-50/30" : b._origen_anexo ? "bg-green-50/30" : ""
-												}`}
-											>
-												<td className={`px-4 py-3 text-sm font-medium text-gray-900 ${b._excluido_por ? "line-through" : ""}`}>{b.nombre_completo}</td>
-												<td className="px-4 py-3 text-sm text-gray-900">{b.carnet}</td>
-												<td className="px-4 py-3 text-sm text-gray-900">{formatDate(b.fecha_nacimiento)}</td>
-												<td className="px-4 py-3 text-sm text-gray-900">{b.genero}</td>
-												<td className="px-4 py-3 text-sm text-gray-900 capitalize">{b.rol}</td>
-												{poliza.tiene_anexos_activos && (
-													<td className="px-4 py-3">
-														{b._origen_anexo && (
-															<span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-700">
-																+{b._origen_anexo}
-															</span>
-														)}
-														{b._excluido_por && (
-															<span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-700">
-																-{b._excluido_por}
-															</span>
-														)}
-													</td>
-												)}
-											</tr>
+
+							{/* Niveles de cobertura */}
+							{poliza.niveles_salud && poliza.niveles_salud.length > 0 && (
+								<div className="mb-4 p-4 bg-gray-50 rounded-lg">
+									<h3 className="text-sm font-semibold text-gray-700 mb-2">Niveles de Cobertura</h3>
+									<div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+										{poliza.niveles_salud.map((nivel) => (
+											<div key={nivel.id} className="bg-white border rounded p-3 text-sm">
+												<p className="font-medium text-gray-900">{nivel.nombre}</p>
+												<p className="text-gray-600">{formatCurrency(nivel.monto, poliza.moneda)}</p>
+											</div>
 										))}
-									</tbody>
-								</table>
+									</div>
+								</div>
+							)}
+
+							{/* Asegurados (contratante/titular) */}
+							{poliza.asegurados_salud && poliza.asegurados_salud.length > 0 && (
+								<div className="mb-4">
+									<h3 className="text-sm font-semibold text-gray-700 mb-2">Asegurados</h3>
+									<div className="overflow-x-auto">
+										<table className="w-full">
+											<thead className="bg-gray-50 border-b">
+												<tr>
+													<th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Nombre</th>
+													<th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase">CI/NIT</th>
+													<th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Rol</th>
+													<th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Nivel</th>
+												</tr>
+											</thead>
+											<tbody className="divide-y">
+												{poliza.asegurados_salud.map((a) => (
+													<tr key={a.id} className="hover:bg-gray-50">
+														<td className="px-4 py-2 text-sm font-medium text-gray-900">{a.client_name}</td>
+														<td className="px-4 py-2 text-sm text-gray-900">{a.client_ci}</td>
+														<td className="px-4 py-2 text-sm text-gray-900 capitalize">{a.rol}</td>
+														<td className="px-4 py-2 text-sm text-gray-900">{a.nivel_nombre || "-"}</td>
+													</tr>
+												))}
+											</tbody>
+										</table>
+									</div>
+								</div>
+							)}
+
+							{/* Beneficiarios (dependientes/conyugues) */}
+							{poliza.beneficiarios_salud && poliza.beneficiarios_salud.length > 0 && (
+								<div>
+									<h3 className="text-sm font-semibold text-gray-700 mb-2">
+										Beneficiarios ({poliza.beneficiarios_salud.filter((b) => !b._excluido_por).length})
+									</h3>
+									<div className="overflow-x-auto">
+										<table className="w-full">
+											<thead className="bg-gray-50 border-b">
+												<tr>
+													<th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Nombre</th>
+													<th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Carnet</th>
+													<th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Fecha Nac.</th>
+													<th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Género</th>
+													<th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Rol</th>
+													{poliza.tiene_anexos_activos && (
+														<th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Estado</th>
+													)}
+												</tr>
+											</thead>
+											<tbody className="divide-y">
+												{poliza.beneficiarios_salud.map((b) => (
+													<tr
+														key={b.id}
+														className={`hover:bg-gray-50 ${
+															b._excluido_por ? "opacity-50 bg-red-50/30" : b._origen_anexo ? "bg-green-50/30" : ""
+														}`}
+													>
+														<td className={`px-4 py-2 text-sm font-medium text-gray-900 ${b._excluido_por ? "line-through" : ""}`}>{b.nombre_completo}</td>
+														<td className="px-4 py-2 text-sm text-gray-900">{b.carnet}</td>
+														<td className="px-4 py-2 text-sm text-gray-900">{formatDate(b.fecha_nacimiento)}</td>
+														<td className="px-4 py-2 text-sm text-gray-900">{b.genero}</td>
+														<td className="px-4 py-2 text-sm text-gray-900 capitalize">{b.rol}</td>
+														{poliza.tiene_anexos_activos && (
+															<td className="px-4 py-2">
+																{b._origen_anexo && (
+																	<span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-700">
+																		+{b._origen_anexo}
+																	</span>
+																)}
+																{b._excluido_por && (
+																	<span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-700">
+																		-{b._excluido_por}
+																	</span>
+																)}
+															</td>
+														)}
+													</tr>
+												))}
+											</tbody>
+										</table>
+									</div>
+								</div>
+							)}
+						</div>
+					)}
+
+					{/* Incendio: Bienes + Items + Asegurados */}
+					{(poliza.incendio_bienes || poliza.incendio_asegurados) && (
+						<div className="bg-white rounded-lg shadow-sm border p-6">
+							<h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
+								<Flame className="h-5 w-5" />
+								Incendio y Aliados
+							</h2>
+
+							{poliza.incendio_asegurados && poliza.incendio_asegurados.length > 0 && (
+								<div className="mb-4 p-4 bg-gray-50 rounded-lg">
+									<h3 className="text-sm font-semibold text-gray-700 mb-2">Asegurados Adicionales</h3>
+									<div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+										{poliza.incendio_asegurados.map((a) => (
+											<div key={a.id} className="bg-white border rounded p-2 text-sm flex items-center gap-2">
+												<User className="h-4 w-4 text-gray-400" />
+												<span className="font-medium">{a.client_name}</span>
+												<span className="text-gray-500">CI/NIT: {a.client_ci}</span>
+											</div>
+										))}
+									</div>
+								</div>
+							)}
+
+							{poliza.incendio_bienes && poliza.incendio_bienes.length > 0 && (
+								<div className="space-y-4">
+									<h3 className="text-sm font-semibold text-gray-700">
+										Bienes Asegurados ({poliza.incendio_bienes.filter((b) => !b._excluido_por).length})
+									</h3>
+									{poliza.incendio_bienes.map((bien) => (
+										<div
+											key={bien.id}
+											className={`border rounded-lg p-4 ${
+												bien._excluido_por
+													? "opacity-50 border-red-200 bg-red-50/30"
+													: bien._origen_anexo
+														? "border-green-200 bg-green-50/30"
+														: ""
+											}`}
+										>
+											{(bien._origen_anexo || bien._excluido_por) && (
+												<div className="mb-2">
+													{bien._origen_anexo && (
+														<span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-700 border border-green-200">
+															Incluido por {bien._origen_anexo}
+														</span>
+													)}
+													{bien._excluido_por && (
+														<span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-700 border border-red-200">
+															Excluido por {bien._excluido_por}
+														</span>
+													)}
+												</div>
+											)}
+											<div className="flex items-center justify-between mb-3">
+												<div>
+													<label className="text-sm font-medium text-gray-600 flex items-center gap-1">
+														<MapPin className="h-3 w-3" /> Dirección
+													</label>
+													<p className={`text-base text-gray-900 ${bien._excluido_por ? "line-through" : ""}`}>{bien.direccion}</p>
+												</div>
+												<div className="text-right">
+													<label className="text-sm font-medium text-gray-600">Valor Total</label>
+													<p className="text-base font-semibold text-gray-900">{formatCurrency(bien.valor_total_declarado, poliza.moneda)}</p>
+													{bien.es_primer_riesgo && (
+														<span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+															Primer Riesgo
+														</span>
+													)}
+												</div>
+											</div>
+											{bien.items.length > 0 && (
+												<div className="border-t pt-2">
+													<table className="w-full text-sm">
+														<tbody>
+															{bien.items.map((item, idx) => (
+																<tr key={idx} className="border-b last:border-0">
+																	<td className="py-1 text-gray-700">{item.nombre}</td>
+																	<td className="py-1 text-right font-medium text-gray-900">{formatCurrency(item.monto, poliza.moneda)}</td>
+																</tr>
+															))}
+														</tbody>
+													</table>
+												</div>
+											)}
+										</div>
+									))}
+								</div>
+							)}
+						</div>
+					)}
+
+					{/* Riesgos Varios: Bienes + Items + Asegurados */}
+					{(poliza.riesgos_varios_bienes || poliza.riesgos_varios_asegurados) && (
+						<div className="bg-white rounded-lg shadow-sm border p-6">
+							<h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
+								<ShieldAlert className="h-5 w-5" />
+								Riesgos Varios Misceláneos
+							</h2>
+
+							{poliza.riesgos_varios_asegurados && poliza.riesgos_varios_asegurados.length > 0 && (
+								<div className="mb-4 p-4 bg-gray-50 rounded-lg">
+									<h3 className="text-sm font-semibold text-gray-700 mb-2">Asegurados</h3>
+									<div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+										{poliza.riesgos_varios_asegurados.map((a) => (
+											<div key={a.id} className="bg-white border rounded p-2 text-sm flex items-center gap-2">
+												<User className="h-4 w-4 text-gray-400" />
+												<span className="font-medium">{a.client_name}</span>
+												<span className="text-gray-500">CI/NIT: {a.client_ci}</span>
+											</div>
+										))}
+									</div>
+								</div>
+							)}
+
+							{poliza.riesgos_varios_bienes && poliza.riesgos_varios_bienes.length > 0 && (
+								<div className="space-y-4">
+									<h3 className="text-sm font-semibold text-gray-700">
+										Bienes Asegurados ({poliza.riesgos_varios_bienes.filter((b) => !b._excluido_por).length})
+									</h3>
+									{poliza.riesgos_varios_bienes.map((bien) => (
+										<div
+											key={bien.id}
+											className={`border rounded-lg p-4 ${
+												bien._excluido_por
+													? "opacity-50 border-red-200 bg-red-50/30"
+													: bien._origen_anexo
+														? "border-green-200 bg-green-50/30"
+														: ""
+											}`}
+										>
+											{(bien._origen_anexo || bien._excluido_por) && (
+												<div className="mb-2">
+													{bien._origen_anexo && (
+														<span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-700 border border-green-200">
+															Incluido por {bien._origen_anexo}
+														</span>
+													)}
+													{bien._excluido_por && (
+														<span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-700 border border-red-200">
+															Excluido por {bien._excluido_por}
+														</span>
+													)}
+												</div>
+											)}
+											<div className="flex items-center justify-between mb-3">
+												<div>
+													<label className="text-sm font-medium text-gray-600 flex items-center gap-1">
+														<MapPin className="h-3 w-3" /> Dirección
+													</label>
+													<p className={`text-base text-gray-900 ${bien._excluido_por ? "line-through" : ""}`}>{bien.direccion}</p>
+												</div>
+												<div className="text-right">
+													<label className="text-sm font-medium text-gray-600">Valor Total</label>
+													<p className="text-base font-semibold text-gray-900">{formatCurrency(bien.valor_total_declarado, poliza.moneda)}</p>
+													{bien.es_primer_riesgo && (
+														<span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+															Primer Riesgo
+														</span>
+													)}
+												</div>
+											</div>
+											{bien.items.length > 0 && (
+												<div className="border-t pt-2">
+													<table className="w-full text-sm">
+														<tbody>
+															{bien.items.map((item, idx) => (
+																<tr key={idx} className="border-b last:border-0">
+																	<td className="py-1 text-gray-700">{item.nombre}</td>
+																	<td className="py-1 text-right font-medium text-gray-900">{formatCurrency(item.monto, poliza.moneda)}</td>
+																</tr>
+															))}
+														</tbody>
+													</table>
+												</div>
+											)}
+										</div>
+									))}
+								</div>
+							)}
+						</div>
+					)}
+
+					{/* Responsabilidad Civil */}
+					{poliza.responsabilidad_civil && (
+						<div className="bg-white rounded-lg shadow-sm border p-6">
+							<h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
+								<Shield className="h-5 w-5" />
+								Responsabilidad Civil
+							</h2>
+							<div className="grid grid-cols-2 gap-6">
+								<div>
+									<label className="text-sm font-medium text-gray-600">Tipo de Póliza</label>
+									<p className="text-base text-gray-900 mt-1 capitalize">{poliza.responsabilidad_civil.tipo_poliza}</p>
+								</div>
+								<div>
+									<label className="text-sm font-medium text-gray-600">Valor Asegurado</label>
+									<p className="text-base font-semibold text-gray-900 mt-1">
+										{formatCurrency(poliza.responsabilidad_civil.valor_asegurado, poliza.moneda)}
+									</p>
+								</div>
 							</div>
+						</div>
+					)}
+
+					{/* Vida / Accidentes Personales / Sepelio */}
+					{(poliza.niveles_cobertura || poliza.asegurados_nivel) && (
+						<div className="bg-white rounded-lg shadow-sm border p-6">
+							<h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
+								<Users className="h-5 w-5" />
+								{poliza.ramo}
+							</h2>
+
+							{/* Niveles de cobertura */}
+							{poliza.niveles_cobertura && poliza.niveles_cobertura.length > 0 && (
+								<div className="mb-4">
+									<h3 className="text-sm font-semibold text-gray-700 mb-2">Niveles de Cobertura</h3>
+									<div className="space-y-3">
+										{poliza.niveles_cobertura.map((nivel) => (
+											<div key={nivel.id} className="border rounded-lg p-3">
+												<div className="flex items-center justify-between mb-2">
+													<span className="font-medium text-gray-900">{nivel.nombre}</span>
+													{nivel.prima_nivel != null && (
+														<span className="text-sm text-gray-600">
+															Prima: {formatCurrency(nivel.prima_nivel, poliza.moneda)}
+														</span>
+													)}
+												</div>
+												<div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm">
+													{Object.entries(nivel.coberturas).map(([key, cob]) => (
+														<div key={key} className={`p-2 rounded ${cob.habilitado ? "bg-green-50 border border-green-200" : "bg-gray-50 border border-gray-200 opacity-50"}`}>
+															<span className="block text-xs text-gray-600 capitalize">{key.replace(/_/g, " ")}</span>
+															<span className="font-medium text-gray-900">
+																{cob.habilitado ? formatCurrency(cob.valor, poliza.moneda) : "No incluido"}
+															</span>
+														</div>
+													))}
+												</div>
+											</div>
+										))}
+									</div>
+								</div>
+							)}
+
+							{/* Asegurados con nivel */}
+							{poliza.asegurados_nivel && poliza.asegurados_nivel.length > 0 && (
+								<div>
+									<h3 className="text-sm font-semibold text-gray-700 mb-2">
+										Asegurados ({poliza.asegurados_nivel.filter((a) => !a._excluido_por).length})
+									</h3>
+									<div className="overflow-x-auto">
+										<table className="w-full">
+											<thead className="bg-gray-50 border-b">
+												<tr>
+													<th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Nombre</th>
+													<th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase">CI/NIT</th>
+													<th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Nivel</th>
+													{poliza.asegurados_nivel.some(a => a.cargo) && (
+														<th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Cargo</th>
+													)}
+													{poliza.tiene_anexos_activos && (
+														<th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Estado</th>
+													)}
+												</tr>
+											</thead>
+											<tbody className="divide-y">
+												{poliza.asegurados_nivel.map((a) => (
+													<tr
+														key={a.id}
+														className={`hover:bg-gray-50 ${
+															a._excluido_por ? "opacity-50 bg-red-50/30" : a._origen_anexo ? "bg-green-50/30" : ""
+														}`}
+													>
+														<td className={`px-4 py-2 text-sm font-medium text-gray-900 ${a._excluido_por ? "line-through" : ""}`}>{a.client_name}</td>
+														<td className="px-4 py-2 text-sm text-gray-900">{a.client_ci}</td>
+														<td className="px-4 py-2 text-sm text-gray-900">{a.nivel_nombre || "-"}</td>
+														{poliza.asegurados_nivel!.some(x => x.cargo) && (
+															<td className="px-4 py-2 text-sm text-gray-900">{a.cargo || "-"}</td>
+														)}
+														{poliza.tiene_anexos_activos && (
+															<td className="px-4 py-2">
+																{a._origen_anexo && (
+																	<span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-700">
+																		+{a._origen_anexo}
+																	</span>
+																)}
+																{a._excluido_por && (
+																	<span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-700">
+																		-{a._excluido_por}
+																	</span>
+																)}
+															</td>
+														)}
+													</tr>
+												))}
+											</tbody>
+										</table>
+									</div>
+								</div>
+							)}
 						</div>
 					)}
 

@@ -71,6 +71,20 @@ export type PolizaDetalle = PolizaListItem & {
 		_origen_anexo?: string;
 		_excluido_por?: string;
 	}>;
+	// Salud: asegurados (contratante/titular) + niveles + beneficiarios
+	asegurados_salud?: Array<{
+		id: string;
+		client_id: string;
+		client_name: string;
+		client_ci: string;
+		nivel_nombre: string | null;
+		rol: string;
+	}>;
+	niveles_salud?: Array<{
+		id: string;
+		nombre: string;
+		monto: number;
+	}>;
 	beneficiarios_salud?: Array<{
 		id: string;
 		nombre_completo: string;
@@ -78,6 +92,57 @@ export type PolizaDetalle = PolizaListItem & {
 		fecha_nacimiento: string;
 		genero: string;
 		rol: string;
+		_origen_anexo?: string;
+		_excluido_por?: string;
+	}>;
+	// Incendio: bienes con items + asegurados
+	incendio_bienes?: Array<{
+		id: string;
+		direccion: string;
+		valor_total_declarado: number;
+		es_primer_riesgo: boolean;
+		items: Array<{ nombre: string; monto: number }>;
+		_origen_anexo?: string;
+		_excluido_por?: string;
+	}>;
+	incendio_asegurados?: Array<{
+		id: string;
+		client_name: string;
+		client_ci: string;
+	}>;
+	// Riesgos Varios: bienes con items + asegurados
+	riesgos_varios_bienes?: Array<{
+		id: string;
+		direccion: string;
+		valor_total_declarado: number;
+		es_primer_riesgo: boolean;
+		items: Array<{ nombre: string; monto: number }>;
+		_origen_anexo?: string;
+		_excluido_por?: string;
+	}>;
+	riesgos_varios_asegurados?: Array<{
+		id: string;
+		client_name: string;
+		client_ci: string;
+	}>;
+	// Responsabilidad Civil
+	responsabilidad_civil?: {
+		tipo_poliza: string;
+		valor_asegurado: number;
+	};
+	// Vida / Accidentes Personales / Sepelio (genéricos con niveles)
+	niveles_cobertura?: Array<{
+		id: string;
+		nombre: string;
+		prima_nivel: number | null;
+		coberturas: Record<string, { habilitado: boolean; valor: number }>;
+	}>;
+	asegurados_nivel?: Array<{
+		id: string;
+		client_name: string;
+		client_ci: string;
+		nivel_nombre: string | null;
+		cargo: string | null;
 		_origen_anexo?: string;
 		_excluido_por?: string;
 	}>;
@@ -416,9 +481,66 @@ export async function obtenerDetallePoliza(polizaId: string) {
 			if (vehiculos.length === 0) vehiculos = undefined;
 		}
 
-		// --- SALUD (Beneficiarios) ---
+		// --- SALUD ---
+		let asegurados_salud: PolizaDetalle["asegurados_salud"];
+		let niveles_salud: PolizaDetalle["niveles_salud"];
 		let beneficiarios_salud: PolizaDetalle["beneficiarios_salud"];
 		if (ramoLower.includes("salud")) {
+			// Niveles de cobertura
+			const { data: nivelesData } = await supabase
+				.from("polizas_salud_niveles")
+				.select("id, nombre, monto")
+				.eq("poliza_id", polizaId);
+
+			if (nivelesData && nivelesData.length > 0) {
+				niveles_salud = nivelesData;
+			}
+			const nivelMap = new Map(nivelesData?.map(n => [n.id, n.nombre]) || []);
+
+			// Asegurados (contratante/titular)
+			const { data: aseguradosData } = await supabase
+				.from("polizas_salud_asegurados")
+				.select("id, client_id, nivel_id, rol")
+				.eq("poliza_id", polizaId);
+
+			if (aseguradosData && aseguradosData.length > 0) {
+				// Resolver nombres de clientes
+				const clientIds = aseguradosData.map(a => a.client_id);
+				const { data: clients } = await supabase
+					.from("clients")
+					.select("id, client_type")
+					.in("id", clientIds);
+
+				const clientMap = new Map<string, { name: string; ci: string }>();
+				for (const c of clients || []) {
+					if (c.client_type === "natural") {
+						const { data: nc } = await supabase
+							.from("natural_clients")
+							.select("primer_nombre, primer_apellido, numero_documento")
+							.eq("client_id", c.id)
+							.single();
+						if (nc) clientMap.set(c.id, { name: `${nc.primer_nombre} ${nc.primer_apellido}`, ci: nc.numero_documento || "-" });
+					} else if (c.client_type === "juridica") {
+						const { data: jc } = await supabase
+							.from("juridic_clients")
+							.select("razon_social, nit")
+							.eq("client_id", c.id)
+							.single();
+						if (jc) clientMap.set(c.id, { name: jc.razon_social, ci: jc.nit || "-" });
+					}
+				}
+
+				asegurados_salud = aseguradosData.map(a => ({
+					id: a.id,
+					client_id: a.client_id,
+					client_name: clientMap.get(a.client_id)?.name || "Desconocido",
+					client_ci: clientMap.get(a.client_id)?.ci || "-",
+					nivel_nombre: a.nivel_id ? nivelMap.get(a.nivel_id) || null : null,
+					rol: a.rol,
+				}));
+			}
+
+			// Beneficiarios (dependientes/conyugues)
 			const { data: beneficiariosData } = await supabase
 				.from("polizas_salud_beneficiarios")
 				.select("id, nombre_completo, carnet, fecha_nacimiento, genero, rol")
@@ -426,6 +548,198 @@ export async function obtenerDetallePoliza(polizaId: string) {
 
 			if (beneficiariosData && beneficiariosData.length > 0) {
 				beneficiarios_salud = beneficiariosData;
+			}
+		}
+
+		// --- INCENDIO ---
+		let incendio_bienes: PolizaDetalle["incendio_bienes"];
+		let incendio_asegurados: PolizaDetalle["incendio_asegurados"];
+		if (ramoLower.includes("incendio")) {
+			// Bienes asegurados
+			const { data: bienesData } = await supabase
+				.from("polizas_incendio_bienes")
+				.select("id, direccion, valor_total_declarado, es_primer_riesgo")
+				.eq("poliza_id", polizaId);
+
+			if (bienesData && bienesData.length > 0) {
+				// Obtener items de cada bien
+				const bienIds = bienesData.map(b => b.id);
+				const { data: itemsData } = await supabase
+					.from("polizas_incendio_items")
+					.select("bien_id, nombre, monto")
+					.in("bien_id", bienIds);
+
+				const itemsByBien = new Map<string, Array<{ nombre: string; monto: number }>>();
+				for (const item of itemsData || []) {
+					const arr = itemsByBien.get(item.bien_id) || [];
+					arr.push({ nombre: item.nombre, monto: Number(item.monto) });
+					itemsByBien.set(item.bien_id, arr);
+				}
+
+				incendio_bienes = bienesData.map(b => ({
+					id: b.id,
+					direccion: b.direccion,
+					valor_total_declarado: Number(b.valor_total_declarado),
+					es_primer_riesgo: b.es_primer_riesgo,
+					items: itemsByBien.get(b.id) || [],
+				}));
+			}
+
+			// Asegurados adicionales
+			const { data: asegIncendio } = await supabase
+				.from("polizas_incendio_asegurados")
+				.select("id, client_id")
+				.eq("poliza_id", polizaId);
+
+			if (asegIncendio && asegIncendio.length > 0) {
+				const resolved: PolizaDetalle["incendio_asegurados"] = [];
+				for (const a of asegIncendio) {
+					const { data: cl } = await supabase.from("clients").select("client_type").eq("id", a.client_id).single();
+					let name = "Desconocido", ci = "-";
+					if (cl?.client_type === "natural") {
+						const { data: nc } = await supabase.from("natural_clients").select("primer_nombre, primer_apellido, numero_documento").eq("client_id", a.client_id).single();
+						if (nc) { name = `${nc.primer_nombre} ${nc.primer_apellido}`; ci = nc.numero_documento || "-"; }
+					} else if (cl?.client_type === "juridica") {
+						const { data: jc } = await supabase.from("juridic_clients").select("razon_social, nit").eq("client_id", a.client_id).single();
+						if (jc) { name = jc.razon_social; ci = jc.nit || "-"; }
+					}
+					resolved.push({ id: a.id, client_name: name, client_ci: ci });
+				}
+				incendio_asegurados = resolved;
+			}
+		}
+
+		// --- RIESGOS VARIOS ---
+		let riesgos_varios_bienes: PolizaDetalle["riesgos_varios_bienes"];
+		let riesgos_varios_asegurados: PolizaDetalle["riesgos_varios_asegurados"];
+		if (ramoLower.includes("riesgos varios")) {
+			const { data: bienesData } = await supabase
+				.from("polizas_riesgos_varios_bienes")
+				.select("id, direccion, valor_total_declarado, es_primer_riesgo")
+				.eq("poliza_id", polizaId);
+
+			if (bienesData && bienesData.length > 0) {
+				const bienIds = bienesData.map(b => b.id);
+				const { data: itemsData } = await supabase
+					.from("polizas_riesgos_varios_items")
+					.select("bien_id, nombre, monto")
+					.in("bien_id", bienIds);
+
+				const itemsByBien = new Map<string, Array<{ nombre: string; monto: number }>>();
+				for (const item of itemsData || []) {
+					const arr = itemsByBien.get(item.bien_id) || [];
+					arr.push({ nombre: item.nombre, monto: Number(item.monto) });
+					itemsByBien.set(item.bien_id, arr);
+				}
+
+				riesgos_varios_bienes = bienesData.map(b => ({
+					id: b.id,
+					direccion: b.direccion,
+					valor_total_declarado: Number(b.valor_total_declarado),
+					es_primer_riesgo: b.es_primer_riesgo,
+					items: itemsByBien.get(b.id) || [],
+				}));
+			}
+
+			const { data: asegRV } = await supabase
+				.from("polizas_riesgos_varios_asegurados")
+				.select("id, client_id")
+				.eq("poliza_id", polizaId);
+
+			if (asegRV && asegRV.length > 0) {
+				const resolved: PolizaDetalle["riesgos_varios_asegurados"] = [];
+				for (const a of asegRV) {
+					const { data: cl } = await supabase.from("clients").select("client_type").eq("id", a.client_id).single();
+					let name = "Desconocido", ci = "-";
+					if (cl?.client_type === "natural") {
+						const { data: nc } = await supabase.from("natural_clients").select("primer_nombre, primer_apellido, numero_documento").eq("client_id", a.client_id).single();
+						if (nc) { name = `${nc.primer_nombre} ${nc.primer_apellido}`; ci = nc.numero_documento || "-"; }
+					} else if (cl?.client_type === "juridica") {
+						const { data: jc } = await supabase.from("juridic_clients").select("razon_social, nit").eq("client_id", a.client_id).single();
+						if (jc) { name = jc.razon_social; ci = jc.nit || "-"; }
+					}
+					resolved.push({ id: a.id, client_name: name, client_ci: ci });
+				}
+				riesgos_varios_asegurados = resolved;
+			}
+		}
+
+		// --- RESPONSABILIDAD CIVIL ---
+		let responsabilidad_civil: PolizaDetalle["responsabilidad_civil"];
+		if (ramoLower.includes("responsabilidad civil")) {
+			const { data: rcData } = await supabase
+				.from("polizas_responsabilidad_civil")
+				.select("tipo_poliza, valor_asegurado")
+				.eq("poliza_id", polizaId)
+				.single();
+
+			if (rcData) {
+				responsabilidad_civil = {
+					tipo_poliza: rcData.tipo_poliza,
+					valor_asegurado: Number(rcData.valor_asegurado),
+				};
+			}
+		}
+
+		// --- VIDA / ACCIDENTES PERSONALES / SEPELIO (genéricos con niveles) ---
+		let niveles_cobertura: PolizaDetalle["niveles_cobertura"];
+		let asegurados_nivel: PolizaDetalle["asegurados_nivel"];
+		if (ramoLower.includes("vida") || ramoLower.includes("accidentes personales") || ramoLower.includes("sepelio")) {
+			const { data: nivelesData } = await supabase
+				.from("polizas_niveles")
+				.select("id, nombre, prima_nivel, coberturas")
+				.eq("poliza_id", polizaId);
+
+			if (nivelesData && nivelesData.length > 0) {
+				niveles_cobertura = nivelesData.map(n => ({
+					id: n.id,
+					nombre: n.nombre,
+					prima_nivel: n.prima_nivel != null ? Number(n.prima_nivel) : null,
+					coberturas: (n.coberturas || {}) as Record<string, { habilitado: boolean; valor: number }>,
+				}));
+			}
+			const nivelMap = new Map(nivelesData?.map(n => [n.id, n.nombre]) || []);
+
+			const { data: asegNivelData } = await supabase
+				.from("polizas_asegurados_nivel")
+				.select("id, client_id, nivel_id, cargo")
+				.eq("poliza_id", polizaId);
+
+			if (asegNivelData && asegNivelData.length > 0) {
+				const clientIds = [...new Set(asegNivelData.map(a => a.client_id))];
+				const clientMap = new Map<string, { name: string; ci: string }>();
+
+				// Batch resolve client names
+				const { data: clients } = await supabase
+					.from("clients")
+					.select("id, client_type")
+					.in("id", clientIds);
+
+				for (const c of clients || []) {
+					if (c.client_type === "natural") {
+						const { data: nc } = await supabase
+							.from("natural_clients")
+							.select("primer_nombre, primer_apellido, numero_documento")
+							.eq("client_id", c.id)
+							.single();
+						if (nc) clientMap.set(c.id, { name: `${nc.primer_nombre} ${nc.primer_apellido}`, ci: nc.numero_documento || "-" });
+					} else if (c.client_type === "juridica") {
+						const { data: jc } = await supabase
+							.from("juridic_clients")
+							.select("razon_social, nit")
+							.eq("client_id", c.id)
+							.single();
+						if (jc) clientMap.set(c.id, { name: jc.razon_social, ci: jc.nit || "-" });
+					}
+				}
+
+				asegurados_nivel = asegNivelData.map(a => ({
+					id: a.id,
+					client_name: clientMap.get(a.client_id)?.name || "Desconocido",
+					client_ci: clientMap.get(a.client_id)?.ci || "-",
+					nivel_nombre: a.nivel_id ? nivelMap.get(a.nivel_id) || null : null,
+					cargo: a.cargo || null,
+				}));
 			}
 		}
 
@@ -751,6 +1065,81 @@ export async function obtenerDetallePoliza(polizaId: string) {
 				}
 			}
 
+			// Incendio bienes
+			if (incendio_bienes) {
+				const { data: anexoBienes } = await supabase
+					.from("polizas_anexos_incendio_bienes")
+					.select("id, anexo_id, accion, original_item_id, direccion, valor_total_declarado, es_primer_riesgo, items")
+					.in("anexo_id", anexoIds);
+
+				for (const ab of anexoBienes || []) {
+					const nroAnexo = anexoNumeroMap.get(ab.anexo_id) || "?";
+					if (ab.accion === "exclusion" && ab.original_item_id) {
+						const original = incendio_bienes.find((b) => b.id === ab.original_item_id);
+						if (original) original._excluido_por = nroAnexo;
+					} else if (ab.accion === "inclusion") {
+						incendio_bienes.push({
+							id: ab.id,
+							direccion: ab.direccion,
+							valor_total_declarado: Number(ab.valor_total_declarado),
+							es_primer_riesgo: ab.es_primer_riesgo,
+							items: (ab.items as Array<{ nombre: string; monto: number }>) || [],
+							_origen_anexo: nroAnexo,
+						});
+					}
+				}
+			}
+
+			// Riesgos Varios bienes
+			if (riesgos_varios_bienes) {
+				const { data: anexoBienes } = await supabase
+					.from("polizas_anexos_riesgos_varios_bienes")
+					.select("id, anexo_id, accion, original_item_id, direccion, valor_total_declarado, es_primer_riesgo, items")
+					.in("anexo_id", anexoIds);
+
+				for (const ab of anexoBienes || []) {
+					const nroAnexo = anexoNumeroMap.get(ab.anexo_id) || "?";
+					if (ab.accion === "exclusion" && ab.original_item_id) {
+						const original = riesgos_varios_bienes.find((b) => b.id === ab.original_item_id);
+						if (original) original._excluido_por = nroAnexo;
+					} else if (ab.accion === "inclusion") {
+						riesgos_varios_bienes.push({
+							id: ab.id,
+							direccion: ab.direccion,
+							valor_total_declarado: Number(ab.valor_total_declarado),
+							es_primer_riesgo: ab.es_primer_riesgo,
+							items: (ab.items as Array<{ nombre: string; monto: number }>) || [],
+							_origen_anexo: nroAnexo,
+						});
+					}
+				}
+			}
+
+			// Asegurados con nivel (Vida/AP/Sepelio)
+			if (asegurados_nivel) {
+				const { data: anexoAseg } = await supabase
+					.from("polizas_anexos_asegurados_nivel")
+					.select("id, anexo_id, accion, original_item_id, client_id, nivel_id, cargo")
+					.in("anexo_id", anexoIds);
+
+				for (const aa of anexoAseg || []) {
+					const nroAnexo = anexoNumeroMap.get(aa.anexo_id) || "?";
+					if (aa.accion === "exclusion" && aa.original_item_id) {
+						const original = asegurados_nivel.find((a) => a.id === aa.original_item_id);
+						if (original) original._excluido_por = nroAnexo;
+					} else if (aa.accion === "inclusion") {
+						asegurados_nivel.push({
+							id: aa.id,
+							client_name: "Incluido por anexo",
+							client_ci: "-",
+							nivel_nombre: null,
+							cargo: aa.cargo || null,
+							_origen_anexo: nroAnexo,
+						});
+					}
+				}
+			}
+
 			// Cuotas consolidadas
 			const { data: cuotasConsolResult } = await supabase
 				.from("polizas_anexos_pagos")
@@ -896,7 +1285,16 @@ export async function obtenerDetallePoliza(polizaId: string) {
 			nro_poliza_anterior: poliza.nro_poliza_anterior || null,
 			pagos: pagos || [],
 			vehiculos,
+			asegurados_salud,
+			niveles_salud,
 			beneficiarios_salud,
+			incendio_bienes,
+			incendio_asegurados,
+			riesgos_varios_bienes,
+			riesgos_varios_asegurados,
+			responsabilidad_civil,
+			niveles_cobertura,
+			asegurados_nivel,
 			transporte,
 			naves,
 			niveles_ap_naves,
