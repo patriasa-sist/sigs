@@ -245,6 +245,7 @@ export async function guardarPoliza(formState: PolizaFormState) {
 			const niveles = datosSalud.niveles || [];
 			if (niveles.length > 0) {
 				const nivelesParaInsertar = niveles.map((nivel) => ({
+					id: nivel.id,
 					poliza_id: poliza.id,
 					nombre: nivel.nombre,
 					monto: nivel.monto,
