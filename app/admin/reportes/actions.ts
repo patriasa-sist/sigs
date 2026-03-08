@@ -5,6 +5,8 @@ import { checkPermission } from "@/utils/auth/helpers";
 import type {
 	ExportProduccionFilters,
 	ExportProduccionRow,
+	ExportProduccionNuevoRow,
+	TipoPolizaReporte,
 	ProduccionServerResponse,
 } from "@/types/reporte";
 
@@ -355,4 +357,482 @@ export async function obtenerCompanias(): Promise<
 	}
 
 	return { success: true, data: data || [] };
+}
+
+// ============================================
+// REPORTE DE PRODUCCIÓN (nuevo - una fila por póliza/anexo)
+// ============================================
+
+// Mapeo de ramos a sus tablas de valor asegurado
+const RAMO_VALOR_ASEGURADO_MAP: Record<
+	string,
+	{ table: string; sumColumn: string } | null
+> = {
+	Automotores: {
+		table: "polizas_automotor_vehiculos",
+		sumColumn: "valor_asegurado",
+	},
+	"Ramos técnicos": {
+		table: "polizas_ramos_tecnicos_equipos",
+		sumColumn: "valor_asegurado",
+	},
+	"Responsabilidad civil": {
+		table: "polizas_responsabilidad_civil",
+		sumColumn: "valor_asegurado",
+	},
+	Transportes: { table: "polizas_transporte", sumColumn: "valor_asegurado" },
+	"Incendio y aliados": {
+		table: "polizas_incendio_bienes",
+		sumColumn: "valor_total_declarado",
+	},
+	"Riesgos varios misceláneos": {
+		table: "polizas_riesgos_varios_bienes",
+		sumColumn: "valor_total_declarado",
+	},
+	Aeronavegación: {
+		table: "polizas_aeronavegacion_naves",
+		sumColumn: "valor_casco",
+	},
+};
+
+/**
+ * Obtiene el valor asegurado para un conjunto de pólizas, agrupado por poliza_id
+ */
+async function obtenerValoresAsegurados(
+	supabase: Awaited<ReturnType<typeof createClient>>,
+	polizaIds: string[],
+	ramos: Set<string>
+): Promise<Map<string, number>> {
+	const valorMap = new Map<string, number>();
+	if (polizaIds.length === 0) return valorMap;
+
+	// Determinar qué tablas necesitamos consultar
+	const tablesToQuery = new Set<{ table: string; sumColumn: string }>();
+	for (const ramo of ramos) {
+		const mapping = RAMO_VALOR_ASEGURADO_MAP[ramo];
+		if (mapping) tablesToQuery.add(mapping);
+	}
+
+	// Consultar cada tabla en paralelo
+	const queries = Array.from(tablesToQuery).map(async ({ table, sumColumn }) => {
+		const { data } = await supabase
+			.from(table)
+			.select("*")
+			.in("poliza_id", polizaIds);
+
+		if (data) {
+			for (const row of data) {
+				const pid = (row as Record<string, unknown>).poliza_id as string;
+				const val = Number((row as Record<string, unknown>)[sumColumn] ?? 0);
+				valorMap.set(pid, (valorMap.get(pid) || 0) + val);
+			}
+		}
+	});
+
+	await Promise.all(queries);
+	return valorMap;
+}
+
+/**
+ * Extrae nombre y CI/NIT de un cliente
+ */
+function extraerDatosCliente(clientData: ClientQueryResult | null): {
+	cliente: string;
+	ciNit: string;
+} {
+	if (!clientData) return { cliente: "N/A", ciNit: "N/A" };
+
+	if (clientData.client_type === "natural") {
+		const n = clientData.natural_clients;
+		if (!n) return { cliente: "N/A", ciNit: "N/A" };
+		return {
+			cliente:
+				`${n.primer_nombre || ""} ${n.segundo_nombre || ""} ${n.primer_apellido || ""} ${n.segundo_apellido || ""}`.trim() ||
+				"N/A",
+			ciNit: n.numero_documento || "N/A",
+		};
+	}
+
+	const j = clientData.juridic_clients;
+	if (!j) return { cliente: "N/A", ciNit: "N/A" };
+	return {
+		cliente: j.razon_social || "N/A",
+		ciNit: j.nit || "N/A",
+	};
+}
+
+/**
+ * Exporta el reporte de producción (una fila por póliza + anexos validados)
+ */
+export async function exportarProduccionNuevo(
+	filtros: ExportProduccionFilters
+): Promise<ProduccionServerResponse<ExportProduccionNuevoRow[]>> {
+	const permiso = await verificarPermisoAdmin();
+	if (!permiso.authorized) {
+		return { success: false, error: permiso.error };
+	}
+
+	const supabase = await createClient();
+
+	try {
+		const primerDiaMes = new Date(filtros.anio, filtros.mes - 1, 1);
+		const ultimoDiaMes = new Date(filtros.anio, filtros.mes, 0);
+		const fechaDesde = primerDiaMes.toISOString().split("T")[0];
+		const fechaHasta = ultimoDiaMes.toISOString().split("T")[0];
+
+		// Resolver miembros de equipo si se filtra por equipo
+		let memberIds: string[] | null = null;
+		if (filtros.equipo_id) {
+			const { data: teamMemberIds } = await supabase
+				.from("equipo_miembros")
+				.select("user_id")
+				.eq("equipo_id", filtros.equipo_id);
+
+			if (teamMemberIds && teamMemberIds.length > 0) {
+				memberIds = teamMemberIds.map((m) => m.user_id);
+			}
+		}
+
+		// ---- CONSULTA 1: Pólizas ----
+		let polizaQuery = supabase.from("polizas").select(`
+			id,
+			numero_poliza,
+			ramo,
+			moneda,
+			prima_total,
+			modalidad_pago,
+			inicio_vigencia,
+			fin_vigencia,
+			fecha_emision_compania,
+			created_at,
+			es_renovacion,
+			producto_id,
+			producto:productos_aseguradoras!producto_id (
+				factor_contado,
+				factor_credito,
+				porcentaje_comision
+			),
+			client:clients!client_id (
+				id,
+				client_type,
+				director_cartera:directores_cartera!director_cartera_id (
+					nombre,
+					apellidos
+				),
+				natural_clients (
+					primer_nombre,
+					segundo_nombre,
+					primer_apellido,
+					segundo_apellido,
+					numero_documento
+				),
+				juridic_clients (
+					razon_social,
+					nit
+				)
+			),
+			compania:companias_aseguradoras!compania_aseguradora_id (
+				nombre,
+				codigo
+			),
+			responsable:profiles!responsable_id (
+				full_name
+			),
+			regional:regionales!regional_id (
+				nombre
+			)
+		`);
+
+		polizaQuery = polizaQuery.gte("inicio_vigencia", fechaDesde);
+		polizaQuery = polizaQuery.lte("inicio_vigencia", fechaHasta);
+
+		if (filtros.estado_poliza && filtros.estado_poliza !== "all") {
+			polizaQuery = polizaQuery.eq("estado", filtros.estado_poliza);
+		}
+		if (filtros.regional_id) {
+			polizaQuery = polizaQuery.eq("regional_id", filtros.regional_id);
+		}
+		if (filtros.compania_id) {
+			polizaQuery = polizaQuery.eq(
+				"compania_aseguradora_id",
+				filtros.compania_id
+			);
+		}
+		if (memberIds) {
+			polizaQuery = polizaQuery.in("responsable_id", memberIds);
+		}
+
+		// ---- CONSULTA 2: Anexos validados ----
+		let anexoQuery = supabase.from("polizas_anexos").select(`
+			id,
+			poliza_id,
+			numero_anexo,
+			tipo_anexo,
+			fecha_anexo,
+			created_at,
+			poliza:polizas!poliza_id (
+				id,
+				numero_poliza,
+				ramo,
+				moneda,
+				prima_total,
+				modalidad_pago,
+				inicio_vigencia,
+				fin_vigencia,
+				fecha_emision_compania,
+				producto_id,
+				producto:productos_aseguradoras!producto_id (
+					factor_contado,
+					factor_credito,
+					porcentaje_comision
+				),
+				client:clients!client_id (
+					id,
+					client_type,
+					director_cartera:directores_cartera!director_cartera_id (
+						nombre,
+						apellidos
+					),
+					natural_clients (
+						primer_nombre,
+						segundo_nombre,
+						primer_apellido,
+						segundo_apellido,
+						numero_documento
+					),
+					juridic_clients (
+						razon_social,
+						nit
+					)
+				),
+				compania:companias_aseguradoras!compania_aseguradora_id (
+					nombre,
+					codigo
+				),
+				responsable:profiles!responsable_id (
+					full_name
+				),
+				regional:regionales!regional_id (
+					nombre
+				)
+			)
+		`);
+
+		anexoQuery = anexoQuery.eq("estado", "activa");
+		anexoQuery = anexoQuery.gte("fecha_anexo", fechaDesde);
+		anexoQuery = anexoQuery.lte("fecha_anexo", fechaHasta);
+
+		if (filtros.regional_id) {
+			anexoQuery = anexoQuery.eq("poliza.regional_id", filtros.regional_id);
+		}
+		if (filtros.compania_id) {
+			anexoQuery = anexoQuery.eq(
+				"poliza.compania_aseguradora_id",
+				filtros.compania_id
+			);
+		}
+		if (memberIds) {
+			anexoQuery = anexoQuery.in("poliza.responsable_id", memberIds);
+		}
+
+		// Ejecutar ambas consultas en paralelo
+		const [polizasRes, anexosRes] = await Promise.all([
+			polizaQuery.order("numero_poliza", { ascending: true }),
+			anexoQuery.order("fecha_anexo", { ascending: true }),
+		]);
+
+		if (polizasRes.error) {
+			console.error("Error fetching polizas for production report:", polizasRes.error);
+			return { success: false, error: "Error al obtener pólizas para el reporte" };
+		}
+		if (anexosRes.error) {
+			console.error("Error fetching anexos for production report:", anexosRes.error);
+			return { success: false, error: "Error al obtener anexos para el reporte" };
+		}
+
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		const polizas = (polizasRes.data || []) as Array<any>;
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		const anexos = (anexosRes.data || []) as Array<any>;
+
+		// Obtener valores asegurados para las pólizas
+		const polizaIds = polizas.map((p: { id: string }) => p.id);
+		const ramosSet = new Set(polizas.map((p: { ramo: string }) => p.ramo));
+		const valorAseguradoMap = await obtenerValoresAsegurados(
+			supabase,
+			polizaIds,
+			ramosSet
+		);
+
+		// Helper para calcular campos financieros
+		function calcularFinancieros(
+			primaTot: number,
+			modalidad: "contado" | "credito",
+			producto?: {
+				factor_contado: number;
+				factor_credito: number;
+				porcentaje_comision: number;
+			} | null
+		) {
+			if (!producto) {
+				return {
+					prima_neta: null as number | null,
+					comision_empresa: null as number | null,
+					factor_prima_neta: null as number | null,
+					porcentaje_comision: null as number | null,
+				};
+			}
+
+			const factor =
+				modalidad === "contado"
+					? Number(producto.factor_contado)
+					: Number(producto.factor_credito);
+			const divisor = 1 + factor / 100;
+			const primaNeta = Number(primaTot) / divisor;
+			const porcComision = Number(producto.porcentaje_comision);
+
+			return {
+				prima_neta: primaNeta,
+				comision_empresa: primaNeta * porcComision,
+				factor_prima_neta: factor,
+				porcentaje_comision: porcComision * 100,
+			};
+		}
+
+		// Construir filas de pólizas
+		const rows: ExportProduccionNuevoRow[] = polizas.map(
+			(p: {
+				id: string;
+				numero_poliza: string;
+				ramo: string;
+				moneda: string;
+				prima_total: number;
+				modalidad_pago: "contado" | "credito";
+				inicio_vigencia: string;
+				fin_vigencia: string;
+				fecha_emision_compania: string;
+				created_at: string;
+				es_renovacion: boolean;
+				producto?: {
+					factor_contado: number;
+					factor_credito: number;
+					porcentaje_comision: number;
+				} | null;
+				client:
+					| (ClientQueryResult & {
+							director_cartera?: {
+								nombre: string;
+								apellidos: string;
+							} | null;
+					  })
+					| null;
+				compania?: { nombre?: string; codigo?: number } | null;
+				responsable?: { full_name?: string } | null;
+				regional?: { nombre?: string } | null;
+			}) => {
+				const { cliente, ciNit } = extraerDatosCliente(
+					p.client as ClientQueryResult | null
+				);
+				const dc = p.client?.director_cartera;
+				const financieros = calcularFinancieros(
+					p.prima_total,
+					p.modalidad_pago,
+					p.producto
+				);
+
+				const valorAseg = valorAseguradoMap.get(p.id) ?? null;
+				const ramoTieneTabla = p.ramo in RAMO_VALOR_ASEGURADO_MAP;
+
+				return {
+					numero_poliza: p.numero_poliza,
+					numero_anexo: null,
+					tipo_poliza: (p.es_renovacion
+						? "Renovada"
+						: "Nueva") as TipoPolizaReporte,
+					cliente,
+					ci_nit: ciNit,
+					director_cartera: dc
+						? `${dc.nombre} ${dc.apellidos}`.trim()
+						: "N/A",
+					compania: p.compania?.nombre || "N/A",
+					cod_aps: p.compania?.codigo ?? null,
+					ramo: p.ramo,
+					responsable: p.responsable?.full_name || "N/A",
+					regional: p.regional?.nombre || "N/A",
+					prima_total: Number(p.prima_total),
+					...financieros,
+					moneda: p.moneda || "Bs",
+					valor_asegurado: ramoTieneTabla
+						? valorAseg
+						: Number(p.prima_total),
+					inicio_vigencia: p.inicio_vigencia || "",
+					fin_vigencia: p.fin_vigencia || "",
+					fecha_emision_compania: p.fecha_emision_compania || "",
+					fecha_produccion_sistema: p.created_at || "",
+				};
+			}
+		);
+
+		// Construir filas de anexos
+		const tipoAnexoMap: Record<string, TipoPolizaReporte> = {
+			exclusion: "Exclusión",
+			inclusion: "Inclusión",
+			anulacion: "Anulación",
+		};
+
+		for (const anexo of anexos) {
+			const pol = anexo.poliza;
+			if (!pol) continue;
+
+			const { cliente, ciNit } = extraerDatosCliente(
+				pol.client as ClientQueryResult | null
+			);
+			const dc = pol.client?.director_cartera;
+			const financieros = calcularFinancieros(
+				pol.prima_total,
+				pol.modalidad_pago,
+				pol.producto
+			);
+
+			const valorAseg = valorAseguradoMap.get(pol.id) ?? null;
+			const ramoTieneTabla = pol.ramo in RAMO_VALOR_ASEGURADO_MAP;
+
+			rows.push({
+				numero_poliza: pol.numero_poliza,
+				numero_anexo: anexo.numero_anexo,
+				tipo_poliza: tipoAnexoMap[anexo.tipo_anexo] || anexo.tipo_anexo,
+				cliente,
+				ci_nit: ciNit,
+				director_cartera: dc
+					? `${dc.nombre} ${dc.apellidos}`.trim()
+					: "N/A",
+				compania: pol.compania?.nombre || "N/A",
+				cod_aps: pol.compania?.codigo ?? null,
+				ramo: pol.ramo,
+				responsable: pol.responsable?.full_name || "N/A",
+				regional: pol.regional?.nombre || "N/A",
+				prima_total: Number(pol.prima_total),
+				...financieros,
+				moneda: pol.moneda || "Bs",
+				valor_asegurado: ramoTieneTabla
+					? valorAseg
+					: Number(pol.prima_total),
+				inicio_vigencia: pol.inicio_vigencia || "",
+				fin_vigencia: pol.fin_vigencia || "",
+				fecha_emision_compania: pol.fecha_emision_compania || "",
+				fecha_produccion_sistema: anexo.created_at || "",
+			});
+		}
+
+		// Ordenar por número de póliza
+		rows.sort((a, b) => a.numero_poliza.localeCompare(b.numero_poliza));
+
+		return { success: true, data: rows };
+	} catch (error) {
+		console.error("Error exporting new production report:", error);
+		return {
+			success: false,
+			error: error instanceof Error ? error.message : "Error desconocido",
+		};
+	}
 }

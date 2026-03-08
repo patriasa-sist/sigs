@@ -1,6 +1,10 @@
 /**
- * Tipos para el Reporte Consolidado de Producción Mensual
+ * Tipos para los Reportes de Producción y Contable
  */
+
+// ============================================
+// FILTROS COMPARTIDOS
+// ============================================
 
 export type ExportProduccionFilters = {
 	mes: number; // 1-12
@@ -11,8 +15,11 @@ export type ExportProduccionFilters = {
 	equipo_id?: string;
 };
 
+// ============================================
+// REPORTE CONTABLE (ex Reporte Producción)
+// ============================================
+
 export type ExportProduccionRow = {
-	// Campos de identificación
 	numero_poliza: string;
 	cliente: string;
 	ci_nit: string;
@@ -21,29 +28,68 @@ export type ExportProduccionRow = {
 	responsable: string;
 	regional: string;
 
-	// Campos financieros de póliza (pueden ser null si no hay producto asignado)
 	prima_total: number;
 	prima_neta: number | null;
 	comision_empresa: number | null;
 	factor_prima_neta: number | null;
-	porcentaje_comision: number | null; // Se muestra como % (ej: 15, no 0.15)
+	porcentaje_comision: number | null;
 
-	// Campos de vigencia
 	inicio_vigencia: string;
 	fin_vigencia: string;
 
-	// Campos de cuota
 	numero_cuota: number;
 	monto_cuota_pt: number;
 	monto_cuota_pn: number | null;
 	monto_cuota_comision: number | null;
 	moneda: string;
 
-	// Campos adicionales
 	fecha_vencimiento: string;
 	estado_cuota: string;
 	modalidad_pago: string;
 };
+
+// ============================================
+// REPORTE DE PRODUCCIÓN (nuevo)
+// ============================================
+
+export type TipoPolizaReporte =
+	| "Nueva"
+	| "Renovada"
+	| "Exclusión"
+	| "Inclusión"
+	| "Anulación";
+
+export type ExportProduccionNuevoRow = {
+	numero_poliza: string;
+	numero_anexo: string | null;
+	tipo_poliza: TipoPolizaReporte;
+	cliente: string;
+	ci_nit: string;
+	director_cartera: string;
+	compania: string;
+	cod_aps: number | null;
+	ramo: string;
+	responsable: string;
+	regional: string;
+
+	prima_total: number;
+	prima_neta: number | null;
+	comision_empresa: number | null;
+	factor_prima_neta: number | null;
+	porcentaje_comision: number | null;
+	moneda: string;
+
+	valor_asegurado: number | null;
+
+	inicio_vigencia: string;
+	fin_vigencia: string;
+	fecha_emision_compania: string;
+	fecha_produccion_sistema: string;
+};
+
+// ============================================
+// RESPUESTA GENÉRICA
+// ============================================
 
 export type ProduccionServerResponse<T> =
 	| { success: true; data: T }

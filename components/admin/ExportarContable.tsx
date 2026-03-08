@@ -11,9 +11,9 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Download, AlertCircle, BarChart3 } from "lucide-react";
+import { Download, AlertCircle, FileSpreadsheet } from "lucide-react";
 import {
-	exportarProduccionNuevo,
+	exportarProduccion,
 	obtenerRegionales,
 	obtenerCompanias,
 	obtenerEquiposParaFiltro,
@@ -36,10 +36,11 @@ const MESES = [
 	{ value: 12, label: "Diciembre" },
 ];
 
+// Generar años desde 2020 hasta el actual + 1
 const currentYear = new Date().getFullYear();
 const ANIOS = Array.from({ length: currentYear - 2020 + 2 }, (_, i) => 2020 + i);
 
-export default function ExportarProduccion() {
+export default function ExportarContable() {
 	const currentMonth = new Date().getMonth() + 1;
 
 	const [mes, setMes] = useState<number>(currentMonth);
@@ -51,10 +52,12 @@ export default function ExportarProduccion() {
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
+	// Datos para los filtros
 	const [regionales, setRegionales] = useState<{ id: string; nombre: string }[]>([]);
 	const [companias, setCompanias] = useState<{ id: string; nombre: string }[]>([]);
 	const [equipos, setEquipos] = useState<{ id: string; nombre: string }[]>([]);
 
+	// Cargar regionales, compañías y equipos al montar
 	useEffect(() => {
 		async function loadFilters() {
 			const [regionalesRes, companiasRes, equiposRes] = await Promise.all([
@@ -63,9 +66,15 @@ export default function ExportarProduccion() {
 				obtenerEquiposParaFiltro(),
 			]);
 
-			if (regionalesRes.success) setRegionales(regionalesRes.data);
-			if (companiasRes.success) setCompanias(companiasRes.data);
-			if (equiposRes.success) setEquipos(equiposRes.data);
+			if (regionalesRes.success) {
+				setRegionales(regionalesRes.data);
+			}
+			if (companiasRes.success) {
+				setCompanias(companiasRes.data);
+			}
+			if (equiposRes.success) {
+				setEquipos(equiposRes.data);
+			}
 		}
 		loadFilters();
 	}, []);
@@ -84,7 +93,7 @@ export default function ExportarProduccion() {
 				equipo_id: equipoId || undefined,
 			};
 
-			const result = await exportarProduccionNuevo(filtros);
+			const result = await exportarProduccion(filtros);
 
 			if (!result.success) {
 				setError(result.error);
@@ -96,18 +105,16 @@ export default function ExportarProduccion() {
 				return;
 			}
 
+			// Generar archivo Excel con ExcelJS
 			const workbook = new ExcelJS.Workbook();
-			const worksheet = workbook.addWorksheet("Producción");
+			const worksheet = workbook.addWorksheet("Producción Mensual");
 
+			// Definir columnas
 			worksheet.columns = [
 				{ header: "N° Póliza", key: "numero_poliza", width: 15 },
-				{ header: "N° Anexo", key: "numero_anexo", width: 12 },
-				{ header: "Tipo", key: "tipo_poliza", width: 14 },
 				{ header: "Cliente", key: "cliente", width: 30 },
 				{ header: "CI/NIT", key: "ci_nit", width: 15 },
-				{ header: "Director de Cartera", key: "director_cartera", width: 22 },
 				{ header: "Compañía", key: "compania", width: 25 },
-				{ header: "Cod APS", key: "cod_aps", width: 10 },
 				{ header: "Ramo", key: "ramo", width: 20 },
 				{ header: "Responsable", key: "responsable", width: 25 },
 				{ header: "Regional", key: "regional", width: 15 },
@@ -116,12 +123,13 @@ export default function ExportarProduccion() {
 				{ header: "Comisión Empresa", key: "comision_empresa", width: 16 },
 				{ header: "Factor Prima Neta", key: "factor_prima_neta", width: 15 },
 				{ header: "% Comisión", key: "porcentaje_comision", width: 12 },
-				{ header: "Moneda", key: "moneda", width: 10 },
-				{ header: "Valor Asegurado", key: "valor_asegurado", width: 16 },
 				{ header: "Inicio Vigencia", key: "inicio_vigencia", width: 15 },
 				{ header: "Fin Vigencia", key: "fin_vigencia", width: 15 },
-				{ header: "Fecha Emisión Compañía", key: "fecha_emision_compania", width: 20 },
-				{ header: "Fecha Producción Sistema", key: "fecha_produccion_sistema", width: 22 },
+				{ header: "N° Cuota", key: "numero_cuota", width: 10 },
+				{ header: "Monto Cuota PT", key: "monto_cuota_pt", width: 14 },
+				{ header: "Monto Cuota PN", key: "monto_cuota_pn", width: 14 },
+				{ header: "Monto Cuota Comisión", key: "monto_cuota_comision", width: 18 },
+				{ header: "Moneda", key: "moneda", width: 10 },
 			];
 
 			// Estilo del header
@@ -130,28 +138,28 @@ export default function ExportarProduccion() {
 			headerRow.fill = {
 				type: "pattern",
 				pattern: "solid",
-				fgColor: { argb: "FF2E7D32" },
+				fgColor: { argb: "FF4472C4" },
 			};
 			headerRow.alignment = { vertical: "middle", horizontal: "center" };
 			headerRow.height = 20;
 
+			// Columnas que deben tener fondo verde (campos financieros calculados)
 			const greenColumns = [
 				"prima_neta",
 				"comision_empresa",
 				"factor_prima_neta",
 				"porcentaje_comision",
+				"monto_cuota_pn",
+				"monto_cuota_comision",
 			];
 
+			// Agregar filas de datos
 			result.data.forEach((row) => {
 				const excelRow = worksheet.addRow({
 					numero_poliza: row.numero_poliza,
-					numero_anexo: row.numero_anexo ?? "",
-					tipo_poliza: row.tipo_poliza,
 					cliente: row.cliente,
 					ci_nit: row.ci_nit,
-					director_cartera: row.director_cartera,
 					compania: row.compania,
-					cod_aps: row.cod_aps ?? "",
 					ramo: row.ramo,
 					responsable: row.responsable,
 					regional: row.regional,
@@ -160,33 +168,31 @@ export default function ExportarProduccion() {
 					comision_empresa: row.comision_empresa ?? "",
 					factor_prima_neta: row.factor_prima_neta ?? "",
 					porcentaje_comision: row.porcentaje_comision ?? "",
-					moneda: row.moneda,
-					valor_asegurado: row.valor_asegurado ?? "",
 					inicio_vigencia: row.inicio_vigencia
 						? new Date(row.inicio_vigencia).toLocaleDateString("es-BO")
 						: "",
 					fin_vigencia: row.fin_vigencia
 						? new Date(row.fin_vigencia).toLocaleDateString("es-BO")
 						: "",
-					fecha_emision_compania: row.fecha_emision_compania
-						? new Date(row.fecha_emision_compania).toLocaleDateString("es-BO")
-						: "",
-					fecha_produccion_sistema: row.fecha_produccion_sistema
-						? new Date(row.fecha_produccion_sistema).toLocaleDateString("es-BO")
-						: "",
+					numero_cuota: row.numero_cuota,
+					monto_cuota_pt: row.monto_cuota_pt,
+					monto_cuota_pn: row.monto_cuota_pn ?? "",
+					monto_cuota_comision: row.monto_cuota_comision ?? "",
+					moneda: row.moneda,
 				});
 
+				// Aplicar fondo verde claro a las columnas financieras
 				greenColumns.forEach((colKey) => {
 					const cell = excelRow.getCell(colKey);
 					cell.fill = {
 						type: "pattern",
 						pattern: "solid",
-						fgColor: { argb: "FFE2EFDA" },
+						fgColor: { argb: "FFE2EFDA" }, // Verde claro
 					};
 				});
 			});
 
-			// Bordes
+			// Agregar bordes a todas las celdas
 			worksheet.eachRow((row) => {
 				row.eachCell((cell) => {
 					cell.border = {
@@ -198,30 +204,36 @@ export default function ExportarProduccion() {
 				});
 			});
 
-			// Formato numérico
+			// Formatear números con decimales
 			const numericColumns = [
 				"prima_total",
 				"prima_neta",
 				"comision_empresa",
-				"valor_asegurado",
+				"monto_cuota_pt",
+				"monto_cuota_pn",
+				"monto_cuota_comision",
 			];
 			numericColumns.forEach((colKey) => {
 				const col = worksheet.getColumn(colKey);
 				col.numFmt = "#,##0.00";
 			});
 
+			// Generar archivo
 			const buffer = await workbook.xlsx.writeBuffer();
 			const blob = new Blob([buffer], {
 				type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
 			});
 
+			// Crear enlace de descarga
 			const url = window.URL.createObjectURL(blob);
 			const link = document.createElement("a");
 			link.href = url;
 
+			// Nombre del archivo
 			const mesNombre = MESES.find((m) => m.value === mes)?.label || mes;
-			link.download = `produccion_${mesNombre}_${anio}.xlsx`;
+			link.download = `contable_${mesNombre}_${anio}.xlsx`;
 
+			// Descargar
 			document.body.appendChild(link);
 			link.click();
 			document.body.removeChild(link);
@@ -241,17 +253,18 @@ export default function ExportarProduccion() {
 			<div className="flex items-center justify-between">
 				<div>
 					<h3 className="text-lg font-semibold">
-						Reporte de Producción
+						Reporte Contable
 					</h3>
 					<p className="text-sm text-muted-foreground mt-1">
-						Una fila por póliza/anexo con director de cartera, valor asegurado,
-						cod APS y fechas de emisión
+						Exporta el reporte contable mensual con cuotas, prima neta, comisiones
+						y factores de cálculo
 					</p>
 				</div>
-				<BarChart3 className="h-6 w-6 text-muted-foreground" />
+				<FileSpreadsheet className="h-6 w-6 text-muted-foreground" />
 			</div>
 
 			<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+				{/* Mes */}
 				<div className="space-y-2">
 					<Label>Mes</Label>
 					<Select
@@ -271,6 +284,7 @@ export default function ExportarProduccion() {
 					</Select>
 				</div>
 
+				{/* Año */}
 				<div className="space-y-2">
 					<Label>Año</Label>
 					<Select
@@ -290,6 +304,7 @@ export default function ExportarProduccion() {
 					</Select>
 				</div>
 
+				{/* Estado Póliza */}
 				<div className="space-y-2">
 					<Label>Estado Póliza</Label>
 					<Select
@@ -306,6 +321,7 @@ export default function ExportarProduccion() {
 					</Select>
 				</div>
 
+				{/* Regional */}
 				<div className="space-y-2">
 					<Label>Regional</Label>
 					<Select
@@ -326,6 +342,7 @@ export default function ExportarProduccion() {
 					</Select>
 				</div>
 
+				{/* Compañía */}
 				<div className="space-y-2">
 					<Label>Compañía</Label>
 					<Select
@@ -346,6 +363,7 @@ export default function ExportarProduccion() {
 					</Select>
 				</div>
 
+				{/* Equipo */}
 				<div className="space-y-2">
 					<Label>Equipo</Label>
 					<Select

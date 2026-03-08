@@ -1,6 +1,7 @@
 import { requirePermission } from "@/utils/auth/helpers";
 import { FileSpreadsheet } from "lucide-react";
 import ExportarProduccion from "@/components/admin/ExportarProduccion";
+import ExportarContable from "@/components/admin/ExportarContable";
 
 export default async function ReportesPage() {
 	await requirePermission("admin.reportes");
@@ -18,8 +19,11 @@ export default async function ReportesPage() {
 				</div>
 			</div>
 
-			{/* Componente de exportación */}
+			{/* Reporte de Producción (nuevo) */}
 			<ExportarProduccion />
+
+			{/* Reporte Contable (ex Producción) */}
+			<ExportarContable />
 		</div>
 	);
 }
