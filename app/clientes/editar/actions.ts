@@ -20,6 +20,13 @@ import type {
 	ClientPartnerData,
 	LegalRepresentativeData,
 } from "@/types/clientForm";
+import {
+	normalizeNaturalClientData,
+	normalizeJuridicClientData,
+	normalizeUnipersonalClientData,
+	normalizePartnerData,
+	normalizeLegalRepresentativeData,
+} from "@/utils/formNormalization";
 
 // ============================================
 // TYPES
@@ -127,6 +134,10 @@ export async function updateNaturalClient(
 			};
 		}
 
+		// Normalize text fields before saving
+		const normalized = normalizeNaturalClientData(data as Record<string, unknown>);
+		Object.assign(data, normalized);
+
 		// Update clients table (director_cartera_id)
 		if (data.director_cartera_id !== undefined) {
 			const { error: updateClientError } = await supabase
@@ -223,6 +234,10 @@ export async function updateJuridicClient(
 			};
 		}
 
+		// Normalize text fields before saving
+		const normalized = normalizeJuridicClientData(data as Record<string, unknown>);
+		Object.assign(data, normalized);
+
 		// Update clients table (director_cartera_id)
 		if (data.director_cartera_id !== undefined) {
 			const { error: updateClientError } = await supabase
@@ -305,6 +320,10 @@ export async function updateUnipersonalClient(
 				error: "Este cliente no es de tipo unipersonal",
 			};
 		}
+
+		// Normalize text fields before saving
+		const normalized = normalizeUnipersonalClientData(data as Record<string, unknown>);
+		Object.assign(data, normalized);
 
 		// Update clients table (director_cartera_id)
 		if (data.director_cartera_id !== undefined) {
@@ -408,6 +427,10 @@ export async function updatePartnerData(
 ): Promise<ActionResult<void>> {
 	try {
 		const { supabase } = await authorizeClientEdit(clientId);
+
+		// Normalize text fields before saving
+		const normalized = normalizePartnerData(data as Record<string, unknown>);
+		Object.assign(data, normalized);
 
 		// Check if partner exists
 		const { data: existingPartner, error: findError } = await supabase
@@ -520,20 +543,23 @@ export async function updateLegalRepresentatives(
 
 		// Insert new representatives
 		if (representatives.length > 0) {
-			const repsToInsert = representatives.map((rep, index) => ({
-				juridic_client_id: clientId,
-				primer_nombre: rep.primer_nombre,
-				segundo_nombre: rep.segundo_nombre || null,
-				primer_apellido: rep.primer_apellido,
-				segundo_apellido: rep.segundo_apellido || null,
-				tipo_documento: rep.tipo_documento,
-				numero_documento: rep.numero_documento,
-				extension: rep.extension || null,
-				cargo: rep.cargo || null,
-				telefono: rep.telefono || null,
-				correo_electronico: rep.correo_electronico || null,
-				is_primary: index === 0, // First one is primary
-			}));
+			const repsToInsert = representatives.map((rep, index) => {
+				const normalizedRep = normalizeLegalRepresentativeData(rep as unknown as Record<string, unknown>);
+				return {
+					juridic_client_id: clientId,
+					primer_nombre: normalizedRep.primer_nombre,
+					segundo_nombre: normalizedRep.segundo_nombre || null,
+					primer_apellido: normalizedRep.primer_apellido,
+					segundo_apellido: normalizedRep.segundo_apellido || null,
+					tipo_documento: normalizedRep.tipo_documento,
+					numero_documento: normalizedRep.numero_documento,
+					extension: normalizedRep.extension || null,
+					cargo: normalizedRep.cargo || null,
+					telefono: normalizedRep.telefono || null,
+					correo_electronico: normalizedRep.correo_electronico || null,
+					is_primary: index === 0, // First one is primary
+				};
+			});
 
 			const { error: insertError } = await supabase
 				.from("legal_representatives")

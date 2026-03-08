@@ -1,6 +1,6 @@
-"use client";
+﻿"use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import { UseFormReturn, Controller } from "react-hook-form";
 import {
 	UnipersonalClientFormData,
@@ -34,6 +34,21 @@ export function UnipersonalClientForm({ form, partnerForm, onFieldBlur }: Uniper
 		watch,
 		setValue,
 	} = form;
+
+	// Helper: register + auto-uppercase for text inputs
+	const ur = (name: Parameters<typeof register>[0], options?: Parameters<typeof register>[1]) => {
+		const { onChange, ...rest } = register(name, options);
+		return {
+			...rest,
+			onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
+				const start = e.target.selectionStart;
+				const end = e.target.selectionEnd;
+				e.target.value = e.target.value.toUpperCase();
+				e.target.setSelectionRange(start, end);
+				return onChange(e);
+			},
+		};
+	};
 
 	// Watch estado_civil to show/hide partner section
 	const estadoCivil = watch("estado_civil");
@@ -69,7 +84,7 @@ export function UnipersonalClientForm({ form, partnerForm, onFieldBlur }: Uniper
 						<Label htmlFor="primer_nombre">
 							Primer Nombre <span className="text-red-500">*</span>
 						</Label>
-						<Input id="primer_nombre" {...register("primer_nombre")} onBlur={onFieldBlur} />
+						<Input id="primer_nombre" {...ur("primer_nombre")} onBlur={onFieldBlur} />
 						{errors.primer_nombre && (
 							<p className="text-sm text-red-500 mt-1">{errors.primer_nombre.message}</p>
 						)}
@@ -77,14 +92,14 @@ export function UnipersonalClientForm({ form, partnerForm, onFieldBlur }: Uniper
 
 					<div>
 						<Label htmlFor="segundo_nombre">Segundo Nombre</Label>
-						<Input id="segundo_nombre" {...register("segundo_nombre")} onBlur={onFieldBlur} />
+						<Input id="segundo_nombre" {...ur("segundo_nombre")} onBlur={onFieldBlur} />
 					</div>
 
 					<div>
 						<Label htmlFor="primer_apellido">
 							Primer Apellido <span className="text-red-500">*</span>
 						</Label>
-						<Input id="primer_apellido" {...register("primer_apellido")} onBlur={onFieldBlur} />
+						<Input id="primer_apellido" {...ur("primer_apellido")} onBlur={onFieldBlur} />
 						{errors.primer_apellido && (
 							<p className="text-sm text-red-500 mt-1">{errors.primer_apellido.message}</p>
 						)}
@@ -92,7 +107,7 @@ export function UnipersonalClientForm({ form, partnerForm, onFieldBlur }: Uniper
 
 					<div>
 						<Label htmlFor="segundo_apellido">Segundo Apellido</Label>
-						<Input id="segundo_apellido" {...register("segundo_apellido")} onBlur={onFieldBlur} />
+						<Input id="segundo_apellido" {...ur("segundo_apellido")} onBlur={onFieldBlur} />
 					</div>
 
 					<div>
@@ -128,7 +143,7 @@ export function UnipersonalClientForm({ form, partnerForm, onFieldBlur }: Uniper
 						</Label>
 						<Input
 							id="numero_documento"
-							{...register("numero_documento")}
+							{...ur("numero_documento")}
 							onBlur={onFieldBlur}
 							placeholder="Min. 6 caracteres"
 						/>
@@ -141,7 +156,7 @@ export function UnipersonalClientForm({ form, partnerForm, onFieldBlur }: Uniper
 						<Label htmlFor="extension_ci">Extensión CI</Label>
 						<Input
 							id="extension_ci"
-							{...register("extension_ci")}
+							{...ur("extension_ci")}
 							onBlur={onFieldBlur}
 							placeholder="Ej: A, CC, etc."
 							maxLength={10}
@@ -154,7 +169,7 @@ export function UnipersonalClientForm({ form, partnerForm, onFieldBlur }: Uniper
 						</Label>
 						<Input
 							id="nacionalidad"
-							{...register("nacionalidad")}
+							{...ur("nacionalidad")}
 							onBlur={onFieldBlur}
 							defaultValue="Boliviana"
 						/>
@@ -231,7 +246,7 @@ export function UnipersonalClientForm({ form, partnerForm, onFieldBlur }: Uniper
 						<Label htmlFor="direccion">
 							Dirección <span className="text-red-500">*</span>
 						</Label>
-						<Input id="direccion" {...register("direccion")} onBlur={onFieldBlur} />
+						<Input id="direccion" {...ur("direccion")} onBlur={onFieldBlur} />
 						{errors.direccion && <p className="text-sm text-red-500 mt-1">{errors.direccion.message}</p>}
 					</div>
 
@@ -273,7 +288,7 @@ export function UnipersonalClientForm({ form, partnerForm, onFieldBlur }: Uniper
 						<Label htmlFor="profesion_oficio">
 							Profesión u Oficio <span className="text-red-500">*</span>
 						</Label>
-						<Input id="profesion_oficio" {...register("profesion_oficio")} onBlur={onFieldBlur} />
+						<Input id="profesion_oficio" {...ur("profesion_oficio")} onBlur={onFieldBlur} />
 						{errors.profesion_oficio && (
 							<p className="text-sm text-red-500 mt-1">{errors.profesion_oficio.message}</p>
 						)}
@@ -281,12 +296,12 @@ export function UnipersonalClientForm({ form, partnerForm, onFieldBlur }: Uniper
 
 					<div>
 						<Label htmlFor="actividad_economica">Actividad Económica</Label>
-						<Input id="actividad_economica" {...register("actividad_economica")} onBlur={onFieldBlur} />
+						<Input id="actividad_economica" {...ur("actividad_economica")} onBlur={onFieldBlur} />
 					</div>
 
 					<div>
 						<Label htmlFor="lugar_trabajo">Lugar de Trabajo</Label>
-						<Input id="lugar_trabajo" {...register("lugar_trabajo")} onBlur={onFieldBlur} />
+						<Input id="lugar_trabajo" {...ur("lugar_trabajo")} onBlur={onFieldBlur} />
 					</div>
 
 					<div>
@@ -330,7 +345,7 @@ export function UnipersonalClientForm({ form, partnerForm, onFieldBlur }: Uniper
 
 					<div>
 						<Label htmlFor="cargo">Cargo</Label>
-						<Input id="cargo" {...register("cargo")} onBlur={onFieldBlur} />
+						<Input id="cargo" {...ur("cargo")} onBlur={onFieldBlur} />
 					</div>
 
 					<div>
@@ -360,7 +375,7 @@ export function UnipersonalClientForm({ form, partnerForm, onFieldBlur }: Uniper
 						<Label htmlFor="domicilio_comercial">Dirección de Facturación</Label>
 						<Input
 							id="domicilio_comercial"
-							{...register("domicilio_comercial")}
+							{...ur("domicilio_comercial")}
 							onBlur={onFieldBlur}
 							disabled={useSameAsDireccion}
 						/>
@@ -385,7 +400,7 @@ export function UnipersonalClientForm({ form, partnerForm, onFieldBlur }: Uniper
 						<Label htmlFor="razon_social">
 							Razón Social <span className="text-red-500">*</span>
 						</Label>
-						<Input id="razon_social" {...register("razon_social")} onBlur={onFieldBlur} />
+						<Input id="razon_social" {...ur("razon_social")} onBlur={onFieldBlur} />
 						{errors.razon_social && (
 							<p className="text-sm text-red-500 mt-1">{errors.razon_social.message}</p>
 						)}
@@ -410,7 +425,7 @@ export function UnipersonalClientForm({ form, partnerForm, onFieldBlur }: Uniper
 					</Label>
 						<Input
 							id="matricula_comercio"
-							{...register("matricula_comercio")}
+							{...ur("matricula_comercio")}
 							onBlur={onFieldBlur}
 							placeholder="Min. 7 caracteres"
 						/>
@@ -425,7 +440,7 @@ export function UnipersonalClientForm({ form, partnerForm, onFieldBlur }: Uniper
 						</Label>
 						<Input
 							id="domicilio_comercial_uni"
-							{...register("domicilio_comercial")}
+							{...ur("domicilio_comercial")}
 							onBlur={onFieldBlur}
 							disabled={useSameAsDireccion}
 						/>
@@ -466,7 +481,7 @@ export function UnipersonalClientForm({ form, partnerForm, onFieldBlur }: Uniper
 						</Label>
 						<Input
 							id="actividad_economica_comercial"
-							{...register("actividad_economica_comercial")}
+							{...ur("actividad_economica_comercial")}
 							onBlur={onFieldBlur}
 						/>
 						{errors.actividad_economica_comercial && (
@@ -560,7 +575,7 @@ export function UnipersonalClientForm({ form, partnerForm, onFieldBlur }: Uniper
 						</Label>
 						<Input
 							id="nombre_representante"
-							{...register("nombre_representante")}
+							{...ur("nombre_representante")}
 							onBlur={onFieldBlur}
 							disabled={useSameAsPropietario}
 						/>
@@ -575,7 +590,7 @@ export function UnipersonalClientForm({ form, partnerForm, onFieldBlur }: Uniper
 						</Label>
 						<Input
 							id="ci_representante"
-							{...register("ci_representante")}
+							{...ur("ci_representante")}
 							onBlur={onFieldBlur}
 							disabled={useSameAsPropietario}
 							placeholder="Min. 7 dígitos"
@@ -589,7 +604,7 @@ export function UnipersonalClientForm({ form, partnerForm, onFieldBlur }: Uniper
 						<Label htmlFor="extension_representante">Extensión</Label>
 						<Input
 							id="extension_representante"
-							{...register("extension_representante")}
+							{...ur("extension_representante")}
 							onBlur={onFieldBlur}
 							disabled={useSameAsPropietario}
 						/>
@@ -632,26 +647,41 @@ function PartnerFields({ form, onFieldBlur }: { form: UseFormReturn<ClientPartne
 		formState: { errors },
 	} = form;
 
+	// Helper: register + auto-uppercase for text inputs
+	const ur = (name: Parameters<typeof register>[0], options?: Parameters<typeof register>[1]) => {
+		const { onChange, ...rest } = register(name, options);
+		return {
+			...rest,
+			onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
+				const start = e.target.selectionStart;
+				const end = e.target.selectionEnd;
+				e.target.value = e.target.value.toUpperCase();
+				e.target.setSelectionRange(start, end);
+				return onChange(e);
+			},
+		};
+	};
+
 	return (
 		<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 			<div>
 				<Label htmlFor="partner_primer_nombre">
 					Primer Nombre <span className="text-red-500">*</span>
 				</Label>
-				<Input id="partner_primer_nombre" {...register("primer_nombre")} onBlur={onFieldBlur} />
+				<Input id="partner_primer_nombre" {...ur("primer_nombre")} onBlur={onFieldBlur} />
 				{errors.primer_nombre && <p className="text-sm text-red-500 mt-1">{errors.primer_nombre.message}</p>}
 			</div>
 
 			<div>
 				<Label htmlFor="partner_segundo_nombre">Segundo Nombre</Label>
-				<Input id="partner_segundo_nombre" {...register("segundo_nombre")} onBlur={onFieldBlur} />
+				<Input id="partner_segundo_nombre" {...ur("segundo_nombre")} onBlur={onFieldBlur} />
 			</div>
 
 			<div>
 				<Label htmlFor="partner_primer_apellido">
 					Primer Apellido <span className="text-red-500">*</span>
 				</Label>
-				<Input id="partner_primer_apellido" {...register("primer_apellido")} onBlur={onFieldBlur} />
+				<Input id="partner_primer_apellido" {...ur("primer_apellido")} onBlur={onFieldBlur} />
 				{errors.primer_apellido && (
 					<p className="text-sm text-red-500 mt-1">{errors.primer_apellido.message}</p>
 				)}
@@ -659,14 +689,14 @@ function PartnerFields({ form, onFieldBlur }: { form: UseFormReturn<ClientPartne
 
 			<div>
 				<Label htmlFor="partner_segundo_apellido">Segundo Apellido</Label>
-				<Input id="partner_segundo_apellido" {...register("segundo_apellido")} onBlur={onFieldBlur} />
+				<Input id="partner_segundo_apellido" {...ur("segundo_apellido")} onBlur={onFieldBlur} />
 			</div>
 
 			<div className="md:col-span-2">
 				<Label htmlFor="partner_direccion">
 					Dirección <span className="text-red-500">*</span>
 				</Label>
-				<Input id="partner_direccion" {...register("direccion")} onBlur={onFieldBlur} />
+				<Input id="partner_direccion" {...ur("direccion")} onBlur={onFieldBlur} />
 				{errors.direccion && <p className="text-sm text-red-500 mt-1">{errors.direccion.message}</p>}
 			</div>
 
@@ -697,7 +727,7 @@ function PartnerFields({ form, onFieldBlur }: { form: UseFormReturn<ClientPartne
 				<Label htmlFor="partner_profesion_oficio">
 					Profesión u Oficio <span className="text-red-500">*</span>
 				</Label>
-				<Input id="partner_profesion_oficio" {...register("profesion_oficio")} onBlur={onFieldBlur} />
+				<Input id="partner_profesion_oficio" {...ur("profesion_oficio")} onBlur={onFieldBlur} />
 				{errors.profesion_oficio && (
 					<p className="text-sm text-red-500 mt-1">{errors.profesion_oficio.message}</p>
 				)}
@@ -707,7 +737,7 @@ function PartnerFields({ form, onFieldBlur }: { form: UseFormReturn<ClientPartne
 				<Label htmlFor="partner_actividad_economica">
 					Actividad Económica
 				</Label>
-				<Input id="partner_actividad_economica" {...register("actividad_economica")} onBlur={onFieldBlur} />
+				<Input id="partner_actividad_economica" {...ur("actividad_economica")} onBlur={onFieldBlur} />
 				{errors.actividad_economica && (
 					<p className="text-sm text-red-500 mt-1">{errors.actividad_economica.message}</p>
 				)}
@@ -717,7 +747,7 @@ function PartnerFields({ form, onFieldBlur }: { form: UseFormReturn<ClientPartne
 				<Label htmlFor="partner_lugar_trabajo">
 					Lugar de Trabajo
 				</Label>
-				<Input id="partner_lugar_trabajo" {...register("lugar_trabajo")} onBlur={onFieldBlur} />
+				<Input id="partner_lugar_trabajo" {...ur("lugar_trabajo")} onBlur={onFieldBlur} />
 				{errors.lugar_trabajo && <p className="text-sm text-red-500 mt-1">{errors.lugar_trabajo.message}</p>}
 			</div>
 		</div>

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -95,7 +95,12 @@ export function EditableTextField({
 			<Input
 				type={type}
 				value={value ?? ""}
-				onChange={(e) => onChange?.(e.target.value)}
+				onChange={(e) => {
+					const v = (type === "email" || type === "tel" || type === "date" || type === "number")
+						? e.target.value
+						: e.target.value.toUpperCase();
+					onChange?.(v);
+				}}
 				placeholder={placeholder}
 				maxLength={maxLength}
 				required={required}
@@ -189,7 +194,7 @@ export function EditableTextareaField({
 			<Label className="text-sm">{label}</Label>
 			<Textarea
 				value={value ?? ""}
-				onChange={(e) => onChange?.(e.target.value)}
+				onChange={(e) => onChange?.(e.target.value.toUpperCase())}
 				rows={rows}
 				maxLength={maxLength}
 			/>

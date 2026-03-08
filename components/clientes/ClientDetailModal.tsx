@@ -523,28 +523,28 @@ function NaturalClientGeneral({ data, executive, isEditing = false, onFieldChang
 							<Label className="text-sm">Primer Nombre *</Label>
 							<Input
 								value={data.primer_nombre || ""}
-								onChange={(e) => onFieldChange?.("primer_nombre", e.target.value)}
+								onChange={(e) => onFieldChange?.("primer_nombre", e.target.value.toUpperCase())}
 							/>
 						</div>
 						<div className="space-y-1">
 							<Label className="text-sm">Segundo Nombre</Label>
 							<Input
 								value={data.segundo_nombre || ""}
-								onChange={(e) => onFieldChange?.("segundo_nombre", e.target.value)}
+								onChange={(e) => onFieldChange?.("segundo_nombre", e.target.value.toUpperCase())}
 							/>
 						</div>
 						<div className="space-y-1">
 							<Label className="text-sm">Primer Apellido *</Label>
 							<Input
 								value={data.primer_apellido || ""}
-								onChange={(e) => onFieldChange?.("primer_apellido", e.target.value)}
+								onChange={(e) => onFieldChange?.("primer_apellido", e.target.value.toUpperCase())}
 							/>
 						</div>
 						<div className="space-y-1">
 							<Label className="text-sm">Segundo Apellido</Label>
 							<Input
 								value={data.segundo_apellido || ""}
-								onChange={(e) => onFieldChange?.("segundo_apellido", e.target.value)}
+								onChange={(e) => onFieldChange?.("segundo_apellido", e.target.value.toUpperCase())}
 							/>
 						</div>
 						<div className="space-y-1">
@@ -569,14 +569,14 @@ function NaturalClientGeneral({ data, executive, isEditing = false, onFieldChang
 							<Label className="text-sm">Número de Documento *</Label>
 							<Input
 								value={data.numero_documento || ""}
-								onChange={(e) => onFieldChange?.("numero_documento", e.target.value)}
+								onChange={(e) => onFieldChange?.("numero_documento", e.target.value.toUpperCase())}
 							/>
 						</div>
 						<div className="space-y-1">
 							<Label className="text-sm">Extensión CI</Label>
 							<Input
 								value={data.extension_ci || ""}
-								onChange={(e) => onFieldChange?.("extension_ci", e.target.value)}
+								onChange={(e) => onFieldChange?.("extension_ci", e.target.value.toUpperCase())}
 								placeholder="Ej: A, Z, etc."
 							/>
 						</div>
@@ -584,7 +584,7 @@ function NaturalClientGeneral({ data, executive, isEditing = false, onFieldChang
 							<Label className="text-sm">Nacionalidad *</Label>
 							<Input
 								value={data.nacionalidad || ""}
-								onChange={(e) => onFieldChange?.("nacionalidad", e.target.value)}
+								onChange={(e) => onFieldChange?.("nacionalidad", e.target.value.toUpperCase())}
 							/>
 						</div>
 						<div className="space-y-1">
@@ -637,28 +637,28 @@ function NaturalClientGeneral({ data, executive, isEditing = false, onFieldChang
 							<Label className="text-sm">Profesión u Oficio</Label>
 							<Input
 								value={data.profesion_oficio || ""}
-								onChange={(e) => onFieldChange?.("profesion_oficio", e.target.value)}
+								onChange={(e) => onFieldChange?.("profesion_oficio", e.target.value.toUpperCase())}
 							/>
 						</div>
 						<div className="space-y-1">
 							<Label className="text-sm">Actividad Económica</Label>
 							<Input
 								value={data.actividad_economica || ""}
-								onChange={(e) => onFieldChange?.("actividad_economica", e.target.value)}
+								onChange={(e) => onFieldChange?.("actividad_economica", e.target.value.toUpperCase())}
 							/>
 						</div>
 						<div className="space-y-1">
 							<Label className="text-sm">Lugar de Trabajo</Label>
 							<Input
 								value={data.lugar_trabajo || ""}
-								onChange={(e) => onFieldChange?.("lugar_trabajo", e.target.value)}
+								onChange={(e) => onFieldChange?.("lugar_trabajo", e.target.value.toUpperCase())}
 							/>
 						</div>
 						<div className="space-y-1">
 							<Label className="text-sm">Cargo</Label>
 							<Input
 								value={data.cargo || ""}
-								onChange={(e) => onFieldChange?.("cargo", e.target.value)}
+								onChange={(e) => onFieldChange?.("cargo", e.target.value.toUpperCase())}
 							/>
 						</div>
 						<div className="space-y-1">
@@ -678,13 +678,13 @@ function NaturalClientGeneral({ data, executive, isEditing = false, onFieldChang
 					<div className="grid grid-cols-2 gap-4">
 						<div className="space-y-1">
 							<Label className="text-sm">NIT</Label>
-							<Input value={data.nit || ""} onChange={(e) => onFieldChange?.("nit", e.target.value)} />
+							<Input value={data.nit || ""} onChange={(e) => onFieldChange?.("nit", e.target.value.toUpperCase())} />
 						</div>
 						<div className="space-y-1">
 							<Label className="text-sm">Dirección de Facturación</Label>
 							<Input
 								value={data.domicilio_comercial || ""}
-								onChange={(e) => onFieldChange?.("domicilio_comercial", e.target.value)}
+								onChange={(e) => onFieldChange?.("domicilio_comercial", e.target.value.toUpperCase())}
 							/>
 						</div>
 					</div>
@@ -762,28 +762,28 @@ function UnipersonalClientGeneral({
 							<Label className="text-sm">Primer Nombre *</Label>
 							<Input
 								value={naturalData.primer_nombre || ""}
-								onChange={(e) => onNaturalFieldChange?.("primer_nombre", e.target.value)}
+								onChange={(e) => onNaturalFieldChange?.("primer_nombre", e.target.value.toUpperCase())}
 							/>
 						</div>
 						<div className="space-y-1">
 							<Label className="text-sm">Primer Apellido *</Label>
 							<Input
 								value={naturalData.primer_apellido || ""}
-								onChange={(e) => onNaturalFieldChange?.("primer_apellido", e.target.value)}
+								onChange={(e) => onNaturalFieldChange?.("primer_apellido", e.target.value.toUpperCase())}
 							/>
 						</div>
 						<div className="space-y-1">
 							<Label className="text-sm">Número de Documento *</Label>
 							<Input
 								value={naturalData.numero_documento || ""}
-								onChange={(e) => onNaturalFieldChange?.("numero_documento", e.target.value)}
+								onChange={(e) => onNaturalFieldChange?.("numero_documento", e.target.value.toUpperCase())}
 							/>
 						</div>
 						<div className="space-y-1">
 							<Label className="text-sm">Nacionalidad *</Label>
 							<Input
 								value={naturalData.nacionalidad || ""}
-								onChange={(e) => onNaturalFieldChange?.("nacionalidad", e.target.value)}
+								onChange={(e) => onNaturalFieldChange?.("nacionalidad", e.target.value.toUpperCase())}
 							/>
 						</div>
 					</div>
@@ -795,21 +795,21 @@ function UnipersonalClientGeneral({
 							<Label className="text-sm">Razón Social *</Label>
 							<Input
 								value={unipersonalData.razon_social || ""}
-								onChange={(e) => onUnipersonalFieldChange?.("razon_social", e.target.value)}
+								onChange={(e) => onUnipersonalFieldChange?.("razon_social", e.target.value.toUpperCase())}
 							/>
 						</div>
 						<div className="space-y-1">
 							<Label className="text-sm">NIT *</Label>
 							<Input
 								value={unipersonalData.nit || ""}
-								onChange={(e) => onUnipersonalFieldChange?.("nit", e.target.value)}
+								onChange={(e) => onUnipersonalFieldChange?.("nit", e.target.value.toUpperCase())}
 							/>
 						</div>
 						<div className="space-y-1">
 							<Label className="text-sm">Matrícula de Comercio</Label>
 							<Input
 								value={unipersonalData.matricula_comercio || ""}
-								onChange={(e) => onUnipersonalFieldChange?.("matricula_comercio", e.target.value)}
+								onChange={(e) => onUnipersonalFieldChange?.("matricula_comercio", e.target.value.toUpperCase())}
 							/>
 						</div>
 						<div className="space-y-1">
@@ -817,7 +817,7 @@ function UnipersonalClientGeneral({
 							<Input
 								value={unipersonalData.actividad_economica_comercial || ""}
 								onChange={(e) =>
-									onUnipersonalFieldChange?.("actividad_economica_comercial", e.target.value)
+									onUnipersonalFieldChange?.("actividad_economica_comercial", e.target.value.toUpperCase())
 								}
 							/>
 						</div>
@@ -843,14 +843,14 @@ function UnipersonalClientGeneral({
 							<Label className="text-sm">Nombre del Representante *</Label>
 							<Input
 								value={unipersonalData.nombre_representante || ""}
-								onChange={(e) => onUnipersonalFieldChange?.("nombre_representante", e.target.value)}
+								onChange={(e) => onUnipersonalFieldChange?.("nombre_representante", e.target.value.toUpperCase())}
 							/>
 						</div>
 						<div className="space-y-1">
 							<Label className="text-sm">CI del Representante *</Label>
 							<Input
 								value={unipersonalData.ci_representante || ""}
-								onChange={(e) => onUnipersonalFieldChange?.("ci_representante", e.target.value)}
+								onChange={(e) => onUnipersonalFieldChange?.("ci_representante", e.target.value.toUpperCase())}
 							/>
 						</div>
 					</div>
@@ -926,12 +926,12 @@ function JuridicClientGeneral({ data, executive, isEditing = false, onFieldChang
 							<Label className="text-sm">Razón Social *</Label>
 							<Input
 								value={data.razon_social || ""}
-								onChange={(e) => onFieldChange?.("razon_social", e.target.value)}
+								onChange={(e) => onFieldChange?.("razon_social", e.target.value.toUpperCase())}
 							/>
 						</div>
 						<div className="space-y-1">
 							<Label className="text-sm">NIT *</Label>
-							<Input value={data.nit || ""} onChange={(e) => onFieldChange?.("nit", e.target.value)} />
+							<Input value={data.nit || ""} onChange={(e) => onFieldChange?.("nit", e.target.value.toUpperCase())} />
 						</div>
 						<div className="space-y-1">
 							<Label className="text-sm">Tipo de Sociedad</Label>
@@ -955,21 +955,21 @@ function JuridicClientGeneral({ data, executive, isEditing = false, onFieldChang
 							<Label className="text-sm">Matrícula de Comercio</Label>
 							<Input
 								value={data.matricula_comercio || ""}
-								onChange={(e) => onFieldChange?.("matricula_comercio", e.target.value)}
+								onChange={(e) => onFieldChange?.("matricula_comercio", e.target.value.toUpperCase())}
 							/>
 						</div>
 						<div className="space-y-1">
 							<Label className="text-sm">País de Constitución *</Label>
 							<Input
 								value={data.pais_constitucion || ""}
-								onChange={(e) => onFieldChange?.("pais_constitucion", e.target.value)}
+								onChange={(e) => onFieldChange?.("pais_constitucion", e.target.value.toUpperCase())}
 							/>
 						</div>
 						<div className="space-y-1">
 							<Label className="text-sm">Actividad Económica</Label>
 							<Input
 								value={data.actividad_economica || ""}
-								onChange={(e) => onFieldChange?.("actividad_economica", e.target.value)}
+								onChange={(e) => onFieldChange?.("actividad_economica", e.target.value.toUpperCase())}
 							/>
 						</div>
 					</div>
@@ -1045,7 +1045,7 @@ function ContactInfo({
 								<Label className="text-sm">Dirección *</Label>
 								<Input
 									value={naturalData.direccion || ""}
-									onChange={(e) => onNaturalFieldChange?.("direccion", e.target.value)}
+									onChange={(e) => onNaturalFieldChange?.("direccion", e.target.value.toUpperCase())}
 								/>
 							</div>
 						</div>
@@ -1073,7 +1073,7 @@ function ContactInfo({
 								<Label className="text-sm">Dirección Legal *</Label>
 								<Input
 									value={juridicData.direccion_legal || ""}
-									onChange={(e) => onJuridicFieldChange?.("direccion_legal", e.target.value)}
+									onChange={(e) => onJuridicFieldChange?.("direccion_legal", e.target.value.toUpperCase())}
 								/>
 							</div>
 						</div>
@@ -1111,14 +1111,14 @@ function ContactInfo({
 								<Label className="text-sm">Domicilio Comercial *</Label>
 								<Input
 									value={unipersonalData.domicilio_comercial || ""}
-									onChange={(e) => onUnipersonalFieldChange?.("domicilio_comercial", e.target.value)}
+									onChange={(e) => onUnipersonalFieldChange?.("domicilio_comercial", e.target.value.toUpperCase())}
 								/>
 							</div>
 							<div className="col-span-2 space-y-1">
 								<Label className="text-sm">Dirección Personal *</Label>
 								<Input
 									value={naturalData.direccion || ""}
-									onChange={(e) => onNaturalFieldChange?.("direccion", e.target.value)}
+									onChange={(e) => onNaturalFieldChange?.("direccion", e.target.value.toUpperCase())}
 								/>
 							</div>
 						</div>

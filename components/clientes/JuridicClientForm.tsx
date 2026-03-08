@@ -1,5 +1,6 @@
-"use client";
+﻿"use client";
 
+import React from "react";
 import { UseFormReturn, Controller, useFieldArray } from "react-hook-form";
 import { JuridicClientFormData, DOCUMENT_TYPES, COMPANY_TYPES } from "@/types/clientForm";
 import type { ClienteDocumentoFormState } from "@/types/clienteDocumento";
@@ -25,6 +26,21 @@ export function JuridicClientForm({ form, onFieldBlur }: JuridicClientFormProps)
 		watch,
 		setValue,
 	} = form;
+
+	// Helper: register + auto-uppercase for text inputs
+	const ur = (name: Parameters<typeof register>[0], options?: Parameters<typeof register>[1]) => {
+		const { onChange, ...rest } = register(name, options);
+		return {
+			...rest,
+			onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
+				const start = e.target.selectionStart;
+				const end = e.target.selectionEnd;
+				e.target.value = e.target.value.toUpperCase();
+				e.target.setSelectionRange(start, end);
+				return onChange(e);
+			},
+		};
+	};
 
 	const { fields, append, remove } = useFieldArray({
 		control,
@@ -58,7 +74,7 @@ export function JuridicClientForm({ form, onFieldBlur }: JuridicClientFormProps)
 						</Label>
 						<Input
 							id="razon_social"
-							{...register("razon_social")}
+							{...ur("razon_social")}
 							onBlur={onFieldBlur}
 							placeholder="Empresa ABC S.R.L."
 						/>
@@ -119,7 +135,7 @@ export function JuridicClientForm({ form, onFieldBlur }: JuridicClientFormProps)
 						</Label>
 						<Input
 							id="pais_constitucion"
-							{...register("pais_constitucion")}
+							{...ur("pais_constitucion")}
 							onBlur={onFieldBlur}
 							defaultValue="Bolivia"
 						/>
@@ -134,7 +150,7 @@ export function JuridicClientForm({ form, onFieldBlur }: JuridicClientFormProps)
 						</Label>
 						<Input
 							id="actividad_economica"
-							{...register("actividad_economica")}
+							{...ur("actividad_economica")}
 							onBlur={onFieldBlur}
 							placeholder="Comercio al por mayor"
 						/>
@@ -170,7 +186,7 @@ export function JuridicClientForm({ form, onFieldBlur }: JuridicClientFormProps)
 						</Label>
 						<Input
 							id="direccion_legal"
-							{...register("direccion_legal")}
+							{...ur("direccion_legal")}
 							onBlur={onFieldBlur}
 							placeholder="Av. Principal #123, Zona Centro"
 						/>
@@ -247,7 +263,7 @@ export function JuridicClientForm({ form, onFieldBlur }: JuridicClientFormProps)
 									</Label>
 									<Input
 										id={`rep_${index}_primer_nombre`}
-										{...register(`legal_representatives.${index}.primer_nombre`)}
+										{...ur(`legal_representatives.${index}.primer_nombre`)}
 										onBlur={onFieldBlur}
 									/>
 									{errors.legal_representatives?.[index]?.primer_nombre && (
@@ -261,7 +277,7 @@ export function JuridicClientForm({ form, onFieldBlur }: JuridicClientFormProps)
 									<Label htmlFor={`rep_${index}_segundo_nombre`}>Segundo Nombre</Label>
 									<Input
 										id={`rep_${index}_segundo_nombre`}
-										{...register(`legal_representatives.${index}.segundo_nombre`)}
+										{...ur(`legal_representatives.${index}.segundo_nombre`)}
 										onBlur={onFieldBlur}
 									/>
 								</div>
@@ -272,7 +288,7 @@ export function JuridicClientForm({ form, onFieldBlur }: JuridicClientFormProps)
 									</Label>
 									<Input
 										id={`rep_${index}_primer_apellido`}
-										{...register(`legal_representatives.${index}.primer_apellido`)}
+										{...ur(`legal_representatives.${index}.primer_apellido`)}
 										onBlur={onFieldBlur}
 									/>
 									{errors.legal_representatives?.[index]?.primer_apellido && (
@@ -286,7 +302,7 @@ export function JuridicClientForm({ form, onFieldBlur }: JuridicClientFormProps)
 									<Label htmlFor={`rep_${index}_segundo_apellido`}>Segundo Apellido</Label>
 									<Input
 										id={`rep_${index}_segundo_apellido`}
-										{...register(`legal_representatives.${index}.segundo_apellido`)}
+										{...ur(`legal_representatives.${index}.segundo_apellido`)}
 										onBlur={onFieldBlur}
 									/>
 								</div>
@@ -341,7 +357,7 @@ export function JuridicClientForm({ form, onFieldBlur }: JuridicClientFormProps)
 									<Label htmlFor={`rep_${index}_extension`}>Extensión</Label>
 									<Input
 										id={`rep_${index}_extension`}
-										{...register(`legal_representatives.${index}.extension`)}
+										{...ur(`legal_representatives.${index}.extension`)}
 										onBlur={onFieldBlur}
 										placeholder="Ej: A, CC, etc."
 										maxLength={10}
@@ -352,7 +368,7 @@ export function JuridicClientForm({ form, onFieldBlur }: JuridicClientFormProps)
 									<Label htmlFor={`rep_${index}_cargo`}>Cargo</Label>
 									<Input
 										id={`rep_${index}_cargo`}
-										{...register(`legal_representatives.${index}.cargo`)}
+										{...ur(`legal_representatives.${index}.cargo`)}
 										onBlur={onFieldBlur}
 										placeholder="Gerente General"
 									/>
