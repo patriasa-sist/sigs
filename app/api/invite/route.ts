@@ -2,6 +2,7 @@ import { createClient } from "@/utils/supabase/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { captureError } from "@/utils/sentry";
 
 // Input validation schema to ensure only valid email addresses are accepted
 const inviteSchema = z.object({
@@ -89,7 +90,7 @@ export async function POST(request: Request) {
 			.single();
 
 		if (inviteError) {
-			console.error("Error creating invitation:", inviteError);
+			await captureError(inviteError, "creating invitation record", { email });
 			return NextResponse.json({ error: "Failed to create invitation" }, { status: 500 });
 		}
 
@@ -115,7 +116,7 @@ export async function POST(request: Request) {
 		if (emailError) {
 			// Clean up invitation if email fails
 			await supabase.from("invitations").delete().eq("id", invitation.id);
-			console.error("Error sending invitation email:", emailError);
+			await captureError(emailError, "sending invitation email", { email });
 			return NextResponse.json({ error: "Failed to send invitation email" }, { status: 500 });
 		}
 
@@ -128,7 +129,7 @@ export async function POST(request: Request) {
 			},
 		});
 	} catch (error) {
-		console.error("Unexpected error in invite API:", error);
+		await captureError(error, "invite API unexpected error");
 		return NextResponse.json({ error: "Internal server error" }, { status: 500 });
 	}
 }

@@ -42,3 +42,5 @@ next-env.d.ts
 
 # mcp configs
 .mcp.*
+# Sentry Config File
+.env.sentry-build-plugin
