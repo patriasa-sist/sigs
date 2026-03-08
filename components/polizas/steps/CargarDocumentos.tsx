@@ -29,7 +29,7 @@ const TIPOS_DOCUMENTO = [
 ] as const;
 
 // Tipos de documentos obligatorios para continuar al siguiente paso
-const DOCUMENTOS_OBLIGATORIOS = ["Póliza", "Plan de pago CLIENTE"] as const;
+const DOCUMENTOS_OBLIGATORIOS = ["Póliza"] as const;
 
 const BUCKET = "polizas-documentos";
 
@@ -414,7 +414,7 @@ export function CargarDocumentos({ documentos, onChange, onSiguiente, onAnterior
 				<div className="text-center py-8 text-gray-500 border border-dashed border-gray-300 rounded-lg mb-6">
 					<FileText className="h-12 w-12 text-gray-400 mx-auto mb-3" />
 					<p className="text-sm">No se han cargado documentos todavía</p>
-					<p className="text-xs mt-1">Debe cargar al menos: Póliza y Plan de pago CLIENTE</p>
+					<p className="text-xs mt-1">Debe cargar al menos: Póliza</p>
 				</div>
 			)}
 

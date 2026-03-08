@@ -57,7 +57,7 @@ export function Resumen({ formState, onAnterior, onEditarPaso, onGuardar, guarda
 
 		// Advertencias sobre documentos obligatorios faltantes
 		const docsSubidos = formState.documentos.filter((d) => d.upload_status === "uploaded" || d.id);
-		const docObligatorios = ["Póliza", "Plan de pago CLIENTE"];
+		const docObligatorios = ["Póliza"];
 		const docsFaltantes = docObligatorios.filter(
 			(tipo) => !docsSubidos.some((d) => d.tipo_documento === tipo)
 		);
