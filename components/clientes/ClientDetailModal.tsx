@@ -29,11 +29,13 @@ import { formatFileSize, getDocumentTypesForClientType, type ClienteDocumento } 
 import type { NaturalClient, JuridicClient, UnipersonalClient } from "@/types/database/client";
 import { checkEditPermission } from "@/app/clientes/permisos/actions";
 import { updateNaturalClient, updateJuridicClient, updateUnipersonalClient } from "@/app/clientes/editar/actions";
+import { saveExtraPhones } from "@/app/clientes/celulares/actions";
 import { ClientPermissionsPanel } from "./ClientPermissionsPanel";
 import { ClienteDocumentUploadEdit } from "./ClienteDocumentUploadEdit";
 import { ClientAuditTrailPanel } from "./ClientAuditTrailPanel";
 import type { PermissionCheckResult } from "@/types/clientPermission";
-import { CIVIL_STATUS, DOCUMENT_TYPES, GENDER_OPTIONS, COMPANY_TYPES } from "@/types/clientForm";
+import { CIVIL_STATUS, DOCUMENT_TYPES, GENDER_OPTIONS, COMPANY_TYPES, type ExtraPhone } from "@/types/clientForm";
+import { ExtraPhonesInput } from "./ExtraPhonesInput";
 
 // Additional types from detail-actions
 type PartnerData = {
@@ -123,6 +125,7 @@ export function ClientDetailModal({ clientId, onClose }: Props) {
 				natural_data: clientResult.data.natural_data,
 				juridic_data: clientResult.data.juridic_data,
 				unipersonal_data: clientResult.data.unipersonal_data,
+				extra_phones: clientResult.data.extra_phones || [],
 			});
 		} else {
 			setError(clientResult.error || "Error al cargar detalles");
@@ -155,6 +158,7 @@ export function ClientDetailModal({ clientId, onClose }: Props) {
 				natural_data: client.natural_data,
 				juridic_data: client.juridic_data,
 				unipersonal_data: client.unipersonal_data,
+				extra_phones: client.extra_phones || [],
 			});
 		}
 	};
@@ -187,6 +191,17 @@ export function ClientDetailModal({ clientId, onClose }: Props) {
 		}
 
 		if (result?.success) {
+			// Save extra phones
+			const phonesResult = await saveExtraPhones(
+				clientId,
+				editData.extra_phones || []
+			);
+			if (!phonesResult.success) {
+				setSaveError(phonesResult.error || "Error al guardar celulares extra");
+				setIsSaving(false);
+				return;
+			}
+
 			setIsEditMode(false);
 			// Reload client data
 			await loadClientDetails();
@@ -444,6 +459,9 @@ export function ClientDetailModal({ clientId, onClose }: Props) {
 								onNaturalFieldChange={updateNaturalField}
 								onJuridicFieldChange={updateJuridicField}
 								onUnipersonalFieldChange={updateUnipersonalField}
+								onExtraPhonesChange={(phones) =>
+									setEditData((prev) => ({ ...prev, extra_phones: phones }))
+								}
 							/>
 						</TabsContent>
 
@@ -1005,6 +1023,7 @@ interface ContactInfoProps {
 	onNaturalFieldChange?: (field: keyof NaturalClient, value: unknown) => void;
 	onJuridicFieldChange?: (field: keyof JuridicClient, value: unknown) => void;
 	onUnipersonalFieldChange?: (field: keyof UnipersonalClient, value: unknown) => void;
+	onExtraPhonesChange?: (phones: ExtraPhone[]) => void;
 }
 
 function ContactInfo({
@@ -1014,6 +1033,7 @@ function ContactInfo({
 	onNaturalFieldChange,
 	onJuridicFieldChange,
 	onUnipersonalFieldChange,
+	onExtraPhonesChange,
 }: ContactInfoProps) {
 	const naturalData = isEditing ? editData?.natural_data || client.natural_data : client.natural_data;
 	const juridicData = isEditing ? editData?.juridic_data || client.juridic_data : client.juridic_data;
@@ -1124,9 +1144,24 @@ function ContactInfo({
 						</div>
 					)}
 				</InfoSection>
+
+				<InfoSection title="Celulares Adicionales" isEditing>
+					<ExtraPhonesInput
+						phones={editData?.extra_phones || []}
+						onChange={(phones) => onExtraPhonesChange?.(phones)}
+					/>
+				</InfoSection>
 			</div>
 		);
 	}
+
+	const LABEL_DISPLAY: Record<string, string> = {
+		personal: "Personal",
+		trabajo: "Trabajo",
+		casa: "Casa",
+		whatsapp: "WhatsApp",
+		otro: "Otro",
+	};
 
 	return (
 		<div className="space-y-6">
@@ -1247,6 +1282,22 @@ function ContactInfo({
 					</>
 				)}
 			</InfoSection>
+
+			{client.extra_phones && client.extra_phones.length > 0 && (
+				<InfoSection title="Celulares Adicionales">
+					{client.extra_phones.map((phone, index) => (
+						<div key={index} className="flex items-start gap-3">
+							<Phone className="h-5 w-5 text-gray-400 mt-0.5" />
+							<div>
+								<p className="text-sm text-gray-600">
+									{LABEL_DISPLAY[phone.etiqueta] || phone.etiqueta}
+								</p>
+								<p className="font-medium">{phone.numero}</p>
+							</div>
+						</div>
+					))}
+				</InfoSection>
+			)}
 		</div>
 	);
 }

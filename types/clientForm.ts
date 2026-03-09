@@ -165,6 +165,7 @@ export interface NaturalClientFormData
     NaturalClientOtherData {
   director_cartera_id: string;
   documentos?: ClienteDocumentoFormState[];
+  celulares_extra?: ExtraPhone[];
 }
 
 export const naturalClientFormSchema = naturalClientPersonalSchema
@@ -283,6 +284,7 @@ export interface UnipersonalClientFormData
     UnipersonalRepresentativeData {
   director_cartera_id: string;
   documentos?: ClienteDocumentoFormState[];
+  celulares_extra?: ExtraPhone[];
 }
 
 export const unipersonalClientFormSchema = naturalClientPersonalSchema
@@ -381,6 +383,7 @@ export interface JuridicClientFormData
   director_cartera_id: string;
   legal_representatives: LegalRepresentativeData[];
   documentos?: ClienteDocumentoFormState[];
+  celulares_extra?: ExtraPhone[];
 }
 
 export const juridicClientFormSchema = juridicClientCompanySchema
@@ -416,6 +419,30 @@ export interface ClientFormState {
     documents?: boolean;
   };
 }
+
+// ============================================================================
+// EXTRA PHONES (celulares adicionales de contacto)
+// ============================================================================
+
+export const PHONE_LABELS = ['personal', 'trabajo', 'casa', 'whatsapp', 'otro'] as const;
+export type PhoneLabel = (typeof PHONE_LABELS)[number];
+
+export interface ExtraPhone {
+  id?: string;
+  client_id?: string;
+  numero: string;
+  etiqueta: PhoneLabel;
+}
+
+export const extraPhoneSchema = z.object({
+  id: z.string().uuid().optional(),
+  client_id: z.string().uuid().optional(),
+  numero: z
+    .string()
+    .min(5, 'Debe tener al menos 5 dígitos')
+    .regex(/^[0-9]+$/, 'Solo números permitidos'),
+  etiqueta: z.enum(PHONE_LABELS).default('otro'),
+});
 
 // ============================================================================
 // HELPER TYPES

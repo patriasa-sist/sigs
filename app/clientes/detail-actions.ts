@@ -4,6 +4,7 @@ import { createClient } from "@/utils/supabase/server";
 import { getDataScopeFilter } from "@/utils/auth/helpers";
 import type { ClienteDocumento } from "@/types/clienteDocumento";
 import type { NaturalClient, JuridicClient, UnipersonalClient } from "@/types/database/client";
+import type { ExtraPhone } from "@/types/clientForm";
 
 // Database types for partner and legal representatives
 type PartnerData = {
@@ -87,6 +88,9 @@ export type ClienteDetalleCompleto = {
 
 	// Policies
 	policies?: PolicyData[];
+
+	// Extra phones
+	extra_phones?: ExtraPhone[];
 };
 
 export type ActionResult<T> = {
@@ -218,7 +222,14 @@ export async function getClientDetailsComplete(
 
 		console.log("[getClientDetailsComplete] Documents:", documents?.length || 0);
 
-		// 5. Get policies
+		// 5. Get extra phones
+		const { data: extraPhones } = await supabase
+			.from("client_extra_phones")
+			.select("id, client_id, numero, etiqueta")
+			.eq("client_id", clientId)
+			.order("created_at");
+
+		// 6. Get policies
 		const { data: policies, error: policiesError } = await supabase
 			.from("polizas")
 			.select(
@@ -270,6 +281,7 @@ export async function getClientDetailsComplete(
 			legal_representatives: legalReps,
 			documents: documents || [],
 			policies: normalizedPolicies,
+			extra_phones: (extraPhones || []) as ExtraPhone[],
 		};
 
 		console.log("[getClientDetailsComplete] Returning result:", {

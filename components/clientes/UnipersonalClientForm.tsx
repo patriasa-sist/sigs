@@ -11,8 +11,10 @@ import {
 	INCOME_LEVELS,
 	INCOME_VALUES,
 } from "@/types/clientForm";
+import type { ExtraPhone } from "@/types/clientForm";
 import type { ClienteDocumentoFormState } from "@/types/clienteDocumento";
 import { FormSection } from "./FormSection";
+import { ExtraPhonesInput } from "./ExtraPhonesInput";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -277,6 +279,16 @@ export function UnipersonalClientForm({ form, partnerForm, onFieldBlur }: Uniper
 							placeholder="Solo números, min. 5 dígitos"
 						/>
 						{errors.celular && <p className="text-sm text-red-500 mt-1">{errors.celular.message}</p>}
+					</div>
+
+					<div className="md:col-span-2">
+						<ExtraPhonesInput
+							phones={watch("celulares_extra") || []}
+							onChange={(phones: ExtraPhone[]) => {
+								setValue("celulares_extra", phones);
+								onFieldBlur?.();
+							}}
+						/>
 					</div>
 				</div>
 			</FormSection>

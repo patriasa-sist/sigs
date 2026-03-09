@@ -2,9 +2,10 @@
 
 import React from "react";
 import { UseFormReturn, Controller, useFieldArray } from "react-hook-form";
-import { JuridicClientFormData, DOCUMENT_TYPES, COMPANY_TYPES } from "@/types/clientForm";
+import { JuridicClientFormData, DOCUMENT_TYPES, COMPANY_TYPES, type ExtraPhone } from "@/types/clientForm";
 import type { ClienteDocumentoFormState } from "@/types/clienteDocumento";
 import { FormSection } from "./FormSection";
+import { ExtraPhonesInput } from "./ExtraPhonesInput";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -218,6 +219,16 @@ export function JuridicClientForm({ form, onFieldBlur }: JuridicClientFormProps)
 							placeholder="Solo números, min. 5 dígitos"
 						/>
 						{errors.telefono && <p className="text-sm text-red-500 mt-1">{errors.telefono.message}</p>}
+					</div>
+
+					<div className="md:col-span-2">
+						<ExtraPhonesInput
+							phones={watch("celulares_extra") || []}
+							onChange={(phones: ExtraPhone[]) => {
+								setValue("celulares_extra", phones);
+								onFieldBlur?.();
+							}}
+						/>
 					</div>
 				</div>
 			</FormSection>

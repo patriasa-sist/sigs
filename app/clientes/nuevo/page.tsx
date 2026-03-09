@@ -43,6 +43,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ArrowLeft, Save, X } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
+import { saveExtraPhones } from "@/app/clientes/celulares/actions";
 
 // ---------------------------------------------------------------------------
 // Field label maps – used to display human-readable names in validation toasts
@@ -421,6 +422,11 @@ export default function NuevoClientePage() {
 		// 4. Upload client documents
 		await uploadClientDocuments(client.id, formData.documentos);
 
+		// 5. Save extra phones
+		if (formData.celulares_extra && formData.celulares_extra.length > 0) {
+			await saveExtraPhones(client.id, formData.celulares_extra);
+		}
+
 		return client.id;
 	};
 
@@ -555,6 +561,11 @@ export default function NuevoClientePage() {
 		// 5. Upload client documents
 		await uploadClientDocuments(client.id, formData.documentos);
 
+		// 6. Save extra phones
+		if (formData.celulares_extra && formData.celulares_extra.length > 0) {
+			await saveExtraPhones(client.id, formData.celulares_extra);
+		}
+
 		return client.id;
 	};
 
@@ -635,6 +646,11 @@ export default function NuevoClientePage() {
 
 		// 3. Upload client documents
 		await uploadClientDocuments(client.id, formData.documentos);
+
+		// 4. Save extra phones
+		if (formData.celulares_extra && formData.celulares_extra.length > 0) {
+			await saveExtraPhones(client.id, formData.celulares_extra);
+		}
 
 		return client.id;
 	};
