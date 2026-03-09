@@ -59,7 +59,13 @@ export interface ReplaceDocumentInput {
 // ============================================
 
 /**
- * Verify the current user can edit the specified client's documents
+ * Verify the current user can edit the specified client's documents.
+ *
+ * Authorization paths (any one is sufficient):
+ * 1. Admin role — always allowed
+ * 2. Role has "clientes.editar" permission — allowed for all clients
+ * 3. Team leader for the client's commercial_owner
+ * 4. Explicit per-client grant in client_edit_permissions
  */
 async function authorizeClientDocumentEdit(clientId: string) {
 	const supabase = await createClient();
@@ -84,39 +90,65 @@ async function authorizeClientDocumentEdit(clientId: string) {
 		throw new Error("Perfil no encontrado");
 	}
 
-	// Admin can always edit
+	// Path 1: Admin can always edit
 	if (profile.role === "admin") {
 		return { supabase, user, profile };
 	}
 
-	// Check if user has edit permission
+	// Path 2: Role-level permission is sufficient
 	const { data: hasEditPerm } = await supabase.rpc("user_has_permission", {
 		p_user_id: profile.id,
 		p_permission_id: "clientes.editar",
 	});
-	if (!hasEditPerm) {
-		throw new Error("No tiene permisos para editar documentos");
+	if (hasEditPerm) {
+		return { supabase, user, profile };
 	}
 
-	// Check specific permission using database function
-	const { data: canEdit, error: rpcError } = await supabase.rpc(
-		"can_edit_client",
-		{
-			p_client_id: clientId,
-			p_user_id: user.id,
+	// Path 3: Team leader for the client's commercial_owner
+	const { data: clientData } = await supabase
+		.from("clients")
+		.select("commercial_owner_id")
+		.eq("id", clientId)
+		.single();
+
+	if (clientData?.commercial_owner_id) {
+		const { data: leaderTeams } = await supabase
+			.from("equipo_miembros")
+			.select("equipo_id")
+			.eq("user_id", user.id)
+			.eq("rol_equipo", "lider");
+
+		if (leaderTeams && leaderTeams.length > 0) {
+			const teamIds = leaderTeams.map((t: { equipo_id: string }) => t.equipo_id);
+			const { count } = await supabase
+				.from("equipo_miembros")
+				.select("*", { count: "exact", head: true })
+				.eq("user_id", clientData.commercial_owner_id)
+				.in("equipo_id", teamIds);
+
+			if ((count ?? 0) > 0) {
+				return { supabase, user, profile };
+			}
 		}
-	);
-
-	if (rpcError) {
-		console.error("[authorizeClientDocumentEdit] RPC error:", rpcError);
-		throw new Error("Error al verificar permisos");
 	}
 
-	if (!canEdit) {
-		throw new Error("No tiene permiso para editar documentos de este cliente");
+	// Path 4: Explicit per-client permission
+	const { data: permission } = await supabase
+		.from("client_edit_permissions")
+		.select("id, expires_at")
+		.eq("client_id", clientId)
+		.eq("user_id", user.id)
+		.is("revoked_at", null)
+		.single();
+
+	if (permission) {
+		const isActive = !permission.expires_at || new Date(permission.expires_at) > new Date();
+		if (isActive) {
+			return { supabase, user, profile };
+		}
 	}
 
-	return { supabase, user, profile };
+	throw new Error("No tiene permiso para editar documentos de este cliente");
 }
 
 // ============================================

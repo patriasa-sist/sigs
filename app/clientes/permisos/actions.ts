@@ -192,12 +192,29 @@ export async function checkEditPermission(
 			}
 		}
 
+		// Path 3: Role-level permission "clientes.editar" is sufficient
+		const { data: hasEditPerm } = await supabase.rpc("user_has_permission", {
+			p_user_id: profile.id,
+			p_permission_id: "clientes.editar",
+		});
+		if (hasEditPerm) {
+			return {
+				success: true,
+				data: {
+					canEdit: true,
+					reason: "Permiso de rol",
+					isAdmin: false,
+					isTeamLeader: false,
+					isTeamMember: true,
+				},
+			};
+		}
+
 		// Check if user is a team member (for traceability visibility)
 		let isTeamMember = false;
 		if (clientData?.commercial_owner_id) {
 			const scope = await getDataScopeFilter("clientes");
 			if (!scope.needsScoping) {
-				// Roles like usuario, cobranza see everything
 				isTeamMember = true;
 			} else if (scope.teamMemberIds.includes(clientData.commercial_owner_id)) {
 				isTeamMember = true;
