@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Client, ClientSearchResult } from "@/types/client";
 import { getAllClients, searchClients as searchClientsAction } from "./actions";
@@ -14,6 +14,21 @@ import { Button } from "@/components/ui/button";
 import { UserPlus, AlertCircle } from "lucide-react";
 
 export default function ClientesPage() {
+	return (
+		<Suspense fallback={
+			<div className="flex items-center justify-center min-h-screen">
+				<div className="text-center">
+					<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+					<p className="text-muted-foreground">Cargando clientes...</p>
+				</div>
+			</div>
+		}>
+			<ClientesContent />
+		</Suspense>
+	);
+}
+
+function ClientesContent() {
 	const router = useRouter();
 	const searchParams = useSearchParams();
 	const [displayedClients, setDisplayedClients] = useState<Client[] | ClientSearchResult[]>([]);
