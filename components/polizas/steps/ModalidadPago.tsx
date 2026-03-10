@@ -74,6 +74,11 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, producto, po
 	);
 	const [cuotasGeneradas, setCuotasGeneradas] = useState<boolean>(false);
 
+	// Estado especial: usar factores de contado en crédito
+	const [usarFactoresContado, setUsarFactoresContado] = useState<boolean>(
+		datos?.tipo === "credito" ? datos.usar_factores_contado ?? false : false
+	);
+
 	// Estado común
 	const [moneda, setMoneda] = useState<Moneda>(datos?.moneda || "Bs");
 	const [errores, setErrores] = useState<Record<string, string>>({});
@@ -86,10 +91,12 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, producto, po
 	const montoPago = tipoPago === "contado" ? cuotaUnica : primaTotal;
 
 	// Usar cálculos basados en producto si está disponible, de lo contrario usar legacy
+	// Si en crédito con usarFactoresContado, pasar "contado" para usar factor_contado
+	const modalidadParaCalculo = tipoPago === "credito" && usarFactoresContado ? "contado" : tipoPago;
 	const calculos: CalculoComisionResult | null = producto && montoPago > 0
 		? calcularComisionesConProducto({
 				prima_total: montoPago,
-				modalidad_pago: tipoPago,
+				modalidad_pago: modalidadParaCalculo,
 				producto,
 				porcentaje_comision_usuario: porcentajeComisionUsuario,
 		  })
@@ -261,6 +268,7 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, producto, po
 				cuotas,
 				prima_neta,
 				comision,
+				usar_factores_contado: usarFactoresContado || undefined,
 			};
 		}
 
@@ -570,6 +578,39 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, producto, po
 								<p className="text-sm text-red-600">{errores.moneda}</p>
 							)}
 						</div>
+
+						{/* Checkbox: Usar factores de contado */}
+						{producto && (
+							<div className="md:col-span-2">
+								<label
+									htmlFor="usar_factores_contado"
+									className={`flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-colors ${
+										usarFactoresContado
+											? "border-red-500 bg-red-50"
+											: "border-dashed border-gray-300 hover:border-gray-400"
+									}`}
+								>
+									<input
+										id="usar_factores_contado"
+										type="checkbox"
+										checked={usarFactoresContado}
+										onChange={(e) => setUsarFactoresContado(e.target.checked)}
+										className="h-4 w-4 rounded border-red-500 text-red-600 focus:ring-red-500 accent-red-600"
+									/>
+									<div>
+										<span className={`text-sm font-medium ${usarFactoresContado ? "text-red-700" : "text-gray-700"}`}>
+											Usar factores de comisión al contado
+										</span>
+										<p className={`text-xs mt-0.5 ${usarFactoresContado ? "text-red-600" : "text-gray-500"}`}>
+											{usarFactoresContado
+												? `Caso especial activo — usando factor contado (${producto.factor_contado}%) en vez de crédito (${producto.factor_credito}%)`
+												: `Solo para casos especiales. Usará factor ${producto.factor_contado}% (contado) en vez de ${producto.factor_credito}% (crédito)`
+											}
+										</p>
+									</div>
+								</label>
+							</div>
+						)}
 
 						{/* Cuota Inicial */}
 						<div className="space-y-2">

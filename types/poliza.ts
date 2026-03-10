@@ -550,6 +550,8 @@ export type PagoCredito = {
 	// Campos calculados (solo para display)
 	prima_neta?: number;
 	comision?: number;
+	// Caso especial: usar factores de contado en pago a crédito
+	usar_factores_contado?: boolean; // Si true, usa factor_contado en vez de factor_credito para cálculos
 	// Campos para edición
 	cuota_inicial_id?: string; // ID de la cuota inicial en BD
 	cuota_inicial_pagada?: boolean; // Si la cuota inicial ya está pagada
@@ -640,6 +642,7 @@ export type PolizaDB = {
 	comision: number;
 	comision_empresa?: number; // Comisión calculada para la empresa
 	comision_encargado?: number; // Comisión calculada para el encargado
+	usar_factores_contado?: boolean; // Si true, se usó factor_contado a pesar de ser pago a crédito
 	estado: "pendiente" | "activa" | "vencida" | "cancelada" | "renovada" | "rechazada" | "anulada";
 	validado_por?: string; // Usuario gerente que validó la póliza
 	fecha_validacion?: string; // Fecha de validación gerencial

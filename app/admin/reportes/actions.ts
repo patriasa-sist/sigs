@@ -76,7 +76,11 @@ export async function exportarProduccion(
 				ramo,
 				moneda,
 				prima_total,
+				prima_neta,
+				comision,
+				comision_empresa,
 				modalidad_pago,
+				usar_factores_contado,
 				inicio_vigencia,
 				fin_vigencia,
 				producto_id,
@@ -168,7 +172,11 @@ export async function exportarProduccion(
 						ramo: string;
 						moneda: string;
 						prima_total: number;
+						prima_neta: number | null;
+						comision: number | null;
+						comision_empresa: number | null;
 						modalidad_pago: "contado" | "credito";
+						usar_factores_contado?: boolean;
 						inicio_vigencia: string;
 						fin_vigencia: string;
 						producto_id: string | null;
@@ -207,35 +215,32 @@ export async function exportarProduccion(
 						}
 					}
 
-					// Cálculos financieros (solo si hay producto asignado)
-					let primaNeta: number | null = null;
-					let comisionEmpresa: number | null = null;
+					// Datos financieros: leer de la DB (no recalcular)
+					const primaNeta = poliza.prima_neta != null ? Number(poliza.prima_neta) : null;
+					const comisionEmpresa = poliza.comision_empresa != null
+						? Number(poliza.comision_empresa)
+						: poliza.comision != null ? Number(poliza.comision) : null;
+
+					// Factor y porcentaje de comisión: referencia del producto
 					let factorPrimaNeta: number | null = null;
 					let porcentajeComision: number | null = null;
+					if (producto) {
+						const usarContado = poliza.modalidad_pago === "contado" || poliza.usar_factores_contado === true;
+						factorPrimaNeta = Number(usarContado ? producto.factor_contado : producto.factor_credito);
+						porcentajeComision = Number(producto.porcentaje_comision) * 100;
+					}
+
+					// Valores por cuota: proporcionar desde los totales de la DB
 					let montoCuotaPN: number | null = null;
 					let montoCuotaComision: number | null = null;
-
-					if (producto) {
-						// Determinar qué factor usar según modalidad de pago
-						const factor =
-							poliza.modalidad_pago === "contado"
-								? producto.factor_contado
-								: producto.factor_credito;
-
-						factorPrimaNeta = Number(factor);
-						// Porcentaje de comisión: almacenado como decimal (0.15), mostrar como % (15)
-						porcentajeComision = Number(producto.porcentaje_comision) * 100;
-
-						// Calcular prima neta: prima_total / (1 + factor/100)
-						const divisor = 1 + factorPrimaNeta / 100;
-						primaNeta = Number(poliza.prima_total) / divisor;
-
-						// Calcular comisión empresa: prima_neta * porcentaje_comision
-						comisionEmpresa = primaNeta * Number(producto.porcentaje_comision);
-
-						// Calcular valores por cuota
-						montoCuotaPN = Number(pago.monto) / divisor;
-						montoCuotaComision = montoCuotaPN * Number(producto.porcentaje_comision);
+					const primaTotalNum = Number(poliza.prima_total);
+					if (primaNeta != null && primaTotalNum > 0) {
+						const ratio = primaNeta / primaTotalNum;
+						montoCuotaPN = Number(pago.monto) * ratio;
+						if (comisionEmpresa != null) {
+							const ratioComision = comisionEmpresa / primaTotalNum;
+							montoCuotaComision = Number(pago.monto) * ratioComision;
+						}
 					}
 
 					return {
@@ -500,7 +505,11 @@ export async function exportarProduccionNuevo(
 			ramo,
 			moneda,
 			prima_total,
+			prima_neta,
+			comision,
+			comision_empresa,
 			modalidad_pago,
+			usar_factores_contado,
 			inicio_vigencia,
 			fin_vigencia,
 			fecha_emision_compania,
@@ -576,7 +585,11 @@ export async function exportarProduccionNuevo(
 				ramo,
 				moneda,
 				prima_total,
+				prima_neta,
+				comision,
+				comision_empresa,
 				modalidad_pago,
+				usar_factores_contado,
 				inicio_vigencia,
 				fin_vigencia,
 				fecha_emision_compania,
@@ -664,38 +677,41 @@ export async function exportarProduccionNuevo(
 			ramosSet
 		);
 
-		// Helper para calcular campos financieros
-		function calcularFinancieros(
-			primaTot: number,
-			modalidad: "contado" | "credito",
+		// Helper para extraer campos financieros desde la DB (sin recalcular)
+		function extraerFinancieros(
+			polizaData: {
+				prima_neta: number | null;
+				comision: number | null;
+				comision_empresa: number | null;
+				modalidad_pago: "contado" | "credito";
+				usar_factores_contado?: boolean;
+			},
 			producto?: {
 				factor_contado: number;
 				factor_credito: number;
 				porcentaje_comision: number;
 			} | null
 		) {
-			if (!producto) {
-				return {
-					prima_neta: null as number | null,
-					comision_empresa: null as number | null,
-					factor_prima_neta: null as number | null,
-					porcentaje_comision: null as number | null,
-				};
-			}
+			// Prima neta y comisión: directamente de la DB
+			const primaNeta = polizaData.prima_neta != null ? Number(polizaData.prima_neta) : null;
+			const comisionEmpresa = polizaData.comision_empresa != null
+				? Number(polizaData.comision_empresa)
+				: polizaData.comision != null ? Number(polizaData.comision) : null;
 
-			const factor =
-				modalidad === "contado"
-					? Number(producto.factor_contado)
-					: Number(producto.factor_credito);
-			const divisor = 1 + factor / 100;
-			const primaNeta = Number(primaTot) / divisor;
-			const porcComision = Number(producto.porcentaje_comision);
+			// Factor y porcentaje: referencia del producto
+			let factorPrimaNeta: number | null = null;
+			let porcentajeComision: number | null = null;
+			if (producto) {
+				const usarContado = polizaData.modalidad_pago === "contado" || polizaData.usar_factores_contado === true;
+				factorPrimaNeta = Number(usarContado ? producto.factor_contado : producto.factor_credito);
+				porcentajeComision = Number(producto.porcentaje_comision) * 100;
+			}
 
 			return {
 				prima_neta: primaNeta,
-				comision_empresa: primaNeta * porcComision,
-				factor_prima_neta: factor,
-				porcentaje_comision: porcComision * 100,
+				comision_empresa: comisionEmpresa,
+				factor_prima_neta: factorPrimaNeta,
+				porcentaje_comision: porcentajeComision,
 			};
 		}
 
@@ -707,7 +723,11 @@ export async function exportarProduccionNuevo(
 				ramo: string;
 				moneda: string;
 				prima_total: number;
+				prima_neta: number | null;
+				comision: number | null;
+				comision_empresa: number | null;
 				modalidad_pago: "contado" | "credito";
+				usar_factores_contado?: boolean;
 				inicio_vigencia: string;
 				fin_vigencia: string;
 				fecha_emision_compania: string;
@@ -734,11 +754,7 @@ export async function exportarProduccionNuevo(
 					p.client as ClientQueryResult | null
 				);
 				const dc = p.client?.director_cartera;
-				const financieros = calcularFinancieros(
-					p.prima_total,
-					p.modalidad_pago,
-					p.producto
-				);
+				const financieros = extraerFinancieros(p, p.producto);
 
 				const valorAseg = valorAseguradoMap.get(p.id) ?? null;
 				const ramoTieneTabla = p.ramo in RAMO_VALOR_ASEGURADO_MAP;
@@ -788,11 +804,7 @@ export async function exportarProduccionNuevo(
 				pol.client as ClientQueryResult | null
 			);
 			const dc = pol.client?.director_cartera;
-			const financieros = calcularFinancieros(
-				pol.prima_total,
-				pol.modalidad_pago,
-				pol.producto
-			);
+			const financieros = extraerFinancieros(pol, pol.producto);
 
 			const valorAseg = valorAseguradoMap.get(pol.id) ?? null;
 			const ramoTieneTabla = pol.ramo in RAMO_VALOR_ASEGURADO_MAP;

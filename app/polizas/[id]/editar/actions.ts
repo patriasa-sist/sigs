@@ -352,6 +352,7 @@ export async function obtenerPolizaParaEdicion(
 				})),
 				prima_neta: poliza.prima_neta,
 				comision: poliza.comision,
+				usar_factores_contado: poliza.usar_factores_contado || false,
 				cuota_inicial_id: cuotaInicial?.id,
 				cuota_inicial_pagada: cuotaInicial?.estado === "pagado",
 				tiene_pagos: tienePagos,
@@ -522,6 +523,7 @@ export async function actualizarPoliza(
 			comision: pagoData.comision_empresa || pagoData.comision || null,
 			comision_empresa: pagoData.comision_empresa || null,
 			comision_encargado: pagoData.comision_encargado || null,
+			usar_factores_contado: formState.modalidad_pago.tipo === "credito" && formState.modalidad_pago.usar_factores_contado === true,
 			es_renovacion: formState.datos_basicos.es_renovacion || false,
 			nro_poliza_anterior: formState.datos_basicos.es_renovacion ? (formState.datos_basicos.nro_poliza_anterior || null) : null,
 		};

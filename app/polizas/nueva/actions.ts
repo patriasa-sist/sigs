@@ -658,6 +658,7 @@ export async function guardarPoliza(formState: PolizaFormState) {
 				comision: pagoData.comision_empresa || pagoData.comision || null,
 				comision_empresa: pagoData.comision_empresa || null,
 				comision_encargado: pagoData.comision_encargado || null,
+				usar_factores_contado: formState.modalidad_pago.tipo === "credito" && formState.modalidad_pago.usar_factores_contado === true,
 				estado: "pendiente",
 				es_renovacion: formState.datos_basicos.es_renovacion || false,
 				nro_poliza_anterior: formState.datos_basicos.es_renovacion ? (formState.datos_basicos.nro_poliza_anterior || null) : null,
