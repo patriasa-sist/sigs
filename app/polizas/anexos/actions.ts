@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/utils/supabase/server";
+import { createAdminClient } from "@/utils/supabase/admin";
 import { revalidatePath } from "next/cache";
 import { getDataScopeFilter } from "@/utils/auth/helpers";
 import { generateFinalStoragePath } from "@/utils/fileUpload";
@@ -36,6 +37,68 @@ function mapAnexoError(
 			return `${context}: sin permisos para realizar esta operación`;
 		default:
 			return `${context}: ${msg || "error desconocido"}${detail ? ` (${detail})` : ""}`;
+	}
+}
+
+/**
+ * Helper: verifica error de Supabase y lanza excepción si hay fallo.
+ */
+function throwIfAnexoError(
+	error: { code?: string; message?: string; details?: string; hint?: string } | null,
+	context: string
+) {
+	if (error) {
+		throw new Error(mapAnexoError(error, context));
+	}
+}
+
+/**
+ * Limpia un anexo parcialmente creado.
+ * Borra de todas las tablas hijas por anexo_id y luego el anexo principal.
+ */
+async function limpiarAnexoFallido(anexoId: string): Promise<void> {
+	try {
+		const supabaseAdmin = createAdminClient();
+
+		// Tablas hijas de anexos (orden no importa, todas referencian anexo_id)
+		const tablasHijas = [
+			"polizas_anexos_automotor_vehiculos",
+			"polizas_anexos_salud_asegurados",
+			"polizas_anexos_salud_beneficiarios",
+			"polizas_anexos_ramos_tecnicos_equipos",
+			"polizas_anexos_aeronavegacion_naves",
+			"polizas_anexos_incendio_bienes",
+			"polizas_anexos_riesgos_varios_bienes",
+			"polizas_anexos_asegurados_nivel",
+			"polizas_anexos_pagos",
+			"polizas_anexos_documentos",
+		];
+
+		// Recolectar rutas de archivos antes de borrar
+		const { data: docs } = await supabaseAdmin
+			.from("polizas_anexos_documentos")
+			.select("archivo_url")
+			.eq("anexo_id", anexoId);
+
+		// Borrar tablas hijas
+		for (const tabla of tablasHijas) {
+			await supabaseAdmin.from(tabla).delete().eq("anexo_id", anexoId);
+		}
+
+		// Borrar anexo principal
+		await supabaseAdmin.from("polizas_anexos").delete().eq("id", anexoId);
+
+		// Borrar archivos de Storage
+		const rutas = (docs || [])
+			.map((d) => d.archivo_url)
+			.filter(Boolean) as string[];
+		if (rutas.length > 0) {
+			await supabaseAdmin.storage.from("polizas-documentos").remove(rutas);
+		}
+
+		console.log("[CLEANUP] Anexo parcial limpiado correctamente:", anexoId);
+	} catch (cleanupError) {
+		console.error("[CLEANUP] Error limpiando anexo fallido:", cleanupError);
 	}
 }
 
@@ -660,60 +723,66 @@ export async function guardarAnexo(formState: AnexoFormState): Promise<{
 			return { success: false, error: mapAnexoError(anexoError, "Error al crear el anexo") };
 		}
 
-		// --- INSERTAR PAGOS DEL ANEXO ---
-		if (formState.config.tipo_anexo === "anulacion") {
-			// Vigencia corrida
-			if (formState.vigencia_corrida && formState.vigencia_corrida.monto > 0) {
-				const { error: pagoError } = await supabase
-					.from("polizas_anexos_pagos")
-					.insert({
+		// --- INSERTAR DATOS DEPENDIENTES CON CLEANUP SI FALLA ---
+		try {
+			// Pagos del anexo
+			if (formState.config.tipo_anexo === "anulacion") {
+				if (formState.vigencia_corrida && formState.vigencia_corrida.monto > 0) {
+					const { error: pagoError } = await supabase
+						.from("polizas_anexos_pagos")
+						.insert({
+							anexo_id: anexo.id,
+							cuota_original_id: null,
+							tipo: "vigencia_corrida",
+							numero_cuota: 0,
+							monto: formState.vigencia_corrida.monto,
+							fecha_vencimiento: formState.vigencia_corrida.fecha_vencimiento,
+							estado: "pendiente",
+							observaciones: formState.vigencia_corrida.observaciones?.trim() || "Cobro vigencia corrida",
+						});
+
+					throwIfAnexoError(pagoError, "Error al guardar vigencia corrida");
+				}
+			} else {
+				const cuotasConDelta = formState.cuotas_ajuste.filter((c) => c.monto_delta !== 0);
+				if (cuotasConDelta.length > 0) {
+					const pagosInsert = cuotasConDelta.map((c) => ({
 						anexo_id: anexo.id,
-						cuota_original_id: null,
-						tipo: "vigencia_corrida",
-						numero_cuota: 0,
-						monto: formState.vigencia_corrida.monto,
-						fecha_vencimiento: formState.vigencia_corrida.fecha_vencimiento,
-						estado: "pendiente",
-						observaciones: formState.vigencia_corrida.observaciones?.trim() || "Cobro vigencia corrida",
-					});
+						cuota_original_id: c.cuota_original_id,
+						tipo: "ajuste" as const,
+						numero_cuota: c.numero_cuota,
+						monto: c.monto_delta,
+						fecha_vencimiento: c.fecha_vencimiento,
+						estado: "pendiente" as const,
+						observaciones: formState.config!.tipo_anexo === "inclusion"
+							? "Ajuste por inclusión"
+							: "Ajuste por exclusión",
+					}));
 
-				if (pagoError) {
-					console.error("Error insertando vigencia corrida:", pagoError);
+					const { error: pagosError } = await supabase
+						.from("polizas_anexos_pagos")
+						.insert(pagosInsert);
+
+					throwIfAnexoError(pagosError, "Error al guardar pagos del anexo");
 				}
 			}
-		} else {
-			// Cuotas ajuste (inclusión/exclusión)
-			const cuotasConDelta = formState.cuotas_ajuste.filter((c) => c.monto_delta !== 0);
-			if (cuotasConDelta.length > 0) {
-				const pagosInsert = cuotasConDelta.map((c) => ({
-					anexo_id: anexo.id,
-					cuota_original_id: c.cuota_original_id,
-					tipo: "ajuste" as const,
-					numero_cuota: c.numero_cuota,
-					monto: c.monto_delta,
-					fecha_vencimiento: c.fecha_vencimiento,
-					estado: "pendiente" as const,
-					observaciones: formState.config!.tipo_anexo === "inclusion"
-						? "Ajuste por inclusión"
-						: "Ajuste por exclusión",
-				}));
 
-				const { error: pagosError } = await supabase
-					.from("polizas_anexos_pagos")
-					.insert(pagosInsert);
-
-				if (pagosError) {
-					console.error("Error insertando pagos de anexo:", pagosError);
-				}
+			// Items del ramo
+			if (formState.items_cambio && formState.config.tipo_anexo !== "anulacion") {
+				await insertarItemsRamo(supabase, anexo.id, formState.items_cambio);
 			}
+		} catch (insertError) {
+			console.error("Error en inserts dependientes del anexo, ejecutando limpieza:", insertError);
+			await limpiarAnexoFallido(anexo.id);
+			return {
+				success: false,
+				error: insertError instanceof Error
+					? insertError.message
+					: "Error guardando datos del anexo. Los datos parciales fueron limpiados automáticamente.",
+			};
 		}
 
-		// --- INSERTAR ITEMS DEL RAMO (inclusión/exclusión) ---
-		if (formState.items_cambio && formState.config.tipo_anexo !== "anulacion") {
-			await insertarItemsRamo(supabase, anexo.id, formState.items_cambio);
-		}
-
-		// --- MOVER DOCUMENTOS ---
+		// --- MOVER DOCUMENTOS (best-effort, fuera del boundary transaccional) ---
 		for (const doc of docsValidos) {
 			const tempPath = doc.storage_path!;
 			const finalPath = generateFinalStoragePath(
@@ -780,7 +849,7 @@ async function insertarItemsRamo(
 					plaza_circulacion: item.data.plaza_circulacion || null,
 				}));
 				const { error } = await supabase.from("polizas_anexos_automotor_vehiculos").insert(rows);
-				if (error) console.error("Error insertando vehículos de anexo:", error);
+				throwIfAnexoError(error, "Error al guardar vehículos del anexo");
 			}
 			break;
 		}
@@ -796,7 +865,7 @@ async function insertarItemsRamo(
 					rol: item.data.rol,
 				}));
 				const { error } = await supabase.from("polizas_anexos_salud_asegurados").insert(rows);
-				if (error) console.error("Error insertando asegurados salud de anexo:", error);
+				throwIfAnexoError(error, "Error al guardar asegurados de salud del anexo");
 			}
 
 			if (itemsCambio.items_beneficiarios.length > 0) {
@@ -812,7 +881,7 @@ async function insertarItemsRamo(
 					rol: item.data.rol,
 				}));
 				const { error } = await supabase.from("polizas_anexos_salud_beneficiarios").insert(rows);
-				if (error) console.error("Error insertando beneficiarios salud de anexo:", error);
+				throwIfAnexoError(error, "Error al guardar beneficiarios de salud del anexo");
 			}
 			break;
 		}
@@ -839,7 +908,7 @@ async function insertarItemsRamo(
 					plaza_circulacion: item.data.plaza_circulacion || null,
 				}));
 				const { error } = await supabase.from("polizas_anexos_ramos_tecnicos_equipos").insert(rows);
-				if (error) console.error("Error insertando equipos de anexo:", error);
+				throwIfAnexoError(error, "Error al guardar equipos del anexo");
 			}
 			break;
 		}
@@ -864,7 +933,7 @@ async function insertarItemsRamo(
 					nivel_ap_id: item.data.nivel_ap_id || null,
 				}));
 				const { error } = await supabase.from("polizas_anexos_aeronavegacion_naves").insert(rows);
-				if (error) console.error("Error insertando naves de anexo:", error);
+				throwIfAnexoError(error, "Error al guardar naves del anexo");
 			}
 			break;
 		}
@@ -881,7 +950,7 @@ async function insertarItemsRamo(
 						es_primer_riesgo: item.data.es_primer_riesgo,
 						items: JSON.stringify(item.data.items),
 					});
-					if (error) console.error("Error insertando bien incendio de anexo:", error);
+					throwIfAnexoError(error, "Error al guardar bien de incendio del anexo");
 				}
 			}
 			break;
@@ -899,7 +968,7 @@ async function insertarItemsRamo(
 						es_primer_riesgo: item.data.es_primer_riesgo,
 						items: JSON.stringify(item.data.items),
 					});
-					if (error) console.error("Error insertando bien riesgos varios de anexo:", error);
+					throwIfAnexoError(error, "Error al guardar bien de riesgos varios del anexo");
 				}
 			}
 			break;
@@ -918,7 +987,7 @@ async function insertarItemsRamo(
 					cargo: item.data.cargo || null,
 				}));
 				const { error } = await supabase.from("polizas_anexos_asegurados_nivel").insert(rows);
-				if (error) console.error("Error insertando asegurados nivel de anexo:", error);
+				throwIfAnexoError(error, "Error al guardar asegurados con nivel del anexo");
 			}
 			break;
 		}
