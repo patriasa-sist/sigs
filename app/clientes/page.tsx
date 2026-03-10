@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Client, ClientSearchResult } from "@/types/client";
 import { getAllClients, searchClients as searchClientsAction } from "./actions";
 import { SearchBar } from "@/components/clientes/SearchBar";
@@ -15,6 +15,7 @@ import { UserPlus, AlertCircle } from "lucide-react";
 
 export default function ClientesPage() {
 	const router = useRouter();
+	const searchParams = useSearchParams();
 	const [displayedClients, setDisplayedClients] = useState<Client[] | ClientSearchResult[]>([]);
 	const [isSearchMode, setIsSearchMode] = useState(false);
 	const [isLoading, setIsLoading] = useState(true);
@@ -23,6 +24,16 @@ export default function ClientesPage() {
 	// View mode state
 	const [viewMode, setViewMode] = useState<ViewMode>("table");
 	const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
+
+	// Open client detail from query param (e.g., ?detalle=<client_id>)
+	useEffect(() => {
+		const detalleId = searchParams.get("detalle");
+		if (detalleId) {
+			setSelectedClientId(detalleId);
+			// Clean up the URL without triggering navigation
+			router.replace("/clientes", { scroll: false });
+		}
+	}, [searchParams, router]);
 
 	// Server-side pagination state
 	const [currentPage, setCurrentPage] = useState(1);

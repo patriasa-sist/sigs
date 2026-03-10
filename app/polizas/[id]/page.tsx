@@ -34,6 +34,7 @@ import {
 	Users,
 } from "lucide-react";
 import { formatCurrency, formatDate } from "@/utils/formatters";
+import Link from "next/link";
 
 export default function PolizaDetallePage() {
 	const router = useRouter();
@@ -299,7 +300,12 @@ export default function PolizaDetallePage() {
 									<User className="h-4 w-4" />
 									Cliente
 								</label>
-								<p className="text-base text-gray-900 mt-1">{poliza.client_name}</p>
+								<Link
+									href={`/clientes?detalle=${poliza.client_id}`}
+									className="text-base text-blue-700 hover:text-blue-900 hover:underline mt-1 block"
+								>
+									{poliza.client_name}
+								</Link>
 								<p className="text-sm text-gray-600">CI/NIT: {poliza.client_ci}</p>
 							</div>
 							<div>
