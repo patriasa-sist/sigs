@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -80,17 +80,15 @@ export default function RegistrarPagoModal({ cuota, poliza, open, onClose, onSuc
 		return Math.max(0, cuota.monto - monto);
 	};
 
-	// MEJORA #1: Handle file selection
-	const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-		const file = e.target.files?.[0];
+	// Ref for the drop zone and file input
+	const dropZoneRef = useRef<HTMLDivElement>(null);
+	const fileInputRef = useRef<HTMLInputElement>(null);
+	const [isDragging, setIsDragging] = useState(false);
+
+	// Shared file validation and selection
+	const processFile = useCallback((file: File) => {
 		setFileError(null);
 
-		if (!file) {
-			setSelectedFile(null);
-			return;
-		}
-
-		// Validate file size
 		const sizeValidation = validarTamanoArchivo(file);
 		if (!sizeValidation.valid) {
 			setFileError(sizeValidation.error || "Error de validación");
@@ -98,7 +96,6 @@ export default function RegistrarPagoModal({ cuota, poliza, open, onClose, onSuc
 			return;
 		}
 
-		// Validate file type
 		const typeValidation = validarTipoArchivo(file);
 		if (!typeValidation.valid) {
 			setFileError(typeValidation.error || "Error de validación");
@@ -107,11 +104,69 @@ export default function RegistrarPagoModal({ cuota, poliza, open, onClose, onSuc
 		}
 
 		setSelectedFile(file);
+	}, []);
+
+	// Handle traditional file input change
+	const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+		const file = e.target.files?.[0];
+		if (!file) {
+			setSelectedFile(null);
+			setFileError(null);
+			return;
+		}
+		processFile(file);
 	};
+
+	// Drag & drop handlers
+	const handleDragOver = useCallback((e: React.DragEvent) => {
+		e.preventDefault();
+		e.stopPropagation();
+		setIsDragging(true);
+	}, []);
+
+	const handleDragLeave = useCallback((e: React.DragEvent) => {
+		e.preventDefault();
+		e.stopPropagation();
+		setIsDragging(false);
+	}, []);
+
+	const handleDrop = useCallback((e: React.DragEvent) => {
+		e.preventDefault();
+		e.stopPropagation();
+		setIsDragging(false);
+
+		const file = e.dataTransfer.files?.[0];
+		if (file) processFile(file);
+	}, [processFile]);
+
+	// Paste handler (Ctrl+V)
+	useEffect(() => {
+		if (!open || selectedFile) return;
+
+		const handlePaste = (e: ClipboardEvent) => {
+			const items = e.clipboardData?.items;
+			if (!items) return;
+
+			for (const item of items) {
+				if (item.kind === "file") {
+					const file = item.getAsFile();
+					if (file) {
+						e.preventDefault();
+						processFile(file);
+						return;
+					}
+				}
+			}
+		};
+
+		document.addEventListener("paste", handlePaste);
+		return () => document.removeEventListener("paste", handlePaste);
+	}, [open, selectedFile, processFile]);
 
 	const handleRemoveFile = () => {
 		setSelectedFile(null);
 		setFileError(null);
+		if (fileInputRef.current) fileInputRef.current.value = "";
 	};
 
 	const handleSubmit = async (e: React.FormEvent) => {
@@ -272,25 +327,36 @@ export default function RegistrarPagoModal({ cuota, poliza, open, onClose, onSuc
 								</SelectContent>
 							</Select>
 
-							{/* File input */}
+							{/* File input with drag & drop, paste, and click */}
 							{!selectedFile ? (
-								<div className="border-2 border-dashed rounded-lg p-4 hover:border-primary transition-colors">
-									<label htmlFor="file-upload" className="cursor-pointer flex flex-col items-center">
-										<Upload className="h-8 w-8 text-muted-foreground mb-2" />
+								<div
+									ref={dropZoneRef}
+									onDragOver={handleDragOver}
+									onDragLeave={handleDragLeave}
+									onDrop={handleDrop}
+									onClick={() => fileInputRef.current?.click()}
+									className={`border-2 border-dashed rounded-lg p-4 cursor-pointer transition-colors ${
+										isDragging
+											? "border-primary bg-primary/5"
+											: "hover:border-primary"
+									}`}
+								>
+									<div className="flex flex-col items-center">
+										<Upload className={`h-8 w-8 mb-2 ${isDragging ? "text-primary" : "text-muted-foreground"}`} />
 										<span className="text-sm text-muted-foreground">
-											Click para seleccionar archivo
+											Arrastra un archivo, pega con Ctrl+V o haz click aquí
 										</span>
 										<span className="text-xs text-muted-foreground mt-1">
 											JPG, PNG, WebP o PDF (máx. 10MB)
 										</span>
 										<input
-											id="file-upload"
+											ref={fileInputRef}
 											type="file"
 											className="hidden"
 											accept="image/jpeg,image/jpg,image/png,image/webp,application/pdf"
 											onChange={handleFileChange}
 										/>
-									</label>
+									</div>
 								</div>
 							) : (
 								<div className="border rounded-lg p-3 bg-muted/30">
