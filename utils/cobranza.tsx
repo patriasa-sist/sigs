@@ -17,7 +17,8 @@ export function generarMensajeRecordatorio(cuota: CuotaPago, poliza: PolizaConPa
 	};
 
 	const formatDate = (dateString: string) => {
-		return new Date(dateString).toLocaleDateString("es-BO", {
+		const [y, m, d] = dateString.split("T")[0].split("-").map(Number);
+		return new Date(y, m - 1, d).toLocaleDateString("es-BO", {
 			day: "2-digit",
 			month: "long",
 			year: "numeric",
@@ -139,7 +140,10 @@ export function formatearMonto(monto: number, moneda: Moneda): string {
  * Formatea fecha a formato legible en español
  */
 export function formatearFecha(fechaISO: string, formato: "corto" | "largo" = "corto"): string {
-	const fecha = new Date(fechaISO);
+	// Parse date parts manually to avoid UTC timezone shift
+	// "2026-03-02" as UTC midnight becomes March 1st in UTC-4 (Bolivia)
+	const [year, month, day] = fechaISO.split("T")[0].split("-").map(Number);
+	const fecha = new Date(year, month - 1, day); // Local timezone
 
 	if (formato === "largo") {
 		return fecha.toLocaleDateString("es-BO", {

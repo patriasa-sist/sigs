@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AlertCircle, CheckCircle, DollarSign, Upload, FileText, X } from "lucide-react";
 import { registrarPago, obtenerCuotasPendientesPorPoliza, subirComprobantePago } from "@/app/cobranzas/actions";
 import type { CuotaPago, PolizaConPagos, ExcessPaymentDistribution, TipoComprobante } from "@/types/cobranza";
-import { validarTamanoArchivo, validarTipoArchivo, formatearTamanoArchivo } from "@/utils/cobranza";
+import { validarTamanoArchivo, validarTipoArchivo, formatearTamanoArchivo, formatearFecha } from "@/utils/cobranza";
 
 interface RegistrarPagoModalProps {
 	cuota: CuotaPago | null;
@@ -211,7 +211,7 @@ export default function RegistrarPagoModal({ cuota, poliza, open, onClose, onSuc
 							<div><span className="font-semibold">Póliza:</span> {poliza.numero_poliza}</div>
 							<div><span className="font-semibold">Cliente:</span> {poliza.client.nombre_completo}</div>
 							<div><span className="font-semibold">Monto de la cuota:</span> {poliza.moneda} {formatCurrency(cuota.monto)}</div>
-							<div><span className="font-semibold">Fecha vencimiento:</span> {new Date(cuota.fecha_vencimiento).toLocaleDateString("es-BO")}</div>
+							<div><span className="font-semibold">Fecha vencimiento:</span> {formatearFecha(cuota.fecha_vencimiento)}</div>
 						</div>
 					</DialogDescription>
 				</DialogHeader>

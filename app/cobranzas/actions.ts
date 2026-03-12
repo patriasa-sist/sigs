@@ -81,7 +81,7 @@ export async function obtenerPolizasConPendientes(): Promise<ObtenerPolizasConPa
 	const supabase = await createClient();
 
 	try {
-		// Query policies with estado='activa' that may have pending quotas
+		// Query policies with estado='activa' including their payment quotas in a single query
 		const { data: polizas, error: polizasError } = await supabase
 			.from("polizas")
 			.select(
@@ -117,7 +117,8 @@ export async function obtenerPolizasConPendientes(): Promise<ObtenerPolizasConPa
         responsable:profiles!responsable_id (
           id,
           full_name
-        )
+        ),
+        cuotas:polizas_pagos (*)
       `
 			)
 			.eq("estado", "activa")
@@ -128,34 +129,27 @@ export async function obtenerPolizasConPendientes(): Promise<ObtenerPolizasConPa
 			return { success: false, error: "Error al obtener pólizas" };
 		}
 
-		// For each policy, fetch payment quotas
+		// Process policies and their quotas (already loaded in single query)
 		const polizasConPagos: PolizaConPagos[] = [];
 
 		for (const poliza of polizas || []) {
-			const { data: cuotas, error: cuotasError } = await supabase
-				.from("polizas_pagos")
-				.select("*")
-				.eq("poliza_id", poliza.id)
-				.order("numero_cuota", { ascending: true });
-
-			if (cuotasError) {
-				console.error(`Error fetching quotas for policy ${poliza.id}:`, cuotasError);
-				continue;
-			}
+			const cuotas = ((poliza.cuotas as CuotaPago[] | null) || []).sort(
+				(a, b) => a.numero_cuota - b.numero_cuota
+			);
 
 			// Calculate totals
-			const cuotasPendientes =
-				cuotas?.filter((c) => c.estado === "pendiente" || c.estado === "vencido" || c.estado === "parcial") ||
-				[];
+			const cuotasPendientes = cuotas.filter(
+				(c) => c.estado === "pendiente" || c.estado === "vencido" || c.estado === "parcial"
+			);
 
 			// Skip policies with no pending quotas
 			if (cuotasPendientes.length === 0) continue;
 
-			const totalPagado = cuotas?.filter((c) => c.estado === "pagado").reduce((sum, c) => sum + c.monto, 0) || 0;
+			const totalPagado = cuotas.filter((c) => c.estado === "pagado").reduce((sum, c) => sum + c.monto, 0);
 
 			const totalPendiente = cuotasPendientes.reduce((sum, c) => sum + c.monto, 0);
 
-			const cuotasVencidas = cuotas?.filter((c) => obtenerEstadoReal(c) === "vencido").length || 0;
+			const cuotasVencidas = cuotas.filter((c) => obtenerEstadoReal(c) === "vencido").length;
 
 			// Format client name
 			const clientData = poliza.client as unknown as ClientQueryResult;
@@ -164,7 +158,6 @@ export async function obtenerPolizasConPendientes(): Promise<ObtenerPolizasConPa
 
 			if (clientData) {
 				if (clientData.client_type === "natural") {
-					// natural_clients is a 1:1 relationship object
 					const natural = clientData.natural_clients;
 					if (natural) {
 						nombreCompleto = `${natural.primer_nombre || ""} ${natural.segundo_nombre || ""} ${
@@ -173,7 +166,6 @@ export async function obtenerPolizasConPendientes(): Promise<ObtenerPolizasConPa
 						documento = natural.numero_documento || "N/A";
 					}
 				} else {
-					// juridic_clients is a 1:1 relationship object
 					const juridic = clientData.juridic_clients;
 					if (juridic) {
 						nombreCompleto = juridic.razon_social || "N/A";
@@ -206,7 +198,7 @@ export async function obtenerPolizasConPendientes(): Promise<ObtenerPolizasConPa
 					id: (poliza.responsable as { id?: string; full_name?: string } | null)?.id || "",
 					full_name: (poliza.responsable as { id?: string; full_name?: string } | null)?.full_name || "N/A",
 				},
-				cuotas: cuotas || [],
+				cuotas: cuotas,
 				total_pagado: totalPagado,
 				total_pendiente: totalPendiente,
 				cuotas_pendientes: cuotasPendientes.length,

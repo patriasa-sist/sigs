@@ -16,6 +16,7 @@ import { Download, AlertCircle, Info } from "lucide-react";
 import { exportarReporte } from "@/app/cobranzas/actions";
 import * as ExcelJS from "exceljs";
 import type { ExportPeriod, EstadoPago, TipoFiltroFecha } from "@/types/cobranza";
+import { formatearFecha } from "@/utils/cobranza";
 
 export default function ExportarReporte() {
 	const [periodo, setPeriodo] = useState<ExportPeriod>("month");
@@ -96,21 +97,21 @@ export default function ExportarReporte() {
 					regional: row.regional,
 					prima_total: row.prima_total,
 					inicio_vigencia: row.inicio_vigencia
-						? new Date(row.inicio_vigencia).toLocaleDateString("es-BO")
+						? formatearFecha(row.inicio_vigencia)
 						: "",
 					fin_vigencia: row.fin_vigencia
-						? new Date(row.fin_vigencia).toLocaleDateString("es-BO")
+						? formatearFecha(row.fin_vigencia)
 						: "",
 					numero_cuota: row.numero_cuota,
 					monto_cuota: row.monto_cuota,
 					moneda: row.moneda,
 					fecha_vencimiento: row.fecha_vencimiento
-						? new Date(row.fecha_vencimiento).toLocaleDateString("es-BO")
+						? formatearFecha(row.fecha_vencimiento)
 						: "",
 					fecha_vencimiento_original: row.fecha_vencimiento_original
-						? new Date(row.fecha_vencimiento_original).toLocaleDateString("es-BO")
+						? formatearFecha(row.fecha_vencimiento_original)
 						: "-",
-					fecha_pago: row.fecha_pago ? new Date(row.fecha_pago).toLocaleDateString("es-BO") : "-",
+					fecha_pago: row.fecha_pago ? formatearFecha(row.fecha_pago) : "-",
 					estado: row.estado,
 					dias_vencido: row.dias_vencido,
 					monto_pagado: row.monto_pagado,

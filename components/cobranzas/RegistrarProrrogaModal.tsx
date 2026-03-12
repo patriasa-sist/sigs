@@ -48,7 +48,8 @@ export default function RegistrarProrrogaModal({
 	const calcularDiasExtension = (): number | null => {
 		if (!nuevaFecha) return null;
 
-		const fechaActual = new Date(cuota.fecha_vencimiento);
+		const [y, m, d] = cuota.fecha_vencimiento.split("T")[0].split("-").map(Number);
+		const fechaActual = new Date(y, m - 1, d);
 		const diferencia = nuevaFecha.getTime() - fechaActual.getTime();
 		const dias = Math.floor(diferencia / (1000 * 60 * 60 * 24));
 
