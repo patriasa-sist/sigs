@@ -735,6 +735,20 @@ export default function NuevoClientePage() {
 					} else {
 						errorMessage = "Ya existe un registro con esos datos";
 					}
+				} else if (code === "23514") {
+					// Check constraint violation — provide user-friendly message
+					const constraint = String(pgError.message ?? "");
+					if (constraint.includes("tipo_documento")) {
+						errorMessage = "El tipo de documento seleccionado no es válido";
+						errorDetail = "Valores permitidos: CI, Pasaporte, CEX. Contacte al administrador si el problema persiste.";
+					} else if (constraint.includes("estado_civil")) {
+						errorMessage = "El estado civil seleccionado no es válido";
+					} else if (constraint.includes("genero")) {
+						errorMessage = "El género seleccionado no es válido";
+					} else {
+						errorMessage = "Uno de los valores ingresados no es válido";
+						errorDetail = "Verifique los campos del formulario e intente nuevamente.";
+					}
 				} else {
 					errorMessage = String(pgError.message);
 					const detail = pgError.details;
