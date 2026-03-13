@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
@@ -13,9 +13,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Download, AlertCircle, Info } from "lucide-react";
-import { exportarReporte } from "@/app/cobranzas/actions";
+import { exportarReporte, obtenerOpcionesFiltroExport } from "@/app/cobranzas/actions";
 import * as ExcelJS from "exceljs";
-import type { ExportPeriod, EstadoPago, TipoFiltroFecha } from "@/types/cobranza";
+import type { ExportPeriod, EstadoPago, TipoFiltroFecha, ExportFilterOptions } from "@/types/cobranza";
 import { formatearFecha } from "@/utils/cobranza";
 
 export default function ExportarReporte() {
@@ -24,8 +24,22 @@ export default function ExportarReporte() {
 	const [fechaHasta, setFechaHasta] = useState("");
 	const [estadoCuota, setEstadoCuota] = useState<EstadoPago | "all">("all");
 	const [tipoFiltroFecha, setTipoFiltroFecha] = useState<TipoFiltroFecha | "ninguno">("ninguno");
+	const [companiaId, setCompaniaId] = useState("all");
+	const [ramo, setRamo] = useState("all");
+	const [responsableId, setResponsableId] = useState("all");
+	const [regionalId, setRegionalId] = useState("all");
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
+	const [filterOptions, setFilterOptions] = useState<ExportFilterOptions | null>(null);
+
+	// Cargar opciones de filtro al montar
+	useEffect(() => {
+		obtenerOpcionesFiltroExport().then((result) => {
+			if (result.success && result.data) {
+				setFilterOptions(result.data);
+			}
+		});
+	}, []);
 
 	const handleExport = async () => {
 		setLoading(true);
@@ -38,6 +52,10 @@ export default function ExportarReporte() {
 				fecha_hasta: periodo === "custom" ? fechaHasta : undefined,
 				estado_cuota: estadoCuota,
 				tipo_filtro_fecha: tipoFiltroFecha !== "ninguno" ? tipoFiltroFecha : undefined,
+				compania_id: companiaId !== "all" ? companiaId : undefined,
+				ramo: ramo !== "all" ? ramo : undefined,
+				responsable_id: responsableId !== "all" ? responsableId : undefined,
+				regional_id: regionalId !== "all" ? regionalId : undefined,
 			});
 
 			if (!result.success || !result.data) {
@@ -196,6 +214,7 @@ export default function ExportarReporte() {
 				<Download className="h-5 w-5 text-muted-foreground" />
 			</div>
 
+			{/* Fila 1: Filtros de período y fecha */}
 			<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
 				{/* Período */}
 				<div className="space-y-2">
@@ -270,6 +289,81 @@ export default function ExportarReporte() {
 						/>
 					</div>
 				)}
+			</div>
+
+			{/* Fila 2: Filtros de entidad (compañía, ramo, responsable, regional) */}
+			<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+				{/* Compañía */}
+				<div className="space-y-2">
+					<Label>Compañía</Label>
+					<Select value={companiaId} onValueChange={setCompaniaId}>
+						<SelectTrigger>
+							<SelectValue />
+						</SelectTrigger>
+						<SelectContent>
+							<SelectItem value="all">Todas</SelectItem>
+							{filterOptions?.companias.map((c) => (
+								<SelectItem key={c.id} value={c.id}>
+									{c.nombre}
+								</SelectItem>
+							))}
+						</SelectContent>
+					</Select>
+				</div>
+
+				{/* Ramo */}
+				<div className="space-y-2">
+					<Label>Ramo</Label>
+					<Select value={ramo} onValueChange={setRamo}>
+						<SelectTrigger>
+							<SelectValue />
+						</SelectTrigger>
+						<SelectContent>
+							<SelectItem value="all">Todos</SelectItem>
+							{filterOptions?.ramos.map((r) => (
+								<SelectItem key={r} value={r}>
+									{r}
+								</SelectItem>
+							))}
+						</SelectContent>
+					</Select>
+				</div>
+
+				{/* Responsable */}
+				<div className="space-y-2">
+					<Label>Responsable</Label>
+					<Select value={responsableId} onValueChange={setResponsableId}>
+						<SelectTrigger>
+							<SelectValue />
+						</SelectTrigger>
+						<SelectContent>
+							<SelectItem value="all">Todos</SelectItem>
+							{filterOptions?.responsables.map((r) => (
+								<SelectItem key={r.id} value={r.id}>
+									{r.full_name}
+								</SelectItem>
+							))}
+						</SelectContent>
+					</Select>
+				</div>
+
+				{/* Regional */}
+				<div className="space-y-2">
+					<Label>Regional</Label>
+					<Select value={regionalId} onValueChange={setRegionalId}>
+						<SelectTrigger>
+							<SelectValue />
+						</SelectTrigger>
+						<SelectContent>
+							<SelectItem value="all">Todas</SelectItem>
+							{filterOptions?.regionales.map((r) => (
+								<SelectItem key={r.id} value={r.id}>
+									{r.nombre}
+								</SelectItem>
+							))}
+						</SelectContent>
+					</Select>
+				</div>
 			</div>
 
 			{/* Mensaje informativo */}

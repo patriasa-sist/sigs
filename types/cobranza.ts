@@ -202,7 +202,20 @@ export type ExportFilters = {
 	fecha_hasta?: string; // Solo para período 'custom'
 	estado_cuota?: EstadoPago | "all";
 	compania_id?: string; // UUID o 'all'
+	ramo?: string; // Filtro por ramo o 'all'
+	responsable_id?: string; // UUID o 'all'
+	regional_id?: string; // UUID o 'all'
 	tipo_filtro_fecha?: TipoFiltroFecha; // Por defecto: fecha_vencimiento
+};
+
+/**
+ * Opciones disponibles para filtros de exportación
+ */
+export type ExportFilterOptions = {
+	companias: { id: string; nombre: string }[];
+	ramos: string[];
+	responsables: { id: string; full_name: string }[];
+	regionales: { id: string; nombre: string }[];
 };
 
 /**

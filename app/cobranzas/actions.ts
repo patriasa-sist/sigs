@@ -2,7 +2,7 @@
 
 import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
-import { checkPermission } from "@/utils/auth/helpers";
+import { checkPermission, getDataScopeFilter } from "@/utils/auth/helpers";
 import { obtenerEstadoReal } from "@/utils/estadoCuota";
 import type {
 	CuotaPago,
@@ -14,6 +14,7 @@ import type {
 	ExcessPaymentDistribution,
 	RedistribuirExcesoResponse,
 	ExportFilters,
+	ExportFilterOptions,
 	ExportRow,
 	CobranzaServerResponse,
 	Moneda,
@@ -81,8 +82,11 @@ export async function obtenerPolizasConPendientes(): Promise<ObtenerPolizasConPa
 	const supabase = await createClient();
 
 	try {
+		// Data scoping: agentes/comerciales solo ven datos de su equipo
+		const scope = await getDataScopeFilter("polizas");
+
 		// Query policies with estado='activa' including their payment quotas in a single query
-		const { data: polizas, error: polizasError } = await supabase
+		let polizasQuery = supabase
 			.from("polizas")
 			.select(
 				`
@@ -123,6 +127,13 @@ export async function obtenerPolizasConPendientes(): Promise<ObtenerPolizasConPa
 			)
 			.eq("estado", "activa")
 			.order("numero_poliza", { ascending: true });
+
+		// Aplicar scoping por equipo si es necesario
+		if (scope.needsScoping) {
+			polizasQuery = polizasQuery.in("responsable_id", scope.teamMemberIds);
+		}
+
+		const { data: polizas, error: polizasError } = await polizasQuery;
 
 		if (polizasError) {
 			console.error("Error fetching policies:", polizasError);
@@ -544,16 +555,23 @@ export async function exportarReporte(filtros: ExportFilters): Promise<CobranzaS
 				break;
 		}
 
+		// Data scoping: agentes/comerciales solo ven datos de su equipo
+		const scope = await getDataScopeFilter("polizas");
+
 		// Fetch all payment quotas with policy details
+		// Usamos !inner para poder filtrar pagos basado en columnas de polizas
 		let query = supabase.from("polizas_pagos").select(`
         *,
-        poliza:polizas!poliza_id (
+        poliza:polizas!poliza_id!inner (
           numero_poliza,
           ramo,
           moneda,
           prima_total,
           inicio_vigencia,
           fin_vigencia,
+          responsable_id,
+          compania_aseguradora_id,
+          regional_id,
           client:clients!client_id (
             id,
             client_type,
@@ -600,6 +618,25 @@ export async function exportarReporte(filtros: ExportFilters): Promise<CobranzaS
 			if (fechaHasta) {
 				query = query.lte(tipoFiltro, fechaHasta);
 			}
+		}
+
+		// Apply entity filters via poliza relationship
+		if (filtros.compania_id && filtros.compania_id !== "all") {
+			query = query.eq("poliza.compania_aseguradora_id", filtros.compania_id);
+		}
+		if (filtros.ramo && filtros.ramo !== "all") {
+			query = query.eq("poliza.ramo", filtros.ramo);
+		}
+		if (filtros.responsable_id && filtros.responsable_id !== "all") {
+			query = query.eq("poliza.responsable_id", filtros.responsable_id);
+		}
+		if (filtros.regional_id && filtros.regional_id !== "all") {
+			query = query.eq("poliza.regional_id", filtros.regional_id);
+		}
+
+		// Scoping: agentes/comerciales solo ven datos de su equipo
+		if (scope.needsScoping) {
+			query = query.in("poliza.responsable_id", scope.teamMemberIds);
 		}
 
 		const { data: pagos, error } = await query.order("fecha_vencimiento", { ascending: true });
@@ -703,6 +740,74 @@ export async function exportarReporte(filtros: ExportFilters): Promise<CobranzaS
 		return { success: true, data: exportRows };
 	} catch (error) {
 		console.error("Error exporting report:", error);
+		return {
+			success: false,
+			error: error instanceof Error ? error.message : "Error desconocido",
+		};
+	}
+}
+
+/**
+ * Obtiene las opciones disponibles para los filtros de exportación.
+ * Respeta scoping: agentes/comerciales solo ven opciones de su equipo.
+ */
+export async function obtenerOpcionesFiltroExport(): Promise<CobranzaServerResponse<ExportFilterOptions>> {
+	const permiso = await verificarPermisoCobranza();
+	if (!permiso.authorized) {
+		return { success: false, error: permiso.error };
+	}
+
+	const supabase = await createClient();
+
+	try {
+		const scope = await getDataScopeFilter("polizas");
+
+		// Obtener compañías, regionales de catálogos
+		const [companiasRes, regionalesRes] = await Promise.all([
+			supabase.from("companias_aseguradoras").select("id, nombre").order("nombre"),
+			supabase.from("regionales").select("id, nombre").order("nombre"),
+		]);
+
+		// Obtener ramos y responsables únicos de pólizas activas (respetando scope)
+		let polizasQuery = supabase
+			.from("polizas")
+			.select("ramo, responsable_id, responsable:profiles!responsable_id(id, full_name)")
+			.eq("estado", "activa");
+
+		if (scope.needsScoping) {
+			polizasQuery = polizasQuery.in("responsable_id", scope.teamMemberIds);
+		}
+
+		const { data: polizasData } = await polizasQuery;
+
+		// Extraer ramos únicos
+		const ramosSet = new Set<string>();
+		const responsablesMap = new Map<string, string>();
+
+		for (const p of polizasData || []) {
+			if (p.ramo) ramosSet.add(p.ramo);
+			const resp = p.responsable as { id?: string; full_name?: string } | null;
+			if (resp?.id && resp?.full_name) {
+				responsablesMap.set(resp.id, resp.full_name);
+			}
+		}
+
+		const ramos = Array.from(ramosSet).sort();
+		const responsables = Array.from(responsablesMap.entries())
+			.map(([id, full_name]) => ({ id, full_name }))
+			.sort((a, b) => a.full_name.localeCompare(b.full_name));
+
+		return {
+			success: true,
+			data: {
+				companias: companiasRes.data || [],
+				ramos,
+				responsables,
+				regionales: regionalesRes.data || [],
+			},
+		};
+	} catch (error) {
+		console.error("Error fetching filter options:", error);
 		return {
 			success: false,
 			error: error instanceof Error ? error.message : "Error desconocido",
