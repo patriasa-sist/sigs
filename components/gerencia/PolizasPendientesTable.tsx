@@ -60,6 +60,9 @@ type PolizaPendiente = {
 			razon_social?: string;
 			nit?: string;
 		}> | null;
+		unipersonal_clients?: Array<{
+			razon_social?: string;
+		}> | null;
 	} | null;
 };
 
@@ -82,10 +85,15 @@ export default function PolizasPendientesTable({ polizas: initialPolizas }: Prop
 	const formatClientName = (poliza: PolizaPendiente) => {
 		if (!poliza.client) return "N/A";
 
-		if (poliza.client.client_type === "natural") {
+		if (poliza.client.client_type === "natural" || poliza.client.client_type === "unipersonal") {
 			const natural = poliza.client.natural_clients?.[0];
 			if (!natural) return "N/A";
-			return `${natural.primer_nombre} ${natural.segundo_nombre || ""} ${natural.primer_apellido} ${natural.segundo_apellido || ""}`.trim();
+			const nombre = `${natural.primer_nombre} ${natural.segundo_nombre || ""} ${natural.primer_apellido} ${natural.segundo_apellido || ""}`.trim();
+			if (poliza.client.client_type === "unipersonal") {
+				const unipersonal = poliza.client.unipersonal_clients?.[0];
+				return unipersonal?.razon_social ? `${nombre} (${unipersonal.razon_social})` : nombre;
+			}
+			return nombre;
 		} else {
 			const juridic = poliza.client.juridic_clients?.[0];
 			return juridic?.razon_social || "N/A";

@@ -237,7 +237,7 @@ export async function obtenerPolizaParaEdicion(
 
 		let asegurado: AseguradoSeleccionado;
 
-		if (client.client_type === "natural") {
+		if (client.client_type === "natural" || client.client_type === "unipersonal") {
 			const { data: naturalClient } = await supabase
 				.from("natural_clients")
 				.select("*")
@@ -255,14 +255,30 @@ export async function obtenerPolizaParaEdicion(
 				.filter(Boolean)
 				.join(" ");
 
+			let nombre_completo = `${nombres} ${apellidos}`.trim();
+			let documento = naturalClient.numero_documento || "-";
+
+			if (client.client_type === "unipersonal") {
+				const { data: unipersonalClient } = await supabase
+					.from("unipersonal_clients")
+					.select("razon_social, nit")
+					.eq("client_id", poliza.client_id)
+					.single();
+
+				if (unipersonalClient) {
+					nombre_completo = `${nombre_completo} (${unipersonalClient.razon_social})`;
+					documento = unipersonalClient.nit || documento;
+				}
+			}
+
 			asegurado = {
 				id: client.id,
-				client_type: "natural",
+				client_type: client.client_type === "unipersonal" ? "natural" : "natural",
 				status: client.status,
 				created_at: client.created_at,
 				detalles: naturalClient,
-				nombre_completo: `${nombres} ${apellidos}`.trim(),
-				documento: naturalClient.numero_documento || "-",
+				nombre_completo,
+				documento,
 			};
 		} else {
 			const { data: juridicClient } = await supabase

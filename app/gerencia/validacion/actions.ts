@@ -73,6 +73,9 @@ export async function obtenerPolizasPendientes() {
 					),
 					juridic_clients (
 						razon_social
+					),
+					unipersonal_clients (
+						razon_social
 					)
 				),
 				compania:companias_aseguradoras!compania_aseguradora_id (

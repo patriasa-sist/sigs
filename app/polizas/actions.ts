@@ -298,10 +298,16 @@ export async function obtenerPolizas() {
 			.select("client_id, razon_social, nit")
 			.in("client_id", clientIds);
 
+		const { data: unipersonalClients } = await supabase
+			.from("unipersonal_clients")
+			.select("client_id, razon_social, nit")
+			.in("client_id", clientIds);
+
 		// Crear mapas de clientes
 		const clientsMap = new Map(clients?.map((c) => [c.id, c]) || []);
 		const naturalClientsMap = new Map(naturalClients?.map((c) => [c.client_id, c]) || []);
 		const juridicClientsMap = new Map(juridicClients?.map((c) => [c.client_id, c]) || []);
+		const unipersonalClientsMap = new Map(unipersonalClients?.map((c) => [c.client_id, c]) || []);
 
 		// Mapear datos
 		const polizasFormateadas: PolizaListItem[] =
@@ -310,7 +316,7 @@ export async function obtenerPolizas() {
 				let client_name = "Cliente Desconocido";
 				let client_ci = "-";
 
-				if (client?.client_type === "natural") {
+				if (client?.client_type === "natural" || client?.client_type === "unipersonal") {
 					const naturalClient = naturalClientsMap.get(poliza.client_id);
 					if (naturalClient) {
 						const nombres = [naturalClient.primer_nombre, naturalClient.segundo_nombre]
@@ -321,6 +327,14 @@ export async function obtenerPolizas() {
 							.join(" ");
 						client_name = `${nombres} ${apellidos}`.trim();
 						client_ci = naturalClient.numero_documento || "-";
+					}
+					// Para unipersonal, usar razón social si existe
+					if (client?.client_type === "unipersonal") {
+						const unipersonalClient = unipersonalClientsMap.get(poliza.client_id);
+						if (unipersonalClient) {
+							client_name = `${client_name} (${unipersonalClient.razon_social})`;
+							client_ci = unipersonalClient.nit || client_ci;
+						}
 					}
 				} else if (client?.client_type === "juridica") {
 					const juridicClient = juridicClientsMap.get(poliza.client_id);
@@ -408,7 +422,7 @@ export async function obtenerDetallePoliza(polizaId: string) {
 		let client_name = "Cliente Desconocido";
 		let client_ci = "-";
 
-		if (client?.client_type === "natural") {
+		if (client?.client_type === "natural" || client?.client_type === "unipersonal") {
 			const { data: naturalClient } = await supabase
 				.from("natural_clients")
 				.select("primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, numero_documento")
@@ -420,6 +434,19 @@ export async function obtenerDetallePoliza(polizaId: string) {
 				const apellidos = [naturalClient.primer_apellido, naturalClient.segundo_apellido].filter(Boolean).join(" ");
 				client_name = `${nombres} ${apellidos}`.trim();
 				client_ci = naturalClient.numero_documento || "-";
+			}
+
+			if (client?.client_type === "unipersonal") {
+				const { data: unipersonalClient } = await supabase
+					.from("unipersonal_clients")
+					.select("razon_social, nit")
+					.eq("client_id", poliza.client_id)
+					.single();
+
+				if (unipersonalClient) {
+					client_name = `${client_name} (${unipersonalClient.razon_social})`;
+					client_ci = unipersonalClient.nit || client_ci;
+				}
 			}
 		} else if (client?.client_type === "juridica") {
 			const { data: juridicClient } = await supabase
