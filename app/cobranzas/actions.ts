@@ -579,102 +579,112 @@ export async function exportarReporte(filtros: ExportFilters): Promise<CobranzaS
 		// Data scoping: agentes/comerciales solo ven datos de su equipo
 		const scope = await getDataScopeFilter("polizas");
 
-		// Fetch all payment quotas with policy details
-		// Usamos !inner para poder filtrar pagos basado en columnas de polizas
-		let query = supabase.from("polizas_pagos").select(`
-        *,
-        poliza:polizas!poliza_id!inner (
-          numero_poliza,
-          ramo,
-          moneda,
-          prima_total,
-          inicio_vigencia,
-          fin_vigencia,
-          responsable_id,
-          compania_aseguradora_id,
-          regional_id,
-          client:clients!client_id (
-            id,
-            client_type,
-            natural_clients (
-              primer_nombre,
-              segundo_nombre,
-              primer_apellido,
-              segundo_apellido,
-              numero_documento
-            ),
-            juridic_clients (
-              razon_social,
-              nit
-            ),
-            unipersonal_clients (
-              razon_social,
-              nit
-            )
-          ),
-          compania:companias_aseguradoras!compania_aseguradora_id (
-            nombre
-          ),
-          responsable:profiles!responsable_id (
-            full_name
-          ),
-          regional:regionales!regional_id (
-            nombre
-          )
-        )
-      `);
+		// Query starts from polizas (left join to pagos) to include policies without payment records
+		let query = supabase.from("polizas").select(`
+			id,
+			numero_poliza,
+			ramo,
+			moneda,
+			prima_total,
+			inicio_vigencia,
+			fin_vigencia,
+			responsable_id,
+			compania_aseguradora_id,
+			regional_id,
+			client:clients!client_id (
+				id,
+				client_type,
+				natural_clients (
+					primer_nombre,
+					segundo_nombre,
+					primer_apellido,
+					segundo_apellido,
+					numero_documento
+				),
+				juridic_clients (
+					razon_social,
+					nit
+				),
+				unipersonal_clients (
+					razon_social,
+					nit
+				)
+			),
+			compania:companias_aseguradoras!compania_aseguradora_id (
+				nombre
+			),
+			responsable:profiles!responsable_id (
+				full_name
+			),
+			regional:regionales!regional_id (
+				nombre
+			),
+			cuotas:polizas_pagos (*)
+		`)
+		.eq("estado", "activa");
 
-		// Apply filters
-		if (filtros.estado_cuota && filtros.estado_cuota !== "all") {
-			query = query.eq("estado", filtros.estado_cuota);
-		}
-
-		// Apply date filters only if aplicarFiltroFecha is true
-		if (aplicarFiltroFecha && (fechaDesde || fechaHasta)) {
-			// Determine which date field to filter by
-			// Para "today" usamos fecha_pago por defecto para mostrar pagos del día
-			const tipoFiltro =
-				filtros.tipo_filtro_fecha || (filtros.periodo === "today" ? "fecha_pago" : "fecha_vencimiento");
-
-			if (fechaDesde) {
-				query = query.gte(tipoFiltro, fechaDesde);
-			}
-
-			if (fechaHasta) {
-				query = query.lte(tipoFiltro, fechaHasta);
-			}
-		}
-
-		// Apply entity filters via poliza relationship
+		// Apply entity filters directly on polizas
 		if (filtros.compania_id && filtros.compania_id !== "all") {
-			query = query.eq("poliza.compania_aseguradora_id", filtros.compania_id);
+			query = query.eq("compania_aseguradora_id", filtros.compania_id);
 		}
 		if (filtros.ramo && filtros.ramo !== "all") {
-			query = query.eq("poliza.ramo", filtros.ramo);
+			query = query.eq("ramo", filtros.ramo);
 		}
 		if (filtros.responsable_id && filtros.responsable_id !== "all") {
-			query = query.eq("poliza.responsable_id", filtros.responsable_id);
+			query = query.eq("responsable_id", filtros.responsable_id);
 		}
 		if (filtros.regional_id && filtros.regional_id !== "all") {
-			query = query.eq("poliza.regional_id", filtros.regional_id);
+			query = query.eq("regional_id", filtros.regional_id);
 		}
 
 		// Scoping: agentes/comerciales solo ven datos de su equipo
 		if (scope.needsScoping) {
-			query = query.in("poliza.responsable_id", scope.teamMemberIds);
+			query = query.in("responsable_id", scope.teamMemberIds);
 		}
 
-		const { data: pagos, error } = await query.order("fecha_vencimiento", { ascending: true });
+		const { data: polizas, error } = await query.order("numero_poliza", { ascending: true });
 
 		if (error) {
-			console.error("Error fetching payments for export:", error);
+			console.error("Error fetching policies for export:", error);
 			return { success: false, error: "Error al obtener datos para exportar" };
 		}
 
-		// Transform to export rows
-		const exportRows: ExportRow[] = (pagos || []).map(
-			(pago: {
-				id: string;
+		// Flatten: each poliza's cuotas become individual export rows
+		// Policies with no cuotas get a single row with empty quota fields
+		const exportRows: ExportRow[] = [];
+
+		for (const poliza of polizas || []) {
+			const clientData = poliza.client as unknown as ClientQueryResult;
+
+			let cliente = "N/A";
+			let ciNit = "N/A";
+
+			if (clientData) {
+				if (clientData.client_type === "natural" || clientData.client_type === "unipersonal") {
+					const natural = clientData.natural_clients;
+					if (natural) {
+						cliente = `${natural.primer_nombre || ""} ${natural.segundo_nombre || ""} ${
+							natural.primer_apellido || ""
+						} ${natural.segundo_apellido || ""}`.trim();
+						ciNit = natural.numero_documento || "N/A";
+					}
+					if (clientData.client_type === "unipersonal") {
+						const unipersonal = clientData.unipersonal_clients;
+						if (unipersonal) {
+							cliente = `${cliente} (${unipersonal.razon_social || ""})`.trim();
+							ciNit = unipersonal.nit || ciNit;
+						}
+					}
+				} else {
+					const juridic = clientData.juridic_clients;
+					if (juridic) {
+						cliente = juridic.razon_social || "N/A";
+						ciNit = juridic.nit || "N/A";
+					}
+				}
+			}
+
+			const cuotas = ((poliza.cuotas || []) as Array<{
 				numero_cuota: number;
 				monto: number;
 				fecha_vencimiento: string;
@@ -683,51 +693,57 @@ export async function exportarReporte(filtros: ExportFilters): Promise<CobranzaS
 				estado: EstadoPago;
 				observaciones: string | null;
 				prorrogas_historial: unknown;
-				poliza: {
-					numero_poliza: string;
-					ramo: string;
-					moneda: string;
-					prima_total: number;
-					inicio_vigencia: string;
-					fin_vigencia: string;
-					client: ClientQueryResult;
-					compania?: { nombre?: string } | null;
-					responsable?: { full_name?: string } | null;
-					regional?: { nombre?: string } | null;
-				} | null;
-			}) => {
-				const poliza = pago.poliza;
-				const clientData = poliza?.client;
+			}>).sort((a, b) => a.numero_cuota - b.numero_cuota);
 
-				let cliente = "N/A";
-				let ciNit = "N/A";
+			// Apply quota-level filters
+			let cuotasFiltradas = cuotas;
 
-				if (clientData) {
-					if (clientData.client_type === "natural" || clientData.client_type === "unipersonal") {
-						const natural = clientData.natural_clients;
-						if (natural) {
-							cliente = `${natural.primer_nombre || ""} ${natural.segundo_nombre || ""} ${
-								natural.primer_apellido || ""
-							} ${natural.segundo_apellido || ""}`.trim();
-							ciNit = natural.numero_documento || "N/A";
-						}
-						if (clientData.client_type === "unipersonal") {
-							const unipersonal = clientData.unipersonal_clients;
-							if (unipersonal) {
-								cliente = `${cliente} (${unipersonal.razon_social || ""})`.trim();
-								ciNit = unipersonal.nit || ciNit;
-							}
-						}
-					} else {
-						const juridic = clientData.juridic_clients;
-						if (juridic) {
-							cliente = juridic.razon_social || "N/A";
-							ciNit = juridic.nit || "N/A";
-						}
-					}
-				}
+			if (filtros.estado_cuota && filtros.estado_cuota !== "all") {
+				cuotasFiltradas = cuotasFiltradas.filter((c) => c.estado === filtros.estado_cuota);
+			}
 
-				// Calculate days overdue
+			if (aplicarFiltroFecha && (fechaDesde || fechaHasta)) {
+				const tipoFiltro =
+					filtros.tipo_filtro_fecha || (filtros.periodo === "today" ? "fecha_pago" : "fecha_vencimiento");
+
+				cuotasFiltradas = cuotasFiltradas.filter((c) => {
+					const fechaCampo = tipoFiltro === "fecha_pago" ? c.fecha_pago : c.fecha_vencimiento;
+					if (!fechaCampo) return false;
+					if (fechaDesde && fechaCampo < fechaDesde) return false;
+					if (fechaHasta && fechaCampo > fechaHasta) return false;
+					return true;
+				});
+			}
+
+			// If no quotas match filters, include a single row for the policy (so it's not lost)
+			if (cuotasFiltradas.length === 0) {
+				exportRows.push({
+					numero_poliza: poliza.numero_poliza,
+					cliente,
+					ci_nit: ciNit,
+					compania: (poliza.compania as { nombre?: string } | null)?.nombre || "N/A",
+					ramo: poliza.ramo || "N/A",
+					responsable: (poliza.responsable as { full_name?: string } | null)?.full_name || "N/A",
+					regional: (poliza.regional as { nombre?: string } | null)?.nombre || "N/A",
+					prima_total: poliza.prima_total || 0,
+					inicio_vigencia: poliza.inicio_vigencia || "",
+					fin_vigencia: poliza.fin_vigencia || "",
+					numero_cuota: 0,
+					monto_cuota: 0,
+					moneda: (poliza.moneda as Moneda) || "Bs",
+					fecha_vencimiento: "",
+					fecha_vencimiento_original: null,
+					fecha_pago: null,
+					estado: cuotas.length === 0 ? "pendiente" : "pagado",
+					dias_vencido: 0,
+					monto_pagado: 0,
+					tiene_prorroga: false,
+					observaciones: cuotas.length === 0 ? "Sin cuotas registradas" : "Todas las cuotas pagadas",
+				});
+				continue;
+			}
+
+			for (const pago of cuotasFiltradas) {
 				const diasVencido =
 					pago.estado === "vencido" || pago.estado === "pendiente"
 						? Math.max(
@@ -738,23 +754,22 @@ export async function exportarReporte(filtros: ExportFilters): Promise<CobranzaS
 						  )
 						: 0;
 
-				// Check if quota has prorroga
 				const tieneProrroga = Array.isArray(pago.prorrogas_historial) && pago.prorrogas_historial.length > 0;
 
-				return {
-					numero_poliza: poliza?.numero_poliza || "N/A",
+				exportRows.push({
+					numero_poliza: poliza.numero_poliza,
 					cliente,
 					ci_nit: ciNit,
-					compania: poliza?.compania?.nombre || "N/A",
-					ramo: poliza?.ramo || "N/A",
-					responsable: poliza?.responsable?.full_name || "N/A",
-					regional: poliza?.regional?.nombre || "N/A",
-					prima_total: poliza?.prima_total || 0,
-					inicio_vigencia: poliza?.inicio_vigencia || "",
-					fin_vigencia: poliza?.fin_vigencia || "",
+					compania: (poliza.compania as { nombre?: string } | null)?.nombre || "N/A",
+					ramo: poliza.ramo || "N/A",
+					responsable: (poliza.responsable as { full_name?: string } | null)?.full_name || "N/A",
+					regional: (poliza.regional as { nombre?: string } | null)?.nombre || "N/A",
+					prima_total: poliza.prima_total || 0,
+					inicio_vigencia: poliza.inicio_vigencia || "",
+					fin_vigencia: poliza.fin_vigencia || "",
 					numero_cuota: pago.numero_cuota,
 					monto_cuota: pago.monto,
-					moneda: (poliza?.moneda as Moneda) || "Bs",
+					moneda: (poliza.moneda as Moneda) || "Bs",
 					fecha_vencimiento: pago.fecha_vencimiento,
 					fecha_vencimiento_original: pago.fecha_vencimiento_original,
 					fecha_pago: pago.fecha_pago,
@@ -763,9 +778,9 @@ export async function exportarReporte(filtros: ExportFilters): Promise<CobranzaS
 					monto_pagado: pago.estado === "pagado" ? pago.monto : 0,
 					tiene_prorroga: tieneProrroga,
 					observaciones: pago.observaciones || "",
-				};
+				});
 			}
-		);
+		}
 
 		return { success: true, data: exportRows };
 	} catch (error) {
