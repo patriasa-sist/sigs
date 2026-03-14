@@ -517,19 +517,39 @@ export async function obtenerFiltrosGerencia(): Promise<GerenciaResponse<Filtros
 	if (!allowed) return { success: false, error: "Sin permiso" };
 
 	const supabase = await createClient();
+	const scope = await getDataScopeFilter("polizas");
 
-	const [regionalesRes, companiasRes, equiposRes] = await Promise.all([
+	const [regionalesRes, companiasRes] = await Promise.all([
 		supabase.from("regionales").select("id, nombre").eq("activo", true).order("nombre"),
 		supabase.from("companias_aseguradoras").select("id, nombre").eq("activo", true).order("nombre"),
-		supabase.from("equipos").select("id, nombre").order("nombre"),
 	]);
+
+	// Equipos: si el usuario necesita scoping, solo mostrar sus equipos
+	let equipos: { id: string; nombre: string }[] = [];
+	if (scope.needsScoping) {
+		// Obtener equipos donde el usuario es miembro
+		const { data: miembros } = await supabase
+			.from("equipo_miembros")
+			.select("equipo:equipos!equipo_id (id, nombre)")
+			.eq("user_id", scope.userId);
+
+		if (miembros) {
+			equipos = miembros
+				.map((m) => m.equipo as unknown as { id: string; nombre: string })
+				.filter(Boolean)
+				.sort((a, b) => a.nombre.localeCompare(b.nombre));
+		}
+	} else {
+		const { data } = await supabase.from("equipos").select("id, nombre").order("nombre");
+		equipos = data || [];
+	}
 
 	return {
 		success: true,
 		data: {
 			regionales: regionalesRes.data || [],
 			companias: companiasRes.data || [],
-			equipos: equiposRes.data || [],
+			equipos,
 		},
 	};
 }

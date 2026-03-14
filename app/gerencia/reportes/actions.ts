@@ -297,7 +297,8 @@ export async function exportarProduccion(
 }
 
 /**
- * Obtiene la lista de equipos para el filtro de reportes
+ * Obtiene la lista de equipos para el filtro de reportes.
+ * Agentes/comerciales solo ven los equipos a los que pertenecen.
  */
 export async function obtenerEquiposParaFiltro(): Promise<
 	ProduccionServerResponse<{ id: string; nombre: string }[]>
@@ -308,6 +309,26 @@ export async function obtenerEquiposParaFiltro(): Promise<
 	}
 
 	const supabase = await createClient();
+	const scope = await getDataScopeFilter("polizas");
+
+	if (scope.needsScoping) {
+		// Solo mostrar equipos donde el usuario es miembro
+		const { data: miembros, error } = await supabase
+			.from("equipo_miembros")
+			.select("equipo:equipos!equipo_id (id, nombre)")
+			.eq("user_id", scope.userId);
+
+		if (error) {
+			return { success: false, error: "Error al obtener equipos" };
+		}
+
+		const equipos = (miembros || [])
+			.map((m) => m.equipo as unknown as { id: string; nombre: string })
+			.filter(Boolean)
+			.sort((a, b) => a.nombre.localeCompare(b.nombre));
+
+		return { success: true, data: equipos };
+	}
 
 	const { data, error } = await supabase
 		.from("equipos")
