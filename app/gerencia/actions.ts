@@ -314,8 +314,15 @@ export async function obtenerEstadisticasCobranzas(
 				(p) => p.fecha_vencimiento >= fechaDesde && p.fecha_vencimiento <= fechaHasta
 			);
 
-		const pendientes = cuotasPeriodo.filter((p) => p.estado === "pendiente");
-		const vencidas = cuotasPeriodo.filter((p) => p.estado === "vencido");
+		// Determinar estado real: "pendiente" con fecha pasada = "vencido"
+		const hoyStr = new Date().toISOString().split("T")[0];
+
+		const pendientes = cuotasPeriodo.filter(
+			(p) => p.estado === "pendiente" && p.fecha_vencimiento >= hoyStr
+		);
+		const vencidas = cuotasPeriodo.filter(
+			(p) => p.estado === "pendiente" && p.fecha_vencimiento < hoyStr
+		);
 		const pagadas = cuotasPeriodo.filter((p) => p.estado === "pagado");
 
 		const montoPendiente = pendientes.reduce((s, p) => s + Number(p.monto || 0), 0);
@@ -358,9 +365,13 @@ export async function obtenerEstadisticasCobranzas(
 		);
 
 		// Distribución estados de pago (período seleccionado)
+		// Usar estado calculado: pendiente con fecha pasada = vencido
 		const estadoMap = new Map<string, { cantidad: number; monto: number }>();
 		for (const p of cuotasPeriodo) {
-			const estado = (p.estado as string) || "desconocido";
+			let estado = (p.estado as string) || "desconocido";
+			if (estado === "pendiente" && p.fecha_vencimiento < hoyStr) {
+				estado = "vencido";
+			}
 			const existing = estadoMap.get(estado) || { cantidad: 0, monto: 0 };
 			existing.cantidad += 1;
 			existing.monto += Number(p.monto || 0);
@@ -370,14 +381,13 @@ export async function obtenerEstadisticasCobranzas(
 			.map(([estado, data]) => ({ estado, ...data }));
 
 		// Próximas cuotas por vencer (30 días desde hoy)
-		const hoy = new Date().toISOString().split("T")[0];
 		const en30Dias = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
 
 		const proximasCuotas: ProximaCuotaPorVencer[] = rows
 			.filter(
 				(p) =>
 					p.estado === "pendiente" &&
-					p.fecha_vencimiento >= hoy &&
+					p.fecha_vencimiento >= hoyStr &&
 					p.fecha_vencimiento <= en30Dias
 			)
 			.sort((a, b) => a.fecha_vencimiento.localeCompare(b.fecha_vencimiento))
