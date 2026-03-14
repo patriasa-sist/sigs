@@ -10,8 +10,9 @@ import type {
 	FiltrosData,
 	GerenciaResponse,
 	PrimaPorMes,
-	DistribucionPorRamo,
-	PrimaPorCompania,
+	ComisionesPorRamo,
+	ColocacionPolizas,
+	DirectorCarteraStats,
 	ProduccionPorResponsable,
 	CobradoVsPendientePorMes,
 	DistribucionEstadosPago,
@@ -61,54 +62,86 @@ export async function obtenerEstadisticasProduccion(
 	try {
 		const { fechaDesde, fechaHasta, fechaAnioDesde, fechaAnioHasta, esAnual } = calcularRangos(filtros);
 
-		// Query base: pólizas activas/pendientes/renovadas del año
-		let query = supabase
-			.from("polizas")
-			.select(`
-				id,
-				prima_total,
-				comision_empresa,
-				ramo,
-				inicio_vigencia,
-				responsable_id,
-				compania:companias_aseguradoras!compania_aseguradora_id ( nombre ),
-				responsable:profiles!responsable_id ( full_name )
-			`)
-			.in("estado", ["activa", "pendiente", "renovada"])
-			.gte("inicio_vigencia", fechaAnioDesde)
-			.lte("inicio_vigencia", fechaAnioHasta);
-
-		if (scope.needsScoping) {
-			query = query.in("responsable_id", scope.teamMemberIds);
-		}
-		if (filtros.regional_id) {
-			query = query.eq("regional_id", filtros.regional_id);
-		}
-		if (filtros.compania_id) {
-			query = query.eq("compania_aseguradora_id", filtros.compania_id);
-		}
+		// Resolver miembros de equipo (si aplica)
+		let equipoMemberIds: string[] | null = null;
 		if (filtros.equipo_id) {
 			const { data: members } = await supabase
 				.from("equipo_miembros")
 				.select("user_id")
 				.eq("equipo_id", filtros.equipo_id);
 			if (members && members.length > 0) {
-				query = query.in("responsable_id", members.map((m) => m.user_id));
+				equipoMemberIds = members.map((m) => m.user_id);
 			}
 		}
 
-		const { data: polizas, error } = await query;
-		if (error) {
-			console.error("Error fetching polizas for stats:", error);
+		// Query 1: pólizas productivas (activa/pendiente/renovada) para KPIs, charts
+		let prodQuery = supabase
+			.from("polizas")
+			.select(`
+				id,
+				prima_total,
+				comision_empresa,
+				ramo,
+				es_renovacion,
+				inicio_vigencia,
+				responsable_id,
+				client_id,
+				responsable:profiles!responsable_id ( full_name ),
+				client:clients!client_id (
+					director_cartera:directores_cartera!director_cartera_id ( nombre, apellidos )
+				)
+			`)
+			.in("estado", ["activa", "pendiente", "renovada"])
+			.gte("inicio_vigencia", fechaAnioDesde)
+			.lte("inicio_vigencia", fechaAnioHasta);
+
+		// Query 2: pólizas canceladas/anuladas para el gráfico de colocación
+		let anulQuery = supabase
+			.from("polizas")
+			.select("id, inicio_vigencia")
+			.in("estado", ["cancelada", "anulada"])
+			.gte("inicio_vigencia", fechaAnioDesde)
+			.lte("inicio_vigencia", fechaAnioHasta);
+
+		// Aplicar filtros comunes a ambas queries
+		if (scope.needsScoping) {
+			prodQuery = prodQuery.in("responsable_id", scope.teamMemberIds);
+			anulQuery = anulQuery.in("responsable_id", scope.teamMemberIds);
+		}
+		if (filtros.regional_id) {
+			prodQuery = prodQuery.eq("regional_id", filtros.regional_id);
+			anulQuery = anulQuery.eq("regional_id", filtros.regional_id);
+		}
+		if (filtros.compania_id) {
+			prodQuery = prodQuery.eq("compania_aseguradora_id", filtros.compania_id);
+			anulQuery = anulQuery.eq("compania_aseguradora_id", filtros.compania_id);
+		}
+		if (equipoMemberIds) {
+			prodQuery = prodQuery.in("responsable_id", equipoMemberIds);
+			anulQuery = anulQuery.in("responsable_id", equipoMemberIds);
+		}
+
+		const [prodRes, anulRes] = await Promise.all([prodQuery, anulQuery]);
+
+		if (prodRes.error) {
+			console.error("Error fetching polizas for stats:", prodRes.error);
 			return { success: false, error: "Error al obtener estadísticas de producción" };
 		}
 
-		const rows = polizas || [];
+		const rows = prodRes.data || [];
+		const anuladas = anulRes.data || [];
 
 		// Período seleccionado: si es anual usa todas, si es mes filtra
 		const polizasPeriodo = esAnual
 			? rows
 			: rows.filter((p) => {
+				const d = p.inicio_vigencia as string;
+				return d >= fechaDesde && d <= fechaHasta;
+			});
+
+		const anuladasPeriodo = esAnual
+			? anuladas
+			: anuladas.filter((p) => {
 				const d = p.inicio_vigencia as string;
 				return d >= fechaDesde && d <= fechaHasta;
 			});
@@ -131,30 +164,27 @@ export async function obtenerEstadisticasProduccion(
 			([mes, prima]) => ({ mes, label: MESES_LABELS[mes - 1], prima_total: prima })
 		);
 
-		// Distribución por ramo (período seleccionado)
-		const ramoMap = new Map<string, number>();
+		// Comisiones por ramo (período seleccionado)
+		const ramoComisionMap = new Map<string, number>();
 		for (const p of polizasPeriodo) {
 			const ramo = (p.ramo as string) || "Otro";
-			ramoMap.set(ramo, (ramoMap.get(ramo) || 0) + Number(p.prima_total || 0));
+			ramoComisionMap.set(ramo, (ramoComisionMap.get(ramo) || 0) + Number(p.comision_empresa || 0));
 		}
-		const totalPrimaRamo = Array.from(ramoMap.values()).reduce((a, b) => a + b, 0);
-		const distribucionPorRamo: DistribucionPorRamo[] = Array.from(ramoMap.entries())
-			.map(([ramo, prima]) => ({
+		const totalComision = Array.from(ramoComisionMap.values()).reduce((a, b) => a + b, 0);
+		const comisionesPorRamo: ComisionesPorRamo[] = Array.from(ramoComisionMap.entries())
+			.map(([ramo, comision]) => ({
 				ramo,
-				prima_total: prima,
-				porcentaje: totalPrimaRamo > 0 ? (prima / totalPrimaRamo) * 100 : 0,
+				comision,
+				porcentaje: totalComision > 0 ? (comision / totalComision) * 100 : 0,
 			}))
-			.sort((a, b) => b.prima_total - a.prima_total);
+			.sort((a, b) => b.comision - a.comision);
 
-		// Prima por compañía (período seleccionado)
-		const companiaMap = new Map<string, number>();
-		for (const p of polizasPeriodo) {
-			const comp = (p.compania as { nombre?: string })?.nombre || "Sin asignar";
-			companiaMap.set(comp, (companiaMap.get(comp) || 0) + Number(p.prima_total || 0));
-		}
-		const primaPorCompania: PrimaPorCompania[] = Array.from(companiaMap.entries())
-			.map(([compania, prima]) => ({ compania, prima_total: prima }))
-			.sort((a, b) => b.prima_total - a.prima_total);
+		// Colocación: nuevas vs renovadas vs anuladas (período seleccionado)
+		const colocacion: ColocacionPolizas = {
+			nuevas: polizasPeriodo.filter((p) => !p.es_renovacion).length,
+			renovadas: polizasPeriodo.filter((p) => p.es_renovacion).length,
+			anuladas: anuladasPeriodo.length,
+		};
 
 		// Top responsables (período seleccionado)
 		const respMap = new Map<string, { prima: number; count: number }>();
@@ -174,9 +204,32 @@ export async function obtenerEstadisticasProduccion(
 			.sort((a, b) => b.prima_total - a.prima_total)
 			.slice(0, 10);
 
+		// Top directores de cartera (período seleccionado)
+		// Agrupa por director: cantidad de clientes únicos y prima total
+		const directorMap = new Map<string, { clientIds: Set<string>; prima: number }>();
+		for (const p of polizasPeriodo) {
+			const client = p.client as { director_cartera?: { nombre?: string; apellidos?: string } | null } | null;
+			const dc = client?.director_cartera;
+			if (!dc) continue;
+			const nombre = `${dc.nombre || ""} ${dc.apellidos || ""}`.trim();
+			if (!nombre) continue;
+			const existing = directorMap.get(nombre) || { clientIds: new Set<string>(), prima: 0 };
+			if (p.client_id) existing.clientIds.add(p.client_id as string);
+			existing.prima += Number(p.prima_total || 0);
+			directorMap.set(nombre, existing);
+		}
+		const topDirectoresCartera: DirectorCarteraStats[] = Array.from(directorMap.entries())
+			.map(([nombre, data]) => ({
+				nombre,
+				cantidad_clientes: data.clientIds.size,
+				prima_total: data.prima,
+			}))
+			.sort((a, b) => b.cantidad_clientes - a.cantidad_clientes)
+			.slice(0, 10);
+
 		return {
 			success: true,
-			data: { kpis, primaPorMes, distribucionPorRamo, primaPorCompania, topResponsables },
+			data: { kpis, primaPorMes, comisionesPorRamo, colocacion, topResponsables, topDirectoresCartera },
 		};
 	} catch (err) {
 		console.error("Error in obtenerEstadisticasProduccion:", err);

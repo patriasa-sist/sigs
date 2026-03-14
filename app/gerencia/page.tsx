@@ -34,9 +34,10 @@ export default async function GerenciaPage() {
 	const emptyProduccion = {
 		kpis: { prima_total_mes: 0, prima_acumulada_anio: 0, comisiones_mes: 0, cantidad_polizas_mes: 0 },
 		primaPorMes: [],
-		distribucionPorRamo: [],
-		primaPorCompania: [],
+		comisionesPorRamo: [],
+		colocacion: { nuevas: 0, renovadas: 0, anuladas: 0 },
 		topResponsables: [],
+		topDirectoresCartera: [],
 	};
 
 	const emptyCobranzas = {

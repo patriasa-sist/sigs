@@ -28,15 +28,16 @@ export type PrimaPorMes = {
 	prima_total: number;
 };
 
-export type DistribucionPorRamo = {
+export type ComisionesPorRamo = {
 	ramo: string;
-	prima_total: number;
+	comision: number;
 	porcentaje: number;
 };
 
-export type PrimaPorCompania = {
-	compania: string;
-	prima_total: number;
+export type ColocacionPolizas = {
+	nuevas: number;
+	renovadas: number;
+	anuladas: number;
 };
 
 export type ProduccionPorResponsable = {
@@ -45,12 +46,19 @@ export type ProduccionPorResponsable = {
 	cantidad_polizas: number;
 };
 
+export type DirectorCarteraStats = {
+	nombre: string;
+	cantidad_clientes: number;
+	prima_total: number;
+};
+
 export type EstadisticasProduccion = {
 	kpis: KPIProduccion;
 	primaPorMes: PrimaPorMes[];
-	distribucionPorRamo: DistribucionPorRamo[];
-	primaPorCompania: PrimaPorCompania[];
+	comisionesPorRamo: ComisionesPorRamo[];
+	colocacion: ColocacionPolizas;
 	topResponsables: ProduccionPorResponsable[];
+	topDirectoresCartera: DirectorCarteraStats[];
 };
 
 // ============================================
