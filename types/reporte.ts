@@ -9,6 +9,9 @@
 export type ExportProduccionFilters = {
 	mes: number; // 1-12
 	anio: number;
+	/** Rango de fechas personalizado (override mes/anio si ambos presentes) */
+	fecha_desde?: string; // YYYY-MM-DD
+	fecha_hasta?: string; // YYYY-MM-DD
 	estado_poliza?: "activa" | "all";
 	regional_id?: string;
 	compania_id?: string;
@@ -81,6 +84,9 @@ export type ExportProduccionNuevoRow = {
 
 	valor_asegurado: number | null;
 
+	cantidad_cuotas: number;
+	cuota_inicial: number | null;
+
 	inicio_vigencia: string;
 	fin_vigencia: string;
 	fecha_emision_compania: string;
@@ -94,3 +100,12 @@ export type ExportProduccionNuevoRow = {
 export type ProduccionServerResponse<T> =
 	| { success: true; data: T }
 	| { success: false; error: string };
+
+export type ExportProduccionNuevoResponse = {
+	data: ExportProduccionNuevoRow[];
+	meta: {
+		usuario_email: string;
+		fecha_desde: string;
+		fecha_hasta: string;
+	};
+};

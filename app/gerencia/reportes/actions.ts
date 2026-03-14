@@ -6,6 +6,7 @@ import type {
 	ExportProduccionFilters,
 	ExportProduccionRow,
 	ExportProduccionNuevoRow,
+	ExportProduccionNuevoResponse,
 	TipoPolizaReporte,
 	ProduccionServerResponse,
 } from "@/types/reporte";
@@ -14,7 +15,7 @@ import type {
  * Verifica que el usuario tenga permiso gerencia.exportar
  */
 async function verificarPermisoExportar(): Promise<
-	| { authorized: true; userId: string }
+	| { authorized: true; userId: string; email: string }
 	| { authorized: false; error: string }
 > {
 	const { allowed, profile } = await checkPermission("gerencia.exportar");
@@ -23,7 +24,7 @@ async function verificarPermisoExportar(): Promise<
 		return { authorized: false, error: "No tiene permisos para exportar reportes" };
 	}
 
-	return { authorized: true, userId: profile.id };
+	return { authorized: true, userId: profile.id, email: profile.email || "N/A" };
 }
 
 // Tipos auxiliares para los datos de cliente
@@ -502,7 +503,7 @@ function extraerDatosCliente(clientData: ClientQueryResult | null): {
  */
 export async function exportarProduccionNuevo(
 	filtros: ExportProduccionFilters
-): Promise<ProduccionServerResponse<ExportProduccionNuevoRow[]>> {
+): Promise<ProduccionServerResponse<ExportProduccionNuevoResponse>> {
 	const permiso = await verificarPermisoExportar();
 	if (!permiso.authorized) {
 		return { success: false, error: permiso.error };
@@ -512,10 +513,18 @@ export async function exportarProduccionNuevo(
 	const scope = await getDataScopeFilter("polizas");
 
 	try {
-		const primerDiaMes = new Date(filtros.anio, filtros.mes - 1, 1);
-		const ultimoDiaMes = new Date(filtros.anio, filtros.mes, 0);
-		const fechaDesde = primerDiaMes.toISOString().split("T")[0];
-		const fechaHasta = ultimoDiaMes.toISOString().split("T")[0];
+		// Si hay rango de fechas personalizado, usarlo; sino calcular desde mes/año
+		let fechaDesde: string;
+		let fechaHasta: string;
+		if (filtros.fecha_desde && filtros.fecha_hasta) {
+			fechaDesde = filtros.fecha_desde;
+			fechaHasta = filtros.fecha_hasta;
+		} else {
+			const primerDiaMes = new Date(filtros.anio, filtros.mes - 1, 1);
+			const ultimoDiaMes = new Date(filtros.anio, filtros.mes, 0);
+			fechaDesde = primerDiaMes.toISOString().split("T")[0];
+			fechaHasta = ultimoDiaMes.toISOString().split("T")[0];
+		}
 
 		// Resolver miembros de equipo si se filtra por equipo
 		let memberIds: string[] | null = null;
@@ -721,6 +730,33 @@ export async function exportarProduccionNuevo(
 			ramosSet
 		);
 
+		// Obtener cantidad de cuotas y cuota inicial por póliza
+		const cuotasMap = new Map<string, { cantidad: number; cuota_inicial: number | null }>();
+		if (polizaIds.length > 0) {
+			const { data: pagosData } = await supabase
+				.from("polizas_pagos")
+				.select("poliza_id, numero_cuota, monto")
+				.in("poliza_id", polizaIds)
+				.order("numero_cuota", { ascending: true });
+
+			if (pagosData) {
+				for (const pago of pagosData) {
+					const existing = cuotasMap.get(pago.poliza_id);
+					if (!existing) {
+						cuotasMap.set(pago.poliza_id, {
+							cantidad: 1,
+							cuota_inicial: pago.numero_cuota === 1 ? Number(pago.monto) : null,
+						});
+					} else {
+						existing.cantidad++;
+						if (pago.numero_cuota === 1) {
+							existing.cuota_inicial = Number(pago.monto);
+						}
+					}
+				}
+			}
+		}
+
 		// Helper para extraer campos financieros desde la DB (sin recalcular)
 		function extraerFinancieros(
 			polizaData: {
@@ -802,6 +838,7 @@ export async function exportarProduccionNuevo(
 
 				const valorAseg = valorAseguradoMap.get(p.id) ?? null;
 				const ramoTieneTabla = p.ramo in RAMO_VALOR_ASEGURADO_MAP;
+				const cuotasInfo = cuotasMap.get(p.id);
 
 				return {
 					numero_poliza: p.numero_poliza,
@@ -825,6 +862,8 @@ export async function exportarProduccionNuevo(
 					valor_asegurado: ramoTieneTabla
 						? valorAseg
 						: Number(p.prima_total),
+					cantidad_cuotas: cuotasInfo?.cantidad ?? 1,
+					cuota_inicial: cuotasInfo?.cuota_inicial ?? null,
 					inicio_vigencia: p.inicio_vigencia || "",
 					fin_vigencia: p.fin_vigencia || "",
 					fecha_emision_compania: p.fecha_emision_compania || "",
@@ -852,6 +891,7 @@ export async function exportarProduccionNuevo(
 
 			const valorAseg = valorAseguradoMap.get(pol.id) ?? null;
 			const ramoTieneTabla = pol.ramo in RAMO_VALOR_ASEGURADO_MAP;
+			const cuotasInfo = cuotasMap.get(pol.id);
 
 			rows.push({
 				numero_poliza: pol.numero_poliza,
@@ -873,6 +913,8 @@ export async function exportarProduccionNuevo(
 				valor_asegurado: ramoTieneTabla
 					? valorAseg
 					: Number(pol.prima_total),
+				cantidad_cuotas: cuotasInfo?.cantidad ?? 1,
+				cuota_inicial: cuotasInfo?.cuota_inicial ?? null,
 				inicio_vigencia: pol.inicio_vigencia || "",
 				fin_vigencia: pol.fin_vigencia || "",
 				fecha_emision_compania: pol.fecha_emision_compania || "",
@@ -883,7 +925,17 @@ export async function exportarProduccionNuevo(
 		// Ordenar por número de póliza
 		rows.sort((a, b) => a.numero_poliza.localeCompare(b.numero_poliza));
 
-		return { success: true, data: rows };
+		return {
+			success: true,
+			data: {
+				data: rows,
+				meta: {
+					usuario_email: permiso.email,
+					fecha_desde: fechaDesde,
+					fecha_hasta: fechaHasta,
+				},
+			},
+		};
 	} catch (error) {
 		console.error("Error exporting new production report:", error);
 		return {

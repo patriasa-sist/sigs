@@ -39,7 +39,7 @@ const navigationItems = [
 		items: [
 			{
 				title: "Producción Mensual",
-				href: "/admin/reportes",
+				href: "/gerencia/reportes",
 				icon: FileSpreadsheet,
 			},
 		],
