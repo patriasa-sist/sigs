@@ -33,9 +33,10 @@ export type Permission =
 	| "admin.usuarios"
 	| "admin.roles"
 	| "admin.invitaciones"
-	| "admin.reportes"
 	| "admin.permisos"
-	| "admin.equipos";
+	| "admin.equipos"
+	| "gerencia.ver"
+	| "gerencia.exportar";
 
 export interface UserProfile {
 	id: string;

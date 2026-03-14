@@ -13,7 +13,6 @@ import {
 	UserCheck,
 	Building2,
 	Shield,
-	Target,
 	BookOpen,
 	Globe,
 	CreditCard,
@@ -63,11 +62,10 @@ const Dashboard = () => {
 			description: "Herramientas de análisis y gestión gerencial",
 			icon: BarChart3,
 			color: "bg-purple-50 hover:bg-purple-100 border-purple-200",
-			link: "/vencimientos",
+			link: "/gerencia",
 			sections: [
-				{ name: "Estadísticas Mensuales", icon: BarChart3 },
-				{ name: "Objetivos y Metas", icon: Target },
-				{ name: "Historial de Operaciones", icon: ClipboardList },
+				{ name: "Dashboard Estadístico", icon: BarChart3 },
+				{ name: "Reportes", icon: FileText },
 			],
 		},
 		{
@@ -94,7 +92,6 @@ const Dashboard = () => {
 				{ name: "Ramos", icon: BookOpen },
 				{ name: "Aseguradoras", icon: Building2 },
 				{ name: "Cartera", icon: CreditCard },
-				{ name: "Reportes", icon: FileText },
 			],
 		},
 		{

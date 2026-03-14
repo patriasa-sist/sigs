@@ -1,10 +1,10 @@
 import { requirePermission } from "@/utils/auth/helpers";
 import { FileSpreadsheet } from "lucide-react";
-import ExportarProduccion from "@/components/admin/ExportarProduccion";
-import ExportarContable from "@/components/admin/ExportarContable";
+import ExportarProduccion from "@/components/gerencia/ExportarProduccion";
+import ExportarContable from "@/components/gerencia/ExportarContable";
 
 export default async function ReportesPage() {
-	await requirePermission("admin.reportes");
+	await requirePermission("gerencia.exportar");
 
 	return (
 		<div className="flex-1 w-full flex flex-col gap-6">

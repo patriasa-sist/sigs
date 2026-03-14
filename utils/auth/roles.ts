@@ -45,9 +45,10 @@ export const ALL_PERMISSIONS: readonly Permission[] = [
 	"admin.usuarios",
 	"admin.roles",
 	"admin.invitaciones",
-	"admin.reportes",
 	"admin.permisos",
 	"admin.equipos",
+	"gerencia.ver",
+	"gerencia.exportar",
 ] as const;
 
 /**
@@ -61,6 +62,7 @@ export const PERMISSION_MODULES: Record<string, string> = {
 	vencimientos: "Vencimientos",
 	documentos: "Documentos",
 	admin: "Administración",
+	gerencia: "Gerencia",
 };
 
 /**
@@ -80,7 +82,6 @@ export const PERMISSION_ACTION_LABELS: Record<string, string> = {
 	usuarios: "Usuarios",
 	roles: "Roles",
 	invitaciones: "Invitaciones",
-	reportes: "Reportes",
 	permisos: "Permisos",
 	equipos: "Equipos",
 };
@@ -172,6 +173,7 @@ export const ROLE_CONFIG = {
 			"cobranzas.ver",
 			"siniestros.ver",
 			"vencimientos.ver",
+			"gerencia.ver",
 		] as Permission[]
 	},
 	agente: {
@@ -198,6 +200,7 @@ export const ROLE_CONFIG = {
 			"vencimientos.generar",
 			"cobranzas.ver",
 			"documentos.descartar",
+			"gerencia.ver",
 		] as Permission[]
 	},
 	comercial: {
@@ -227,6 +230,7 @@ export const ROLE_CONFIG = {
 			"siniestros.crear",
 			"siniestros.editar",
 			"documentos.descartar",
+			"gerencia.ver",
 		] as Permission[]
 	},
 	cobranza: {

@@ -1,7 +1,7 @@
 "use server";
 
 import { createClient } from "@/utils/supabase/server";
-import { checkPermission } from "@/utils/auth/helpers";
+import { checkPermission, getDataScopeFilter } from "@/utils/auth/helpers";
 import type {
 	ExportProduccionFilters,
 	ExportProduccionRow,
@@ -11,16 +11,16 @@ import type {
 } from "@/types/reporte";
 
 /**
- * Verifica que el usuario tenga rol admin
+ * Verifica que el usuario tenga permiso gerencia.exportar
  */
-async function verificarPermisoAdmin(): Promise<
+async function verificarPermisoExportar(): Promise<
 	| { authorized: true; userId: string }
 	| { authorized: false; error: string }
 > {
-	const { allowed, profile } = await checkPermission("admin.reportes");
+	const { allowed, profile } = await checkPermission("gerencia.exportar");
 
 	if (!allowed || !profile) {
-		return { authorized: false, error: "No tiene permisos de administrador" };
+		return { authorized: false, error: "No tiene permisos para exportar reportes" };
 	}
 
 	return { authorized: true, userId: profile.id };
@@ -50,16 +50,18 @@ type ClientQueryResult = {
 /**
  * Exporta el reporte consolidado de producción mensual
  * Incluye campos financieros calculados: prima neta, comisión, etc.
+ * Aplica data scoping: comercial/agente solo ven datos de su equipo.
  */
 export async function exportarProduccion(
 	filtros: ExportProduccionFilters
 ): Promise<ProduccionServerResponse<ExportProduccionRow[]>> {
-	const permiso = await verificarPermisoAdmin();
+	const permiso = await verificarPermisoExportar();
 	if (!permiso.authorized) {
 		return { success: false, error: permiso.error };
 	}
 
 	const supabase = await createClient();
+	const scope = await getDataScopeFilter("polizas");
 
 	try {
 		// Calcular rango de fechas para el mes seleccionado
@@ -83,6 +85,7 @@ export async function exportarProduccion(
 				usar_factores_contado,
 				inicio_vigencia,
 				fin_vigencia,
+				responsable_id,
 				producto_id,
 				producto:productos_aseguradoras!producto_id (
 					factor_contado,
@@ -119,6 +122,11 @@ export async function exportarProduccion(
 		// Filtrar por inicio de vigencia dentro del mes seleccionado
 		query = query.gte("poliza.inicio_vigencia", fechaDesde);
 		query = query.lte("poliza.inicio_vigencia", fechaHasta);
+
+		// Data scoping: comercial/agente solo ven datos de su equipo
+		if (scope.needsScoping) {
+			query = query.in("poliza.responsable_id", scope.teamMemberIds);
+		}
 
 		// Filtrar por estado de póliza si se especifica
 		if (filtros.estado_poliza && filtros.estado_poliza !== "all") {
@@ -179,6 +187,7 @@ export async function exportarProduccion(
 						usar_factores_contado?: boolean;
 						inicio_vigencia: string;
 						fin_vigencia: string;
+						responsable_id: string;
 						producto_id: string | null;
 						producto?: {
 							factor_contado: number;
@@ -293,7 +302,7 @@ export async function exportarProduccion(
 export async function obtenerEquiposParaFiltro(): Promise<
 	ProduccionServerResponse<{ id: string; nombre: string }[]>
 > {
-	const permiso = await verificarPermisoAdmin();
+	const permiso = await verificarPermisoExportar();
 	if (!permiso.authorized) {
 		return { success: false, error: permiso.error };
 	}
@@ -318,7 +327,7 @@ export async function obtenerEquiposParaFiltro(): Promise<
 export async function obtenerRegionales(): Promise<
 	ProduccionServerResponse<{ id: string; nombre: string }[]>
 > {
-	const permiso = await verificarPermisoAdmin();
+	const permiso = await verificarPermisoExportar();
 	if (!permiso.authorized) {
 		return { success: false, error: permiso.error };
 	}
@@ -344,7 +353,7 @@ export async function obtenerRegionales(): Promise<
 export async function obtenerCompanias(): Promise<
 	ProduccionServerResponse<{ id: string; nombre: string }[]>
 > {
-	const permiso = await verificarPermisoAdmin();
+	const permiso = await verificarPermisoExportar();
 	if (!permiso.authorized) {
 		return { success: false, error: permiso.error };
 	}
@@ -468,16 +477,18 @@ function extraerDatosCliente(clientData: ClientQueryResult | null): {
 
 /**
  * Exporta el reporte de producción (una fila por póliza + anexos validados)
+ * Aplica data scoping: comercial/agente solo ven datos de su equipo.
  */
 export async function exportarProduccionNuevo(
 	filtros: ExportProduccionFilters
 ): Promise<ProduccionServerResponse<ExportProduccionNuevoRow[]>> {
-	const permiso = await verificarPermisoAdmin();
+	const permiso = await verificarPermisoExportar();
 	if (!permiso.authorized) {
 		return { success: false, error: permiso.error };
 	}
 
 	const supabase = await createClient();
+	const scope = await getDataScopeFilter("polizas");
 
 	try {
 		const primerDiaMes = new Date(filtros.anio, filtros.mes - 1, 1);
@@ -515,6 +526,7 @@ export async function exportarProduccionNuevo(
 			fecha_emision_compania,
 			created_at,
 			es_renovacion,
+			responsable_id,
 			producto_id,
 			producto:productos_aseguradoras!producto_id (
 				factor_contado,
@@ -555,6 +567,11 @@ export async function exportarProduccionNuevo(
 		polizaQuery = polizaQuery.gte("inicio_vigencia", fechaDesde);
 		polizaQuery = polizaQuery.lte("inicio_vigencia", fechaHasta);
 
+		// Data scoping: comercial/agente solo ven datos de su equipo
+		if (scope.needsScoping) {
+			polizaQuery = polizaQuery.in("responsable_id", scope.teamMemberIds);
+		}
+
 		if (filtros.estado_poliza && filtros.estado_poliza !== "all") {
 			polizaQuery = polizaQuery.eq("estado", filtros.estado_poliza);
 		}
@@ -593,6 +610,7 @@ export async function exportarProduccionNuevo(
 				inicio_vigencia,
 				fin_vigencia,
 				fecha_emision_compania,
+				responsable_id,
 				producto_id,
 				producto:productos_aseguradoras!producto_id (
 					factor_contado,
@@ -634,6 +652,11 @@ export async function exportarProduccionNuevo(
 		anexoQuery = anexoQuery.eq("estado", "activa");
 		anexoQuery = anexoQuery.gte("fecha_anexo", fechaDesde);
 		anexoQuery = anexoQuery.lte("fecha_anexo", fechaHasta);
+
+		// Data scoping for anexos
+		if (scope.needsScoping) {
+			anexoQuery = anexoQuery.in("poliza.responsable_id", scope.teamMemberIds);
+		}
 
 		if (filtros.regional_id) {
 			anexoQuery = anexoQuery.eq("poliza.regional_id", filtros.regional_id);

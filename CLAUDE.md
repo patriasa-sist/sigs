@@ -437,10 +437,38 @@ Documents implement a **soft delete** system where:
 - Consider adding policy edit functionality
 - Consider adding policy duplication/renewal functionality
 
-## Gerencia Module (Management Validation System)
+## Gerencia Module (Management Dashboard, Reports & Validation)
 
 ### Module Overview
-The gerencia module (`/app/gerencia/`) provides managerial oversight and validation of insurance policies before they become active in the system. This implements a two-stage approval workflow where commercial users create policies in "pendiente" (pending) state, and managers validate them before activation.
+The gerencia module (`/app/gerencia/`) provides managerial dashboard with statistics, report exports, and policy validation. Routes:
+
+- `/gerencia/` — Dashboard estadístico (requires `gerencia.ver`)
+- `/gerencia/reportes/` — Report exports (requires `gerencia.exportar`)
+- `/gerencia/validacion/` — Policy/annex validation (requires `polizas.validar`)
+
+### Dashboard (Charts & Statistics)
+- **Chart Library**: Recharts
+- **Three sections** via tabs: Producción, Cobranzas, Siniestros
+- **Shared filters**: mes, año, regional, compañía, equipo
+- **Data scoping**: comercial/agente see only own+team data; admin/usuario see all
+- **Server actions**: `app/gerencia/actions.ts` with 4 functions (produccion, cobranzas, siniestros, filtros)
+- **Types**: `types/gerencia.ts`
+- **Components**: `components/gerencia/GerenciaDashboard.tsx` (orchestrator), `KPICard.tsx`, `DashboardFilters.tsx`, `charts/ProduccionCharts.tsx`, `charts/CobranzasCharts.tsx`, `charts/SiniestrosCharts.tsx`
+
+### Reports (migrated from /admin/reportes)
+- **Server actions**: `app/gerencia/reportes/actions.ts` (exportarProduccion, exportarProduccionNuevo, helpers)
+- **Components**: `components/gerencia/ExportarProduccion.tsx`, `components/gerencia/ExportarContable.tsx`
+- **Permission**: `gerencia.exportar` (replaces old `admin.reportes`)
+- **Data scoping**: applied to export queries for non-admin users
+
+### Permissions
+- `gerencia.ver` — View dashboard and statistics
+- `gerencia.exportar` — Export reports
+- Default assignments: admin (both via bypass), usuario (both), comercial (ver only), agente (ver only)
+- SQL migration: `docs/migration_gerencia_permissions.sql` (user executes manually)
+
+### Validation (unchanged)
+The gerencia module also provides managerial oversight and validation of insurance policies before they become active in the system. This implements a two-stage approval workflow where commercial users create policies in "pendiente" (pending) state, and managers validate them before activation.
 
 ### Key Features
 - **Pending Policy Review**: View all policies awaiting validation

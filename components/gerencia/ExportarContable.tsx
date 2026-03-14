@@ -17,7 +17,7 @@ import {
 	obtenerRegionales,
 	obtenerCompanias,
 	obtenerEquiposParaFiltro,
-} from "@/app/admin/reportes/actions";
+} from "@/app/gerencia/reportes/actions";
 import * as ExcelJS from "exceljs";
 import type { ExportProduccionFilters } from "@/types/reporte";
 

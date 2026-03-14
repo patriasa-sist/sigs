@@ -8,7 +8,6 @@ import {
 	UsersRound,
 	ArrowRightLeft,
 	BarChart3,
-	FileText,
 	Building2,
 	Layers,
 	Tag,
@@ -66,17 +65,6 @@ const adminSections = [
 				icon: BarChart3,
 				label: "Dashboard Equipos",
 				description: "Métricas de producción por equipo",
-			},
-		],
-	},
-	{
-		title: "Reportes",
-		items: [
-			{
-				href: "/admin/reportes",
-				icon: FileText,
-				label: "Reportes",
-				description: "Generar reportes consolidados de producción",
 			},
 		],
 	},

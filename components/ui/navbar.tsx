@@ -6,7 +6,7 @@ import { User } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Home, LogOut, User as UserIcon, FileText, CheckSquare, DollarSign, FileWarning, Shield, Users } from "lucide-react";
+import { Home, LogOut, User as UserIcon, FileText, CheckSquare, DollarSign, FileWarning, Shield, Users, BarChart3, ChevronDown, FileSpreadsheet } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { signOut } from "@/app/auth/login/actions";
@@ -157,6 +157,36 @@ export function Navbar() {
 								<span>Pólizas</span>
 							</Button>
 						</Link>
+					)}
+
+					{(can("gerencia.ver") || can("gerencia.exportar")) && (
+						<DropdownMenu>
+							<DropdownMenuTrigger asChild>
+								<Button variant="ghost" size="sm" className="flex items-center space-x-2">
+									<BarChart3 className="h-4 w-4" />
+									<span>Gerencia</span>
+									<ChevronDown className="h-3 w-3" />
+								</Button>
+							</DropdownMenuTrigger>
+							<DropdownMenuContent align="start">
+								{can("gerencia.ver") && (
+									<Link href="/gerencia">
+										<DropdownMenuItem className="cursor-pointer">
+											<BarChart3 className="mr-2 h-4 w-4" />
+											<span>Dashboard</span>
+										</DropdownMenuItem>
+									</Link>
+								)}
+								{can("gerencia.exportar") && (
+									<Link href="/gerencia/reportes">
+										<DropdownMenuItem className="cursor-pointer">
+											<FileSpreadsheet className="mr-2 h-4 w-4" />
+											<span>Reportes</span>
+										</DropdownMenuItem>
+									</Link>
+								)}
+							</DropdownMenuContent>
+						</DropdownMenu>
 					)}
 
 					{can("polizas.validar") && (
