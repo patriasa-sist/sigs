@@ -146,7 +146,7 @@ async function insertarPagos(
 				poliza_id: polizaId,
 				numero_cuota: numeroCuotaActual,
 				monto: formState.modalidad_pago.cuota_inicial,
-				fecha_vencimiento: formState.datos_basicos!.inicio_vigencia,
+				fecha_vencimiento: formState.modalidad_pago.fecha_inicio_cuotas,
 				estado: "pendiente",
 				observaciones: "Cuota inicial",
 			});
