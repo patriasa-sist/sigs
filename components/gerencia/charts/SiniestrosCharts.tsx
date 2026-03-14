@@ -19,7 +19,7 @@ function formatCurrency(value: number): string {
 	return value.toLocaleString("es-BO", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 }
 
-export default function SiniestrosCharts({ data }: { data: EstadisticasSiniestros }) {
+export default function SiniestrosCharts({ data, periodoLabel }: { data: EstadisticasSiniestros; periodoLabel: string }) {
 	const { kpis, siniestrosPorMes, siniestrosPorRamo, siniestrosAbiertos } = data;
 
 	const isEmpty =
@@ -32,10 +32,10 @@ export default function SiniestrosCharts({ data }: { data: EstadisticasSiniestro
 			{/* KPIs */}
 			<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
 				<KPICard title="Siniestros Abiertos" value={kpis.siniestros_abiertos} icon={AlertCircle} />
-				<KPICard title="Cerrados del Mes" value={kpis.cerrados_mes} icon={CheckCircle} />
+				<KPICard title={`Cerrados — ${periodoLabel}`} value={kpis.cerrados_mes} icon={CheckCircle} />
 				<KPICard title="Monto Reservado" value={kpis.monto_reservado} icon={DollarSign} format="currency" />
 				<KPICard
-					title="Promedio Días Resolución"
+					title={`Promedio Días Resolución — ${periodoLabel}`}
 					value={kpis.promedio_dias_resolucion !== null ? `${kpis.promedio_dias_resolucion} días` : "—"}
 					icon={Clock}
 				/>
@@ -80,7 +80,7 @@ export default function SiniestrosCharts({ data }: { data: EstadisticasSiniestro
 						{/* Por Ramo */}
 						<Card>
 							<CardHeader>
-								<CardTitle className="text-base">Distribución por Ramo</CardTitle>
+								<CardTitle className="text-base">Distribución por Ramo — {periodoLabel}</CardTitle>
 							</CardHeader>
 							<CardContent>
 								{siniestrosPorRamo.length === 0 ? (

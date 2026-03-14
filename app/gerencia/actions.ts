@@ -26,6 +26,25 @@ const MESES_LABELS = [
 	"Jul", "Ago", "Sep", "Oct", "Nov", "Dic",
 ];
 
+/**
+ * Calcula rango de fechas según filtros.
+ * Si mes está definido, retorna rango del mes; sino rango del año completo.
+ */
+function calcularRangos(filtros: GerenciaFiltros) {
+	const fechaAnioDesde = `${filtros.anio}-01-01`;
+	const fechaAnioHasta = `${filtros.anio}-12-31`;
+
+	if (filtros.mes) {
+		const mes = filtros.mes;
+		const fechaDesde = `${filtros.anio}-${String(mes).padStart(2, "0")}-01`;
+		const ultimoDia = new Date(filtros.anio, mes, 0).getDate();
+		const fechaHasta = `${filtros.anio}-${String(mes).padStart(2, "0")}-${ultimoDia}`;
+		return { fechaDesde, fechaHasta, fechaAnioDesde, fechaAnioHasta, esAnual: false };
+	}
+
+	return { fechaDesde: fechaAnioDesde, fechaHasta: fechaAnioHasta, fechaAnioDesde, fechaAnioHasta, esAnual: true };
+}
+
 // ============================================
 // PRODUCCIÓN
 // ============================================
@@ -40,16 +59,9 @@ export async function obtenerEstadisticasProduccion(
 	const scope = await getDataScopeFilter("polizas");
 
 	try {
-		// Rango del mes seleccionado
-		const fechaDesde = `${filtros.anio}-${String(filtros.mes).padStart(2, "0")}-01`;
-		const ultimoDia = new Date(filtros.anio, filtros.mes, 0).getDate();
-		const fechaHasta = `${filtros.anio}-${String(filtros.mes).padStart(2, "0")}-${ultimoDia}`;
+		const { fechaDesde, fechaHasta, fechaAnioDesde, fechaAnioHasta, esAnual } = calcularRangos(filtros);
 
-		// Rango del año completo
-		const fechaAnioDesde = `${filtros.anio}-01-01`;
-		const fechaAnioHasta = `${filtros.anio}-12-31`;
-
-		// Query base: pólizas activas/pendientes/renovadas
+		// Query base: pólizas activas/pendientes/renovadas del año
 		let query = supabase
 			.from("polizas")
 			.select(`
@@ -93,17 +105,19 @@ export async function obtenerEstadisticasProduccion(
 
 		const rows = polizas || [];
 
-		// KPIs
-		const polizasMes = rows.filter((p) => {
-			const d = p.inicio_vigencia as string;
-			return d >= fechaDesde && d <= fechaHasta;
-		});
+		// Período seleccionado: si es anual usa todas, si es mes filtra
+		const polizasPeriodo = esAnual
+			? rows
+			: rows.filter((p) => {
+				const d = p.inicio_vigencia as string;
+				return d >= fechaDesde && d <= fechaHasta;
+			});
 
 		const kpis = {
-			prima_total_mes: polizasMes.reduce((sum, p) => sum + Number(p.prima_total || 0), 0),
+			prima_total_mes: polizasPeriodo.reduce((sum, p) => sum + Number(p.prima_total || 0), 0),
 			prima_acumulada_anio: rows.reduce((sum, p) => sum + Number(p.prima_total || 0), 0),
-			comisiones_mes: polizasMes.reduce((sum, p) => sum + Number(p.comision_empresa || 0), 0),
-			cantidad_polizas_mes: polizasMes.length,
+			comisiones_mes: polizasPeriodo.reduce((sum, p) => sum + Number(p.comision_empresa || 0), 0),
+			cantidad_polizas_mes: polizasPeriodo.length,
 		};
 
 		// Prima por mes (12 meses del año)
@@ -117,9 +131,9 @@ export async function obtenerEstadisticasProduccion(
 			([mes, prima]) => ({ mes, label: MESES_LABELS[mes - 1], prima_total: prima })
 		);
 
-		// Distribución por ramo
+		// Distribución por ramo (período seleccionado)
 		const ramoMap = new Map<string, number>();
-		for (const p of polizasMes) {
+		for (const p of polizasPeriodo) {
 			const ramo = (p.ramo as string) || "Otro";
 			ramoMap.set(ramo, (ramoMap.get(ramo) || 0) + Number(p.prima_total || 0));
 		}
@@ -132,9 +146,9 @@ export async function obtenerEstadisticasProduccion(
 			}))
 			.sort((a, b) => b.prima_total - a.prima_total);
 
-		// Prima por compañía
+		// Prima por compañía (período seleccionado)
 		const companiaMap = new Map<string, number>();
-		for (const p of polizasMes) {
+		for (const p of polizasPeriodo) {
 			const comp = (p.compania as { nombre?: string })?.nombre || "Sin asignar";
 			companiaMap.set(comp, (companiaMap.get(comp) || 0) + Number(p.prima_total || 0));
 		}
@@ -142,9 +156,9 @@ export async function obtenerEstadisticasProduccion(
 			.map(([compania, prima]) => ({ compania, prima_total: prima }))
 			.sort((a, b) => b.prima_total - a.prima_total);
 
-		// Top responsables
+		// Top responsables (período seleccionado)
 		const respMap = new Map<string, { prima: number; count: number }>();
-		for (const p of polizasMes) {
+		for (const p of polizasPeriodo) {
 			const resp = (p.responsable as { full_name?: string })?.full_name || "Sin asignar";
 			const existing = respMap.get(resp) || { prima: 0, count: 0 };
 			existing.prima += Number(p.prima_total || 0);
@@ -184,11 +198,7 @@ export async function obtenerEstadisticasCobranzas(
 	const scope = await getDataScopeFilter("polizas");
 
 	try {
-		const fechaAnioDesde = `${filtros.anio}-01-01`;
-		const fechaAnioHasta = `${filtros.anio}-12-31`;
-		const fechaMesDesde = `${filtros.anio}-${String(filtros.mes).padStart(2, "0")}-01`;
-		const ultimoDia = new Date(filtros.anio, filtros.mes, 0).getDate();
-		const fechaMesHasta = `${filtros.anio}-${String(filtros.mes).padStart(2, "0")}-${ultimoDia}`;
+		const { fechaDesde, fechaHasta, fechaAnioDesde, fechaAnioHasta, esAnual } = calcularRangos(filtros);
 
 		// Query pagos con poliza join para scoping
 		let query = supabase
@@ -244,14 +254,16 @@ export async function obtenerEstadisticasCobranzas(
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		const rows = (pagos || []).filter((p: any) => p.poliza !== null) as Array<any>;
 
-		// KPIs (sobre cuotas del mes seleccionado)
-		const cuotasMes = rows.filter(
-			(p) => p.fecha_vencimiento >= fechaMesDesde && p.fecha_vencimiento <= fechaMesHasta
-		);
+		// Período seleccionado: si anual usa todas, sino filtra por mes
+		const cuotasPeriodo = esAnual
+			? rows
+			: rows.filter(
+				(p) => p.fecha_vencimiento >= fechaDesde && p.fecha_vencimiento <= fechaHasta
+			);
 
-		const pendientes = cuotasMes.filter((p) => p.estado === "pendiente");
-		const vencidas = cuotasMes.filter((p) => p.estado === "vencido");
-		const pagadas = cuotasMes.filter((p) => p.estado === "pagado");
+		const pendientes = cuotasPeriodo.filter((p) => p.estado === "pendiente");
+		const vencidas = cuotasPeriodo.filter((p) => p.estado === "vencido");
+		const pagadas = cuotasPeriodo.filter((p) => p.estado === "pagado");
 
 		const montoPendiente = pendientes.reduce((s, p) => s + Number(p.monto || 0), 0);
 		const montoVencido = vencidas.reduce((s, p) => s + Number(p.monto || 0), 0);
@@ -292,9 +304,9 @@ export async function obtenerEstadisticasCobranzas(
 			})
 		);
 
-		// Distribución estados de pago (mes seleccionado)
+		// Distribución estados de pago (período seleccionado)
 		const estadoMap = new Map<string, { cantidad: number; monto: number }>();
-		for (const p of cuotasMes) {
+		for (const p of cuotasPeriodo) {
 			const estado = (p.estado as string) || "desconocido";
 			const existing = estadoMap.get(estado) || { cantidad: 0, monto: 0 };
 			existing.cantidad += 1;
@@ -361,11 +373,7 @@ export async function obtenerEstadisticasSiniestros(
 	const scope = await getDataScopeFilter("siniestros");
 
 	try {
-		const fechaAnioDesde = `${filtros.anio}-01-01`;
-		const fechaAnioHasta = `${filtros.anio}-12-31`;
-		const fechaMesDesde = `${filtros.anio}-${String(filtros.mes).padStart(2, "0")}-01`;
-		const ultimoDia = new Date(filtros.anio, filtros.mes, 0).getDate();
-		const fechaMesHasta = `${filtros.anio}-${String(filtros.mes).padStart(2, "0")}-${ultimoDia}`;
+		const { fechaDesde, fechaHasta, fechaAnioDesde, fechaAnioHasta, esAnual } = calcularRangos(filtros);
 
 		// Query siniestros del año con poliza join
 		let query = supabase
@@ -409,26 +417,28 @@ export async function obtenerEstadisticasSiniestros(
 
 		// KPIs
 		const abiertos = rows.filter((s) => s.estado === "abierto");
-		const cerradosMes = rows.filter(
-			(s) =>
-				s.fecha_cierre &&
-				s.fecha_cierre >= fechaMesDesde &&
-				s.fecha_cierre <= fechaMesHasta
-		);
+		const cerradosPeriodo = esAnual
+			? rows.filter((s) => s.fecha_cierre)
+			: rows.filter(
+				(s) =>
+					s.fecha_cierre &&
+					s.fecha_cierre >= fechaDesde &&
+					s.fecha_cierre <= fechaHasta
+			);
 
 		let promedioDias: number | null = null;
-		if (cerradosMes.length > 0) {
-			const totalDias = cerradosMes.reduce((sum, s) => {
+		if (cerradosPeriodo.length > 0) {
+			const totalDias = cerradosPeriodo.reduce((sum, s) => {
 				const inicio = new Date(s.fecha_siniestro).getTime();
 				const cierre = new Date(s.fecha_cierre).getTime();
 				return sum + (cierre - inicio) / (1000 * 60 * 60 * 24);
 			}, 0);
-			promedioDias = Math.round(totalDias / cerradosMes.length);
+			promedioDias = Math.round(totalDias / cerradosPeriodo.length);
 		}
 
 		const kpis: EstadisticasSiniestros["kpis"] = {
 			siniestros_abiertos: abiertos.length,
-			cerrados_mes: cerradosMes.length,
+			cerrados_mes: cerradosPeriodo.length,
 			monto_reservado: abiertos.reduce((s, r) => s + Number(r.monto_reserva || 0), 0),
 			promedio_dias_resolucion: promedioDias,
 		};
@@ -458,9 +468,16 @@ export async function obtenerEstadisticasSiniestros(
 			})
 		);
 
-		// Por ramo
+		// Por ramo (período seleccionado)
+		const siniestrosPeriodo = esAnual
+			? rows
+			: rows.filter((s) => {
+				const d = s.fecha_siniestro as string;
+				return d >= fechaDesde && d <= fechaHasta;
+			});
+
 		const ramoMap = new Map<string, number>();
-		for (const s of rows) {
+		for (const s of siniestrosPeriodo) {
 			const ramo = s.poliza?.ramo || "Sin ramo";
 			ramoMap.set(ramo, (ramoMap.get(ramo) || 0) + 1);
 		}

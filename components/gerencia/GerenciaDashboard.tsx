@@ -20,6 +20,18 @@ import type {
 } from "@/types/gerencia";
 import { Loader2 } from "lucide-react";
 
+const MESES_COMPLETOS = [
+	"Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+	"Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
+];
+
+function getPeriodoLabel(filtros: GerenciaFiltros): string {
+	if (filtros.mes) {
+		return `${MESES_COMPLETOS[filtros.mes - 1]} ${filtros.anio}`;
+	}
+	return `Anual ${filtros.anio}`;
+}
+
 interface GerenciaDashboardProps {
 	initialProduccion: EstadisticasProduccion;
 	initialCobranzas: EstadisticasCobranzas;
@@ -55,6 +67,8 @@ export default function GerenciaDashboard({
 		});
 	};
 
+	const periodoLabel = getPeriodoLabel(filtros);
+
 	return (
 		<div className="space-y-6">
 			{/* Filtros */}
@@ -82,13 +96,13 @@ export default function GerenciaDashboard({
 					<TabsTrigger value="siniestros">Siniestros</TabsTrigger>
 				</TabsList>
 				<TabsContent value="produccion" className="mt-6">
-					<ProduccionCharts data={produccion} />
+					<ProduccionCharts data={produccion} periodoLabel={periodoLabel} />
 				</TabsContent>
 				<TabsContent value="cobranzas" className="mt-6">
-					<CobranzasCharts data={cobranzas} />
+					<CobranzasCharts data={cobranzas} periodoLabel={periodoLabel} />
 				</TabsContent>
 				<TabsContent value="siniestros" className="mt-6">
-					<SiniestrosCharts data={siniestros} />
+					<SiniestrosCharts data={siniestros} periodoLabel={periodoLabel} />
 				</TabsContent>
 			</Tabs>
 		</div>

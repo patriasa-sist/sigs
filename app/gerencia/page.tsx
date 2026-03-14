@@ -20,9 +20,8 @@ export default async function GerenciaPage() {
 	await requirePermission("gerencia.ver");
 	const canExportar = await checkPermission("gerencia.exportar");
 
-	const currentMonth = new Date().getMonth() + 1;
 	const currentYear = new Date().getFullYear();
-	const defaultFiltros: GerenciaFiltros = { mes: currentMonth, anio: currentYear };
+	const defaultFiltros: GerenciaFiltros = { anio: currentYear };
 
 	const [produccionRes, cobranzasRes, siniestrosRes, filtrosRes] = await Promise.all([
 		obtenerEstadisticasProduccion(defaultFiltros),

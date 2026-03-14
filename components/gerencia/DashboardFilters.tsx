@@ -42,25 +42,6 @@ export default function DashboardFilters({ filtros, filtrosData, onFiltrosChange
 	return (
 		<div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
 			<div className="space-y-1.5">
-				<Label className="text-xs">Mes</Label>
-				<Select
-					value={filtros.mes.toString()}
-					onValueChange={(v) => update({ mes: Number(v) })}
-				>
-					<SelectTrigger className="h-9">
-						<SelectValue />
-					</SelectTrigger>
-					<SelectContent>
-						{MESES.map((m) => (
-							<SelectItem key={m.value} value={m.value.toString()}>
-								{m.label}
-							</SelectItem>
-						))}
-					</SelectContent>
-				</Select>
-			</div>
-
-			<div className="space-y-1.5">
 				<Label className="text-xs">Año</Label>
 				<Select
 					value={filtros.anio.toString()}
@@ -73,6 +54,26 @@ export default function DashboardFilters({ filtros, filtrosData, onFiltrosChange
 						{ANIOS.map((a) => (
 							<SelectItem key={a} value={a.toString()}>
 								{a}
+							</SelectItem>
+						))}
+					</SelectContent>
+				</Select>
+			</div>
+
+			<div className="space-y-1.5">
+				<Label className="text-xs">Mes</Label>
+				<Select
+					value={filtros.mes?.toString() ?? "all"}
+					onValueChange={(v) => update({ mes: v === "all" ? undefined : Number(v) })}
+				>
+					<SelectTrigger className="h-9">
+						<SelectValue />
+					</SelectTrigger>
+					<SelectContent>
+						<SelectItem value="all">Todos</SelectItem>
+						{MESES.map((m) => (
+							<SelectItem key={m.value} value={m.value.toString()}>
+								{m.label}
 							</SelectItem>
 						))}
 					</SelectContent>

@@ -23,17 +23,17 @@ function formatCurrency(value: number): string {
 	return value.toLocaleString("es-BO", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 }
 
-export default function CobranzasCharts({ data }: { data: EstadisticasCobranzas }) {
+export default function CobranzasCharts({ data, periodoLabel }: { data: EstadisticasCobranzas; periodoLabel: string }) {
 	const { kpis, cobradoVsPendiente, distribucionEstados, proximasCuotas } = data;
 
 	return (
 		<div className="space-y-6">
 			{/* KPIs */}
 			<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-				<KPICard title="Cuotas Pendientes" value={kpis.cuotas_pendientes} icon={Clock} />
-				<KPICard title="Cuotas Vencidas" value={kpis.cuotas_vencidas} icon={AlertTriangle} />
-				<KPICard title="Cobrado del Mes" value={kpis.monto_cobrado_mes} icon={DollarSign} format="currency" />
-				<KPICard title="Tasa de Cobranza" value={kpis.tasa_cobranza} icon={TrendingUp} format="percent" />
+				<KPICard title={`Cuotas Pendientes — ${periodoLabel}`} value={kpis.cuotas_pendientes} icon={Clock} />
+				<KPICard title={`Cuotas Vencidas — ${periodoLabel}`} value={kpis.cuotas_vencidas} icon={AlertTriangle} />
+				<KPICard title={`Cobrado — ${periodoLabel}`} value={kpis.monto_cobrado_mes} icon={DollarSign} format="currency" />
+				<KPICard title={`Tasa de Cobranza — ${periodoLabel}`} value={kpis.tasa_cobranza} icon={TrendingUp} format="percent" />
 			</div>
 
 			{/* Charts */}
@@ -61,7 +61,7 @@ export default function CobranzasCharts({ data }: { data: EstadisticasCobranzas 
 				{/* Distribución Estados */}
 				<Card>
 					<CardHeader>
-						<CardTitle className="text-base">Distribución de Estados</CardTitle>
+						<CardTitle className="text-base">Distribución de Estados — {periodoLabel}</CardTitle>
 					</CardHeader>
 					<CardContent>
 						{distribucionEstados.length === 0 ? (

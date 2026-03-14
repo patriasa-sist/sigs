@@ -19,17 +19,17 @@ function formatCurrency(value: number): string {
 	return value.toLocaleString("es-BO", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 }
 
-export default function ProduccionCharts({ data }: { data: EstadisticasProduccion }) {
+export default function ProduccionCharts({ data, periodoLabel }: { data: EstadisticasProduccion; periodoLabel: string }) {
 	const { kpis, primaPorMes, distribucionPorRamo, primaPorCompania, topResponsables } = data;
 
 	return (
 		<div className="space-y-6">
 			{/* KPIs */}
 			<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-				<KPICard title="Prima Total del Mes" value={kpis.prima_total_mes} icon={DollarSign} format="currency" />
+				<KPICard title={`Prima Total — ${periodoLabel}`} value={kpis.prima_total_mes} icon={DollarSign} format="currency" />
 				<KPICard title="Prima Acumulada del Año" value={kpis.prima_acumulada_anio} icon={TrendingUp} format="currency" />
-				<KPICard title="Comisiones del Mes" value={kpis.comisiones_mes} icon={Percent} format="currency" />
-				<KPICard title="Pólizas del Mes" value={kpis.cantidad_polizas_mes} icon={FileText} />
+				<KPICard title={`Comisiones — ${periodoLabel}`} value={kpis.comisiones_mes} icon={Percent} format="currency" />
+				<KPICard title={`Pólizas — ${periodoLabel}`} value={kpis.cantidad_polizas_mes} icon={FileText} />
 			</div>
 
 			{/* Charts Row */}
@@ -55,7 +55,7 @@ export default function ProduccionCharts({ data }: { data: EstadisticasProduccio
 				{/* Distribución por Ramo */}
 				<Card>
 					<CardHeader>
-						<CardTitle className="text-base">Distribución por Ramo</CardTitle>
+						<CardTitle className="text-base">Distribución por Ramo — {periodoLabel}</CardTitle>
 					</CardHeader>
 					<CardContent>
 						{distribucionPorRamo.length === 0 ? (
@@ -92,7 +92,7 @@ export default function ProduccionCharts({ data }: { data: EstadisticasProduccio
 				{/* Prima por Compañía */}
 				<Card>
 					<CardHeader>
-						<CardTitle className="text-base">Prima por Compañía</CardTitle>
+						<CardTitle className="text-base">Prima por Compañía — {periodoLabel}</CardTitle>
 					</CardHeader>
 					<CardContent>
 						{primaPorCompania.length === 0 ? (
@@ -114,7 +114,7 @@ export default function ProduccionCharts({ data }: { data: EstadisticasProduccio
 				{/* Top Responsables */}
 				<Card>
 					<CardHeader>
-						<CardTitle className="text-base">Top Responsables</CardTitle>
+						<CardTitle className="text-base">Top Responsables — {periodoLabel}</CardTitle>
 					</CardHeader>
 					<CardContent>
 						{topResponsables.length === 0 ? (

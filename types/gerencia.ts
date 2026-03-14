@@ -4,7 +4,7 @@
 
 /** Filtros compartidos para todas las secciones del dashboard */
 export type GerenciaFiltros = {
-	mes: number; // 1-12
+	mes?: number; // 1-12, undefined = todos los meses
 	anio: number;
 	regional_id?: string;
 	compania_id?: string;
