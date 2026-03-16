@@ -91,6 +91,10 @@ export type ExportProduccionNuevoRow = {
 	fin_vigencia: string;
 	fecha_emision_compania: string;
 	fecha_produccion_sistema: string;
+
+	persona_registro: string;
+	categoria: string;
+	producto: string;
 };
 
 // ============================================

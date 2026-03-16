@@ -561,7 +561,14 @@ export async function exportarProduccionNuevo(
 			producto:productos_aseguradoras!producto_id (
 				factor_contado,
 				factor_credito,
-				porcentaje_comision
+				porcentaje_comision,
+				nombre_producto
+			),
+			created_by_profile:profiles!created_by (
+				full_name
+			),
+			categoria:categorias!categoria_id (
+				nombre
 			),
 			client:clients!client_id (
 				id,
@@ -626,6 +633,9 @@ export async function exportarProduccionNuevo(
 			tipo_anexo,
 			fecha_anexo,
 			created_at,
+			created_by_profile:profiles!created_by (
+				full_name
+			),
 			poliza:polizas!poliza_id (
 				id,
 				numero_poliza,
@@ -645,7 +655,11 @@ export async function exportarProduccionNuevo(
 				producto:productos_aseguradoras!producto_id (
 					factor_contado,
 					factor_credito,
-					porcentaje_comision
+					porcentaje_comision,
+					nombre_producto
+				),
+				categoria:categorias!categoria_id (
+					nombre
 				),
 				client:clients!client_id (
 					id,
@@ -817,7 +831,10 @@ export async function exportarProduccionNuevo(
 					factor_contado: number;
 					factor_credito: number;
 					porcentaje_comision: number;
+					nombre_producto?: string;
 				} | null;
+				created_by_profile?: { full_name?: string } | null;
+				categoria?: { nombre?: string } | null;
 				client:
 					| (ClientQueryResult & {
 							director_cartera?: {
@@ -868,6 +885,9 @@ export async function exportarProduccionNuevo(
 					fin_vigencia: p.fin_vigencia || "",
 					fecha_emision_compania: p.fecha_emision_compania || "",
 					fecha_produccion_sistema: p.created_at || "",
+					persona_registro: p.created_by_profile?.full_name || "N/A",
+					categoria: p.categoria?.nombre || "N/A",
+					producto: p.producto?.nombre_producto || "N/A",
 				};
 			}
 		);
@@ -919,6 +939,9 @@ export async function exportarProduccionNuevo(
 				fin_vigencia: pol.fin_vigencia || "",
 				fecha_emision_compania: pol.fecha_emision_compania || "",
 				fecha_produccion_sistema: anexo.created_at || "",
+				persona_registro: anexo.created_by_profile?.full_name || "N/A",
+				categoria: pol.categoria?.nombre || "N/A",
+				producto: pol.producto?.nombre_producto || "N/A",
 			});
 		}
 
