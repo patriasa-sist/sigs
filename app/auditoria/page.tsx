@@ -1,6 +1,6 @@
 import { requirePermission } from "@/utils/auth/helpers";
 import { obtenerExcepcionesCompletas, obtenerUsuariosOperativos } from "./excepciones/actions";
-import { ExcepcionesPanel } from "@/components/auditoria/ExcepcionesPanel";
+import { AuditoriaContent } from "@/components/auditoria/AuditoriaContent";
 
 export default async function AuditoriaPage() {
 	await requirePermission("auditoria.ver");
@@ -19,7 +19,7 @@ export default async function AuditoriaPage() {
 				</p>
 			</div>
 
-			<ExcepcionesPanel
+			<AuditoriaContent
 				excepcionesIniciales={excepciones}
 				usuarios={usuarios}
 			/>
