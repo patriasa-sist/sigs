@@ -5,8 +5,29 @@ import { createClient } from "@/utils/supabase/client";
 import { User } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Home, LogOut, User as UserIcon, FileText, CheckSquare, DollarSign, FileWarning, Shield, Users, BarChart3, ChevronDown, FileSpreadsheet, Eye } from "lucide-react";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuLabel,
+	DropdownMenuSeparator,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+	Home,
+	LogOut,
+	User as UserIcon,
+	FileText,
+	CheckSquare,
+	DollarSign,
+	FileWarning,
+	Shield,
+	Users,
+	BarChart3,
+	ChevronDown,
+	FileSpreadsheet,
+	Eye,
+} from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { signOut } from "@/app/auth/login/actions";
@@ -30,14 +51,14 @@ function usePermissions() {
 	useEffect(() => {
 		async function loadPermissions() {
 			const supabase = createClient();
-			const { data: { session } } = await supabase.auth.getSession();
+			const {
+				data: { session },
+			} = await supabase.auth.getSession();
 			if (!session?.access_token) return;
 
 			try {
 				const payload = session.access_token.split(".")[1];
-				const decoded = JSON.parse(
-					atob(payload.replace(/-/g, "+").replace(/_/g, "/"))
-				);
+				const decoded = JSON.parse(atob(payload.replace(/-/g, "+").replace(/_/g, "/")));
 				setPermissions(decoded.user_permissions || []);
 				setRole(decoded.user_role || null);
 			} catch {
@@ -65,7 +86,9 @@ export function Navbar() {
 	useEffect(() => {
 		async function getUser() {
 			try {
-				const { data: { user } } = await supabase.auth.getUser();
+				const {
+					data: { user },
+				} = await supabase.auth.getUser();
 				setUser(user);
 
 				if (user) {
@@ -95,7 +118,7 @@ export function Navbar() {
 		if (profile?.full_name) {
 			return profile.full_name
 				.split(" ")
-				.map(name => name[0])
+				.map((name) => name[0])
 				.join("")
 				.toUpperCase()
 				.slice(0, 2);
@@ -139,7 +162,7 @@ export function Navbar() {
 							height={32}
 							className="h-8 w-auto"
 						/>
-						<span className="text-[10px] text-gray-400 font-mono leading-none">v1.4.3</span>
+						<span className="text-[10px] text-gray-400 font-mono leading-none">v1.4.4</span>
 					</Link>
 				</div>
 
@@ -240,9 +263,7 @@ export function Navbar() {
 							<DropdownMenuLabel className="font-normal">
 								<div className="flex flex-col space-y-1">
 									<p className="text-sm font-medium leading-none">{getUserDisplayName()}</p>
-									<p className="text-xs leading-none text-muted-foreground">
-										{user.email}
-									</p>
+									<p className="text-xs leading-none text-muted-foreground">{user.email}</p>
 									{profile?.role && (
 										<p className="text-xs leading-none text-muted-foreground capitalize">
 											Rol: {profile.role}

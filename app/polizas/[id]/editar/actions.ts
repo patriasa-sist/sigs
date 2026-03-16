@@ -13,6 +13,7 @@
 "use server";
 
 import { createClient } from "@/utils/supabase/server";
+import { createAdminClient } from "@/utils/supabase/admin";
 import { revalidatePath } from "next/cache";
 import { generateFinalStoragePath } from "@/utils/fileUpload";
 import type {
@@ -609,7 +610,10 @@ export async function actualizarPoliza(
 			}
 		} else {
 			// Crédito: eliminar cuotas no pagadas y reinsertar las del formulario
-			// Esto evita conflictos de constraint único cuando las cuotas se recalculan
+			// Usa admin client para DELETE ya que RLS no tiene política de delete en polizas_pagos
+			// La autorización ya fue verificada en verifyEditPermission()
+
+			const supabaseAdmin = createAdminClient();
 
 			// 1. Eliminar cuotas no pagadas (las pagadas se preservan intactas)
 			const idsNoPagadas = (currentPagos || [])
@@ -617,7 +621,7 @@ export async function actualizarPoliza(
 				.map(p => p.id);
 
 			if (idsNoPagadas.length > 0) {
-				const { error: deleteError } = await supabase
+				const { error: deleteError } = await supabaseAdmin
 					.from("polizas_pagos")
 					.delete()
 					.in("id", idsNoPagadas);
@@ -640,7 +644,6 @@ export async function actualizarPoliza(
 
 			// Cuota inicial
 			if (formState.modalidad_pago.cuota_inicial > 0) {
-				// Verificar que la cuota inicial no esté pagada
 				const cuotaInicialPagada = cuotasPagadas.some(
 					p => p.observaciones?.toLowerCase().includes("inicial")
 				);
