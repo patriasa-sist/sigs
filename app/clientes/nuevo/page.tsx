@@ -17,8 +17,9 @@ import {
 	clientPartnerSchema,
 	ClientFormState,
 } from "@/types/clientForm";
-import type { ClienteDocumentoFormState } from "@/types/clienteDocumento";
-import { generateStoragePath } from "@/types/clienteDocumento";
+import type { ClienteDocumentoFormState, TipoDocumentoCliente } from "@/types/clienteDocumento";
+import { generateStoragePath, validateClientDocuments, REQUIRED_DOCUMENTS } from "@/types/clienteDocumento";
+import { obtenerMisExcepciones, consumirExcepciones } from "@/app/auditoria/excepciones/actions";
 import {
 	normalizeNaturalClientData,
 	normalizeUnipersonalClientData,
@@ -127,6 +128,7 @@ export default function NuevoClientePage() {
 	const [isLoading, setIsLoading] = useState(true);
 	const [isSaving, setIsSaving] = useState(false);
 	const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+	const [docExceptions, setDocExceptions] = useState<TipoDocumentoCliente[]>([]);
 
 	// Natural client form
 	const naturalForm = useForm<NaturalClientFormData>({
@@ -167,6 +169,14 @@ export default function NuevoClientePage() {
 				if (userError) throw userError;
 
 				setCurrentUserId(user?.id || null);
+
+				// Fetch document exceptions for this user
+				try {
+					const exceptions = await obtenerMisExcepciones();
+					setDocExceptions(exceptions.map((e) => e.tipo_documento));
+				} catch {
+					// Non-critical: if exceptions can't be fetched, all docs remain required
+				}
 
 				// Check for draft and prompt user
 				if (hasDraft()) {
@@ -655,9 +665,53 @@ export default function NuevoClientePage() {
 		return client.id;
 	};
 
+	// Validate required documents before saving
+	const validateDocumentsBeforeSave = (
+		documentos: ClienteDocumentoFormState[] | undefined,
+		type: "natural" | "unipersonal" | "juridica"
+	): boolean => {
+		const docs = documentos || [];
+		const validation = validateClientDocuments(docs, type, docExceptions);
+
+		if (!validation.hasAllRequired) {
+			// Build readable names for missing docs
+			const missingNames = validation.missingDocuments.map((docType) => {
+				const entry = Object.entries(
+					type === "juridica"
+						? { nit: "NIT", matricula_comercio: "Matrícula de Comercio", testimonio_constitucion: "Testimonio de Constitución Social", balance_estado_resultados: "Balance General", poder_representacion: "Poder de Representación", ci_representante_anverso: "CI Representante Legal", ci_representante_reverso: "CI Reverso Representante Legal", certificacion_pep: "Certificación PEP", carta_nombramiento: "Carta de Nombramiento", formulario_kyc: "KYC" }
+						: { documento_identidad: "CI (completo o anverso)", documento_identidad_reverso: "CI Reverso", certificacion_pep: "Certificación PEP", carta_nombramiento: "Carta de Nombramiento", formulario_kyc: "KYC", nit: "NIT", matricula_comercio: "Matrícula de Comercio" }
+				).find(([key]) => key === docType);
+				return entry ? entry[1] : docType;
+			});
+
+			toast.error("Documentos obligatorios faltantes", {
+				description: `Faltan: ${missingNames.join(", ")}`,
+			});
+			return false;
+		}
+		return true;
+	};
+
+	// Determine which documents were skipped using exceptions (for consumption)
+	const getSkippedDocTypes = (
+		documentos: ClienteDocumentoFormState[] | undefined,
+		type: "natural" | "unipersonal" | "juridica"
+	): TipoDocumentoCliente[] => {
+		const docs = documentos || [];
+		const uploadedTypes = docs.map((d) => d.tipo_documento);
+		const allRequired = REQUIRED_DOCUMENTS[type];
+		// Documents that are required, not uploaded, but allowed because of exception
+		return allRequired.filter(
+			(docType) =>
+				!uploadedTypes.includes(docType) &&
+				docExceptions.includes(docType as TipoDocumentoCliente)
+		) as TipoDocumentoCliente[];
+	};
+
 	// Handle form submission
 	const handleSubmit = async () => {
 		setIsSaving(true);
+		let createdClientId: string | undefined;
 
 		try {
 			if (clientType === "natural") {
@@ -671,7 +725,13 @@ export default function NuevoClientePage() {
 					return;
 				}
 
-				await submitNaturalClient();
+				// Validate required documents
+				if (!validateDocumentsBeforeSave(naturalForm.getValues().documentos, "natural")) {
+					setIsSaving(false);
+					return;
+				}
+
+				createdClientId = await submitNaturalClient();
 				toast.success("Cliente natural creado exitosamente");
 			} else if (clientType === "unipersonal") {
 				// Pre-populate owner fields (auto-filled from personal data, no visible inputs)
@@ -694,7 +754,13 @@ export default function NuevoClientePage() {
 					return;
 				}
 
-				await submitUnipersonalClient();
+				// Validate required documents
+				if (!validateDocumentsBeforeSave(unipersonalForm.getValues().documentos, "unipersonal")) {
+					setIsSaving(false);
+					return;
+				}
+
+				createdClientId = await submitUnipersonalClient();
 				toast.success("Cliente unipersonal creado exitosamente");
 			} else if (clientType === "juridica") {
 				const isValid = await juridicForm.trigger();
@@ -707,8 +773,27 @@ export default function NuevoClientePage() {
 					return;
 				}
 
-				await submitJuridicClient();
+				// Validate required documents
+				if (!validateDocumentsBeforeSave(juridicForm.getValues().documentos, "juridica")) {
+					setIsSaving(false);
+					return;
+				}
+
+				createdClientId = await submitJuridicClient();
 				toast.success("Cliente jurídico creado exitosamente");
+			}
+
+			// Consume used exceptions (if any documents were skipped)
+			if (createdClientId && clientType && docExceptions.length > 0) {
+				const formData = clientType === "natural"
+					? naturalForm.getValues()
+					: clientType === "unipersonal"
+						? unipersonalForm.getValues()
+						: juridicForm.getValues();
+				const skipped = getSkippedDocTypes(formData.documentos, clientType);
+				if (skipped.length > 0) {
+					await consumirExcepciones(skipped, createdClientId);
+				}
 			}
 
 			clearDraft();
@@ -795,7 +880,7 @@ export default function NuevoClientePage() {
 			{/* Form Content */}
 			{clientType === "natural" && (
 				<div className="mt-6">
-					<NaturalClientForm form={naturalForm} partnerForm={partnerForm} onFieldBlur={handleAutoSave} />
+					<NaturalClientForm form={naturalForm} partnerForm={partnerForm} onFieldBlur={handleAutoSave} exceptions={docExceptions} />
 				</div>
 			)}
 
@@ -805,13 +890,14 @@ export default function NuevoClientePage() {
 						form={unipersonalForm}
 						partnerForm={partnerForm}
 						onFieldBlur={handleAutoSave}
+						exceptions={docExceptions}
 					/>
 				</div>
 			)}
 
 			{clientType === "juridica" && (
 				<div className="mt-6">
-					<JuridicClientForm form={juridicForm} onFieldBlur={handleAutoSave} />
+					<JuridicClientForm form={juridicForm} onFieldBlur={handleAutoSave} exceptions={docExceptions} />
 				</div>
 			)}
 

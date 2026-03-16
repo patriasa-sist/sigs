@@ -12,7 +12,7 @@ import {
 	INCOME_VALUES,
 } from "@/types/clientForm";
 import type { ExtraPhone } from "@/types/clientForm";
-import type { ClienteDocumentoFormState } from "@/types/clienteDocumento";
+import type { ClienteDocumentoFormState, TipoDocumentoCliente } from "@/types/clienteDocumento";
 import { FormSection } from "./FormSection";
 import { ExtraPhonesInput } from "./ExtraPhonesInput";
 import { Input } from "@/components/ui/input";
@@ -26,9 +26,10 @@ interface NaturalClientFormProps {
 	form: UseFormReturn<NaturalClientFormData>;
 	partnerForm?: UseFormReturn<ClientPartnerData>;
 	onFieldBlur?: () => void;
+	exceptions?: TipoDocumentoCliente[];
 }
 
-export function NaturalClientForm({ form, partnerForm, onFieldBlur }: NaturalClientFormProps) {
+export function NaturalClientForm({ form, partnerForm, onFieldBlur, exceptions = [] }: NaturalClientFormProps) {
 	const {
 		register,
 		control,
@@ -438,6 +439,7 @@ export function NaturalClientForm({ form, partnerForm, onFieldBlur }: NaturalCli
 						setValue("documentos", docs);
 						onFieldBlur?.();
 					}}
+					exceptions={exceptions}
 				/>
 			</FormSection>
 		</div>

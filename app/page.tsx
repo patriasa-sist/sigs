@@ -18,6 +18,7 @@ import {
 	CreditCard,
 	ClipboardList,
 	DollarSign,
+	Eye,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -104,6 +105,17 @@ const Dashboard = () => {
 			sections: [
 				{ name: "Busqueda de pólizas", icon: Building2 },
 				{ name: "Reportes", icon: FileText },
+			],
+		},
+		{
+			id: "auditoria",
+			title: "Módulo Auditoría",
+			description: "Control de cumplimiento y excepciones documentales",
+			icon: Eye,
+			color: "bg-rose-50 hover:bg-rose-100 border-rose-200",
+			link: "/auditoria",
+			sections: [
+				{ name: "Excepciones de Documentos", icon: FileText },
 			],
 		},
 	];

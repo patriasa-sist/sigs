@@ -8,7 +8,7 @@ import { z } from "zod";
  * Document types for Natural Person clients
  */
 export const NATURAL_DOCUMENT_TYPES = {
-	documento_identidad: "CI Anverso",
+	documento_identidad: "CI (completo o anverso)",
 	documento_identidad_reverso: "CI Reverso",
 	certificacion_pep: "Certificación PEP",
 	carta_nombramiento: "carta de nombramiento",
@@ -57,11 +57,26 @@ export type TipoDocumentoCliente = keyof typeof ALL_DOCUMENT_TYPES;
 /**
  * Required documents by client type
  */
+/**
+ * Required documents by client type.
+ * ALL documents are now mandatory by default.
+ * UIF can grant single-use exceptions for specific documents (except NON_EXCEPTABLE_DOCUMENTS).
+ */
 export const REQUIRED_DOCUMENTS = {
-	natural: ["documento_identidad", "formulario_kyc"] as const,
-	unipersonal: ["documento_identidad", "formulario_kyc"] as const,
-	juridica: ["formulario_kyc"] as const,
+	natural: ["documento_identidad", "documento_identidad_reverso", "certificacion_pep", "carta_nombramiento", "formulario_kyc"] as const,
+	unipersonal: ["documento_identidad", "documento_identidad_reverso", "certificacion_pep", "carta_nombramiento", "formulario_kyc", "nit", "matricula_comercio"] as const,
+	juridica: ["nit", "matricula_comercio", "testimonio_constitucion", "balance_estado_resultados", "poder_representacion", "ci_representante_anverso", "ci_representante_reverso", "certificacion_pep", "carta_nombramiento", "formulario_kyc"] as const,
 } as const;
+
+/**
+ * Documents that can NEVER be excepted, even by UIF.
+ * These are always mandatory regardless of any exception.
+ */
+export const NON_EXCEPTABLE_DOCUMENTS: readonly TipoDocumentoCliente[] = [
+	"formulario_kyc",
+	"certificacion_pep",
+	"documento_identidad",
+] as const;
 
 /**
  * Get document types for a specific client type
@@ -308,16 +323,26 @@ export type DocumentValidationResult = {
 };
 
 /**
- * Validate uploaded documents for a client type
+ * Validate uploaded documents for a client type.
+ * Accepts optional exceptions array: documents the user is allowed to skip (granted by UIF).
+ * NON_EXCEPTABLE_DOCUMENTS are always required regardless of exceptions.
  */
 export function validateClientDocuments(
 	uploadedDocuments: ClienteDocumentoFormState[],
-	clientType: "natural" | "unipersonal" | "juridica"
+	clientType: "natural" | "unipersonal" | "juridica",
+	exceptions: TipoDocumentoCliente[] = []
 ): DocumentValidationResult {
-	const required = REQUIRED_DOCUMENTS[clientType];
+	const allRequired = REQUIRED_DOCUMENTS[clientType];
 	const uploadedTypes = uploadedDocuments.map((d) => d.tipo_documento);
 
-	const missingDocuments = required.filter((docType) => !uploadedTypes.includes(docType));
+	// Effective required = all required MINUS exceptions (but NON_EXCEPTABLE always stay required)
+	const effectiveRequired = allRequired.filter(
+		(docType) =>
+			NON_EXCEPTABLE_DOCUMENTS.includes(docType as TipoDocumentoCliente) ||
+			!exceptions.includes(docType as TipoDocumentoCliente)
+	);
+
+	const missingDocuments = effectiveRequired.filter((docType) => !uploadedTypes.includes(docType));
 
 	return {
 		hasAllRequired: missingDocuments.length === 0,
@@ -325,3 +350,55 @@ export function validateClientDocuments(
 		uploadedDocuments: uploadedTypes,
 	};
 }
+
+/**
+ * Check if a document type can be excepted by UIF
+ */
+export function isDocumentExceptable(documentType: TipoDocumentoCliente): boolean {
+	return !NON_EXCEPTABLE_DOCUMENTS.includes(documentType);
+}
+
+/**
+ * Get exceptable document types for a client type (excludes NON_EXCEPTABLE)
+ */
+export function getExceptableDocuments(clientType: "natural" | "unipersonal" | "juridica"): TipoDocumentoCliente[] {
+	const allDocs = Object.keys(getDocumentTypesForClientType(clientType)) as TipoDocumentoCliente[];
+	return allDocs.filter((doc) => isDocumentExceptable(doc));
+}
+
+// ================================================
+// DOCUMENT EXCEPTION TYPES
+// ================================================
+
+/**
+ * Estado de una excepción de documento
+ */
+export type EstadoExcepcion = "activa" | "usada" | "revocada";
+
+/**
+ * Excepción de documento otorgada por UIF.
+ * Uso único: se consume al crear el siguiente cliente.
+ */
+export type ExcepcionDocumento = {
+	id: string;
+	user_id: string;
+	tipo_documento: TipoDocumentoCliente;
+	motivo: string;
+	estado: EstadoExcepcion;
+	otorgado_por: string;
+	fecha_otorgamiento: string;
+	usado_en_client_id: string | null;
+	fecha_uso: string | null;
+	revocado_por: string | null;
+	fecha_revocacion: string | null;
+};
+
+/**
+ * Excepción con datos enriquecidos de usuarios (para la UI de auditoría)
+ */
+export type ExcepcionDocumentoVista = ExcepcionDocumento & {
+	user_email: string;
+	user_role: string;
+	otorgado_por_email: string;
+	revocado_por_email: string | null;
+};

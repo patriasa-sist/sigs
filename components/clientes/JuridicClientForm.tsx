@@ -3,7 +3,7 @@
 import React from "react";
 import { UseFormReturn, Controller, useFieldArray } from "react-hook-form";
 import { JuridicClientFormData, DOCUMENT_TYPES, COMPANY_TYPES, type ExtraPhone } from "@/types/clientForm";
-import type { ClienteDocumentoFormState } from "@/types/clienteDocumento";
+import type { ClienteDocumentoFormState, TipoDocumentoCliente } from "@/types/clienteDocumento";
 import { FormSection } from "./FormSection";
 import { ExtraPhonesInput } from "./ExtraPhonesInput";
 import { Input } from "@/components/ui/input";
@@ -17,9 +17,10 @@ import { ClienteDocumentUpload } from "./ClienteDocumentUpload";
 interface JuridicClientFormProps {
 	form: UseFormReturn<JuridicClientFormData>;
 	onFieldBlur?: () => void;
+	exceptions?: TipoDocumentoCliente[];
 }
 
-export function JuridicClientForm({ form, onFieldBlur }: JuridicClientFormProps) {
+export function JuridicClientForm({ form, onFieldBlur, exceptions = [] }: JuridicClientFormProps) {
 	const {
 		register,
 		control,
@@ -437,6 +438,7 @@ export function JuridicClientForm({ form, onFieldBlur }: JuridicClientFormProps)
 						setValue("documentos", docs);
 						onFieldBlur?.();
 					}}
+					exceptions={exceptions}
 				/>
 			</FormSection>
 		</div>

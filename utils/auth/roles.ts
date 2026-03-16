@@ -16,7 +16,7 @@
  */
 
 import type { UserRole, Permission } from "./helpers";
-import { Crown, UserCheck, Shield, Users, UserX, Ban, FileWarning } from "lucide-react";
+import { Crown, UserCheck, Shield, Users, UserX, Ban, FileWarning, Eye } from "lucide-react";
 
 /**
  * Array de todos los permisos del sistema.
@@ -49,6 +49,8 @@ export const ALL_PERMISSIONS: readonly Permission[] = [
 	"admin.equipos",
 	"gerencia.ver",
 	"gerencia.exportar",
+	"auditoria.ver",
+	"auditoria.excepciones",
 ] as const;
 
 /**
@@ -63,6 +65,7 @@ export const PERMISSION_MODULES: Record<string, string> = {
 	documentos: "Documentos",
 	admin: "Administración",
 	gerencia: "Gerencia",
+	auditoria: "Auditoría",
 };
 
 /**
@@ -84,6 +87,7 @@ export const PERMISSION_ACTION_LABELS: Record<string, string> = {
 	invitaciones: "Invitaciones",
 	permisos: "Permisos",
 	equipos: "Equipos",
+	excepciones: "Excepciones",
 };
 
 /**
@@ -97,6 +101,7 @@ export const VALID_ROLES: readonly UserRole[] = [
 	"comercial",
 	"cobranza",
 	"siniestros",
+	"uif",
 	"invitado",
 	"desactivado"
 ] as const;
@@ -112,6 +117,7 @@ export const ASSIGNABLE_ROLES: readonly UserRole[] = [
 	"comercial",
 	"cobranza",
 	"siniestros",
+	"uif",
 	"invitado",
 	"desactivado"
 ] as const;
@@ -126,7 +132,8 @@ export const OPERATIONAL_ROLES: readonly UserRole[] = [
 	"agente",
 	"comercial",
 	"cobranza",
-	"siniestros"
+	"siniestros",
+	"uif"
 ] as const;
 
 /**
@@ -273,6 +280,25 @@ export const ROLE_CONFIG = {
 			"polizas.ver",
 			"clientes.ver",
 			"cobranzas.ver",
+		] as Permission[]
+	},
+	uif: {
+		label: "UIF",
+		labelEs: "UIF",
+		description: "Document compliance officer - manages document exceptions and audit",
+		descriptionEs: "Unidad de Información Financiera - gestiona excepciones de documentos y auditoría",
+		color: "rose",
+		icon: Eye,
+		colorClasses: {
+			bg: "bg-rose-50",
+			text: "text-rose-600",
+			border: "border-rose-200",
+			gradient: "from-rose-50 to-white"
+		},
+		defaultPermissions: [
+			"auditoria.ver",
+			"auditoria.excepciones",
+			"clientes.ver",
 		] as Permission[]
 	},
 	invitado: {

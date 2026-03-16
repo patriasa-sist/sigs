@@ -12,7 +12,7 @@ import {
 	INCOME_VALUES,
 } from "@/types/clientForm";
 import type { ExtraPhone } from "@/types/clientForm";
-import type { ClienteDocumentoFormState } from "@/types/clienteDocumento";
+import type { ClienteDocumentoFormState, TipoDocumentoCliente } from "@/types/clienteDocumento";
 import { FormSection } from "./FormSection";
 import { ExtraPhonesInput } from "./ExtraPhonesInput";
 import { Input } from "@/components/ui/input";
@@ -26,9 +26,10 @@ interface UnipersonalClientFormProps {
 	form: UseFormReturn<UnipersonalClientFormData>;
 	partnerForm?: UseFormReturn<ClientPartnerData>;
 	onFieldBlur?: () => void;
+	exceptions?: TipoDocumentoCliente[];
 }
 
-export function UnipersonalClientForm({ form, partnerForm, onFieldBlur }: UnipersonalClientFormProps) {
+export function UnipersonalClientForm({ form, partnerForm, onFieldBlur, exceptions = [] }: UnipersonalClientFormProps) {
 	const {
 		register,
 		control,
@@ -646,6 +647,7 @@ export function UnipersonalClientForm({ form, partnerForm, onFieldBlur }: Uniper
 						setValue("documentos", docs);
 						onFieldBlur?.();
 					}}
+					exceptions={exceptions}
 				/>
 			</FormSection>
 		</div>

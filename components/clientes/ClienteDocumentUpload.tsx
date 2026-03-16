@@ -21,21 +21,36 @@ import {
 	validateFile,
 	formatFileSize,
 	validateClientDocuments,
+	NON_EXCEPTABLE_DOCUMENTS,
 } from "@/types/clienteDocumento";
 
 type Props = {
 	clientType: "natural" | "unipersonal" | "juridica";
 	documentos: ClienteDocumentoFormState[];
 	onDocumentosChange: (documentos: ClienteDocumentoFormState[]) => void;
+	exceptions?: TipoDocumentoCliente[];
 };
 
-export function ClienteDocumentUpload({ clientType, documentos, onDocumentosChange }: Props) {
+export function ClienteDocumentUpload({ clientType, documentos, onDocumentosChange, exceptions = [] }: Props) {
 	const [selectedDocType, setSelectedDocType] = useState<TipoDocumentoCliente | "">("");
 	const [descripcion, setDescripcion] = useState("");
 	const [error, setError] = useState<string | null>(null);
 
 	const documentTypes = getDocumentTypesForClientType(clientType);
-	const validation = validateClientDocuments(documentos, clientType);
+	const validation = validateClientDocuments(documentos, clientType, exceptions);
+
+	// Helper to determine if a doc is effectively required (considering exceptions)
+	const isEffectivelyRequired = (docType: TipoDocumentoCliente): boolean => {
+		if (!isDocumentRequired(docType, clientType)) return false;
+		// Non-exceptable documents are always required
+		if (NON_EXCEPTABLE_DOCUMENTS.includes(docType)) return true;
+		// If user has exception for this doc, it's optional
+		return !exceptions.includes(docType);
+	};
+
+	const isExcepted = (docType: TipoDocumentoCliente): boolean => {
+		return isDocumentRequired(docType, clientType) && exceptions.includes(docType) && !NON_EXCEPTABLE_DOCUMENTS.includes(docType);
+	};
 
 	// Handle file drop
 	const onDrop = useCallback(
@@ -123,7 +138,7 @@ export function ClienteDocumentUpload({ clientType, documentos, onDocumentosChan
 				<div>
 					<h3 className="text-lg font-semibold text-gray-900">Documentos del Cliente</h3>
 					<p className="text-sm text-gray-600 mt-1">
-						Suba los documentos requeridos y opcionales del cliente
+						Suba los documentos requeridos del cliente
 					</p>
 				</div>
 
@@ -141,6 +156,33 @@ export function ClienteDocumentUpload({ clientType, documentos, onDocumentosChan
 					</div>
 				)}
 			</div>
+
+			{/* Exceptions info */}
+			{exceptions.length > 0 && (
+				<div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+					<div className="flex gap-3">
+						<AlertCircle className="h-5 w-5 text-purple-600 flex-shrink-0 mt-0.5" />
+						<div>
+							<p className="text-sm font-medium text-purple-900">
+								Excepciones UIF activas (uso único)
+							</p>
+							<ul className="mt-2 space-y-1">
+								{exceptions.map((docType) => {
+									const docLabel = (documentTypes as Record<string, string>)[docType] || docType;
+									return (
+										<li key={docType} className="text-sm text-purple-800">
+											• {docLabel}
+										</li>
+									);
+								})}
+							</ul>
+							<p className="text-xs text-purple-600 mt-2">
+								Estos documentos son opcionales para este registro. La excepción se consumirá al guardar.
+							</p>
+						</div>
+					</div>
+				</div>
+			)}
 
 			{/* Missing required documents warning */}
 			{!validation.hasAllRequired && (
@@ -190,8 +232,11 @@ export function ClienteDocumentUpload({ clientType, documentos, onDocumentosChan
 									availableDocTypes.map(([key, label]) => (
 										<SelectItem key={key} value={key}>
 											{label}
-											{isDocumentRequired(key as TipoDocumentoCliente, clientType) && (
+											{isEffectivelyRequired(key as TipoDocumentoCliente) && (
 												<span className="ml-2 text-red-500">*</span>
+											)}
+											{isExcepted(key as TipoDocumentoCliente) && (
+												<span className="ml-2 text-purple-500">(exceptuado)</span>
 											)}
 										</SelectItem>
 									))
@@ -256,7 +301,8 @@ export function ClienteDocumentUpload({ clientType, documentos, onDocumentosChan
 
 					<div className="divide-y divide-gray-200">
 						{documentos.map((doc, index) => {
-							const isRequired = isDocumentRequired(doc.tipo_documento, clientType);
+							const effectivelyRequired = isEffectivelyRequired(doc.tipo_documento);
+							const excepted = isExcepted(doc.tipo_documento);
 
 							const docLabel = (documentTypes as Record<string, string>)[doc.tipo_documento] || doc.tipo_documento;
 
@@ -270,9 +316,14 @@ export function ClienteDocumentUpload({ clientType, documentos, onDocumentosChan
 												<div className="flex-1">
 													<p className="font-medium text-gray-900 flex items-center gap-2">
 														{docLabel}
-														{isRequired && (
+														{effectivelyRequired && (
 															<span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded">
 																Obligatorio
+															</span>
+														)}
+														{excepted && (
+															<span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded">
+																Exceptuado (UIF)
 															</span>
 														)}
 													</p>

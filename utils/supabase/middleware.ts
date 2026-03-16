@@ -17,6 +17,7 @@ const PROTECTED_ROUTES: Record<string, Permission> = {
 	"/gerencia/validacion": "polizas.validar",
 	"/gerencia/reportes": "gerencia.exportar",
 	"/gerencia": "gerencia.ver",
+	"/auditoria": "auditoria.ver",
 };
 
 const PUBLIC_ROUTES = [
