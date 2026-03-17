@@ -90,6 +90,38 @@ export function Resumen({ formState, onAnterior, onEditarPaso, onGuardar, guarda
 			});
 		}
 
+		// Validar que datos_especificos exista para ramos que lo requieren
+		if (formState.datos_basicos?.ramo) {
+			const ramoNorm = formState.datos_basicos.ramo
+				.toLowerCase()
+				.trim()
+				.normalize("NFD")
+				.replace(/[\u0300-\u036f]/g, "");
+
+			// Ramos que tienen formulario específico implementado (no el genérico)
+			const requiereDatosEspecificos =
+				ramoNorm.includes("automotor") ||
+				ramoNorm.includes("salud") || ramoNorm.includes("enfermedad") ||
+				ramoNorm.includes("incendio") ||
+				ramoNorm.includes("responsabilidad") || ramoNorm.includes("civil") ||
+				ramoNorm.includes("transporte") ||
+				ramoNorm.includes("aeronavegacion") ||
+				ramoNorm.includes("nave") || ramoNorm.includes("embarcacion") ||
+				ramoNorm.includes("accidente") ||
+				ramoNorm.includes("vida") ||
+				ramoNorm.includes("sepelio") || ramoNorm.includes("defuncion") ||
+				(ramoNorm.includes("riesgo") && ramoNorm.includes("vario")) ||
+				(ramoNorm.includes("ramo") && ramoNorm.includes("tecnico"));
+
+			if (requiereDatosEspecificos && !formState.datos_especificos) {
+				nuevasAdvertencias.push({
+					tipo: "error",
+					campo: "datos_especificos",
+					mensaje: `Debe completar los datos específicos del ramo "${formState.datos_basicos.ramo}" antes de guardar`,
+				});
+			}
+		}
+
 		setAdvertencias(nuevasAdvertencias);
 	}, [formState]);
 

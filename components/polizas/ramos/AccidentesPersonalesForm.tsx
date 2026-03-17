@@ -13,7 +13,13 @@ import {
 	UserPlus,
 	Edit,
 } from "lucide-react";
-import type { DatosAccidentesPersonales, AseguradoConNivel, NivelCobertura, CoberturasAccidentesPersonales, BeneficiarioSalud } from "@/types/poliza";
+import type {
+	DatosAccidentesPersonales,
+	AseguradoConNivel,
+	NivelCobertura,
+	CoberturasAccidentesPersonales,
+	BeneficiarioSalud,
+} from "@/types/poliza";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -34,10 +40,17 @@ type Props = {
 // Sub-paso interno: 2.1 o 3
 type SubPaso = "niveles" | "principal";
 
-export function AccidentesPersonalesForm({ datos, moneda = "Bs", regionales, onChange, onSiguiente, onAnterior }: Props) {
+export function AccidentesPersonalesForm({
+	datos,
+	moneda = "Bs",
+	regionales,
+	onChange,
+	onSiguiente,
+	onAnterior,
+}: Props) {
 	// Estado del sub-paso actual
 	const [subPaso, setSubPaso] = useState<SubPaso>(
-		datos?.niveles && datos.niveles.length > 0 ? "principal" : "niveles"
+		datos?.niveles && datos.niveles.length > 0 ? "principal" : "niveles",
 	);
 
 	// ===== PASO 2.1: NIVELES DE COBERTURA =====
@@ -51,9 +64,7 @@ export function AccidentesPersonalesForm({ datos, moneda = "Bs", regionales, onC
 	});
 
 	// ===== PASO 3: FORMULARIO PRINCIPAL =====
-	const [tipoPoliza, setTipoPoliza] = useState<"individual" | "corporativo">(
-		datos?.tipo_poliza || "individual"
-	);
+	const [tipoPoliza, setTipoPoliza] = useState<"individual" | "corporativo">(datos?.tipo_poliza || "individual");
 	const [regionalId, setRegionalId] = useState<string>(datos?.regional_asegurado_id || "");
 	const [asegurados, setAsegurados] = useState<AseguradoConNivel[]>(datos?.asegurados || []);
 	const [beneficiarios, setBeneficiarios] = useState<BeneficiarioSalud[]>(datos?.beneficiarios || []);
@@ -207,9 +218,7 @@ export function AccidentesPersonalesForm({ datos, moneda = "Bs", regionales, onC
 
 	const guardarBeneficiario = (beneficiario: BeneficiarioSalud) => {
 		if (beneficiarioEditando) {
-			setBeneficiarios(
-				beneficiarios.map((b) => (b.id === beneficiarioEditando.id ? beneficiario : b))
-			);
+			setBeneficiarios(beneficiarios.map((b) => (b.id === beneficiarioEditando.id ? beneficiario : b)));
 		} else {
 			setBeneficiarios([...beneficiarios, beneficiario]);
 		}
@@ -224,9 +233,7 @@ export function AccidentesPersonalesForm({ datos, moneda = "Bs", regionales, onC
 	};
 
 	const cambiarNivelBeneficiario = (beneficiarioId: string, nivelId: string) => {
-		setBeneficiarios(
-			beneficiarios.map((b) => (b.id === beneficiarioId ? { ...b, nivel_id: nivelId } : b))
-		);
+		setBeneficiarios(beneficiarios.map((b) => (b.id === beneficiarioId ? { ...b, nivel_id: nivelId } : b)));
 	};
 
 	const handleContinuar = () => {
@@ -318,7 +325,10 @@ export function AccidentesPersonalesForm({ datos, moneda = "Bs", regionales, onC
 							{niveles.map((nivel) => {
 								const cob = nivel.coberturas as CoberturasAccidentesPersonales;
 								return (
-									<div key={nivel.id} className="flex items-center justify-between p-4 border rounded-lg">
+									<div
+										key={nivel.id}
+										className="flex items-center justify-between p-4 border rounded-lg"
+									>
 										<div className="flex-1">
 											<div className="flex items-center gap-3">
 												<p className="font-medium text-gray-900">{nivel.nombre}</p>
@@ -329,25 +339,33 @@ export function AccidentesPersonalesForm({ datos, moneda = "Bs", regionales, onC
 												)}
 											</div>
 											<div className="text-sm text-gray-600 space-y-1 mt-2">
-												{cob.muerte_accidental.habilitado && <p>• Muerte Accidental: Bs {cob.muerte_accidental.valor.toLocaleString()}</p>}
-												{cob.invalidez_total_parcial.habilitado && <p>• Invalidez Total/Parcial: Bs {cob.invalidez_total_parcial.valor.toLocaleString()}</p>}
-												{cob.gastos_medicos.habilitado && <p>• Gastos Médicos: Bs {cob.gastos_medicos.valor.toLocaleString()}</p>}
-												{cob.sepelio.habilitado && <p>• Sepelio: Bs {cob.sepelio.valor.toLocaleString()}</p>}
+												{cob.muerte_accidental.habilitado && (
+													<p>
+														• Muerte Accidental: Bs{" "}
+														{cob.muerte_accidental.valor.toLocaleString()}
+													</p>
+												)}
+												{cob.invalidez_total_parcial.habilitado && (
+													<p>
+														• Invalidez Total/Parcial: Bs{" "}
+														{cob.invalidez_total_parcial.valor.toLocaleString()}
+													</p>
+												)}
+												{cob.gastos_medicos.habilitado && (
+													<p>
+														• Gastos Médicos: Bs {cob.gastos_medicos.valor.toLocaleString()}
+													</p>
+												)}
+												{cob.sepelio.habilitado && (
+													<p>• Sepelio: Bs {cob.sepelio.valor.toLocaleString()}</p>
+												)}
 											</div>
 										</div>
 										<div className="flex gap-2">
-											<Button
-												variant="outline"
-												size="sm"
-												onClick={() => editarNivel(nivel)}
-											>
+											<Button variant="outline" size="sm" onClick={() => editarNivel(nivel)}>
 												Editar
 											</Button>
-											<Button
-												variant="ghost"
-												size="sm"
-												onClick={() => eliminarNivel(nivel.id)}
-											>
+											<Button variant="ghost" size="sm" onClick={() => eliminarNivel(nivel.id)}>
 												<Trash2 className="h-4 w-4" />
 											</Button>
 										</div>
@@ -372,17 +390,13 @@ export function AccidentesPersonalesForm({ datos, moneda = "Bs", regionales, onC
 									<Input
 										id="nombre_nivel"
 										value={nivelEditando.nombre}
-										onChange={(e) =>
-											setNivelEditando({ ...nivelEditando, nombre: e.target.value })
-										}
+										onChange={(e) => setNivelEditando({ ...nivelEditando, nombre: e.target.value })}
 										placeholder="Ej: Nivel 1, Nivel Premium, etc."
 									/>
 								</div>
 
 								<div className="space-y-2">
-									<Label htmlFor="prima_nivel">
-										Prima del Nivel (Opcional)
-									</Label>
+									<Label htmlFor="prima_nivel">Prima del Nivel (Opcional)</Label>
 									<Input
 										id="prima_nivel"
 										type="number"
@@ -390,7 +404,10 @@ export function AccidentesPersonalesForm({ datos, moneda = "Bs", regionales, onC
 										step="0.01"
 										value={nivelEditando.prima_nivel || ""}
 										onChange={(e) =>
-											setNivelEditando({ ...nivelEditando, prima_nivel: parseFloat(e.target.value) || undefined })
+											setNivelEditando({
+												...nivelEditando,
+												prima_nivel: parseFloat(e.target.value) || undefined,
+											})
 										}
 										placeholder="0.00"
 									/>
@@ -410,7 +427,10 @@ export function AccidentesPersonalesForm({ datos, moneda = "Bs", regionales, onC
 											onCheckedChange={(checked) =>
 												setCoberturas({
 													...coberturas,
-													muerte_accidental: { ...coberturas.muerte_accidental, habilitado: checked === true },
+													muerte_accidental: {
+														...coberturas.muerte_accidental,
+														habilitado: checked === true,
+													},
 												})
 											}
 										/>
@@ -427,7 +447,10 @@ export function AccidentesPersonalesForm({ datos, moneda = "Bs", regionales, onC
 												onChange={(e) =>
 													setCoberturas({
 														...coberturas,
-														muerte_accidental: { ...coberturas.muerte_accidental, valor: parseFloat(e.target.value) || 0 },
+														muerte_accidental: {
+															...coberturas.muerte_accidental,
+															valor: parseFloat(e.target.value) || 0,
+														},
 													})
 												}
 												className={errores.muerte_accidental ? "border-red-500" : ""}
@@ -448,7 +471,10 @@ export function AccidentesPersonalesForm({ datos, moneda = "Bs", regionales, onC
 											onCheckedChange={(checked) =>
 												setCoberturas({
 													...coberturas,
-													invalidez_total_parcial: { ...coberturas.invalidez_total_parcial, habilitado: checked === true },
+													invalidez_total_parcial: {
+														...coberturas.invalidez_total_parcial,
+														habilitado: checked === true,
+													},
 												})
 											}
 										/>
@@ -465,13 +491,18 @@ export function AccidentesPersonalesForm({ datos, moneda = "Bs", regionales, onC
 												onChange={(e) =>
 													setCoberturas({
 														...coberturas,
-														invalidez_total_parcial: { ...coberturas.invalidez_total_parcial, valor: parseFloat(e.target.value) || 0 },
+														invalidez_total_parcial: {
+															...coberturas.invalidez_total_parcial,
+															valor: parseFloat(e.target.value) || 0,
+														},
 													})
 												}
 												className={errores.invalidez_total_parcial ? "border-red-500" : ""}
 											/>
 											{errores.invalidez_total_parcial && (
-												<p className="text-sm text-red-600 mt-1">{errores.invalidez_total_parcial}</p>
+												<p className="text-sm text-red-600 mt-1">
+													{errores.invalidez_total_parcial}
+												</p>
 											)}
 										</div>
 									)}
@@ -486,7 +517,10 @@ export function AccidentesPersonalesForm({ datos, moneda = "Bs", regionales, onC
 											onCheckedChange={(checked) =>
 												setCoberturas({
 													...coberturas,
-													gastos_medicos: { ...coberturas.gastos_medicos, habilitado: checked === true },
+													gastos_medicos: {
+														...coberturas.gastos_medicos,
+														habilitado: checked === true,
+													},
 												})
 											}
 										/>
@@ -503,7 +537,10 @@ export function AccidentesPersonalesForm({ datos, moneda = "Bs", regionales, onC
 												onChange={(e) =>
 													setCoberturas({
 														...coberturas,
-														gastos_medicos: { ...coberturas.gastos_medicos, valor: parseFloat(e.target.value) || 0 },
+														gastos_medicos: {
+															...coberturas.gastos_medicos,
+															valor: parseFloat(e.target.value) || 0,
+														},
 													})
 												}
 												className={errores.gastos_medicos ? "border-red-500" : ""}
@@ -541,7 +578,10 @@ export function AccidentesPersonalesForm({ datos, moneda = "Bs", regionales, onC
 												onChange={(e) =>
 													setCoberturas({
 														...coberturas,
-														sepelio: { ...coberturas.sepelio, valor: parseFloat(e.target.value) || 0 },
+														sepelio: {
+															...coberturas.sepelio,
+															valor: parseFloat(e.target.value) || 0,
+														},
 													})
 												}
 												className={errores.sepelio ? "border-red-500" : ""}
@@ -607,7 +647,9 @@ export function AccidentesPersonalesForm({ datos, moneda = "Bs", regionales, onC
 		<div className="bg-white rounded-lg shadow-sm border p-6">
 			<div className="flex items-center justify-between mb-6">
 				<div>
-					<h2 className="text-xl font-semibold text-gray-900">Paso 3: Datos Específicos - Accidentes Personales</h2>
+					<h2 className="text-xl font-semibold text-gray-900">
+						Paso 3: Datos Específicos - Accidentes Personales
+					</h2>
 					<p className="text-sm text-gray-600 mt-1">
 						Complete la información de los asegurados y sus niveles de cobertura
 					</p>
@@ -630,9 +672,7 @@ export function AccidentesPersonalesForm({ datos, moneda = "Bs", regionales, onC
 							<p className="text-sm font-medium text-gray-900">
 								{niveles.length} nivel(es) de cobertura configurado(s)
 							</p>
-							<p className="text-xs text-gray-600">
-								{niveles.map((n) => n.nombre).join(", ")}
-							</p>
+							<p className="text-xs text-gray-600">{niveles.map((n) => n.nombre).join(", ")}</p>
 						</div>
 					</div>
 					<Button variant="outline" size="sm" onClick={volverANiveles}>
@@ -647,7 +687,10 @@ export function AccidentesPersonalesForm({ datos, moneda = "Bs", regionales, onC
 					<Label htmlFor="tipo_poliza">
 						Tipo de Póliza <span className="text-red-500">*</span>
 					</Label>
-					<Select value={tipoPoliza} onValueChange={(value: "individual" | "corporativo") => setTipoPoliza(value)}>
+					<Select
+						value={tipoPoliza}
+						onValueChange={(value: "individual" | "corporativo") => setTipoPoliza(value)}
+					>
 						<SelectTrigger>
 							<SelectValue />
 						</SelectTrigger>
@@ -677,7 +720,6 @@ export function AccidentesPersonalesForm({ datos, moneda = "Bs", regionales, onC
 					</Select>
 					{errores.regional && <p className="text-sm text-red-600">{errores.regional}</p>}
 				</div>
-
 			</div>
 
 			{/* Clientes (Contratantes/Titulares) */}
@@ -686,7 +728,7 @@ export function AccidentesPersonalesForm({ datos, moneda = "Bs", regionales, onC
 					<div>
 						<Label className="text-base">Clientes Contratantes</Label>
 						<p className="text-sm text-gray-600 mt-1">
-							Clientes registrados en el sistema que contratan la póliza (opcional)
+							Clientes registrados en el sistema que contratan la póliza
 						</p>
 					</div>
 					<Button onClick={() => setMostrarBuscador(true)} disabled={mostrarBuscador}>
@@ -719,81 +761,90 @@ export function AccidentesPersonalesForm({ datos, moneda = "Bs", regionales, onC
 				{asegurados.length > 0 ? (
 					<div className="space-y-3">
 						{asegurados.map((asegurado) => (
-								<div key={asegurado.client_id} className="p-4 border rounded-lg">
-									<div className="flex items-start gap-4">
-										<Users className="h-5 w-5 text-gray-400 flex-shrink-0 mt-1" />
-										<div className="flex-1 space-y-3">
-											<div>
-												<p className="font-medium text-gray-900">{asegurado.client_name}</p>
-												<p className="text-sm text-gray-600">CI: {asegurado.client_ci}</p>
-											</div>
-											<div className={`grid gap-3 ${tipoPoliza === "corporativo" ? "grid-cols-1 md:grid-cols-3" : "grid-cols-1 md:grid-cols-2"}`}>
-												<div className="space-y-1">
-													<Label className="text-xs text-gray-600">Nivel de Cobertura</Label>
-													<Select
-														value={asegurado.nivel_id}
-														onValueChange={(value) => cambiarNivel(asegurado.client_id, value)}
-													>
-														<SelectTrigger className="w-full">
-															<SelectValue placeholder="Nivel" />
-														</SelectTrigger>
-														<SelectContent>
-															{niveles.map((nivel) => (
-																<SelectItem key={nivel.id} value={nivel.id}>
-																	{nivel.nombre}
-																</SelectItem>
-															))}
-														</SelectContent>
-													</Select>
-												</div>
-												<div className="space-y-1">
-													<Label className="text-xs text-gray-600">
-														Rol <span className="text-red-500">*</span>
-													</Label>
-													<Select
-														value={asegurado.rol || ""}
-														onValueChange={(value) =>
-															cambiarRol(asegurado.client_id, value as "contratante" | "titular")
-														}
-													>
-														<SelectTrigger className="w-full">
-															<SelectValue placeholder="Seleccione un rol" />
-														</SelectTrigger>
-														<SelectContent>
-															<SelectItem value="contratante">Contratante</SelectItem>
-															<SelectItem value="titular">Titular</SelectItem>
-														</SelectContent>
-													</Select>
-												</div>
-												{tipoPoliza === "corporativo" && (
-													<div className="space-y-1">
-														<Label className="text-xs text-gray-600">Cargo (Opcional)</Label>
-														<Input
-															value={asegurado.cargo || ""}
-															onChange={(e) => cambiarCargo(asegurado.client_id, e.target.value)}
-															placeholder="Ej: Gerente, Operador, etc."
-														/>
-													</div>
-												)}
-											</div>
+							<div key={asegurado.client_id} className="p-4 border rounded-lg">
+								<div className="flex items-start gap-4">
+									<Users className="h-5 w-5 text-gray-400 flex-shrink-0 mt-1" />
+									<div className="flex-1 space-y-3">
+										<div>
+											<p className="font-medium text-gray-900">{asegurado.client_name}</p>
+											<p className="text-sm text-gray-600">CI: {asegurado.client_ci}</p>
 										</div>
-										<Button
-											variant="ghost"
-											size="sm"
-											onClick={() => eliminarAsegurado(asegurado.client_id)}
-											className="mt-1"
+										<div
+											className={`grid gap-3 ${tipoPoliza === "corporativo" ? "grid-cols-1 md:grid-cols-3" : "grid-cols-1 md:grid-cols-2"}`}
 										>
-											<Trash2 className="h-4 w-4 text-red-600" />
-										</Button>
+											<div className="space-y-1">
+												<Label className="text-xs text-gray-600">Nivel de Cobertura</Label>
+												<Select
+													value={asegurado.nivel_id}
+													onValueChange={(value) => cambiarNivel(asegurado.client_id, value)}
+												>
+													<SelectTrigger className="w-full">
+														<SelectValue placeholder="Nivel" />
+													</SelectTrigger>
+													<SelectContent>
+														{niveles.map((nivel) => (
+															<SelectItem key={nivel.id} value={nivel.id}>
+																{nivel.nombre}
+															</SelectItem>
+														))}
+													</SelectContent>
+												</Select>
+											</div>
+											<div className="space-y-1">
+												<Label className="text-xs text-gray-600">
+													Rol <span className="text-red-500">*</span>
+												</Label>
+												<Select
+													value={asegurado.rol || ""}
+													onValueChange={(value) =>
+														cambiarRol(
+															asegurado.client_id,
+															value as "contratante" | "titular",
+														)
+													}
+												>
+													<SelectTrigger className="w-full">
+														<SelectValue placeholder="Seleccione un rol" />
+													</SelectTrigger>
+													<SelectContent>
+														<SelectItem value="contratante">Contratante</SelectItem>
+														<SelectItem value="titular">Titular</SelectItem>
+													</SelectContent>
+												</Select>
+											</div>
+											{tipoPoliza === "corporativo" && (
+												<div className="space-y-1">
+													<Label className="text-xs text-gray-600">Cargo (Opcional)</Label>
+													<Input
+														value={asegurado.cargo || ""}
+														onChange={(e) =>
+															cambiarCargo(asegurado.client_id, e.target.value)
+														}
+														placeholder="Ej: Gerente, Operador, etc."
+													/>
+												</div>
+											)}
+										</div>
 									</div>
+									<Button
+										variant="ghost"
+										size="sm"
+										onClick={() => eliminarAsegurado(asegurado.client_id)}
+										className="mt-1"
+									>
+										<Trash2 className="h-4 w-4 text-red-600" />
+									</Button>
 								</div>
+							</div>
 						))}
 					</div>
 				) : (
 					<div className="text-center py-8 border-2 border-dashed rounded-lg">
 						<Users className="h-12 w-12 text-gray-400 mx-auto mb-3" />
 						<p className="text-gray-600">No hay clientes agregados</p>
-						<p className="text-sm text-gray-500">Haga clic en &ldquo;Agregar Cliente&rdquo; para comenzar</p>
+						<p className="text-sm text-gray-500">
+							Haga clic en &ldquo;Agregar Cliente&rdquo; para comenzar
+						</p>
 					</div>
 				)}
 			</div>
@@ -833,14 +884,16 @@ export function AccidentesPersonalesForm({ datos, moneda = "Bs", regionales, onC
 										<div className="flex items-start justify-between">
 											<div>
 												<div className="flex items-center gap-2">
-													<p className="font-medium text-gray-900">{beneficiario.nombre_completo}</p>
+													<p className="font-medium text-gray-900">
+														{beneficiario.nombre_completo}
+													</p>
 													{beneficiario.rol && (
 														<span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
 															{beneficiario.rol === "dependiente"
 																? "Dependiente"
 																: beneficiario.rol === "conyugue"
-																? "Cónyuge"
-																: beneficiario.rol}
+																	? "Cónyuge"
+																	: beneficiario.rol}
 														</span>
 													)}
 												</div>
@@ -848,15 +901,17 @@ export function AccidentesPersonalesForm({ datos, moneda = "Bs", regionales, onC
 													<p>CI: {beneficiario.carnet}</p>
 													<p>
 														Fecha Nac:{" "}
-														{new Date(beneficiario.fecha_nacimiento).toLocaleDateString("es-BO")}
+														{new Date(beneficiario.fecha_nacimiento).toLocaleDateString(
+															"es-BO",
+														)}
 													</p>
 													<p>
 														Género:{" "}
 														{beneficiario.genero === "M"
 															? "Masculino"
 															: beneficiario.genero === "F"
-															? "Femenino"
-															: "Otro"}
+																? "Femenino"
+																: "Otro"}
 													</p>
 												</div>
 											</div>
@@ -881,7 +936,9 @@ export function AccidentesPersonalesForm({ datos, moneda = "Bs", regionales, onC
 											<Label className="text-xs text-gray-600">Nivel de Cobertura</Label>
 											<Select
 												value={beneficiario.nivel_id}
-												onValueChange={(value) => cambiarNivelBeneficiario(beneficiario.id, value)}
+												onValueChange={(value) =>
+													cambiarNivelBeneficiario(beneficiario.id, value)
+												}
 											>
 												<SelectTrigger className="w-full">
 													<SelectValue placeholder="Nivel" />
@@ -918,15 +975,23 @@ export function AccidentesPersonalesForm({ datos, moneda = "Bs", regionales, onC
 					<div>
 						<p className="font-semibold mb-1">Clientes Registrados:</p>
 						<ul className="space-y-1 ml-3">
-							<li>• <strong>Contratante:</strong> Cliente que contrata el seguro (opcional)</li>
-							<li>• <strong>Titular:</strong> Cliente principal asegurado (opcional)</li>
+							<li>
+								• <strong>Contratante:</strong> Cliente que contrata el seguro (opcional)
+							</li>
+							<li>
+								• <strong>Titular:</strong> Cliente principal asegurado (opcional)
+							</li>
 						</ul>
 					</div>
 					<div>
 						<p className="font-semibold mb-1">Beneficiarios (sin registro completo):</p>
 						<ul className="space-y-1 ml-3">
-							<li>• <strong>Dependiente:</strong> Hijo, familiar u otro dependiente</li>
-							<li>• <strong>Cónyuge:</strong> Pareja o cónyuge del asegurado</li>
+							<li>
+								• <strong>Dependiente:</strong> Hijo, familiar u otro dependiente
+							</li>
+							<li>
+								• <strong>Cónyuge:</strong> Pareja o cónyuge del asegurado
+							</li>
 						</ul>
 					</div>
 				</div>

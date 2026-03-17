@@ -656,6 +656,28 @@ export async function guardarPoliza(formState: PolizaFormState) {
 			return { success: false, error: "Producto es requerido" };
 		}
 
+		// Validar datos_especificos para ramos que lo requieren
+		const ramoNorm = formState.datos_basicos.ramo
+			.toLowerCase().trim()
+			.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+		const requiereDatosEspecificos =
+			ramoNorm.includes("automotor") ||
+			ramoNorm.includes("salud") || ramoNorm.includes("enfermedad") ||
+			ramoNorm.includes("incendio") ||
+			ramoNorm.includes("responsabilidad") || ramoNorm.includes("civil") ||
+			ramoNorm.includes("transporte") ||
+			ramoNorm.includes("aeronavegacion") ||
+			ramoNorm.includes("nave") || ramoNorm.includes("embarcacion") ||
+			ramoNorm.includes("accidente") ||
+			ramoNorm.includes("vida") ||
+			ramoNorm.includes("sepelio") || ramoNorm.includes("defuncion") ||
+			(ramoNorm.includes("riesgo") && ramoNorm.includes("vario")) ||
+			(ramoNorm.includes("ramo") && ramoNorm.includes("tecnico"));
+
+		if (requiereDatosEspecificos && !formState.datos_especificos) {
+			return { success: false, error: `Datos específicos del ramo "${formState.datos_basicos.ramo}" son obligatorios` };
+		}
+
 		// Validar que agente/comercial solo asigne responsable dentro de su equipo
 		const scope = await getDataScopeFilter('polizas');
 		if (scope.needsScoping && formState.datos_basicos.responsable_id) {

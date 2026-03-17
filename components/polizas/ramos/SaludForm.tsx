@@ -13,7 +13,7 @@ import {
 	UserPlus,
 	Edit,
 } from "lucide-react";
-import type { DatosSalud, AseguradoSalud, NivelSalud, BeneficiarioSalud } from "@/types/poliza";
+import type { DatosSalud, AseguradoSalud, NivelSalud, BeneficiarioSalud, AseguradoSeleccionado } from "@/types/poliza";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -26,6 +26,7 @@ type Props = {
 	datos: DatosSalud | null;
 	moneda?: string;
 	regionales: Array<{ id: string; nombre: string }>;
+	aseguradoPrincipal?: AseguradoSeleccionado | null;
 	onChange: (datos: DatosSalud) => void;
 	onSiguiente: () => void;
 	onAnterior: () => void;
@@ -34,10 +35,18 @@ type Props = {
 // Sub-paso interno: 2.1 o 3
 type SubPaso = "niveles" | "principal";
 
-export function SaludForm({ datos, moneda = "Bs", regionales, onChange, onSiguiente, onAnterior }: Props) {
+export function SaludForm({
+	datos,
+	moneda = "Bs",
+	regionales,
+	aseguradoPrincipal,
+	onChange,
+	onSiguiente,
+	onAnterior,
+}: Props) {
 	// Estado del sub-paso actual
 	const [subPaso, setSubPaso] = useState<SubPaso>(
-		datos?.niveles && datos.niveles.length > 0 ? "principal" : "niveles"
+		datos?.niveles && datos.niveles.length > 0 ? "principal" : "niveles",
 	);
 
 	// ===== PASO 2.1: NIVELES DE COBERTURA =====
@@ -47,9 +56,7 @@ export function SaludForm({ datos, moneda = "Bs", regionales, onChange, onSiguie
 	const [montoNivel, setMontoNivel] = useState<number>(0);
 
 	// ===== PASO 3: FORMULARIO PRINCIPAL =====
-	const [tipoPoliza, setTipoPoliza] = useState<"individual" | "corporativo">(
-		datos?.tipo_poliza || "individual"
-	);
+	const [tipoPoliza, setTipoPoliza] = useState<"individual" | "corporativo">(datos?.tipo_poliza || "individual");
 	const [regionalId, setRegionalId] = useState<string>(datos?.regional_asegurado_id || "");
 	const [tieneMaternidad, setTieneMaternidad] = useState<boolean>(datos?.tiene_maternidad || false);
 	const [asegurados, setAsegurados] = useState<AseguradoSalud[]>(datos?.asegurados || []);
@@ -184,9 +191,7 @@ export function SaludForm({ datos, moneda = "Bs", regionales, onChange, onSiguie
 	const guardarBeneficiario = (beneficiario: BeneficiarioSalud) => {
 		if (beneficiarioEditando) {
 			// Editar existente
-			setBeneficiarios(
-				beneficiarios.map((b) => (b.id === beneficiarioEditando.id ? beneficiario : b))
-			);
+			setBeneficiarios(beneficiarios.map((b) => (b.id === beneficiarioEditando.id ? beneficiario : b)));
 		} else {
 			// Agregar nuevo
 			setBeneficiarios([...beneficiarios, beneficiario]);
@@ -202,9 +207,7 @@ export function SaludForm({ datos, moneda = "Bs", regionales, onChange, onSiguie
 	};
 
 	const cambiarNivelBeneficiario = (beneficiarioId: string, nivelId: string) => {
-		setBeneficiarios(
-			beneficiarios.map((b) => (b.id === beneficiarioId ? { ...b, nivel_id: nivelId } : b))
-		);
+		setBeneficiarios(beneficiarios.map((b) => (b.id === beneficiarioId ? { ...b, nivel_id: nivelId } : b)));
 	};
 
 	const handleContinuar = () => {
@@ -298,21 +301,15 @@ export function SaludForm({ datos, moneda = "Bs", regionales, onChange, onSiguie
 								<div key={nivel.id} className="flex items-center justify-between p-4 border rounded-lg">
 									<div className="flex-1">
 										<p className="font-medium text-gray-900">{nivel.nombre}</p>
-										<p className="text-sm text-gray-600">Cobertura: {moneda} {nivel.monto.toLocaleString()}</p>
+										<p className="text-sm text-gray-600">
+											Cobertura: {moneda} {nivel.monto.toLocaleString()}
+										</p>
 									</div>
 									<div className="flex gap-2">
-										<Button
-											variant="outline"
-											size="sm"
-											onClick={() => editarNivel(nivel)}
-										>
+										<Button variant="outline" size="sm" onClick={() => editarNivel(nivel)}>
 											Editar
 										</Button>
-										<Button
-											variant="ghost"
-											size="sm"
-											onClick={() => eliminarNivel(nivel.id)}
-										>
+										<Button variant="ghost" size="sm" onClick={() => eliminarNivel(nivel.id)}>
 											<Trash2 className="h-4 w-4" />
 										</Button>
 									</div>
@@ -448,9 +445,7 @@ export function SaludForm({ datos, moneda = "Bs", regionales, onChange, onSiguie
 							<p className="text-sm font-medium text-gray-900">
 								{niveles.length} nivel(es) de cobertura configurado(s)
 							</p>
-							<p className="text-xs text-gray-600">
-								{niveles.map((n) => n.nombre).join(", ")}
-							</p>
+							<p className="text-xs text-gray-600">{niveles.map((n) => n.nombre).join(", ")}</p>
 						</div>
 					</div>
 					<Button variant="outline" size="sm" onClick={volverANiveles}>
@@ -465,7 +460,10 @@ export function SaludForm({ datos, moneda = "Bs", regionales, onChange, onSiguie
 					<Label htmlFor="tipo_poliza">
 						Tipo de Póliza <span className="text-red-500">*</span>
 					</Label>
-					<Select value={tipoPoliza} onValueChange={(value: "individual" | "corporativo") => setTipoPoliza(value)}>
+					<Select
+						value={tipoPoliza}
+						onValueChange={(value: "individual" | "corporativo") => setTipoPoliza(value)}
+					>
 						<SelectTrigger>
 							<SelectValue />
 						</SelectTrigger>
@@ -520,7 +518,7 @@ export function SaludForm({ datos, moneda = "Bs", regionales, onChange, onSiguie
 					<div>
 						<Label className="text-base">Clientes Contratantes</Label>
 						<p className="text-sm text-gray-600 mt-1">
-							Clientes registrados en el sistema que contratan la póliza (opcional)
+							Clientes registrados en el sistema que contratan la póliza
 						</p>
 					</div>
 					<Button onClick={() => setMostrarBuscador(true)} disabled={mostrarBuscador}>
@@ -528,6 +526,33 @@ export function SaludForm({ datos, moneda = "Bs", regionales, onChange, onSiguie
 						Agregar Cliente
 					</Button>
 				</div>
+
+				{/* Sugerencia: agregar asegurado principal de la póliza */}
+				{aseguradoPrincipal && !asegurados.some((a) => a.client_id === aseguradoPrincipal.id) && (
+					<div className="p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between">
+						<div className="flex items-center gap-2">
+							<Users className="h-4 w-4 text-blue-600" />
+							<span className="text-sm text-blue-900">
+								<strong>{aseguradoPrincipal.nombre_completo}</strong> ({aseguradoPrincipal.documento}) —
+								Asegurado de la póliza
+							</span>
+						</div>
+						<Button
+							size="sm"
+							variant="outline"
+							onClick={() =>
+								agregarAsegurado({
+									id: aseguradoPrincipal.id,
+									nombre: aseguradoPrincipal.nombre_completo,
+									ci: aseguradoPrincipal.documento,
+								})
+							}
+						>
+							<Plus className="mr-1 h-3 w-3" />
+							Agregar
+						</Button>
+					</div>
+				)}
 
 				{errores.asegurados && (
 					<div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded">
@@ -553,71 +578,76 @@ export function SaludForm({ datos, moneda = "Bs", regionales, onChange, onSiguie
 				{asegurados.length > 0 ? (
 					<div className="space-y-3">
 						{asegurados.map((asegurado) => (
-								<div key={asegurado.client_id} className="p-4 border rounded-lg">
-									<div className="flex items-start gap-4">
-										<Users className="h-5 w-5 text-gray-400 flex-shrink-0 mt-1" />
-										<div className="flex-1 space-y-3">
-											<div>
-												<p className="font-medium text-gray-900">{asegurado.client_name}</p>
-												<p className="text-sm text-gray-600">CI: {asegurado.client_ci}</p>
+							<div key={asegurado.client_id} className="p-4 border rounded-lg">
+								<div className="flex items-start gap-4">
+									<Users className="h-5 w-5 text-gray-400 flex-shrink-0 mt-1" />
+									<div className="flex-1 space-y-3">
+										<div>
+											<p className="font-medium text-gray-900">{asegurado.client_name}</p>
+											<p className="text-sm text-gray-600">CI: {asegurado.client_ci}</p>
+										</div>
+										<div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+											<div className="space-y-1">
+												<Label className="text-xs text-gray-600">Nivel de Cobertura</Label>
+												<Select
+													value={asegurado.nivel_id}
+													onValueChange={(value) => cambiarNivel(asegurado.client_id, value)}
+												>
+													<SelectTrigger className="w-full">
+														<SelectValue placeholder="Nivel" />
+													</SelectTrigger>
+													<SelectContent>
+														{niveles.map((nivel) => (
+															<SelectItem key={nivel.id} value={nivel.id}>
+																{nivel.nombre}
+															</SelectItem>
+														))}
+													</SelectContent>
+												</Select>
 											</div>
-											<div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-												<div className="space-y-1">
-													<Label className="text-xs text-gray-600">Nivel de Cobertura</Label>
-													<Select
-														value={asegurado.nivel_id}
-														onValueChange={(value) => cambiarNivel(asegurado.client_id, value)}
-													>
-														<SelectTrigger className="w-full">
-															<SelectValue placeholder="Nivel" />
-														</SelectTrigger>
-														<SelectContent>
-															{niveles.map((nivel) => (
-																<SelectItem key={nivel.id} value={nivel.id}>
-																	{nivel.nombre}
-																</SelectItem>
-															))}
-														</SelectContent>
-													</Select>
-												</div>
-												<div className="space-y-1">
-													<Label className="text-xs text-gray-600">
-														Rol <span className="text-red-500">*</span>
-													</Label>
-													<Select
-														value={asegurado.rol}
-														onValueChange={(value) =>
-															cambiarRol(asegurado.client_id, value as "contratante" | "titular")
-														}
-													>
-														<SelectTrigger className="w-full">
-															<SelectValue placeholder="Seleccione un rol" />
-														</SelectTrigger>
-														<SelectContent>
-															<SelectItem value="contratante">Contratante</SelectItem>
-															<SelectItem value="titular">Titular</SelectItem>
-														</SelectContent>
-													</Select>
-												</div>
+											<div className="space-y-1">
+												<Label className="text-xs text-gray-600">
+													Rol <span className="text-red-500">*</span>
+												</Label>
+												<Select
+													value={asegurado.rol}
+													onValueChange={(value) =>
+														cambiarRol(
+															asegurado.client_id,
+															value as "contratante" | "titular",
+														)
+													}
+												>
+													<SelectTrigger className="w-full">
+														<SelectValue placeholder="Seleccione un rol" />
+													</SelectTrigger>
+													<SelectContent>
+														<SelectItem value="contratante">Contratante</SelectItem>
+														<SelectItem value="titular">Titular</SelectItem>
+													</SelectContent>
+												</Select>
 											</div>
 										</div>
-										<Button
-											variant="ghost"
-											size="sm"
-											onClick={() => eliminarAsegurado(asegurado.client_id)}
-											className="mt-1"
-										>
-											<Trash2 className="h-4 w-4 text-red-600" />
-										</Button>
 									</div>
+									<Button
+										variant="ghost"
+										size="sm"
+										onClick={() => eliminarAsegurado(asegurado.client_id)}
+										className="mt-1"
+									>
+										<Trash2 className="h-4 w-4 text-red-600" />
+									</Button>
 								</div>
+							</div>
 						))}
 					</div>
 				) : (
 					<div className="text-center py-8 border-2 border-dashed rounded-lg">
 						<Users className="h-12 w-12 text-gray-400 mx-auto mb-3" />
 						<p className="text-gray-600">No hay clientes agregados</p>
-						<p className="text-sm text-gray-500">Haga clic en &ldquo;Agregar Cliente&rdquo; para comenzar</p>
+						<p className="text-sm text-gray-500">
+							Haga clic en &ldquo;Agregar Cliente&rdquo; para comenzar
+						</p>
 					</div>
 				)}
 			</div>
@@ -657,14 +687,16 @@ export function SaludForm({ datos, moneda = "Bs", regionales, onChange, onSiguie
 										<div className="flex items-start justify-between">
 											<div>
 												<div className="flex items-center gap-2">
-													<p className="font-medium text-gray-900">{beneficiario.nombre_completo}</p>
+													<p className="font-medium text-gray-900">
+														{beneficiario.nombre_completo}
+													</p>
 													{beneficiario.rol && (
 														<span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
 															{beneficiario.rol === "dependiente"
 																? "Dependiente"
 																: beneficiario.rol === "conyugue"
-																? "Cónyuge"
-																: beneficiario.rol}
+																	? "Cónyuge"
+																	: beneficiario.rol}
 														</span>
 													)}
 												</div>
@@ -672,15 +704,17 @@ export function SaludForm({ datos, moneda = "Bs", regionales, onChange, onSiguie
 													<p>CI: {beneficiario.carnet}</p>
 													<p>
 														Fecha Nac:{" "}
-														{new Date(beneficiario.fecha_nacimiento).toLocaleDateString("es-BO")}
+														{new Date(beneficiario.fecha_nacimiento).toLocaleDateString(
+															"es-BO",
+														)}
 													</p>
 													<p>
 														Género:{" "}
 														{beneficiario.genero === "M"
 															? "Masculino"
 															: beneficiario.genero === "F"
-															? "Femenino"
-															: "Otro"}
+																? "Femenino"
+																: "Otro"}
 													</p>
 												</div>
 											</div>
@@ -705,7 +739,9 @@ export function SaludForm({ datos, moneda = "Bs", regionales, onChange, onSiguie
 											<Label className="text-xs text-gray-600">Nivel de Cobertura</Label>
 											<Select
 												value={beneficiario.nivel_id}
-												onValueChange={(value) => cambiarNivelBeneficiario(beneficiario.id, value)}
+												onValueChange={(value) =>
+													cambiarNivelBeneficiario(beneficiario.id, value)
+												}
 											>
 												<SelectTrigger className="w-full">
 													<SelectValue placeholder="Nivel" />
@@ -742,15 +778,23 @@ export function SaludForm({ datos, moneda = "Bs", regionales, onChange, onSiguie
 					<div>
 						<p className="font-semibold mb-1">Clientes Registrados:</p>
 						<ul className="space-y-1 ml-3">
-							<li>• <strong>Contratante:</strong> Cliente que contrata el seguro (opcional)</li>
-							<li>• <strong>Titular:</strong> Cliente principal asegurado (opcional)</li>
+							<li>
+								• <strong>Contratante:</strong> Cliente que contrata el seguro (opcional)
+							</li>
+							<li>
+								• <strong>Titular:</strong> Cliente principal asegurado (opcional)
+							</li>
 						</ul>
 					</div>
 					<div>
 						<p className="font-semibold mb-1">Beneficiarios (sin registro completo):</p>
 						<ul className="space-y-1 ml-3">
-							<li>• <strong>Dependiente:</strong> Hijo, familiar u otro dependiente</li>
-							<li>• <strong>Cónyuge:</strong> Pareja o cónyuge del asegurado</li>
+							<li>
+								• <strong>Dependiente:</strong> Hijo, familiar u otro dependiente
+							</li>
+							<li>
+								• <strong>Cónyuge:</strong> Pareja o cónyuge del asegurado
+							</li>
 						</ul>
 					</div>
 				</div>

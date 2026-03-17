@@ -1,7 +1,7 @@
 "use client";
 
 import { ChevronRight, ChevronLeft, AlertCircle } from "lucide-react";
-import type { DatosEspecificosPoliza } from "@/types/poliza";
+import type { DatosEspecificosPoliza, AseguradoSeleccionado } from "@/types/poliza";
 import { Button } from "@/components/ui/button";
 
 // Formularios específicos por ramo
@@ -22,12 +22,13 @@ type Props = {
 	datos: DatosEspecificosPoliza | null;
 	moneda?: string;
 	regionales: Array<{ id: string; nombre: string }>;
+	asegurado?: AseguradoSeleccionado | null;
 	onChange: (datos: DatosEspecificosPoliza) => void;
 	onSiguiente: () => void;
 	onAnterior: () => void;
 };
 
-export function DatosEspecificos({ ramo, datos, moneda = "Bs", regionales, onChange, onSiguiente, onAnterior }: Props) {
+export function DatosEspecificos({ ramo, datos, moneda = "Bs", regionales, asegurado, onChange, onSiguiente, onAnterior }: Props) {
 	// Normalizar nombre del ramo (case-insensitive, sin tildes)
 	const ramoNormalizado = ramo
 		.toLowerCase()
@@ -61,6 +62,7 @@ export function DatosEspecificos({ ramo, datos, moneda = "Bs", regionales, onCha
 					datos={datos?.tipo_ramo === "Salud" ? datos.datos : null}
 					moneda={moneda}
 					regionales={regionales}
+					aseguradoPrincipal={asegurado}
 					onChange={(datosSalud) => {
 						onChange({
 							tipo_ramo: "Salud",

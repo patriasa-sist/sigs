@@ -36,7 +36,7 @@ type SubPaso = "niveles" | "principal";
 export function VidaForm({ datos, regionales, onChange, onSiguiente, onAnterior }: Props) {
 	// Estado del sub-paso actual
 	const [subPaso, setSubPaso] = useState<SubPaso>(
-		datos?.niveles && datos.niveles.length > 0 ? "principal" : "niveles"
+		datos?.niveles && datos.niveles.length > 0 ? "principal" : "niveles",
 	);
 
 	// ===== PASO 2.1: NIVELES DE COBERTURA =====
@@ -51,9 +51,7 @@ export function VidaForm({ datos, regionales, onChange, onSiguiente, onAnterior 
 	});
 
 	// ===== PASO 3: FORMULARIO PRINCIPAL =====
-	const [tipoPoliza, setTipoPoliza] = useState<"individual" | "corporativo">(
-		datos?.tipo_poliza || "individual"
-	);
+	const [tipoPoliza, setTipoPoliza] = useState<"individual" | "corporativo">(datos?.tipo_poliza || "individual");
 	const [regionalId, setRegionalId] = useState<string>(datos?.regional_asegurado_id || "");
 	const [asegurados, setAsegurados] = useState<AseguradoConNivel[]>(datos?.asegurados || []);
 	const [beneficiarios, setBeneficiarios] = useState<BeneficiarioSalud[]>(datos?.beneficiarios || []);
@@ -206,9 +204,7 @@ export function VidaForm({ datos, regionales, onChange, onSiguiente, onAnterior 
 
 	const guardarBeneficiario = (beneficiario: BeneficiarioSalud) => {
 		if (beneficiarioEditando) {
-			setBeneficiarios(
-				beneficiarios.map((b) => (b.id === beneficiarioEditando.id ? beneficiario : b))
-			);
+			setBeneficiarios(beneficiarios.map((b) => (b.id === beneficiarioEditando.id ? beneficiario : b)));
 		} else {
 			setBeneficiarios([...beneficiarios, beneficiario]);
 		}
@@ -223,9 +219,7 @@ export function VidaForm({ datos, regionales, onChange, onSiguiente, onAnterior 
 	};
 
 	const cambiarNivelBeneficiario = (beneficiarioId: string, nivelId: string) => {
-		setBeneficiarios(
-			beneficiarios.map((b) => (b.id === beneficiarioId ? { ...b, nivel_id: nivelId } : b))
-		);
+		setBeneficiarios(beneficiarios.map((b) => (b.id === beneficiarioId ? { ...b, nivel_id: nivelId } : b)));
 	};
 
 	const handleContinuar = () => {
@@ -317,30 +311,40 @@ export function VidaForm({ datos, regionales, onChange, onSiguiente, onAnterior 
 							{niveles.map((nivel) => {
 								const cob = nivel.coberturas as CoberturasVida;
 								return (
-									<div key={nivel.id} className="flex items-center justify-between p-4 border rounded-lg">
+									<div
+										key={nivel.id}
+										className="flex items-center justify-between p-4 border rounded-lg"
+									>
 										<div className="flex-1">
 											<p className="font-medium text-gray-900">{nivel.nombre}</p>
 											<div className="text-sm text-gray-600 space-y-1">
-												{cob.muerte.habilitado && <p>• Muerte: Bs {cob.muerte.valor.toLocaleString()}</p>}
-												{cob.dima.habilitado && <p>• DIMA: Bs {cob.dima.valor.toLocaleString()}</p>}
-												{cob.sepelio.habilitado && <p>• Sepelio: Bs {cob.sepelio.valor.toLocaleString()}</p>}
-												{cob.gastos_medicos.habilitado && <p>• Gastos Médicos: Bs {cob.gastos_medicos.valor.toLocaleString()}</p>}
-												{cob.indm_enfermedades_graves.habilitado && <p>• INDM Enf. Graves: Bs {cob.indm_enfermedades_graves.valor.toLocaleString()}</p>}
+												{cob.muerte.habilitado && (
+													<p>• Muerte: Bs {cob.muerte.valor.toLocaleString()}</p>
+												)}
+												{cob.dima.habilitado && (
+													<p>• DIMA: Bs {cob.dima.valor.toLocaleString()}</p>
+												)}
+												{cob.sepelio.habilitado && (
+													<p>• Sepelio: Bs {cob.sepelio.valor.toLocaleString()}</p>
+												)}
+												{cob.gastos_medicos.habilitado && (
+													<p>
+														• Gastos Médicos: Bs {cob.gastos_medicos.valor.toLocaleString()}
+													</p>
+												)}
+												{cob.indm_enfermedades_graves.habilitado && (
+													<p>
+														• INDM Enf. Graves: Bs{" "}
+														{cob.indm_enfermedades_graves.valor.toLocaleString()}
+													</p>
+												)}
 											</div>
 										</div>
 										<div className="flex gap-2">
-											<Button
-												variant="outline"
-												size="sm"
-												onClick={() => editarNivel(nivel)}
-											>
+											<Button variant="outline" size="sm" onClick={() => editarNivel(nivel)}>
 												Editar
 											</Button>
-											<Button
-												variant="ghost"
-												size="sm"
-												onClick={() => eliminarNivel(nivel.id)}
-											>
+											<Button variant="ghost" size="sm" onClick={() => eliminarNivel(nivel.id)}>
 												<Trash2 className="h-4 w-4" />
 											</Button>
 										</div>
@@ -364,9 +368,7 @@ export function VidaForm({ datos, regionales, onChange, onSiguiente, onAnterior 
 								<Input
 									id="nombre_nivel"
 									value={nivelEditando.nombre}
-									onChange={(e) =>
-										setNivelEditando({ ...nivelEditando, nombre: e.target.value })
-									}
+									onChange={(e) => setNivelEditando({ ...nivelEditando, nombre: e.target.value })}
 									placeholder="Ej: Nivel 1, Nivel Premium, etc."
 								/>
 							</div>
@@ -400,7 +402,10 @@ export function VidaForm({ datos, regionales, onChange, onSiguiente, onAnterior 
 												onChange={(e) =>
 													setCoberturas({
 														...coberturas,
-														muerte: { ...coberturas.muerte, valor: parseFloat(e.target.value) || 0 },
+														muerte: {
+															...coberturas.muerte,
+															valor: parseFloat(e.target.value) || 0,
+														},
 													})
 												}
 												className={errores.muerte ? "border-red-500" : ""}
@@ -438,7 +443,10 @@ export function VidaForm({ datos, regionales, onChange, onSiguiente, onAnterior 
 												onChange={(e) =>
 													setCoberturas({
 														...coberturas,
-														dima: { ...coberturas.dima, valor: parseFloat(e.target.value) || 0 },
+														dima: {
+															...coberturas.dima,
+															valor: parseFloat(e.target.value) || 0,
+														},
 													})
 												}
 												className={errores.dima ? "border-red-500" : ""}
@@ -476,7 +484,10 @@ export function VidaForm({ datos, regionales, onChange, onSiguiente, onAnterior 
 												onChange={(e) =>
 													setCoberturas({
 														...coberturas,
-														sepelio: { ...coberturas.sepelio, valor: parseFloat(e.target.value) || 0 },
+														sepelio: {
+															...coberturas.sepelio,
+															valor: parseFloat(e.target.value) || 0,
+														},
 													})
 												}
 												className={errores.sepelio ? "border-red-500" : ""}
@@ -497,7 +508,10 @@ export function VidaForm({ datos, regionales, onChange, onSiguiente, onAnterior 
 											onCheckedChange={(checked) =>
 												setCoberturas({
 													...coberturas,
-													gastos_medicos: { ...coberturas.gastos_medicos, habilitado: checked === true },
+													gastos_medicos: {
+														...coberturas.gastos_medicos,
+														habilitado: checked === true,
+													},
 												})
 											}
 										/>
@@ -514,7 +528,10 @@ export function VidaForm({ datos, regionales, onChange, onSiguiente, onAnterior 
 												onChange={(e) =>
 													setCoberturas({
 														...coberturas,
-														gastos_medicos: { ...coberturas.gastos_medicos, valor: parseFloat(e.target.value) || 0 },
+														gastos_medicos: {
+															...coberturas.gastos_medicos,
+															valor: parseFloat(e.target.value) || 0,
+														},
 													})
 												}
 												className={errores.gastos_medicos ? "border-red-500" : ""}
@@ -535,7 +552,10 @@ export function VidaForm({ datos, regionales, onChange, onSiguiente, onAnterior 
 											onCheckedChange={(checked) =>
 												setCoberturas({
 													...coberturas,
-													indm_enfermedades_graves: { ...coberturas.indm_enfermedades_graves, habilitado: checked === true },
+													indm_enfermedades_graves: {
+														...coberturas.indm_enfermedades_graves,
+														habilitado: checked === true,
+													},
 												})
 											}
 										/>
@@ -552,13 +572,18 @@ export function VidaForm({ datos, regionales, onChange, onSiguiente, onAnterior 
 												onChange={(e) =>
 													setCoberturas({
 														...coberturas,
-														indm_enfermedades_graves: { ...coberturas.indm_enfermedades_graves, valor: parseFloat(e.target.value) || 0 },
+														indm_enfermedades_graves: {
+															...coberturas.indm_enfermedades_graves,
+															valor: parseFloat(e.target.value) || 0,
+														},
 													})
 												}
 												className={errores.indm_enfermedades_graves ? "border-red-500" : ""}
 											/>
 											{errores.indm_enfermedades_graves && (
-												<p className="text-sm text-red-600 mt-1">{errores.indm_enfermedades_graves}</p>
+												<p className="text-sm text-red-600 mt-1">
+													{errores.indm_enfermedades_graves}
+												</p>
 											)}
 										</div>
 									)}
@@ -641,9 +666,7 @@ export function VidaForm({ datos, regionales, onChange, onSiguiente, onAnterior 
 							<p className="text-sm font-medium text-gray-900">
 								{niveles.length} nivel(es) de cobertura configurado(s)
 							</p>
-							<p className="text-xs text-gray-600">
-								{niveles.map((n) => n.nombre).join(", ")}
-							</p>
+							<p className="text-xs text-gray-600">{niveles.map((n) => n.nombre).join(", ")}</p>
 						</div>
 					</div>
 					<Button variant="outline" size="sm" onClick={volverANiveles}>
@@ -658,7 +681,10 @@ export function VidaForm({ datos, regionales, onChange, onSiguiente, onAnterior 
 					<Label htmlFor="tipo_poliza">
 						Tipo de Póliza <span className="text-red-500">*</span>
 					</Label>
-					<Select value={tipoPoliza} onValueChange={(value: "individual" | "corporativo") => setTipoPoliza(value)}>
+					<Select
+						value={tipoPoliza}
+						onValueChange={(value: "individual" | "corporativo") => setTipoPoliza(value)}
+					>
 						<SelectTrigger>
 							<SelectValue />
 						</SelectTrigger>
@@ -691,9 +717,7 @@ export function VidaForm({ datos, regionales, onChange, onSiguiente, onAnterior 
 
 				{/* Nota sobre pago */}
 				<div className="md:col-span-2">
-					<p className="text-xs text-gray-500">
-						Pólizas de Vida solo permiten pago en contado (pago único)
-					</p>
+					<p className="text-xs text-gray-500">Pólizas de Vida solo permiten pago en contado (pago único)</p>
 				</div>
 			</div>
 
@@ -703,7 +727,7 @@ export function VidaForm({ datos, regionales, onChange, onSiguiente, onAnterior 
 					<div>
 						<Label className="text-base">Clientes Contratantes</Label>
 						<p className="text-sm text-gray-600 mt-1">
-							Clientes registrados en el sistema que contratan la póliza (opcional)
+							Clientes registrados en el sistema que contratan la póliza
 						</p>
 					</div>
 					<Button onClick={() => setMostrarBuscador(true)} disabled={mostrarBuscador}>
@@ -736,71 +760,76 @@ export function VidaForm({ datos, regionales, onChange, onSiguiente, onAnterior 
 				{asegurados.length > 0 ? (
 					<div className="space-y-3">
 						{asegurados.map((asegurado) => (
-								<div key={asegurado.client_id} className="p-4 border rounded-lg">
-									<div className="flex items-start gap-4">
-										<Users className="h-5 w-5 text-gray-400 flex-shrink-0 mt-1" />
-										<div className="flex-1 space-y-3">
-											<div>
-												<p className="font-medium text-gray-900">{asegurado.client_name}</p>
-												<p className="text-sm text-gray-600">CI: {asegurado.client_ci}</p>
+							<div key={asegurado.client_id} className="p-4 border rounded-lg">
+								<div className="flex items-start gap-4">
+									<Users className="h-5 w-5 text-gray-400 flex-shrink-0 mt-1" />
+									<div className="flex-1 space-y-3">
+										<div>
+											<p className="font-medium text-gray-900">{asegurado.client_name}</p>
+											<p className="text-sm text-gray-600">CI: {asegurado.client_ci}</p>
+										</div>
+										<div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+											<div className="space-y-1">
+												<Label className="text-xs text-gray-600">Nivel de Cobertura</Label>
+												<Select
+													value={asegurado.nivel_id}
+													onValueChange={(value) => cambiarNivel(asegurado.client_id, value)}
+												>
+													<SelectTrigger className="w-full">
+														<SelectValue placeholder="Nivel" />
+													</SelectTrigger>
+													<SelectContent>
+														{niveles.map((nivel) => (
+															<SelectItem key={nivel.id} value={nivel.id}>
+																{nivel.nombre}
+															</SelectItem>
+														))}
+													</SelectContent>
+												</Select>
 											</div>
-											<div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-												<div className="space-y-1">
-													<Label className="text-xs text-gray-600">Nivel de Cobertura</Label>
-													<Select
-														value={asegurado.nivel_id}
-														onValueChange={(value) => cambiarNivel(asegurado.client_id, value)}
-													>
-														<SelectTrigger className="w-full">
-															<SelectValue placeholder="Nivel" />
-														</SelectTrigger>
-														<SelectContent>
-															{niveles.map((nivel) => (
-																<SelectItem key={nivel.id} value={nivel.id}>
-																	{nivel.nombre}
-																</SelectItem>
-															))}
-														</SelectContent>
-													</Select>
-												</div>
-												<div className="space-y-1">
-													<Label className="text-xs text-gray-600">
-														Rol <span className="text-red-500">*</span>
-													</Label>
-													<Select
-														value={asegurado.rol || ""}
-														onValueChange={(value) =>
-															cambiarRol(asegurado.client_id, value as "contratante" | "titular")
-														}
-													>
-														<SelectTrigger className="w-full">
-															<SelectValue placeholder="Seleccione un rol" />
-														</SelectTrigger>
-														<SelectContent>
-															<SelectItem value="contratante">Contratante</SelectItem>
-															<SelectItem value="titular">Titular</SelectItem>
-														</SelectContent>
-													</Select>
-												</div>
+											<div className="space-y-1">
+												<Label className="text-xs text-gray-600">
+													Rol <span className="text-red-500">*</span>
+												</Label>
+												<Select
+													value={asegurado.rol || ""}
+													onValueChange={(value) =>
+														cambiarRol(
+															asegurado.client_id,
+															value as "contratante" | "titular",
+														)
+													}
+												>
+													<SelectTrigger className="w-full">
+														<SelectValue placeholder="Seleccione un rol" />
+													</SelectTrigger>
+													<SelectContent>
+														<SelectItem value="contratante">Contratante</SelectItem>
+														<SelectItem value="titular">Titular</SelectItem>
+													</SelectContent>
+												</Select>
 											</div>
 										</div>
-										<Button
-											variant="ghost"
-											size="sm"
-											onClick={() => eliminarAsegurado(asegurado.client_id)}
-											className="mt-1"
-										>
-											<Trash2 className="h-4 w-4 text-red-600" />
-										</Button>
 									</div>
+									<Button
+										variant="ghost"
+										size="sm"
+										onClick={() => eliminarAsegurado(asegurado.client_id)}
+										className="mt-1"
+									>
+										<Trash2 className="h-4 w-4 text-red-600" />
+									</Button>
 								</div>
+							</div>
 						))}
 					</div>
 				) : (
 					<div className="text-center py-8 border-2 border-dashed rounded-lg">
 						<Users className="h-12 w-12 text-gray-400 mx-auto mb-3" />
 						<p className="text-gray-600">No hay clientes agregados</p>
-						<p className="text-sm text-gray-500">Haga clic en &ldquo;Agregar Cliente&rdquo; para comenzar</p>
+						<p className="text-sm text-gray-500">
+							Haga clic en &ldquo;Agregar Cliente&rdquo; para comenzar
+						</p>
 					</div>
 				)}
 			</div>
@@ -840,14 +869,16 @@ export function VidaForm({ datos, regionales, onChange, onSiguiente, onAnterior 
 										<div className="flex items-start justify-between">
 											<div>
 												<div className="flex items-center gap-2">
-													<p className="font-medium text-gray-900">{beneficiario.nombre_completo}</p>
+													<p className="font-medium text-gray-900">
+														{beneficiario.nombre_completo}
+													</p>
 													{beneficiario.rol && (
 														<span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
 															{beneficiario.rol === "dependiente"
 																? "Dependiente"
 																: beneficiario.rol === "conyugue"
-																? "Cónyuge"
-																: beneficiario.rol}
+																	? "Cónyuge"
+																	: beneficiario.rol}
 														</span>
 													)}
 												</div>
@@ -855,15 +886,17 @@ export function VidaForm({ datos, regionales, onChange, onSiguiente, onAnterior 
 													<p>CI: {beneficiario.carnet}</p>
 													<p>
 														Fecha Nac:{" "}
-														{new Date(beneficiario.fecha_nacimiento).toLocaleDateString("es-BO")}
+														{new Date(beneficiario.fecha_nacimiento).toLocaleDateString(
+															"es-BO",
+														)}
 													</p>
 													<p>
 														Género:{" "}
 														{beneficiario.genero === "M"
 															? "Masculino"
 															: beneficiario.genero === "F"
-															? "Femenino"
-															: "Otro"}
+																? "Femenino"
+																: "Otro"}
 													</p>
 												</div>
 											</div>
@@ -888,7 +921,9 @@ export function VidaForm({ datos, regionales, onChange, onSiguiente, onAnterior 
 											<Label className="text-xs text-gray-600">Nivel de Cobertura</Label>
 											<Select
 												value={beneficiario.nivel_id}
-												onValueChange={(value) => cambiarNivelBeneficiario(beneficiario.id, value)}
+												onValueChange={(value) =>
+													cambiarNivelBeneficiario(beneficiario.id, value)
+												}
 											>
 												<SelectTrigger className="w-full">
 													<SelectValue placeholder="Nivel" />
@@ -925,15 +960,23 @@ export function VidaForm({ datos, regionales, onChange, onSiguiente, onAnterior 
 					<div>
 						<p className="font-semibold mb-1">Clientes Registrados:</p>
 						<ul className="space-y-1 ml-3">
-							<li>• <strong>Contratante:</strong> Cliente que contrata el seguro (opcional)</li>
-							<li>• <strong>Titular:</strong> Cliente principal asegurado (opcional)</li>
+							<li>
+								• <strong>Contratante:</strong> Cliente que contrata el seguro (opcional)
+							</li>
+							<li>
+								• <strong>Titular:</strong> Cliente principal asegurado (opcional)
+							</li>
 						</ul>
 					</div>
 					<div>
 						<p className="font-semibold mb-1">Beneficiarios (sin registro completo):</p>
 						<ul className="space-y-1 ml-3">
-							<li>• <strong>Dependiente:</strong> Hijo, familiar u otro dependiente</li>
-							<li>• <strong>Cónyuge:</strong> Pareja o cónyuge del asegurado</li>
+							<li>
+								• <strong>Dependiente:</strong> Hijo, familiar u otro dependiente
+							</li>
+							<li>
+								• <strong>Cónyuge:</strong> Pareja o cónyuge del asegurado
+							</li>
 						</ul>
 					</div>
 				</div>
