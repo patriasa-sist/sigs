@@ -462,7 +462,8 @@ export type AseguradoConNivel = {
 	client_name: string;
 	client_ci: string;
 	nivel_id: string; // Referencia al ID del nivel
-	cargo?: string; // NUEVO: Cargo/posición (Ej: "Gerente", "Operador") - solo para Accidentes Personales corporativo
+	cargo?: string; // Cargo/posición (Ej: "Gerente", "Operador") - solo para corporativo
+	rol?: "contratante" | "titular"; // Rol del asegurado (usado en Vida y Accidentes Personales)
 };
 
 export type DatosAccidentesPersonales = {
@@ -470,7 +471,7 @@ export type DatosAccidentesPersonales = {
 	tipo_poliza: "individual" | "corporativo";
 	regional_asegurado_id: string;
 	asegurados: AseguradoConNivel[];
-	producto?: string; // Opcional
+	beneficiarios: BeneficiarioSalud[]; // Dependientes/cónyuges cubiertos
 };
 
 export type DatosVida = {
@@ -478,8 +479,7 @@ export type DatosVida = {
 	tipo_poliza: "individual" | "corporativo";
 	regional_asegurado_id: string;
 	asegurados: AseguradoConNivel[];
-	producto: string; // MODIFICADO: Ahora obligatorio (nombre del producto seleccionado)
-	producto_id?: string; // NUEVO: UUID referencia a productos_vida.id
+	beneficiarios: BeneficiarioSalud[]; // Dependientes/cónyuges cubiertos
 };
 
 export type DatosSepelio = {
@@ -487,7 +487,6 @@ export type DatosSepelio = {
 	tipo_poliza: "individual" | "corporativo";
 	regional_asegurado_id: string;
 	asegurados: AseguradoConNivel[];
-	producto?: string; // Opcional
 };
 
 // Tipo discriminado para datos específicos

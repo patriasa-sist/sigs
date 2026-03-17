@@ -539,6 +539,7 @@ async function insertarDatosRamo(
 					client_id: asegurado.client_id,
 					nivel_id: nivelIdMap.get(asegurado.nivel_id)!,
 					cargo: asegurado.cargo || null,
+					rol: asegurado.rol || null,
 				}));
 
 			if (aseguradosParaInsertar.length > 0) {
@@ -547,6 +548,35 @@ async function insertarDatosRamo(
 					.insert(aseguradosParaInsertar);
 
 				throwIfError(errorAsegurados, "Error al guardar los asegurados con nivel");
+			}
+		}
+
+		// Guardar beneficiarios (Vida y Accidentes Personales)
+		if (
+			formState.datos_especificos.tipo_ramo === "Vida" ||
+			formState.datos_especificos.tipo_ramo === "Accidentes Personales"
+		) {
+			const beneficiarios = "beneficiarios" in datosNivel ? datosNivel.beneficiarios || [] : [];
+			if (beneficiarios.length > 0) {
+				const beneficiariosParaInsertar = beneficiarios
+					.filter((b) => nivelIdMap.has(b.nivel_id))
+					.map((beneficiario) => ({
+						poliza_id: polizaId,
+						nombre_completo: beneficiario.nombre_completo,
+						carnet: beneficiario.carnet,
+						fecha_nacimiento: beneficiario.fecha_nacimiento,
+						genero: beneficiario.genero,
+						nivel_id: nivelIdMap.get(beneficiario.nivel_id)!,
+						rol: beneficiario.rol,
+					}));
+
+				if (beneficiariosParaInsertar.length > 0) {
+					const { error: errorBeneficiarios } = await supabase
+						.from("polizas_beneficiarios")
+						.insert(beneficiariosParaInsertar);
+
+					throwIfError(errorBeneficiarios, "Error al guardar los beneficiarios");
+				}
 			}
 		}
 	}

@@ -178,6 +178,9 @@ export default function ExportarProduccion() {
 				{ header: "Fin Vigencia", key: "fin_vigencia", width: 15 },
 				{ header: "Fecha Emisión Compañía", key: "fecha_emision_compania", width: 20 },
 				{ header: "Fecha Producción Sistema", key: "fecha_produccion_sistema", width: 22 },
+				{ header: "Persona Registro", key: "persona_registro", width: 25 },
+				{ header: "Categoría", key: "categoria", width: 20 },
+				{ header: "Producto", key: "producto", width: 25 },
 			];
 
 			// Aplicar anchos de columna

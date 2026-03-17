@@ -143,6 +143,18 @@ export type PolizaDetalle = PolizaListItem & {
 		client_ci: string;
 		nivel_nombre: string | null;
 		cargo: string | null;
+		rol: string | null;
+		_origen_anexo?: string;
+		_excluido_por?: string;
+	}>;
+	beneficiarios_nivel?: Array<{
+		id: string;
+		nombre_completo: string;
+		carnet: string;
+		fecha_nacimiento: string;
+		genero: string;
+		nivel_nombre: string | null;
+		rol: string;
 		_origen_anexo?: string;
 		_excluido_por?: string;
 	}>;
@@ -540,7 +552,7 @@ export async function obtenerDetallePoliza(polizaId: string) {
 
 				const clientMap = new Map<string, { name: string; ci: string }>();
 				for (const c of clients || []) {
-					if (c.client_type === "natural") {
+					if (c.client_type === "natural" || c.client_type === "unipersonal") {
 						const { data: nc } = await supabase
 							.from("natural_clients")
 							.select("primer_nombre, primer_apellido, numero_documento")
@@ -711,6 +723,7 @@ export async function obtenerDetallePoliza(polizaId: string) {
 		// --- VIDA / ACCIDENTES PERSONALES / SEPELIO (genéricos con niveles) ---
 		let niveles_cobertura: PolizaDetalle["niveles_cobertura"];
 		let asegurados_nivel: PolizaDetalle["asegurados_nivel"];
+		let beneficiarios_nivel: PolizaDetalle["beneficiarios_nivel"];
 		if (ramoLower.includes("vida") || ramoLower.includes("accidentes personales") || ramoLower.includes("sepelio")) {
 			const { data: nivelesData } = await supabase
 				.from("polizas_niveles")
@@ -729,7 +742,7 @@ export async function obtenerDetallePoliza(polizaId: string) {
 
 			const { data: asegNivelData } = await supabase
 				.from("polizas_asegurados_nivel")
-				.select("id, client_id, nivel_id, cargo")
+				.select("id, client_id, nivel_id, cargo, rol")
 				.eq("poliza_id", polizaId);
 
 			if (asegNivelData && asegNivelData.length > 0) {
@@ -743,7 +756,7 @@ export async function obtenerDetallePoliza(polizaId: string) {
 					.in("id", clientIds);
 
 				for (const c of clients || []) {
-					if (c.client_type === "natural") {
+					if (c.client_type === "natural" || c.client_type === "unipersonal") {
 						const { data: nc } = await supabase
 							.from("natural_clients")
 							.select("primer_nombre, primer_apellido, numero_documento")
@@ -766,7 +779,28 @@ export async function obtenerDetallePoliza(polizaId: string) {
 					client_ci: clientMap.get(a.client_id)?.ci || "-",
 					nivel_nombre: a.nivel_id ? nivelMap.get(a.nivel_id) || null : null,
 					cargo: a.cargo || null,
+					rol: a.rol || null,
 				}));
+			}
+
+			// Beneficiarios (Vida y Accidentes Personales)
+			if (ramoLower.includes("vida") || ramoLower.includes("accidentes personales")) {
+				const { data: benefData } = await supabase
+					.from("polizas_beneficiarios")
+					.select("id, nombre_completo, carnet, fecha_nacimiento, genero, nivel_id, rol")
+					.eq("poliza_id", polizaId);
+
+				if (benefData && benefData.length > 0) {
+					beneficiarios_nivel = benefData.map(b => ({
+						id: b.id,
+						nombre_completo: b.nombre_completo,
+						carnet: b.carnet,
+						fecha_nacimiento: b.fecha_nacimiento,
+						genero: b.genero,
+						nivel_nombre: b.nivel_id ? nivelMap.get(b.nivel_id) || null : null,
+						rol: b.rol,
+					}));
+				}
 			}
 		}
 
@@ -1161,6 +1195,7 @@ export async function obtenerDetallePoliza(polizaId: string) {
 							client_ci: "-",
 							nivel_nombre: null,
 							cargo: aa.cargo || null,
+							rol: null,
 							_origen_anexo: nroAnexo,
 						});
 					}
@@ -1322,6 +1357,7 @@ export async function obtenerDetallePoliza(polizaId: string) {
 			responsabilidad_civil,
 			niveles_cobertura,
 			asegurados_nivel,
+			beneficiarios_nivel,
 			transporte,
 			naves,
 			niveles_ap_naves,

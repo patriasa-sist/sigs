@@ -184,6 +184,7 @@ DECLARE
   v_rc INTEGER := 0;
   v_niveles INTEGER := 0;
   v_asegurados_nivel INTEGER := 0;
+  v_beneficiarios INTEGER := 0;
   v_transporte INTEGER := 0;
   v_ramos_tecnicos INTEGER := 0;
   v_aero_niveles INTEGER := 0;
@@ -316,6 +317,13 @@ BEGIN
   END;
 
   BEGIN
+    DELETE FROM polizas_anexos_beneficiarios
+    WHERE anexo_id IN (SELECT id FROM polizas_anexos WHERE poliza_id = p_poliza_id);
+    GET DIAGNOSTICS v_count = ROW_COUNT; v_anexos_items := v_anexos_items + v_count;
+  EXCEPTION WHEN undefined_table THEN NULL;
+  END;
+
+  BEGIN
     DELETE FROM polizas_anexos_documentos
     WHERE anexo_id IN (SELECT id FROM polizas_anexos WHERE poliza_id = p_poliza_id);
     GET DIAGNOSTICS v_count = ROW_COUNT; v_anexos_items := v_anexos_items + v_count;
@@ -402,6 +410,13 @@ BEGIN
     DELETE FROM polizas_asegurados_nivel WHERE poliza_id = p_poliza_id;
     GET DIAGNOSTICS v_count = ROW_COUNT; v_asegurados_nivel := v_count;
   EXCEPTION WHEN undefined_table THEN v_asegurados_nivel := 0;
+  END;
+
+  -- Beneficiarios genéricos (Vida, AP, Sepelio - hijo de polizas_niveles)
+  BEGIN
+    DELETE FROM polizas_beneficiarios WHERE poliza_id = p_poliza_id;
+    GET DIAGNOSTICS v_count = ROW_COUNT; v_beneficiarios := v_count;
+  EXCEPTION WHEN undefined_table THEN v_beneficiarios := 0;
   END;
 
   -- Naves de aeronavegación (tiene FK a polizas_aeronavegacion_niveles_ap)
@@ -581,6 +596,7 @@ BEGIN
       'responsabilidad_civil', v_rc,
       'niveles', v_niveles,
       'asegurados_nivel', v_asegurados_nivel,
+      'beneficiarios', v_beneficiarios,
       'transporte', v_transporte,
       'ramos_tecnicos_equipos', v_ramos_tecnicos,
       'aeronavegacion_niveles_ap', v_aero_niveles,
@@ -799,6 +815,13 @@ BEGIN
     v_result := v_result || jsonb_build_object('niveles', v_count);
   EXCEPTION WHEN undefined_table THEN
     v_result := v_result || jsonb_build_object('niveles', 0);
+  END;
+
+  BEGIN
+    SELECT COUNT(*) INTO v_count FROM polizas_beneficiarios WHERE poliza_id = p_poliza_id;
+    v_result := v_result || jsonb_build_object('beneficiarios', v_count);
+  EXCEPTION WHEN undefined_table THEN
+    v_result := v_result || jsonb_build_object('beneficiarios', 0);
   END;
 
   BEGIN

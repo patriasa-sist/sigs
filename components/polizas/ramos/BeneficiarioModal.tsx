@@ -2,16 +2,19 @@
 
 import { useState } from "react";
 import { X, AlertTriangle } from "lucide-react";
-import type { BeneficiarioSalud, NivelSalud } from "@/types/poliza";
+import type { BeneficiarioSalud } from "@/types/poliza";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
+// Tipo genérico para niveles: acepta NivelSalud (con monto) o NivelCobertura (sin monto)
+type NivelGenerico = { id: string; nombre: string; monto?: number };
+
 type Props = {
 	beneficiario: BeneficiarioSalud | null;
 	moneda?: string;
-	niveles: NivelSalud[];
+	niveles: NivelGenerico[];
 	onGuardar: (beneficiario: BeneficiarioSalud) => void;
 	onCancelar: () => void;
 };
@@ -242,7 +245,7 @@ export function BeneficiarioModal({ beneficiario, moneda = "Bs", niveles, onGuar
 									<SelectContent>
 										{niveles.map((nivel) => (
 											<SelectItem key={nivel.id} value={nivel.id}>
-												{nivel.nombre} - {moneda} {nivel.monto.toLocaleString()}
+												{nivel.nombre}{nivel.monto != null ? ` - ${moneda} ${nivel.monto.toLocaleString()}` : ""}
 											</SelectItem>
 										))}
 									</SelectContent>

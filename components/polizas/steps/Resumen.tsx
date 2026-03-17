@@ -367,10 +367,6 @@ export function Resumen({ formState, onAnterior, onEditarPaso, onGuardar, guarda
 								{datos_especificos?.tipo_ramo === "Vida" && (
 									<div className="text-sm text-gray-600 space-y-2">
 										<div>
-											<span className="font-medium text-gray-700">Producto:</span>{" "}
-											{datos_especificos.datos.producto}
-										</div>
-										<div>
 											<span className="font-medium text-gray-700">Suma Asegurada:</span>{" "}
 											{datos_especificos.datos.niveles.length} nivel(es)
 										</div>

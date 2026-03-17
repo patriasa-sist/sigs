@@ -54,7 +54,6 @@ export function SepelioForm({ datos, regionales, onChange, onSiguiente, onAnteri
 		datos?.tipo_poliza || "individual"
 	);
 	const [regionalId, setRegionalId] = useState<string>(datos?.regional_asegurado_id || "");
-	const [producto, setProducto] = useState<string>(datos?.producto || "");
 	const [asegurados, setAsegurados] = useState<AseguradoConNivel[]>(datos?.asegurados || []);
 	const [mostrarBuscador, setMostrarBuscador] = useState(false);
 	const [errores, setErrores] = useState<Record<string, string>>({});
@@ -258,7 +257,6 @@ export function SepelioForm({ datos, regionales, onChange, onSiguiente, onAnteri
 			tipo_poliza: tipoPoliza,
 			regional_asegurado_id: regionalId,
 			asegurados,
-			producto: producto || undefined,
 		};
 
 		onChange(datosSepelio);
@@ -518,17 +516,7 @@ export function SepelioForm({ datos, regionales, onChange, onSiguiente, onAnteri
 					{errores.regional && <p className="text-sm text-red-600">{errores.regional}</p>}
 				</div>
 
-				{/* Producto (Opcional) */}
-				<div className="space-y-2 md:col-span-2">
-					<Label htmlFor="producto">Producto (Opcional)</Label>
-					<Input
-						id="producto"
-						value={producto}
-						onChange={(e) => setProducto(e.target.value)}
-						placeholder="Ej: Sepelio Premium, Sepelio Familiar, etc."
-					/>
 				</div>
-			</div>
 
 			{/* Asegurados */}
 			<div className="space-y-4 mb-6">

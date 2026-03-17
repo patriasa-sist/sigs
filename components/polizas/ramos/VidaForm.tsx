@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
 	ChevronRight,
 	ChevronLeft,
@@ -10,15 +10,17 @@ import {
 	Users,
 	AlertTriangle,
 	Settings,
+	UserPlus,
+	Edit,
 } from "lucide-react";
-import type { DatosVida, AseguradoConNivel, NivelCobertura, CoberturasVida, ProductoVida } from "@/types/poliza";
+import type { DatosVida, AseguradoConNivel, NivelCobertura, CoberturasVida, BeneficiarioSalud } from "@/types/poliza";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { BuscadorClientes } from "../BuscadorClientes";
-import { createClient } from "@/utils/supabase/client";
+import { BeneficiarioModal } from "./BeneficiarioModal";
 
 type Props = {
 	datos: DatosVida | null;
@@ -53,34 +55,12 @@ export function VidaForm({ datos, regionales, onChange, onSiguiente, onAnterior 
 		datos?.tipo_poliza || "individual"
 	);
 	const [regionalId, setRegionalId] = useState<string>(datos?.regional_asegurado_id || "");
-	const [productoId, setProductoId] = useState<string>(datos?.producto_id || "");
-	const [producto, setProducto] = useState<string>(datos?.producto || "");
 	const [asegurados, setAsegurados] = useState<AseguradoConNivel[]>(datos?.asegurados || []);
+	const [beneficiarios, setBeneficiarios] = useState<BeneficiarioSalud[]>(datos?.beneficiarios || []);
 	const [mostrarBuscador, setMostrarBuscador] = useState(false);
+	const [mostrarModalBeneficiario, setMostrarModalBeneficiario] = useState(false);
+	const [beneficiarioEditando, setBeneficiarioEditando] = useState<BeneficiarioSalud | null>(null);
 	const [errores, setErrores] = useState<Record<string, string>>({});
-	const [productos, setProductos] = useState<ProductoVida[]>([]);
-	const [cargandoProductos, setCargandoProductos] = useState(true);
-
-	// Fetch productos_vida from Supabase
-	useEffect(() => {
-		const fetchProductos = async () => {
-			const supabase = createClient();
-			const { data, error } = await supabase
-				.from("productos_vida")
-				.select("*")
-				.eq("activo", true)
-				.order("nombre", { ascending: true });
-
-			if (error) {
-				console.error("Error fetching productos vida:", error);
-			} else if (data) {
-				setProductos(data);
-			}
-			setCargandoProductos(false);
-		};
-
-		fetchProductos();
-	}, []);
 
 	// ===== FUNCIONES PASO 2.1: NIVELES =====
 	const crearNuevoNivel = () => {
@@ -187,7 +167,7 @@ export function VidaForm({ datos, regionales, onChange, onSiguiente, onAnterior 
 			return;
 		}
 
-		// Agregar con el primer nivel disponible por defecto
+		// Agregar con el primer nivel y rol contratante por defecto
 		setAsegurados([
 			...asegurados,
 			{
@@ -195,6 +175,7 @@ export function VidaForm({ datos, regionales, onChange, onSiguiente, onAnterior 
 				client_name: cliente.nombre,
 				client_ci: cliente.ci,
 				nivel_id: niveles[0]?.id || "",
+				rol: "contratante",
 			},
 		]);
 		setMostrarBuscador(false);
@@ -204,22 +185,47 @@ export function VidaForm({ datos, regionales, onChange, onSiguiente, onAnterior 
 		setAsegurados(asegurados.map((a) => (a.client_id === clientId ? { ...a, nivel_id: nivelId } : a)));
 	};
 
+	const cambiarRol = (clientId: string, rol: "contratante" | "titular") => {
+		setAsegurados(asegurados.map((a) => (a.client_id === clientId ? { ...a, rol } : a)));
+	};
+
 	const eliminarAsegurado = (clientId: string) => {
 		setAsegurados(asegurados.filter((a) => a.client_id !== clientId));
 	};
 
-	const handleProductoChange = (selectedProductoId: string) => {
-		setProductoId(selectedProductoId);
-		const productoSeleccionado = productos.find((p) => p.id === selectedProductoId);
-		if (productoSeleccionado) {
-			setProducto(productoSeleccionado.nombre);
+	// ===== FUNCIONES BENEFICIARIOS =====
+	const abrirModalBeneficiario = () => {
+		setBeneficiarioEditando(null);
+		setMostrarModalBeneficiario(true);
+	};
+
+	const abrirModalEditarBeneficiario = (beneficiario: BeneficiarioSalud) => {
+		setBeneficiarioEditando(beneficiario);
+		setMostrarModalBeneficiario(true);
+	};
+
+	const guardarBeneficiario = (beneficiario: BeneficiarioSalud) => {
+		if (beneficiarioEditando) {
+			setBeneficiarios(
+				beneficiarios.map((b) => (b.id === beneficiarioEditando.id ? beneficiario : b))
+			);
+		} else {
+			setBeneficiarios([...beneficiarios, beneficiario]);
 		}
-		// Clear error if exists
-		if (errores.producto) {
-			// eslint-disable-next-line @typescript-eslint/no-unused-vars
-			const { producto: _removed, ...rest } = errores;
-			setErrores(rest);
+		setMostrarModalBeneficiario(false);
+		setBeneficiarioEditando(null);
+	};
+
+	const eliminarBeneficiario = (id: string) => {
+		if (confirm("¿Está seguro de eliminar este beneficiario?")) {
+			setBeneficiarios(beneficiarios.filter((b) => b.id !== id));
 		}
+	};
+
+	const cambiarNivelBeneficiario = (beneficiarioId: string, nivelId: string) => {
+		setBeneficiarios(
+			beneficiarios.map((b) => (b.id === beneficiarioId ? { ...b, nivel_id: nivelId } : b))
+		);
 	};
 
 	const handleContinuar = () => {
@@ -229,18 +235,31 @@ export function VidaForm({ datos, regionales, onChange, onSiguiente, onAnterior 
 			nuevosErrores.regional = "Debe seleccionar una regional";
 		}
 
-		if (!productoId || !producto) {
-			nuevosErrores.producto = "Debe seleccionar un producto";
+		// Validar que haya al menos un cliente o beneficiario
+		if (asegurados.length === 0 && beneficiarios.length === 0) {
+			nuevosErrores.asegurados = "Debe agregar al menos un cliente o beneficiario";
 		}
 
-		if (asegurados.length === 0) {
-			nuevosErrores.asegurados = "Debe agregar al menos un asegurado";
-		}
-
-		// Validar que todos los asegurados tengan un nivel asignado
+		// Validar que todos los asegurados tengan un nivel y rol asignado
 		const aseguradosSinNivel = asegurados.filter((a) => !a.nivel_id);
 		if (aseguradosSinNivel.length > 0) {
-			nuevosErrores.asegurados = "Todos los asegurados deben tener un nivel asignado";
+			nuevosErrores.asegurados = "Todos los clientes deben tener un nivel asignado";
+		}
+
+		const aseguradosSinRol = asegurados.filter((a) => !a.rol);
+		if (aseguradosSinRol.length > 0) {
+			nuevosErrores.asegurados = "Todos los clientes deben tener un rol asignado (Contratante o Titular)";
+		}
+
+		// Validar que todos los beneficiarios tengan un nivel y rol asignado
+		const beneficiariosSinNivel = beneficiarios.filter((b) => !b.nivel_id);
+		if (beneficiariosSinNivel.length > 0) {
+			nuevosErrores.beneficiarios = "Todos los beneficiarios deben tener un nivel asignado";
+		}
+
+		const beneficiariosSinRol = beneficiarios.filter((b) => !b.rol);
+		if (beneficiariosSinRol.length > 0) {
+			nuevosErrores.beneficiarios = "Todos los beneficiarios deben tener un rol asignado (Dependiente o Cónyuge)";
 		}
 
 		if (Object.keys(nuevosErrores).length > 0) {
@@ -254,8 +273,7 @@ export function VidaForm({ datos, regionales, onChange, onSiguiente, onAnterior 
 			tipo_poliza: tipoPoliza,
 			regional_asegurado_id: regionalId,
 			asegurados,
-			producto,
-			producto_id: productoId,
+			beneficiarios,
 		};
 
 		onChange(datosVida);
@@ -671,44 +689,26 @@ export function VidaForm({ datos, regionales, onChange, onSiguiente, onAnterior 
 					{errores.regional && <p className="text-sm text-red-600">{errores.regional}</p>}
 				</div>
 
-				{/* Producto (Obligatorio) */}
-				<div className="space-y-2 md:col-span-2">
-					<Label htmlFor="producto">
-						Producto <span className="text-red-500">*</span>
-					</Label>
-					<Select value={productoId} onValueChange={handleProductoChange} disabled={cargandoProductos}>
-						<SelectTrigger className={errores.producto ? "border-red-500" : ""}>
-							<SelectValue placeholder={cargandoProductos ? "Cargando productos..." : "Seleccione un producto"} />
-						</SelectTrigger>
-						<SelectContent>
-							{productos.map((prod) => (
-								<SelectItem key={prod.id} value={prod.id}>
-									{prod.nombre}
-								</SelectItem>
-							))}
-						</SelectContent>
-					</Select>
-					{errores.producto && <p className="text-sm text-red-600">{errores.producto}</p>}
+				{/* Nota sobre pago */}
+				<div className="md:col-span-2">
 					<p className="text-xs text-gray-500">
 						Pólizas de Vida solo permiten pago en contado (pago único)
 					</p>
 				</div>
 			</div>
 
-			{/* Asegurados */}
+			{/* Clientes (Contratantes/Titulares) */}
 			<div className="space-y-4 mb-6">
 				<div className="flex items-center justify-between">
 					<div>
-						<Label className="text-base">
-							Asegurados <span className="text-red-500">*</span>
-						</Label>
+						<Label className="text-base">Clientes Contratantes</Label>
 						<p className="text-sm text-gray-600 mt-1">
-							Agregue los asegurados y asigne su nivel de cobertura
+							Clientes registrados en el sistema que contratan la póliza (opcional)
 						</p>
 					</div>
 					<Button onClick={() => setMostrarBuscador(true)} disabled={mostrarBuscador}>
 						<Plus className="mr-2 h-4 w-4" />
-						Agregar Asegurado
+						Agregar Cliente
 					</Button>
 				</div>
 
@@ -736,32 +736,59 @@ export function VidaForm({ datos, regionales, onChange, onSiguiente, onAnterior 
 				{asegurados.length > 0 ? (
 					<div className="space-y-3">
 						{asegurados.map((asegurado) => (
-								<div key={asegurado.client_id} className="flex items-center gap-4 p-4 border rounded-lg">
-									<Users className="h-5 w-5 text-gray-400 flex-shrink-0" />
-									<div className="flex-1">
-										<p className="font-medium text-gray-900">{asegurado.client_name}</p>
-										<p className="text-sm text-gray-600">CI: {asegurado.client_ci}</p>
-									</div>
-									<div className="flex items-center gap-2">
-										<Select
-											value={asegurado.nivel_id}
-											onValueChange={(value) => cambiarNivel(asegurado.client_id, value)}
-										>
-											<SelectTrigger className="w-[180px]">
-												<SelectValue placeholder="Nivel" />
-											</SelectTrigger>
-											<SelectContent>
-												{niveles.map((nivel) => (
-													<SelectItem key={nivel.id} value={nivel.id}>
-														{nivel.nombre}
-													</SelectItem>
-												))}
-											</SelectContent>
-										</Select>
+								<div key={asegurado.client_id} className="p-4 border rounded-lg">
+									<div className="flex items-start gap-4">
+										<Users className="h-5 w-5 text-gray-400 flex-shrink-0 mt-1" />
+										<div className="flex-1 space-y-3">
+											<div>
+												<p className="font-medium text-gray-900">{asegurado.client_name}</p>
+												<p className="text-sm text-gray-600">CI: {asegurado.client_ci}</p>
+											</div>
+											<div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+												<div className="space-y-1">
+													<Label className="text-xs text-gray-600">Nivel de Cobertura</Label>
+													<Select
+														value={asegurado.nivel_id}
+														onValueChange={(value) => cambiarNivel(asegurado.client_id, value)}
+													>
+														<SelectTrigger className="w-full">
+															<SelectValue placeholder="Nivel" />
+														</SelectTrigger>
+														<SelectContent>
+															{niveles.map((nivel) => (
+																<SelectItem key={nivel.id} value={nivel.id}>
+																	{nivel.nombre}
+																</SelectItem>
+															))}
+														</SelectContent>
+													</Select>
+												</div>
+												<div className="space-y-1">
+													<Label className="text-xs text-gray-600">
+														Rol <span className="text-red-500">*</span>
+													</Label>
+													<Select
+														value={asegurado.rol || ""}
+														onValueChange={(value) =>
+															cambiarRol(asegurado.client_id, value as "contratante" | "titular")
+														}
+													>
+														<SelectTrigger className="w-full">
+															<SelectValue placeholder="Seleccione un rol" />
+														</SelectTrigger>
+														<SelectContent>
+															<SelectItem value="contratante">Contratante</SelectItem>
+															<SelectItem value="titular">Titular</SelectItem>
+														</SelectContent>
+													</Select>
+												</div>
+											</div>
+										</div>
 										<Button
 											variant="ghost"
 											size="sm"
 											onClick={() => eliminarAsegurado(asegurado.client_id)}
+											className="mt-1"
 										>
 											<Trash2 className="h-4 w-4 text-red-600" />
 										</Button>
@@ -772,10 +799,144 @@ export function VidaForm({ datos, regionales, onChange, onSiguiente, onAnterior 
 				) : (
 					<div className="text-center py-8 border-2 border-dashed rounded-lg">
 						<Users className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-						<p className="text-gray-600">No hay asegurados agregados</p>
-						<p className="text-sm text-gray-500">Haga clic en &ldquo;Agregar Asegurado&rdquo; para comenzar</p>
+						<p className="text-gray-600">No hay clientes agregados</p>
+						<p className="text-sm text-gray-500">Haga clic en &ldquo;Agregar Cliente&rdquo; para comenzar</p>
 					</div>
 				)}
+			</div>
+
+			{/* Beneficiarios (Personas Cubiertas) */}
+			<div className="space-y-4 mb-6">
+				<div className="flex items-center justify-between">
+					<div>
+						<Label className="text-base">
+							Beneficiarios / Asegurados <span className="text-red-500">*</span>
+						</Label>
+						<p className="text-sm text-gray-600 mt-1">
+							Personas cubiertas por la póliza (al menos uno es requerido)
+						</p>
+					</div>
+					<Button onClick={abrirModalBeneficiario} disabled={mostrarModalBeneficiario}>
+						<UserPlus className="mr-2 h-4 w-4" />
+						Agregar Asegurado
+					</Button>
+				</div>
+
+				{errores.beneficiarios && (
+					<div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded">
+						<AlertTriangle className="h-4 w-4 text-red-600" />
+						<p className="text-sm text-red-600">{errores.beneficiarios}</p>
+					</div>
+				)}
+
+				{/* Lista de beneficiarios */}
+				{beneficiarios.length > 0 ? (
+					<div className="space-y-3">
+						{beneficiarios.map((beneficiario) => (
+							<div key={beneficiario.id} className="p-4 border rounded-lg bg-gray-50">
+								<div className="flex items-start gap-4">
+									<UserPlus className="h-5 w-5 text-primary flex-shrink-0 mt-1" />
+									<div className="flex-1 space-y-3">
+										<div className="flex items-start justify-between">
+											<div>
+												<div className="flex items-center gap-2">
+													<p className="font-medium text-gray-900">{beneficiario.nombre_completo}</p>
+													{beneficiario.rol && (
+														<span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
+															{beneficiario.rol === "dependiente"
+																? "Dependiente"
+																: beneficiario.rol === "conyugue"
+																? "Cónyuge"
+																: beneficiario.rol}
+														</span>
+													)}
+												</div>
+												<div className="text-sm text-gray-600 space-y-0.5 mt-1">
+													<p>CI: {beneficiario.carnet}</p>
+													<p>
+														Fecha Nac:{" "}
+														{new Date(beneficiario.fecha_nacimiento).toLocaleDateString("es-BO")}
+													</p>
+													<p>
+														Género:{" "}
+														{beneficiario.genero === "M"
+															? "Masculino"
+															: beneficiario.genero === "F"
+															? "Femenino"
+															: "Otro"}
+													</p>
+												</div>
+											</div>
+											<div className="flex gap-2">
+												<Button
+													variant="ghost"
+													size="sm"
+													onClick={() => abrirModalEditarBeneficiario(beneficiario)}
+												>
+													<Edit className="h-4 w-4" />
+												</Button>
+												<Button
+													variant="ghost"
+													size="sm"
+													onClick={() => eliminarBeneficiario(beneficiario.id)}
+												>
+													<Trash2 className="h-4 w-4 text-red-600" />
+												</Button>
+											</div>
+										</div>
+										<div className="space-y-1">
+											<Label className="text-xs text-gray-600">Nivel de Cobertura</Label>
+											<Select
+												value={beneficiario.nivel_id}
+												onValueChange={(value) => cambiarNivelBeneficiario(beneficiario.id, value)}
+											>
+												<SelectTrigger className="w-full">
+													<SelectValue placeholder="Nivel" />
+												</SelectTrigger>
+												<SelectContent>
+													{niveles.map((nivel) => (
+														<SelectItem key={nivel.id} value={nivel.id}>
+															{nivel.nombre}
+														</SelectItem>
+													))}
+												</SelectContent>
+											</Select>
+										</div>
+									</div>
+								</div>
+							</div>
+						))}
+					</div>
+				) : (
+					<div className="text-center py-8 border-2 border-dashed rounded-lg bg-amber-50">
+						<UserPlus className="h-12 w-12 text-amber-600 mx-auto mb-3" />
+						<p className="text-gray-900 font-medium">No hay beneficiarios agregados</p>
+						<p className="text-sm text-gray-600">
+							Agregue al menos un beneficiario haciendo clic en &ldquo;Agregar Asegurado&rdquo;
+						</p>
+					</div>
+				)}
+			</div>
+
+			{/* Información sobre roles */}
+			<div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+				<p className="text-sm text-blue-900 font-medium mb-2">Información sobre roles:</p>
+				<div className="text-xs text-blue-800 space-y-2">
+					<div>
+						<p className="font-semibold mb-1">Clientes Registrados:</p>
+						<ul className="space-y-1 ml-3">
+							<li>• <strong>Contratante:</strong> Cliente que contrata el seguro (opcional)</li>
+							<li>• <strong>Titular:</strong> Cliente principal asegurado (opcional)</li>
+						</ul>
+					</div>
+					<div>
+						<p className="font-semibold mb-1">Beneficiarios (sin registro completo):</p>
+						<ul className="space-y-1 ml-3">
+							<li>• <strong>Dependiente:</strong> Hijo, familiar u otro dependiente</li>
+							<li>• <strong>Cónyuge:</strong> Pareja o cónyuge del asegurado</li>
+						</ul>
+					</div>
+				</div>
 			</div>
 
 			{/* Botones de navegación */}
@@ -790,6 +951,19 @@ export function VidaForm({ datos, regionales, onChange, onSiguiente, onAnterior 
 					<ChevronRight className="ml-2 h-5 w-5" />
 				</Button>
 			</div>
+
+			{/* Modal de Beneficiario */}
+			{mostrarModalBeneficiario && (
+				<BeneficiarioModal
+					beneficiario={beneficiarioEditando}
+					niveles={niveles}
+					onGuardar={guardarBeneficiario}
+					onCancelar={() => {
+						setMostrarModalBeneficiario(false);
+						setBeneficiarioEditando(null);
+					}}
+				/>
+			)}
 		</div>
 	);
 }
