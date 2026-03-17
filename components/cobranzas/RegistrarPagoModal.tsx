@@ -130,14 +130,17 @@ export default function RegistrarPagoModal({ cuota, poliza, open, onClose, onSuc
 		setIsDragging(false);
 	}, []);
 
-	const handleDrop = useCallback((e: React.DragEvent) => {
-		e.preventDefault();
-		e.stopPropagation();
-		setIsDragging(false);
+	const handleDrop = useCallback(
+		(e: React.DragEvent) => {
+			e.preventDefault();
+			e.stopPropagation();
+			setIsDragging(false);
 
-		const file = e.dataTransfer.files?.[0];
-		if (file) processFile(file);
-	}, [processFile]);
+			const file = e.dataTransfer.files?.[0];
+			if (file) processFile(file);
+		},
+		[processFile],
+	);
 
 	// Paste handler (Ctrl+V)
 	useEffect(() => {
@@ -263,10 +266,20 @@ export default function RegistrarPagoModal({ cuota, poliza, open, onClose, onSuc
 					<DialogTitle>Registrar Pago - Cuota #{cuota.numero_cuota}</DialogTitle>
 					<DialogDescription asChild>
 						<div className="space-y-1 text-sm text-muted-foreground">
-							<div><span className="font-semibold">Póliza:</span> {poliza.numero_poliza}</div>
-							<div><span className="font-semibold">Cliente:</span> {poliza.client.nombre_completo}</div>
-							<div><span className="font-semibold">Monto de la cuota:</span> {poliza.moneda} {formatCurrency(cuota.monto)}</div>
-							<div><span className="font-semibold">Fecha vencimiento:</span> {formatearFecha(cuota.fecha_vencimiento)}</div>
+							<div>
+								<span className="font-semibold">Póliza:</span> {poliza.numero_poliza}
+							</div>
+							<div>
+								<span className="font-semibold">Cliente:</span> {poliza.client.nombre_completo}
+							</div>
+							<div>
+								<span className="font-semibold">Monto de la cuota:</span> {poliza.moneda}{" "}
+								{formatCurrency(cuota.monto)}
+							</div>
+							<div>
+								<span className="font-semibold">Fecha vencimiento:</span>{" "}
+								{formatearFecha(cuota.fecha_vencimiento)}
+							</div>
 						</div>
 					</DialogDescription>
 				</DialogHeader>
@@ -288,7 +301,7 @@ export default function RegistrarPagoModal({ cuota, poliza, open, onClose, onSuc
 
 					{/* Fecha de Pago */}
 					<div className="space-y-2">
-						<Label htmlFor="fecha">Fecha de Pago *</Label>
+						<Label htmlFor="fecha">Fecha de Pago Compañía *</Label>
 						<Input
 							id="fecha"
 							type="date"
@@ -315,7 +328,10 @@ export default function RegistrarPagoModal({ cuota, poliza, open, onClose, onSuc
 						<Label htmlFor="comprobante">Comprobante de Pago *</Label>
 						<div className="space-y-2">
 							{/* Tipo de comprobante */}
-							<Select value={tipoComprobante} onValueChange={(value) => setTipoComprobante(value as TipoComprobante)}>
+							<Select
+								value={tipoComprobante}
+								onValueChange={(value) => setTipoComprobante(value as TipoComprobante)}
+							>
 								<SelectTrigger>
 									<SelectValue placeholder="Seleccione tipo de comprobante" />
 								</SelectTrigger>
@@ -336,13 +352,13 @@ export default function RegistrarPagoModal({ cuota, poliza, open, onClose, onSuc
 									onDrop={handleDrop}
 									onClick={() => fileInputRef.current?.click()}
 									className={`border-2 border-dashed rounded-lg p-4 cursor-pointer transition-colors ${
-										isDragging
-											? "border-primary bg-primary/5"
-											: "hover:border-primary"
+										isDragging ? "border-primary bg-primary/5" : "hover:border-primary"
 									}`}
 								>
 									<div className="flex flex-col items-center">
-										<Upload className={`h-8 w-8 mb-2 ${isDragging ? "text-primary" : "text-muted-foreground"}`} />
+										<Upload
+											className={`h-8 w-8 mb-2 ${isDragging ? "text-primary" : "text-muted-foreground"}`}
+										/>
 										<span className="text-sm text-muted-foreground">
 											Arrastra un archivo, pega con Ctrl+V o haz click aquí
 										</span>
@@ -370,21 +386,14 @@ export default function RegistrarPagoModal({ cuota, poliza, open, onClose, onSuc
 												</p>
 											</div>
 										</div>
-										<Button
-											type="button"
-											variant="ghost"
-											size="sm"
-											onClick={handleRemoveFile}
-										>
+										<Button type="button" variant="ghost" size="sm" onClick={handleRemoveFile}>
 											<X className="h-4 w-4" />
 										</Button>
 									</div>
 								</div>
 							)}
 
-							{fileError && (
-								<p className="text-sm text-red-600">{fileError}</p>
-							)}
+							{fileError && <p className="text-sm text-red-600">{fileError}</p>}
 						</div>
 					</div>
 
