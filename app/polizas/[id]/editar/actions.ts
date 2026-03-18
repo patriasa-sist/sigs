@@ -502,8 +502,8 @@ export async function obtenerPolizaParaEdicion(
 				datos: {
 					niveles: nivelesFormateados,
 					tipo_poliza: aseguradosFormateados.length > 1 ? "corporativo" : "individual",
-					regional_asegurado_id: poliza.regional_id || "",
-					tiene_maternidad: false,
+					regional_asegurado_id: poliza.regional_asegurado_id || "",
+					tiene_maternidad: poliza.tiene_maternidad ?? false,
 					asegurados: aseguradosFormateados,
 					beneficiarios: beneficiariosFormateados,
 				},
@@ -638,6 +638,18 @@ export async function actualizarPoliza(
 			comision_encargado?: number;
 		};
 
+		// Extraer campos ramo-específicos que se guardan en la tabla polizas
+		const datosEsp = formState.datos_especificos?.datos;
+		const ramosConRegionalAsegurado = ["Salud", "Vida", "Accidentes Personales", "Sepelio"];
+		const regionalAseguradoId = ramosConRegionalAsegurado.includes(formState.datos_especificos?.tipo_ramo ?? "")
+			&& datosEsp && "regional_asegurado_id" in datosEsp
+			? (datosEsp as { regional_asegurado_id: string }).regional_asegurado_id || null
+			: null;
+		const tieneMaternidad = formState.datos_especificos?.tipo_ramo === "Salud"
+			&& datosEsp && "tiene_maternidad" in datosEsp
+			? (datosEsp as { tiene_maternidad: boolean }).tiene_maternidad
+			: false;
+
 		const updatePayload: Record<string, unknown> = {
 			client_id: formState.asegurado.id,
 			numero_poliza: formState.datos_basicos.numero_poliza,
@@ -661,6 +673,8 @@ export async function actualizarPoliza(
 			usar_factores_contado: formState.modalidad_pago.tipo === "credito" && formState.modalidad_pago.usar_factores_contado === true,
 			es_renovacion: formState.datos_basicos.es_renovacion || false,
 			nro_poliza_anterior: formState.datos_basicos.es_renovacion ? (formState.datos_basicos.nro_poliza_anterior || null) : null,
+			regional_asegurado_id: regionalAseguradoId,
+			tiene_maternidad: tieneMaternidad,
 		};
 
 		// If policy was active or rejected, reset to pending and clear validation/rejection

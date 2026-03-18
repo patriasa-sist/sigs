@@ -486,6 +486,22 @@ export default function PolizaDetallePage() {
 								Datos de Salud
 							</h2>
 
+							{/* Regional del asegurado y maternidad */}
+							<div className="mb-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+								<div>
+									<p className="text-xs text-gray-500 uppercase tracking-wide">Regional del Asegurado</p>
+									<p className="text-sm font-medium text-gray-900">
+										{poliza.regional_asegurado_nombre || <span className="text-gray-400 italic">Sin dato</span>}
+									</p>
+								</div>
+								<div>
+									<p className="text-xs text-gray-500 uppercase tracking-wide">Cobertura de Maternidad</p>
+									<p className="text-sm font-medium text-gray-900">
+										{poliza.tiene_maternidad ? "Sí" : "No"}
+									</p>
+								</div>
+							</div>
+
 							{/* Niveles de cobertura */}
 							{poliza.niveles_salud && poliza.niveles_salud.length > 0 && (
 								<div className="mb-4 p-4 bg-gray-50 rounded-lg">
@@ -798,6 +814,14 @@ export default function PolizaDetallePage() {
 								<Users className="h-5 w-5" />
 								{poliza.ramo}
 							</h2>
+
+							{/* Regional del asegurado */}
+							<div className="mb-4">
+								<p className="text-xs text-gray-500 uppercase tracking-wide">Regional del Asegurado</p>
+								<p className="text-sm font-medium text-gray-900">
+									{poliza.regional_asegurado_nombre || <span className="text-gray-400 italic">Sin dato</span>}
+								</p>
+							</div>
 
 							{/* Niveles de cobertura */}
 							{poliza.niveles_cobertura && poliza.niveles_cobertura.length > 0 && (

@@ -162,7 +162,7 @@ export function Navbar() {
 							height={32}
 							className="h-8 w-auto"
 						/>
-						<span className="text-[10px] text-gray-400 font-mono leading-none">v1.4.5</span>
+						<span className="text-[10px] text-gray-400 font-mono leading-none">v1.4.6</span>
 					</Link>
 				</div>
 

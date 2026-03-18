@@ -688,6 +688,19 @@ export async function guardarPoliza(formState: PolizaFormState) {
 
 		// 2. Insertar póliza principal
 		const pagoData = formState.modalidad_pago as { prima_neta?: number; comision?: number; comision_empresa?: number; comision_encargado?: number };
+
+		// Extraer campos ramo-específicos que se guardan en la tabla polizas
+		const datosEsp = formState.datos_especificos?.datos;
+		const ramosConRegionalAsegurado = ["Salud", "Vida", "Accidentes Personales", "Sepelio"];
+		const regionalAseguradoId = ramosConRegionalAsegurado.includes(formState.datos_especificos?.tipo_ramo ?? "")
+			&& datosEsp && "regional_asegurado_id" in datosEsp
+			? (datosEsp as { regional_asegurado_id: string }).regional_asegurado_id || null
+			: null;
+		const tieneMaternidad = formState.datos_especificos?.tipo_ramo === "Salud"
+			&& datosEsp && "tiene_maternidad" in datosEsp
+			? (datosEsp as { tiene_maternidad: boolean }).tiene_maternidad
+			: false;
+
 		const { data: poliza, error: errorPoliza } = await supabase
 			.from("polizas")
 			.insert({
@@ -714,6 +727,8 @@ export async function guardarPoliza(formState: PolizaFormState) {
 				estado: "pendiente",
 				es_renovacion: formState.datos_basicos.es_renovacion || false,
 				nro_poliza_anterior: formState.datos_basicos.es_renovacion ? (formState.datos_basicos.nro_poliza_anterior || null) : null,
+				regional_asegurado_id: regionalAseguradoId,
+				tiene_maternidad: tieneMaternidad,
 			})
 			.select()
 			.single();

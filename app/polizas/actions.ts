@@ -42,6 +42,10 @@ export type PolizaDetalle = PolizaListItem & {
 	// Renewal fields
 	es_renovacion: boolean;
 	nro_poliza_anterior: string | null;
+	// Campos ramo-específicos almacenados en polizas
+	regional_asegurado_id: string | null;
+	regional_asegurado_nombre: string | null;
+	tiene_maternidad: boolean;
 	pagos: Array<{
 		id: string;
 		numero_cuota: number;
@@ -1312,6 +1316,17 @@ export async function obtenerDetallePoliza(polizaId: string) {
 			.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
 			.slice(0, 30);
 
+		// Resolver nombre de regional del asegurado (FK distinto a regional_id de la póliza)
+		let regionalAseguradoNombre: string | null = null;
+		if (poliza.regional_asegurado_id) {
+			const { data: regAseg } = await supabase
+				.from("regionales")
+				.select("nombre")
+				.eq("id", poliza.regional_asegurado_id)
+				.single();
+			regionalAseguradoNombre = regAseg?.nombre || null;
+		}
+
 		const polizaDetalle: PolizaDetalle = {
 			id: poliza.id,
 			numero_poliza: poliza.numero_poliza,
@@ -1345,6 +1360,9 @@ export async function obtenerDetallePoliza(polizaId: string) {
 			puede_editar_hasta: poliza.puede_editar_hasta || null,
 			es_renovacion: poliza.es_renovacion || false,
 			nro_poliza_anterior: poliza.nro_poliza_anterior || null,
+			regional_asegurado_id: poliza.regional_asegurado_id || null,
+			regional_asegurado_nombre: regionalAseguradoNombre,
+			tiene_maternidad: poliza.tiene_maternidad ?? false,
 			pagos: pagos || [],
 			vehiculos,
 			asegurados_salud,
