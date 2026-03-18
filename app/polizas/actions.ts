@@ -282,7 +282,7 @@ export async function obtenerPolizas() {
 				created_at,
 				companias_aseguradoras (nombre),
 				profiles!polizas_responsable_id_fkey (full_name),
-				regionales (nombre)
+				regionales!polizas_regional_id_fkey (nombre)
 			`
 			)
 			.order("created_at", { ascending: false });
@@ -414,7 +414,7 @@ export async function obtenerDetallePoliza(polizaId: string) {
 				*,
 				companias_aseguradoras (nombre),
 				profiles!polizas_responsable_id_fkey (full_name),
-				regionales (nombre),
+				regionales!polizas_regional_id_fkey (nombre),
 				categorias (nombre)
 			`
 			)
@@ -1448,7 +1448,7 @@ export async function buscarPolizas(query: string) {
 				created_at,
 				companias_aseguradoras (nombre),
 				profiles!polizas_responsable_id_fkey (full_name),
-				regionales (nombre)
+				regionales!polizas_regional_id_fkey (nombre)
 			`
 			)
 			.ilike("numero_poliza", `%${query}%`)

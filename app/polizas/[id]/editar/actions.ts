@@ -219,7 +219,7 @@ export async function obtenerPolizaParaEdicion(
 			.select(`
 				*,
 				companias_aseguradoras (id, nombre),
-				regionales (id, nombre),
+				regionales!polizas_regional_id_fkey (id, nombre),
 				categorias (id, nombre),
 				profiles!polizas_responsable_id_fkey (id, full_name)
 			`)
