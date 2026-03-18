@@ -415,6 +415,7 @@ export async function obtenerDetallePoliza(polizaId: string) {
 				companias_aseguradoras (nombre),
 				profiles!polizas_responsable_id_fkey (full_name),
 				regionales!polizas_regional_id_fkey (nombre),
+				regional_asegurado:regionales!polizas_regional_asegurado_id_fkey (nombre),
 				categorias (nombre)
 			`
 			)
@@ -1316,16 +1317,7 @@ export async function obtenerDetallePoliza(polizaId: string) {
 			.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
 			.slice(0, 30);
 
-		// Resolver nombre de regional del asegurado (FK distinto a regional_id de la póliza)
-		let regionalAseguradoNombre: string | null = null;
-		if (poliza.regional_asegurado_id) {
-			const { data: regAseg } = await supabase
-				.from("regionales")
-				.select("nombre")
-				.eq("id", poliza.regional_asegurado_id)
-				.single();
-			regionalAseguradoNombre = regAseg?.nombre || null;
-		}
+		const regionalAseguradoNombre = (poliza.regional_asegurado as { nombre?: string } | null)?.nombre || null;
 
 		const polizaDetalle: PolizaDetalle = {
 			id: poliza.id,
