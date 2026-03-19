@@ -25,6 +25,7 @@ import type {
 	DatosEspecificosRamo,
 	VehiculoAutomotor,
 	TipoComprobante,
+	Comprobante,
 	ObtenerDetallePolizaResponse,
 	SubirComprobanteResponse,
 	RegistroProrroga,
@@ -1369,6 +1370,63 @@ export async function prepararDatosAvisoMora(polizaId: string): Promise<Preparar
 		return { success: true, data: avisoMoraData };
 	} catch (error) {
 		console.error("Error preparing aviso de mora data:", error);
+		return {
+			success: false,
+			error: error instanceof Error ? error.message : "Error desconocido",
+		};
+	}
+}
+
+/**
+ * Obtiene el comprobante de pago de una cuota y retorna una URL firmada temporal para visualización
+ * El bucket pagos-comprobantes es privado, por lo que se usa createSignedUrl
+ */
+export async function obtenerComprobanteCuota(
+	pagoId: string
+): Promise<CobranzaServerResponse<{ comprobante: Comprobante; publicUrl: string }>> {
+	const permiso = await verificarPermisoCobranza();
+	if (!permiso.authorized) {
+		return { success: false, error: permiso.error };
+	}
+
+	const supabase = await createClient();
+
+	try {
+		const { data, error } = await supabase
+			.from("polizas_pagos_comprobantes")
+			.select("*")
+			.eq("pago_id", pagoId)
+			.eq("estado", "activo")
+			.maybeSingle();
+
+		if (error) {
+			console.error("Error fetching comprobante:", error);
+			return { success: false, error: "Error al obtener comprobante" };
+		}
+
+		if (!data) {
+			return { success: false, error: "No se encontró comprobante para esta cuota" };
+		}
+
+		// Generate signed URL (valid for 1 hour) since bucket is private
+		const { data: signedUrlData, error: signedUrlError } = await supabase.storage
+			.from("pagos-comprobantes")
+			.createSignedUrl(data.archivo_url, 3600);
+
+		if (signedUrlError || !signedUrlData?.signedUrl) {
+			console.error("Error creating signed URL:", signedUrlError);
+			return { success: false, error: "Error al generar URL de acceso al archivo" };
+		}
+
+		return {
+			success: true,
+			data: {
+				comprobante: data as Comprobante,
+				publicUrl: signedUrlData.signedUrl,
+			},
+		};
+	} catch (error) {
+		console.error("Error in obtenerComprobanteCuota:", error);
 		return {
 			success: false,
 			error: error instanceof Error ? error.message : "Error desconocido",

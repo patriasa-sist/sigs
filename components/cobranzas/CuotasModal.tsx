@@ -15,10 +15,12 @@ import {
 	Calendar,
 	Clock,
 	FileWarning,
-	Send
+	Send,
+	Paperclip,
+	Loader2,
 } from "lucide-react";
 import type { PolizaConPagos, CuotaPago, PolizaConPagosExtendida } from "@/types/cobranza";
-import { obtenerDetallePolizaParaCuotas, prepararDatosAvisoMora } from "@/app/cobranzas/actions";
+import { obtenerDetallePolizaParaCuotas, prepararDatosAvisoMora, obtenerComprobanteCuota } from "@/app/cobranzas/actions";
 import { enviarRecordatorioWhatsApp, enviarRecordatorioEmail, formatearFecha, formatearMonto } from "@/utils/cobranza";
 import { generarURLWhatsApp } from "@/utils/whatsapp";
 import { contarCuotasVencidas, obtenerEstadoReal } from "@/utils/estadoCuota";
@@ -49,6 +51,7 @@ export default function CuotasModal({ poliza, open, onClose, onSelectQuota }: Cu
 	const [selectedCuotaProrroga, setSelectedCuotaProrroga] = useState<CuotaPago | null>(null);
 	const [prorrogaModalOpen, setProrrogaModalOpen] = useState(false);
 	const [generatingPDF, setGeneratingPDF] = useState(false);
+	const [loadingComprobante, setLoadingComprobante] = useState<string | null>(null);
 
 	useEffect(() => {
 		if (open && poliza) {
@@ -164,6 +167,24 @@ export default function CuotasModal({ poliza, open, onClose, onSelectQuota }: Cu
 			description: "La fecha de vencimiento ha sido actualizada"
 		});
 		loadExtendedData(); // Reload data
+	};
+
+	const handleVerComprobante = async (cuota: CuotaPago) => {
+		setLoadingComprobante(cuota.id);
+		try {
+			const response = await obtenerComprobanteCuota(cuota.id);
+			if (response.success && response.data) {
+				window.open(response.data.publicUrl, "_blank");
+			} else {
+				toast.info("Sin comprobante", {
+					description: response.error || "No se encontró comprobante para esta cuota"
+				});
+			}
+		} catch {
+			toast.error("Error al obtener comprobante");
+		} finally {
+			setLoadingComprobante(null);
+		}
 	};
 
 	if (!poliza) return null;
@@ -532,7 +553,20 @@ export default function CuotasModal({ poliza, open, onClose, onSelectQuota }: Cu
 													)}
 
 													{obtenerEstadoReal(cuota) === "pagado" && (
-														<span className="text-muted-foreground">-</span>
+														<Button
+															size="sm"
+															variant="outline"
+															onClick={() => handleVerComprobante(cuota)}
+															disabled={loadingComprobante === cuota.id}
+															title="Ver comprobante de pago"
+														>
+															{loadingComprobante === cuota.id ? (
+																<Loader2 className="h-4 w-4 animate-spin" />
+															) : (
+																<Paperclip className="h-4 w-4" />
+															)}
+															<span className="ml-1">Comprobante</span>
+														</Button>
 													)}
 												</div>
 											</td>
