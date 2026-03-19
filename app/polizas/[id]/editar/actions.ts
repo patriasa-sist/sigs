@@ -29,6 +29,8 @@ import type {
 	BeneficiarioSalud,
 	RolAseguradoSalud,
 	RolBeneficiarioSalud,
+	NivelCobertura,
+	AseguradoConNivel,
 } from "@/types/poliza";
 import type { ActionResult } from "@/types/policyPermission";
 
@@ -510,6 +512,117 @@ export async function obtenerPolizaParaEdicion(
 			};
 		}
 
+		// Vida, Accidentes Personales, Sepelio (tablas compartidas: polizas_niveles, polizas_asegurados_nivel, polizas_beneficiarios)
+		const ramoLower = poliza.ramo.toLowerCase();
+		if (
+			ramoLower.includes("vida") ||
+			ramoLower.includes("accidente") ||
+			ramoLower.includes("sepelio") || ramoLower.includes("defuncion")
+		) {
+			const { data: niveles, error: errorNiveles } = await supabase
+				.from("polizas_niveles")
+				.select("id, nombre, prima_nivel, coberturas")
+				.eq("poliza_id", polizaId);
+
+			if (errorNiveles) {
+				throw new Error(`Error al cargar niveles: ${errorNiveles.message}`);
+			}
+
+			const { data: aseguradosDB, error: errorAsegurados } = await supabase
+				.from("polizas_asegurados_nivel")
+				.select("client_id, nivel_id, cargo, rol")
+				.eq("poliza_id", polizaId);
+
+			if (errorAsegurados) {
+				throw new Error(`Error al cargar asegurados: ${errorAsegurados.message}`);
+			}
+
+			// Cargar nombres de clientes asegurados
+			const aseguradosFormateadosNivel: AseguradoConNivel[] = [];
+			for (const a of aseguradosDB || []) {
+				const { data: naturalClient } = await supabase
+					.from("natural_clients")
+					.select("primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, numero_documento")
+					.eq("client_id", a.client_id)
+					.single();
+
+				const nombre = naturalClient
+					? [naturalClient.primer_nombre, naturalClient.segundo_nombre, naturalClient.primer_apellido, naturalClient.segundo_apellido]
+						.filter(Boolean)
+						.join(" ")
+					: "Cliente";
+				const ci = naturalClient?.numero_documento || "-";
+
+				aseguradosFormateadosNivel.push({
+					client_id: a.client_id,
+					client_name: nombre,
+					client_ci: ci,
+					nivel_id: a.nivel_id,
+					cargo: a.cargo || undefined,
+					rol: a.rol as "contratante" | "titular" | undefined,
+				});
+			}
+
+			const nivelesFormateados: NivelCobertura[] = (niveles || []).map(n => ({
+				id: n.id,
+				nombre: n.nombre,
+				prima_nivel: n.prima_nivel || undefined,
+				coberturas: n.coberturas,
+			}));
+
+			// Determinar tipo_ramo
+			let tipoRamo: "Vida" | "Accidentes Personales" | "Sepelio" = "Vida";
+			if (ramoLower.includes("accidente")) {
+				tipoRamo = "Accidentes Personales";
+			} else if (ramoLower.includes("sepelio") || ramoLower.includes("defuncion")) {
+				tipoRamo = "Sepelio";
+			}
+
+			// Cargar beneficiarios solo para Vida y Accidentes Personales
+			if (tipoRamo === "Vida" || tipoRamo === "Accidentes Personales") {
+				const { data: beneficiariosDB, error: errorBeneficiarios } = await supabase
+					.from("polizas_beneficiarios")
+					.select("id, nombre_completo, carnet, fecha_nacimiento, genero, nivel_id, rol")
+					.eq("poliza_id", polizaId);
+
+				if (errorBeneficiarios) {
+					throw new Error(`Error al cargar beneficiarios: ${errorBeneficiarios.message}`);
+				}
+
+				const beneficiariosFormateadosNivel: BeneficiarioSalud[] = (beneficiariosDB || []).map(b => ({
+					id: b.id,
+					nombre_completo: b.nombre_completo,
+					carnet: b.carnet,
+					fecha_nacimiento: b.fecha_nacimiento,
+					genero: b.genero as "M" | "F" | "Otro",
+					nivel_id: b.nivel_id,
+					rol: b.rol as RolBeneficiarioSalud,
+				}));
+
+				datos_especificos = {
+					tipo_ramo: tipoRamo,
+					datos: {
+						niveles: nivelesFormateados,
+						tipo_poliza: aseguradosFormateadosNivel.length > 1 ? "corporativo" : "individual",
+						regional_asegurado_id: poliza.regional_asegurado_id || "",
+						asegurados: aseguradosFormateadosNivel,
+						beneficiarios: beneficiariosFormateadosNivel,
+					},
+				};
+			} else {
+				// Sepelio: sin beneficiarios
+				datos_especificos = {
+					tipo_ramo: "Sepelio",
+					datos: {
+						niveles: nivelesFormateados,
+						tipo_poliza: aseguradosFormateadosNivel.length > 1 ? "corporativo" : "individual",
+						regional_asegurado_id: poliza.regional_asegurado_id || "",
+						asegurados: aseguradosFormateadosNivel,
+					},
+				};
+			}
+		}
+
 		// 6. Get documents (only active ones)
 		const { data: documentos } = await supabase
 			.from("polizas_documentos")
@@ -931,6 +1044,116 @@ export async function actualizarPoliza(
 					})));
 				if (errBenef) {
 					return { success: false, error: `Error al guardar beneficiarios de salud: ${errBenef.message}` };
+				}
+			}
+		}
+
+		// 3c. Update Vida / Accidentes Personales / Sepelio data
+		if (
+			formState.datos_especificos?.tipo_ramo === "Vida" ||
+			formState.datos_especificos?.tipo_ramo === "Accidentes Personales" ||
+			formState.datos_especificos?.tipo_ramo === "Sepelio"
+		) {
+			const supabaseAdmin = createAdminClient();
+			const datosNivel = formState.datos_especificos.datos;
+			const tipoRamo = formState.datos_especificos.tipo_ramo;
+
+			// Delete existing data (beneficiarios first due to FK, then asegurados, then niveles)
+			if (tipoRamo === "Vida" || tipoRamo === "Accidentes Personales") {
+				const { error: delBenef } = await supabaseAdmin
+					.from("polizas_beneficiarios")
+					.delete()
+					.eq("poliza_id", polizaId);
+				if (delBenef) {
+					return { success: false, error: `Error al limpiar beneficiarios: ${delBenef.message}` };
+				}
+			}
+
+			const { error: delAseg } = await supabaseAdmin
+				.from("polizas_asegurados_nivel")
+				.delete()
+				.eq("poliza_id", polizaId);
+			if (delAseg) {
+				return { success: false, error: `Error al limpiar asegurados: ${delAseg.message}` };
+			}
+
+			const { error: delNiv } = await supabaseAdmin
+				.from("polizas_niveles")
+				.delete()
+				.eq("poliza_id", polizaId);
+			if (delNiv) {
+				return { success: false, error: `Error al limpiar niveles: ${delNiv.message}` };
+			}
+
+			// Insert new niveles and build ID map (client ID -> DB ID)
+			const nivelIdMap = new Map<string, string>();
+			for (const nivel of datosNivel.niveles || []) {
+				const { data: nivelDB, error: errNivel } = await supabase
+					.from("polizas_niveles")
+					.insert({
+						poliza_id: polizaId,
+						nombre: nivel.nombre,
+						prima_nivel: nivel.prima_nivel || null,
+						coberturas: nivel.coberturas,
+					})
+					.select("id")
+					.single();
+
+				if (errNivel) {
+					return { success: false, error: `Error al guardar nivel: ${errNivel.message}` };
+				}
+				if (nivelDB) {
+					nivelIdMap.set(nivel.id, nivelDB.id);
+				}
+			}
+
+			// Insert new asegurados
+			const asegurados = datosNivel.asegurados || [];
+			if (asegurados.length > 0) {
+				const aseguradosParaInsertar = asegurados
+					.filter(a => nivelIdMap.has(a.nivel_id))
+					.map(a => ({
+						poliza_id: polizaId,
+						client_id: a.client_id,
+						nivel_id: nivelIdMap.get(a.nivel_id)!,
+						cargo: a.cargo || null,
+						rol: a.rol || null,
+					}));
+
+				if (aseguradosParaInsertar.length > 0) {
+					const { error: errAseg } = await supabase
+						.from("polizas_asegurados_nivel")
+						.insert(aseguradosParaInsertar);
+					if (errAseg) {
+						return { success: false, error: `Error al guardar asegurados: ${errAseg.message}` };
+					}
+				}
+			}
+
+			// Insert new beneficiarios (Vida y Accidentes Personales)
+			if (tipoRamo === "Vida" || tipoRamo === "Accidentes Personales") {
+				const beneficiarios = "beneficiarios" in datosNivel ? datosNivel.beneficiarios || [] : [];
+				if (beneficiarios.length > 0) {
+					const beneficiariosParaInsertar = beneficiarios
+						.filter(b => nivelIdMap.has(b.nivel_id))
+						.map(b => ({
+							poliza_id: polizaId,
+							nombre_completo: b.nombre_completo,
+							carnet: b.carnet,
+							fecha_nacimiento: b.fecha_nacimiento,
+							genero: b.genero,
+							nivel_id: nivelIdMap.get(b.nivel_id)!,
+							rol: b.rol,
+						}));
+
+					if (beneficiariosParaInsertar.length > 0) {
+						const { error: errBenef } = await supabase
+							.from("polizas_beneficiarios")
+							.insert(beneficiariosParaInsertar);
+						if (errBenef) {
+							return { success: false, error: `Error al guardar beneficiarios: ${errBenef.message}` };
+						}
+					}
 				}
 			}
 		}
