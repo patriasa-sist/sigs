@@ -8,7 +8,7 @@ import {
 	Calendar,
 	TrendingUp,
 } from "lucide-react";
-import type { CobranzaStats } from "@/types/cobranza";
+import type { CobranzaStats, MontoPorMoneda } from "@/types/cobranza";
 
 interface StatsCardsProps {
 	stats: CobranzaStats;
@@ -25,6 +25,22 @@ export default function StatsCards({ stats }: StatsCardsProps) {
 			minimumFractionDigits: 2,
 			maximumFractionDigits: 2,
 		}).format(amount);
+	};
+
+	/** Renders amounts broken down by currency, one line per currency */
+	const renderMontos = (montos: MontoPorMoneda[], className?: string) => {
+		if (montos.length === 0) {
+			return <div className={`text-2xl font-bold ${className || ""}`}>-</div>;
+		}
+		return (
+			<div className="space-y-0.5">
+				{montos.map((m) => (
+					<div key={m.moneda} className={`text-2xl font-bold ${className || ""}`}>
+						{m.moneda} {formatCurrency(m.monto)}
+					</div>
+				))}
+			</div>
+		);
 	};
 
 	return (
@@ -49,7 +65,7 @@ export default function StatsCards({ stats }: StatsCardsProps) {
 				</CardHeader>
 				<CardContent>
 					<div className="text-2xl font-bold">{stats.total_cuotas_pendientes}</div>
-					<p className="text-xs text-muted-foreground">Total de cuotas por cobrar</p>
+					<p className="text-xs text-muted-foreground">Por cobrar (sin vencidas)</p>
 				</CardContent>
 			</Card>
 
@@ -67,7 +83,7 @@ export default function StatsCards({ stats }: StatsCardsProps) {
 				</CardContent>
 			</Card>
 
-			{/* Por Vencer (7 días) */}
+			{/* Por Vencer (10 días) */}
 			<Card>
 				<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
 					<CardTitle className="text-sm font-medium">Por Vencer (10 días)</CardTitle>
@@ -75,48 +91,44 @@ export default function StatsCards({ stats }: StatsCardsProps) {
 				</CardHeader>
 				<CardContent>
 					<div className="text-2xl font-bold text-orange-600 dark:text-orange-400">
-						{stats.cuotas_por_vencer_7dias}
+						{stats.cuotas_por_vencer_10dias}
 					</div>
 					<p className="text-xs text-muted-foreground">Próximas a vencer</p>
 				</CardContent>
 			</Card>
 
-			{/* Total Pendiente Bs */}
+			{/* Total Pendiente por moneda */}
 			<Card>
 				<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
 					<CardTitle className="text-sm font-medium">Total Pendiente</CardTitle>
 					<DollarSign className="h-4 w-4 text-gray-600 dark:text-gray-400" />
 				</CardHeader>
 				<CardContent>
-					<div className="text-2xl font-bold">Bs {formatCurrency(stats.monto_total_pendiente)}</div>
+					{renderMontos(stats.montos_pendientes)}
 					<p className="text-xs text-muted-foreground">Monto por cobrar</p>
 				</CardContent>
 			</Card>
 
-			{/* Cobrado Hoy */}
+			{/* Cobrado Hoy por moneda */}
 			<Card>
 				<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
 					<CardTitle className="text-sm font-medium">Cobrado Hoy</CardTitle>
 					<CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
 				</CardHeader>
 				<CardContent>
-					<div className="text-2xl font-bold text-green-600 dark:text-green-400">
-						Bs {formatCurrency(stats.monto_total_cobrado_hoy)}
-					</div>
+					{renderMontos(stats.montos_cobrados_hoy, "text-green-600 dark:text-green-400")}
 					<p className="text-xs text-muted-foreground">Recaudado el día de hoy</p>
 				</CardContent>
 			</Card>
 
-			{/* Cobrado Mes */}
+			{/* Cobrado Mes por moneda */}
 			<Card>
 				<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
 					<CardTitle className="text-sm font-medium">Cobrado Este Mes</CardTitle>
 					<TrendingUp className="h-4 w-4 text-green-600 dark:text-green-400" />
 				</CardHeader>
 				<CardContent>
-					<div className="text-2xl font-bold text-green-600 dark:text-green-400">
-						Bs {formatCurrency(stats.monto_total_cobrado_mes)}
-					</div>
+					{renderMontos(stats.montos_cobrados_mes, "text-green-600 dark:text-green-400")}
 					<p className="text-xs text-muted-foreground">Recaudado en el mes</p>
 				</CardContent>
 			</Card>

@@ -60,6 +60,14 @@ export type ResponsableInfo = {
 };
 
 /**
+ * Información de la regional
+ */
+export type RegionalInfo = {
+	id: string;
+	nombre: string;
+};
+
+/**
  * Póliza con información de cuotas de pago
  * Incluye datos calculados para el dashboard
  */
@@ -78,6 +86,7 @@ export type PolizaConPagos = {
 	client: ClienteInfo;
 	compania: CompaniaInfo;
 	responsable: ResponsableInfo;
+	regional: RegionalInfo;
 
 	// Cuotas de pago
 	cuotas: CuotaPago[];
@@ -138,18 +147,24 @@ export type ExcessPaymentDistribution = {
 // DASHBOARD & FILTERING TYPES
 // ============================================
 
+/** Monto desglosado por moneda */
+export type MontoPorMoneda = {
+	moneda: Moneda;
+	monto: number;
+};
+
 /**
  * Estadísticas globales para el dashboard de cobranzas
  * Calculadas server-side
  */
 export type CobranzaStats = {
 	total_polizas: number;
-	total_cuotas_pendientes: number;
+	total_cuotas_pendientes: number; // Solo pendientes (no incluye vencidas)
 	total_cuotas_vencidas: number;
-	monto_total_pendiente: number;
-	monto_total_cobrado_hoy: number;
-	monto_total_cobrado_mes: number;
-	cuotas_por_vencer_7dias: number; // Cuotas que vencen en los próximos 10 días
+	montos_pendientes: MontoPorMoneda[]; // Desglosado por moneda
+	montos_cobrados_hoy: MontoPorMoneda[]; // Desglosado por moneda
+	montos_cobrados_mes: MontoPorMoneda[]; // Desglosado por moneda
+	cuotas_por_vencer_10dias: number;
 };
 
 /**

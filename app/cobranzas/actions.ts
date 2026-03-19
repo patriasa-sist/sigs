@@ -18,6 +18,7 @@ import type {
 	ExportRow,
 	CobranzaServerResponse,
 	Moneda,
+	MontoPorMoneda,
 	EstadoPago,
 	// New types for improvements
 	PolizaConPagosExtendida,
@@ -81,10 +82,11 @@ async function verificarPermisoCobranza() {
 }
 
 /**
- * Obtiene todas las pólizas activas con cuotas pendientes
- * Incluye estadísticas calculadas para el dashboard
+ * Obtiene pólizas activas con sus cuotas de pago.
+ * Por defecto solo incluye pólizas con cuotas pendientes.
+ * Con incluirPagadas=true, incluye también pólizas completamente pagadas.
  */
-export async function obtenerPolizasConPendientes(): Promise<ObtenerPolizasConPagosResponse> {
+export async function obtenerPolizasConPendientes(incluirPagadas: boolean = false): Promise<ObtenerPolizasConPagosResponse> {
 	const permiso = await verificarPermisoCobranza();
 	if (!permiso.authorized) {
 		return { success: false, error: permiso.error };
@@ -137,6 +139,10 @@ export async function obtenerPolizasConPendientes(): Promise<ObtenerPolizasConPa
           id,
           full_name
         ),
+        regional:regionales!regional_id (
+          id,
+          nombre
+        ),
         cuotas:polizas_pagos (*)
       `
 			)
@@ -168,8 +174,8 @@ export async function obtenerPolizasConPendientes(): Promise<ObtenerPolizasConPa
 				(c) => c.estado === "pendiente" || c.estado === "vencido" || c.estado === "parcial"
 			);
 
-			// Skip policies with no pending quotas
-			if (cuotasPendientes.length === 0) continue;
+			// Skip policies with no pending quotas (unless incluirPagadas is true)
+			if (!incluirPagadas && cuotasPendientes.length === 0) continue;
 
 			const totalPagado = cuotas.filter((c) => c.estado === "pagado").reduce((sum, c) => sum + c.monto, 0);
 
@@ -231,6 +237,10 @@ export async function obtenerPolizasConPendientes(): Promise<ObtenerPolizasConPa
 					id: (poliza.responsable as { id?: string; full_name?: string } | null)?.id || "",
 					full_name: (poliza.responsable as { id?: string; full_name?: string } | null)?.full_name || "N/A",
 				},
+				regional: {
+					id: (poliza.regional as { id?: string; nombre?: string } | null)?.id || "",
+					nombre: (poliza.regional as { id?: string; nombre?: string } | null)?.nombre || "N/A",
+				},
 				cuotas: cuotas,
 				total_pagado: totalPagado,
 				total_pendiente: totalPendiente,
@@ -239,40 +249,86 @@ export async function obtenerPolizasConPendientes(): Promise<ObtenerPolizasConPa
 			});
 		}
 
-		// Calculate statistics
-		const stats: CobranzaStats = {
-			total_polizas: polizasConPagos.length,
-			total_cuotas_pendientes: polizasConPagos.reduce((sum, p) => sum + p.cuotas_pendientes, 0),
-			total_cuotas_vencidas: polizasConPagos.reduce((sum, p) => sum + p.cuotas_vencidas, 0),
-			monto_total_pendiente: polizasConPagos.reduce((sum, p) => sum + p.total_pendiente, 0),
-			monto_total_cobrado_hoy: 0,
-			monto_total_cobrado_mes: 0,
-			cuotas_por_vencer_7dias: 0,
-		};
-
-		// Calculate date-based stats
+		// Calculate statistics from polizasConPagos (only policies with pending quotas)
 		const today = new Date().toISOString().split("T")[0];
-		const firstDayOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1)
-			.toISOString()
-			.split("T")[0];
-		const sevenDaysFromNow = new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+		const tenDaysFromNow = new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+
+		// Montos pendientes desglosados por moneda
+		const pendientesPorMoneda = new Map<string, number>();
+		let totalCuotasPendientes = 0;
+		let totalCuotasVencidas = 0;
+		let cuotasPorVencer10dias = 0;
 
 		for (const poliza of polizasConPagos) {
+			// Acumular monto pendiente por moneda
+			const moneda = poliza.moneda;
+			pendientesPorMoneda.set(moneda, (pendientesPorMoneda.get(moneda) || 0) + poliza.total_pendiente);
+
 			for (const cuota of poliza.cuotas) {
-				// Count payments today
-				if (cuota.fecha_pago === today && cuota.estado === "pagado") {
-					stats.monto_total_cobrado_hoy += cuota.monto;
-				}
-				// Count payments this month
-				if (cuota.fecha_pago && cuota.fecha_pago >= firstDayOfMonth && cuota.estado === "pagado") {
-					stats.monto_total_cobrado_mes += cuota.monto;
-				}
-				// Count quotas due within 7 days
-				if (cuota.estado === "pendiente" && cuota.fecha_vencimiento <= sevenDaysFromNow) {
-					stats.cuotas_por_vencer_7dias++;
+				const estadoReal = obtenerEstadoReal(cuota);
+
+				if (estadoReal === "vencido") {
+					totalCuotasVencidas++;
+				} else if (estadoReal === "pendiente" || estadoReal === "parcial") {
+					totalCuotasPendientes++;
+					// Por vencer en 10 días (solo pendientes, no vencidas)
+					if (cuota.fecha_vencimiento <= tenDaysFromNow) {
+						cuotasPorVencer10dias++;
+					}
 				}
 			}
 		}
+
+		// Cobrado hoy/mes: query independiente para incluir pólizas ya totalmente pagadas
+		const firstDayOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1)
+			.toISOString()
+			.split("T")[0];
+
+		let cobradosQuery = supabase
+			.from("polizas_pagos")
+			.select("monto, fecha_pago, poliza:polizas!poliza_id(moneda, responsable_id)")
+			.eq("estado", "pagado")
+			.gte("fecha_pago", firstDayOfMonth);
+
+		// Aplicar scoping si es necesario
+		if (scope.needsScoping) {
+			cobradosQuery = cobradosQuery.in("poliza.responsable_id", scope.teamMemberIds);
+		}
+
+		const { data: cuotasCobradas } = await cobradosQuery;
+
+		const cobradosHoyPorMoneda = new Map<string, number>();
+		const cobradosMesPorMoneda = new Map<string, number>();
+
+		for (const cuota of cuotasCobradas || []) {
+			const polizaData = cuota.poliza as unknown as { moneda: string; responsable_id: string } | null;
+			if (!polizaData) continue;
+			const moneda = polizaData.moneda;
+
+			// Cobrado este mes
+			cobradosMesPorMoneda.set(moneda, (cobradosMesPorMoneda.get(moneda) || 0) + cuota.monto);
+
+			// Cobrado hoy
+			if (cuota.fecha_pago === today) {
+				cobradosHoyPorMoneda.set(moneda, (cobradosHoyPorMoneda.get(moneda) || 0) + cuota.monto);
+			}
+		}
+
+		// Convertir Maps a arrays de MontoPorMoneda
+		const toMontoPorMoneda = (map: Map<string, number>): MontoPorMoneda[] =>
+			Array.from(map.entries())
+				.map(([moneda, monto]) => ({ moneda: moneda as Moneda, monto }))
+				.sort((a, b) => a.moneda.localeCompare(b.moneda));
+
+		const stats: CobranzaStats = {
+			total_polizas: polizasConPagos.length,
+			total_cuotas_pendientes: totalCuotasPendientes,
+			total_cuotas_vencidas: totalCuotasVencidas,
+			montos_pendientes: toMontoPorMoneda(pendientesPorMoneda),
+			montos_cobrados_hoy: toMontoPorMoneda(cobradosHoyPorMoneda),
+			montos_cobrados_mes: toMontoPorMoneda(cobradosMesPorMoneda),
+			cuotas_por_vencer_10dias: cuotasPorVencer10dias,
+		};
 
 		return {
 			success: true,
@@ -896,6 +952,7 @@ export async function obtenerDetallePolizaParaCuotas(polizaId: string): Promise<
 				),
 				compania:companias_aseguradoras!compania_aseguradora_id(id, nombre),
 				responsable:profiles!responsable_id(id, full_name),
+				regional:regionales!regional_id(id, nombre),
 				cuotas:polizas_pagos(*)
 			`
 			)
@@ -1098,6 +1155,10 @@ export async function obtenerDetallePolizaParaCuotas(polizaId: string): Promise<
 			responsable: {
 				id: poliza.responsable.id,
 				full_name: poliza.responsable.full_name,
+			},
+			regional: {
+				id: poliza.regional?.id || "",
+				nombre: poliza.regional?.nombre || "N/A",
 			},
 			cuotas: cuotas as CuotaPago[],
 			total_pagado,
