@@ -31,6 +31,9 @@ import type {
 	RolBeneficiarioSalud,
 	NivelCobertura,
 	AseguradoConNivel,
+	BienAseguradoIncendio,
+	AseguradoIncendio,
+	ItemIncendio,
 } from "@/types/poliza";
 import type { ActionResult } from "@/types/policyPermission";
 
@@ -623,7 +626,85 @@ export async function obtenerPolizaParaEdicion(
 			}
 		}
 
-		// 6. Get documents (only active ones)
+		// Incendio y Aliados
+	if (ramoLower.includes("incendio")) {
+		const { data: bienesDB, error: errorBienes } = await supabase
+			.from("polizas_incendio_bienes")
+			.select("id, direccion, valor_total_declarado, es_primer_riesgo")
+			.eq("poliza_id", polizaId);
+
+		if (errorBienes) {
+			throw new Error(`Error al cargar bienes de incendio: ${errorBienes.message}`);
+		}
+
+		const bienesFormateados: BienAseguradoIncendio[] = [];
+		for (const bien of bienesDB || []) {
+			const { data: itemsDB } = await supabase
+				.from("polizas_incendio_items")
+				.select("nombre, monto")
+				.eq("bien_id", bien.id);
+
+			bienesFormateados.push({
+				direccion: bien.direccion,
+				valor_total_declarado: Number(bien.valor_total_declarado),
+				es_primer_riesgo: bien.es_primer_riesgo,
+				items: (itemsDB || []).map(i => ({ nombre: i.nombre as ItemIncendio["nombre"], monto: Number(i.monto) })),
+			});
+		}
+
+		const { data: aseguradosIncendioDB, error: errorAsegIncendio } = await supabase
+			.from("polizas_incendio_asegurados")
+			.select("client_id")
+			.eq("poliza_id", polizaId);
+
+		if (errorAsegIncendio) {
+			throw new Error(`Error al cargar asegurados de incendio: ${errorAsegIncendio.message}`);
+		}
+
+		const aseguradosIncendioFormateados: AseguradoIncendio[] = [];
+		for (const a of aseguradosIncendioDB || []) {
+			const { data: naturalClient } = await supabase
+				.from("natural_clients")
+				.select("primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, numero_documento")
+				.eq("client_id", a.client_id)
+				.single();
+
+			if (naturalClient) {
+				aseguradosIncendioFormateados.push({
+					client_id: a.client_id,
+					client_name: [naturalClient.primer_nombre, naturalClient.segundo_nombre, naturalClient.primer_apellido, naturalClient.segundo_apellido]
+						.filter(Boolean)
+						.join(" "),
+					client_ci: naturalClient.numero_documento || "-",
+				});
+			} else {
+				const { data: juridicClient } = await supabase
+					.from("juridic_clients")
+					.select("razon_social, nit")
+					.eq("client_id", a.client_id)
+					.single();
+
+				aseguradosIncendioFormateados.push({
+					client_id: a.client_id,
+					client_name: juridicClient?.razon_social || "Cliente",
+					client_ci: juridicClient?.nit || "-",
+				});
+			}
+		}
+
+		datos_especificos = {
+			tipo_ramo: "Incendio y Aliados",
+			datos: {
+				tipo_poliza: aseguradosIncendioFormateados.length > 1 ? "corporativo" : "individual",
+				regional_asegurado_id: poliza.regional_asegurado_id || "",
+				valor_asegurado: bienesFormateados.reduce((sum, b) => sum + b.valor_total_declarado, 0),
+				bienes: bienesFormateados,
+				asegurados: aseguradosIncendioFormateados,
+			},
+		};
+	}
+
+	// 6. Get documents (only active ones)
 		const { data: documentos } = await supabase
 			.from("polizas_documentos")
 			.select("id, tipo_documento, nombre_archivo, archivo_url, tamano_bytes")
@@ -1158,7 +1239,75 @@ export async function actualizarPoliza(
 			}
 		}
 
-		// 4. Handle new documents (uploaded client-side to temp/)
+		// 3d. Update Incendio y Aliados data
+	if (formState.datos_especificos?.tipo_ramo === "Incendio y Aliados") {
+		const datosIncendio = formState.datos_especificos.datos;
+
+		// Delete existing bienes (items cascade automatically via FK)
+		const { error: delBienes } = await supabase
+			.from("polizas_incendio_bienes")
+			.delete()
+			.eq("poliza_id", polizaId);
+		if (delBienes) {
+			return { success: false, error: `Error al limpiar bienes de incendio: ${delBienes.message}` };
+		}
+
+		// Delete existing asegurados
+		const { error: delAsegIncendio } = await supabase
+			.from("polizas_incendio_asegurados")
+			.delete()
+			.eq("poliza_id", polizaId);
+		if (delAsegIncendio) {
+			return { success: false, error: `Error al limpiar asegurados de incendio: ${delAsegIncendio.message}` };
+		}
+
+		// Insert new bienes and their items
+		for (const bien of datosIncendio.bienes) {
+			const { data: bienDB, error: errBien } = await supabase
+				.from("polizas_incendio_bienes")
+				.insert({
+					poliza_id: polizaId,
+					direccion: bien.direccion,
+					valor_total_declarado: bien.valor_total_declarado,
+					es_primer_riesgo: bien.es_primer_riesgo,
+				})
+				.select("id")
+				.single();
+
+			if (errBien || !bienDB) {
+				return { success: false, error: `Error al guardar bien de incendio: ${errBien?.message}` };
+			}
+
+			if (bien.items.length > 0) {
+				const { error: errItems } = await supabase
+					.from("polizas_incendio_items")
+					.insert(bien.items.map(item => ({
+						bien_id: bienDB.id,
+						nombre: item.nombre,
+						monto: item.monto,
+					})));
+				if (errItems) {
+					return { success: false, error: `Error al guardar items de incendio: ${errItems.message}` };
+				}
+			}
+		}
+
+		// Insert new asegurados
+		const aseguradosIncendio = datosIncendio.asegurados || [];
+		if (aseguradosIncendio.length > 0) {
+			const { error: errAsegIncendio } = await supabase
+				.from("polizas_incendio_asegurados")
+				.insert(aseguradosIncendio.map(a => ({
+					poliza_id: polizaId,
+					client_id: a.client_id,
+				})));
+			if (errAsegIncendio) {
+				return { success: false, error: `Error al guardar asegurados de incendio: ${errAsegIncendio.message}` };
+			}
+		}
+	}
+
+	// 4. Handle new documents (uploaded client-side to temp/)
 		const newDocuments = formState.documentos.filter(
 			(d) => d.storage_path && d.upload_status === "uploaded" && !d.id
 		);
