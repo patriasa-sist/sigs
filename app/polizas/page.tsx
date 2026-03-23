@@ -169,9 +169,30 @@ export default function PolizasPage() {
 		<div className="container mx-auto px-4 py-8 max-w-7xl">
 			{/* Header */}
 			<div className="mb-8">
-				<div className="flex items-center gap-3 mb-2">
-					<FileText className="h-8 w-8 text-primary" />
-					<h1 className="text-4xl font-bold text-gray-900">Pólizas</h1>
+				<div className="flex items-center justify-between gap-3 mb-2">
+					<div className="flex items-center gap-3">
+						<FileText className="h-8 w-8 text-primary" />
+						<h1 className="text-4xl font-bold text-gray-900">Pólizas</h1>
+					</div>
+					<div className="flex items-center gap-3">
+						<Button
+							onClick={() => router.push("/polizas/anexos/nuevo")}
+							size="sm"
+							variant="outline"
+							className="font-semibold cursor-pointer"
+						>
+							<Plus className="mr-1.5 h-4 w-4" />
+							Nuevo Anexo
+						</Button>
+						<Button
+							onClick={handleNewPolicy}
+							size="sm"
+							className="font-semibold cursor-pointer"
+						>
+							<Plus className="mr-1.5 h-4 w-4" />
+							Nueva Póliza
+						</Button>
+					</div>
 				</div>
 				<p className="text-gray-600 ml-11">Gestión de pólizas de seguros y seguimiento de pagos</p>
 			</div>
@@ -564,26 +585,6 @@ export default function PolizasPage() {
 				</div>
 			)}
 
-			{/* Floating Action Buttons */}
-			<div className="fixed bottom-8 right-8 z-50 flex flex-col gap-3">
-				<Button
-					onClick={() => router.push("/polizas/anexos/nuevo")}
-					size="lg"
-					variant="outline"
-					className="h-12 px-6 text-sm font-semibold shadow-lg hover:shadow-xl transition-all cursor-pointer bg-white"
-				>
-					<Plus className="mr-2 h-4 w-4" />
-					NUEVO ANEXO
-				</Button>
-				<Button
-					onClick={handleNewPolicy}
-					size="lg"
-					className="h-14 px-8 text-base font-semibold shadow-lg hover:shadow-xl transition-all cursor-pointer"
-				>
-					<Plus className="mr-2 h-5 w-5" />
-					NUEVA PÓLIZA
-				</Button>
-			</div>
 		</div>
 	);
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { version } from "@/package.json";
 import { useState, useEffect } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { User } from "@supabase/supabase-js";
@@ -162,7 +163,7 @@ export function Navbar() {
 							height={32}
 							className="h-8 w-auto"
 						/>
-						<span className="text-[10px] text-gray-400 font-mono leading-none">v{require('@/../package.json').version}</span>
+						<span className="text-[10px] text-gray-400 font-mono leading-none">v{version}</span>
 					</Link>
 				</div>
 
