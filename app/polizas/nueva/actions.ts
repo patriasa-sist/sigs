@@ -192,6 +192,7 @@ async function insertarDatosRamo(
 			franquicia: vehiculo.franquicia,
 			nro_chasis: vehiculo.nro_chasis,
 			uso: vehiculo.uso,
+			coaseguro: vehiculo.coaseguro,
 			tipo_vehiculo_id: vehiculo.tipo_vehiculo_id || null,
 			marca_id: vehiculo.marca_id || null,
 			modelo: vehiculo.modelo || null,
