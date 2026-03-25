@@ -3,66 +3,66 @@ Orden: implementar todos los formularios con detalles provistos y dejar un mensa
 
 1. Campos obligatorios salud:
 
--   tipo de poliza (dropdown individual o corporativo)
--   Suma asegurada (numero)
--   Regional Asegurado (dropdown regional de los 9 departamentos de Bolivia fijo)
--   busqueda de cliente para ir agregando a una lista de 1 o mas asegurados, se debe definir en cada cliente seleccionado su rango (contratante, titular, conyugue, dependiente) pueden haber uno o mas dependientes pero solo 1 contratante, 1 titular y 1 conyugue, el contratante esta separado del titular porque puede ser una empresa la que contrata el seguro para sus empleados, se puede repetir la misma persona para contratante y titular que son las dos personas minimas necesarias. boton de agregar asegurado
+- tipo de poliza (dropdown individual o corporativo)
+- Suma asegurada (numero)
+- Regional Asegurado (dropdown regional de los 9 departamentos de Bolivia fijo)
+- busqueda de cliente para ir agregando a una lista de 1 o mas asegurados, se debe definir en cada cliente seleccionado su rango (contratante, titular, conyugue, dependiente) pueden haber uno o mas dependientes pero solo 1 contratante, 1 titular y 1 conyugue, el contratante esta separado del titular porque puede ser una empresa la que contrata el seguro para sus empleados, se puede repetir la misma persona para contratante y titular que son las dos personas minimas necesarias. boton de agregar asegurado
 
 2. campos obligatorios Incendio y aliados:
 
--   tipo de poliza (dropdown individual o corporativo)
--   regional asegurado (dropdown regional de los 9 departamentos de Bolivia fijo)
--   busqueda de cliente para ir agregando a una lista de 1 o mas asegurados
--   valor asegurado (numero)
--   direccion del bien asegurado (texto) 1 o mas direcciones admitidas
--   valor declarado $ (numero) que va junto a la direccion del bien asegurado 1 por cada direccion
--   PRIMER RIESGO: marcar la direccion principal del bien asegurado
+- tipo de poliza (dropdown individual o corporativo)
+- regional asegurado (dropdown regional de los 9 departamentos de Bolivia fijo)
+- busqueda de cliente para ir agregando a una lista de 1 o mas asegurados
+- valor asegurado (numero)
+- direccion del bien asegurado (texto) 1 o mas direcciones admitidas
+- valor declarado $ (numero) que va junto a la direccion del bien asegurado 1 por cada direccion
+- PRIMER RIESGO: marcar la direccion principal del bien asegurado
 
-*   se pueden tener N bienes asegurados en una misma poliza
+* se pueden tener N bienes asegurados en una misma poliza
 
 3. campos obligatorios de responsabilidad civil:
 
--   tipo de poliza (dropdown individual o corporativo)
--   VALOR ASEGURADO: BS/USD
--   busqueda de cliente para ir agregando a una lista de 1 o más asegurados
+- tipo de poliza (dropdown individual o corporativo)
+- VALOR ASEGURADO: BS/USD
+- busqueda de cliente para ir agregando a una lista de 1 o más asegurados
 
 4. campos obligatorios de Riesgos varios misceláneos:
    COBERTURAS:
 
--   CONVENIO 1 INFIDELIDAD DE EMPLEADOS (numero) Bs/USD
--   CONVENIO 2 PERDIDAS DENTRO DEL LOCAL (numero) Bs/USD
--   CONVENIO 3 PERDIDAS FUERA DENTRO DEL LOCALES (numero) Bs/USD
--   VALOR TOTAL ASEGURADO con moneda BS/USD
--   busqueda de cliente para ir agregando a una lista de 1 o más asegurados
+- CONVENIO 1 INFIDELIDAD DE EMPLEADOS (numero) Bs/USD
+- CONVENIO 2 PERDIDAS DENTRO DEL LOCAL (numero) Bs/USD
+- CONVENIO 3 PERDIDAS FUERA DENTRO DEL LOCALES (numero) Bs/USD
+- VALOR TOTAL ASEGURADO con moneda BS/USD
+- busqueda de cliente para ir agregando a una lista de 1 o más asegurados
 
 5. En las polizas de accidentes personales, Vida y Sepelio se tiene un formulario previo antes del paso 3 que llamaremos paso especial 2.1 donde se deben definir los niveles de cobertura que tiene la poliza, esto es unico para Accidentes personales y Vida, y se declara de la siguiente manera:
 
--   se tiene una seccion donde se puede habilitar o deshabilitar las siguientes coberturas para Accidentes personales:
-    [X] MUERTE ACCIDENTAL
-    [X] INVALIDEZ TOTAL/PARCIAL
-    [X] GASTOS MEDICOS
-    [X] SEPELIO
--   para Vida:
-    [X] MUERTE (por cualquier causa)
-    [X] DIMA
-    [X] SEPELIO
-    [X] GASTOS MEDICOS
-    [X] INDM POR ENFERMEDADES GRAVES
--   para Sepelio de corto y largo plazo:
-    [X] SEPELIO
--   si se habilita la cobertura se debe agregar el valor asegurado de la misma
--   cuando todo haya sido configurado propiamente se debe hacer un boton de "crear nivel" para agregar un nuevo nivel de cobertura (Nivel 1, nivel 2, etc) ya se que se pueden tener N niveles de cobertura
--   una vez se haya concluido esta configuracion previa recién se va al paso 3 que es el formulario principal de la poliza
+- se tiene una seccion donde se puede habilitar o deshabilitar las siguientes coberturas para Accidentes personales:
+  [X] MUERTE ACCIDENTAL
+  [X] INVALIDEZ TOTAL/PARCIAL
+  [X] GASTOS MEDICOS
+  [X] SEPELIO
+- para Vida:
+  [X] MUERTE (por cualquier causa)
+  [X] DIMA
+  [X] SEPELIO
+  [X] GASTOS MEDICOS
+  [X] INDM POR ENFERMEDADES GRAVES
+- para Sepelio de corto y largo plazo:
+  [X] SEPELIO
+- si se habilita la cobertura se debe agregar el valor asegurado de la misma
+- cuando todo haya sido configurado propiamente se debe hacer un boton de "crear nivel" para agregar un nuevo nivel de cobertura (Nivel 1, nivel 2, etc) ya se que se pueden tener N niveles de cobertura
+- una vez se haya concluido esta configuracion previa recién se va al paso 3 que es el formulario principal de la poliza
 
-*   campos obligatorios de Accidentes personales, tambien de polizas de Vida y tambien de polizas de Sepelio:
+* campos obligatorios de Accidentes personales, tambien de polizas de Vida y tambien de polizas de Sepelio:
 
--   tipo de poliza (dropdown individual o corporativo)
--   regional asegurado (dropdown regional de los 9 departamentos de Bolivia fijo)
--   busqueda de cliente y asignacion de su nivel previamente configurado en el paso 2.1, se pueden tener N asegurados con 1 solo nivel de cobertura
+- tipo de poliza (dropdown individual o corporativo)
+- regional asegurado (dropdown regional de los 9 departamentos de Bolivia fijo)
+- busqueda de cliente y asignacion de su nivel previamente configurado en el paso 2.1, se pueden tener N asegurados con 1 solo nivel de cobertura
 
-*   campos opcionales de Accidentes personales, tambien de polizas de Vida y tambien de polizas de Sepelio:
+* campos opcionales de Accidentes personales, tambien de polizas de Vida y tambien de polizas de Sepelio:
 
--   Producto (texto)
+- Producto (texto)
 
 errores a solucionar:
 
@@ -86,13 +86,13 @@ Vida individual corto y largo plazo
 en salud al buscar a los asegurados se deberia poder volver a seleccionar al mismo cliente que ya se agrego
 Aeronavegacion agregado?
 
--   trabajar en seccion de edicion de datos de polizas
--   mejorar el modulo de creacion de clientes
--   PR de refactorizacion de modulo de polizas para mover validaciones de campos a Zod y no hacerlo manual
--   modulo cobranzas de polizas
--   modulo de siniestros
--   centralizacion de constantes de validacion en todos los modulos
--   optimizacion para eliminacion periodica de archivos "eliminados" de supabase cada 90 dias
+- trabajar en seccion de edicion de datos de polizas
+- mejorar el modulo de creacion de clientes
+- PR de refactorizacion de modulo de polizas para mover validaciones de campos a Zod y no hacerlo manual
+- modulo cobranzas de polizas
+- modulo de siniestros
+- centralizacion de constantes de validacion en todos los modulos
+- optimizacion para eliminacion periodica de archivos "eliminados" de supabase cada 90 dias
 
 mejoraremos partes del flujo de creacion de las polizas nuevas en los siguientes aspectos paso por paso, te ire dando cada paso a mejorar gradualmente:
 Paso 2:
@@ -210,9 +210,9 @@ Vamos a continuar con la mejora del modulo de clientes:
 ✅ la fecha de nacimiento no puede ser mayor a hoy
 ✅ quitar redundancia de datos comerciales para unipersonal son los mismos que los datos personales
 
--   NUEVO form extra accionista para registrarlo con datos minimos: nombre y carnet
+- NUEVO form extra accionista para registrarlo con datos minimos: nombre y carnet
 
--   NUEVO tipo de cliente llamado "asegurado" con datos minimos
+- NUEVO tipo de cliente llamado "asegurado" con datos minimos
 
 finalizar cambios en el modulo de clientes actual
 trabajar editor de clientes con trazabilidad
@@ -282,16 +282,16 @@ Moneda es de toda la póliza, borrar eso que dice "Valor declarado (USD)" al agr
 borrar texto "(dirección personal)" del check "marcar como PRIMER RIESGO"
 NUEVO En la creación de dirección se deben agregar "Items" como en los Niveles de AP, estos items son las siguientes caracteristicas de esta poliza:
 
--   Edificaciones, instalaciones en general
--   Activos fijos en general
--   Equipos electronicos
--   maquinaria fija o equipos
--   existencias (mercaderia)
--   Dinero y valores dentro del predio
--   vidrios y cristales
--   valor total declarado
-    la sumantoria de todos los items da "Valor total Declarado"
-    La sumatoria de todas las ubicaciones da "Valor Asegurado TOTAL"
+- Edificaciones, instalaciones en general
+- Activos fijos en general
+- Equipos electronicos
+- maquinaria fija o equipos
+- existencias (mercaderia)
+- Dinero y valores dentro del predio
+- vidrios y cristales
+- valor total declarado
+  la sumantoria de todos los items da "Valor total Declarado"
+  La sumatoria de todas las ubicaciones da "Valor Asegurado TOTAL"
 
 paso3 salud
 NUEVO en corporativo definir niveles con un monto para aplicar luego a cada asegurado
@@ -312,64 +312,63 @@ Convenios checkbox para habilitar o deshabilitar, cada uno con su monto
 
 CONCRETAR:
 
--   plantilla de FIANZAS es todo ramo que empieze con el codigo "92"
-    BENEFICIARIO (TEXTO MAYUSCULAS)
-    OBJETO DEL CONTRATO (TEXTO)
-    VALOR DEL CONTRATO (NUM)
-    VALOR CAUCIONADO (NUM)
-    UBICACION DE LA OBRA (TEXTO)
+- plantilla de FIANZAS es todo ramo que empieze con el codigo "92"
+  BENEFICIARIO (TEXTO MAYUSCULAS)
+  OBJETO DEL CONTRATO (TEXTO)
+  VALOR DEL CONTRATO (NUM)
+  VALOR CAUCIONADO (NUM)
+  UBICACION DE LA OBRA (TEXTO)
 
--   plantilla AERONAVEGACION // Naves y embarcaciones
-    ASEGURADO ADICIONAL (buscar cliente)
-    DATOS OBJETO ASEGURADO:
+- plantilla AERONAVEGACION // Naves y embarcaciones
+  ASEGURADO ADICIONAL (buscar cliente)
+  DATOS OBJETO ASEGURADO:
+    - MARCA
+    - MODELO
+    - AÑO
+    - SERIE
+    - USO privado/publico/recreaccion/
+    - MATRICULA
+    - NUMERO DE PASAJERO
+    - NUMERO TRIPULANTES
+      VALOR ASEGURADO: (monto)
+    - CASCO (texto)
+    - RESPONSBILIDAD CIVIL (monto)
+    - ACCIDENTES PERSONALES (desplegable de niveles AP, varios niveles)
 
-    -   MARCA
-    -   MODELO
-    -   AÑO
-    -   SERIE
-    -   USO privado/publico/recreaccion/
-    -   MATRICULA
-    -   NUMERO DE PASAJERO
-    -   NUMERO TRIPULANTES
-        VALOR ASEGURADO: (monto)
-    -   CASCO (texto)
-    -   RESPONSBILIDAD CIVIL (monto)
-    -   ACCIDENTES PERSONALES (desplegable de niveles AP, varios niveles)
-
--   plantilla ROBO
-    Ubicación de riesgo
-    Items seleccionables con su monto
-    valor asegurado
+- plantilla ROBO
+  Ubicación de riesgo
+  Items seleccionables con su monto
+  valor asegurado
 
 faltante>>
 
--   RAMOS TECNICOS
-    Placa opcional
-    tipo de vehículo pasa a "tipo de equipo" (industrial)
-    marcas industriales
-    sin ejes ni asientos
-    NUEVO nro de serie opcional
+- RAMOS TECNICOS
+  Placa opcional
+  tipo de vehículo pasa a "tipo de equipo" (industrial)
+  marcas industriales
+  sin ejes ni asientos
+  NUEVO nro de serie opcional
 
--   TRANSPORTE
-    Materia asegurada (texto largo)
-    tipo de embalaje (texto)
-    fecha embarque (fecha)
-    tipo transporte (terrestre, marítimo, arereo, ferreo, multimodal)
-    ciudad origen (texto)
-    país origen (parametrizado)
-    país destino (parametrizado)
-    ciudad destino (texto)
-    Valor asegurado (num)
-    factura (texto)
-    fecha factura (fecha)
-    Cobertura A, C checkbox
-    modalidad (selección: flotante, flat, un solo embarque, flat con prima minima deposito)
+- TRANSPORTE
+  Materia asegurada (texto largo)
+  tipo de embalaje (texto)
+  fecha embarque (fecha)
+  tipo transporte (terrestre, marítimo, arereo, ferreo, multimodal)
+  ciudad origen (texto)
+  país origen (parametrizado)
+  país destino (parametrizado)
+  ciudad destino (texto)
+  Valor asegurado (num)
+  factura (texto)
+  fecha factura (fecha)
+  Cobertura A, C checkbox
+  modalidad (selección: flotante, flat, un solo embarque, flat con prima minima deposito)
 
 Ramos generales:: NUEVO Subrrogacion texto y moneda por cada item cubierto
 
--   automotor
--   equipo móvil pesado (ramos técnicos)
--   incendio y aliados
+- automotor
+- equipo móvil pesado (ramos técnicos)
+- incendio y aliados
 
 TODAS LAS POLIZAS DEBEN SER LIGADAS AL TIPO DE CLIENTE INDIVIDUAL, UNI, JURID
 
@@ -394,41 +393,41 @@ similar al modulo de cobranzas, ahora haremos el módulo de siniestros:
    paso 1: se selecciona la poliza siniestrada y se confirman los datos más importantes que son el cliente, el responsable de esa poliza, las cuotas y los asegurados dentro de dicha poliza (personas, autos, viviendas, etc, etc) para saber que ese es el cliente siniestrado
    paso 2: se registran los detalles del siniestro como:
 
--   fecha siniestro (fecha, obligatorio)
--   fecha reporte (fecha, obligatorio)
--   lugar del hecho (texto, obligatorio)
--   departamento (selector departamento, obligatorio)
--   monto de reseva (moneda 2 decimales, obligatorio)
--   selector de moneda (Bs/USD)
--   area de texto para la descripcion del siniestro (texto largo, obligatorio)
--   contacto (uno o varios correos electronicos)
-    paso 3: se marcan las coberturas que se cubren en el siniestro
--   se ingresa la cobertura como texto y se marca el checkbox de la cobertura
-    paso 4: carga de documentos opcionales con sus etiquetas
--   fotografia VA
--   fotografia RC
--   formulario de denuncia
--   licencia de conducir
--   informe transito
--   informe soat
--   test alcoholemia
--   franquicia y/o deducible
--   proforma
--   orden de compra/trabajo
--   inspeccion
--   liquidacion
-    una vez se llena todo se guarda el siniestro y queda etiquetado como "abierto"
+- fecha siniestro (fecha, obligatorio)
+- fecha reporte (fecha, obligatorio)
+- lugar del hecho (texto, obligatorio)
+- departamento (selector departamento, obligatorio)
+- monto de reseva (moneda 2 decimales, obligatorio)
+- selector de moneda (Bs/USD)
+- area de texto para la descripcion del siniestro (texto largo, obligatorio)
+- contacto (uno o varios correos electronicos)
+  paso 3: se marcan las coberturas que se cubren en el siniestro
+- se ingresa la cobertura como texto y se marca el checkbox de la cobertura
+  paso 4: carga de documentos opcionales con sus etiquetas
+- fotografia VA
+- fotografia RC
+- formulario de denuncia
+- licencia de conducir
+- informe transito
+- informe soat
+- test alcoholemia
+- franquicia y/o deducible
+- proforma
+- orden de compra/trabajo
+- inspeccion
+- liquidacion
+  una vez se llena todo se guarda el siniestro y queda etiquetado como "abierto"
 
 si yo entro al reporte y este está abierto tengo la posibilidad de visualizar los datos previos y agregar nuevos como:
 
--   agregar nuevos archivos
--   agregar nuevas observaciones del proceso del siniestro
--   agregar fecha de llegada de repuestos necesarios para la reparacion
--   actualizar el estado final del siniestro en 3 posibles conclusiones:
-    rechazado: se agrega una carta de rechazo (archivo obligatorio), se selecciona el motivo de rechazo de una lista parametrizada (Mora, incumplimiento, sin cobertura, no aplicable) y boton "cerrar reporte"
-    declinado: carta de respaldo (archivo obligatorio), seleccionar el motivo de una lista parametrizada (solicitud cliente, pagó otra poliza) y boton "cerrar reporte"
-    concluido: - seccion indemnizacion: archivo UIF y archivo PEP ambos obligatorios - monto reclamado y selector moneda Bs/USD - deducible y selector moneda Bs/USD - monto pagado y selector moneda Bs/USD - check para marcar si es un "pago comercial" - boton "cerrar reporte"
-    toda actualizacion que se haga en este modo edicion debe quedar registrada en el propio siniestro para saber quién subió x archivo o quién anotó Y observación, además de quién cambió el siniestro de estado o quién lo cerró, esto debe ser visualizado como una lista con la fecha, el autor y el cambio realizado
+- agregar nuevos archivos
+- agregar nuevas observaciones del proceso del siniestro
+- agregar fecha de llegada de repuestos necesarios para la reparacion
+- actualizar el estado final del siniestro en 3 posibles conclusiones:
+  rechazado: se agrega una carta de rechazo (archivo obligatorio), se selecciona el motivo de rechazo de una lista parametrizada (Mora, incumplimiento, sin cobertura, no aplicable) y boton "cerrar reporte"
+  declinado: carta de respaldo (archivo obligatorio), seleccionar el motivo de una lista parametrizada (solicitud cliente, pagó otra poliza) y boton "cerrar reporte"
+  concluido: - seccion indemnizacion: archivo UIF y archivo PEP ambos obligatorios - monto reclamado y selector moneda Bs/USD - deducible y selector moneda Bs/USD - monto pagado y selector moneda Bs/USD - check para marcar si es un "pago comercial" - boton "cerrar reporte"
+  toda actualizacion que se haga en este modo edicion debe quedar registrada en el propio siniestro para saber quién subió x archivo o quién anotó Y observación, además de quién cambió el siniestro de estado o quién lo cerró, esto debe ser visualizado como una lista con la fecha, el autor y el cambio realizado
 
 ## siniestros 2da reunion (listo)
 
@@ -436,11 +435,11 @@ reunion 18-12-2025
 
 paso 2
 
--   fecha de reporte siniestro (no futura, ancla de aviso)
--   fecha de reporte cliente (no futura)
--   fecha reporte compania (no futura)
--   NUEVO alerta de dias de "aviso de siniestro"
--   (fecha de registro interno es automatico)
+- fecha de reporte siniestro (no futura, ancla de aviso)
+- fecha de reporte cliente (no futura)
+- fecha reporte compania (no futura)
+- NUEVO alerta de dias de "aviso de siniestro"
+- (fecha de registro interno es automatico)
 
 modificar contacto>
 nombre (obligatorio)
@@ -467,40 +466,40 @@ alerta si el reporte no ha sufrido cambios en 10 dias y sigue abierto
 
 Observaciones>>
 
--   NUEVA seccion "estados" encima de agregar observacion
-    Espera informe transito
-    Espera proforma
-    Espera franquicia
-    Espera orden
-    Espera reparacion
-    Espera conformidad
-    Espera receta medica
-    Espera autorizacion/ordenes
-    Espera liquidacion
-    [[[FALTA ESTADOS DE POLIZAS GENERALES]]]
+- NUEVA seccion "estados" encima de agregar observacion
+  Espera informe transito
+  Espera proforma
+  Espera franquicia
+  Espera orden
+  Espera reparacion
+  Espera conformidad
+  Espera receta medica
+  Espera autorizacion/ordenes
+  Espera liquidacion
+  [[[FALTA ESTADOS DE POLIZAS GENERALES]]]
 
--   Documentos siniestro con minatura reconstruccion total
-    [[[pasar etiquetado e archivos para revision]]]
+- Documentos siniestro con minatura reconstruccion total
+  [[[pasar etiquetado e archivos para revision]]]
 
--   visualizar no solo polizas vigentes, sino vencidas dentro del anio
+- visualizar no solo polizas vigentes, sino vencidas dentro del anio
 
 selector de conclusion>
 
--   indemnizacion y/o reembolso>
-    UIF y PEP obligatorio
--   ordenes>
-    reclamado, deducible, pagado
--   quitar pago comercial de cierre concluido
+- indemnizacion y/o reembolso>
+  UIF y PEP obligatorio
+- ordenes>
+  reclamado, deducible, pagado
+- quitar pago comercial de cierre concluido
 
--   NUEVO Enviar mensaje de WhatsApp al cerrar el cierre del reporte
+- NUEVO Enviar mensaje de WhatsApp al cerrar el cierre del reporte
 
--   quitar informacion de registro
+- quitar informacion de registro
 
--   mensaje estandarizado al registrar el siniestro [[pedir mensaje]]
+- mensaje estandarizado al registrar el siniestro [[pedir mensaje]]
 
 paso1
 
--   color segun estado de poliza al seleccionarla
+- color segun estado de poliza al seleccionarla
 
 alertas para siniestros (detalle grafico)
 
@@ -518,20 +517,20 @@ Mejoraremos el modulo de siniestros con los siguientes cambios:
 
 2. agregar limitantes en sistema de conclusion de siniestros de la siguiente manera:
 
--   quitar pago comercial de cierre concluido
--   NUEVO Enviar mensaje de WhatsApp al cerrar el cierre del reporte (inventar mensaje estandar formal)
--   mensaje estandarizado al registrar el siniestro [[pedir mensaje]]
+- quitar pago comercial de cierre concluido
+- NUEVO Enviar mensaje de WhatsApp al cerrar el cierre del reporte (inventar mensaje estandar formal)
+- mensaje estandarizado al registrar el siniestro [[pedir mensaje]]
 
 3. modificar la edicion de siniestros de la siguiente forma:
 
 seccion resumen:
 
--   agregar detalles completos de la persona y los bienes asegurados en la poliza asociada como sucede en el modulo cobranzas
--   quitar parte de informacion de registro
+- agregar detalles completos de la persona y los bienes asegurados en la poliza asociada como sucede en el modulo cobranzas
+- quitar parte de informacion de registro
 
 seccion documentos:
 
--   reconstrucción completa de la seccion de documentos al cargar y editar el siniestro, ahora los tipos de documento se deben mostrar como pestañas en un lateral y al seleccionar cualquier pestaña se muestran todos los archivos bajo esa etiqueta, ademas se muestran miniaturas de los archivos de imagen y en cada pestaña (etiqueta) se puede cargar un nuevo archivo (de forma manual sin arrastrar) que queda etiquetado automaticamente.
+- reconstrucción completa de la seccion de documentos al cargar y editar el siniestro, ahora los tipos de documento se deben mostrar como pestañas en un lateral y al seleccionar cualquier pestaña se muestran todos los archivos bajo esa etiqueta, ademas se muestran miniaturas de los archivos de imagen y en cada pestaña (etiqueta) se puede cargar un nuevo archivo (de forma manual sin arrastrar) que queda etiquetado automaticamente.
 
 seccion observaciones:
 NUEVA seccion de "estados" encima de la seccion de "agregar observacion" que debe tener los siguientes estados (traidos desde la db, crear tabla de eso) en un menu desplegable
@@ -547,62 +546,62 @@ Espera liquidacion
 
 1. Base de Datos ✅
 
--   Creada migración SQL completa con:
-    -   Tabla siniestros_estados_catalogo (9 estados predefinidos)
-    -   Tabla siniestros_estados_historial (auditoría de cambios)
-    -   Vista siniestros_con_estado_actual con flag requiere_atencion
-    -   Función obtener_contacto_poliza() para WhatsApp
-    -   Índices optimizados en updated_at
-    -   Políticas RLS configuradas
+- Creada migración SQL completa con:
+    - Tabla siniestros_estados_catalogo (9 estados predefinidos)
+    - Tabla siniestros_estados_historial (auditoría de cambios)
+    - Vista siniestros_con_estado_actual con flag requiere_atencion
+    - Función obtener_contacto_poliza() para WhatsApp
+    - Índices optimizados en updated_at
+    - Políticas RLS configuradas
 
 2. Tipos TypeScript ✅
 
--   Agregados ~15 nuevos tipos en types/siniestro.ts
--   Incluye tipos para estados, contactos, WhatsApp, y vistas extendidas
+- Agregados ~15 nuevos tipos en types/siniestro.ts
+- Incluye tipos para estados, contactos, WhatsApp, y vistas extendidas
 
 3. Server Actions ✅
 
--   Implementadas 8 nuevas funciones en app/siniestros/actions.ts:
-    -   obtenerEstadosCatalogo() - Lista de estados
-    -   obtenerHistorialEstados() - Historial cronológico
-    -   cambiarEstadoSiniestro() - Cambiar estado con observación
-    -   obtenerSiniestrosConAtencion() - Query con flag de atención
-    -   obtenerContactoParaWhatsApp() - Contacto del cliente
-    -   generarWhatsAppRegistroSiniestro() - URL WhatsApp registro
-    -   generarWhatsAppCierreSiniestro() - URL WhatsApp cierre
-    -   obtenerDetalleCompletoPoliza() - Detalle completo por ramo
+- Implementadas 8 nuevas funciones en app/siniestros/actions.ts:
+    - obtenerEstadosCatalogo() - Lista de estados
+    - obtenerHistorialEstados() - Historial cronológico
+    - cambiarEstadoSiniestro() - Cambiar estado con observación
+    - obtenerSiniestrosConAtencion() - Query con flag de atención
+    - obtenerContactoParaWhatsApp() - Contacto del cliente
+    - generarWhatsAppRegistroSiniestro() - URL WhatsApp registro
+    - generarWhatsAppCierreSiniestro() - URL WhatsApp cierre
+    - obtenerDetalleCompletoPoliza() - Detalle completo por ramo
 
 4. Componentes Nuevos ✅
 
--   BotonWhatsAppRegistro.tsx - Botón WhatsApp después de registro
--   BotonWhatsAppCierre.tsx - Botón WhatsApp al cerrar
--   UltimoCambioSiniestro.tsx - Card destacado con último cambio
--   DetallePolizaSiniestro.tsx - Detalles completos de póliza por ramo
--   SeccionEstados.tsx - Dropdown de estados + historial + modal
--   DocumentosPorTipo.tsx - Sistema de tabs laterales con 16 tipos
+- BotonWhatsAppRegistro.tsx - Botón WhatsApp después de registro
+- BotonWhatsAppCierre.tsx - Botón WhatsApp al cerrar
+- UltimoCambioSiniestro.tsx - Card destacado con último cambio
+- DetallePolizaSiniestro.tsx - Detalles completos de póliza por ramo
+- SeccionEstados.tsx - Dropdown de estados + historial + modal
+- DocumentosPorTipo.tsx - Sistema de tabs laterales con 16 tipos
 
 5. Modificaciones a Componentes ✅
 
--   Dashboard (page.tsx + Dashboard.tsx + SiniestrosTable.tsx):
-    -   Usa obtenerSiniestrosConAtencion()
-    -   Filas rojas para siniestros sin actualización en 10+ días
-    -   Badge "⚠️ Atención" visible
-    -   Tooltip explicativo
--   CerrarSiniestro.tsx:
-    -   Eliminado checkbox "Pago Comercial"
-    -   Integrado WhatsApp automático al cerrar
-    -   Mensajes personalizados por tipo de cierre
--   Registro (RegistrarSiniestroForm.tsx):
-    -   Pantalla de éxito con WhatsApp opcional
-    -   No redirige inmediatamente
-    -   Botón "Ir al Dashboard"
--   EditarSiniestroForm.tsx:
-    -   Tab Resumen: Agregados UltimoCambioSiniestro + DetallePolizaSiniestro
-    -   Tab Documentos: Reemplazado con DocumentosPorTipo
-    -   Tab Observaciones: Agregado SeccionEstados arriba
--   ResumenReadonly.tsx:
-    -   Eliminada sección "Información de Registro" completa
-    -   Datos ahora visibles en historial y último cambio
+- Dashboard (page.tsx + Dashboard.tsx + SiniestrosTable.tsx):
+    - Usa obtenerSiniestrosConAtencion()
+    - Filas rojas para siniestros sin actualización en 10+ días
+    - Badge "⚠️ Atención" visible
+    - Tooltip explicativo
+- CerrarSiniestro.tsx:
+    - Eliminado checkbox "Pago Comercial"
+    - Integrado WhatsApp automático al cerrar
+    - Mensajes personalizados por tipo de cierre
+- Registro (RegistrarSiniestroForm.tsx):
+    - Pantalla de éxito con WhatsApp opcional
+    - No redirige inmediatamente
+    - Botón "Ir al Dashboard"
+- EditarSiniestroForm.tsx:
+    - Tab Resumen: Agregados UltimoCambioSiniestro + DetallePolizaSiniestro
+    - Tab Documentos: Reemplazado con DocumentosPorTipo
+    - Tab Observaciones: Agregado SeccionEstados arriba
+- ResumenReadonly.tsx:
+    - Eliminada sección "Información de Registro" completa
+    - Datos ahora visibles en historial y último cambio
 
 📋 Para ejecutar manualmente:
 
@@ -610,13 +609,13 @@ Espera liquidacion
 2. Verificar que los 9 estados se insertaron correctamente
 3. Probar el flujo completo de registro → edición → cierre
 
--   ✅ Siniestros sin actualización: fondo rojo + badge de atención
--   ✅ Pestañas laterales de documentos con contadores
--   ✅ Timeline de estados con indicadores visuales
--   ✅ Cards destacados para último cambio
--   ✅ Mensajes de éxito con opciones de acción
--   ✅ Tooltips informativos
--   ✅ Dark mode compatible en todos los componentes
+- ✅ Siniestros sin actualización: fondo rojo + badge de atención
+- ✅ Pestañas laterales de documentos con contadores
+- ✅ Timeline de estados con indicadores visuales
+- ✅ Cards destacados para último cambio
+- ✅ Mensajes de éxito con opciones de acción
+- ✅ Tooltips informativos
+- ✅ Dark mode compatible en todos los componentes
 
 ---
 
@@ -624,21 +623,21 @@ ahora continuaremos con las mejoras esta vez en la forma en la que se registran 
 
 4. paso 2
 
--   fecha de reporte siniestro (no fecha futura, alerta de aviso si la fecha ingresada es mayor a 10 dias pasados)
--   fecha de reporte cliente (no fecha futura)
--   fecha reporte compania (no fecha futura)
--   modificar la forma de agregar contacto>
-    nombre (obligatorio)
-    telefono (obligatorio)
-    correo (opcional)
+- fecha de reporte siniestro (no fecha futura, alerta de aviso si la fecha ingresada es mayor a 10 dias pasados)
+- fecha de reporte cliente (no fecha futura)
+- fecha reporte compania (no fecha futura)
+- modificar la forma de agregar contacto>
+  nombre (obligatorio)
+  telefono (obligatorio)
+  correo (opcional)
 
 5. paso3
 
--   agregar "Gestion comercial" como cobertura seleccionable extra a las coberturas que se cargan de la poliza
+- agregar "Gestion comercial" como cobertura seleccionable extra a las coberturas que se cargan de la poliza
 
 6. paso4
 
--   cambiar a vista mejorada de documentos usada en la parte de modificacion de documentos
+- cambiar a vista mejorada de documentos usada en la parte de modificacion de documentos
 
 errores y cambios a realizar:
 
@@ -647,3 +646,13 @@ errores y cambios a realizar:
 3. resumen: ultimo cambio no refleja modificaciones en el estado del siniestro
 4. el cambio de estado no deberia tener observacion opcional, para eso ya existe el campo de observaciones
 5. el historial de estado deberia ser parte del historial goblal del siniestro, por que esta separado? se puede corregir o es complicado?
+
+los datos especificos de las polizas de ramos tecnicos en este momento estan siendo tratadas como si fuera un registro de vehiculos especializado en maquinaria, sin embargo se han creado dos nuevos productos que estan bajo el paraguas de un ramo tecnico, pero que no aseguran vehiculos sino la ejecución de una construccion y el montaje de un sistema. estos dos productos
+
+modo edicion de incendio y aliados no trae datos especificos de la db para actualizar
+
+al guardar cambios en incendio y aliados no se reflejan en los datos especificos de la visualizacion
+
+los botones para crear anexos y polizas se superponen sobre la lista, mover los botones a la zona superior alineado al titulo de la seccion
+
+guardar automotor si el coaseguro es diferente a 0 no se guarda o mejor dicho no se visualiza, confirmar si el guardado es correcto o no y arreglar la visualización

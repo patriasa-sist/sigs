@@ -19,6 +19,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { createClient } from "@/utils/supabase/client";
+import { DirectorCarteraDropdown } from "@/components/shared/DirectorCarteraDropdown";
 
 type Props = {
 	datos: DatosBasicosPoliza | null;
@@ -52,6 +53,7 @@ export function DatosBasicos({ datos, onChange, onSiguiente, onAnterior }: Props
 			inicio_vigencia: "",
 			fin_vigencia: "",
 			fecha_emision_compania: "",
+			director_cartera_id: "",
 			responsable_id: "",
 			regional_id: "",
 			categoria_id: undefined,
@@ -315,6 +317,7 @@ export function DatosBasicos({ datos, onChange, onSiguiente, onAnterior }: Props
 		formData.inicio_vigencia &&
 		formData.fin_vigencia &&
 		formData.fecha_emision_compania &&
+		formData.director_cartera_id &&
 		formData.responsable_id &&
 		formData.regional_id &&
 		formData.grupo_produccion &&
@@ -505,6 +508,16 @@ export function DatosBasicos({ datos, onChange, onSiguiente, onAnterior }: Props
 					</Select>
 					{errores.producto_id && <p className="text-sm text-red-600">{errores.producto_id}</p>}
 					{errorProductos && !errores.producto_id && <p className="text-sm text-red-600">{errorProductos}</p>}
+				</div>
+
+				{/* Director de cartera */}
+				<div className="space-y-2">
+					<DirectorCarteraDropdown
+						value={formData.director_cartera_id || null}
+						onValueChange={(value) => handleChange("director_cartera_id", value || "")}
+						error={errores.director_cartera_id}
+						required
+					/>
 				</div>
 
 				{/* Ejecutivo comercial */}

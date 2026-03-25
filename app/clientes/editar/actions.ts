@@ -145,7 +145,7 @@ export async function updateNaturalClient(
 	data: Partial<NaturalClientFormData>
 ): Promise<ActionResult<void>> {
 	try {
-		const { supabase, user } = await authorizeClientEdit(clientId);
+		const { supabase } = await authorizeClientEdit(clientId);
 
 		// Verify client exists and is natural type
 		const { data: clientData, error: clientError } = await supabase
@@ -168,23 +168,6 @@ export async function updateNaturalClient(
 		// Normalize text fields before saving
 		const normalized = normalizeNaturalClientData(data as Record<string, unknown>);
 		Object.assign(data, normalized);
-
-		// Update clients table (director_cartera_id)
-		if (data.director_cartera_id !== undefined) {
-			const { error: updateClientError } = await supabase
-				.from("clients")
-				.update({
-					director_cartera_id: data.director_cartera_id ?? null,
-					updated_by: user.id,
-					updated_at: new Date().toISOString(),
-				})
-				.eq("id", clientId);
-
-			if (updateClientError) {
-				console.error("[updateNaturalClient] Client update error:", updateClientError);
-				return { success: false, error: "Error al actualizar datos del cliente" };
-			}
-		}
 
 		// Update natural_clients table
 		const { error: updateNaturalError } = await supabase
@@ -245,7 +228,7 @@ export async function updateJuridicClient(
 	data: Partial<JuridicClientFormData>
 ): Promise<ActionResult<void>> {
 	try {
-		const { supabase, user } = await authorizeClientEdit(clientId);
+		const { supabase } = await authorizeClientEdit(clientId);
 
 		// Verify client exists and is juridica type
 		const { data: clientData, error: clientError } = await supabase
@@ -268,23 +251,6 @@ export async function updateJuridicClient(
 		// Normalize text fields before saving
 		const normalized = normalizeJuridicClientData(data as Record<string, unknown>);
 		Object.assign(data, normalized);
-
-		// Update clients table (director_cartera_id)
-		if (data.director_cartera_id !== undefined) {
-			const { error: updateClientError } = await supabase
-				.from("clients")
-				.update({
-					director_cartera_id: data.director_cartera_id ?? null,
-					updated_by: user.id,
-					updated_at: new Date().toISOString(),
-				})
-				.eq("id", clientId);
-
-			if (updateClientError) {
-				console.error("[updateJuridicClient] Client update error:", updateClientError);
-				return { success: false, error: "Error al actualizar datos del cliente" };
-			}
-		}
 
 		// Update juridic_clients table
 		const { error: updateJuridicError } = await supabase
@@ -332,7 +298,7 @@ export async function updateUnipersonalClient(
 	data: Partial<UnipersonalClientFormData>
 ): Promise<ActionResult<void>> {
 	try {
-		const { supabase, user } = await authorizeClientEdit(clientId);
+		const { supabase } = await authorizeClientEdit(clientId);
 
 		// Verify client exists and is unipersonal type
 		const { data: clientData, error: clientError } = await supabase
@@ -355,23 +321,6 @@ export async function updateUnipersonalClient(
 		// Normalize text fields before saving
 		const normalized = normalizeUnipersonalClientData(data as Record<string, unknown>);
 		Object.assign(data, normalized);
-
-		// Update clients table (director_cartera_id)
-		if (data.director_cartera_id !== undefined) {
-			const { error: updateClientError } = await supabase
-				.from("clients")
-				.update({
-					director_cartera_id: data.director_cartera_id ?? null,
-					updated_by: user.id,
-					updated_at: new Date().toISOString(),
-				})
-				.eq("id", clientId);
-
-			if (updateClientError) {
-				console.error("[updateUnipersonalClient] Client update error:", updateClientError);
-				return { success: false, error: "Error al actualizar datos del cliente" };
-			}
-		}
 
 		// Update natural_clients table (personal data)
 		const { error: updateNaturalError } = await supabase

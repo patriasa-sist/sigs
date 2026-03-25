@@ -87,9 +87,7 @@ export async function obtenerEstadisticasProduccion(
 				responsable_id,
 				client_id,
 				responsable:profiles!responsable_id ( full_name ),
-				client:clients!client_id (
-					director_cartera:directores_cartera!director_cartera_id ( nombre, apellidos )
-				)
+				director_cartera:directores_cartera!director_cartera_id ( nombre, apellidos )
 			`)
 			.in("estado", ["activa", "pendiente", "renovada"])
 			.gte("inicio_vigencia", fechaAnioDesde)
@@ -208,8 +206,7 @@ export async function obtenerEstadisticasProduccion(
 		// Agrupa por director: cantidad de clientes únicos y prima total
 		const directorMap = new Map<string, { clientIds: Set<string>; prima: number }>();
 		for (const p of polizasPeriodo) {
-			const client = p.client as { director_cartera?: { nombre?: string; apellidos?: string } | null } | null;
-			const dc = client?.director_cartera;
+			const dc = p.director_cartera as { nombre?: string; apellidos?: string } | null;
 			if (!dc) continue;
 			const nombre = `${dc.nombre || ""} ${dc.apellidos || ""}`.trim();
 			if (!nombre) continue;

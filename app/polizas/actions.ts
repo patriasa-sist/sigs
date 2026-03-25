@@ -18,6 +18,7 @@ export type PolizaListItem = {
 	moneda: string;
 	estado: string;
 	modalidad_pago: string;
+	director_cartera_nombre: string;
 	responsable_nombre: string;
 	regional_nombre: string;
 	created_at: string;
@@ -281,6 +282,7 @@ export async function obtenerPolizas() {
 				regional_id,
 				created_at,
 				companias_aseguradoras (nombre),
+				directores_cartera (nombre, apellidos),
 				profiles!polizas_responsable_id_fkey (full_name),
 				regionales!polizas_regional_id_fkey (nombre)
 			`
@@ -374,6 +376,10 @@ export async function obtenerPolizas() {
 					moneda: poliza.moneda,
 					estado: poliza.estado,
 					modalidad_pago: poliza.modalidad_pago,
+					director_cartera_nombre: (() => {
+						const dc = poliza.directores_cartera as { nombre?: string; apellidos?: string } | null;
+						return dc ? `${dc.nombre || ""} ${dc.apellidos || ""}`.trim() : "-";
+					})(),
 					responsable_nombre: (poliza.profiles as { full_name?: string } | null)?.full_name || "-",
 					regional_nombre: (poliza.regionales as { nombre?: string } | null)?.nombre || "-",
 					created_at: poliza.created_at,
@@ -413,6 +419,7 @@ export async function obtenerDetallePoliza(polizaId: string) {
 				`
 				*,
 				companias_aseguradoras (nombre),
+				directores_cartera (nombre, apellidos),
 				profiles!polizas_responsable_id_fkey (full_name),
 				regionales!polizas_regional_id_fkey (nombre),
 				regional_asegurado:regionales!polizas_regional_asegurado_id_fkey (nombre),
@@ -1336,6 +1343,10 @@ export async function obtenerDetallePoliza(polizaId: string) {
 			moneda: poliza.moneda,
 			estado: poliza.estado,
 			modalidad_pago: poliza.modalidad_pago,
+			director_cartera_nombre: (() => {
+				const dc = poliza.directores_cartera as { nombre?: string; apellidos?: string } | null;
+				return dc ? `${dc.nombre || ""} ${dc.apellidos || ""}`.trim() : "-";
+			})(),
 			responsable_nombre: (poliza.profiles as { full_name?: string } | null)?.full_name || "-",
 			regional_nombre: (poliza.regionales as { nombre?: string } | null)?.nombre || "-",
 			categoria_nombre: (poliza.categorias as { nombre?: string } | null)?.nombre || "-",
@@ -1439,6 +1450,7 @@ export async function buscarPolizas(query: string) {
 				regional_id,
 				created_at,
 				companias_aseguradoras (nombre),
+				directores_cartera (nombre, apellidos),
 				profiles!polizas_responsable_id_fkey (full_name),
 				regionales!polizas_regional_id_fkey (nombre)
 			`
@@ -1515,6 +1527,10 @@ export async function buscarPolizas(query: string) {
 				moneda: poliza.moneda,
 				estado: poliza.estado,
 				modalidad_pago: poliza.modalidad_pago,
+				director_cartera_nombre: (() => {
+					const dc = poliza.directores_cartera as { nombre?: string; apellidos?: string } | null;
+					return dc ? `${dc.nombre || ""} ${dc.apellidos || ""}`.trim() : "-";
+				})(),
 				responsable_nombre: (poliza.profiles as { full_name?: string } | null)?.full_name || "-",
 				regional_nombre: (poliza.regionales as { nombre?: string } | null)?.nombre || "-",
 				created_at: poliza.created_at,

@@ -210,16 +210,17 @@ export async function desactivarDirectorCartera(
 ): Promise<DirectorActionResult> {
   const supabase = await createClient();
 
-  // Check if director has active clients
-  const { count: clientesCount } = await supabase
-    .from("clients")
+  // Check if director has active polizas
+  const { count: polizasCount } = await supabase
+    .from("polizas")
     .select("*", { count: "exact", head: true })
-    .eq("director_cartera_id", id);
+    .eq("director_cartera_id", id)
+    .in("estado", ["pendiente", "activa"]);
 
-  if (clientesCount && clientesCount > 0) {
+  if (polizasCount && polizasCount > 0) {
     return {
       success: false,
-      error: `Este director tiene ${clientesCount} cliente(s) asignado(s). Reasígnalos antes de desactivar.`,
+      error: `Este director tiene ${polizasCount} póliza(s) activa(s) asignada(s). Reasígnalas antes de desactivar.`,
     };
   }
 

@@ -59,6 +59,11 @@ export function validarDatosBasicos(datos: Partial<DatosBasicosPoliza>): Validat
 		}
 	}
 
+	// Validar director de cartera
+	if (!datos.director_cartera_id) {
+		errores.push({ campo: "director_cartera_id", mensaje: "Director de cartera es requerido" });
+	}
+
 	// Validar responsable
 	if (!datos.responsable_id) {
 		errores.push({ campo: "responsable_id", mensaje: "Ejecutivo comercial es requerido" });

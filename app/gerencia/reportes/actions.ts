@@ -570,13 +570,13 @@ export async function exportarProduccionNuevo(
 			categoria:categorias!categoria_id (
 				nombre
 			),
+			director_cartera:directores_cartera!director_cartera_id (
+				nombre,
+				apellidos
+			),
 			client:clients!client_id (
 				id,
 				client_type,
-				director_cartera:directores_cartera!director_cartera_id (
-					nombre,
-					apellidos
-				),
 				natural_clients (
 					primer_nombre,
 					segundo_nombre,
@@ -661,13 +661,13 @@ export async function exportarProduccionNuevo(
 				categoria:categorias!categoria_id (
 					nombre
 				),
+				director_cartera:directores_cartera!director_cartera_id (
+					nombre,
+					apellidos
+				),
 				client:clients!client_id (
 					id,
 					client_type,
-					director_cartera:directores_cartera!director_cartera_id (
-						nombre,
-						apellidos
-					),
 					natural_clients (
 						primer_nombre,
 						segundo_nombre,
@@ -835,14 +835,11 @@ export async function exportarProduccionNuevo(
 				} | null;
 				created_by_profile?: { full_name?: string } | null;
 				categoria?: { nombre?: string } | null;
-				client:
-					| (ClientQueryResult & {
-							director_cartera?: {
-								nombre: string;
-								apellidos: string;
-							} | null;
-					  })
-					| null;
+				director_cartera?: {
+					nombre: string;
+					apellidos: string;
+				} | null;
+				client: ClientQueryResult | null;
 				compania?: { nombre?: string; codigo?: number } | null;
 				responsable?: { full_name?: string } | null;
 				regional?: { nombre?: string } | null;
@@ -850,7 +847,7 @@ export async function exportarProduccionNuevo(
 				const { cliente, ciNit } = extraerDatosCliente(
 					p.client as ClientQueryResult | null
 				);
-				const dc = p.client?.director_cartera;
+				const dc = p.director_cartera;
 				const financieros = extraerFinancieros(p, p.producto);
 
 				const valorAseg = valorAseguradoMap.get(p.id) ?? null;
@@ -906,7 +903,7 @@ export async function exportarProduccionNuevo(
 			const { cliente, ciNit } = extraerDatosCliente(
 				pol.client as ClientQueryResult | null
 			);
-			const dc = pol.client?.director_cartera;
+			const dc = pol.director_cartera;
 			const financieros = extraerFinancieros(pol, pol.producto);
 
 			const valorAseg = valorAseguradoMap.get(pol.id) ?? null;

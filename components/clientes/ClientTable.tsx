@@ -49,7 +49,7 @@ export function ClientTable({ clients, searchMode = false, onClientClick }: Clie
 						<TableHead className="font-semibold">Nombre</TableHead>
 						<TableHead className="font-semibold">CI</TableHead>
 						<TableHead className="font-semibold">NIT</TableHead>
-						<TableHead className="font-semibold">Director de cuenta</TableHead>
+						<TableHead className="font-semibold">Creado por</TableHead>
 						<TableHead className="font-semibold text-center">Pólizas Activas</TableHead>
 						<TableHead className="w-[50px]"></TableHead>
 					</TableRow>

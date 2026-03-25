@@ -545,6 +545,10 @@ export default function PolizasPage() {
 									<p className="text-base text-gray-900 mt-1">{selectedPoliza.regional_nombre}</p>
 								</div>
 								<div>
+									<label className="text-sm font-medium text-gray-600">Director de cartera</label>
+									<p className="text-base text-gray-900 mt-1">{selectedPoliza.director_cartera_nombre || "No asignado"}</p>
+								</div>
+								<div>
 									<label className="text-sm font-medium text-gray-600">Ejecutivo comercial</label>
 									<p className="text-base text-gray-900 mt-1">{selectedPoliza.responsable_nombre}</p>
 								</div>

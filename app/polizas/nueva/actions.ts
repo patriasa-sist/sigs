@@ -714,6 +714,7 @@ export async function guardarPoliza(formState: PolizaFormState) {
 				inicio_vigencia: formState.datos_basicos.inicio_vigencia,
 				fin_vigencia: formState.datos_basicos.fin_vigencia,
 				fecha_emision_compania: formState.datos_basicos.fecha_emision_compania,
+				director_cartera_id: formState.datos_basicos.director_cartera_id || null,
 				responsable_id: formState.datos_basicos.responsable_id,
 				regional_id: formState.datos_basicos.regional_id,
 				categoria_id: formState.datos_basicos.categoria_id,

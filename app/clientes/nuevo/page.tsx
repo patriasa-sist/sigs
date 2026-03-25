@@ -73,7 +73,6 @@ const COMMON_FIELD_LABELS: Record<string, string> = {
 	anios_servicio: "Años de servicio",
 	nit: "NIT",
 	domicilio_comercial: "Domicilio comercial",
-	director_cartera_id: "Director de cartera",
 	// Unipersonal commercial
 	razon_social: "Razón social",
 	matricula_comercio: "Matrícula de comercio",
@@ -365,7 +364,6 @@ export default function NuevoClientePage() {
 			.insert({
 				client_type: "natural",
 				commercial_owner_id: currentUserId,
-				director_cartera_id: normalized.director_cartera_id ?? null,
 				status: "active",
 				created_by: currentUserId,
 			})
@@ -476,7 +474,6 @@ export default function NuevoClientePage() {
 			.insert({
 				client_type: "unipersonal",
 				commercial_owner_id: currentUserId,
-				director_cartera_id: normalized.director_cartera_id ?? null,
 				status: "active",
 				created_by: currentUserId,
 			})
@@ -601,7 +598,6 @@ export default function NuevoClientePage() {
 			.insert({
 				client_type: "juridica",
 				commercial_owner_id: currentUserId,
-				director_cartera_id: normalized.director_cartera_id ?? null,
 				status: "active",
 				created_by: currentUserId,
 			})

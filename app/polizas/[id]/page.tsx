@@ -331,6 +331,10 @@ export default function PolizaDetallePage() {
 								<p className="text-base text-gray-900 mt-1">{poliza.regional_nombre}</p>
 							</div>
 							<div>
+								<label className="text-sm font-medium text-gray-600">Director de cartera</label>
+								<p className="text-base text-gray-900 mt-1">{poliza.director_cartera_nombre || "No asignado"}</p>
+							</div>
+							<div>
 								<label className="text-sm font-medium text-gray-600">Ejecutivo comercial</label>
 								<p className="text-base text-gray-900 mt-1">{poliza.responsable_nombre}</p>
 							</div>

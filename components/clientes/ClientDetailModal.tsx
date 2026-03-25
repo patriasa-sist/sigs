@@ -417,7 +417,7 @@ export function ClientDetailModal({ clientId, onClose }: Props) {
 							{client.client_type === "natural" && (editData.natural_data || client.natural_data) && (
 								<NaturalClientGeneral
 									data={isEditMode ? (editData.natural_data as NaturalClient) : client.natural_data!}
-									executive={client.commercial_owner_name}
+									
 									isEditing={isEditMode}
 									onFieldChange={updateNaturalField}
 								/>
@@ -434,7 +434,7 @@ export function ClientDetailModal({ clientId, onClose }: Props) {
 												? (editData.unipersonal_data as UnipersonalClient)
 												: client.unipersonal_data!
 										}
-										executive={client.commercial_owner_name}
+										
 										isEditing={isEditMode}
 										onNaturalFieldChange={updateNaturalField}
 										onUnipersonalFieldChange={updateUnipersonalField}
@@ -443,7 +443,7 @@ export function ClientDetailModal({ clientId, onClose }: Props) {
 							{client.client_type === "juridica" && (editData.juridic_data || client.juridic_data) && (
 								<JuridicClientGeneral
 									data={isEditMode ? (editData.juridic_data as JuridicClient) : client.juridic_data!}
-									executive={client.commercial_owner_name}
+									
 									isEditing={isEditMode}
 									onFieldChange={updateJuridicField}
 								/>
@@ -526,12 +526,11 @@ export function ClientDetailModal({ clientId, onClose }: Props) {
 
 interface NaturalClientGeneralProps {
 	data: NaturalClient;
-	executive?: string;
 	isEditing?: boolean;
 	onFieldChange?: (field: keyof NaturalClient, value: unknown) => void;
 }
 
-function NaturalClientGeneral({ data, executive, isEditing = false, onFieldChange }: NaturalClientGeneralProps) {
+function NaturalClientGeneral({ data, isEditing = false, onFieldChange }: NaturalClientGeneralProps) {
 	if (isEditing) {
 		return (
 			<div className="space-y-6">
@@ -745,11 +744,6 @@ function NaturalClientGeneral({ data, executive, isEditing = false, onFieldChang
 				</InfoSection>
 			)}
 
-			{executive && (
-				<InfoSection title="Información Adicional">
-					<InfoRow label="Director de Cartera" value={executive} />
-				</InfoSection>
-			)}
 		</div>
 	);
 }
@@ -757,7 +751,6 @@ function NaturalClientGeneral({ data, executive, isEditing = false, onFieldChang
 interface UnipersonalClientGeneralProps {
 	naturalData: NaturalClient;
 	unipersonalData: UnipersonalClient;
-	executive?: string;
 	isEditing?: boolean;
 	onNaturalFieldChange?: (field: keyof NaturalClient, value: unknown) => void;
 	onUnipersonalFieldChange?: (field: keyof UnipersonalClient, value: unknown) => void;
@@ -766,7 +759,6 @@ interface UnipersonalClientGeneralProps {
 function UnipersonalClientGeneral({
 	naturalData,
 	unipersonalData,
-	executive,
 	isEditing = false,
 	onNaturalFieldChange,
 	onUnipersonalFieldChange,
@@ -918,23 +910,17 @@ function UnipersonalClientGeneral({
 				/>
 			</InfoSection>
 
-			{executive && (
-				<InfoSection title="Información Adicional">
-					<InfoRow label="Director de Cartera" value={executive} />
-				</InfoSection>
-			)}
 		</div>
 	);
 }
 
 interface JuridicClientGeneralProps {
 	data: JuridicClient;
-	executive?: string;
 	isEditing?: boolean;
 	onFieldChange?: (field: keyof JuridicClient, value: unknown) => void;
 }
 
-function JuridicClientGeneral({ data, executive, isEditing = false, onFieldChange }: JuridicClientGeneralProps) {
+function JuridicClientGeneral({ data, isEditing = false, onFieldChange }: JuridicClientGeneralProps) {
 	if (isEditing) {
 		return (
 			<div className="space-y-6">
@@ -1007,11 +993,6 @@ function JuridicClientGeneral({ data, executive, isEditing = false, onFieldChang
 				{data.actividad_economica && <InfoRow label="Actividad Económica" value={data.actividad_economica} />}
 			</InfoSection>
 
-			{executive && (
-				<InfoSection title="Información Adicional">
-					<InfoRow label="Director de Cartera" value={executive} />
-				</InfoSection>
-			)}
 		</div>
 	);
 }

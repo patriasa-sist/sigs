@@ -163,17 +163,13 @@ export interface NaturalClientFormData
   extends NaturalClientPersonalData,
     NaturalClientContactData,
     NaturalClientOtherData {
-  director_cartera_id: string;
   documentos?: ClienteDocumentoFormState[];
   celulares_extra?: ExtraPhone[];
 }
 
 export const naturalClientFormSchema = naturalClientPersonalSchema
   .merge(naturalClientContactSchema)
-  .merge(naturalClientOtherSchema)
-  .extend({
-    director_cartera_id: z.string('Director de cartera es requerido').uuid('Director de cartera es requerido'),
-  });
+  .merge(naturalClientOtherSchema);
 
 // ============================================================================
 // CLIENT PARTNER (for married natural clients)
@@ -282,7 +278,6 @@ export interface UnipersonalClientFormData
     UnipersonalCommercialData, // Use required fields from commercial
     UnipersonalOwnerData,
     UnipersonalRepresentativeData {
-  director_cartera_id: string;
   documentos?: ClienteDocumentoFormState[];
   celulares_extra?: ExtraPhone[];
 }
@@ -292,10 +287,7 @@ export const unipersonalClientFormSchema = naturalClientPersonalSchema
   .merge(naturalClientOtherSchema.omit({ nit: true, domicilio_comercial: true, nivel_ingresos: true })) // Remove overlapping optional fields
   .merge(unipersonalCommercialSchema) // Use required fields from commercial
   .merge(unipersonalOwnerSchema) // Owner fields are required (auto-filled from personal data)
-  .merge(unipersonalRepresentativeSchema)
-  .extend({
-    director_cartera_id: z.string('Director de cartera es requerido').uuid('Director de cartera es requerido'),
-  });
+  .merge(unipersonalRepresentativeSchema);
 
 // ============================================================================
 // JURIDIC CLIENT (Company)
@@ -380,7 +372,6 @@ export const legalRepresentativeSchema = z.object({
 export interface JuridicClientFormData
   extends JuridicClientCompanyData,
     JuridicClientContactData {
-  director_cartera_id: string;
   legal_representatives: LegalRepresentativeData[];
   documentos?: ClienteDocumentoFormState[];
   celulares_extra?: ExtraPhone[];
@@ -389,7 +380,6 @@ export interface JuridicClientFormData
 export const juridicClientFormSchema = juridicClientCompanySchema
   .merge(juridicClientContactSchema)
   .extend({
-    director_cartera_id: z.string('Director de cartera es requerido').uuid('Director de cartera es requerido'),
     legal_representatives: z
       .array(legalRepresentativeSchema.omit({ juridic_client_id: true }))
       .min(1, 'Al menos un representante legal es requerido'),
@@ -486,7 +476,6 @@ export interface SameAsState {
 export interface ClientBasePayload {
   client_type: ClientType;
   commercial_owner_id?: string | null;
-  director_cartera_id?: string | null;
   status: 'active' | 'inactive' | 'suspended';
   notes?: string;
   created_by?: string;

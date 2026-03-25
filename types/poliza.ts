@@ -148,6 +148,7 @@ export type DatosBasicosPoliza = {
 	inicio_vigencia: string; // ISO date string
 	fin_vigencia: string;
 	fecha_emision_compania: string;
+	director_cartera_id: string; // ID del director de cartera (comisión)
 	responsable_id: string; // ID del usuario comercial
 	regional_id: string;
 	categoria_id?: string; // Ahora es opcional (grupo de negocios)
@@ -631,6 +632,7 @@ export type PolizaDB = {
 	inicio_vigencia: string;
 	fin_vigencia: string;
 	fecha_emision_compania: string;
+	director_cartera_id?: string; // Director de cartera asignado a esta póliza
 	responsable_id: string;
 	regional_id: string;
 	categoria_id: string;

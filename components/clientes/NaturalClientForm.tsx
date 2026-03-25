@@ -19,7 +19,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SameAsCheckbox } from "@/components/ui/same-as-checkbox";
-import { DirectorCarteraDropdown } from "@/components/shared/DirectorCarteraDropdown";
 import { ClienteDocumentUpload } from "./ClienteDocumentUpload";
 
 interface NaturalClientFormProps {
@@ -209,22 +208,7 @@ export function NaturalClientForm({ form, partnerForm, onFieldBlur, exceptions =
 						)}
 					</div>
 
-					{/* Director de cartera */}
-					<div>
-						<Controller
-							name="director_cartera_id"
-							control={control}
-							render={({ field }) => (
-								<DirectorCarteraDropdown
-									value={field.value}
-									onValueChange={field.onChange}
-									error={errors.director_cartera_id?.message}
-								required
-								/>
-							)}
-						/>
 					</div>
-				</div>
 			</FormSection>
 
 			{/* SECCIÓN 2: INFORMACIÓN DE CONTACTO */}

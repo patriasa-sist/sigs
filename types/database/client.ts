@@ -57,7 +57,6 @@ export const BaseClientSchema = z.object({
 	id: z.string().uuid("ID de cliente inválido"),
 	client_type: ClientTypeEnum,
 	commercial_owner_id: z.string().nullable(),
-	director_cartera_id: z.string().nullable(),
 	status: ClientStatusEnum,
 	notes: z.string().nullable(),
 	created_at: z.coerce.string(),
