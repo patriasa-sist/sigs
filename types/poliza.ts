@@ -297,7 +297,8 @@ export type ItemRiesgosVarios = {
 		| "Dinero y valores dentro del predio"
 		| "Vidrios y cristales"
 		| "Letreros"
-		| "Perdida de beneficios";
+		| "Perdida de beneficios"
+		| "Valor asegurado (SALUD)";
 	monto: number;
 };
 

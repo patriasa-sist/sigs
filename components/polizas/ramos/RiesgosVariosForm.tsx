@@ -28,6 +28,7 @@ const ITEMS_DISPONIBLES: ItemRiesgosVarios["nombre"][] = [
 	"Vidrios y cristales",
 	"Letreros",
 	"Perdida de beneficios",
+	"Valor asegurado (SALUD)",
 ];
 
 export function RiesgosVariosForm({ datos, moneda, onChange, onSiguiente, onAnterior }: Props) {
