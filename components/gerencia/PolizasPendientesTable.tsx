@@ -21,7 +21,7 @@ import {
 	DialogTitle,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle, XCircle, Eye } from "lucide-react";
+import { CheckCircle, XCircle, Eye, Loader2 } from "lucide-react";
 import { RechazoPolizaModal } from "./RechazoPolizaModal";
 
 type PolizaPendiente = {
@@ -47,23 +47,6 @@ type PolizaPendiente = {
 	regional?: {
 		nombre?: string;
 	} | null;
-	client?: {
-		client_type: string;
-		natural_clients?: Array<{
-			primer_nombre?: string;
-			segundo_nombre?: string;
-			primer_apellido?: string;
-			segundo_apellido?: string;
-			numero_documento?: string;
-		}> | null;
-		juridic_clients?: Array<{
-			razon_social?: string;
-			nit?: string;
-		}> | null;
-		unipersonal_clients?: Array<{
-			razon_social?: string;
-		}> | null;
-	} | null;
 };
 
 interface Props {
@@ -80,25 +63,6 @@ export default function PolizasPendientesTable({ polizas: initialPolizas }: Prop
 	// Estado para el modal de rechazo
 	const [rechazoModalOpen, setRechazoModalOpen] = useState(false);
 	const [polizaArechazar, setPolizaArechazar] = useState<PolizaPendiente | null>(null);
-
-	// Formatear nombre del cliente
-	const formatClientName = (poliza: PolizaPendiente) => {
-		if (!poliza.client) return "N/A";
-
-		if (poliza.client.client_type === "natural" || poliza.client.client_type === "unipersonal") {
-			const natural = poliza.client.natural_clients?.[0];
-			if (!natural) return "N/A";
-			const nombre = `${natural.primer_nombre} ${natural.segundo_nombre || ""} ${natural.primer_apellido} ${natural.segundo_apellido || ""}`.trim();
-			if (poliza.client.client_type === "unipersonal") {
-				const unipersonal = poliza.client.unipersonal_clients?.[0];
-				return unipersonal?.razon_social ? `${nombre} (${unipersonal.razon_social})` : nombre;
-			}
-			return nombre;
-		} else {
-			const juridic = poliza.client.juridic_clients?.[0];
-			return juridic?.razon_social || "N/A";
-		}
-	};
 
 	// Formatear fecha
 	const formatDate = (dateString: string) => {
@@ -185,89 +149,84 @@ export default function PolizasPendientesTable({ polizas: initialPolizas }: Prop
 
 	return (
 		<>
-			<div className="bg-white rounded-lg border shadow-sm">
-				<div className="p-4 border-b">
-					<div className="flex items-center justify-between">
-						<h2 className="text-lg font-semibold">
-							Pólizas Pendientes ({polizas.length})
-						</h2>
-						<Badge variant="outline" className="bg-yellow-50 text-yellow-800 border-yellow-300">
-							Pendiente de validación
-						</Badge>
-					</div>
-				</div>
-
+			<div className="rounded-lg border">
 				<Table>
 					<TableHeader>
 						<TableRow>
-							<TableHead>Nro. Póliza</TableHead>
-							<TableHead>Asegurado</TableHead>
-							<TableHead>Compañía</TableHead>
-							<TableHead>Ramo</TableHead>
-							<TableHead>Prima Total</TableHead>
-							<TableHead>Vigencia</TableHead>
-							<TableHead>Responsable</TableHead>
-							<TableHead>Creado por</TableHead>
-							<TableHead className="text-right">Acciones</TableHead>
+							<TableHead className="h-8 text-xs">Nro. Póliza</TableHead>
+							<TableHead className="h-8 text-xs">Compañía</TableHead>
+							<TableHead className="h-8 text-xs">Ramo</TableHead>
+							<TableHead className="h-8 text-xs text-right">Prima Total</TableHead>
+							<TableHead className="h-8 text-xs">Vigencia</TableHead>
+							<TableHead className="h-8 text-xs">Responsable</TableHead>
+							<TableHead className="h-8 text-xs">Creado</TableHead>
+							<TableHead className="h-8 text-xs text-center">Acciones</TableHead>
 						</TableRow>
 					</TableHeader>
 					<TableBody>
-						{polizas.map((poliza) => (
-							<TableRow key={poliza.id}>
-								<TableCell className="font-medium">{poliza.numero_poliza}</TableCell>
-								<TableCell>{formatClientName(poliza)}</TableCell>
-								<TableCell>{poliza.compania?.nombre || "N/A"}</TableCell>
-								<TableCell>
-									<Badge variant="secondary">{poliza.ramo}</Badge>
-								</TableCell>
-								<TableCell>{formatCurrency(poliza.prima_total, poliza.moneda)}</TableCell>
-								<TableCell>
-									<div className="text-sm">
-										<div>{formatDate(poliza.inicio_vigencia)}</div>
-										<div className="text-gray-500">{formatDate(poliza.fin_vigencia)}</div>
-									</div>
-								</TableCell>
-								<TableCell>{poliza.responsable?.full_name || "N/A"}</TableCell>
-								<TableCell>
-									<div className="text-sm">
-										<div>{poliza.created_by_user?.full_name || "N/A"}</div>
-										<div className="text-gray-500 text-xs">
-											{formatDate(poliza.created_at)}
+						{polizas.map((poliza) => {
+							const isLoading = loading === poliza.id;
+							return (
+								<TableRow key={poliza.id}>
+									<TableCell className="py-1.5 font-medium">{poliza.numero_poliza}</TableCell>
+									<TableCell className="py-1.5 max-w-[180px] truncate" title={poliza.compania?.nombre || "N/A"}>{poliza.compania?.nombre || "N/A"}</TableCell>
+									<TableCell className="py-1.5">
+										<Badge variant="secondary" className="text-xs">{poliza.ramo}</Badge>
+									</TableCell>
+									<TableCell className="py-1.5 text-right">{formatCurrency(poliza.prima_total, poliza.moneda)}</TableCell>
+									<TableCell className="py-1.5">
+										<div className="text-xs leading-tight">
+											<div>{formatDate(poliza.inicio_vigencia)}</div>
+											<div className="text-muted-foreground">{formatDate(poliza.fin_vigencia)}</div>
 										</div>
-									</div>
-								</TableCell>
-								<TableCell className="text-right">
-									<div className="flex gap-2 justify-end">
-										<Button
-											variant="outline"
-											size="sm"
-											onClick={() => verDetallePoliza(poliza.id)}
-										>
-											<Eye className="h-4 w-4 mr-1" />
-											Ver
-										</Button>
-										<Button
-											variant="default"
-											size="sm"
-											onClick={() => openDialog(poliza, "validar")}
-											disabled={loading === poliza.id}
-										>
-											<CheckCircle className="h-4 w-4 mr-1" />
-											{loading === poliza.id ? "Validando..." : "Validar"}
-										</Button>
-										<Button
-											variant="destructive"
-											size="sm"
-											onClick={() => openRechazoModal(poliza)}
-											disabled={loading === poliza.id}
-										>
-											<XCircle className="h-4 w-4 mr-1" />
-											Rechazar
-										</Button>
-									</div>
-								</TableCell>
-							</TableRow>
-						))}
+									</TableCell>
+									<TableCell className="py-1.5 max-w-[120px] truncate" title={poliza.responsable?.full_name || "N/A"}>{poliza.responsable?.full_name || "N/A"}</TableCell>
+									<TableCell className="py-1.5">
+										<div className="text-xs leading-tight">
+											<div className="truncate max-w-[100px]" title={poliza.created_by_user?.full_name || "N/A"}>{poliza.created_by_user?.full_name || "N/A"}</div>
+											<div className="text-muted-foreground">{formatDate(poliza.created_at)}</div>
+										</div>
+									</TableCell>
+									<TableCell className="py-1.5">
+										<div className="flex justify-center gap-1">
+											<Button
+												variant="ghost"
+												size="icon"
+												className="h-7 w-7"
+												onClick={() => verDetallePoliza(poliza.id)}
+												title="Ver detalle"
+											>
+												<Eye className="h-4 w-4" />
+											</Button>
+											<Button
+												variant="ghost"
+												size="icon"
+												className="h-7 w-7 text-green-600 hover:text-green-700 hover:bg-green-50"
+												onClick={() => openDialog(poliza, "validar")}
+												disabled={isLoading}
+												title="Validar"
+											>
+												{isLoading ? (
+													<Loader2 className="h-4 w-4 animate-spin" />
+												) : (
+													<CheckCircle className="h-4 w-4" />
+												)}
+											</Button>
+											<Button
+												variant="ghost"
+												size="icon"
+												className="h-7 w-7 text-red-600 hover:text-red-700 hover:bg-red-50"
+												onClick={() => openRechazoModal(poliza)}
+												disabled={isLoading}
+												title="Rechazar"
+											>
+												<XCircle className="h-4 w-4" />
+											</Button>
+										</div>
+									</TableCell>
+								</TableRow>
+							);
+						})}
 					</TableBody>
 				</Table>
 			</div>
@@ -290,11 +249,7 @@ export default function PolizasPendientesTable({ polizas: initialPolizas }: Prop
 					</DialogHeader>
 
 					{selectedPoliza && (
-						<div className="py-4 space-y-2">
-							<div className="flex justify-between text-sm">
-								<span className="text-gray-500">Asegurado:</span>
-								<span className="font-medium">{formatClientName(selectedPoliza)}</span>
-							</div>
+						<div className="py-4">
 							<div className="flex justify-between text-sm">
 								<span className="text-gray-500">Prima Total:</span>
 								<span className="font-medium">

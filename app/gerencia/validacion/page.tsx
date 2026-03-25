@@ -21,10 +21,10 @@ export default async function ValidacionPage() {
 	const anexosError = !anexosResult.success ? anexosResult.error : null;
 
 	return (
-		<div className="container mx-auto py-8 px-4">
-			<div className="mb-8">
-				<h1 className="text-3xl font-bold mb-2">Validación</h1>
-				<p className="text-gray-600">
+		<div className="container mx-auto py-4 px-4">
+			<div className="mb-4">
+				<h1 className="text-2xl font-bold mb-1">Validación</h1>
+				<p className="text-gray-600 text-sm">
 					Revisa y valida las pólizas y anexos pendientes de aprobación gerencial
 				</p>
 			</div>

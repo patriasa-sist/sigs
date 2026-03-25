@@ -6,6 +6,14 @@ import { CheckCircle, XCircle, Eye, AlertTriangle, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
+	Table,
+	TableBody,
+	TableCell,
+	TableHead,
+	TableHeader,
+	TableRow,
+} from "@/components/ui/table";
+import {
 	Dialog,
 	DialogContent,
 	DialogDescription,
@@ -97,57 +105,58 @@ export default function AnexosPendientesTable({ anexos: initialAnexos }: Props) 
 
 	return (
 		<>
-			<div className="border rounded-lg overflow-hidden">
-				<table className="w-full text-sm">
-					<thead className="bg-gray-50">
-						<tr>
-							<th className="text-left px-4 py-3 font-medium">Nro. Anexo</th>
-							<th className="text-left px-4 py-3 font-medium">Tipo</th>
-							<th className="text-left px-4 py-3 font-medium">Póliza</th>
-							<th className="text-left px-4 py-3 font-medium">Ramo</th>
-							<th className="text-left px-4 py-3 font-medium">Asegurado</th>
-							<th className="text-right px-4 py-3 font-medium">Ajuste</th>
-							<th className="text-left px-4 py-3 font-medium">Creado por</th>
-							<th className="text-left px-4 py-3 font-medium">Fecha</th>
-							<th className="text-center px-4 py-3 font-medium">Acciones</th>
-						</tr>
-					</thead>
-					<tbody className="divide-y">
+			<div className="rounded-lg border">
+				<Table>
+					<TableHeader>
+						<TableRow>
+							<TableHead className="h-8 text-xs">Nro. Anexo</TableHead>
+							<TableHead className="h-8 text-xs">Tipo</TableHead>
+							<TableHead className="h-8 text-xs">Póliza</TableHead>
+							<TableHead className="h-8 text-xs">Ramo</TableHead>
+							<TableHead className="h-8 text-xs text-right">Ajuste</TableHead>
+							<TableHead className="h-8 text-xs">Creado por</TableHead>
+							<TableHead className="h-8 text-xs">Fecha</TableHead>
+							<TableHead className="h-8 text-xs text-center">Acciones</TableHead>
+						</TableRow>
+					</TableHeader>
+					<TableBody>
 						{anexos.map((anexo) => {
 							const tipoBadge = TIPO_BADGE[anexo.tipo_anexo];
 							const isLoading = loading === anexo.id;
 
 							return (
-								<tr key={anexo.id} className="hover:bg-gray-50">
-									<td className="px-4 py-3 font-medium">{anexo.numero_anexo}</td>
-									<td className="px-4 py-3">
+								<TableRow key={anexo.id}>
+									<TableCell className="py-1.5 font-medium">{anexo.numero_anexo}</TableCell>
+									<TableCell className="py-1.5">
 										<Badge variant="outline" className={tipoBadge.className}>
 											{tipoBadge.label}
 										</Badge>
-									</td>
-									<td className="px-4 py-3">{anexo.numero_poliza}</td>
-									<td className="px-4 py-3">{anexo.ramo}</td>
-									<td className="px-4 py-3">{anexo.client_name}</td>
-									<td className="px-4 py-3 text-right">
+									</TableCell>
+									<TableCell className="py-1.5">{anexo.numero_poliza}</TableCell>
+									<TableCell className="py-1.5">{anexo.ramo}</TableCell>
+									<TableCell className="py-1.5 text-right">
 										{anexo.monto_ajuste_total !== 0 ? (
 											<span className={anexo.monto_ajuste_total >= 0 ? "text-green-600" : "text-red-600"}>
 												{anexo.monto_ajuste_total >= 0 ? "+" : ""}
 												{anexo.monto_ajuste_total.toLocaleString("es-BO", { minimumFractionDigits: 2 })}
 											</span>
 										) : (
-											<span className="text-gray-400">-</span>
+											<span className="text-muted-foreground">-</span>
 										)}
-									</td>
-									<td className="px-4 py-3">
-										<div>{anexo.creado_por_nombre || "-"}</div>
-										<div className="text-xs text-gray-500">{formatDate(anexo.created_at)}</div>
-									</td>
-									<td className="px-4 py-3">{formatDate(anexo.fecha_anexo)}</td>
-									<td className="px-4 py-3">
+									</TableCell>
+									<TableCell className="py-1.5">
+										<div className="text-xs leading-tight">
+											<div>{anexo.creado_por_nombre || "-"}</div>
+											<div className="text-muted-foreground">{formatDate(anexo.created_at)}</div>
+										</div>
+									</TableCell>
+									<TableCell className="py-1.5">{formatDate(anexo.fecha_anexo)}</TableCell>
+									<TableCell className="py-1.5">
 										<div className="flex justify-center gap-1">
 											<Button
 												variant="ghost"
-												size="sm"
+												size="icon"
+												className="h-7 w-7"
 												onClick={() => router.push(`/polizas/${anexo.poliza_id}#anexo-${anexo.id}`)}
 												title="Ver en póliza"
 											>
@@ -155,10 +164,10 @@ export default function AnexosPendientesTable({ anexos: initialAnexos }: Props) 
 											</Button>
 											<Button
 												variant="ghost"
-												size="sm"
+												size="icon"
+												className="h-7 w-7 text-green-600 hover:text-green-700 hover:bg-green-50"
 												disabled={isLoading}
 												onClick={() => openDialog(anexo, "validar")}
-												className="text-green-600 hover:text-green-700 hover:bg-green-50"
 												title="Validar"
 											>
 												{isLoading ? (
@@ -169,21 +178,21 @@ export default function AnexosPendientesTable({ anexos: initialAnexos }: Props) 
 											</Button>
 											<Button
 												variant="ghost"
-												size="sm"
+												size="icon"
+												className="h-7 w-7 text-red-600 hover:text-red-700 hover:bg-red-50"
 												disabled={isLoading}
 												onClick={() => openDialog(anexo, "rechazar")}
-												className="text-red-600 hover:text-red-700 hover:bg-red-50"
 												title="Rechazar"
 											>
 												<XCircle className="h-4 w-4" />
 											</Button>
 										</div>
-									</td>
-								</tr>
+									</TableCell>
+								</TableRow>
 							);
 						})}
-					</tbody>
-				</table>
+					</TableBody>
+				</Table>
 			</div>
 
 			{/* Dialog de confirmación */}

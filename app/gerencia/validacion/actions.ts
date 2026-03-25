@@ -61,23 +61,17 @@ export async function obtenerPolizasPendientes() {
 		let query = supabase
 			.from("polizas")
 			.select(`
-				*,
-				client:clients!client_id (
-					id,
-					client_type,
-					natural_clients (
-						primer_nombre,
-						segundo_nombre,
-						primer_apellido,
-						segundo_apellido
-					),
-					juridic_clients (
-						razon_social
-					),
-					unipersonal_clients (
-						razon_social
-					)
-				),
+				id,
+				numero_poliza,
+				ramo,
+				prima_total,
+				prima_neta,
+				moneda,
+				modalidad_pago,
+				inicio_vigencia,
+				fin_vigencia,
+				created_at,
+				responsable_id,
 				compania:companias_aseguradoras!compania_aseguradora_id (
 					nombre
 				),
@@ -87,12 +81,8 @@ export async function obtenerPolizasPendientes() {
 				regional:regionales!regional_id (
 					nombre
 				),
-				categoria:categorias!categoria_id (
-					nombre
-				),
 				created_by_user:profiles!created_by (
-					full_name,
-					email
+					full_name
 				)
 			`)
 			.eq("estado", "pendiente")

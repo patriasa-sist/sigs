@@ -33,12 +33,12 @@ export function ValidacionTabs({ polizas, anexos }: Props) {
 				</TabsTrigger>
 			</TabsList>
 
-			<TabsContent value="polizas" className="mt-6">
+			<TabsContent value="polizas" className="mt-4">
 				{/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
 				<PolizasPendientesTable polizas={polizas as any} />
 			</TabsContent>
 
-			<TabsContent value="anexos" className="mt-6">
+			<TabsContent value="anexos" className="mt-4">
 				<AnexosPendientesTable anexos={anexos} />
 			</TabsContent>
 		</Tabs>
