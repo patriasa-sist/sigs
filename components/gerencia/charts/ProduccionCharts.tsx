@@ -252,7 +252,7 @@ export default function ProduccionCharts({ data, periodoLabel }: { data: Estadis
 								<TableHeader>
 									<TableRow>
 										<TableHead>Director</TableHead>
-										<TableHead className="text-right">Clientes</TableHead>
+										<TableHead className="text-right">Pólizas</TableHead>
 										<TableHead className="text-right">Prima Total</TableHead>
 									</TableRow>
 								</TableHeader>
@@ -260,7 +260,7 @@ export default function ProduccionCharts({ data, periodoLabel }: { data: Estadis
 									{topDirectoresCartera.map((d, i) => (
 										<TableRow key={i}>
 											<TableCell className="font-medium">{d.nombre}</TableCell>
-											<TableCell className="text-right">{d.cantidad_clientes}</TableCell>
+											<TableCell className="text-right">{d.cantidad_polizas}</TableCell>
 											<TableCell className="text-right">{formatCurrency(d.prima_total)}</TableCell>
 										</TableRow>
 									))}

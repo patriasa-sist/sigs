@@ -48,7 +48,7 @@ export type ProduccionPorResponsable = {
 
 export type DirectorCarteraStats = {
 	nombre: string;
-	cantidad_clientes: number;
+	cantidad_polizas: number;
 	prima_total: number;
 };
 

@@ -203,25 +203,25 @@ export async function obtenerEstadisticasProduccion(
 			.slice(0, 10);
 
 		// Top directores de cartera (período seleccionado)
-		// Agrupa por director: cantidad de clientes únicos y prima total
-		const directorMap = new Map<string, { clientIds: Set<string>; prima: number }>();
+		// Agrupa por director: cantidad de pólizas y prima total
+		const directorMap = new Map<string, { polizas: number; prima: number }>();
 		for (const p of polizasPeriodo) {
 			const dc = p.director_cartera as { nombre?: string; apellidos?: string } | null;
 			if (!dc) continue;
 			const nombre = `${dc.nombre || ""} ${dc.apellidos || ""}`.trim();
 			if (!nombre) continue;
-			const existing = directorMap.get(nombre) || { clientIds: new Set<string>(), prima: 0 };
-			if (p.client_id) existing.clientIds.add(p.client_id as string);
+			const existing = directorMap.get(nombre) || { polizas: 0, prima: 0 };
+			existing.polizas += 1;
 			existing.prima += Number(p.prima_total || 0);
 			directorMap.set(nombre, existing);
 		}
 		const topDirectoresCartera: DirectorCarteraStats[] = Array.from(directorMap.entries())
 			.map(([nombre, data]) => ({
 				nombre,
-				cantidad_clientes: data.clientIds.size,
+				cantidad_polizas: data.polizas,
 				prima_total: data.prima,
 			}))
-			.sort((a, b) => b.cantidad_clientes - a.cantidad_clientes)
+			.sort((a, b) => b.cantidad_polizas - a.cantidad_polizas)
 			.slice(0, 10);
 
 		return {
