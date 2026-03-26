@@ -217,9 +217,9 @@ export function SaludForm({
 			nuevosErrores.regional = "Debe seleccionar una regional";
 		}
 
-		// Validar que haya al menos un cliente o beneficiario
-		if (asegurados.length === 0 && beneficiarios.length === 0) {
-			nuevosErrores.asegurados = "Debe agregar al menos un cliente o beneficiario";
+		// Validar que haya al menos un cliente (asegurado)
+		if (asegurados.length === 0) {
+			nuevosErrores.asegurados = "Debe agregar al menos un cliente contratante";
 		}
 
 		// Validar que todos los asegurados (clientes) tengan un nivel y rol asignado
@@ -657,10 +657,10 @@ export function SaludForm({
 				<div className="flex items-center justify-between">
 					<div>
 						<Label className="text-base">
-							Beneficiarios / Asegurados <span className="text-red-500">*</span>
+							Beneficiarios / Asegurados
 						</Label>
 						<p className="text-sm text-gray-600 mt-1">
-							Personas cubiertas por la póliza (al menos uno es requerido)
+							Personas cubiertas por la póliza
 						</p>
 					</div>
 					<Button onClick={abrirModalBeneficiario} disabled={mostrarModalBeneficiario}>
@@ -761,11 +761,11 @@ export function SaludForm({
 						))}
 					</div>
 				) : (
-					<div className="text-center py-8 border-2 border-dashed rounded-lg bg-amber-50">
-						<UserPlus className="h-12 w-12 text-amber-600 mx-auto mb-3" />
-						<p className="text-gray-900 font-medium">No hay beneficiarios agregados</p>
-						<p className="text-sm text-gray-600">
-							Agregue al menos un beneficiario haciendo clic en &ldquo;Agregar Asegurado&rdquo;
+					<div className="text-center py-8 border-2 border-dashed rounded-lg">
+						<UserPlus className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+						<p className="text-gray-600">No hay beneficiarios agregados</p>
+						<p className="text-sm text-gray-500">
+							Haga clic en &ldquo;Agregar Asegurado&rdquo; para agregar beneficiarios
 						</p>
 					</div>
 				)}
