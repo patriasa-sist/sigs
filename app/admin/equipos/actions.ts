@@ -136,7 +136,7 @@ export async function obtenerUsuariosDisponibles(): Promise<ActionResult<Usuario
 		const { data, error } = await supabase
 			.from("profiles")
 			.select("id, email, full_name, role")
-			.in("role", ["agente", "comercial", "siniestros"])
+			.in("role", ["admin", "agente", "comercial", "siniestros", "cobranza", "uif"])
 			.order("role")
 			.order("full_name");
 

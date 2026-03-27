@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { useDropzone } from "react-dropzone";
 import {
 	ChevronRight, ChevronLeft, Lock, Upload, FileText, X, AlertCircle, Loader2
@@ -48,6 +48,7 @@ export function PagosYDocumentos({
 }: Props) {
 	const [errores, setErrores] = useState<string[]>([]);
 	const sessionIdRef = useRef(crypto.randomUUID());
+	const supabase = useMemo(() => createClient(), []);
 
 	// Inicializar cuotas ajuste si están vacías (en useEffect para evitar setState durante render)
 	useEffect(() => {
@@ -101,7 +102,6 @@ export function PagosYDocumentos({
 				onChangeDocumentos([...documentos, newDoc]);
 
 				try {
-					const supabase = createClient();
 					const storagePath = generateTempStoragePath(userId, sessionIdRef.current, file.name);
 
 					const { error: uploadError } = await supabase.storage

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useMemo } from "react";
 import { useDropzone } from "react-dropzone";
 import { ChevronRight, ChevronLeft, CheckCircle2, Upload, FileText, X, AlertCircle, Loader2 } from "lucide-react";
 import type { DocumentoPoliza } from "@/types/poliza";
@@ -38,6 +38,7 @@ export function CargarDocumentos({ documentos, onChange, onSiguiente, onAnterior
 	const [tipoPersonalizado, setTipoPersonalizado] = useState<string>("");
 	const [error, setError] = useState<string | null>(null);
 	const sessionIdRef = useRef(crypto.randomUUID());
+	const supabase = useMemo(() => createClient(), []);
 
 	// Validar archivo
 	const validarArchivo = (file: File): string | null => {
@@ -83,7 +84,6 @@ export function CargarDocumentos({ documentos, onChange, onSiguiente, onAnterior
 		}
 
 		const storagePath = generateTempStoragePath(userId, sessionIdRef.current, file.name);
-		const supabase = createClient();
 
 		const { error: uploadError } = await supabase.storage
 			.from(BUCKET)
