@@ -28,7 +28,16 @@ type Props = {
 	onAnterior: () => void;
 };
 
-export function DatosEspecificos({ ramo, datos, moneda = "Bs", regionales, asegurado, onChange, onSiguiente, onAnterior }: Props) {
+export function DatosEspecificos({
+	ramo,
+	datos,
+	moneda = "Bs",
+	regionales,
+	asegurado,
+	onChange,
+	onSiguiente,
+	onAnterior,
+}: Props) {
 	// Normalizar nombre del ramo (case-insensitive, sin tildes)
 	const ramoNormalizado = ramo
 		.toLowerCase()
@@ -255,16 +264,16 @@ export function DatosEspecificos({ ramo, datos, moneda = "Bs", regionales, asegu
 
 		// Otros ramos (genérico)
 		return (
-			<div className="bg-white rounded-lg shadow-sm border p-6">
+			<div className="bg-card rounded-lg shadow-sm border border-border p-6">
 				<div className="text-center py-12">
-					<AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-					<h3 className="text-lg font-semibold mb-2">Ramo: {ramo}</h3>
-					<p className="text-gray-600 mb-6">
+					<AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+					<h3 className="text-lg font-semibold text-foreground mb-2">Ramo: {ramo}</h3>
+					<p className="text-muted-foreground mb-6">
 						El formulario específico para este ramo está en desarrollo.
 						<br />
 						Por ahora puede continuar sin datos específicos.
 					</p>
-					<div className="flex justify-between pt-6 border-t">
+					<div className="flex justify-between pt-6 border-t border-border">
 						<Button variant="outline" onClick={onAnterior}>
 							<ChevronLeft className="mr-2 h-5 w-5" />
 							Anterior

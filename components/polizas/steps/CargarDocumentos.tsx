@@ -85,12 +85,10 @@ export function CargarDocumentos({ documentos, onChange, onSiguiente, onAnterior
 
 		const storagePath = generateTempStoragePath(userId, sessionIdRef.current, file.name);
 
-		const { error: uploadError } = await supabase.storage
-			.from(BUCKET)
-			.upload(storagePath, file, {
-				cacheControl: "3600",
-				upsert: false,
-			});
+		const { error: uploadError } = await supabase.storage.from(BUCKET).upload(storagePath, file, {
+			cacheControl: "3600",
+			upsert: false,
+		});
 
 		if (uploadError) {
 			return {
@@ -169,9 +167,7 @@ export function CargarDocumentos({ documentos, onChange, onSiguiente, onAnterior
 			setTipoPersonalizado("");
 
 			// Subir cada archivo y reemplazar placeholder con resultado
-			const resultados = await Promise.all(
-				archivosValidos.map((file) => subirArchivo(file, tipoDoc))
-			);
+			const resultados = await Promise.all(archivosValidos.map((file) => subirArchivo(file, tipoDoc)));
 
 			// Reemplazar placeholders con resultados reales
 			// Usamos el índice para mapear: los placeholders empiezan en documentos.length
@@ -187,12 +183,12 @@ export function CargarDocumentos({ documentos, onChange, onSiguiente, onAnterior
 			const fallidos = resultados.filter((r) => r.upload_status === "error");
 			if (fallidos.length > 0) {
 				setError(
-					`Error al subir ${fallidos.length} archivo(s): ${fallidos.map((f) => f.upload_error).join(", ")}`
+					`Error al subir ${fallidos.length} archivo(s): ${fallidos.map((f) => f.upload_error).join(", ")}`,
 				);
 			}
 		},
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-		[tipoSeleccionado, tipoPersonalizado, documentos, onChange, userId]
+		[tipoSeleccionado, tipoPersonalizado, documentos, onChange, userId],
 	);
 
 	const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -245,23 +241,23 @@ export function CargarDocumentos({ documentos, onChange, onSiguiente, onAnterior
 	// Verificar documentos obligatorios (solo cuentan los subidos exitosamente)
 	const documentosSubidos = documentos.filter((d) => d.upload_status === "uploaded" || d.id);
 	const documentosFaltantes = DOCUMENTOS_OBLIGATORIOS.filter(
-		(tipo) => !documentosSubidos.some((d) => d.tipo_documento === tipo)
+		(tipo) => !documentosSubidos.some((d) => d.tipo_documento === tipo),
 	);
 	const cumpleObligatorios = documentosFaltantes.length === 0;
 
 	return (
-		<div className="bg-white rounded-lg shadow-sm border p-6">
+		<div className="bg-card rounded-lg shadow-sm border border-border p-6">
 			{/* Header */}
 			<div className="flex items-center justify-between mb-6">
 				<div>
-					<h2 className="text-xl font-semibold text-gray-900">Paso 5: Cargar Documentos</h2>
-					<p className="text-sm text-gray-600 mt-1">
+					<h2 className="text-lg font-semibold text-foreground">Cargar Documentos</h2>
+					<p className="text-sm text-muted-foreground mt-1">
 						Adjunte los documentos relacionados con la póliza
 					</p>
 				</div>
 
 				{tieneDocumentos && (
-					<div className="flex items-center gap-2 text-green-600">
+					<div className="flex items-center gap-2 text-success">
 						<CheckCircle2 className="h-5 w-5" />
 						<span className="text-sm font-medium">
 							{documentos.filter((d) => d.upload_status === "uploaded" || d.id).length} documento
@@ -272,7 +268,7 @@ export function CargarDocumentos({ documentos, onChange, onSiguiente, onAnterior
 			</div>
 
 			{/* Upload Section */}
-			<div className="border border-gray-200 rounded-lg p-6 space-y-4 mb-6">
+			<div className="border border-border rounded-lg p-6 space-y-4 mb-6">
 				<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 					{/* Document type selector */}
 					<div className="space-y-2">
@@ -283,13 +279,13 @@ export function CargarDocumentos({ documentos, onChange, onSiguiente, onAnterior
 							</SelectTrigger>
 							<SelectContent>
 								{availableDocTypes.length === 0 ? (
-									<div className="p-2 text-sm text-gray-500">No hay tipos disponibles</div>
+									<div className="p-2 text-sm text-muted-foreground">No hay tipos disponibles</div>
 								) : (
 									availableDocTypes.map((tipo) => (
 										<SelectItem key={tipo} value={tipo}>
 											{tipo}
 											{(DOCUMENTOS_OBLIGATORIOS as readonly string[]).includes(tipo) && (
-												<span className="text-red-500 ml-1">*</span>
+												<span className="text-destructive ml-1">*</span>
 											)}
 										</SelectItem>
 									))
@@ -317,21 +313,21 @@ export function CargarDocumentos({ documentos, onChange, onSiguiente, onAnterior
 					{...getRootProps()}
 					className={`
             border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors
-            ${isDragActive ? "border-primary bg-primary/5" : "border-gray-300 hover:border-primary/50"}
+            ${isDragActive ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"}
             ${!tipoSeleccionado || haySubiendo ? "opacity-50 cursor-not-allowed" : ""}
           `}
 				>
 					<input {...getInputProps()} disabled={!tipoSeleccionado || haySubiendo} />
-					<Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+					<Upload className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
 
 					{isDragActive ? (
-						<p className="text-sm text-gray-600">Suelte los archivos aquí...</p>
+						<p className="text-sm text-muted-foreground">Suelte los archivos aquí...</p>
 					) : (
 						<>
-							<p className="text-sm text-gray-600 mb-1">
+							<p className="text-sm text-muted-foreground mb-1">
 								Arrastre archivos aquí o haga clic para seleccionar
 							</p>
-							<p className="text-xs text-gray-500">
+							<p className="text-xs text-muted-foreground">
 								PDF, JPG, PNG, DOC, DOCX, MSG, EML (máx. 20MB por archivo)
 							</p>
 						</>
@@ -339,29 +335,31 @@ export function CargarDocumentos({ documentos, onChange, onSiguiente, onAnterior
 				</div>
 
 				{error && (
-					<div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
-						<AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
-						<p className="text-sm text-red-800">{error}</p>
+					<div className="flex items-start gap-2 p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
+						<AlertCircle className="h-5 w-5 text-destructive flex-shrink-0 mt-0.5" />
+						<p className="text-sm text-destructive">{error}</p>
 					</div>
 				)}
 			</div>
 
 			{/* Uploaded Documents List */}
 			{documentos.length > 0 && (
-				<div className="border border-gray-200 rounded-lg mb-6">
-					<div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
-						<h4 className="text-sm font-medium text-gray-900">Documentos Cargados ({documentos.length})</h4>
+				<div className="border border-border rounded-lg mb-6">
+					<div className="px-4 py-3 bg-secondary border-b border-border">
+						<h4 className="text-sm font-medium text-foreground">
+							Documentos Cargados ({documentos.length})
+						</h4>
 					</div>
 
-					<div className="divide-y divide-gray-200">
+					<div className="divide-y divide-border">
 						{documentos.map((doc, index) => (
-							<div key={index} className="p-4 hover:bg-gray-50 transition-colors">
+							<div key={index} className="p-4 hover:bg-secondary/50 transition-colors">
 								<div className="flex items-start gap-3">
 									{/* Icono según estado */}
 									{doc.upload_status === "uploading" ? (
-										<Loader2 className="h-10 w-10 text-blue-500 flex-shrink-0 animate-spin" />
+										<Loader2 className="h-10 w-10 text-primary flex-shrink-0 animate-spin" />
 									) : doc.upload_status === "error" ? (
-										<AlertCircle className="h-10 w-10 text-red-500 flex-shrink-0" />
+										<AlertCircle className="h-10 w-10 text-destructive flex-shrink-0" />
 									) : (
 										<FileText className="h-10 w-10 text-primary flex-shrink-0" />
 									)}
@@ -369,24 +367,28 @@ export function CargarDocumentos({ documentos, onChange, onSiguiente, onAnterior
 									<div className="flex-1 min-w-0">
 										<div className="flex items-start justify-between gap-2">
 											<div className="flex-1">
-												<p className="font-medium text-gray-900">{doc.tipo_documento}</p>
-												<p className="text-sm text-gray-600 truncate">{doc.nombre_archivo}</p>
+												<p className="font-medium text-foreground">{doc.tipo_documento}</p>
+												<p className="text-sm text-muted-foreground truncate">
+													{doc.nombre_archivo}
+												</p>
 												<div className="flex items-center gap-2 mt-1">
 													{doc.tamano_bytes !== undefined && (
-														<p className="text-xs text-gray-500">
+														<p className="text-xs text-muted-foreground">
 															{formatearTamano(doc.tamano_bytes)}
 														</p>
 													)}
 													{doc.upload_status === "uploading" && (
-														<span className="text-xs text-blue-600 font-medium">Subiendo...</span>
+														<span className="text-xs text-primary font-medium">
+															Subiendo...
+														</span>
 													)}
 													{doc.upload_status === "error" && (
-														<span className="text-xs text-red-600 font-medium">
+														<span className="text-xs text-destructive font-medium">
 															Error: {doc.upload_error || "Error desconocido"}
 														</span>
 													)}
 													{doc.upload_status === "uploaded" && (
-														<span className="text-xs text-green-600 font-medium">Subido</span>
+														<span className="text-xs text-success font-medium">Subido</span>
 													)}
 												</div>
 											</div>
@@ -411,8 +413,8 @@ export function CargarDocumentos({ documentos, onChange, onSiguiente, onAnterior
 
 			{/* Empty state */}
 			{documentos.length === 0 && (
-				<div className="text-center py-8 text-gray-500 border border-dashed border-gray-300 rounded-lg mb-6">
-					<FileText className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+				<div className="text-center py-8 text-muted-foreground border border-dashed border-border rounded-lg mb-6">
+					<FileText className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
 					<p className="text-sm">No se han cargado documentos todavía</p>
 					<p className="text-xs mt-1">Debe cargar al menos: Póliza</p>
 				</div>
@@ -420,11 +422,13 @@ export function CargarDocumentos({ documentos, onChange, onSiguiente, onAnterior
 
 			{/* Indicador de documentos obligatorios faltantes */}
 			{!cumpleObligatorios && documentos.length > 0 && (
-				<div className="flex items-start gap-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg mb-6">
-					<AlertCircle className="h-5 w-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+				<div className="flex items-start gap-2 p-3 bg-warning/10 border border-warning/30 rounded-lg mb-6">
+					<AlertCircle className="h-5 w-5 text-warning flex-shrink-0 mt-0.5" />
 					<div>
-						<p className="text-sm font-medium text-yellow-800">Documentos obligatorios faltantes:</p>
-						<ul className="text-sm text-yellow-700 mt-1">
+						<p className="text-sm font-medium text-warning-foreground">
+							Documentos obligatorios faltantes:
+						</p>
+						<ul className="text-sm text-warning-foreground mt-1">
 							{documentosFaltantes.map((tipo) => (
 								<li key={tipo}>• {tipo}</li>
 							))}
@@ -434,7 +438,7 @@ export function CargarDocumentos({ documentos, onChange, onSiguiente, onAnterior
 			)}
 
 			{/* Botones de navegación */}
-			<div className="flex justify-between pt-6 border-t">
+			<div className="flex justify-between pt-6 border-t border-border">
 				<Button variant="outline" onClick={onAnterior}>
 					<ChevronLeft className="mr-2 h-5 w-5" />
 					Anterior

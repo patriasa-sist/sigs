@@ -58,9 +58,7 @@ export function Resumen({ formState, onAnterior, onEditarPaso, onGuardar, guarda
 		// Advertencias sobre documentos obligatorios faltantes
 		const docsSubidos = formState.documentos.filter((d) => d.upload_status === "uploaded" || d.id);
 		const docObligatorios = ["Póliza"];
-		const docsFaltantes = docObligatorios.filter(
-			(tipo) => !docsSubidos.some((d) => d.tipo_documento === tipo)
-		);
+		const docsFaltantes = docObligatorios.filter((tipo) => !docsSubidos.some((d) => d.tipo_documento === tipo));
 		if (docsFaltantes.length > 0) {
 			nuevasAdvertencias.push({
 				tipo: "error",
@@ -101,15 +99,19 @@ export function Resumen({ formState, onAnterior, onEditarPaso, onGuardar, guarda
 			// Ramos que tienen formulario específico implementado (no el genérico)
 			const requiereDatosEspecificos =
 				ramoNorm.includes("automotor") ||
-				ramoNorm.includes("salud") || ramoNorm.includes("enfermedad") ||
+				ramoNorm.includes("salud") ||
+				ramoNorm.includes("enfermedad") ||
 				ramoNorm.includes("incendio") ||
-				ramoNorm.includes("responsabilidad") || ramoNorm.includes("civil") ||
+				ramoNorm.includes("responsabilidad") ||
+				ramoNorm.includes("civil") ||
 				ramoNorm.includes("transporte") ||
 				ramoNorm.includes("aeronavegacion") ||
-				ramoNorm.includes("nave") || ramoNorm.includes("embarcacion") ||
+				ramoNorm.includes("nave") ||
+				ramoNorm.includes("embarcacion") ||
 				ramoNorm.includes("accidente") ||
 				ramoNorm.includes("vida") ||
-				ramoNorm.includes("sepelio") || ramoNorm.includes("defuncion") ||
+				ramoNorm.includes("sepelio") ||
+				ramoNorm.includes("defuncion") ||
 				(ramoNorm.includes("riesgo") && ramoNorm.includes("vario")) ||
 				(ramoNorm.includes("ramo") && ramoNorm.includes("tecnico"));
 
@@ -178,11 +180,13 @@ export function Resumen({ formState, onAnterior, onEditarPaso, onGuardar, guarda
 	const infos = advertencias.filter((a) => a.tipo === "info");
 
 	return (
-		<div className="bg-white rounded-lg shadow-sm border p-6">
+		<div className="bg-card rounded-lg shadow-sm border border-border p-6">
 			<div className="flex items-center justify-between mb-6">
 				<div>
-					<h2 className="text-xl font-semibold text-gray-900">Paso 6: Resumen y Confirmación</h2>
-					<p className="text-sm text-gray-600 mt-1">Revise toda la información antes de guardar la póliza</p>
+					<h2 className="text-lg font-semibold text-foreground">Resumen y Confirmación</h2>
+					<p className="text-sm text-muted-foreground mt-1">
+						Revise toda la información antes de guardar la póliza
+					</p>
 				</div>
 			</div>
 
@@ -190,14 +194,14 @@ export function Resumen({ formState, onAnterior, onEditarPaso, onGuardar, guarda
 			{advertencias.length > 0 && (
 				<div className="mb-6 space-y-3">
 					{errores.length > 0 && (
-						<div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+						<div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
 							<div className="flex gap-2">
-								<AlertTriangle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+								<AlertTriangle className="h-5 w-5 text-destructive flex-shrink-0 mt-0.5" />
 								<div className="flex-1">
-									<h4 className="text-sm font-semibold text-red-800 mb-2">
+									<h4 className="text-sm font-semibold text-destructive mb-2">
 										Errores que deben corregirse:
 									</h4>
-									<ul className="text-sm text-red-700 space-y-1">
+									<ul className="text-sm text-destructive space-y-1">
 										{errores.map((adv, i) => (
 											<li key={i}>• {adv.mensaje}</li>
 										))}
@@ -208,12 +212,14 @@ export function Resumen({ formState, onAnterior, onEditarPaso, onGuardar, guarda
 					)}
 
 					{warnings.length > 0 && (
-						<div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+						<div className="p-4 bg-warning/10 border border-warning/30 rounded-lg">
 							<div className="flex gap-2">
-								<AlertTriangle className="h-5 w-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+								<AlertTriangle className="h-5 w-5 text-warning flex-shrink-0 mt-0.5" />
 								<div className="flex-1">
-									<h4 className="text-sm font-semibold text-yellow-800 mb-2">Advertencias:</h4>
-									<ul className="text-sm text-yellow-700 space-y-1">
+									<h4 className="text-sm font-semibold text-warning-foreground mb-2">
+										Advertencias:
+									</h4>
+									<ul className="text-sm text-warning-foreground space-y-1">
 										{warnings.map((adv, i) => (
 											<li key={i}>• {adv.mensaje}</li>
 										))}
@@ -224,12 +230,12 @@ export function Resumen({ formState, onAnterior, onEditarPaso, onGuardar, guarda
 					)}
 
 					{infos.length > 0 && (
-						<div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+						<div className="p-4 bg-secondary border border-border rounded-lg">
 							<div className="flex gap-2">
-								<Info className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+								<Info className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
 								<div className="flex-1">
-									<h4 className="text-sm font-semibold text-blue-800 mb-2">Información:</h4>
-									<ul className="text-sm text-blue-700 space-y-1">
+									<h4 className="text-sm font-semibold text-foreground mb-2">Información:</h4>
+									<ul className="text-sm text-muted-foreground space-y-1">
 										{infos.map((adv, i) => (
 											<li key={i}>• {adv.mensaje}</li>
 										))}
@@ -243,20 +249,20 @@ export function Resumen({ formState, onAnterior, onEditarPaso, onGuardar, guarda
 
 			<div className="space-y-4">
 				{/* Paso 1: Asegurado */}
-				<div className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
+				<div className="border border-border rounded-lg p-4 hover:bg-secondary/50 transition-colors">
 					<div className="flex items-start justify-between">
 						<div className="flex gap-3 flex-1">
-							<div className="p-2 bg-blue-100 rounded-lg">
-								<User className="h-5 w-5 text-blue-600" />
+							<div className="p-2 bg-secondary rounded-md">
+								<User className="h-5 w-5 text-primary" />
 							</div>
 							<div className="flex-1">
 								<div className="flex items-center gap-2 mb-2">
-									<h3 className="text-sm font-semibold text-gray-900">Asegurado</h3>
-									<CheckCircle className="h-4 w-4 text-green-600" />
+									<h3 className="text-sm font-semibold text-foreground">Asegurado</h3>
+									<CheckCircle className="h-4 w-4 text-success" />
 								</div>
 								{asegurado && (
-									<div className="text-sm text-gray-600 space-y-1">
-										<p className="font-medium text-gray-900">{asegurado.nombre_completo}</p>
+									<div className="text-sm text-muted-foreground space-y-1">
+										<p className="font-medium text-foreground">{asegurado.nombre_completo}</p>
 										<p>Documento: {asegurado.documento}</p>
 										<p>
 											Tipo:{" "}
@@ -268,26 +274,26 @@ export function Resumen({ formState, onAnterior, onEditarPaso, onGuardar, guarda
 								)}
 							</div>
 						</div>
-						<Button variant="ghost" size="sm" onClick={() => onEditarPaso(1)}>
-							<Edit className="h-4 w-4" />
+						<Button variant="ghost" size="icon" onClick={() => onEditarPaso(1)}>
+							<Edit className="h-5 w-5" />
 						</Button>
 					</div>
 				</div>
 
 				{/* Paso 2: Datos Básicos */}
-				<div className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
+				<div className="border border-border rounded-lg p-4 hover:bg-secondary/50 transition-colors">
 					<div className="flex items-start justify-between">
 						<div className="flex gap-3 flex-1">
-							<div className="p-2 bg-green-100 rounded-lg">
-								<FileText className="h-5 w-5 text-green-600" />
+							<div className="p-2 bg-secondary rounded-md">
+								<FileText className="h-5 w-5 text-success" />
 							</div>
 							<div className="flex-1">
 								<div className="flex items-center gap-2 mb-2">
-									<h3 className="text-sm font-semibold text-gray-900">Datos Básicos</h3>
-									<CheckCircle className="h-4 w-4 text-green-600" />
+									<h3 className="text-sm font-semibold text-foreground">Datos Básicos</h3>
+									<CheckCircle className="h-4 w-4 text-success" />
 								</div>
 								{datos_basicos && (
-									<div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2 text-sm text-gray-600">
+									<div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2 text-sm text-muted-foreground">
 										{datos_basicos.es_renovacion && (
 											<div className="col-span-2 mb-1">
 												<span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800">
@@ -296,67 +302,75 @@ export function Resumen({ formState, onAnterior, onEditarPaso, onGuardar, guarda
 											</div>
 										)}
 										<div>
-											<span className="font-medium text-gray-700">Nº Póliza:</span>{" "}
+											<span className="font-medium text-foreground">Nº Póliza:</span>{" "}
 											{datos_basicos.numero_poliza}
 										</div>
 										<div>
-											<span className="font-medium text-gray-700">Ramo:</span>{" "}
+											<span className="font-medium text-foreground">Ramo:</span>{" "}
 											{datos_basicos.ramo}
 										</div>
 										{productoNombre && (
 											<div className="col-span-2">
-												<span className="font-medium text-gray-700">Producto:</span>{" "}
-												<span className="text-blue-600">{productoNombre}</span>
+												<span className="font-medium text-foreground">Producto:</span>{" "}
+												<span className="text-primary">{productoNombre}</span>
 											</div>
 										)}
 										<div>
-											<span className="font-medium text-gray-700">Vigencia:</span>{" "}
-											{new Date(datos_basicos.inicio_vigencia + 'T00:00:00').toLocaleDateString("es-BO")} -{" "}
-											{new Date(datos_basicos.fin_vigencia + 'T00:00:00').toLocaleDateString("es-BO")}
+											<span className="font-medium text-foreground">Vigencia:</span>{" "}
+											{new Date(datos_basicos.inicio_vigencia + "T00:00:00").toLocaleDateString(
+												"es-BO",
+											)}{" "}
+											-{" "}
+											{new Date(datos_basicos.fin_vigencia + "T00:00:00").toLocaleDateString(
+												"es-BO",
+											)}
 										</div>
 										<div>
-											<span className="font-medium text-gray-700">Emisión:</span>{" "}
-											{new Date(datos_basicos.fecha_emision_compania + 'T00:00:00').toLocaleDateString("es-BO")}
+											<span className="font-medium text-foreground">Emisión:</span>{" "}
+											{new Date(
+												datos_basicos.fecha_emision_compania + "T00:00:00",
+											).toLocaleDateString("es-BO")}
 										</div>
 									</div>
 								)}
 							</div>
 						</div>
-						<Button variant="ghost" size="sm" onClick={() => onEditarPaso(2)}>
-							<Edit className="h-4 w-4" />
+						<Button variant="ghost" size="icon" onClick={() => onEditarPaso(2)}>
+							<Edit className="h-5 w-5" />
 						</Button>
 					</div>
 				</div>
 
 				{/* Paso 3: Datos Específicos */}
-				<div className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
+				<div className="border border-border rounded-lg p-4 hover:bg-secondary/50 transition-colors">
 					<div className="flex items-start justify-between">
 						<div className="flex gap-3 flex-1">
-							<div className="p-2 bg-purple-100 rounded-lg">
-								<Car className="h-5 w-5 text-purple-600" />
+							<div className="p-2 bg-secondary rounded-md">
+								<Car className="h-5 w-5 text-primary" />
 							</div>
 							<div className="flex-1">
 								<div className="flex items-center gap-2 mb-2">
-									<h3 className="text-sm font-semibold text-gray-900">
+									<h3 className="text-sm font-semibold text-foreground">
 										Datos Específicos - {datos_especificos?.tipo_ramo}
 									</h3>
-									<CheckCircle className="h-4 w-4 text-green-600" />
+									<CheckCircle className="h-4 w-4 text-success" />
 								</div>
 
 								{/* Automotores */}
 								{datos_especificos?.tipo_ramo === "Automotores" && (
-									<div className="text-sm text-gray-600">
+									<div className="text-sm text-muted-foreground">
 										<p className="font-medium">
 											{datos_especificos.datos.vehiculos.length} vehículo(s) asegurado(s)
 										</p>
 										<ul className="mt-2 space-y-1">
 											{datos_especificos.datos.vehiculos.slice(0, 3).map((v, i) => (
 												<li key={i}>
-													• {v.placa} - Valor: {v.valor_asegurado.toLocaleString("es-BO")} {modalidad_pago?.moneda || "Bs"}
+													• {v.placa} - Valor: {v.valor_asegurado.toLocaleString("es-BO")}{" "}
+													{modalidad_pago?.moneda || "Bs"}
 												</li>
 											))}
 											{datos_especificos.datos.vehiculos.length > 3 && (
-												<li className="text-gray-500 italic">
+												<li className="text-muted-foreground italic">
 													...y {datos_especificos.datos.vehiculos.length - 3} más
 												</li>
 											)}
@@ -366,15 +380,15 @@ export function Resumen({ formState, onAnterior, onEditarPaso, onGuardar, guarda
 
 								{/* Accidentes Personales */}
 								{datos_especificos?.tipo_ramo === "Accidentes Personales" && (
-									<div className="text-sm text-gray-600 space-y-2">
+									<div className="text-sm text-muted-foreground space-y-2">
 										<div>
-											<span className="font-medium text-gray-700">Tipo:</span>{" "}
+											<span className="font-medium text-foreground">Tipo:</span>{" "}
 											{datos_especificos.datos.tipo_poliza === "individual"
 												? "Individual"
 												: "Corporativo"}
 										</div>
 										<div>
-											<p className="font-medium text-gray-700">
+											<p className="font-medium text-foreground">
 												Niveles de cobertura: {datos_especificos.datos.niveles.length}
 											</p>
 											<ul className="mt-1 space-y-1">
@@ -388,7 +402,7 @@ export function Resumen({ formState, onAnterior, onEditarPaso, onGuardar, guarda
 											</ul>
 										</div>
 										<div>
-											<p className="font-medium text-gray-700">
+											<p className="font-medium text-foreground">
 												Asegurados: {datos_especificos.datos.asegurados.length}
 											</p>
 										</div>
@@ -397,12 +411,12 @@ export function Resumen({ formState, onAnterior, onEditarPaso, onGuardar, guarda
 
 								{/* Vida */}
 								{datos_especificos?.tipo_ramo === "Vida" && (
-									<div className="text-sm text-gray-600 space-y-2">
+									<div className="text-sm text-muted-foreground space-y-2">
 										<div>
-											<span className="font-medium text-gray-700">Suma Asegurada:</span>{" "}
+											<span className="font-medium text-foreground">Suma Asegurada:</span>{" "}
 											{datos_especificos.datos.niveles.length} nivel(es)
 										</div>
-										<div className="text-blue-600 italic text-xs mt-2">
+										<div className="text-primary italic text-xs mt-2">
 											ℹ️ Pólizas de Vida solo permiten pago en contado
 										</div>
 									</div>
@@ -410,30 +424,31 @@ export function Resumen({ formState, onAnterior, onEditarPaso, onGuardar, guarda
 
 								{/* Salud */}
 								{datos_especificos?.tipo_ramo === "Salud" && (
-									<div className="text-sm text-gray-600 space-y-2">
+									<div className="text-sm text-muted-foreground space-y-2">
 										<div>
-											<span className="font-medium text-gray-700">Tipo:</span>{" "}
+											<span className="font-medium text-foreground">Tipo:</span>{" "}
 											{datos_especificos.datos.tipo_poliza === "individual"
 												? "Individual"
 												: "Colectivo"}
 										</div>
 										{datos_especificos.datos.tiene_maternidad && (
-											<div className="text-green-600">✓ Incluye cobertura de maternidad</div>
+											<div className="text-success">✓ Incluye cobertura de maternidad</div>
 										)}
 										<div>
-											<p className="font-medium text-gray-700">
+											<p className="font-medium text-foreground">
 												Niveles: {datos_especificos.datos.niveles.length}
 											</p>
 											<ul className="mt-1 space-y-1">
 												{datos_especificos.datos.niveles.map((nivel, i) => (
 													<li key={i} className="ml-2">
-														• {nivel.nombre} - {nivel.monto.toLocaleString("es-BO")} {modalidad_pago?.moneda || "Bs"}
+														• {nivel.nombre} - {nivel.monto.toLocaleString("es-BO")}{" "}
+														{modalidad_pago?.moneda || "Bs"}
 													</li>
 												))}
 											</ul>
 										</div>
 										<div>
-											<p className="font-medium text-gray-700">
+											<p className="font-medium text-foreground">
 												Asegurados: {datos_especificos.datos.asegurados.length}
 											</p>
 										</div>
@@ -442,15 +457,15 @@ export function Resumen({ formState, onAnterior, onEditarPaso, onGuardar, guarda
 
 								{/* Sepelio */}
 								{datos_especificos?.tipo_ramo === "Sepelio" && (
-									<div className="text-sm text-gray-600 space-y-2">
+									<div className="text-sm text-muted-foreground space-y-2">
 										<div>
-											<span className="font-medium text-gray-700">Tipo:</span>{" "}
+											<span className="font-medium text-foreground">Tipo:</span>{" "}
 											{datos_especificos.datos.tipo_poliza === "individual"
 												? "Individual"
 												: "Colectivo"}
 										</div>
 										<div>
-											<p className="font-medium text-gray-700">
+											<p className="font-medium text-foreground">
 												Niveles de cobertura: {datos_especificos.datos.niveles.length}
 											</p>
 											<ul className="mt-1 space-y-1">
@@ -465,7 +480,7 @@ export function Resumen({ formState, onAnterior, onEditarPaso, onGuardar, guarda
 											</ul>
 										</div>
 										<div>
-											<p className="font-medium text-gray-700">
+											<p className="font-medium text-foreground">
 												Asegurados: {datos_especificos.datos.asegurados.length}
 											</p>
 										</div>
@@ -474,9 +489,9 @@ export function Resumen({ formState, onAnterior, onEditarPaso, onGuardar, guarda
 
 								{/* Incendio */}
 								{datos_especificos?.tipo_ramo === "Incendio y Aliados" && (
-									<div className="text-sm text-gray-600 space-y-2">
+									<div className="text-sm text-muted-foreground space-y-2">
 										<div>
-											<p className="font-medium text-gray-700">
+											<p className="font-medium text-foreground">
 												Bienes asegurados:{" "}
 												{(datos_especificos.datos as DatosIncendio).bienes.length}
 											</p>
@@ -484,29 +499,31 @@ export function Resumen({ formState, onAnterior, onEditarPaso, onGuardar, guarda
 												{(datos_especificos.datos as DatosIncendio).bienes
 													.slice(0, 2)
 													.map((bien, i) => (
-														<li key={i} className="ml-2 border-l-2 border-purple-300 pl-3">
-															<div className="font-medium text-gray-900">
+														<li key={i} className="ml-2 border-l-2 border-primary/30 pl-3">
+															<div className="font-medium text-foreground">
 																{bien.direccion}
 															</div>
-															<div className="text-xs text-gray-500 mt-1">
+															<div className="text-xs text-muted-foreground mt-1">
 																Items asegurados: {bien.items.length}
 															</div>
 															<ul className="mt-1 space-y-0.5">
 																{bien.items.map((item, j) => (
 																	<li key={j} className="text-xs">
 																		• {item.nombre}:{" "}
-																		{item.monto.toLocaleString("es-BO")} {modalidad_pago?.moneda || "Bs"}
+																		{item.monto.toLocaleString("es-BO")}{" "}
+																		{modalidad_pago?.moneda || "Bs"}
 																	</li>
 																))}
 															</ul>
-															<div className="mt-1 text-sm font-medium text-purple-700">
+															<div className="mt-1 text-sm font-medium text-primary">
 																Valor total:{" "}
-																{bien.valor_total_declarado.toLocaleString("es-BO")} {modalidad_pago?.moneda || "Bs"}
+																{bien.valor_total_declarado.toLocaleString("es-BO")}{" "}
+																{modalidad_pago?.moneda || "Bs"}
 															</div>
 														</li>
 													))}
 												{(datos_especificos.datos as DatosIncendio).bienes.length > 2 && (
-													<li className="text-gray-500 italic ml-2">
+													<li className="text-muted-foreground italic ml-2">
 														...y{" "}
 														{(datos_especificos.datos as DatosIncendio).bienes.length - 2}{" "}
 														bien(es) más
@@ -514,10 +531,10 @@ export function Resumen({ formState, onAnterior, onEditarPaso, onGuardar, guarda
 												)}
 											</ul>
 										</div>
-										<div className="pt-2 border-t border-gray-200">
-											<span className="font-medium text-gray-900">Valor Total Asegurado:</span>{" "}
+										<div className="pt-2 border-t border-border">
+											<span className="font-medium text-foreground">Valor Total Asegurado:</span>{" "}
 											{(datos_especificos.datos as DatosIncendio).valor_asegurado.toLocaleString(
-												"es-BO"
+												"es-BO",
 											)}{" "}
 											{modalidad_pago?.moneda || "Bs"}
 										</div>
@@ -526,80 +543,91 @@ export function Resumen({ formState, onAnterior, onEditarPaso, onGuardar, guarda
 
 								{/* Riesgos Varios */}
 								{datos_especificos?.tipo_ramo === "Riesgos Varios Misceláneos" && (
-									<div className="text-sm text-gray-600 space-y-2">
+									<div className="text-sm text-muted-foreground space-y-2">
 										<div>
-											<span className="font-medium text-gray-700">Valor Total Asegurado:</span>{" "}
-											{(datos_especificos.datos as DatosRiesgosVarios).valor_total_asegurado.toLocaleString("es-BO")} {modalidad_pago?.moneda || "Bs"}
+											<span className="font-medium text-foreground">Valor Total Asegurado:</span>{" "}
+											{(
+												datos_especificos.datos as DatosRiesgosVarios
+											).valor_total_asegurado.toLocaleString("es-BO")}{" "}
+											{modalidad_pago?.moneda || "Bs"}
 										</div>
 										<div>
-											<span className="font-medium text-gray-700">Bienes Asegurados:</span>{" "}
-											{(datos_especificos.datos as DatosRiesgosVarios).bienes?.length || 0} bien(es)
+											<span className="font-medium text-foreground">Bienes Asegurados:</span>{" "}
+											{(datos_especificos.datos as DatosRiesgosVarios).bienes?.length || 0}{" "}
+											bien(es)
 										</div>
 										<div>
-											<span className="font-medium text-gray-700">Asegurados:</span>{" "}
-											{(datos_especificos.datos as DatosRiesgosVarios).asegurados.length} asegurado(s)
+											<span className="font-medium text-foreground">Asegurados:</span>{" "}
+											{(datos_especificos.datos as DatosRiesgosVarios).asegurados.length}{" "}
+											asegurado(s)
 										</div>
 									</div>
 								)}
 
 								{/* RC (Responsabilidad Civil) */}
 								{datos_especificos?.tipo_ramo === "Responsabilidad Civil" && (
-									<div className="text-sm text-gray-600 space-y-2">
+									<div className="text-sm text-muted-foreground space-y-2">
 										<div>
-											<span className="font-medium text-gray-700">Tipo de Póliza:</span>{" "}
-											{(datos_especificos.datos as DatosResponsabilidadCivil).tipo_poliza === "individual" ? "Individual" : "Corporativo"}
+											<span className="font-medium text-foreground">Tipo de Póliza:</span>{" "}
+											{(datos_especificos.datos as DatosResponsabilidadCivil).tipo_poliza ===
+											"individual"
+												? "Individual"
+												: "Corporativo"}
 										</div>
 										<div>
-											<span className="font-medium text-gray-700">Valor Asegurado:</span>{" "}
-											{(datos_especificos.datos as DatosResponsabilidadCivil).valor_asegurado.toLocaleString("es-BO")} {modalidad_pago?.moneda || "Bs"}
+											<span className="font-medium text-foreground">Valor Asegurado:</span>{" "}
+											{(
+												datos_especificos.datos as DatosResponsabilidadCivil
+											).valor_asegurado.toLocaleString("es-BO")}{" "}
+											{modalidad_pago?.moneda || "Bs"}
 										</div>
 									</div>
 								)}
 							</div>
 						</div>
-						<Button variant="ghost" size="sm" onClick={() => onEditarPaso(3)}>
-							<Edit className="h-4 w-4" />
+						<Button variant="ghost" size="icon" onClick={() => onEditarPaso(3)}>
+							<Edit className="h-5 w-5" />
 						</Button>
 					</div>
 				</div>
 
 				{/* Paso 4: Modalidad de Pago */}
-				<div className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
+				<div className="border border-border rounded-lg p-4 hover:bg-secondary/50 transition-colors">
 					<div className="flex items-start justify-between">
 						<div className="flex gap-3 flex-1">
-							<div className="p-2 bg-yellow-100 rounded-lg">
-								<CreditCard className="h-5 w-5 text-yellow-600" />
+							<div className="p-2 bg-secondary rounded-md">
+								<CreditCard className="h-5 w-5 text-warning" />
 							</div>
 							<div className="flex-1">
 								<div className="flex items-center gap-2 mb-2">
-									<h3 className="text-sm font-semibold text-gray-900">Modalidad de Pago</h3>
-									<CheckCircle className="h-4 w-4 text-green-600" />
+									<h3 className="text-sm font-semibold text-foreground">Modalidad de Pago</h3>
+									<CheckCircle className="h-4 w-4 text-success" />
 								</div>
 								{modalidad_pago && (
-									<div className="text-sm text-gray-600 space-y-1">
+									<div className="text-sm text-muted-foreground space-y-1">
 										<p>
-											<span className="font-medium text-gray-700">Tipo:</span>{" "}
+											<span className="font-medium text-foreground">Tipo:</span>{" "}
 											{modalidad_pago.tipo === "contado" ? "Contado" : "Crédito"}
 										</p>
 										<p>
-											<span className="font-medium text-gray-700">Prima Total:</span>{" "}
+											<span className="font-medium text-foreground">Prima Total:</span>{" "}
 											{modalidad_pago.prima_total.toLocaleString("es-BO")} {modalidad_pago.moneda}
 										</p>
 										{modalidad_pago.tipo === "credito" && (
 											<>
 												<p>
-													<span className="font-medium text-gray-700">Cuota Inicial:</span>{" "}
+													<span className="font-medium text-foreground">Cuota Inicial:</span>{" "}
 													{modalidad_pago.cuota_inicial.toLocaleString("es-BO")}{" "}
 													{modalidad_pago.moneda}
 												</p>
 												<p>
-													<span className="font-medium text-gray-700">Cuotas:</span>{" "}
+													<span className="font-medium text-foreground">Cuotas:</span>{" "}
 													{modalidad_pago.cantidad_cuotas} cuotas
 												</p>
 											</>
 										)}
 										{modalidad_pago.prima_neta && (
-											<p className="text-blue-600">
+											<p className="text-primary">
 												<span className="font-medium">Prima Neta:</span>{" "}
 												{modalidad_pago.prima_neta.toLocaleString("es-BO")}{" "}
 												{modalidad_pago.moneda}
@@ -607,14 +635,16 @@ export function Resumen({ formState, onAnterior, onEditarPaso, onGuardar, guarda
 										)}
 										{/* Mostrar comisión empresa si está disponible */}
 										{(() => {
-											const pago = modalidad_pago as { comision_empresa?: number; moneda: string };
+											const pago = modalidad_pago as {
+												comision_empresa?: number;
+												moneda: string;
+											};
 											if (!pago.comision_empresa) return null;
 											return (
-												<div className="mt-2 pt-2 border-t border-gray-200">
-													<p className="text-green-600">
+												<div className="mt-2 pt-2 border-t border-border">
+													<p className="text-success">
 														<span className="font-medium">Comisión Empresa:</span>{" "}
-														{pago.comision_empresa.toLocaleString("es-BO")}{" "}
-														{pago.moneda}
+														{pago.comision_empresa.toLocaleString("es-BO")} {pago.moneda}
 													</p>
 												</div>
 											);
@@ -623,29 +653,29 @@ export function Resumen({ formState, onAnterior, onEditarPaso, onGuardar, guarda
 								)}
 							</div>
 						</div>
-						<Button variant="ghost" size="sm" onClick={() => onEditarPaso(4)}>
-							<Edit className="h-4 w-4" />
+						<Button variant="ghost" size="icon" onClick={() => onEditarPaso(4)}>
+							<Edit className="h-5 w-5" />
 						</Button>
 					</div>
 				</div>
 
 				{/* Paso 5: Documentos */}
-				<div className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
+				<div className="border border-border rounded-lg p-4 hover:bg-secondary/50 transition-colors">
 					<div className="flex items-start justify-between">
 						<div className="flex gap-3 flex-1">
-							<div className="p-2 bg-indigo-100 rounded-lg">
-								<File className="h-5 w-5 text-indigo-600" />
+							<div className="p-2 bg-secondary rounded-md">
+								<File className="h-5 w-5 text-primary" />
 							</div>
 							<div className="flex-1">
 								<div className="flex items-center gap-2 mb-2">
-									<h3 className="text-sm font-semibold text-gray-900">Documentos</h3>
+									<h3 className="text-sm font-semibold text-foreground">Documentos</h3>
 									{documentos.length > 0 ? (
-										<CheckCircle className="h-4 w-4 text-green-600" />
+										<CheckCircle className="h-4 w-4 text-success" />
 									) : (
-										<Info className="h-4 w-4 text-gray-400" />
+										<Info className="h-4 w-4 text-muted-foreground" />
 									)}
 								</div>
-								<div className="text-sm text-gray-600">
+								<div className="text-sm text-muted-foreground">
 									{documentos.length > 0 ? (
 										<>
 											<p className="font-medium mb-2">
@@ -656,37 +686,33 @@ export function Resumen({ formState, onAnterior, onEditarPaso, onGuardar, guarda
 													<li key={i}>• {doc.nombre_archivo}</li>
 												))}
 												{documentos.length > 3 && (
-													<li className="text-gray-500 italic">
+													<li className="text-muted-foreground italic">
 														...y {documentos.length - 3} más
 													</li>
 												)}
 											</ul>
 										</>
 									) : (
-										<p className="text-gray-500 italic">No se cargaron documentos</p>
+										<p className="text-muted-foreground italic">No se cargaron documentos</p>
 									)}
 								</div>
 							</div>
 						</div>
-						<Button variant="ghost" size="sm" onClick={() => onEditarPaso(5)}>
-							<Edit className="h-4 w-4" />
+						<Button variant="ghost" size="icon" onClick={() => onEditarPaso(5)}>
+							<Edit className="h-5 w-5" />
 						</Button>
 					</div>
 				</div>
 			</div>
 
 			{/* Botones de navegación */}
-			<div className="flex justify-between pt-6 mt-6 border-t">
+			<div className="flex justify-between pt-6 mt-6 border-t border-border">
 				<Button variant="outline" onClick={onAnterior} disabled={guardando}>
 					<ChevronLeft className="mr-2 h-5 w-5" />
 					Anterior
 				</Button>
 
-				<Button
-					onClick={handleGuardar}
-					disabled={guardando || errores.length > 0}
-					className="bg-green-600 hover:bg-green-700"
-				>
+				<Button onClick={handleGuardar} disabled={guardando || errores.length > 0} className="">
 					{guardando ? (
 						<>
 							<div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>

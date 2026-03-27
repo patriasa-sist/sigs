@@ -45,7 +45,7 @@ export function BuscarAsegurado({ asegurado, onAseguradoSeleccionado, onSiguient
 							`segundo_nombre.ilike.%${queryNormalizada}%,` +
 							`primer_apellido.ilike.%${queryNormalizada}%,` +
 							`segundo_apellido.ilike.%${queryNormalizada}%,` +
-							`numero_documento.ilike.%${queryNormalizada}%`
+							`numero_documento.ilike.%${queryNormalizada}%`,
 					)
 					.order("created_at", { referencedTable: "clients", ascending: false })
 					.limit(20),
@@ -102,7 +102,7 @@ export function BuscarAsegurado({ asegurado, onAseguradoSeleccionado, onSiguient
 
 			// Combinar y ordenar por fecha de creación descendente
 			const asegurados = [...aseguradosNaturales, ...aseguradosJuridicos].sort(
-				(a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+				(a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
 			);
 
 			setResultados(asegurados.slice(0, 20));
@@ -134,15 +134,15 @@ export function BuscarAsegurado({ asegurado, onAseguradoSeleccionado, onSiguient
 	const puedeAvanzar = asegurado !== null;
 
 	return (
-		<div className="bg-white rounded-lg shadow-sm border p-6">
+		<div className="bg-card rounded-lg shadow-sm border border-border p-6">
 			<div className="flex items-center justify-between mb-6">
 				<div>
-					<h2 className="text-xl font-semibold text-gray-900">Paso 1: Buscar Asegurado</h2>
-					<p className="text-sm text-gray-600 mt-1">Busque y seleccione el cliente asegurado</p>
+					<h2 className="text-lg font-semibold text-foreground">Buscar Asegurado</h2>
+					<p className="text-sm text-muted-foreground mt-1">Busque y seleccione el cliente asegurado</p>
 				</div>
 
 				{asegurado && (
-					<div className="flex items-center gap-2 text-green-600">
+					<div className="flex items-center gap-2 text-success">
 						<CheckCircle2 className="h-5 w-5" />
 						<span className="text-sm font-medium">Asegurado seleccionado</span>
 					</div>
@@ -153,7 +153,7 @@ export function BuscarAsegurado({ asegurado, onAseguradoSeleccionado, onSiguient
 			{!asegurado && (
 				<div className="mb-6">
 					<div className="relative">
-						<Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+						<Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
 						<Input
 							type="text"
 							placeholder="Buscar por nombre, razón social, CI, NIT..."
@@ -163,24 +163,24 @@ export function BuscarAsegurado({ asegurado, onAseguradoSeleccionado, onSiguient
 						/>
 					</div>
 
-					{error && <p className="text-sm text-red-600 mt-2">{error}</p>}
+					{error && <p className="text-sm text-destructive mt-2">{error}</p>}
 				</div>
 			)}
 
 			{/* Asegurado Seleccionado */}
 			{asegurado && (
-				<div className="mb-6 p-4 border-2 border-primary rounded-lg bg-primary/5">
+				<div className="mb-6 p-4 border border-primary/40 rounded-lg bg-primary/5">
 					<div className="flex items-start justify-between">
 						<div className="flex items-start gap-3">
 							{asegurado.client_type === "natural" ? (
-								<User className="h-10 w-10 text-primary" />
+								<User className="h-9 w-9 text-primary" />
 							) : (
-								<Building2 className="h-10 w-10 text-primary" />
+								<Building2 className="h-9 w-9 text-primary" />
 							)}
 
 							<div>
-								<p className="font-semibold text-lg">{asegurado.nombre_completo}</p>
-								<p className="text-sm text-gray-600">
+								<p className="font-semibold text-base text-foreground">{asegurado.nombre_completo}</p>
+								<p className="text-sm text-muted-foreground">
 									{asegurado.client_type === "natural" ? "Persona Natural" : "Persona Jurídica"}
 									{" · "}
 									{asegurado.client_type === "natural"
@@ -190,14 +190,14 @@ export function BuscarAsegurado({ asegurado, onAseguradoSeleccionado, onSiguient
 								</p>
 
 								{asegurado.client_type === "natural" && (
-									<p className="text-sm text-gray-600 mt-1">
-										📍 {(asegurado.detalles as ClienteNatural).direccion}
+									<p className="text-sm text-muted-foreground mt-1">
+										{(asegurado.detalles as ClienteNatural).direccion}
 									</p>
 								)}
 
 								{asegurado.client_type === "juridica" && (
-									<p className="text-sm text-gray-600 mt-1">
-										📍 {(asegurado.detalles as ClienteJuridico).direccion_legal}
+									<p className="text-sm text-muted-foreground mt-1">
+										{(asegurado.detalles as ClienteJuridico).direccion_legal}
 									</p>
 								)}
 							</div>
@@ -216,11 +216,11 @@ export function BuscarAsegurado({ asegurado, onAseguradoSeleccionado, onSiguient
 					{cargando ? (
 						<div className="text-center py-8">
 							<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
-							<p className="text-sm text-gray-600">Buscando...</p>
+							<p className="text-sm text-muted-foreground">Buscando...</p>
 						</div>
 					) : resultados.length > 0 ? (
 						<div className="space-y-2">
-							<p className="text-sm text-gray-600 mb-3">
+							<p className="text-sm text-muted-foreground mb-3">
 								{resultados.length}{" "}
 								{resultados.length === 1 ? "resultado encontrado" : "resultados encontrados"}
 							</p>
@@ -229,18 +229,18 @@ export function BuscarAsegurado({ asegurado, onAseguradoSeleccionado, onSiguient
 								<button
 									key={cliente.id}
 									onClick={() => handleSeleccionar(cliente)}
-									className="w-full text-left p-4 border rounded-lg hover:border-primary hover:bg-primary/5 transition-colors"
+									className="w-full text-left p-4 border border-border rounded-lg bg-card hover:border-primary/60 hover:bg-primary/5 transition-colors"
 								>
 									<div className="flex items-start gap-3">
 										{cliente.client_type === "natural" ? (
-											<User className="h-8 w-8 text-gray-400" />
+											<User className="h-8 w-8 text-muted-foreground" />
 										) : (
-											<Building2 className="h-8 w-8 text-gray-400" />
+											<Building2 className="h-8 w-8 text-muted-foreground" />
 										)}
 
 										<div className="flex-1">
 											<p className="font-medium">{cliente.nombre_completo}</p>
-											<p className="text-sm text-gray-600">
+											<p className="text-sm text-muted-foreground">
 												{cliente.client_type === "natural"
 													? "Persona Natural"
 													: "Persona Jurídica"}
@@ -249,13 +249,13 @@ export function BuscarAsegurado({ asegurado, onAseguradoSeleccionado, onSiguient
 											</p>
 										</div>
 
-										<ChevronRight className="h-5 w-5 text-gray-400" />
+										<ChevronRight className="h-5 w-5 text-muted-foreground" />
 									</div>
 								</button>
 							))}
 						</div>
 					) : (
-						<div className="text-center py-8 text-gray-500">
+						<div className="text-center py-8 text-muted-foreground">
 							<p>No se encontraron clientes</p>
 							<p className="text-sm mt-1">El cliente debe estar registrado previamente en el sistema</p>
 						</div>
@@ -264,7 +264,7 @@ export function BuscarAsegurado({ asegurado, onAseguradoSeleccionado, onSiguient
 			)}
 
 			{/* Botón Siguiente */}
-			<div className="flex justify-end pt-4 border-t">
+			<div className="flex justify-end pt-4 border-t border-border">
 				<Button onClick={onSiguiente} disabled={!puedeAvanzar} size="lg" className="cursor-pointer">
 					Continuar con Datos Básicos
 					<ChevronRight className="ml-2 h-5 w-5" />

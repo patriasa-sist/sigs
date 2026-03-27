@@ -327,25 +327,25 @@ export function DatosBasicos({ datos, onChange, onSiguiente, onAnterior }: Props
 
 	if (cargandoCatalogos) {
 		return (
-			<div className="bg-white rounded-lg shadow-sm border p-6">
+			<div className="bg-card rounded-lg shadow-sm border border-border p-6">
 				<div className="text-center py-8">
 					<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
-					<p className="text-sm text-gray-600">Cargando catálogos...</p>
+					<p className="text-sm text-muted-foreground">Cargando catálogos...</p>
 				</div>
 			</div>
 		);
 	}
 
 	return (
-		<div className="bg-white rounded-lg shadow-sm border p-6">
+		<div className="bg-card rounded-lg shadow-sm border border-border p-6">
 			<div className="flex items-center justify-between mb-6">
 				<div>
-					<h2 className="text-xl font-semibold text-gray-900">Paso 2: Datos Básicos de la Póliza</h2>
-					<p className="text-sm text-gray-600 mt-1">Complete la información general de la póliza</p>
+					<h2 className="text-lg font-semibold text-foreground">Datos Básicos de la Póliza</h2>
+					<p className="text-sm text-muted-foreground mt-1">Complete la información general de la póliza</p>
 				</div>
 
 				{esCompleto && (
-					<div className="flex items-center gap-2 text-green-600">
+					<div className="flex items-center gap-2 text-success">
 						<CheckCircle2 className="h-5 w-5" />
 						<span className="text-sm font-medium">Completado</span>
 					</div>
@@ -353,7 +353,7 @@ export function DatosBasicos({ datos, onChange, onSiguiente, onAnterior }: Props
 			</div>
 
 			{/* Renovación de póliza */}
-			<div className="mb-6 p-4 border rounded-lg bg-gray-50">
+			<div className="mb-6 p-4 border border-border rounded-lg bg-secondary">
 				<div className="flex items-center gap-3">
 					<Checkbox
 						id="es_renovacion"
@@ -372,14 +372,14 @@ export function DatosBasicos({ datos, onChange, onSiguiente, onAnterior }: Props
 							}
 						}}
 					/>
-					<Label htmlFor="es_renovacion" className="cursor-pointer font-medium text-gray-900">
+					<Label htmlFor="es_renovacion" className="cursor-pointer font-medium text-foreground">
 						Esta póliza es una renovación
 					</Label>
 				</div>
 				{formData.es_renovacion && (
 					<div className="mt-3 ml-7">
 						<Label htmlFor="nro_poliza_anterior">
-							Nº de Póliza anterior <span className="text-red-500">*</span>
+							Nº de Póliza anterior <span className="text-destructive">*</span>
 						</Label>
 						<Input
 							id="nro_poliza_anterior"
@@ -393,12 +393,12 @@ export function DatosBasicos({ datos, onChange, onSiguiente, onAnterior }: Props
 								}
 							}}
 							placeholder="Ingrese el número de la póliza que se renueva"
-							className={`mt-1 max-w-md ${errores.nro_poliza_anterior ? "border-red-500" : ""}`}
+							className={`mt-1 max-w-md ${errores.nro_poliza_anterior ? "border-destructive" : ""}`}
 						/>
 						{errores.nro_poliza_anterior && (
-							<p className="text-sm text-red-600 mt-1">{errores.nro_poliza_anterior}</p>
+							<p className="text-sm text-destructive mt-1">{errores.nro_poliza_anterior}</p>
 						)}
-						<p className="text-xs text-gray-500 mt-1">
+						<p className="text-xs text-muted-foreground mt-1">
 							Puede ser una póliza registrada en el sistema o de terceros
 						</p>
 					</div>
@@ -409,28 +409,28 @@ export function DatosBasicos({ datos, onChange, onSiguiente, onAnterior }: Props
 				{/* Número de Póliza */}
 				<div className="space-y-2">
 					<Label htmlFor="numero_poliza">
-						Número de Póliza <span className="text-red-500">*</span>
+						Número de Póliza <span className="text-destructive">*</span>
 					</Label>
 					<Input
 						id="numero_poliza"
 						value={formData.numero_poliza}
 						onChange={(e) => handleChange("numero_poliza", e.target.value)}
 						placeholder="Ej: POL-2024-001"
-						className={errores.numero_poliza ? "border-red-500" : ""}
+						className={errores.numero_poliza ? "border-destructive" : ""}
 					/>
-					{errores.numero_poliza && <p className="text-sm text-red-600">{errores.numero_poliza}</p>}
+					{errores.numero_poliza && <p className="text-sm text-destructive">{errores.numero_poliza}</p>}
 				</div>
 
 				{/* Compañía Aseguradora */}
 				<div className="space-y-2">
 					<Label htmlFor="compania">
-						Compañía Aseguradora <span className="text-red-500">*</span>
+						Compañía Aseguradora <span className="text-destructive">*</span>
 					</Label>
 					<Select
 						value={formData.compania_aseguradora_id}
 						onValueChange={(value) => handleChange("compania_aseguradora_id", value)}
 					>
-						<SelectTrigger className={errores.compania_aseguradora_id ? "border-red-500" : ""}>
+						<SelectTrigger className={errores.compania_aseguradora_id ? "border-destructive" : ""}>
 							<SelectValue placeholder="Seleccione una compañía" />
 						</SelectTrigger>
 						<SelectContent>
@@ -442,35 +442,35 @@ export function DatosBasicos({ datos, onChange, onSiguiente, onAnterior }: Props
 						</SelectContent>
 					</Select>
 					{errores.compania_aseguradora_id && (
-						<p className="text-sm text-red-600">{errores.compania_aseguradora_id}</p>
+						<p className="text-sm text-destructive">{errores.compania_aseguradora_id}</p>
 					)}
 				</div>
 
 				{/* Ramo */}
 				<div className="space-y-2">
 					<Label htmlFor="ramo">
-						Ramo <span className="text-red-500">*</span>
+						Ramo <span className="text-destructive">*</span>
 					</Label>
 					<Select value={formData.ramo} onValueChange={(value) => handleChange("ramo", value)}>
-						<SelectTrigger className={errores.ramo ? "border-red-500" : ""}>
+						<SelectTrigger className={errores.ramo ? "border-destructive" : ""}>
 							<SelectValue placeholder="Seleccione un ramo" />
 						</SelectTrigger>
 						<SelectContent>
 							{tiposSeguros.map((tipo) => (
 								<SelectItem key={tipo.id} value={tipo.nombre}>
-									<span className="font-mono text-xs text-gray-500">({tipo.codigo})</span>{" "}
+									<span className="font-mono text-xs text-muted-foreground">({tipo.codigo})</span>{" "}
 									{tipo.nombre}
 								</SelectItem>
 							))}
 						</SelectContent>
 					</Select>
-					{errores.ramo && <p className="text-sm text-red-600">{errores.ramo}</p>}
+					{errores.ramo && <p className="text-sm text-destructive">{errores.ramo}</p>}
 				</div>
 
 				{/* Producto de Aseguradora */}
 				<div className="space-y-2">
 					<Label htmlFor="producto_id">
-						Producto <span className="text-red-500">*</span>
+						Producto <span className="text-destructive">*</span>
 					</Label>
 					<Select
 						value={formData.producto_id}
@@ -482,7 +482,7 @@ export function DatosBasicos({ datos, onChange, onSiguiente, onAnterior }: Props
 							productos.length === 0
 						}
 					>
-						<SelectTrigger className={errores.producto_id || errorProductos ? "border-red-500" : ""}>
+						<SelectTrigger className={errores.producto_id || errorProductos ? "border-destructive" : ""}>
 							<SelectValue
 								placeholder={
 									cargandoProductos
@@ -498,7 +498,7 @@ export function DatosBasicos({ datos, onChange, onSiguiente, onAnterior }: Props
 						<SelectContent>
 							{productos.map((producto) => (
 								<SelectItem key={producto.id} value={producto.id}>
-									<span className="font-mono text-xs text-gray-500">
+									<span className="font-mono text-xs text-muted-foreground">
 										({producto.codigo_producto})
 									</span>{" "}
 									{producto.nombre_producto}
@@ -506,8 +506,10 @@ export function DatosBasicos({ datos, onChange, onSiguiente, onAnterior }: Props
 							))}
 						</SelectContent>
 					</Select>
-					{errores.producto_id && <p className="text-sm text-red-600">{errores.producto_id}</p>}
-					{errorProductos && !errores.producto_id && <p className="text-sm text-red-600">{errorProductos}</p>}
+					{errores.producto_id && <p className="text-sm text-destructive">{errores.producto_id}</p>}
+					{errorProductos && !errores.producto_id && (
+						<p className="text-sm text-destructive">{errorProductos}</p>
+					)}
 				</div>
 
 				{/* Director de cartera */}
@@ -523,13 +525,13 @@ export function DatosBasicos({ datos, onChange, onSiguiente, onAnterior }: Props
 				{/* Ejecutivo comercial */}
 				<div className="space-y-2">
 					<Label htmlFor="responsable">
-						Ejecutivo comercial <span className="text-red-500">*</span>
+						Ejecutivo comercial <span className="text-destructive">*</span>
 					</Label>
 					<Select
 						value={formData.responsable_id}
 						onValueChange={(value) => handleChange("responsable_id", value)}
 					>
-						<SelectTrigger className={errores.responsable_id ? "border-red-500" : ""}>
+						<SelectTrigger className={errores.responsable_id ? "border-destructive" : ""}>
 							<SelectValue placeholder="Seleccione un responsable" />
 						</SelectTrigger>
 						<SelectContent>
@@ -540,13 +542,13 @@ export function DatosBasicos({ datos, onChange, onSiguiente, onAnterior }: Props
 							))}
 						</SelectContent>
 					</Select>
-					{errores.responsable_id && <p className="text-sm text-red-600">{errores.responsable_id}</p>}
+					{errores.responsable_id && <p className="text-sm text-destructive">{errores.responsable_id}</p>}
 				</div>
 
 				{/* Fecha de Emisión */}
 				<div className="space-y-2">
 					<Label htmlFor="fecha_emision">
-						Fecha de Emisión (Compañía) <span className="text-red-500">*</span>
+						Fecha de Emisión (Compañía) <span className="text-destructive">*</span>
 					</Label>
 					<Input
 						id="fecha_emision"
@@ -554,17 +556,17 @@ export function DatosBasicos({ datos, onChange, onSiguiente, onAnterior }: Props
 						lang="es"
 						value={formData.fecha_emision_compania}
 						onChange={(e) => handleChange("fecha_emision_compania", e.target.value)}
-						className={errores.fecha_emision_compania ? "border-red-500" : ""}
+						className={errores.fecha_emision_compania ? "border-destructive" : ""}
 					/>
 					{errores.fecha_emision_compania && (
-						<p className="text-sm text-red-600">{errores.fecha_emision_compania}</p>
+						<p className="text-sm text-destructive">{errores.fecha_emision_compania}</p>
 					)}
 				</div>
 
 				{/* Inicio de Vigencia */}
 				<div className="space-y-2">
 					<Label htmlFor="inicio_vigencia">
-						Inicio de Vigencia <span className="text-red-500">*</span>
+						Inicio de Vigencia <span className="text-destructive">*</span>
 					</Label>
 					<Input
 						id="inicio_vigencia"
@@ -572,15 +574,15 @@ export function DatosBasicos({ datos, onChange, onSiguiente, onAnterior }: Props
 						lang="es"
 						value={formData.inicio_vigencia}
 						onChange={(e) => handleChange("inicio_vigencia", e.target.value)}
-						className={errores.inicio_vigencia ? "border-red-500" : ""}
+						className={errores.inicio_vigencia ? "border-destructive" : ""}
 					/>
-					{errores.inicio_vigencia && <p className="text-sm text-red-600">{errores.inicio_vigencia}</p>}
+					{errores.inicio_vigencia && <p className="text-sm text-destructive">{errores.inicio_vigencia}</p>}
 				</div>
 
 				{/* Fin de Vigencia */}
 				<div className="space-y-2">
 					<Label htmlFor="fin_vigencia">
-						Fin de Vigencia <span className="text-red-500">*</span>
+						Fin de Vigencia <span className="text-destructive">*</span>
 					</Label>
 					<Input
 						id="fin_vigencia"
@@ -588,18 +590,18 @@ export function DatosBasicos({ datos, onChange, onSiguiente, onAnterior }: Props
 						lang="es"
 						value={formData.fin_vigencia}
 						onChange={(e) => handleChange("fin_vigencia", e.target.value)}
-						className={errores.fin_vigencia ? "border-red-500" : ""}
+						className={errores.fin_vigencia ? "border-destructive" : ""}
 					/>
-					{errores.fin_vigencia && <p className="text-sm text-red-600">{errores.fin_vigencia}</p>}
+					{errores.fin_vigencia && <p className="text-sm text-destructive">{errores.fin_vigencia}</p>}
 				</div>
 
 				{/* Regional */}
 				<div className="space-y-2">
 					<Label htmlFor="regional">
-						Regional Patria <span className="text-red-500">*</span>
+						Regional Patria <span className="text-destructive">*</span>
 					</Label>
 					<Select value={formData.regional_id} onValueChange={(value) => handleChange("regional_id", value)}>
-						<SelectTrigger className={errores.regional_id ? "border-red-500" : ""}>
+						<SelectTrigger className={errores.regional_id ? "border-destructive" : ""}>
 							<SelectValue placeholder="Seleccione una regional" />
 						</SelectTrigger>
 						<SelectContent>
@@ -610,7 +612,7 @@ export function DatosBasicos({ datos, onChange, onSiguiente, onAnterior }: Props
 							))}
 						</SelectContent>
 					</Select>
-					{errores.regional_id && <p className="text-sm text-red-600">{errores.regional_id}</p>}
+					{errores.regional_id && <p className="text-sm text-destructive">{errores.regional_id}</p>}
 				</div>
 
 				{/* Grupo de negocios (antes Categoría) - AHORA OPCIONAL */}
@@ -620,7 +622,7 @@ export function DatosBasicos({ datos, onChange, onSiguiente, onAnterior }: Props
 						value={formData.categoria_id || ""}
 						onValueChange={(value) => handleChange("categoria_id", value || undefined)}
 					>
-						<SelectTrigger className={errores.categoria_id ? "border-red-500" : ""}>
+						<SelectTrigger className={errores.categoria_id ? "border-destructive" : ""}>
 							<SelectValue placeholder="Seleccione un grupo (opcional)" />
 						</SelectTrigger>
 						<SelectContent>
@@ -631,19 +633,19 @@ export function DatosBasicos({ datos, onChange, onSiguiente, onAnterior }: Props
 							))}
 						</SelectContent>
 					</Select>
-					{errores.categoria_id && <p className="text-sm text-red-600">{errores.categoria_id}</p>}
+					{errores.categoria_id && <p className="text-sm text-destructive">{errores.categoria_id}</p>}
 				</div>
 
 				{/* NUEVO: Grupo de producción (usa constantes centralizadas) */}
 				<div className="space-y-2">
 					<Label htmlFor="grupo_produccion">
-						Grupo de producción <span className="text-red-500">*</span>
+						Grupo de producción <span className="text-destructive">*</span>
 					</Label>
 					<Select
 						value={formData.grupo_produccion}
 						onValueChange={(value) => handleChange("grupo_produccion", value as GrupoProduccion)}
 					>
-						<SelectTrigger className={errores.grupo_produccion ? "border-red-500" : ""}>
+						<SelectTrigger className={errores.grupo_produccion ? "border-destructive" : ""}>
 							<SelectValue />
 						</SelectTrigger>
 						<SelectContent>
@@ -654,16 +656,16 @@ export function DatosBasicos({ datos, onChange, onSiguiente, onAnterior }: Props
 							))}
 						</SelectContent>
 					</Select>
-					{errores.grupo_produccion && <p className="text-sm text-red-600">{errores.grupo_produccion}</p>}
+					{errores.grupo_produccion && <p className="text-sm text-destructive">{errores.grupo_produccion}</p>}
 				</div>
 
 				{/* NUEVO: Moneda (usa constantes centralizadas) */}
 				<div className="space-y-2">
 					<Label htmlFor="moneda">
-						Moneda <span className="text-red-500">*</span>
+						Moneda <span className="text-destructive">*</span>
 					</Label>
 					<Select value={formData.moneda} onValueChange={(value) => handleChange("moneda", value as Moneda)}>
-						<SelectTrigger className={errores.moneda ? "border-red-500" : ""}>
+						<SelectTrigger className={errores.moneda ? "border-destructive" : ""}>
 							<SelectValue />
 						</SelectTrigger>
 						<SelectContent>
@@ -673,12 +675,12 @@ export function DatosBasicos({ datos, onChange, onSiguiente, onAnterior }: Props
 							<SelectItem value="UFV">UFV</SelectItem>
 						</SelectContent>
 					</Select>
-					{errores.moneda && <p className="text-sm text-red-600">{errores.moneda}</p>}
+					{errores.moneda && <p className="text-sm text-destructive">{errores.moneda}</p>}
 				</div>
 			</div>
 
 			{/* Botones de navegación */}
-			<div className="flex justify-between pt-6 border-t mt-6">
+			<div className="flex justify-between pt-6 border-t border-border mt-6">
 				<Button variant="outline" onClick={onAnterior}>
 					<ChevronLeft className="mr-2 h-5 w-5" />
 					Anterior

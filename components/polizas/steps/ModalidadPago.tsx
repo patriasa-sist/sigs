@@ -1,9 +1,33 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ChevronRight, ChevronLeft, CheckCircle2, DollarSign, CreditCard, Calendar, AlertCircle, Sparkles, Lock, Check, Save } from "lucide-react";
-import type { ModalidadPago as ModalidadPagoType, Moneda, CuotaCredito, PeriodoPago, ProductoAseguradora, CalculoComisionResult } from "@/types/poliza";
-import { validarModalidadPago, calcularPrimaNetaYComision, calcularComisionesConProducto, validarFechasDentroVigencia } from "@/utils/polizaValidation";
+import {
+	ChevronRight,
+	ChevronLeft,
+	CheckCircle2,
+	DollarSign,
+	CreditCard,
+	Calendar,
+	AlertCircle,
+	Sparkles,
+	Lock,
+	Check,
+	Save,
+} from "lucide-react";
+import type {
+	ModalidadPago as ModalidadPagoType,
+	Moneda,
+	CuotaCredito,
+	PeriodoPago,
+	ProductoAseguradora,
+	CalculoComisionResult,
+} from "@/types/poliza";
+import {
+	validarModalidadPago,
+	calcularPrimaNetaYComision,
+	calcularComisionesConProducto,
+	validarFechasDentroVigencia,
+} from "@/utils/polizaValidation";
 import { POLIZA_RULES } from "@/utils/validationConstants";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,12 +56,24 @@ const tieneCuotasPagadas = (datos: ModalidadPagoType | null): boolean => {
 		return datos.cuota_pagada === true;
 	}
 	// For credito, check cuota_inicial_pagada and any cuota with estado "pagado"
-	return datos.cuota_inicial_pagada === true ||
+	return (
+		datos.cuota_inicial_pagada === true ||
 		datos.tiene_pagos === true ||
-		datos.cuotas.some(c => c.estado === "pagado");
+		datos.cuotas.some((c) => c.estado === "pagado")
+	);
 };
 
-export function ModalidadPago({ datos, inicioVigencia, finVigencia, producto, porcentajeComisionUsuario = 0.5, mode = "create", onChange, onSiguiente, onAnterior }: Props) {
+export function ModalidadPago({
+	datos,
+	inicioVigencia,
+	finVigencia,
+	producto,
+	porcentajeComisionUsuario = 0.5,
+	mode = "create",
+	onChange,
+	onSiguiente,
+	onAnterior,
+}: Props) {
 	const [tipoPago, setTipoPago] = useState<"contado" | "credito">(datos?.tipo || "contado");
 
 	// Check if modality change should be blocked (paid cuotas exist)
@@ -46,37 +82,27 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, producto, po
 	const cuotaInicialPagada = datos?.tipo === "credito" && datos.cuota_inicial_pagada === true;
 
 	// Estados para pago contado
-	const [cuotaUnica, setCuotaUnica] = useState<number>(
-		datos?.tipo === "contado" ? datos.cuota_unica : 0
-	);
+	const [cuotaUnica, setCuotaUnica] = useState<number>(datos?.tipo === "contado" ? datos.cuota_unica : 0);
 	const [fechaPagoUnico, setFechaPagoUnico] = useState<string>(
-		datos?.tipo === "contado" ? datos.fecha_pago_unico : ""
+		datos?.tipo === "contado" ? datos.fecha_pago_unico : "",
 	);
 
 	// Estados para pago crédito
-	const [primaTotal, setPrimaTotal] = useState<number>(
-		datos ? datos.prima_total : 0
-	);
-	const [cantidadCuotas, setCantidadCuotas] = useState<number>(
-		datos?.tipo === "credito" ? datos.cantidad_cuotas : 1
-	);
-	const [cuotaInicial, setCuotaInicial] = useState<number>(
-		datos?.tipo === "credito" ? datos.cuota_inicial : 0
-	);
+	const [primaTotal, setPrimaTotal] = useState<number>(datos ? datos.prima_total : 0);
+	const [cantidadCuotas, setCantidadCuotas] = useState<number>(datos?.tipo === "credito" ? datos.cantidad_cuotas : 1);
+	const [cuotaInicial, setCuotaInicial] = useState<number>(datos?.tipo === "credito" ? datos.cuota_inicial : 0);
 	const [fechaInicioCuotas, setFechaInicioCuotas] = useState<string>(
-		datos?.tipo === "credito" ? datos.fecha_inicio_cuotas : inicioVigencia || ""
+		datos?.tipo === "credito" ? datos.fecha_inicio_cuotas : inicioVigencia || "",
 	);
 	const [periodoPago, setPeriodoPago] = useState<PeriodoPago>(
-		datos?.tipo === "credito" ? datos.periodo_pago : "mensual"
+		datos?.tipo === "credito" ? datos.periodo_pago : "mensual",
 	);
-	const [cuotas, setCuotas] = useState<CuotaCredito[]>(
-		datos?.tipo === "credito" ? datos.cuotas : []
-	);
+	const [cuotas, setCuotas] = useState<CuotaCredito[]>(datos?.tipo === "credito" ? datos.cuotas : []);
 	const [cuotasGeneradas, setCuotasGeneradas] = useState<boolean>(false);
 
 	// Estado especial: usar factores de contado en crédito
 	const [usarFactoresContado, setUsarFactoresContado] = useState<boolean>(
-		datos?.tipo === "credito" ? datos.usar_factores_contado ?? false : false
+		datos?.tipo === "credito" ? (datos.usar_factores_contado ?? false) : false,
 	);
 
 	// Estado común
@@ -93,14 +119,15 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, producto, po
 	// Usar cálculos basados en producto si está disponible, de lo contrario usar legacy
 	// Si en crédito con usarFactoresContado, pasar "contado" para usar factor_contado
 	const modalidadParaCalculo = tipoPago === "credito" && usarFactoresContado ? "contado" : tipoPago;
-	const calculos: CalculoComisionResult | null = producto && montoPago > 0
-		? calcularComisionesConProducto({
-				prima_total: montoPago,
-				modalidad_pago: modalidadParaCalculo,
-				producto,
-				porcentaje_comision_usuario: porcentajeComisionUsuario,
-		  })
-		: null;
+	const calculos: CalculoComisionResult | null =
+		producto && montoPago > 0
+			? calcularComisionesConProducto({
+					prima_total: montoPago,
+					modalidad_pago: modalidadParaCalculo,
+					producto,
+					porcentaje_comision_usuario: porcentajeComisionUsuario,
+				})
+			: null;
 
 	// Valores legacy para compatibilidad
 	const { prima_neta: prima_neta_legacy, comision: comision_legacy } = calcularPrimaNetaYComision(montoPago);
@@ -141,7 +168,7 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, producto, po
 		const fechas: string[] = [];
 
 		// Parsear la fecha correctamente para evitar problemas de timezone
-		const [year, month, day] = fechaInicioCuotas.split('-').map(Number);
+		const [year, month, day] = fechaInicioCuotas.split("-").map(Number);
 
 		// Calcular el incremento en meses según el periodo
 		const incrementoMeses = periodoPago === "mensual" ? 1 : periodoPago === "trimestral" ? 3 : 6;
@@ -152,12 +179,12 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, producto, po
 		for (let i = 0; i < numCuotas; i++) {
 			// Crear fecha en zona horaria local
 			const fecha = new Date(year, month - 1, day);
-			fecha.setMonth(fecha.getMonth() + offsetInicial + (i * incrementoMeses));
+			fecha.setMonth(fecha.getMonth() + offsetInicial + i * incrementoMeses);
 
 			// Formatear como YYYY-MM-DD sin usar toISOString para evitar problemas de timezone
 			const y = fecha.getFullYear();
-			const m = String(fecha.getMonth() + 1).padStart(2, '0');
-			const d = String(fecha.getDate()).padStart(2, '0');
+			const m = String(fecha.getMonth() + 1).padStart(2, "0");
+			const d = String(fecha.getDate()).padStart(2, "0");
 			fechas.push(`${y}-${m}-${d}`);
 		}
 
@@ -319,28 +346,27 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, producto, po
 	};
 
 	// En modo edición, si ya hay cuotas cargadas de la BD (tienen id), no requerir cuotasGeneradas
-	const cuotasExistentes = cuotas.some(c => c.id);
-	const tieneDatos = tipoPago === "contado"
-		? cuotaUnica > 0 && fechaPagoUnico
-		: primaTotal > 0 && cuotas.length > 0 && (cuotasGeneradas || cuotasExistentes);
+	const cuotasExistentes = cuotas.some((c) => c.id);
+	const tieneDatos =
+		tipoPago === "contado"
+			? cuotaUnica > 0 && fechaPagoUnico
+			: primaTotal > 0 && cuotas.length > 0 && (cuotasGeneradas || cuotasExistentes);
 
 	return (
-		<div className="bg-white rounded-lg shadow-sm border p-6">
+		<div className="bg-card rounded-lg shadow-sm border border-border p-6">
 			<div className="flex items-center justify-between mb-6">
 				<div>
-					<h2 className="text-xl font-semibold text-gray-900">
-						Paso 4: Modalidad de Pago
-					</h2>
-					<p className="text-sm text-gray-600 mt-1">
-						Defina cómo se realizará el pago de la póliza
-					</p>
+					<h2 className="text-lg font-semibold text-foreground">Modalidad de Pago</h2>
+					<p className="text-sm text-muted-foreground mt-1">Defina cómo se realizará el pago de la póliza</p>
 				</div>
 
 				{tieneDatos && (
-					<div className="flex items-center gap-2 text-green-600">
+					<div className="flex items-center gap-2 text-success">
 						<CheckCircle2 className="h-5 w-5" />
 						<span className="text-sm font-medium">
-							{tipoPago === "contado" ? "Pago al contado" : `${cuotaInicial > 0 ? cuotas.length + 1 : cuotas.length} cuotas`}
+							{tipoPago === "contado"
+								? "Pago al contado"
+								: `${cuotaInicial > 0 ? cuotas.length + 1 : cuotas.length} cuotas`}
 						</span>
 					</div>
 				)}
@@ -348,11 +374,11 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, producto, po
 
 			{/* Warning about blocked modality change */}
 			{bloquearCambioModalidad && (
-				<div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg flex items-center gap-2">
-					<Lock className="h-5 w-5 text-yellow-600 flex-shrink-0" />
-					<p className="text-sm text-yellow-800">
-						No se puede cambiar la modalidad de pago porque hay cuotas ya pagados.
-						Solo puede editar las cuotas pendientes.
+				<div className="mb-4 p-3 bg-warning/10 border border-warning/30 rounded-lg flex items-center gap-2">
+					<Lock className="h-5 w-5 text-warning flex-shrink-0" />
+					<p className="text-sm text-warning-foreground">
+						No se puede cambiar la modalidad de pago porque hay cuotas ya pagados. Solo puede editar las
+						cuotas pendientes.
 					</p>
 				</div>
 			)}
@@ -383,9 +409,9 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, producto, po
 				<TabsContent value="contado" className="space-y-6 mt-6">
 					{/* Show paid indicator */}
 					{cuotaUnicaPagada && (
-						<div className="p-3 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2">
-							<CheckCircle2 className="h-5 w-5 text-green-600 flex-shrink-0" />
-							<p className="text-sm text-green-800">
+						<div className="p-3 bg-success/10 border border-success/30 rounded-lg flex items-center gap-2">
+							<CheckCircle2 className="h-5 w-5 text-success flex-shrink-0" />
+							<p className="text-sm text-success">
 								Esta cuota ya está <strong>pagado</strong>. Los datos no pueden ser modificados.
 							</p>
 						</div>
@@ -395,8 +421,12 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, producto, po
 						{/* Cuota Única */}
 						<div className="space-y-2">
 							<Label htmlFor="cuota_unica">
-								Cuota Única <span className="text-red-500">*</span>
-								{cuotaUnicaPagada && <Badge variant="secondary" className="ml-2 bg-green-100 text-green-800">Pagada</Badge>}
+								Cuota Única <span className="text-destructive">*</span>
+								{cuotaUnicaPagada && (
+									<Badge variant="secondary" className="ml-2 bg-green-100 text-green-800">
+										Pagada
+									</Badge>
+								)}
 							</Label>
 							<Input
 								id="cuota_unica"
@@ -413,18 +443,16 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, producto, po
 									setErrores(rest);
 								}}
 								placeholder="5000.00"
-								className={errores.cuota_unica ? "border-red-500" : ""}
+								className={errores.cuota_unica ? "border-destructive" : ""}
 								disabled={cuotaUnicaPagada}
 							/>
-							{errores.cuota_unica && (
-								<p className="text-sm text-red-600">{errores.cuota_unica}</p>
-							)}
+							{errores.cuota_unica && <p className="text-sm text-destructive">{errores.cuota_unica}</p>}
 						</div>
 
 						{/* Fecha de Pago */}
 						<div className="space-y-2">
 							<Label htmlFor="fecha_pago_unico">
-								Fecha de Pago <span className="text-red-500">*</span>
+								Fecha de Pago <span className="text-destructive">*</span>
 							</Label>
 							<Input
 								id="fecha_pago_unico"
@@ -441,24 +469,28 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, producto, po
 									setErrores(restErrores);
 									setAdvertencias(restAdv);
 								}}
-								className={errores.fecha_pago_unico || advertencias.fecha_pago_unico ? "border-red-500" : ""}
+								className={
+									errores.fecha_pago_unico || advertencias.fecha_pago_unico
+										? "border-destructive"
+										: ""
+								}
 								disabled={cuotaUnicaPagada}
 							/>
 							{errores.fecha_pago_unico && (
-								<p className="text-sm text-red-600">{errores.fecha_pago_unico}</p>
+								<p className="text-sm text-destructive">{errores.fecha_pago_unico}</p>
 							)}
 							{advertencias.fecha_pago_unico && (
-								<p className="text-sm text-yellow-600">{advertencias.fecha_pago_unico}</p>
+								<p className="text-sm text-warning">{advertencias.fecha_pago_unico}</p>
 							)}
 						</div>
 
 						{/* Moneda */}
 						<div className="space-y-2">
 							<Label htmlFor="moneda">
-								Moneda <span className="text-red-500">*</span>
+								Moneda <span className="text-destructive">*</span>
 							</Label>
 							<Select value={moneda} onValueChange={(value) => setMoneda(value as Moneda)}>
-								<SelectTrigger className={errores.moneda ? "border-red-500" : ""}>
+								<SelectTrigger className={errores.moneda ? "border-destructive" : ""}>
 									<SelectValue />
 								</SelectTrigger>
 								<SelectContent>
@@ -468,60 +500,59 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, producto, po
 									<SelectItem value="UFV">UFV</SelectItem>
 								</SelectContent>
 							</Select>
-							{errores.moneda && (
-								<p className="text-sm text-red-600">{errores.moneda}</p>
-							)}
+							{errores.moneda && <p className="text-sm text-destructive">{errores.moneda}</p>}
 						</div>
 					</div>
 
 					{/* Cálculos */}
 					{cuotaUnica > 0 && (
-						<div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-							<h4 className="text-sm font-semibold text-blue-900 mb-3">
+						<div className="bg-secondary border border-border rounded-lg p-4">
+							<h4 className="text-sm font-semibold text-foreground mb-3">
 								Cálculos Automáticos
 								{producto && (
-									<span className="text-xs font-normal text-blue-600 ml-2">
+									<span className="text-xs font-normal text-muted-foreground ml-2">
 										(Producto: {producto.nombre_producto})
 									</span>
 								)}
 							</h4>
 							<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
 								<div>
-									<p className="text-blue-700 font-medium">Prima Total</p>
-									<p className="text-blue-900 text-lg font-bold">
+									<p className="text-muted-foreground font-medium">Prima Total</p>
+									<p className="text-foreground text-lg font-bold">
 										{cuotaUnica.toLocaleString("es-BO", { minimumFractionDigits: 2 })} {moneda}
 									</p>
 								</div>
 								<div>
-									<p className="text-blue-700 font-medium">
+									<p className="text-muted-foreground font-medium">
 										Prima Neta
 										{calculos && (
-											<span className="text-xs font-normal text-blue-500 ml-1">
+											<span className="text-xs font-normal text-muted-foreground ml-1">
 												(Factor: {calculos.factor_usado}%)
 											</span>
 										)}
 									</p>
-									<p className="text-blue-900 text-lg font-bold">
+									<p className="text-foreground text-lg font-bold">
 										{prima_neta.toLocaleString("es-BO", { minimumFractionDigits: 2 })} {moneda}
 									</p>
 								</div>
 								<div>
-									<p className="text-blue-700 font-medium">
+									<p className="text-muted-foreground font-medium">
 										Comisión Empresa
 										{calculos && (
-											<span className="text-xs font-normal text-blue-500 ml-1">
+											<span className="text-xs font-normal text-muted-foreground ml-1">
 												({(calculos.porcentaje_comision * 100).toFixed(1)}%)
 											</span>
 										)}
 									</p>
-									<p className="text-blue-900 text-lg font-bold">
+									<p className="text-foreground text-lg font-bold">
 										{comision.toLocaleString("es-BO", { minimumFractionDigits: 2 })} {moneda}
 									</p>
 								</div>
 							</div>
 							{!producto && (
-								<p className="text-xs text-yellow-600 mt-2">
-									⚠️ Cálculos usando fórmula legacy (87% / 2%). Seleccione un producto para cálculos dinámicos.
+								<p className="text-xs text-warning mt-2">
+									⚠️ Cálculos usando fórmula legacy (87% / 2%). Seleccione un producto para cálculos
+									dinámicos.
 								</p>
 							)}
 						</div>
@@ -534,7 +565,7 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, producto, po
 						{/* Prima Total */}
 						<div className="space-y-2">
 							<Label htmlFor="prima_total">
-								Prima Total <span className="text-red-500">*</span>
+								Prima Total <span className="text-destructive">*</span>
 							</Label>
 							<Input
 								id="prima_total"
@@ -551,20 +582,18 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, producto, po
 									setCuotasGeneradas(false); // Reset cuotas al cambiar prima
 								}}
 								placeholder="10000.00"
-								className={errores.prima_total ? "border-red-500" : ""}
+								className={errores.prima_total ? "border-destructive" : ""}
 							/>
-							{errores.prima_total && (
-								<p className="text-sm text-red-600">{errores.prima_total}</p>
-							)}
+							{errores.prima_total && <p className="text-sm text-destructive">{errores.prima_total}</p>}
 						</div>
 
 						{/* Moneda */}
 						<div className="space-y-2">
 							<Label htmlFor="moneda_credito">
-								Moneda <span className="text-red-500">*</span>
+								Moneda <span className="text-destructive">*</span>
 							</Label>
 							<Select value={moneda} onValueChange={(value) => setMoneda(value as Moneda)}>
-								<SelectTrigger className={errores.moneda ? "border-red-500" : ""}>
+								<SelectTrigger className={errores.moneda ? "border-destructive" : ""}>
 									<SelectValue />
 								</SelectTrigger>
 								<SelectContent>
@@ -574,9 +603,7 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, producto, po
 									<SelectItem value="UFV">UFV</SelectItem>
 								</SelectContent>
 							</Select>
-							{errores.moneda && (
-								<p className="text-sm text-red-600">{errores.moneda}</p>
-							)}
+							{errores.moneda && <p className="text-sm text-destructive">{errores.moneda}</p>}
 						</div>
 
 						{/* Checkbox: Usar factores de contado */}
@@ -586,8 +613,8 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, producto, po
 									htmlFor="usar_factores_contado"
 									className={`flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-colors ${
 										usarFactoresContado
-											? "border-red-500 bg-red-50"
-											: "border-dashed border-gray-300 hover:border-gray-400"
+											? "border-destructive bg-red-50"
+											: "border-dashed border-border hover:border-muted-foreground/40"
 									}`}
 								>
 									<input
@@ -595,17 +622,20 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, producto, po
 										type="checkbox"
 										checked={usarFactoresContado}
 										onChange={(e) => setUsarFactoresContado(e.target.checked)}
-										className="h-4 w-4 rounded border-red-500 text-red-600 focus:ring-red-500 accent-red-600"
+										className="h-4 w-4 rounded border-destructive text-destructive focus:ring-red-500 accent-red-600"
 									/>
 									<div>
-										<span className={`text-sm font-medium ${usarFactoresContado ? "text-red-700" : "text-gray-700"}`}>
+										<span
+											className={`text-sm font-medium ${usarFactoresContado ? "text-destructive" : "text-foreground"}`}
+										>
 											Usar factores de comisión al contado
 										</span>
-										<p className={`text-xs mt-0.5 ${usarFactoresContado ? "text-red-600" : "text-gray-500"}`}>
+										<p
+											className={`text-xs mt-0.5 ${usarFactoresContado ? "text-destructive" : "text-muted-foreground"}`}
+										>
 											{usarFactoresContado
 												? `Caso especial activo — usando factor contado (${producto.factor_contado}%) en vez de crédito (${producto.factor_credito}%)`
-												: `Solo para casos especiales. Usará factor ${producto.factor_contado}% (contado) en vez de ${producto.factor_credito}% (crédito)`
-											}
+												: `Solo para casos especiales. Usará factor ${producto.factor_contado}% (contado) en vez de ${producto.factor_credito}% (crédito)`}
 										</p>
 									</div>
 								</label>
@@ -616,7 +646,9 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, producto, po
 						<div className="space-y-2">
 							<Label htmlFor="cuota_inicial">
 								Cuota Inicial
-								{bloquearCambioModalidad && <Lock className="inline h-3 w-3 ml-1 text-gray-400" />}
+								{bloquearCambioModalidad && (
+									<Lock className="inline h-3 w-3 ml-1 text-muted-foreground" />
+								)}
 							</Label>
 							<Input
 								id="cuota_inicial"
@@ -633,13 +665,13 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, producto, po
 									setCuotasGeneradas(false);
 								}}
 								placeholder="0.00 (opcional)"
-								className={errores.cuota_inicial ? "border-red-500" : ""}
+								className={errores.cuota_inicial ? "border-destructive" : ""}
 								disabled={bloquearCambioModalidad}
 							/>
 							{errores.cuota_inicial && (
-								<p className="text-sm text-red-600">{errores.cuota_inicial}</p>
+								<p className="text-sm text-destructive">{errores.cuota_inicial}</p>
 							)}
-							<p className="text-xs text-gray-500">
+							<p className="text-xs text-muted-foreground">
 								{bloquearCambioModalidad
 									? "No se puede modificar porque hay cuotas pagadas"
 									: cuotaInicial > 0
@@ -651,8 +683,10 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, producto, po
 						{/* Fecha Inicio Cuotas */}
 						<div className="space-y-2">
 							<Label htmlFor="fecha_inicio_cuotas">
-								Fecha Inicio Cuotas <span className="text-red-500">*</span>
-								{bloquearCambioModalidad && <Lock className="inline h-3 w-3 ml-1 text-gray-400" />}
+								Fecha Inicio Cuotas <span className="text-destructive">*</span>
+								{bloquearCambioModalidad && (
+									<Lock className="inline h-3 w-3 ml-1 text-muted-foreground" />
+								)}
 							</Label>
 							<Input
 								id="fecha_inicio_cuotas"
@@ -666,19 +700,21 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, producto, po
 									setErrores(rest);
 									setCuotasGeneradas(false);
 								}}
-								className={errores.fecha_inicio_cuotas ? "border-red-500" : ""}
+								className={errores.fecha_inicio_cuotas ? "border-destructive" : ""}
 								disabled={bloquearCambioModalidad}
 							/>
 							{errores.fecha_inicio_cuotas && (
-								<p className="text-sm text-red-600">{errores.fecha_inicio_cuotas}</p>
+								<p className="text-sm text-destructive">{errores.fecha_inicio_cuotas}</p>
 							)}
 						</div>
 
 						{/* Periodo de Pago */}
 						<div className="space-y-2">
 							<Label htmlFor="periodo_pago">
-								Periodo de Pago <span className="text-red-500">*</span>
-								{bloquearCambioModalidad && <Lock className="inline h-3 w-3 ml-1 text-gray-400" />}
+								Periodo de Pago <span className="text-destructive">*</span>
+								{bloquearCambioModalidad && (
+									<Lock className="inline h-3 w-3 ml-1 text-muted-foreground" />
+								)}
 							</Label>
 							<Select
 								value={periodoPago}
@@ -688,7 +724,7 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, producto, po
 								}}
 								disabled={bloquearCambioModalidad}
 							>
-								<SelectTrigger className={errores.periodo_pago ? "border-red-500" : ""}>
+								<SelectTrigger className={errores.periodo_pago ? "border-destructive" : ""}>
 									<SelectValue />
 								</SelectTrigger>
 								<SelectContent>
@@ -697,19 +733,21 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, producto, po
 									<SelectItem value="semestral">Semestral</SelectItem>
 								</SelectContent>
 							</Select>
-							{errores.periodo_pago && (
-								<p className="text-sm text-red-600">{errores.periodo_pago}</p>
-							)}
+							{errores.periodo_pago && <p className="text-sm text-destructive">{errores.periodo_pago}</p>}
 						</div>
 
 						{/* Cantidad de Cuotas con Slider */}
 						<div className="space-y-2">
 							<Label htmlFor="cantidad_cuotas">
-								Cantidad de Cuotas: <span className="font-bold text-blue-600">{cantidadCuotas}</span>
+								Cantidad de Cuotas: <span className="font-bold text-primary">{cantidadCuotas}</span>
 								{cuotaInicial > 0 && (
-									<span className="text-xs text-gray-500 ml-2">(#1 inicial + #{2}-{cantidadCuotas} regulares)</span>
+									<span className="text-xs text-muted-foreground ml-2">
+										(#1 inicial + #{2}-{cantidadCuotas} regulares)
+									</span>
 								)}
-								{bloquearCambioModalidad && <Lock className="inline h-3 w-3 ml-1 text-gray-400" />}
+								{bloquearCambioModalidad && (
+									<Lock className="inline h-3 w-3 ml-1 text-muted-foreground" />
+								)}
 							</Label>
 							<div className="pt-2">
 								<Slider
@@ -725,13 +763,13 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, producto, po
 									className="w-full"
 									disabled={bloquearCambioModalidad}
 								/>
-								<div className="flex justify-between text-xs text-gray-500 mt-1">
+								<div className="flex justify-between text-xs text-muted-foreground mt-1">
 									<span>2 cuotas</span>
 									<span>12 cuotas</span>
 								</div>
 							</div>
 							{errores.cantidad_cuotas && (
-								<p className="text-sm text-red-600">{errores.cantidad_cuotas}</p>
+								<p className="text-sm text-destructive">{errores.cantidad_cuotas}</p>
 							)}
 						</div>
 					</div>
@@ -748,7 +786,7 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, producto, po
 							Generar Cuotas
 						</Button>
 						{bloquearCambioModalidad && (
-							<p className="text-xs text-yellow-600 flex items-center gap-1">
+							<p className="text-xs text-warning flex items-center gap-1">
 								<Lock className="h-3 w-3" />
 								No se pueden regenerar las cuotas porque hay pagos registrados
 							</p>
@@ -757,58 +795,62 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, producto, po
 
 					{/* Cálculos */}
 					{primaTotal > 0 && (
-						<div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-							<h4 className="text-sm font-semibold text-blue-900 mb-3">
+						<div className="bg-secondary border border-border rounded-lg p-4">
+							<h4 className="text-sm font-semibold text-foreground mb-3">
 								Cálculos Automáticos
 								{producto && (
-									<span className="text-xs font-normal text-blue-600 ml-2">
+									<span className="text-xs font-normal text-muted-foreground ml-2">
 										(Producto: {producto.nombre_producto})
 									</span>
 								)}
 							</h4>
 							<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
 								<div>
-									<p className="text-blue-700 font-medium">Prima Total</p>
-									<p className="text-blue-900 text-lg font-bold">
+									<p className="text-muted-foreground font-medium">Prima Total</p>
+									<p className="text-foreground text-lg font-bold">
 										{primaTotal.toLocaleString("es-BO", { minimumFractionDigits: 2 })} {moneda}
 									</p>
 								</div>
 								<div>
-									<p className="text-blue-700 font-medium">
+									<p className="text-muted-foreground font-medium">
 										Prima Neta
 										{calculos && (
-											<span className="text-xs font-normal text-blue-500 ml-1">
+											<span className="text-xs font-normal text-muted-foreground ml-1">
 												(Factor: {calculos.factor_usado}%)
 											</span>
 										)}
 									</p>
-									<p className="text-blue-900 text-lg font-bold">
+									<p className="text-foreground text-lg font-bold">
 										{prima_neta.toLocaleString("es-BO", { minimumFractionDigits: 2 })} {moneda}
 									</p>
 								</div>
 								<div>
-									<p className="text-blue-700 font-medium">
+									<p className="text-muted-foreground font-medium">
 										Comisión Empresa
 										{calculos && (
-											<span className="text-xs font-normal text-blue-500 ml-1">
+											<span className="text-xs font-normal text-muted-foreground ml-1">
 												({(calculos.porcentaje_comision * 100).toFixed(1)}%)
 											</span>
 										)}
 									</p>
-									<p className="text-blue-900 text-lg font-bold">
+									<p className="text-foreground text-lg font-bold">
 										{comision.toLocaleString("es-BO", { minimumFractionDigits: 2 })} {moneda}
 									</p>
 								</div>
 								<div>
-									<p className="text-blue-700 font-medium">Resto a Pagar</p>
-									<p className="text-blue-900 text-lg font-bold">
-										{(primaTotal - cuotaInicial).toLocaleString("es-BO", { minimumFractionDigits: 2 })} {moneda}
+									<p className="text-muted-foreground font-medium">Resto a Pagar</p>
+									<p className="text-foreground text-lg font-bold">
+										{(primaTotal - cuotaInicial).toLocaleString("es-BO", {
+											minimumFractionDigits: 2,
+										})}{" "}
+										{moneda}
 									</p>
 								</div>
 							</div>
 							{!producto && (
-								<p className="text-xs text-yellow-600 mt-2">
-									⚠️ Cálculos usando fórmula legacy (87% / 2%). Seleccione un producto para cálculos dinámicos.
+								<p className="text-xs text-warning mt-2">
+									⚠️ Cálculos usando fórmula legacy (87% / 2%). Seleccione un producto para cálculos
+									dinámicos.
 								</p>
 							)}
 						</div>
@@ -818,10 +860,8 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, producto, po
 					{cuotas.length > 0 && (
 						<div className="space-y-3">
 							<div className="flex items-center justify-between">
-								<h4 className="text-sm font-semibold text-gray-900">
-									Plan de Cuotas
-								</h4>
-								<span className="text-xs text-gray-600">
+								<h4 className="text-sm font-semibold text-foreground">Plan de Cuotas</h4>
+								<span className="text-xs text-muted-foreground">
 									{cuotaInicial > 0
 										? `Cuota #1 (inicial) + Cuotas #2-${cuotas.length + 1} = ${cuotas.length + 1} total`
 										: `${cuotas.length} cuota${cuotas.length !== 1 ? "s" : ""}`}
@@ -830,10 +870,10 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, producto, po
 
 							{/* Mostrar advertencia si hay errores */}
 							{(Object.keys(errores).some((key) => key.startsWith("cuota_")) ||
-							  Object.keys(advertencias).some((key) => key.startsWith("cuota_"))) && (
-								<div className="bg-red-50 border border-red-200 rounded-lg p-3 flex gap-2">
-									<AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
-									<div className="text-sm text-red-800">
+								Object.keys(advertencias).some((key) => key.startsWith("cuota_"))) && (
+								<div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3 flex gap-2">
+									<AlertCircle className="h-5 w-5 text-destructive flex-shrink-0 mt-0.5" />
+									<div className="text-sm text-destructive">
 										<p className="font-medium mb-1">Corrija los errores en las cuotas</p>
 										<p>Revise las fechas y montos marcados en rojo.</p>
 									</div>
@@ -843,20 +883,28 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, producto, po
 							<div className="border rounded-lg overflow-hidden">
 								<div className="overflow-x-auto max-h-96 overflow-y-auto">
 									<table className="w-full">
-										<thead className="bg-gray-50 sticky top-0">
+										<thead className="bg-secondary sticky top-0">
 											<tr>
-												<th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">
+												<th className="px-4 py-3 text-left text-xs font-medium text-foreground uppercase">
 													# Cuota
-													{mode === "edit" && <span className="text-gray-400 ml-1">(solo pendientes)</span>}
+													{mode === "edit" && (
+														<span className="text-muted-foreground ml-1">
+															(solo pendientes)
+														</span>
+													)}
 												</th>
-												<th className="px-4 py-3 text-right text-xs font-medium text-gray-700 uppercase">
+												<th className="px-4 py-3 text-right text-xs font-medium text-foreground uppercase">
 													Monto
-													{mode === "edit" && <span className="text-gray-400 ml-1">(solo pendientes)</span>}
+													{mode === "edit" && (
+														<span className="text-muted-foreground ml-1">
+															(solo pendientes)
+														</span>
+													)}
 												</th>
-												<th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">
-													Fecha Vencimiento <span className="text-red-500">*</span>
+												<th className="px-4 py-3 text-left text-xs font-medium text-foreground uppercase">
+													Fecha Vencimiento <span className="text-destructive">*</span>
 												</th>
-												<th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">
+												<th className="px-4 py-3 text-left text-xs font-medium text-foreground uppercase">
 													Estado
 												</th>
 											</tr>
@@ -864,36 +912,55 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, producto, po
 										<tbody className="divide-y">
 											{/* Mostrar cuota inicial si existe */}
 											{cuotaInicial > 0 && (
-												<tr className={cuotaInicialPagada ? "bg-green-50" : "bg-blue-50"}>
+												<tr className={cuotaInicialPagada ? "bg-success/10" : "bg-primary/5"}>
 													<td className="px-4 py-3">
-														<span className={`font-medium ${cuotaInicialPagada ? "text-green-700" : "text-blue-700"}`}>
+														<span
+															className={`font-medium ${cuotaInicialPagada ? "text-success" : "text-primary"}`}
+														>
 															1 (Inicial)
 														</span>
 													</td>
 													<td className="px-4 py-3">
 														<div className="flex items-center justify-end gap-2">
-															<span className={`font-semibold ${cuotaInicialPagada ? "text-green-900" : "text-blue-900"}`}>
-																{cuotaInicial.toLocaleString("es-BO", { minimumFractionDigits: 2 })}
+															<span
+																className={`font-semibold ${cuotaInicialPagada ? "text-success" : "text-foreground"}`}
+															>
+																{cuotaInicial.toLocaleString("es-BO", {
+																	minimumFractionDigits: 2,
+																})}
 															</span>
-															<span className="text-sm text-gray-600 font-medium">{moneda}</span>
+															<span className="text-sm text-muted-foreground font-medium">
+																{moneda}
+															</span>
 														</div>
 													</td>
 													<td className="px-4 py-3">
 														<div className="flex items-center gap-2">
-															<Calendar className={`h-4 w-4 ${cuotaInicialPagada ? "text-green-400" : "text-blue-400"}`} />
-															<span className={`text-sm ${cuotaInicialPagada ? "text-green-700" : "text-blue-700"}`}>
-																{fechaInicioCuotas ? new Date(fechaInicioCuotas + 'T00:00:00').toLocaleDateString("es-BO") : "-"}
+															<Calendar
+																className={`h-4 w-4 ${cuotaInicialPagada ? "text-success/70" : "text-primary/50"}`}
+															/>
+															<span
+																className={`text-sm ${cuotaInicialPagada ? "text-success" : "text-primary"}`}
+															>
+																{fechaInicioCuotas
+																	? new Date(
+																			fechaInicioCuotas + "T00:00:00",
+																		).toLocaleDateString("es-BO")
+																	: "-"}
 															</span>
 														</div>
 													</td>
 													<td className="px-4 py-3">
 														{cuotaInicialPagada ? (
-															<Badge className="bg-green-100 text-green-800 border-green-200">
+															<Badge className="bg-success/15 text-success border-success/30">
 																<Lock className="h-3 w-3 mr-1" />
 																Pagada
 															</Badge>
 														) : (
-															<Badge variant="outline" className="bg-yellow-50 text-yellow-800 border-yellow-200">
+															<Badge
+																variant="outline"
+																className="bg-warning/10 text-warning-foreground border-warning/30"
+															>
 																Pendiente
 															</Badge>
 														)}
@@ -903,10 +970,15 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, producto, po
 											{cuotas.map((cuota, index) => {
 												const estaPagada = cuota.estado === "pagado";
 												return (
-													<tr key={index} className={estaPagada ? "bg-green-50" : "hover:bg-gray-50"}>
+													<tr
+														key={index}
+														className={
+															estaPagada ? "bg-success/10" : "hover:bg-secondary/50"
+														}
+													>
 														<td className="px-4 py-3">
 															{estaPagada ? (
-																<span className="font-medium text-green-700">
+																<span className="font-medium text-success">
 																	{cuota.numero}
 																</span>
 															) : (
@@ -914,7 +986,12 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, producto, po
 																	type="number"
 																	min="1"
 																	value={cuota.numero}
-																	onChange={(e) => handleChangeNumeroCuota(index, parseInt(e.target.value) || 1)}
+																	onChange={(e) =>
+																		handleChangeNumeroCuota(
+																			index,
+																			parseInt(e.target.value) || 1,
+																		)
+																	}
 																	className="max-w-[80px]"
 																/>
 															)}
@@ -922,8 +999,10 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, producto, po
 														<td className="px-4 py-3">
 															<div className="flex items-center justify-end gap-2">
 																{estaPagada ? (
-																	<span className="font-semibold text-green-900">
-																		{cuota.monto.toLocaleString("es-BO", { minimumFractionDigits: 2 })}
+																	<span className="font-semibold text-success">
+																		{cuota.monto.toLocaleString("es-BO", {
+																			minimumFractionDigits: 2,
+																		})}
 																	</span>
 																) : (
 																	<Input
@@ -931,47 +1010,76 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, producto, po
 																		min="0"
 																		step="0.01"
 																		value={cuota.monto || ""}
-																		onChange={(e) => handleChangeMontoCuota(index, parseFloat(e.target.value) || 0)}
+																		onChange={(e) =>
+																			handleChangeMontoCuota(
+																				index,
+																				parseFloat(e.target.value) || 0,
+																			)
+																		}
 																		className="max-w-[140px] text-right"
 																	/>
 																)}
-																<span className="text-sm text-gray-600 font-medium">{moneda}</span>
+																<span className="text-sm text-muted-foreground font-medium">
+																	{moneda}
+																</span>
 															</div>
 														</td>
 														<td className="px-4 py-3">
 															<div className="flex items-center gap-2">
-																<Calendar className={`h-4 w-4 ${estaPagada ? "text-green-400" : "text-gray-400"}`} />
+																<Calendar
+																	className={`h-4 w-4 ${estaPagada ? "text-success/70" : "text-muted-foreground"}`}
+																/>
 																{estaPagada ? (
-																	<span className="text-sm text-green-700">
-																		{cuota.fecha_vencimiento ? new Date(cuota.fecha_vencimiento + 'T00:00:00').toLocaleDateString("es-BO") : "-"}
+																	<span className="text-sm text-success">
+																		{cuota.fecha_vencimiento
+																			? new Date(
+																					cuota.fecha_vencimiento +
+																						"T00:00:00",
+																				).toLocaleDateString("es-BO")
+																			: "-"}
 																	</span>
 																) : (
 																	<Input
 																		type="date"
 																		lang="es"
 																		value={cuota.fecha_vencimiento}
-																		onChange={(e) => handleChangeFechaCuota(index, e.target.value)}
+																		onChange={(e) =>
+																			handleChangeFechaCuota(
+																				index,
+																				e.target.value,
+																			)
+																		}
 																		className={`max-w-[180px] ${
-																			errores[`cuota_${index}_fecha`] || advertencias[`cuota_${index}_fecha`] ? "border-red-500" : ""
+																			errores[`cuota_${index}_fecha`] ||
+																			advertencias[`cuota_${index}_fecha`]
+																				? "border-destructive"
+																				: ""
 																		}`}
 																	/>
 																)}
 															</div>
 															{!estaPagada && errores[`cuota_${index}_fecha`] && (
-																<p className="text-xs text-red-600 mt-1">{errores[`cuota_${index}_fecha`]}</p>
+																<p className="text-xs text-destructive mt-1">
+																	{errores[`cuota_${index}_fecha`]}
+																</p>
 															)}
 															{!estaPagada && advertencias[`cuota_${index}_fecha`] && (
-																<p className="text-xs text-red-600 mt-1">{advertencias[`cuota_${index}_fecha`]}</p>
+																<p className="text-xs text-destructive mt-1">
+																	{advertencias[`cuota_${index}_fecha`]}
+																</p>
 															)}
 														</td>
 														<td className="px-4 py-3">
 															{estaPagada ? (
-																<Badge className="bg-green-100 text-green-800 border-green-200">
+																<Badge className="bg-success/15 text-success border-success/30">
 																	<Lock className="h-3 w-3 mr-1" />
 																	Pagada
 																</Badge>
 															) : (
-																<Badge variant="outline" className="bg-yellow-50 text-yellow-800 border-yellow-200">
+																<Badge
+																	variant="outline"
+																	className="bg-warning/10 text-warning-foreground border-warning/30"
+																>
 																	Pendiente
 																</Badge>
 															)}
@@ -986,9 +1094,9 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, producto, po
 
 							{/* Advertencia suma de cuotas */}
 							{advertencias.cuotas && (
-								<div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 flex gap-2">
-									<AlertCircle className="h-5 w-5 text-yellow-600 flex-shrink-0 mt-0.5" />
-									<p className="text-sm text-yellow-800">{advertencias.cuotas}</p>
+								<div className="bg-warning/10 border border-warning/30 rounded-lg p-3 flex gap-2">
+									<AlertCircle className="h-5 w-5 text-warning flex-shrink-0 mt-0.5" />
+									<p className="text-sm text-warning-foreground">{advertencias.cuotas}</p>
 								</div>
 							)}
 						</div>
@@ -998,9 +1106,9 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, producto, po
 
 			{/* Errores generales */}
 			{Object.keys(errores).filter((key) => !key.startsWith("cuota_")).length > 0 && (
-				<div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-					<h4 className="text-sm font-semibold text-red-800 mb-2">Errores:</h4>
-					<ul className="text-sm text-red-700 space-y-1">
+				<div className="mb-6 p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
+					<h4 className="text-sm font-semibold text-destructive mb-2">Errores:</h4>
+					<ul className="text-sm text-destructive space-y-1">
 						{Object.entries(errores)
 							.filter(([key]) => !key.startsWith("cuota_"))
 							.map(([campo, mensaje]) => (
@@ -1012,9 +1120,9 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, producto, po
 
 			{/* Advertencias generales */}
 			{Object.keys(advertencias).filter((key) => !key.startsWith("cuota_")).length > 0 && (
-				<div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-					<h4 className="text-sm font-semibold text-yellow-800 mb-2">Advertencias:</h4>
-					<ul className="text-sm text-yellow-700 space-y-1">
+				<div className="mb-6 p-4 bg-warning/10 border border-warning/30 rounded-lg">
+					<h4 className="text-sm font-semibold text-warning-foreground mb-2">Advertencias:</h4>
+					<ul className="text-sm text-warning-foreground space-y-1">
 						{Object.entries(advertencias)
 							.filter(([key]) => !key.startsWith("cuota_"))
 							.map(([campo, mensaje]) => (
@@ -1025,7 +1133,7 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, producto, po
 			)}
 
 			{/* Botones de navegación */}
-			<div className="flex justify-between pt-6 border-t">
+			<div className="flex justify-between pt-6 border-t border-border">
 				<Button variant="outline" onClick={onAnterior}>
 					<ChevronLeft className="mr-2 h-5 w-5" />
 					Anterior
@@ -1034,17 +1142,13 @@ export function ModalidadPago({ datos, inicioVigencia, finVigencia, producto, po
 				<div className="flex items-center gap-3">
 					{/* Feedback visual de actualización exitosa */}
 					{datosActualizados && (
-						<span className="flex items-center gap-1 text-green-600 text-sm font-medium animate-in fade-in duration-300">
+						<span className="flex items-center gap-1 text-success text-sm font-medium animate-in fade-in duration-300">
 							<Check className="h-4 w-4" />
 							Datos actualizados
 						</span>
 					)}
 
-					<Button
-						onClick={handleContinuar}
-						disabled={!tieneDatos}
-						className={datosActualizados ? "bg-green-600 hover:bg-green-700" : ""}
-					>
+					<Button onClick={handleContinuar} disabled={!tieneDatos} className="">
 						{mode === "edit" ? (
 							<>
 								<Save className="mr-2 h-4 w-4" />
