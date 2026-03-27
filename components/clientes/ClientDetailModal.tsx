@@ -19,7 +19,6 @@ import {
 	Shield,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -33,6 +32,7 @@ import { saveExtraPhones } from "@/app/clientes/celulares/actions";
 import { ClientPermissionsPanel } from "./ClientPermissionsPanel";
 import { ClienteDocumentUploadEdit } from "./ClienteDocumentUploadEdit";
 import { ClientAuditTrailPanel } from "./ClientAuditTrailPanel";
+import { StatusBadge } from "@/components/ui/status-badge";
 import type { PermissionCheckResult } from "@/types/clientPermission";
 import { CIVIL_STATUS, DOCUMENT_TYPES, GENDER_OPTIONS, COMPANY_TYPES, type ExtraPhone } from "@/types/clientForm";
 import { ExtraPhonesInput } from "./ExtraPhonesInput";
@@ -176,12 +176,12 @@ export function ClientDetailModal({ clientId, onClose }: Props) {
 		if (client.client_type === "natural" && editData.natural_data) {
 			result = await updateNaturalClient(
 				clientId,
-				editData.natural_data as unknown as Parameters<typeof updateNaturalClient>[1]
+				editData.natural_data as unknown as Parameters<typeof updateNaturalClient>[1],
 			);
 		} else if (client.client_type === "juridica" && editData.juridic_data) {
 			result = await updateJuridicClient(
 				clientId,
-				editData.juridic_data as unknown as Parameters<typeof updateJuridicClient>[1]
+				editData.juridic_data as unknown as Parameters<typeof updateJuridicClient>[1],
 			);
 		} else if (client.client_type === "unipersonal" && editData.unipersonal_data && editData.natural_data) {
 			result = await updateUnipersonalClient(clientId, {
@@ -192,10 +192,7 @@ export function ClientDetailModal({ clientId, onClose }: Props) {
 
 		if (result?.success) {
 			// Save extra phones
-			const phonesResult = await saveExtraPhones(
-				clientId,
-				editData.extra_phones || []
-			);
+			const phonesResult = await saveExtraPhones(clientId, editData.extra_phones || []);
 			if (!phonesResult.success) {
 				setSaveError(phonesResult.error || "Error al guardar celulares extra");
 				setIsSaving(false);
@@ -286,10 +283,10 @@ export function ClientDetailModal({ clientId, onClose }: Props) {
 
 	if (isLoading) {
 		return (
-			<div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-				<div className="bg-white rounded-lg p-8">
-					<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-					<p className="text-center mt-4 text-gray-600">Cargando detalles...</p>
+			<div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+				<div className="bg-card rounded-lg p-8 shadow-md">
+					<div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent mx-auto"></div>
+					<p className="text-center mt-4 text-sm text-muted-foreground">Cargando detalles…</p>
 				</div>
 			</div>
 		);
@@ -297,10 +294,12 @@ export function ClientDetailModal({ clientId, onClose }: Props) {
 
 	if (error || !client) {
 		return (
-			<div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-				<div className="bg-white rounded-lg p-8 max-w-md">
-					<p className="text-red-600 mb-4">{error || "Error desconocido"}</p>
-					<Button onClick={onClose}>Cerrar</Button>
+			<div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+				<div className="bg-card rounded-lg p-8 max-w-md shadow-md space-y-3">
+					<p className="text-sm text-destructive">{error || "Error desconocido"}</p>
+					<Button size="sm" onClick={onClose}>
+						Cerrar
+					</Button>
 				</div>
 			</div>
 		);
@@ -309,66 +308,65 @@ export function ClientDetailModal({ clientId, onClose }: Props) {
 	const documentTypes = getDocumentTypesForClientType(client.client_type);
 
 	return (
-		<div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-			<div className="bg-white rounded-lg w-full max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
+		<div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+			<div className="bg-card rounded-lg w-full max-w-6xl max-h-[90vh] overflow-hidden flex flex-col shadow-md">
 				{/* Header */}
-				<div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between z-10">
+				<div className="sticky top-0 bg-card border-b border-border px-6 py-4 flex items-center justify-between z-10">
 					<div className="flex items-center gap-3">
 						{client.client_type === "natural" || client.client_type === "unipersonal" ? (
-							<User className="h-6 w-6 text-primary" />
+							<User className="h-5 w-5 text-primary" />
 						) : (
-							<Building2 className="h-6 w-6 text-primary" />
+							<Building2 className="h-5 w-5 text-primary" />
 						)}
 						<div>
-							<h2 className="text-xl font-semibold">
+							<h2 className="text-base font-semibold text-foreground">
 								{isEditMode ? "Editando Cliente" : "Detalles del Cliente"}
 							</h2>
-							<p className="text-sm text-gray-600">
+							<p className="text-xs text-muted-foreground mt-0.5">
 								{client.client_type === "natural"
 									? "Persona Natural"
 									: client.client_type === "unipersonal"
-									? "Unipersonal"
-									: "Persona Jurídica"}
+										? "Unipersonal"
+										: "Persona Jurídica"}
 							</p>
 						</div>
 					</div>
 
 					<div className="flex items-center gap-2">
-						{/* Edit/Save/Cancel buttons */}
 						{isEditMode ? (
 							<>
-								<Button variant="outline" onClick={handleCancelEdit} disabled={isSaving}>
-									<XCircle className="h-4 w-4 mr-2" />
+								<Button variant="outline" size="sm" onClick={handleCancelEdit} disabled={isSaving}>
+									<XCircle className="h-4 w-4" />
 									Cancelar
 								</Button>
-								<Button onClick={handleSave} disabled={isSaving}>
+								<Button size="sm" onClick={handleSave} disabled={isSaving}>
 									{isSaving ? (
-										<Loader2 className="h-4 w-4 mr-2 animate-spin" />
+										<Loader2 className="h-4 w-4 animate-spin" />
 									) : (
-										<Save className="h-4 w-4 mr-2" />
+										<Save className="h-4 w-4" />
 									)}
 									Guardar
 								</Button>
 							</>
 						) : (
 							permission?.canEdit && (
-								<Button variant="outline" onClick={handleEnterEditMode}>
-									<Pencil className="h-4 w-4 mr-2" />
+								<Button variant="outline" size="sm" onClick={handleEnterEditMode}>
+									<Pencil className="h-4 w-4" />
 									Editar
 								</Button>
 							)
 						)}
 
-						<Button variant="ghost" size="icon" onClick={onClose} className="rounded-full">
-							<X className="h-5 w-5" />
+						<Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8">
+							<X className="h-4 w-4" />
 						</Button>
 					</div>
 				</div>
 
 				{/* Save error message */}
 				{saveError && (
-					<div className="mx-6 mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-						<p className="text-sm text-red-600">{saveError}</p>
+					<div className="mx-6 mt-4 p-3 bg-destructive/5 border border-destructive/20 rounded-md">
+						<p className="text-sm text-destructive">{saveError}</p>
 					</div>
 				)}
 
@@ -417,7 +415,6 @@ export function ClientDetailModal({ clientId, onClose }: Props) {
 							{client.client_type === "natural" && (editData.natural_data || client.natural_data) && (
 								<NaturalClientGeneral
 									data={isEditMode ? (editData.natural_data as NaturalClient) : client.natural_data!}
-									
 									isEditing={isEditMode}
 									onFieldChange={updateNaturalField}
 								/>
@@ -434,7 +431,6 @@ export function ClientDetailModal({ clientId, onClose }: Props) {
 												? (editData.unipersonal_data as UnipersonalClient)
 												: client.unipersonal_data!
 										}
-										
 										isEditing={isEditMode}
 										onNaturalFieldChange={updateNaturalField}
 										onUnipersonalFieldChange={updateUnipersonalField}
@@ -443,7 +439,6 @@ export function ClientDetailModal({ clientId, onClose }: Props) {
 							{client.client_type === "juridica" && (editData.juridic_data || client.juridic_data) && (
 								<JuridicClientGeneral
 									data={isEditMode ? (editData.juridic_data as JuridicClient) : client.juridic_data!}
-									
 									isEditing={isEditMode}
 									onFieldChange={updateJuridicField}
 								/>
@@ -695,7 +690,10 @@ function NaturalClientGeneral({ data, isEditing = false, onFieldChange }: Natura
 					<div className="grid grid-cols-2 gap-4">
 						<div className="space-y-1">
 							<Label className="text-sm">NIT</Label>
-							<Input value={data.nit || ""} onChange={(e) => onFieldChange?.("nit", e.target.value.toUpperCase())} />
+							<Input
+								value={data.nit || ""}
+								onChange={(e) => onFieldChange?.("nit", e.target.value.toUpperCase())}
+							/>
 						</div>
 						<div className="space-y-1">
 							<Label className="text-sm">Dirección de Facturación</Label>
@@ -743,7 +741,6 @@ function NaturalClientGeneral({ data, isEditing = false, onFieldChange }: Natura
 					)}
 				</InfoSection>
 			)}
-
 		</div>
 	);
 }
@@ -779,14 +776,18 @@ function UnipersonalClientGeneral({
 							<Label className="text-sm">Primer Apellido *</Label>
 							<Input
 								value={naturalData.primer_apellido || ""}
-								onChange={(e) => onNaturalFieldChange?.("primer_apellido", e.target.value.toUpperCase())}
+								onChange={(e) =>
+									onNaturalFieldChange?.("primer_apellido", e.target.value.toUpperCase())
+								}
 							/>
 						</div>
 						<div className="space-y-1">
 							<Label className="text-sm">Número de Documento *</Label>
 							<Input
 								value={naturalData.numero_documento || ""}
-								onChange={(e) => onNaturalFieldChange?.("numero_documento", e.target.value.toUpperCase())}
+								onChange={(e) =>
+									onNaturalFieldChange?.("numero_documento", e.target.value.toUpperCase())
+								}
 							/>
 						</div>
 						<div className="space-y-1">
@@ -805,7 +806,9 @@ function UnipersonalClientGeneral({
 							<Label className="text-sm">Razón Social *</Label>
 							<Input
 								value={unipersonalData.razon_social || ""}
-								onChange={(e) => onUnipersonalFieldChange?.("razon_social", e.target.value.toUpperCase())}
+								onChange={(e) =>
+									onUnipersonalFieldChange?.("razon_social", e.target.value.toUpperCase())
+								}
 							/>
 						</div>
 						<div className="space-y-1">
@@ -819,7 +822,9 @@ function UnipersonalClientGeneral({
 							<Label className="text-sm">Matrícula de Comercio</Label>
 							<Input
 								value={unipersonalData.matricula_comercio || ""}
-								onChange={(e) => onUnipersonalFieldChange?.("matricula_comercio", e.target.value.toUpperCase())}
+								onChange={(e) =>
+									onUnipersonalFieldChange?.("matricula_comercio", e.target.value.toUpperCase())
+								}
 							/>
 						</div>
 						<div className="space-y-1">
@@ -827,7 +832,10 @@ function UnipersonalClientGeneral({
 							<Input
 								value={unipersonalData.actividad_economica_comercial || ""}
 								onChange={(e) =>
-									onUnipersonalFieldChange?.("actividad_economica_comercial", e.target.value.toUpperCase())
+									onUnipersonalFieldChange?.(
+										"actividad_economica_comercial",
+										e.target.value.toUpperCase(),
+									)
 								}
 							/>
 						</div>
@@ -839,7 +847,7 @@ function UnipersonalClientGeneral({
 								onChange={(e) =>
 									onUnipersonalFieldChange?.(
 										"nivel_ingresos",
-										e.target.value ? Number(e.target.value) : null
+										e.target.value ? Number(e.target.value) : null,
 									)
 								}
 							/>
@@ -853,14 +861,18 @@ function UnipersonalClientGeneral({
 							<Label className="text-sm">Nombre del Representante *</Label>
 							<Input
 								value={unipersonalData.nombre_representante || ""}
-								onChange={(e) => onUnipersonalFieldChange?.("nombre_representante", e.target.value.toUpperCase())}
+								onChange={(e) =>
+									onUnipersonalFieldChange?.("nombre_representante", e.target.value.toUpperCase())
+								}
 							/>
 						</div>
 						<div className="space-y-1">
 							<Label className="text-sm">CI del Representante *</Label>
 							<Input
 								value={unipersonalData.ci_representante || ""}
-								onChange={(e) => onUnipersonalFieldChange?.("ci_representante", e.target.value.toUpperCase())}
+								onChange={(e) =>
+									onUnipersonalFieldChange?.("ci_representante", e.target.value.toUpperCase())
+								}
 							/>
 						</div>
 					</div>
@@ -909,7 +921,6 @@ function UnipersonalClientGeneral({
 					value={`${unipersonalData.ci_representante} ${unipersonalData.extension_representante || ""}`}
 				/>
 			</InfoSection>
-
 		</div>
 	);
 }
@@ -935,7 +946,10 @@ function JuridicClientGeneral({ data, isEditing = false, onFieldChange }: Juridi
 						</div>
 						<div className="space-y-1">
 							<Label className="text-sm">NIT *</Label>
-							<Input value={data.nit || ""} onChange={(e) => onFieldChange?.("nit", e.target.value.toUpperCase())} />
+							<Input
+								value={data.nit || ""}
+								onChange={(e) => onFieldChange?.("nit", e.target.value.toUpperCase())}
+							/>
 						</div>
 						<div className="space-y-1">
 							<Label className="text-sm">Tipo de Sociedad</Label>
@@ -992,7 +1006,6 @@ function JuridicClientGeneral({ data, isEditing = false, onFieldChange }: Juridi
 				<InfoRow label="País de Constitución" value={data.pais_constitucion} />
 				{data.actividad_economica && <InfoRow label="Actividad Económica" value={data.actividad_economica} />}
 			</InfoSection>
-
 		</div>
 	);
 }
@@ -1074,7 +1087,9 @@ function ContactInfo({
 								<Label className="text-sm">Dirección Legal *</Label>
 								<Input
 									value={juridicData.direccion_legal || ""}
-									onChange={(e) => onJuridicFieldChange?.("direccion_legal", e.target.value.toUpperCase())}
+									onChange={(e) =>
+										onJuridicFieldChange?.("direccion_legal", e.target.value.toUpperCase())
+									}
 								/>
 							</div>
 						</div>
@@ -1112,7 +1127,9 @@ function ContactInfo({
 								<Label className="text-sm">Domicilio Comercial *</Label>
 								<Input
 									value={unipersonalData.domicilio_comercial || ""}
-									onChange={(e) => onUnipersonalFieldChange?.("domicilio_comercial", e.target.value.toUpperCase())}
+									onChange={(e) =>
+										onUnipersonalFieldChange?.("domicilio_comercial", e.target.value.toUpperCase())
+									}
 								/>
 							</div>
 							<div className="col-span-2 space-y-1">
@@ -1151,28 +1168,32 @@ function ContactInfo({
 					<>
 						{client.natural_data.correo_electronico && (
 							<div className="flex items-start gap-3">
-								<Mail className="h-5 w-5 text-gray-400 mt-0.5" />
+								<Mail className="h-5 w-5 text-muted-foreground mt-0.5" />
 								<div>
-									<p className="text-sm text-gray-600">Correo Electrónico</p>
-									<p className="font-medium">{client.natural_data.correo_electronico}</p>
+									<p className="text-xs text-muted-foreground">Correo Electrónico</p>
+									<p className="text-sm font-medium text-foreground">
+										{client.natural_data.correo_electronico}
+									</p>
 								</div>
 							</div>
 						)}
 						{client.natural_data.celular && (
 							<div className="flex items-start gap-3">
-								<Phone className="h-5 w-5 text-gray-400 mt-0.5" />
+								<Phone className="h-5 w-5 text-muted-foreground mt-0.5" />
 								<div>
-									<p className="text-sm text-gray-600">Teléfono/Celular</p>
-									<p className="font-medium">{client.natural_data.celular}</p>
+									<p className="text-xs text-muted-foreground">Teléfono/Celular</p>
+									<p className="text-sm font-medium text-foreground">{client.natural_data.celular}</p>
 								</div>
 							</div>
 						)}
 						{client.natural_data.direccion && (
 							<div className="flex items-start gap-3">
-								<MapPin className="h-5 w-5 text-gray-400 mt-0.5" />
+								<MapPin className="h-5 w-5 text-muted-foreground mt-0.5" />
 								<div>
-									<p className="text-sm text-gray-600">Dirección</p>
-									<p className="font-medium">{client.natural_data.direccion}</p>
+									<p className="text-xs text-muted-foreground">Dirección</p>
+									<p className="text-sm font-medium text-foreground">
+										{client.natural_data.direccion}
+									</p>
 								</div>
 							</div>
 						)}
@@ -1183,28 +1204,34 @@ function ContactInfo({
 					<>
 						{client.juridic_data.correo_electronico && (
 							<div className="flex items-start gap-3">
-								<Mail className="h-5 w-5 text-gray-400 mt-0.5" />
+								<Mail className="h-5 w-5 text-muted-foreground mt-0.5" />
 								<div>
-									<p className="text-sm text-gray-600">Correo Electrónico</p>
-									<p className="font-medium">{client.juridic_data.correo_electronico}</p>
+									<p className="text-xs text-muted-foreground">Correo Electrónico</p>
+									<p className="text-sm font-medium text-foreground">
+										{client.juridic_data.correo_electronico}
+									</p>
 								</div>
 							</div>
 						)}
 						{client.juridic_data.telefono && (
 							<div className="flex items-start gap-3">
-								<Phone className="h-5 w-5 text-gray-400 mt-0.5" />
+								<Phone className="h-5 w-5 text-muted-foreground mt-0.5" />
 								<div>
-									<p className="text-sm text-gray-600">Teléfono</p>
-									<p className="font-medium">{client.juridic_data.telefono}</p>
+									<p className="text-xs text-muted-foreground">Teléfono</p>
+									<p className="text-sm font-medium text-foreground">
+										{client.juridic_data.telefono}
+									</p>
 								</div>
 							</div>
 						)}
 						{client.juridic_data.direccion_legal && (
 							<div className="flex items-start gap-3">
-								<MapPin className="h-5 w-5 text-gray-400 mt-0.5" />
+								<MapPin className="h-5 w-5 text-muted-foreground mt-0.5" />
 								<div>
-									<p className="text-sm text-gray-600">Dirección Legal</p>
-									<p className="font-medium">{client.juridic_data.direccion_legal}</p>
+									<p className="text-xs text-muted-foreground">Dirección Legal</p>
+									<p className="text-sm font-medium text-foreground">
+										{client.juridic_data.direccion_legal}
+									</p>
 								</div>
 							</div>
 						)}
@@ -1215,10 +1242,10 @@ function ContactInfo({
 					<>
 						{client.unipersonal_data.correo_electronico_comercial && (
 							<div className="flex items-start gap-3">
-								<Mail className="h-5 w-5 text-gray-400 mt-0.5" />
+								<Mail className="h-5 w-5 text-muted-foreground mt-0.5" />
 								<div>
-									<p className="text-sm text-gray-600">Correo Electrónico Comercial</p>
-									<p className="font-medium">
+									<p className="text-xs text-muted-foreground">Correo Electrónico Comercial</p>
+									<p className="text-sm font-medium text-foreground">
 										{client.unipersonal_data.correo_electronico_comercial}
 									</p>
 								</div>
@@ -1226,37 +1253,43 @@ function ContactInfo({
 						)}
 						{client.unipersonal_data.telefono_comercial && (
 							<div className="flex items-start gap-3">
-								<Phone className="h-5 w-5 text-gray-400 mt-0.5" />
+								<Phone className="h-5 w-5 text-muted-foreground mt-0.5" />
 								<div>
-									<p className="text-sm text-gray-600">Teléfono Comercial</p>
-									<p className="font-medium">{client.unipersonal_data.telefono_comercial}</p>
+									<p className="text-xs text-muted-foreground">Teléfono Comercial</p>
+									<p className="text-sm font-medium text-foreground">
+										{client.unipersonal_data.telefono_comercial}
+									</p>
 								</div>
 							</div>
 						)}
 						{client.natural_data.celular && (
 							<div className="flex items-start gap-3">
-								<Phone className="h-5 w-5 text-gray-400 mt-0.5" />
+								<Phone className="h-5 w-5 text-muted-foreground mt-0.5" />
 								<div>
-									<p className="text-sm text-gray-600">Celular Personal</p>
-									<p className="font-medium">{client.natural_data.celular}</p>
+									<p className="text-xs text-muted-foreground">Celular Personal</p>
+									<p className="text-sm font-medium text-foreground">{client.natural_data.celular}</p>
 								</div>
 							</div>
 						)}
 						{client.unipersonal_data.domicilio_comercial && (
 							<div className="flex items-start gap-3">
-								<Briefcase className="h-5 w-5 text-gray-400 mt-0.5" />
+								<Briefcase className="h-5 w-5 text-muted-foreground mt-0.5" />
 								<div>
-									<p className="text-sm text-gray-600">Domicilio Comercial</p>
-									<p className="font-medium">{client.unipersonal_data.domicilio_comercial}</p>
+									<p className="text-xs text-muted-foreground">Domicilio Comercial</p>
+									<p className="text-sm font-medium text-foreground">
+										{client.unipersonal_data.domicilio_comercial}
+									</p>
 								</div>
 							</div>
 						)}
 						{client.natural_data.direccion && (
 							<div className="flex items-start gap-3">
-								<MapPin className="h-5 w-5 text-gray-400 mt-0.5" />
+								<MapPin className="h-5 w-5 text-muted-foreground mt-0.5" />
 								<div>
-									<p className="text-sm text-gray-600">Dirección Personal</p>
-									<p className="font-medium">{client.natural_data.direccion}</p>
+									<p className="text-xs text-muted-foreground">Dirección Personal</p>
+									<p className="text-sm font-medium text-foreground">
+										{client.natural_data.direccion}
+									</p>
 								</div>
 							</div>
 						)}
@@ -1268,12 +1301,12 @@ function ContactInfo({
 				<InfoSection title="Celulares Adicionales">
 					{client.extra_phones.map((phone, index) => (
 						<div key={index} className="flex items-start gap-3">
-							<Phone className="h-5 w-5 text-gray-400 mt-0.5" />
+							<Phone className="h-5 w-5 text-muted-foreground mt-0.5" />
 							<div>
-								<p className="text-sm text-gray-600">
+								<p className="text-xs text-muted-foreground">
 									{LABEL_DISPLAY[phone.etiqueta] || phone.etiqueta}
 								</p>
-								<p className="font-medium">{phone.numero}</p>
+								<p className="text-sm font-medium text-foreground">{phone.numero}</p>
 							</div>
 						</div>
 					))}
@@ -1305,20 +1338,20 @@ function PartnerInfo({ partner }: { partner: PartnerData }) {
 
 function LegalRepresentatives({ representatives }: { representatives: LegalRepresentative[] }) {
 	return (
-		<div className="space-y-4">
+		<div className="space-y-3">
 			{representatives.map((rep, index) => (
-				<div key={index} className="p-4 border rounded-lg">
+				<div key={index} className="p-4 border border-border rounded-lg">
 					<div className="flex items-center gap-2 mb-3">
-						<User className="h-5 w-5 text-primary" />
-						<h4 className="font-semibold">
+						<User className="h-4 w-4 text-muted-foreground" />
+						<h4 className="text-sm font-semibold text-foreground">
 							{`${rep.primer_nombre} ${rep.segundo_nombre || ""} ${rep.primer_apellido} ${
 								rep.segundo_apellido || ""
 							}`.trim()}
 						</h4>
 						{rep.is_primary && (
-							<Badge variant="default" className="ml-auto">
+							<span className="ml-auto text-xs font-medium text-teal-800 bg-teal-50 border border-teal-200 px-2 py-0.5 rounded-md">
 								Principal
-							</Badge>
+							</span>
 						)}
 					</div>
 					<div className="grid grid-cols-2 gap-3 text-sm">
@@ -1341,63 +1374,46 @@ function PoliciesList({ policies }: { policies: PolicyData[] }) {
 
 	if (policies.length === 0) {
 		return (
-			<div className="text-center py-12 border-2 border-dashed rounded-lg">
-				<FileText className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-				<p className="text-gray-600">No hay pólizas asociadas</p>
+			<div className="text-center py-12 border-2 border-dashed border-border rounded-lg">
+				<FileText className="h-10 w-10 text-muted-foreground/25 mx-auto mb-3" />
+				<p className="text-sm font-medium text-foreground">Sin pólizas asociadas</p>
+				<p className="text-xs text-muted-foreground mt-1">Este cliente no tiene pólizas registradas.</p>
 			</div>
 		);
 	}
-
-	const getStatusColor = (estado: string) => {
-		switch (estado) {
-			case "activa":
-				return "bg-green-500 text-white";
-			case "pendiente":
-				return "bg-yellow-500 text-white";
-			case "vencida":
-				return "bg-red-500 text-white";
-			case "cancelada":
-				return "bg-gray-500 text-white";
-			case "renovada":
-				return "bg-blue-500 text-white";
-			default:
-				return "bg-gray-500 text-white";
-		}
-	};
 
 	const formatCurrency = (amount: number, currency: string) => {
 		return `${currency} ${amount.toLocaleString("es-BO", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 	};
 
 	return (
-		<div className="space-y-3">
+		<div className="space-y-2">
 			{policies.map((policy) => (
-				<div key={policy.id} className="border rounded-lg overflow-hidden">
+				<div key={policy.id} className="border border-border rounded-lg overflow-hidden">
 					<button
 						onClick={() => router.push(`/polizas/${policy.id}`)}
-						className="w-full p-4 hover:bg-gray-50 transition-colors text-left"
+						className="w-full px-4 py-3 hover:bg-muted/40 transition-colors duration-100 text-left"
 					>
 						<div className="flex items-center justify-between gap-3">
-							<div className="flex items-center gap-3 flex-1">
-								<FileText className="h-8 w-8 text-primary flex-shrink-0" />
-								<div>
-									<div className="flex items-center gap-2 mb-1">
-										<Badge className={getStatusColor(policy.estado)}>
-											{policy.estado.toUpperCase()}
-										</Badge>
-										<span className="font-semibold">{policy.numero_poliza}</span>
+							<div className="flex items-center gap-3 flex-1 min-w-0">
+								<div className="flex-1 min-w-0">
+									<div className="flex items-center gap-2 mb-0.5">
+										<StatusBadge status={policy.estado} />
+										<span className="text-sm font-semibold text-foreground font-mono">
+											{policy.numero_poliza}
+										</span>
 									</div>
-									<p className="text-sm text-gray-600">
+									<p className="text-xs text-muted-foreground truncate">
 										{policy.ramo} • {policy.companias_aseguradoras?.nombre || "Sin compañía"}
 									</p>
 								</div>
 							</div>
-							<div className="text-right">
-								<p className="font-semibold text-primary">
+							<div className="text-right shrink-0">
+								<p className="text-sm font-semibold text-foreground tabular-nums">
 									{formatCurrency(policy.prima_total, policy.moneda)}
 								</p>
-								<p className="text-xs text-gray-500">
-									{new Date(policy.inicio_vigencia).toLocaleDateString()} -{" "}
+								<p className="text-xs text-muted-foreground tabular-nums mt-0.5">
+									{new Date(policy.inicio_vigencia).toLocaleDateString()} –{" "}
 									{new Date(policy.fin_vigencia).toLocaleDateString()}
 								</p>
 							</div>
@@ -1420,32 +1436,35 @@ function DocumentsList({
 }) {
 	if (documents.length === 0) {
 		return (
-			<div className="text-center py-12 border-2 border-dashed rounded-lg">
-				<FileText className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-				<p className="text-gray-600">No hay documentos cargados</p>
+			<div className="text-center py-12 border-2 border-dashed border-border rounded-lg">
+				<FileText className="h-10 w-10 text-muted-foreground/25 mx-auto mb-3" />
+				<p className="text-sm font-medium text-foreground">Sin documentos cargados</p>
+				<p className="text-xs text-muted-foreground mt-1">No hay documentos adjuntos a este cliente.</p>
 			</div>
 		);
 	}
 
 	return (
-		<div className="space-y-3">
+		<div className="space-y-2">
 			{documents.map((doc, index) => {
 				const docLabel = (documentTypes as Record<string, string>)[doc.tipo_documento] || doc.tipo_documento;
 
 				return (
-					<div key={index} className="p-4 border rounded-lg hover:bg-gray-50 transition-colors">
-						<div className="flex items-start gap-3">
-							<FileText className="h-10 w-10 text-primary flex-shrink-0" />
+					<div
+						key={index}
+						className="px-4 py-3 border border-border rounded-lg hover:bg-muted/40 transition-colors duration-100"
+					>
+						<div className="flex items-center gap-3">
+							<FileText className="h-8 w-8 text-muted-foreground/40 flex-shrink-0" />
 
 							<div className="flex-1 min-w-0">
-								<p className="font-medium text-gray-900">{docLabel}</p>
-								<p className="text-sm text-gray-600 truncate">{doc.nombre_archivo}</p>
-								<p className="text-xs text-gray-500 mt-1">
+								<p className="text-sm font-medium text-foreground">{docLabel}</p>
+								<p className="text-xs text-muted-foreground truncate mt-0.5">{doc.nombre_archivo}</p>
+								<p className="text-xs text-muted-foreground/70 mt-0.5">
 									{formatFileSize(doc.tamano_bytes)}
 									{doc.descripcion && ` • ${doc.descripcion}`}
-								</p>
-								<p className="text-xs text-gray-400 mt-1">
-									Subido: {new Date(doc.fecha_subida).toLocaleDateString()}
+									{" • "}
+									{new Date(doc.fecha_subida).toLocaleDateString()}
 								</p>
 							</div>
 
@@ -1453,9 +1472,9 @@ function DocumentsList({
 								variant="outline"
 								size="sm"
 								onClick={() => onDownload(doc.storage_path, doc.nombre_archivo)}
-								className="flex-shrink-0"
+								className="shrink-0 h-7 px-2.5 text-xs"
 							>
-								<Download className="h-4 w-4 mr-2" />
+								<Download className="h-3.5 w-3.5" />
 								Descargar
 							</Button>
 						</div>
@@ -1478,10 +1497,10 @@ function InfoSection({
 	isEditing?: boolean;
 }) {
 	return (
-		<div className="border rounded-lg p-4">
-			<h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+		<div className="border border-border rounded-lg p-5">
+			<h3 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
 				{title}
-				{isEditing && <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">Editando</span>}
+				{isEditing && <span className="text-xs font-medium text-primary">— editando</span>}
 			</h3>
 			<div className={isEditing ? "space-y-4" : "space-y-3"}>{children}</div>
 		</div>
@@ -1491,8 +1510,8 @@ function InfoSection({
 function InfoRow({ label, value }: { label: string; value: string | number | null | undefined }) {
 	return (
 		<div className="grid grid-cols-3 gap-4">
-			<p className="text-sm text-gray-600">{label}:</p>
-			<p className="col-span-2 font-medium">{value ?? "-"}</p>
+			<p className="text-sm text-muted-foreground">{label}:</p>
+			<p className="col-span-2 text-sm font-medium text-foreground">{value ?? "—"}</p>
 		</div>
 	);
 }

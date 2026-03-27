@@ -9,22 +9,26 @@ import { ClientList } from "@/components/clientes/ClientList";
 import { ClientTable } from "@/components/clientes/ClientTable";
 import { ClientDetailModal } from "@/components/clientes/ClientDetailModal";
 import { ViewToggle, ViewMode } from "@/components/clientes/ViewToggle";
-import { Pagination } from "@/components/clientes/Pagination";
 import { Button } from "@/components/ui/button";
-import { UserPlus, AlertCircle } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { UserPlus, AlertCircle, Plus } from "lucide-react";
 
 export default function ClientesPage() {
 	return (
-		<Suspense fallback={
-			<div className="flex items-center justify-center min-h-screen">
-				<div className="text-center">
-					<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-					<p className="text-muted-foreground">Cargando clientes...</p>
-				</div>
-			</div>
-		}>
+		<Suspense fallback={<LoadingState />}>
 			<ClientesContent />
 		</Suspense>
+	);
+}
+
+function LoadingState() {
+	return (
+		<div className="flex items-center justify-center min-h-[60vh]">
+			<div className="text-center space-y-3">
+				<div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent mx-auto" />
+				<p className="text-sm text-muted-foreground">Cargando clientes…</p>
+			</div>
+		</div>
 	);
 }
 
@@ -36,37 +40,28 @@ function ClientesContent() {
 	const [isLoading, setIsLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 
-	// View mode state
 	const [viewMode, setViewMode] = useState<ViewMode>("table");
 	const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
 
-	// Open client detail from query param (e.g., ?detalle=<client_id>)
 	useEffect(() => {
 		const detalleId = searchParams.get("detalle");
 		if (detalleId) {
 			setSelectedClientId(detalleId);
-			// Clean up the URL without triggering navigation
 			router.replace("/clientes", { scroll: false });
 		}
 	}, [searchParams, router]);
 
-	// Server-side pagination state
 	const [currentPage, setCurrentPage] = useState(1);
-	const [pageSize, setPageSize] = useState(20);
+	const [pageSize] = useState(20);
 	const [totalRecords, setTotalRecords] = useState(0);
 
-	// Load clients from database with server-side pagination
 	useEffect(() => {
 		async function loadClients() {
-			// Don't reload if in search mode
 			if (isSearchMode) return;
-
 			setIsLoading(true);
 			setError(null);
-
 			try {
 				const result = await getAllClients({ page: currentPage, pageSize });
-
 				if (result.success) {
 					setDisplayedClients(result.data);
 					setTotalRecords(result.pagination.totalRecords);
@@ -75,34 +70,28 @@ function ClientesContent() {
 					console.error("Error loading clients:", result.error, result.details);
 				}
 			} catch (err) {
-				const errorMessage = err instanceof Error ? err.message : "Error desconocido";
-				setError(errorMessage);
+				const msg = err instanceof Error ? err.message : "Error desconocido";
+				setError(msg);
 				console.error("Unexpected error loading clients:", err);
 			} finally {
 				setIsLoading(false);
 			}
 		}
-
 		loadClients();
 	}, [currentPage, pageSize, isSearchMode]);
 
 	const handleSearch = async (query: string) => {
 		if (!query.trim()) {
-			// Reset to showing paginated clients
 			setIsSearchMode(false);
 			setCurrentPage(1);
 			return;
 		}
-
-		// Perform server-side search
 		setIsLoading(true);
 		try {
 			const result = await searchClientsAction(query);
-
 			if (result.success) {
 				setDisplayedClients(result.data);
 				setIsSearchMode(true);
-				// Update pagination for search results
 				setTotalRecords(result.data.length);
 			} else {
 				console.error("Search error:", result.error);
@@ -119,127 +108,146 @@ function ClientesContent() {
 
 	const handlePageChange = (page: number) => {
 		setCurrentPage(page);
-		// Scroll to top when page changes
 		window.scrollTo({ top: 0, behavior: "smooth" });
 	};
 
-	const handlePageSizeChange = (newPageSize: number) => {
-		setPageSize(newPageSize);
-		setCurrentPage(1);
-	};
+	const totalPages = Math.ceil(totalRecords / pageSize);
+	const startIndex = (currentPage - 1) * pageSize;
 
-	const handleNewClient = () => {
-		router.push("/clientes/nuevo");
-	};
-
-	const handleClientClick = (client: Client | ClientSearchResult) => {
-		setSelectedClientId(client.id);
-	};
-
-	const handleCloseDetail = () => {
-		setSelectedClientId(null);
-	};
-
-	if (isLoading) {
-		return (
-			<div className="flex items-center justify-center min-h-screen">
-				<div className="text-center">
-					<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-					<p className="text-muted-foreground">Cargando clientes...</p>
-				</div>
-			</div>
-		);
-	}
+	if (isLoading) return <LoadingState />;
 
 	if (error) {
 		return (
-			<div className="flex items-center justify-center min-h-screen">
-				<div className="text-center max-w-md">
-					<AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-					<h2 className="text-xl font-semibold mb-2">Error al cargar clientes</h2>
-					<p className="text-muted-foreground mb-4">{error}</p>
-					<Button onClick={() => window.location.reload()}>Reintentar</Button>
+			<div className="flex items-center justify-center min-h-[60vh]">
+				<div className="text-center max-w-md space-y-3">
+					<AlertCircle className="h-10 w-10 text-destructive mx-auto" />
+					<p className="text-sm font-medium">Error al cargar clientes</p>
+					<p className="text-xs text-muted-foreground">{error}</p>
+					<Button size="sm" onClick={() => window.location.reload()}>
+						Reintentar
+					</Button>
 				</div>
 			</div>
 		);
 	}
 
 	return (
-		<div className="container mx-auto py-8 px-4 relative min-h-screen pb-24">
-			{/* Header */}
-			<div className="mb-8">
-				<h1 className="text-3xl font-bold mb-2">VENTANA CLIENTES</h1>
-				<p className="text-muted-foreground">Gestiona y busca información de clientes y sus pólizas</p>
-			</div>
-
-			{/* Search Bar and View Toggle */}
-			<div className="mb-8 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-				<div className="flex-1 w-full">
-					<SearchBar onSearch={handleSearch} />
-				</div>
-				<ViewToggle currentView={viewMode} onViewChange={setViewMode} />
-			</div>
-
-			{/* Results Info */}
-			{isSearchMode && displayedClients.length > 0 && (
-				<div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
-					<p className="text-sm text-blue-700">
-						Resultados de búsqueda - {displayedClients.length}{" "}
-						{displayedClients.length === 1 ? "cliente encontrado" : "clientes encontrados"}
+		<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-10 space-y-5">
+			{/* ── Page Header ─────────────────────────────────────────── */}
+			<div className="flex items-start justify-between">
+				<div>
+					<h1 className="text-2xl font-semibold text-foreground tracking-tight">Clientes</h1>
+					<p className="text-sm text-muted-foreground mt-0.5">
+						{totalRecords > 0 ? `${totalRecords} clientes registrados` : "Gestión de clientes"}
 					</p>
 				</div>
-			)}
+				<Button size="sm" onClick={() => router.push("/clientes/nuevo")} className="shrink-0 cursor-pointer">
+					<Plus className="h-4 w-4" />
+					Nuevo Cliente
+				</Button>
+			</div>
 
-			{/* Client Display - Table or Cards */}
-			<div className="mb-8">
-				{viewMode === "table" ? (
+			{/* ── Search + View Toggle ─────────────────────────────────── */}
+			<Card>
+				<CardContent className="p-4">
+					<div className="flex items-center gap-3">
+						<div className="flex-1">
+							<SearchBar onSearch={handleSearch} />
+						</div>
+						<div className="flex items-center gap-3 shrink-0">
+							{isSearchMode && (
+								<p className="text-xs text-muted-foreground">
+									<span className="font-medium text-foreground">{displayedClients.length}</span>{" "}
+									resultado{displayedClients.length !== 1 ? "s" : ""}
+								</p>
+							)}
+							<ViewToggle currentView={viewMode} onViewChange={setViewMode} />
+						</div>
+					</div>
+				</CardContent>
+			</Card>
+
+			{/* ── Table / Cards ────────────────────────────────────────── */}
+			<Card>
+				{displayedClients.length === 0 ? (
+					<CardContent className="flex flex-col items-center justify-center py-20">
+						<UserPlus className="h-10 w-10 text-muted-foreground/25 mb-3" />
+						<p className="text-sm font-medium text-foreground">
+							{isSearchMode ? "Sin resultados" : "Sin clientes registrados"}
+						</p>
+						<p className="text-xs text-muted-foreground mt-1">
+							{isSearchMode
+								? "Ningún cliente coincide con tu búsqueda."
+								: "Registra el primer cliente para comenzar."}
+						</p>
+					</CardContent>
+				) : viewMode === "table" ? (
 					<ClientTable
 						clients={displayedClients}
 						searchMode={isSearchMode}
-						onClientClick={handleClientClick}
+						onClientClick={(c) => setSelectedClientId(c.id)}
 					/>
 				) : (
-					<ClientList
-						clients={displayedClients}
-						searchMode={isSearchMode}
-						onClientClick={handleClientClick}
-						emptyMessage={
-							isSearchMode
-								? "No se encontraron clientes que coincidan con tu búsqueda. Intenta con otros términos."
-								: "No hay clientes registrados en el sistema."
-						}
-					/>
+					<CardContent className="p-4">
+						<ClientList
+							clients={displayedClients}
+							searchMode={isSearchMode}
+							onClientClick={(c) => setSelectedClientId(c.id)}
+						/>
+					</CardContent>
 				)}
 
-				{/* Pagination */}
-				{totalRecords > 0 && (
-					<div className="mt-6">
-						<Pagination
-							currentPage={currentPage}
-							totalItems={totalRecords}
-							pageSize={pageSize}
-							onPageChange={handlePageChange}
-							onPageSizeChange={handlePageSizeChange}
-						/>
+				{/* Pagination inside card */}
+				{!isSearchMode && totalPages > 1 && (
+					<div className="flex items-center justify-between px-4 py-3 border-t border-border">
+						<p className="text-xs text-muted-foreground">
+							{startIndex + 1}–{Math.min(startIndex + pageSize, totalRecords)} de {totalRecords}
+						</p>
+						<div className="flex items-center gap-1">
+							<Button
+								variant="outline"
+								size="sm"
+								onClick={() => handlePageChange(currentPage - 1)}
+								disabled={currentPage === 1}
+								className="h-7 px-2.5 text-xs"
+							>
+								Anterior
+							</Button>
+							{Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+								let pageNum: number;
+								if (totalPages <= 5) pageNum = i + 1;
+								else if (currentPage <= 3) pageNum = i + 1;
+								else if (currentPage >= totalPages - 2) pageNum = totalPages - 4 + i;
+								else pageNum = currentPage - 2 + i;
+								return (
+									<Button
+										key={pageNum}
+										variant={currentPage === pageNum ? "default" : "ghost"}
+										size="sm"
+										onClick={() => handlePageChange(pageNum)}
+										className="h-7 w-7 p-0 text-xs"
+									>
+										{pageNum}
+									</Button>
+								);
+							})}
+							<Button
+								variant="outline"
+								size="sm"
+								onClick={() => handlePageChange(currentPage + 1)}
+								disabled={currentPage === totalPages}
+								className="h-7 px-2.5 text-xs"
+							>
+								Siguiente
+							</Button>
+						</div>
 					</div>
 				)}
-			</div>
+			</Card>
 
-			{/* Selected Client Detail Modal */}
-			{selectedClientId && <ClientDetailModal clientId={selectedClientId} onClose={handleCloseDetail} />}
-
-			{/* Floating Add Client Button */}
-			<div className="fixed bottom-8 right-8">
-				<Button
-					onClick={handleNewClient}
-					disabled={isLoading}
-					size="lg"
-					className="h-14 px-8 text-base font-semibold shadow-lg hover:shadow-xl transition-all cursor-pointer"
-				>
-					<UserPlus className="mr-2 h-5 w-5" />
-					{isLoading ? "Cargando..." : "NUEVO CLIENTE"}
-				</Button>
-			</div>
+			{selectedClientId && (
+				<ClientDetailModal clientId={selectedClientId} onClose={() => setSelectedClientId(null)} />
+			)}
 		</div>
 	);
 }

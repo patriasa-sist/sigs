@@ -21,37 +21,38 @@ export function ClientCard({ client, searchMode = false, onClick }: ClientCardPr
 	};
 
 	const getStatusColor = (status: string) => {
-		// Import Policy type for proper status typing
-		type PolicyStatus = "pendiente" | "activa" | "vencida" | "cancelada" | "renovada" | "rechazada";
-		const statusInfo = getStatusLabel(status as PolicyStatus);
-		switch (statusInfo.color) {
-			case "green":
-				return "bg-green-500 text-white";
-			case "red":
-				return "bg-red-500 text-white";
-			case "gray":
-				return "bg-gray-500 text-white";
-			case "yellow":
-				return "bg-yellow-500 text-white";
-			case "blue":
-				return "bg-blue-500 text-white";
+		switch (status) {
+			case "activa":
+				return "bg-teal-50 text-teal-800 border border-teal-200";
+			case "pendiente":
+				return "bg-amber-50 text-amber-800 border border-amber-200";
+			case "vencida":
+				return "bg-rose-50 text-rose-800 border border-rose-200";
+			case "cancelada":
+				return "bg-slate-100 text-slate-600 border border-slate-200";
+			case "renovada":
+				return "bg-sky-50 text-sky-800 border border-sky-200";
+			case "anulada":
+				return "bg-red-50 text-red-800 border border-red-200";
+			case "rechazada":
+				return "bg-orange-50 text-orange-800 border border-orange-200";
 			default:
-				return "bg-blue-500 text-white";
+				return "bg-slate-100 text-slate-600 border border-slate-200";
 		}
 	};
 
 	return (
-		<Card
-			className="hover:shadow-lg transition-shadow cursor-pointer"
-			onClick={onClick}
-		>
-			<CardHeader className="pb-3">
+		<Card className="hover:shadow-md transition-shadow">
+			<CardHeader
+				className="pb-3 cursor-pointer hover:bg-muted/30 transition-colors rounded-t-lg"
+				onClick={onClick}
+			>
 				<div className="flex items-start justify-between">
 					<div className="flex-1">
 						<div className="flex items-center gap-2 mb-2">
 							<User className="h-5 w-5 text-muted-foreground" />
 							<h3
-								className={`text-lg font-semibold ${isFieldMatched("fullName") ? "bg-yellow-200" : ""}`}
+								className={`text-lg font-semibold ${isFieldMatched("fullName") ? "bg-amber-50 text-amber-900" : ""}`}
 							>
 								{client.fullName}
 							</h3>
@@ -59,7 +60,7 @@ export function ClientCard({ client, searchMode = false, onClick }: ClientCardPr
 						<div className="grid grid-cols-2 gap-2 text-sm">
 							<div
 								className={`flex items-center gap-1 ${
-									isFieldMatched("idNumber") ? "bg-yellow-200" : ""
+									isFieldMatched("idNumber") ? "bg-amber-50 text-amber-900" : ""
 								}`}
 							>
 								<CreditCard className="h-4 w-4 text-muted-foreground" />
@@ -69,7 +70,7 @@ export function ClientCard({ client, searchMode = false, onClick }: ClientCardPr
 							{client.nit && (
 								<div
 									className={`flex items-center gap-1 ${
-										isFieldMatched("nit") ? "bg-yellow-200" : ""
+										isFieldMatched("nit") ? "bg-amber-50 text-amber-900" : ""
 									}`}
 								>
 									<span className="text-muted-foreground">NIT:</span>
@@ -102,7 +103,7 @@ export function ClientCard({ client, searchMode = false, onClick }: ClientCardPr
 				</div>
 
 				{/* Policies Accordion */}
-				<div className="pt-2">
+				<div className="pt-2" onClick={(e) => e.stopPropagation()}>
 					<h4 className="text-sm font-semibold mb-2 text-muted-foreground uppercase">Pólizas</h4>
 					<Accordion type="single" collapsible className="w-full">
 						{client.policies.map((policy) => (
@@ -114,7 +115,9 @@ export function ClientCard({ client, searchMode = false, onClick }: ClientCardPr
 										</Badge>
 										<span
 											className={`font-medium ${
-												isFieldMatched("policyNumber") && searchMode ? "bg-yellow-200" : ""
+												isFieldMatched("policyNumber") && searchMode
+													? "bg-amber-50 text-amber-900"
+													: ""
 											}`}
 										>
 											{policy.policyNumber}
@@ -133,7 +136,9 @@ export function ClientCard({ client, searchMode = false, onClick }: ClientCardPr
 											</div>
 											<div>
 												<span className="text-muted-foreground">Vencimiento:</span>
-												<span className="ml-2 font-medium">{formatDate(policy.expirationDate)}</span>
+												<span className="ml-2 font-medium">
+													{formatDate(policy.expirationDate)}
+												</span>
 											</div>
 										</div>
 										<div>
@@ -146,7 +151,7 @@ export function ClientCard({ client, searchMode = false, onClick }: ClientCardPr
 											<div
 												className={
 													isFieldMatched("beneficiaryName") && searchMode
-														? "bg-yellow-200"
+														? "bg-amber-50 text-amber-900"
 														: ""
 												}
 											>

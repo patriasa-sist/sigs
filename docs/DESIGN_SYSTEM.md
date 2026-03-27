@@ -263,7 +263,10 @@ Shadow color should be slightly tinted toward slate, not pure black:
 - [x] Home page (module grid)
 - [x] Navbar
 - [x] Polizas listing
-- [ ] Nueva Poliza form
+- [x] Polizas modals
+- [x] Nueva Poliza form
+- [ ] Clientes listing
+- [ ] New client form
 - [ ] Gerencia dashboard
 - [ ] Gerencia validacion
 - [ ] Client pages

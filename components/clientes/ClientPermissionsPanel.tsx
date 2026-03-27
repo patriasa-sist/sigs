@@ -15,10 +15,7 @@ import {
 	AlertDialogTitle,
 	AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import {
-	getClientPermissions,
-	revokeEditPermission,
-} from "@/app/clientes/permisos/actions";
+import { getClientPermissions, revokeEditPermission } from "@/app/clientes/permisos/actions";
 import { GrantPermissionModal } from "./GrantPermissionModal";
 import type { ClientEditPermissionViewModel } from "@/types/clientPermission";
 
@@ -49,7 +46,6 @@ export function ClientPermissionsPanel({ clientId, clientName }: Props) {
 		setIsLoading(false);
 	}, [clientId]);
 
-	// Load permissions on mount
 	useEffect(() => {
 		loadPermissions();
 	}, [loadPermissions]);
@@ -60,7 +56,6 @@ export function ClientPermissionsPanel({ clientId, clientName }: Props) {
 		const result = await revokeEditPermission(permissionId);
 
 		if (result.success) {
-			// Reload permissions
 			await loadPermissions();
 		} else {
 			setError(result.error);
@@ -90,16 +85,16 @@ export function ClientPermissionsPanel({ clientId, clientName }: Props) {
 	if (isLoading) {
 		return (
 			<div className="flex items-center justify-center py-12">
-				<Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+				<Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
 			</div>
 		);
 	}
 
 	if (error) {
 		return (
-			<div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-				<div className="flex items-center gap-2 text-red-600">
-					<AlertCircle className="h-5 w-5" />
+			<div className="p-4 bg-destructive/5 border border-destructive/20 rounded-md">
+				<div className="flex items-center gap-2 text-destructive text-sm">
+					<AlertCircle className="h-4 w-4 shrink-0" />
 					<p>{error}</p>
 				</div>
 			</div>
@@ -107,57 +102,57 @@ export function ClientPermissionsPanel({ clientId, clientName }: Props) {
 	}
 
 	return (
-		<div className="space-y-6">
+		<div className="space-y-5">
 			{/* Header with grant button */}
 			<div className="flex items-center justify-between">
 				<div className="flex items-center gap-2">
-					<Shield className="h-5 w-5 text-primary" />
-					<h3 className="font-semibold">Permisos de Edición</h3>
-					<Badge variant="secondary">{permissions.length}</Badge>
+					<Shield className="h-4 w-4 text-muted-foreground" />
+					<h3 className="text-sm font-semibold text-foreground">Permisos de Edición</h3>
+					<Badge variant="secondary" className="text-xs">
+						{permissions.length}
+					</Badge>
 				</div>
-				<Button onClick={() => setShowGrantModal(true)} size="sm">
-					<UserPlus className="h-4 w-4 mr-2" />
+				<Button onClick={() => setShowGrantModal(true)} size="sm" className="cursor-pointer">
+					<UserPlus className="h-4 w-4" />
 					Otorgar Permiso
 				</Button>
 			</div>
 
 			{/* Permissions list */}
 			{permissions.length === 0 ? (
-				<div className="text-center py-12 border-2 border-dashed rounded-lg">
-					<Shield className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-					<p className="text-gray-600 mb-2">
-						No hay permisos de edición otorgados
-					</p>
-					<p className="text-sm text-gray-500">
+				<div className="text-center py-12 border-2 border-dashed border-border rounded-lg">
+					<Shield className="h-10 w-10 text-muted-foreground/25 mx-auto mb-3" />
+					<p className="text-sm font-medium text-foreground">No hay permisos de edición otorgados</p>
+					<p className="text-xs text-muted-foreground mt-1">
 						Solo los administradores y líderes de equipo pueden editar este cliente
 					</p>
 				</div>
 			) : (
-				<div className="space-y-3">
+				<div className="space-y-2">
 					{permissions.map((permission) => (
 						<div
 							key={permission.id}
-							className="p-4 border rounded-lg hover:bg-gray-50 transition-colors"
+							className="px-4 py-3 border border-border rounded-lg hover:bg-muted/40 transition-colors duration-100"
 						>
 							<div className="flex items-start justify-between gap-4">
 								{/* User info */}
 								<div className="flex items-start gap-3 flex-1">
-									<div className="p-2 bg-blue-100 rounded-full">
-										<User className="h-5 w-5 text-blue-600" />
+									<div className="p-1.5 bg-muted rounded-full shrink-0 mt-0.5">
+										<User className="h-4 w-4 text-muted-foreground" />
 									</div>
-									<div className="flex-1">
+									<div className="flex-1 min-w-0">
 										<div className="flex items-center gap-2">
-											<p className="font-medium">{permission.user_name}</p>
+											<p className="text-sm font-medium text-foreground">
+												{permission.user_name}
+											</p>
 											{!permission.is_active && (
-												<Badge variant="destructive" className="text-xs">
+												<span className="text-xs font-medium bg-rose-50 text-rose-800 border border-rose-200 px-1.5 py-0.5 rounded-md">
 													Expirado
-												</Badge>
+												</span>
 											)}
 										</div>
-										<p className="text-sm text-gray-500">
-											{permission.user_email}
-										</p>
-										<div className="mt-2 text-xs text-gray-500 space-y-1">
+										<p className="text-xs text-muted-foreground mt-0.5">{permission.user_email}</p>
+										<div className="mt-1.5 text-xs text-muted-foreground space-y-0.5">
 											<p>
 												Otorgado por {permission.granted_by_name} el{" "}
 												{formatDateTime(permission.granted_at)}
@@ -169,7 +164,7 @@ export function ClientPermissionsPanel({ clientId, clientName }: Props) {
 												</p>
 											)}
 											{permission.notes && (
-												<p className="italic text-gray-400">
+												<p className="italic text-muted-foreground/70">
 													&quot;{permission.notes}&quot;
 												</p>
 											)}
@@ -183,13 +178,13 @@ export function ClientPermissionsPanel({ clientId, clientName }: Props) {
 										<Button
 											variant="ghost"
 											size="sm"
-											className="text-red-600 hover:text-red-700 hover:bg-red-50"
+											className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/8"
 											disabled={revokingId === permission.id}
 										>
 											{revokingId === permission.id ? (
-												<Loader2 className="h-4 w-4 animate-spin" />
+												<Loader2 className="h-3.5 w-3.5 animate-spin" />
 											) : (
-												<Trash2 className="h-4 w-4" />
+												<Trash2 className="h-3.5 w-3.5" />
 											)}
 										</Button>
 									</AlertDialogTrigger>
@@ -198,8 +193,7 @@ export function ClientPermissionsPanel({ clientId, clientName }: Props) {
 											<AlertDialogTitle>Revocar Permiso</AlertDialogTitle>
 											<AlertDialogDescription>
 												¿Está seguro de revocar el permiso de edición de{" "}
-												<strong>{permission.user_name}</strong> para este
-												cliente?
+												<strong>{permission.user_name}</strong> para este cliente?
 												<br />
 												<br />
 												El usuario ya no podrá editar los datos del cliente.
@@ -209,7 +203,7 @@ export function ClientPermissionsPanel({ clientId, clientName }: Props) {
 											<AlertDialogCancel>Cancelar</AlertDialogCancel>
 											<AlertDialogAction
 												onClick={() => handleRevoke(permission.id)}
-												className="bg-red-600 hover:bg-red-700"
+												className="bg-destructive hover:bg-destructive/90"
 											>
 												Revocar Permiso
 											</AlertDialogAction>
@@ -222,12 +216,12 @@ export function ClientPermissionsPanel({ clientId, clientName }: Props) {
 				</div>
 			)}
 
-			{/* Info box */}
-			<div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-				<p className="text-sm text-blue-700">
-					<strong>Nota:</strong> Los administradores y líderes de equipo
-					siempre pueden editar los clientes de su equipo. Los permisos aquí
-					listados aplican para usuarios con rol comercial o agente.
+			{/* Info note */}
+			<div className="p-4 bg-muted/50 border border-border rounded-md">
+				<p className="text-xs text-muted-foreground leading-relaxed">
+					<span className="font-medium text-foreground">Nota:</span> Los administradores y líderes de equipo
+					siempre pueden editar los clientes de su equipo. Los permisos aquí listados aplican para usuarios
+					con rol comercial o agente.
 				</p>
 			</div>
 

@@ -1,47 +1,48 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { Search } from 'lucide-react';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
+import { useState } from "react";
+import { Search, X } from "lucide-react";
+import { Input } from "@/components/ui/input";
 
 interface SearchBarProps {
-  onSearch: (query: string) => void;
-  placeholder?: string;
+	onSearch: (query: string) => void;
+	placeholder?: string;
 }
 
 export function SearchBar({ onSearch, placeholder }: SearchBarProps) {
-  const [searchQuery, setSearchQuery] = useState('');
+	const [searchQuery, setSearchQuery] = useState("");
 
-  const handleSearch = () => {
-    onSearch(searchQuery);
-  };
+	const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+		if (e.key === "Enter") {
+			onSearch(searchQuery);
+		}
+	};
 
-  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      handleSearch();
-    }
-  };
+	const handleClear = () => {
+		setSearchQuery("");
+		onSearch("");
+	};
 
-  return (
-    <div className="flex w-full gap-2">
-      <div className="relative flex-1">
-        <Input
-          type="text"
-          placeholder={placeholder || 'carnet/nit/poliza/NOMBRE/beneficiario'}
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          onKeyPress={handleKeyPress}
-          className="w-full pr-10 text-lg h-12"
-        />
-        <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-      </div>
-      <Button
-        onClick={handleSearch}
-        className="h-12 px-8 text-base font-semibold"
-      >
-        BUSCAR
-      </Button>
-    </div>
-  );
+	return (
+		<div className="relative">
+			<Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+			<Input
+				type="text"
+				placeholder={placeholder || "Buscar por carnet, NIT, póliza, nombre o beneficiario…"}
+				value={searchQuery}
+				onChange={(e) => setSearchQuery(e.target.value)}
+				onKeyDown={handleKeyDown}
+				className="pl-9 pr-9"
+			/>
+			{searchQuery && (
+				<button
+					onClick={handleClear}
+					className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+					aria-label="Limpiar búsqueda"
+				>
+					<X className="h-4 w-4" />
+				</button>
+			)}
+		</div>
+	);
 }

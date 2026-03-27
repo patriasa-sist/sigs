@@ -2,7 +2,6 @@
 
 import { Client, ClientSearchResult } from "@/types/client";
 import { getActivePolicyCount } from "@/utils/clientHelpers";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { ChevronRight } from "lucide-react";
 
@@ -17,105 +16,106 @@ export function ClientTable({ clients, searchMode = false, onClientClick }: Clie
 		return searchMode && "matchedFields" in client && client.matchedFields.includes(fieldName);
 	};
 
-	if (clients.length === 0) {
-		return (
-			<div className="flex flex-col items-center justify-center py-16 text-center border rounded-lg">
-				<div className="rounded-full bg-muted p-6 mb-4">
-					<svg
-						className="h-12 w-12 text-muted-foreground"
-						fill="none"
-						viewBox="0 0 24 24"
-						stroke="currentColor"
-					>
-						<path
-							strokeLinecap="round"
-							strokeLinejoin="round"
-							strokeWidth={2}
-							d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-						/>
-					</svg>
-				</div>
-				<h3 className="text-lg font-semibold mb-2">No se encontraron clientes</h3>
-				<p className="text-muted-foreground max-w-sm">No hay clientes que coincidan con tu búsqueda.</p>
-			</div>
-		);
-	}
+	if (clients.length === 0) return null;
 
 	return (
-		<div className="border rounded-lg overflow-hidden">
-			<Table>
-				<TableHeader>
-					<TableRow className="bg-muted/50">
-						<TableHead className="font-semibold">Nombre</TableHead>
-						<TableHead className="font-semibold">CI</TableHead>
-						<TableHead className="font-semibold">NIT</TableHead>
-						<TableHead className="font-semibold">Creado por</TableHead>
-						<TableHead className="font-semibold text-center">Pólizas Activas</TableHead>
-						<TableHead className="w-[50px]"></TableHead>
-					</TableRow>
-				</TableHeader>
-				<TableBody>
+		<div className="overflow-x-auto">
+			<table className="w-full">
+				<thead>
+					<tr className="border-b border-border">
+						<th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">
+							Nombre
+						</th>
+						<th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">
+							CI / NIT
+						</th>
+						<th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">
+							Ejecutivo
+						</th>
+						<th className="px-4 py-2.5 text-center text-xs font-medium text-muted-foreground uppercase tracking-wide">
+							Pólizas Activas
+						</th>
+						<th className="w-8" />
+					</tr>
+				</thead>
+				<tbody className="divide-y divide-border">
 					{clients.map((client) => {
 						const activePolicyCount = getActivePolicyCount(client);
-
 						return (
-							<TableRow
+							<tr
 								key={client.id}
-								className="cursor-pointer hover:bg-muted/50 transition-colors"
 								onClick={() => onClientClick?.(client)}
+								className="group hover:bg-muted/40 cursor-pointer transition-colors duration-100"
 							>
-								<TableCell className="font-medium">
+								{/* Name */}
+								<td className="px-4 py-3">
 									<span
-										className={
-											isFieldMatched(client, "fullName") ? "bg-yellow-200 px-1 rounded" : ""
-										}
+										className={`text-sm font-medium text-foreground${
+											isFieldMatched(client, "fullName")
+												? " bg-amber-50 text-amber-900 px-1 rounded"
+												: ""
+										}`}
 									>
 										{client.fullName}
 									</span>
-								</TableCell>
-								<TableCell>
-									<span
-										className={
-											isFieldMatched(client, "idNumber") ? "bg-yellow-200 px-1 rounded" : ""
-										}
+								</td>
+
+								{/* CI + NIT stacked */}
+								<td className="px-4 py-3">
+									<div
+										className={`text-sm text-foreground tabular-nums${
+											isFieldMatched(client, "idNumber")
+												? " bg-amber-50 text-amber-900 px-1 rounded"
+												: ""
+										}`}
 									>
 										{client.idNumber}
-									</span>
-								</TableCell>
-								<TableCell>
+									</div>
 									{client.nit ? (
-										<span
-											className={
-												isFieldMatched(client, "nit") ? "bg-yellow-200 px-1 rounded" : ""
-											}
+										<div
+											className={`text-xs text-muted-foreground mt-0.5 tabular-nums${
+												isFieldMatched(client, "nit")
+													? " bg-amber-50 text-amber-900 px-1 rounded"
+													: ""
+											}`}
 										>
-											{client.nit}
-										</span>
+											NIT: {client.nit}
+										</div>
 									) : (
-										<span className="text-muted-foreground text-sm">—</span>
+										<div className="text-xs text-muted-foreground/50 mt-0.5">NIT: —</div>
 									)}
-								</TableCell>
-								<TableCell>
+								</td>
+
+								{/* Ejecutivo */}
+								<td className="px-4 py-3">
 									<span className="text-sm text-muted-foreground">
 										{client.executiveInCharge || "—"}
 									</span>
-								</TableCell>
-								<TableCell className="text-center">
+								</td>
+
+								{/* Active policies badge */}
+								<td className="px-4 py-3 text-center">
 									<Badge
-										variant={activePolicyCount > 0 ? "default" : "secondary"}
-										className={activePolicyCount > 0 ? "bg-green-500 hover:bg-green-600" : ""}
+										variant="outline"
+										className={
+											activePolicyCount > 0
+												? "bg-teal-50 text-teal-800 border-teal-200"
+												: "bg-slate-100 text-slate-500 border-slate-200"
+										}
 									>
 										{activePolicyCount}
 									</Badge>
-								</TableCell>
-								<TableCell>
-									<ChevronRight className="h-4 w-4 text-muted-foreground" />
-								</TableCell>
-							</TableRow>
+								</td>
+
+								{/* Arrow */}
+								<td className="pr-3 py-3">
+									<ChevronRight className="h-4 w-4 text-muted-foreground/40 group-hover:text-muted-foreground transition-colors" />
+								</td>
+							</tr>
 						);
 					})}
-				</TableBody>
-			</Table>
+				</tbody>
+			</table>
 		</div>
 	);
 }
