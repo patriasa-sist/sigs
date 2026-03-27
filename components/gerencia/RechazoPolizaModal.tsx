@@ -4,15 +4,13 @@ import { useState } from "react";
 import {
 	Dialog,
 	DialogContent,
-	DialogDescription,
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { AlertTriangle, XCircle } from "lucide-react";
+import { AlertTriangle, Loader2, XCircle } from "lucide-react";
 
 interface PolizaParaRechazo {
 	id: string;
@@ -29,6 +27,9 @@ interface RechazoPolizaModalProps {
 	isLoading: boolean;
 }
 
+const MIN_CHARS = 10;
+const MAX_CHARS = 500;
+
 export function RechazoPolizaModal({
 	isOpen,
 	onClose,
@@ -39,9 +40,13 @@ export function RechazoPolizaModal({
 	const [motivo, setMotivo] = useState("");
 	const [error, setError] = useState<string | null>(null);
 
+	const charCount = motivo.trim().length;
+	const progress = Math.min((charCount / MIN_CHARS) * 100, 100);
+	const isReady = charCount >= MIN_CHARS;
+
 	const handleConfirm = async () => {
-		if (motivo.trim().length < 10) {
-			setError("El motivo debe tener al menos 10 caracteres");
+		if (!isReady) {
+			setError(`El motivo debe tener al menos ${MIN_CHARS} caracteres`);
 			return;
 		}
 		setError(null);
@@ -57,98 +62,130 @@ export function RechazoPolizaModal({
 		}
 	};
 
-	const formatCurrency = (amount: number, currency: string) => {
-		return new Intl.NumberFormat("es-BO", {
+	const formatCurrency = (amount: number, currency: string) =>
+		new Intl.NumberFormat("es-BO", {
 			style: "decimal",
 			minimumFractionDigits: 2,
 			maximumFractionDigits: 2,
-		}).format(amount) + " " + currency;
-	};
+		}).format(amount) +
+		" " +
+		currency;
 
 	if (!poliza) return null;
 
 	return (
 		<Dialog open={isOpen} onOpenChange={handleClose}>
-			<DialogContent className="sm:max-w-md">
-				<DialogHeader>
-					<DialogTitle className="flex items-center gap-2">
-						<XCircle className="h-5 w-5 text-red-500" />
-						Rechazar Poliza
-					</DialogTitle>
-					<DialogDescription>
-						Poliza: <strong>{poliza.numero_poliza}</strong>
-						<span className="ml-2 text-muted-foreground">
-							({formatCurrency(poliza.prima_total, poliza.moneda)})
-						</span>
-					</DialogDescription>
-				</DialogHeader>
+			<DialogContent className="sm:max-w-md p-0 gap-0 overflow-hidden">
+				{/* Destructive top bar */}
+				<div className="h-1 w-full bg-destructive" />
 
-				<div className="space-y-4 py-4">
-					<div className="space-y-2">
-						<Label htmlFor="motivo">
-							Motivo del rechazo <span className="text-red-500">*</span>
-						</Label>
-						<Textarea
-							id="motivo"
-							placeholder="Describa el motivo del rechazo (minimo 10 caracteres)..."
-							value={motivo}
-							onChange={(e) => {
-								setMotivo(e.target.value);
-								if (error) setError(null);
-							}}
-							rows={4}
-							className={error ? "border-red-500" : ""}
-							disabled={isLoading}
-						/>
-						<div className="flex justify-between text-sm">
-							{error ? (
-								<p className="text-red-500">{error}</p>
-							) : (
-								<span className="text-muted-foreground">
-									{motivo.length}/10 caracteres minimo
-								</span>
-							)}
-						</div>
-					</div>
-
-					<div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-						<div className="flex items-start gap-2">
-							<AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5 flex-shrink-0" />
-							<div className="text-sm text-yellow-800">
-								<p className="font-medium">El creador tendra 24 horas para editar</p>
-								<p className="mt-1">
-									La poliza sera marcada como &quot;Rechazada&quot; y el usuario
-									que la creo podra editarla durante 1 dia para corregirla.
+				<div className="px-6 pt-5 pb-2">
+					<DialogHeader className="mb-5">
+						<div className="flex items-center gap-3">
+							<span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-destructive/10">
+								<XCircle className="h-5 w-5 text-destructive" />
+							</span>
+							<div>
+								<DialogTitle className="text-base font-semibold text-foreground leading-tight">
+									Rechazar póliza
+								</DialogTitle>
+								<p className="text-xs text-muted-foreground mt-0.5 font-mono">
+									{poliza.numero_poliza}
+									<span className="ml-2 not-italic font-sans text-muted-foreground/70">
+										{formatCurrency(poliza.prima_total, poliza.moneda)}
+									</span>
 								</p>
+							</div>
+						</div>
+					</DialogHeader>
+
+					<div className="space-y-4 pb-4">
+						{/* Textarea */}
+						<div className="space-y-2">
+							<label className="text-xs font-medium text-foreground">
+								Motivo del rechazo <span className="text-destructive">*</span>
+							</label>
+							<Textarea
+								placeholder="Describe el motivo del rechazo…"
+								value={motivo}
+								onChange={(e) => {
+									if (e.target.value.length <= MAX_CHARS) {
+										setMotivo(e.target.value);
+										if (error) setError(null);
+									}
+								}}
+								rows={4}
+								disabled={isLoading}
+								className={`resize-none text-sm transition-colors ${
+									error ? "border-destructive focus-visible:ring-destructive/30" : ""
+								}`}
+							/>
+
+							{/* Progress bar + counter row */}
+							<div className="space-y-1.5">
+								<div className="h-1 w-full rounded-full bg-muted overflow-hidden">
+									<div
+										className={`h-full rounded-full transition-all duration-300 ${
+											isReady ? "bg-primary" : "bg-destructive/50"
+										}`}
+										style={{ width: `${progress}%` }}
+									/>
+								</div>
+								<div className="flex justify-between text-xs">
+									{error ? (
+										<span className="text-destructive">{error}</span>
+									) : (
+										<span className={`transition-colors ${isReady ? "text-primary font-medium" : "text-muted-foreground"}`}>
+											{isReady
+												? "Listo para enviar"
+												: `${MIN_CHARS - charCount} caracteres restantes`}
+										</span>
+									)}
+									<span className="text-muted-foreground tabular-nums">
+										{charCount}/{MAX_CHARS}
+									</span>
+								</div>
+							</div>
+						</div>
+
+						{/* Warning notice */}
+						<div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 px-3.5 py-3">
+							<AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+							<div className="text-xs text-amber-800 leading-relaxed">
+								<span className="font-semibold">El creador tendrá 24 horas para editar.</span>{" "}
+								La póliza quedará marcada como rechazada y podrá ser corregida y
+								reenviada a validación.
 							</div>
 						</div>
 					</div>
 				</div>
 
-				<DialogFooter className="gap-2 sm:gap-0">
+				<DialogFooter className="px-6 pb-5 gap-2 flex-row justify-end border-t border-border pt-4">
 					<Button
-						type="button"
 						variant="outline"
+						size="sm"
 						onClick={handleClose}
 						disabled={isLoading}
+						className="min-w-[80px]"
 					>
 						Cancelar
 					</Button>
 					<Button
-						type="button"
 						variant="destructive"
+						size="sm"
 						onClick={handleConfirm}
-						disabled={isLoading || motivo.trim().length < 10}
+						disabled={isLoading || !isReady}
+						className="min-w-[140px]"
 					>
 						{isLoading ? (
 							<>
-								<span className="animate-spin mr-2">...</span>
-								Rechazando...
+								<Loader2 className="h-3.5 w-3.5 animate-spin mr-2" />
+								Rechazando…
 							</>
 						) : (
 							<>
-								<XCircle className="h-4 w-4 mr-2" />
-								Confirmar Rechazo
+								<XCircle className="h-3.5 w-3.5 mr-2" />
+								Confirmar rechazo
 							</>
 						)}
 					</Button>

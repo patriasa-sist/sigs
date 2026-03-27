@@ -136,12 +136,11 @@ export function Navbar() {
 
 	if (loading) {
 		return (
-			<nav className="bg-white border-b border-gray-200 px-4 sm:px-6 lg:px-8">
-				<div className="flex justify-between items-center h-16">
-					<div className="flex items-center space-x-4">
-						<div className="h-8 w-32 bg-gray-200 animate-pulse rounded"></div>
-					</div>
-					<div className="h-8 w-8 bg-gray-200 animate-pulse rounded-full"></div>
+			<nav className="bg-card border-b border-border px-4 sm:px-6 lg:px-8">
+				<div className="flex items-center h-14 gap-6">
+					<div className="h-8 w-32 bg-muted animate-pulse rounded shrink-0"></div>
+					<div className="flex-1"></div>
+					<div className="h-8 w-8 bg-muted animate-pulse rounded-full"></div>
 				</div>
 			</nav>
 		);
@@ -152,24 +151,26 @@ export function Navbar() {
 	}
 
 	return (
-		<nav className="bg-white border-b border-gray-200 px-4 sm:px-6 lg:px-8">
-			<div className="flex justify-between items-center h-16">
-				<div className="flex items-center space-x-4">
-					<Link href="/" className="flex items-center space-x-3 hover:opacity-80 transition-opacity">
-						<Image
-							src="/patria-horizontal.png"
-							alt="Patria S.A."
-							width={120}
-							height={32}
-							className="h-8 w-auto"
-						/>
-						<span className="text-[10px] text-gray-400 font-mono leading-none">v{version}</span>
-					</Link>
-				</div>
+		<nav className="bg-card border-b border-border px-4 sm:px-6 lg:px-8">
+			<div className="flex items-center h-14 gap-6">
 
-				<div className="flex items-center space-x-4">
+				{/* Logo */}
+				<Link href="/" className="flex items-center gap-2.5 hover:opacity-80 transition-opacity shrink-0">
+					<Image
+						src="/patria-horizontal.png"
+						alt="Patria S.A."
+						width={120}
+						height={32}
+						style={{ height: "2rem", width: "auto" }}
+						priority
+					/>
+					<span className="text-[10px] text-muted-foreground font-mono leading-none">v{version}</span>
+				</Link>
+
+				{/* Nav links */}
+				<div className="flex items-center gap-1 flex-1">
 					<Link href="/">
-						<Button variant="ghost" size="sm" className="flex items-center space-x-2">
+						<Button variant="ghost" size="sm" className="gap-2">
 							<Home className="h-4 w-4" />
 							<span>Dashboard</span>
 						</Button>
@@ -177,7 +178,7 @@ export function Navbar() {
 
 					{can("polizas.ver") && (
 						<Link href="/polizas">
-							<Button variant="ghost" size="sm" className="flex items-center space-x-2">
+							<Button variant="ghost" size="sm" className="gap-2">
 								<FileText className="h-4 w-4" />
 								<span>Pólizas</span>
 							</Button>
@@ -187,7 +188,7 @@ export function Navbar() {
 					{(can("gerencia.ver") || can("gerencia.exportar")) && (
 						<DropdownMenu>
 							<DropdownMenuTrigger asChild>
-								<Button variant="ghost" size="sm" className="flex items-center space-x-2">
+								<Button variant="ghost" size="sm" className="gap-2">
 									<BarChart3 className="h-4 w-4" />
 									<span>Gerencia</span>
 									<ChevronDown className="h-3 w-3" />
@@ -216,7 +217,7 @@ export function Navbar() {
 
 					{can("polizas.validar") && (
 						<Link href="/gerencia/validacion">
-							<Button variant="ghost" size="sm" className="flex items-center space-x-2">
+							<Button variant="ghost" size="sm" className="gap-2">
 								<CheckSquare className="h-4 w-4" />
 								<span>Validación</span>
 							</Button>
@@ -225,7 +226,7 @@ export function Navbar() {
 
 					{can("cobranzas.ver") && (
 						<Link href="/cobranzas">
-							<Button variant="ghost" size="sm" className="flex items-center space-x-2">
+							<Button variant="ghost" size="sm" className="gap-2">
 								<DollarSign className="h-4 w-4" />
 								<span>Cobranzas</span>
 							</Button>
@@ -234,7 +235,7 @@ export function Navbar() {
 
 					{can("siniestros.ver") && (
 						<Link href="/siniestros">
-							<Button variant="ghost" size="sm" className="flex items-center space-x-2">
+							<Button variant="ghost" size="sm" className="gap-2">
 								<FileWarning className="h-4 w-4" />
 								<span>Siniestros</span>
 							</Button>
@@ -243,69 +244,71 @@ export function Navbar() {
 
 					{can("auditoria.ver") && (
 						<Link href="/auditoria">
-							<Button variant="ghost" size="sm" className="flex items-center space-x-2">
+							<Button variant="ghost" size="sm" className="gap-2">
 								<Eye className="h-4 w-4" />
 								<span>Auditoría</span>
 							</Button>
 						</Link>
 					)}
+				</div>
 
-					<DropdownMenu>
-						<DropdownMenuTrigger asChild>
-							<Button variant="ghost" className="relative h-8 w-8 rounded-full">
-								<Avatar className="h-8 w-8">
-									<AvatarFallback className="bg-blue-100 text-blue-600">
-										{getUserInitials()}
-									</AvatarFallback>
-								</Avatar>
-							</Button>
-						</DropdownMenuTrigger>
-						<DropdownMenuContent className="w-56" align="end" forceMount>
-							<DropdownMenuLabel className="font-normal">
-								<div className="flex flex-col space-y-1">
-									<p className="text-sm font-medium leading-none">{getUserDisplayName()}</p>
-									<p className="text-xs leading-none text-muted-foreground">{user.email}</p>
-									{profile?.role && (
-										<p className="text-xs leading-none text-muted-foreground capitalize">
-											Rol: {profile.role}
-										</p>
-									)}
-								</div>
-							</DropdownMenuLabel>
-							<DropdownMenuSeparator />
-							<Link href="/profile">
+				{/* User menu */}
+				<DropdownMenu>
+					<DropdownMenuTrigger asChild>
+						<Button variant="ghost" className="relative h-8 w-8 rounded-full">
+							<Avatar className="h-8 w-8">
+								<AvatarFallback className="bg-primary/10 text-primary">
+									{getUserInitials()}
+								</AvatarFallback>
+							</Avatar>
+						</Button>
+					</DropdownMenuTrigger>
+					<DropdownMenuContent className="w-56" align="end" forceMount>
+						<DropdownMenuLabel className="font-normal">
+							<div className="flex flex-col space-y-1">
+								<p className="text-sm font-medium leading-none">{getUserDisplayName()}</p>
+								<p className="text-xs leading-none text-muted-foreground">{user.email}</p>
+								{profile?.role && (
+									<p className="text-xs leading-none text-muted-foreground capitalize">
+										Rol: {profile.role}
+									</p>
+								)}
+							</div>
+						</DropdownMenuLabel>
+						<DropdownMenuSeparator />
+						<Link href="/profile">
+							<DropdownMenuItem className="cursor-pointer">
+								<UserIcon className="mr-2 h-4 w-4" />
+								<span>Perfil</span>
+							</DropdownMenuItem>
+						</Link>
+						{can("admin.permisos") && (
+							<Link href="/admin/permisos">
 								<DropdownMenuItem className="cursor-pointer">
-									<UserIcon className="mr-2 h-4 w-4" />
-									<span>Perfil</span>
+									<Shield className="mr-2 h-4 w-4" />
+									<span>Permisos</span>
 								</DropdownMenuItem>
 							</Link>
-							{can("admin.permisos") && (
-								<Link href="/admin/permisos">
-									<DropdownMenuItem className="cursor-pointer">
-										<Shield className="mr-2 h-4 w-4" />
-										<span>Permisos</span>
-									</DropdownMenuItem>
-								</Link>
-							)}
-							{can("admin.equipos") && (
-								<Link href="/admin/equipos">
-									<DropdownMenuItem className="cursor-pointer">
-										<Users className="mr-2 h-4 w-4" />
-										<span>Equipos</span>
-									</DropdownMenuItem>
-								</Link>
-							)}
-							<DropdownMenuSeparator />
-							<DropdownMenuItem
-								className="cursor-pointer text-red-600 focus:text-red-600"
-								onClick={handleSignOut}
-							>
-								<LogOut className="mr-2 h-4 w-4" />
-								<span>Cerrar sesión</span>
-							</DropdownMenuItem>
-						</DropdownMenuContent>
-					</DropdownMenu>
-				</div>
+						)}
+						{can("admin.equipos") && (
+							<Link href="/admin/equipos">
+								<DropdownMenuItem className="cursor-pointer">
+									<Users className="mr-2 h-4 w-4" />
+									<span>Equipos</span>
+								</DropdownMenuItem>
+							</Link>
+						)}
+						<DropdownMenuSeparator />
+						<DropdownMenuItem
+							className="cursor-pointer text-destructive focus:text-destructive"
+							onClick={handleSignOut}
+						>
+							<LogOut className="mr-2 h-4 w-4" />
+							<span>Cerrar sesión</span>
+						</DropdownMenuItem>
+					</DropdownMenuContent>
+				</DropdownMenu>
+
 			</div>
 		</nav>
 	);

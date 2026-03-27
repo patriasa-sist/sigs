@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import DashboardFilters from "@/components/gerencia/DashboardFilters";
 import ProduccionCharts from "@/components/gerencia/charts/ProduccionCharts";
@@ -72,13 +73,15 @@ export default function GerenciaDashboard({
 	return (
 		<div className="space-y-6">
 			{/* Filtros */}
-			<div className="rounded-lg border p-4 bg-white">
-				<DashboardFilters
-					filtros={filtros}
-					filtrosData={filtrosData}
-					onFiltrosChange={handleFiltrosChange}
-				/>
-			</div>
+			<Card>
+				<CardContent className="p-4">
+					<DashboardFilters
+						filtros={filtros}
+						filtrosData={filtrosData}
+						onFiltrosChange={handleFiltrosChange}
+					/>
+				</CardContent>
+			</Card>
 
 			{/* Loading indicator */}
 			{isPending && (

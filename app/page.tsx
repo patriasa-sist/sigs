@@ -29,7 +29,6 @@ const Dashboard = () => {
 			title: "Módulo Clientes",
 			description: "Gestión completa de clientes individuales y corporativos",
 			icon: Users,
-			color: "bg-blue-50 hover:bg-blue-100 border-blue-200",
 			link: "/clientes",
 			sections: [
 				{ name: "Gestor de clientes", icon: UserCheck },
@@ -41,7 +40,6 @@ const Dashboard = () => {
 			title: "Módulo Pólizas",
 			description: "Administración de pólizas individuales y corporativas",
 			icon: Shield,
-			color: "bg-green-50 hover:bg-green-100 border-green-200",
 			link: "/polizas",
 			sections: [
 				{ name: "Gestor de pólizas", icon: Building2 },
@@ -53,7 +51,6 @@ const Dashboard = () => {
 			title: "Módulo Vencimientos",
 			description: "Control y seguimiento de vencimientos de pólizas",
 			icon: Calendar,
-			color: "bg-orange-50 hover:bg-orange-100 border-orange-200",
 			link: "/vencimientos",
 			sections: [{ name: "Cartas de Vencimiento", icon: Mail }],
 		},
@@ -62,7 +59,6 @@ const Dashboard = () => {
 			title: "Módulo Gerencia",
 			description: "Herramientas de análisis y gestión gerencial",
 			icon: BarChart3,
-			color: "bg-purple-50 hover:bg-purple-100 border-purple-200",
 			link: "/gerencia",
 			sections: [
 				{ name: "Dashboard Estadístico", icon: BarChart3 },
@@ -74,7 +70,6 @@ const Dashboard = () => {
 			title: "Módulo Siniestros",
 			description: "Gestión y registro de siniestros",
 			icon: Wrench,
-			color: "bg-red-50 hover:bg-red-100 border-red-200",
 			link: "/siniestros",
 			sections: [
 				{ name: "Registro Siniestros", icon: ClipboardList },
@@ -86,7 +81,6 @@ const Dashboard = () => {
 			title: "Módulo Administración",
 			description: "Configuración y administración del sistema",
 			icon: Settings,
-			color: "bg-gray-50 hover:bg-gray-100 border-gray-200",
 			link: "/admin",
 			sections: [
 				{ name: "Usuarios", icon: Users },
@@ -100,7 +94,6 @@ const Dashboard = () => {
 			title: "Módulo Cobranzas",
 			description: "Gestión de cobranzas y pagos",
 			icon: DollarSign,
-			color: "bg-gray-50 hover:bg-gray-100 border-gray-200",
 			link: "/cobranzas",
 			sections: [
 				{ name: "Busqueda de pólizas", icon: Building2 },
@@ -112,7 +105,6 @@ const Dashboard = () => {
 			title: "Módulo Auditoría",
 			description: "Control de cumplimiento y excepciones documentales",
 			icon: Eye,
-			color: "bg-rose-50 hover:bg-rose-100 border-rose-200",
 			link: "/auditoria",
 			sections: [
 				{ name: "Excepciones de Documentos", icon: FileText },
@@ -122,50 +114,50 @@ const Dashboard = () => {
 
 	return (
 		<div className="min-h-screen">
-			<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+			<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-8">
 				{/* Welcome Section */}
 				<div className="mb-8">
-					<h2 className="text-3xl font-bold text-gray-900 mb-2">Bienvenido al Sistema de Gestión</h2>
-					<p className="text-gray-600">Selecciona un módulo para acceder a las funcionalidades del sistema</p>
+					<h2 className="text-2xl font-semibold text-foreground mb-1">Bienvenido al Sistema de Gestión</h2>
+					<p className="text-muted-foreground">Selecciona un módulo para acceder a las funcionalidades del sistema</p>
 				</div>
 
 				{/* Main Modules */}
 				<div className="mb-8">
-					<h3 className="text-lg font-semibold text-gray-900 mb-4">Módulos del Sistema</h3>
-					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+					<h3 className="text-lg font-medium text-foreground mb-4">Módulos del Sistema</h3>
+					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
 						{modules.map((module) => (
 							<Card
 								key={module.id}
-								className={`${module.color} transition-all duration-200 cursor-pointer hover:shadow-lg`}
+								className="bg-card transition-all duration-150 hover:shadow-md hover:border-primary/20 flex flex-col"
 							>
-								<CardHeader className="pb-4">
-									<div className="flex items-center space-x-3">
-										<div className="p-2 bg-white rounded-lg">
-											<module.icon className="h-6 w-6 text-gray-700" />
+								<CardHeader className="pb-3">
+									<div className="flex items-center gap-3">
+										<div className="p-2 bg-primary/8 rounded-md shrink-0">
+											<module.icon className="h-5 w-5 text-primary" />
 										</div>
 										<div>
-											<CardTitle className="text-lg text-gray-900">{module.title}</CardTitle>
-											<CardDescription className="text-sm text-gray-600">
+											<CardTitle className="text-base text-foreground">{module.title}</CardTitle>
+											<CardDescription className="text-sm">
 												{module.description}
 											</CardDescription>
 										</div>
 									</div>
 								</CardHeader>
-								<CardContent>
-									<div className="space-y-2">
+								<CardContent className="flex flex-col flex-1">
+									<div className="space-y-0.5 border-t border-border pt-3 mb-4 flex-1">
 										{module.sections.map((section, sectionIndex) => (
 											<div
 												key={sectionIndex}
-												className="flex items-center space-x-2 p-2 rounded-md hover:bg-white/50 transition-colors"
+												className="flex items-center gap-2 px-2 py-1.5 rounded-md text-sm text-muted-foreground"
 											>
-												<section.icon className="h-4 w-4 text-gray-600" />
-												<span className="text-sm text-gray-700">{section.name}</span>
+												<section.icon className="h-3.5 w-3.5 shrink-0" />
+												<span>{section.name}</span>
 											</div>
 										))}
 									</div>
 									<Link href={module.link}>
-										<Button className="w-full mt-4 cursor-pointer" variant="default">
-											Acceder al Módulo
+										<Button className="w-full cursor-pointer" variant="default">
+											Acceder
 										</Button>
 									</Link>
 								</CardContent>
@@ -175,18 +167,22 @@ const Dashboard = () => {
 				</div>
 
 				{/* Footer Info */}
-				<div className="bg-white rounded-lg border border-gray-200 p-6">
-					<div className="flex items-center justify-between">
-						<div className="flex items-center space-x-4">
-							<Globe className="h-5 w-5 text-gray-600" />
-							<div>
-								<h4 className="font-medium text-gray-900">Sistema en Línea</h4>
-								<p className="text-sm text-gray-600">Acceso 24/7 desde cualquier dispositivo</p>
+				<Card className="bg-card">
+					<CardContent className="py-3 px-5">
+						<div className="flex items-center justify-between">
+							<div className="flex items-center gap-3">
+								<Globe className="h-4 w-4 text-muted-foreground shrink-0" />
+								<p className="text-sm text-muted-foreground">
+									Sistema en línea · Acceso 24/7 desde cualquier dispositivo
+								</p>
 							</div>
+							<Badge variant="outline" className="text-xs text-success border-success/30 gap-1.5">
+								<span className="inline-block h-1.5 w-1.5 rounded-full bg-success" />
+								En línea
+							</Badge>
 						</div>
-						<Badge variant="secondary">En línea</Badge>
-					</div>
-				</div>
+					</CardContent>
+				</Card>
 			</div>
 		</div>
 	);
