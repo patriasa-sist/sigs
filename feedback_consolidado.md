@@ -22,14 +22,14 @@ quitar el 2FA de la interfaz de inicio de sesión (no usado)
 reformular el correo de invitación para que sea compatible con la seguridad de Outlook
 anadir logica basica de seguridad de campos de datos en el formulario. Ej:
 
--   ✅todo texto es normalizado en mayusculas y sin acentos
--   los clientes no pueden ser menores de edad
--   lugar de trabajo no puede tener menos de 2 letras
--   ✅telefono no puede tener menos de 4 numeros
--   ✅NIT no puede tener menos de 6 numeros
--   actividad economica no puede tener menos de 4 letras
--   formato correo validado
--   documento puede contener solo numeros
+- ✅todo texto es normalizado en mayusculas y sin acentos
+- los clientes no pueden ser menores de edad
+- lugar de trabajo no puede tener menos de 2 letras
+- ✅telefono no puede tener menos de 4 numeros
+- ✅NIT no puede tener menos de 6 numeros
+- actividad economica no puede tener menos de 4 letras
+- formato correo validado
+- documento puede contener solo numeros
 
 ---------------------------------------- 8 12 25 --------------------------------------------
 Paso 1
@@ -88,62 +88,62 @@ Convenios checkbox para habilitar
 
 CONCRETAR:
 
--   FIANZAS COD 92❌ para todas las fianzas??
-    BENEFICIARIO (TEXTO MAYUSCULAS)
-    OBJETO DEL CONTRATO (TEXTO)
-    VALOR DEL CONTRATO (numero)
-    VALOR CAUCIONADO (numero) debe mostrar la unidad monetaria que se seleccionó al principio del formulario solo como referencia
-    UBICACION DE LA OBRA (TEXTO)
+- FIANZAS COD 92❌ para todas las fianzas??
+  BENEFICIARIO (TEXTO MAYUSCULAS)
+  OBJETO DEL CONTRATO (TEXTO)
+  VALOR DEL CONTRATO (numero)
+  VALOR CAUCIONADO (numero) debe mostrar la unidad monetaria que se seleccionó al principio del formulario solo como referencia
+  UBICACION DE LA OBRA (TEXTO)
 
--   AERONAVEGACION // Naves y embarcaciones✅
-    ASEGURADO ADICIONAL (cliente completo) opcional si hay otro asegurado aparte del titular que se seleccionó al principio del formulario
-    DATOS nave/embarcacion ASEGURADA:
--   MARCA
--   MODELO
--   AÑO
--   SERIE
--   USO (privado/publico/recreaccion)
--   MATRICULA
--   NUMERO DE PASAJEROS
--   NUMERO TRIPULANTES
-    VALOR ASEGURADO:
--   CASCO (numero)
--   RESPONSBILIDAD CIVIL (numero)
--   ACCIDENTES PERSONALES (desplegable de niveles AP, varios niveles) como en Accidentes Personales
+- AERONAVEGACION // Naves y embarcaciones✅
+  ASEGURADO ADICIONAL (cliente completo) opcional si hay otro asegurado aparte del titular que se seleccionó al principio del formulario
+  DATOS nave/embarcacion ASEGURADA:
+- MARCA
+- MODELO
+- AÑO
+- SERIE
+- USO (privado/publico/recreaccion)
+- MATRICULA
+- NUMERO DE PASAJEROS
+- NUMERO TRIPULANTES
+  VALOR ASEGURADO:
+- CASCO (numero)
+- RESPONSBILIDAD CIVIL (numero)
+- ACCIDENTES PERSONALES (desplegable de niveles AP, varios niveles) como en Accidentes Personales
 
--   ROBO❌
-    Ubicación de riesgo
-    Items seleccionables con su monto
-    valor asegurado
+- ROBO❌
+  Ubicación de riesgo
+  Items seleccionables con su monto
+  valor asegurado
 
 faltante>>
 
--   RAMOS TECNICOS✅
-    NUEVO nro de serie
-    no tiene Placa
-    sin ejes ni asientos
-    tipo de vehículo pasa a "tipo de equipo" (industrial) seleccionar marcas industriales en vez de marcas de autos
+- RAMOS TECNICOS✅
+  NUEVO nro de serie
+  no tiene Placa
+  sin ejes ni asientos
+  tipo de vehículo pasa a "tipo de equipo" (industrial) seleccionar marcas industriales en vez de marcas de autos
 
--   TRANSPORTE✅
-    Materia asegurada (texto largo)
-    tipo de embalaje (texto)
-    fecha embarque (fecha)
-    tipo transporte (terrestre, marítimo, arereo, ferreo, multimodal)
-    ciudad origen (texto)
-    país origen (parametrizado)
-    país destino (parametrizado)
-    ciudad destino (texto)
-    Valor asegurado (num)
-    factura (texto)
-    fecha factura (fecha)
-    Cobertura A, C checkbox
-    modalidad (selección: flotante, flat, un solo embarque, flat con prima minima deposito)
+- TRANSPORTE✅
+  Materia asegurada (texto largo)
+  tipo de embalaje (texto)
+  fecha embarque (fecha)
+  tipo transporte (terrestre, marítimo, arereo, ferreo, multimodal)
+  ciudad origen (texto)
+  país origen (parametrizado)
+  país destino (parametrizado)
+  ciudad destino (texto)
+  Valor asegurado (num)
+  factura (texto)
+  fecha factura (fecha)
+  Cobertura A, C checkbox
+  modalidad (selección: flotante, flat, un solo embarque, flat con prima minima deposito)
 
 Ramos generales:: NUEVO Subrrogacion texto y moneda por cada item cubierto
 
--   automotor
--   equipo móvil pesado (ramos técnicos)
--   incendio y aliados
+- automotor
+- equipo móvil pesado (ramos técnicos)
+- incendio y aliados
 
 ✅TODAS LAS POLIZAS DEBEN SER LIGADAS AL TIPO DE CLIENTE INDIVIDUAL, UNI, JURID
 
@@ -163,11 +163,11 @@ PARAMETRIZACIONES>
 
 paso 2
 
--   fecha de reporte siniestro (no futura, ancla de aviso)
--   fecha de reporte cliente (no futura)
--   fecha reporte compania (no futura)
--   NUEVO alerta de dias de "aviso de siniestro"
--   (fecha de registro interno es automatico)
+- fecha de reporte siniestro (no futura, ancla de aviso)
+- fecha de reporte cliente (no futura)
+- fecha reporte compania (no futura)
+- NUEVO alerta de dias de "aviso de siniestro"
+- (fecha de registro interno es automatico)
 
 modificar contacto>
 nombre (obligatorio)
@@ -194,40 +194,40 @@ alerta si el reporte no ha sufrido cambios en 10 dias y sigue abierto
 
 Observaciones>>
 
--   NUEVA seccion "estados" encima de agregar observacion
-    Espera informe transito
-    Espera proforma
-    Espera franquicia
-    Espera orden
-    Espera reparacion
-    Espera conformidad
-    Espera receta medica
-    Espera autorizacion/ordenes
-    Espera liquidacion
-    [[[FALTA ESTADOS DE POLIZAS GENERALES]]]
+- NUEVA seccion "estados" encima de agregar observacion
+  Espera informe transito
+  Espera proforma
+  Espera franquicia
+  Espera orden
+  Espera reparacion
+  Espera conformidad
+  Espera receta medica
+  Espera autorizacion/ordenes
+  Espera liquidacion
+  [[[FALTA ESTADOS DE POLIZAS GENERALES]]]
 
--   Documentos siniestro con minatura reconstruccion total
-    [[[pasar etiquetado e archivos para revision]]]
+- Documentos siniestro con minatura reconstruccion total
+  [[[pasar etiquetado e archivos para revision]]]
 
--   visualizar no solo polizas vigentes, sino vencidas dentro del anio
+- visualizar no solo polizas vigentes, sino vencidas dentro del anio
 
 selector de conclusion>
 
--   indemnizacion y/o reembolso>
-    UIF y PEP obligatorio
--   ordenes>
-    reclamado, deducible, pagado
--   quitar pago comercial de cierre concluido
+- indemnizacion y/o reembolso>
+  UIF y PEP obligatorio
+- ordenes>
+  reclamado, deducible, pagado
+- quitar pago comercial de cierre concluido
 
--   NUEVO Enviar mensaje de WhatsApp al cerrar el cierre del reporte
+- NUEVO Enviar mensaje de WhatsApp al cerrar el cierre del reporte
 
--   quitar informacion de registro
+- quitar informacion de registro
 
--   mensaje estandarizado al registrar el siniestro [[pedir mensaje]]]
+- mensaje estandarizado al registrar el siniestro [[pedir mensaje]]]
 
 paso1
 
--   color segun estado de poliza al seleccionarla
+- color segun estado de poliza al seleccionarla
 
 alertas para siniestros (detalle grafico)
 
@@ -255,16 +255,16 @@ logica para anulaciones
 
 ---
 
--   ❌selector General-personal que sea automatico según la compañía seleccionada
--   ❌manejar cuotas de póliza de 0 a 11 (considerar poeque creo que la cuota inicial ya es la cuota cero)
--   ✅ver donde o como se guarda el calculo de comisión para independizarlo según otra tabla (que me conviene calcularlo en el momento y guardarlo en la póliza o calcularlo a demanda según se lo pida? cual seria el mejor metodo)
--   ✅agregar editor de polizas
--   ✅hacer la mejora de carga de clientes, de una vez consolidar esa parte
+- ❌selector General-personal que sea automatico según la compañía seleccionada
+- ❌manejar cuotas de póliza de 0 a 11 (considerar poeque creo que la cuota inicial ya es la cuota cero)
+- ✅ver donde o como se guarda el calculo de comisión para independizarlo según otra tabla (que me conviene calcularlo en el momento y guardarlo en la póliza o calcularlo a demanda según se lo pida? cual seria el mejor metodo)
+- ✅agregar editor de polizas
+- ✅hacer la mejora de carga de clientes, de una vez consolidar esa parte
 
 Conciliaciones:
 
--   ⭕Exportar reporte de polizas en TXT:
-    [cod patria, cod compania, cod moneda 0 BS-1 USD-2, ultimo dia del mes anterior, ]
+- ⭕Exportar reporte de polizas en TXT:
+  [cod patria, cod compania, cod moneda 0 BS-1 USD-2, ultimo dia del mes anterior, ]
 
 ---
 
@@ -308,13 +308,13 @@ conciliación:
 
 polizas:
 
--   que exista una forma de marcar si la póliza a registrar es nuevo o renovación, pedir esa confirmación obligatoria al principio del formulario
--   que no hayan bloqueos en la fecha de emisión de la póliza
-    ✅la visualizacion de resumen de datos esta atrasada por 1 dia, Tambien al guardar, 1-12-25 paso a ser 30-11-25
-    ✅se pueden seleccionar beneficiarios para las polizas de salud, un beneficiario es como un cliente pero con datos minimos: nombre, carnet, fecha de nacimiento y género
--   que se quite la opcion de contratante del selector de rol en salud
-    ✅que se agrege la opcion de rol en la creacion de asegurados
--   rol del asegurado es obligatorio
+- que exista una forma de marcar si la póliza a registrar es nuevo o renovación, pedir esa confirmación obligatoria al principio del formulario
+- que no hayan bloqueos en la fecha de emisión de la póliza
+  ✅la visualizacion de resumen de datos esta atrasada por 1 dia, Tambien al guardar, 1-12-25 paso a ser 30-11-25
+  ✅se pueden seleccionar beneficiarios para las polizas de salud, un beneficiario es como un cliente pero con datos minimos: nombre, carnet, fecha de nacimiento y género
+- que se quite la opcion de contratante del selector de rol en salud
+  ✅que se agrege la opcion de rol en la creacion de asegurados
+- rol del asegurado es obligatorio
 
 validacion:
 ✅el boton de ver me lleva directo a la poliza
@@ -326,15 +326,15 @@ SISTEMA DE EDICION:
 
 1. Error de usuario: (se pide permiso a adm)
 
--   modificar y guardar dejando trazabilidad
+- modificar y guardar dejando trazabilidad
 
 2. inclusion: ❌❌DESCARTADO
 
--   hacia la póliza principal
-    --nro anexo
-    --cambios a agregar
-    --documento de anexo
-    --aumento de cuotas (si aplica)
+- hacia la póliza principal
+  --nro anexo
+  --cambios a agregar
+  --documento de anexo
+  --aumento de cuotas (si aplica)
 
 4. exclusion: ❌❌DESCARTADO
    -lo mismo que arriba y las cuotas no pagadas se pueden modificar
@@ -346,9 +346,9 @@ SISTEMA DE EDICION:
 
 nuevo sistema de anexos de polizas:
 
--   anexos de inclusion y exclusion generan un nuevo registro de cuotas en la tabla de cuotas, pero modifican datos en la poliza original
--   anexos de anulacion guardan el archivo de anulacion y la poliza madre se marca como desactivada
--   renovación es basicamente hacer una nueva poliza desde cero solo que esta tiene una referencia a una poliza anterior del cliente que ya se ha vencido
+- anexos de inclusion y exclusion generan un nuevo registro de cuotas en la tabla de cuotas, pero modifican datos en la poliza original
+- anexos de anulacion guardan el archivo de anulacion y la poliza madre se marca como desactivada
+- renovación es basicamente hacer una nueva poliza desde cero solo que esta tiene una referencia a una poliza anterior del cliente que ya se ha vencido
 
 consideracion para cobranzas:
 como habrán dos tablas con datos a cobrar decidir como se hace la unión de ambas tablas para el cobro, suma de los montos
@@ -452,3 +452,17 @@ Código Nombre
 9 de Seguros de Fianzas (podrían compartir una plantilla genérica de fianzas)
 2 de Desgravamen Hipotecario
 1 de Accidentes de Tránsito
+
+## Próximos Pasos (Opcionales)
+
+Mejoras futuras que podrías implementar:
+
+- [ ] Pantalla de visualización de documentos del cliente (en detalle)
+- [ ] Descarga de documentos
+- [ ] Edición de cliente con actualización de documentos
+- [ ] Soft delete UI para comerciales (botón "Descartar")
+- [ ] Admin panel para ver/restaurar documentos descartados
+- [ ] Limpieza automática de documentos descartados (90+ días)
+- [ ] Compresión de imágenes al subir
+- [ ] Preview de PDFs en modal
+- [ ] Firma digital de documentos
