@@ -7,6 +7,15 @@ const nextConfig: NextConfig = {
       bodySizeLimit: '2mb', // Solo metadatos, archivos se suben client-side a Storage
     },
   },
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'pxcbrtyaptgukmoxwwgz.supabase.co',
+        pathname: '/storage/v1/object/public/**',
+      },
+    ],
+  },
 };
 
 export default withSentryConfig(nextConfig, {

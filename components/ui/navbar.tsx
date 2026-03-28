@@ -10,7 +10,6 @@ import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
-	DropdownMenuLabel,
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -39,6 +38,7 @@ interface Profile {
 	email: string;
 	role: string;
 	full_name?: string;
+	cargo?: string;
 }
 
 /**
@@ -82,7 +82,7 @@ export function Navbar() {
 	const [profile, setProfile] = useState<Profile | null>(null);
 	const [loading, setLoading] = useState(true);
 	const supabase = createClient();
-	const { can } = usePermissions();
+	const { can, role } = usePermissions();
 
 	useEffect(() => {
 		async function getUser() {
@@ -264,56 +264,71 @@ export function Navbar() {
 				{/* User menu */}
 				<DropdownMenu>
 					<DropdownMenuTrigger asChild>
-						<Button variant="ghost" className="relative h-8 w-8 rounded-full">
+						<Button variant="ghost" className="relative h-8 w-8 rounded-full p-0">
 							<Avatar className="h-8 w-8">
-								<AvatarFallback className="bg-primary/10 text-primary">
+								<AvatarFallback className="bg-primary text-primary-foreground text-xs font-semibold tracking-wide">
 									{getUserInitials()}
 								</AvatarFallback>
 							</Avatar>
 						</Button>
 					</DropdownMenuTrigger>
-					<DropdownMenuContent className="w-56" align="end" forceMount>
-						<DropdownMenuLabel className="font-normal">
-							<div className="flex flex-col space-y-1">
-								<p className="text-sm font-medium leading-none">{getUserDisplayName()}</p>
-								<p className="text-xs leading-none text-muted-foreground">{user.email}</p>
-								{profile?.role && (
-									<p className="text-xs leading-none text-muted-foreground capitalize">
-										Rol: {profile.role}
-									</p>
-								)}
+					<DropdownMenuContent className="w-72" align="end" forceMount>
+						{/* Rich header */}
+						<div className="px-3 py-3 flex items-center gap-3">
+							<Avatar className="h-10 w-10 shrink-0">
+								<AvatarFallback className="bg-primary text-primary-foreground text-sm font-semibold tracking-wide">
+									{getUserInitials()}
+								</AvatarFallback>
+							</Avatar>
+							<div className="flex-1 min-w-0">
+								<p className="text-sm font-semibold text-foreground truncate leading-tight">
+									{getUserDisplayName()}
+								</p>
+								<p className="text-xs text-muted-foreground truncate leading-tight mt-0.5">
+									{user.email}
+								</p>
+								<div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+									{profile?.role && (
+										<span className="inline-flex items-center rounded-md bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary capitalize leading-none">
+											{profile.role}
+										</span>
+									)}
+									{profile?.cargo && (
+										<span className="text-[10px] text-muted-foreground truncate">
+											{profile.cargo}
+										</span>
+									)}
+								</div>
 							</div>
-						</DropdownMenuLabel>
+						</div>
 						<DropdownMenuSeparator />
 						<Link href="/profile">
-							<DropdownMenuItem className="cursor-pointer">
-								<UserIcon className="mr-2 h-4 w-4" />
-								<span>Perfil</span>
+							<DropdownMenuItem className="cursor-pointer gap-2.5 py-2">
+								<UserIcon className="h-4 w-4 text-muted-foreground" />
+								<div>
+									<p className="text-sm leading-none">Mi Perfil</p>
+									<p className="text-xs text-muted-foreground mt-0.5">Datos personales y comerciales</p>
+								</div>
 							</DropdownMenuItem>
 						</Link>
-						{can("admin.permisos") && (
-							<Link href="/admin/permisos">
-								<DropdownMenuItem className="cursor-pointer">
-									<Shield className="mr-2 h-4 w-4" />
-									<span>Permisos</span>
-								</DropdownMenuItem>
-							</Link>
-						)}
-						{can("admin.equipos") && (
-							<Link href="/admin/equipos">
-								<DropdownMenuItem className="cursor-pointer">
-									<Users className="mr-2 h-4 w-4" />
-									<span>Equipos</span>
+						{role === "admin" && (
+							<Link href="/admin">
+								<DropdownMenuItem className="cursor-pointer gap-2.5 py-2">
+									<Shield className="h-4 w-4 text-muted-foreground" />
+									<div>
+										<p className="text-sm leading-none">Administración</p>
+										<p className="text-xs text-muted-foreground mt-0.5">Usuarios, roles y catálogos</p>
+									</div>
 								</DropdownMenuItem>
 							</Link>
 						)}
 						<DropdownMenuSeparator />
 						<DropdownMenuItem
-							className="cursor-pointer text-destructive focus:text-destructive"
+							className="cursor-pointer gap-2.5 py-2 text-destructive focus:text-destructive focus:bg-destructive/8"
 							onClick={handleSignOut}
 						>
-							<LogOut className="mr-2 h-4 w-4" />
-							<span>Cerrar sesión</span>
+							<LogOut className="h-4 w-4" />
+							<span className="text-sm">Cerrar sesión</span>
 						</DropdownMenuItem>
 					</DropdownMenuContent>
 				</DropdownMenu>
