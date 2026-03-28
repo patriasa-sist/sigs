@@ -519,30 +519,33 @@ export function NuevaPolizaForm({ mode = "create", polizaId, initialData }: Nuev
 
 	return (
 		<div className="max-w-7xl mx-auto">
-			{/* Page Header */}
-			<div className="mb-6 flex items-start justify-between">
-				<div>
-					<button
-						onClick={() => router.push("/polizas")}
-						className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-2 transition-colors"
-					>
-						<ChevronLeft className="h-4 w-4" />
-						Pólizas
-					</button>
-					<div className="flex items-center gap-3">
-						<FileText className="h-6 w-6 text-primary" />
-						<h1 className="text-2xl font-semibold text-foreground">
-							{mode === "edit" ? "Editar Póliza" : "Nueva Póliza"}
-						</h1>
+			{/* Page Header — sticky so cancel button is always visible */}
+			<div className="sticky top-0 z-20 bg-[#F1F4F9] border-b border-[#E2E8F0] -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 pt-4 pb-4 mb-6">
+				<div className="flex items-center justify-between gap-4 max-w-7xl mx-auto">
+					<div className="flex items-center gap-3 min-w-0">
+						<button
+							onClick={() => router.push("/polizas")}
+							className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors shrink-0"
+						>
+							<ChevronLeft className="h-4 w-4" />
+							Pólizas
+						</button>
+						<span className="text-[#CBD5E1]">/</span>
+						<FileText className="h-6 w-6 text-primary shrink-0" />
+						<div className="min-w-0">
+							<h1 className="text-xl font-semibold text-foreground leading-tight">
+								{mode === "edit" ? "Editar Póliza" : "Nueva Póliza"}
+							</h1>
+							<p className="text-sm text-muted-foreground leading-tight">
+								{STEP_CONFIG[formState.paso_actual - 1]?.label} — Paso {formState.paso_actual} de 6
+							</p>
+						</div>
 					</div>
-					<p className="text-sm text-muted-foreground mt-1 ml-9">
-						{STEP_CONFIG[formState.paso_actual - 1]?.label} — Paso {formState.paso_actual} de 6
-					</p>
+					<Button variant="ghost" size="sm" onClick={handleCancelar} className="shrink-0 text-muted-foreground hover:text-destructive hover:bg-destructive/8">
+						<X className="h-4 w-4 mr-1.5" />
+						Cancelar
+					</Button>
 				</div>
-				<Button variant="ghost" size="sm" onClick={handleCancelar} className="mt-1">
-					<X className="h-4 w-4 mr-1.5" />
-					Cancelar
-				</Button>
 			</div>
 
 			{/* Mobile step progress bar */}
@@ -564,8 +567,8 @@ export function NuevaPolizaForm({ mode = "create", polizaId, initialData }: Nuev
 
 			{/* Two-column layout */}
 			<div className="flex gap-8 items-start">
-				{/* Sidebar — step tracker, hidden on mobile */}
-				<aside className="hidden lg:block w-52 shrink-0 sticky top-6 self-start">
+				{/* Sidebar — sticky below the sticky header (~80px) */}
+				<aside className="hidden lg:block w-52 shrink-0 sticky top-[81px] self-start">
 					<div className="bg-card rounded-lg border border-border shadow-sm overflow-hidden">
 						<div className="px-4 py-3 border-b border-border">
 							<p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
@@ -608,7 +611,7 @@ export function NuevaPolizaForm({ mode = "create", polizaId, initialData }: Nuev
 											{/* Step info */}
 											<div className="flex-1 min-w-0">
 												<p
-													className={`text-xs font-medium leading-tight ${
+													className={`text-sm font-medium leading-tight ${
 														isActive
 															? "text-primary"
 															: isCompleted
@@ -619,12 +622,12 @@ export function NuevaPolizaForm({ mode = "create", polizaId, initialData }: Nuev
 													{step.label}
 												</p>
 												{summary && isCompleted && (
-													<p className="text-xs text-muted-foreground truncate mt-0.5 leading-tight">
+													<p className="text-[0.8125rem] text-muted-foreground truncate mt-0.5 leading-tight">
 														{summary}
 													</p>
 												)}
 												{isActive && (
-													<p className="text-xs text-primary/70 mt-0.5">En progreso</p>
+													<p className="text-[0.8125rem] text-primary/70 mt-0.5">En progreso</p>
 												)}
 											</div>
 										</div>

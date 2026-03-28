@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState } from "react";
 import { UseFormReturn, Controller } from "react-hook-form";
@@ -20,6 +20,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SameAsCheckbox } from "@/components/ui/same-as-checkbox";
 import { ClienteDocumentUpload } from "./ClienteDocumentUpload";
+import { cn } from "@/lib/utils";
 
 interface NaturalClientFormProps {
 	form: UseFormReturn<NaturalClientFormData>;
@@ -60,19 +61,26 @@ export function NaturalClientForm({ form, partnerForm, onFieldBlur, exceptions =
 	const [useSameAsDireccion, setUseSameAsDireccion] = useState(false);
 	const direccion = watch("direccion");
 
+	// Shorthand for error border class
+	const eb = (hasErr: boolean) => (hasErr ? "border-destructive focus-visible:ring-destructive/20" : "");
+
 	return (
 		<div className="space-y-6">
 			{/* SECCIÓN 1: DATOS PERSONALES */}
-			<FormSection title="Datos Personales" description="Información personal del cliente">
+			<FormSection
+				title="Datos Personales"
+				description="Información personal del cliente"
+				required
+			>
+				{/* Nombres y apellidos — grid 2 columnas */}
 				<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-					{/* Nombres */}
 					<div>
 						<Label htmlFor="primer_nombre">
-							Primer Nombre <span className="text-red-500">*</span>
+							Primer Nombre <span className="text-destructive">*</span>
 						</Label>
-						<Input id="primer_nombre" {...ur("primer_nombre")} onBlur={onFieldBlur} />
+						<Input id="primer_nombre" {...ur("primer_nombre")} onBlur={onFieldBlur} className={eb(!!errors.primer_nombre)} />
 						{errors.primer_nombre && (
-							<p className="text-sm text-red-500 mt-1">{errors.primer_nombre.message}</p>
+							<p className="text-sm text-destructive mt-1">{errors.primer_nombre.message}</p>
 						)}
 					</div>
 
@@ -83,11 +91,11 @@ export function NaturalClientForm({ form, partnerForm, onFieldBlur, exceptions =
 
 					<div>
 						<Label htmlFor="primer_apellido">
-							Primer Apellido <span className="text-red-500">*</span>
+							Primer Apellido <span className="text-destructive">*</span>
 						</Label>
-						<Input id="primer_apellido" {...ur("primer_apellido")} onBlur={onFieldBlur} />
+						<Input id="primer_apellido" {...ur("primer_apellido")} onBlur={onFieldBlur} className={eb(!!errors.primer_apellido)} />
 						{errors.primer_apellido && (
-							<p className="text-sm text-red-500 mt-1">{errors.primer_apellido.message}</p>
+							<p className="text-sm text-destructive mt-1">{errors.primer_apellido.message}</p>
 						)}
 					</div>
 
@@ -95,18 +103,20 @@ export function NaturalClientForm({ form, partnerForm, onFieldBlur, exceptions =
 						<Label htmlFor="segundo_apellido">Segundo Apellido</Label>
 						<Input id="segundo_apellido" {...ur("segundo_apellido")} onBlur={onFieldBlur} />
 					</div>
+				</div>
 
-					{/* Documento */}
-					<div>
+				{/* Documento — grid 4 columnas */}
+				<div className="grid grid-cols-4 gap-4 mt-4">
+					<div className="col-span-1">
 						<Label htmlFor="tipo_documento">
-							Tipo de Documento <span className="text-red-500">*</span>
+							Tipo Doc. <span className="text-destructive">*</span>
 						</Label>
 						<Controller
 							name="tipo_documento"
 							control={control}
 							render={({ field }) => (
 								<Select value={field.value} onValueChange={field.onChange}>
-									<SelectTrigger>
+									<SelectTrigger className={cn("w-full min-w-[7.5rem]", eb(!!errors.tipo_documento))}>
 										<SelectValue placeholder="Seleccionar" />
 									</SelectTrigger>
 									<SelectContent>
@@ -120,77 +130,104 @@ export function NaturalClientForm({ form, partnerForm, onFieldBlur, exceptions =
 							)}
 						/>
 						{errors.tipo_documento && (
-							<p className="text-sm text-red-500 mt-1">{errors.tipo_documento.message}</p>
+							<p className="text-sm text-destructive mt-1">{errors.tipo_documento.message}</p>
 						)}
 					</div>
 
-					<div>
+					<div className="col-span-2">
 						<Label htmlFor="numero_documento">
-							Número de Documento <span className="text-red-500">*</span>
+							Número de Documento <span className="text-destructive">*</span>
 						</Label>
 						<Input
 							id="numero_documento"
 							{...ur("numero_documento")}
 							onBlur={onFieldBlur}
-							placeholder="Min. 6 caracteres"
+							placeholder="Mín. 6 caracteres"
+							className={eb(!!errors.numero_documento)}
 						/>
 						{errors.numero_documento && (
-							<p className="text-sm text-red-500 mt-1">{errors.numero_documento.message}</p>
+							<p className="text-sm text-destructive mt-1">{errors.numero_documento.message}</p>
 						)}
 					</div>
 
-					<div>
+					<div className="col-span-1">
 						<Label htmlFor="extension_ci">Extensión CI</Label>
 						<Input
 							id="extension_ci"
 							{...ur("extension_ci")}
 							onBlur={onFieldBlur}
-							placeholder="Ej: A, CC, etc."
+							placeholder="Ej: A, SC"
 							maxLength={10}
 						/>
 					</div>
+				</div>
 
-					<div>
-						<Label htmlFor="nacionalidad">
-							Nacionalidad <span className="text-red-500">*</span>
-						</Label>
-						<Input
-							id="nacionalidad"
-							{...ur("nacionalidad")}
-							onBlur={onFieldBlur}
-							defaultValue="Boliviana"
-						/>
-						{errors.nacionalidad && (
-							<p className="text-sm text-red-500 mt-1">{errors.nacionalidad.message}</p>
-						)}
-					</div>
-
-					<div>
+				{/* Fecha, Nacionalidad, Género, Estado Civil — grid 4 columnas */}
+				<div className="grid grid-cols-4 gap-4 mt-4">
+					<div className="col-span-1">
 						<Label htmlFor="fecha_nacimiento">
-							Fecha de Nacimiento <span className="text-red-500">*</span>
+							Fecha de Nacimiento <span className="text-destructive">*</span>
 						</Label>
 						<Input
 							id="fecha_nacimiento"
 							type="date"
 							{...register("fecha_nacimiento")}
 							onBlur={onFieldBlur}
-							className={errors.fecha_nacimiento ? "border-red-500" : ""}
+							className={eb(!!errors.fecha_nacimiento)}
 						/>
 						{errors.fecha_nacimiento && (
-							<p className="text-sm text-red-500 mt-1">{errors.fecha_nacimiento.message}</p>
+							<p className="text-sm text-destructive mt-1">{errors.fecha_nacimiento.message}</p>
 						)}
 					</div>
 
-					<div>
+					<div className="col-span-1">
+						<Label htmlFor="nacionalidad">
+							Nacionalidad <span className="text-destructive">*</span>
+						</Label>
+						<Input
+							id="nacionalidad"
+							{...ur("nacionalidad")}
+							onBlur={onFieldBlur}
+							defaultValue="Boliviana"
+							className={eb(!!errors.nacionalidad)}
+						/>
+						{errors.nacionalidad && (
+							<p className="text-sm text-destructive mt-1">{errors.nacionalidad.message}</p>
+						)}
+					</div>
+
+					<div className="col-span-1">
+						<Label htmlFor="genero_personal">Género</Label>
+						<Controller
+							name="genero"
+							control={control}
+							render={({ field }) => (
+								<Select value={field.value} onValueChange={field.onChange}>
+									<SelectTrigger className="w-full">
+										<SelectValue placeholder="Seleccionar" />
+									</SelectTrigger>
+									<SelectContent>
+										{GENDER_OPTIONS.map((gender) => (
+											<SelectItem key={gender} value={gender}>
+												{gender.charAt(0).toUpperCase() + gender.slice(1)}
+											</SelectItem>
+										))}
+									</SelectContent>
+								</Select>
+							)}
+						/>
+					</div>
+
+					<div className="col-span-1">
 						<Label htmlFor="estado_civil">
-							Estado Civil <span className="text-red-500">*</span>
+							Estado Civil <span className="text-destructive">*</span>
 						</Label>
 						<Controller
 							name="estado_civil"
 							control={control}
 							render={({ field }) => (
 								<Select value={field.value} onValueChange={field.onChange}>
-									<SelectTrigger>
+									<SelectTrigger className={cn("w-full", eb(!!errors.estado_civil))}>
 										<SelectValue placeholder="Seleccionar" />
 									</SelectTrigger>
 									<SelectContent>
@@ -204,27 +241,30 @@ export function NaturalClientForm({ form, partnerForm, onFieldBlur, exceptions =
 							)}
 						/>
 						{errors.estado_civil && (
-							<p className="text-sm text-red-500 mt-1">{errors.estado_civil.message}</p>
+							<p className="text-sm text-destructive mt-1">{errors.estado_civil.message}</p>
 						)}
 					</div>
-
-					</div>
+				</div>
 			</FormSection>
 
 			{/* SECCIÓN 2: INFORMACIÓN DE CONTACTO */}
-			<FormSection title="Información de Contacto" description="Datos de contacto del cliente">
+			<FormSection
+				title="Información de Contacto"
+				description="Datos de contacto del cliente"
+				required
+			>
 				<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 					<div className="md:col-span-2">
 						<Label htmlFor="direccion">
-							Dirección <span className="text-red-500">*</span>
+							Dirección <span className="text-destructive">*</span>
 						</Label>
-						<Input id="direccion" {...ur("direccion")} onBlur={onFieldBlur} />
-						{errors.direccion && <p className="text-sm text-red-500 mt-1">{errors.direccion.message}</p>}
+						<Input id="direccion" {...ur("direccion")} onBlur={onFieldBlur} className={eb(!!errors.direccion)} />
+						{errors.direccion && <p className="text-sm text-destructive mt-1">{errors.direccion.message}</p>}
 					</div>
 
 					<div>
 						<Label htmlFor="correo_electronico">
-							Correo Electrónico <span className="text-red-500">*</span>
+							Correo Electrónico <span className="text-destructive">*</span>
 						</Label>
 						<Input
 							id="correo_electronico"
@@ -232,23 +272,25 @@ export function NaturalClientForm({ form, partnerForm, onFieldBlur, exceptions =
 							{...register("correo_electronico")}
 							onBlur={onFieldBlur}
 							placeholder="ejemplo@correo.com"
+							className={eb(!!errors.correo_electronico)}
 						/>
 						{errors.correo_electronico && (
-							<p className="text-sm text-red-500 mt-1">{errors.correo_electronico.message}</p>
+							<p className="text-sm text-destructive mt-1">{errors.correo_electronico.message}</p>
 						)}
 					</div>
 
 					<div>
 						<Label htmlFor="celular">
-							Celular <span className="text-red-500">*</span>
+							Celular <span className="text-destructive">*</span>
 						</Label>
 						<Input
 							id="celular"
 							{...register("celular")}
 							onBlur={onFieldBlur}
 							placeholder="Solo números, min. 5 dígitos"
+							className={eb(!!errors.celular)}
 						/>
-						{errors.celular && <p className="text-sm text-red-500 mt-1">{errors.celular.message}</p>}
+						{errors.celular && <p className="text-sm text-destructive mt-1">{errors.celular.message}</p>}
 					</div>
 
 					<div className="md:col-span-2">
@@ -264,15 +306,16 @@ export function NaturalClientForm({ form, partnerForm, onFieldBlur, exceptions =
 			</FormSection>
 
 			{/* SECCIÓN 3: OTROS DATOS */}
-			<FormSection title="Otros Datos" description="Información adicional (opcional)">
+			<FormSection title="Otros Datos" description="Información adicional del cliente" required>
+				{/* Grupo 1: datos laborales */}
 				<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 					<div>
 						<Label htmlFor="profesion_oficio">
-							Profesión u Oficio <span className="text-red-500">*</span>
+							Profesión u Oficio <span className="text-destructive">*</span>
 						</Label>
-						<Input id="profesion_oficio" {...ur("profesion_oficio")} onBlur={onFieldBlur} />
+						<Input id="profesion_oficio" {...ur("profesion_oficio")} onBlur={onFieldBlur} className={eb(!!errors.profesion_oficio)} />
 						{errors.profesion_oficio && (
-							<p className="text-sm text-red-500 mt-1">{errors.profesion_oficio.message}</p>
+							<p className="text-sm text-destructive mt-1">{errors.profesion_oficio.message}</p>
 						)}
 					</div>
 
@@ -287,76 +330,14 @@ export function NaturalClientForm({ form, partnerForm, onFieldBlur, exceptions =
 					</div>
 
 					<div>
-						<Label htmlFor="pais_residencia">
-							País de Residencia <span className="text-red-500">*</span>
-						</Label>
-						<Input
-							id="pais_residencia"
-							{...register("pais_residencia")}
-							onBlur={onFieldBlur}
-							defaultValue="Bolivia"
-							readOnly
-							className="bg-muted cursor-not-allowed"
-						/>
-						{errors.pais_residencia && (
-							<p className="text-sm text-red-500 mt-1">{errors.pais_residencia.message}</p>
-						)}
-					</div>
-
-					<div>
-						<Label htmlFor="genero">Género</Label>
-						<Controller
-							name="genero"
-							control={control}
-							render={({ field }) => (
-								<Select value={field.value} onValueChange={field.onChange}>
-									<SelectTrigger>
-										<SelectValue placeholder="Seleccionar" />
-									</SelectTrigger>
-									<SelectContent>
-										{GENDER_OPTIONS.map((gender) => (
-											<SelectItem key={gender} value={gender}>
-												{gender.charAt(0).toUpperCase() + gender.slice(1)}
-											</SelectItem>
-										))}
-									</SelectContent>
-								</Select>
-							)}
-						/>
-					</div>
-
-					<div>
-						<Label htmlFor="nivel_ingresos">Nivel de Ingresos aproximado</Label>
-						<Controller
-							name="nivel_ingresos"
-							control={control}
-							render={({ field }) => (
-								<Select
-									value={field.value?.toString()}
-									onValueChange={(value) => field.onChange(Number(value))}
-								>
-									<SelectTrigger>
-										<SelectValue placeholder="Seleccionar" />
-									</SelectTrigger>
-									<SelectContent>
-										{INCOME_LEVELS.map((level) => (
-											<SelectItem key={level} value={INCOME_VALUES[level].toString()}>
-												{level.charAt(0).toUpperCase() + level.slice(1)} (Bs.
-												{INCOME_VALUES[level].toLocaleString()})
-											</SelectItem>
-										))}
-									</SelectContent>
-								</Select>
-							)}
-						/>
-					</div>
-
-					<div>
 						<Label htmlFor="cargo">Cargo</Label>
 						<Input id="cargo" {...ur("cargo")} onBlur={onFieldBlur} />
 					</div>
+				</div>
 
-					<div>
+				{/* Grupo 2: contexto — campos cortos */}
+				<div className="grid grid-cols-4 gap-4 mt-4">
+					<div className="col-span-1">
 						<Label htmlFor="anio_ingreso">Año de Ingreso</Label>
 						<Input
 							id="anio_ingreso"
@@ -366,17 +347,60 @@ export function NaturalClientForm({ form, partnerForm, onFieldBlur, exceptions =
 							placeholder="Ej: 2020"
 							{...register("anio_ingreso", { valueAsNumber: true })}
 							onBlur={onFieldBlur}
-							className={errors.anio_ingreso ? "border-red-500" : ""}
+							className={eb(!!errors.anio_ingreso)}
 						/>
 						{errors.anio_ingreso && (
-							<p className="text-sm text-red-500 mt-1">{errors.anio_ingreso.message}</p>
+							<p className="text-sm text-destructive mt-1">{errors.anio_ingreso.message}</p>
 						)}
 					</div>
 
+					<div className="col-span-1">
+						<Label htmlFor="pais_residencia">
+							País de Residencia <span className="text-destructive">*</span>
+						</Label>
+						<Input
+							id="pais_residencia"
+							{...register("pais_residencia")}
+							onBlur={onFieldBlur}
+							defaultValue="Bolivia"
+							readOnly
+							className="bg-muted cursor-not-allowed"
+						/>
+					</div>
+
+					<div className="col-span-2">
+						<Label htmlFor="nivel_ingresos">Nivel de Ingresos aproximado</Label>
+						<Controller
+							name="nivel_ingresos"
+							control={control}
+							render={({ field }) => (
+								<Select
+									value={field.value?.toString()}
+									onValueChange={(value) => field.onChange(Number(value))}
+								>
+									<SelectTrigger className="w-full">
+										<SelectValue placeholder="Seleccionar" />
+									</SelectTrigger>
+									<SelectContent>
+										{INCOME_LEVELS.map((level) => (
+											<SelectItem key={level} value={INCOME_VALUES[level].toString()}>
+												{level.charAt(0).toUpperCase() + level.slice(1)} (Bs.{" "}
+												{INCOME_VALUES[level].toLocaleString()})
+											</SelectItem>
+										))}
+									</SelectContent>
+								</Select>
+							)}
+						/>
+					</div>
+				</div>
+
+				{/* Grupo 3: facturación */}
+				<div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
 					<div>
 						<Label htmlFor="nit">NIT de Facturación</Label>
-						<Input id="nit" {...register("nit")} onBlur={onFieldBlur} placeholder="Min. 7 dígitos" />
-						{errors.nit && <p className="text-sm text-red-500 mt-1">{errors.nit.message}</p>}
+						<Input id="nit" {...register("nit")} onBlur={onFieldBlur} placeholder="Mín. 7 dígitos" className={eb(!!errors.nit)} />
+						{errors.nit && <p className="text-sm text-destructive mt-1">{errors.nit.message}</p>}
 					</div>
 
 					<div className="md:col-span-2">
@@ -415,6 +439,7 @@ export function NaturalClientForm({ form, partnerForm, onFieldBlur, exceptions =
 			<FormSection
 				title="Documentos del Cliente"
 				description="Cargue los documentos requeridos del cliente"
+				required
 			>
 				<ClienteDocumentUpload
 					clientType="natural"
@@ -451,12 +476,15 @@ function PartnerFields({ form, onFieldBlur }: { form: UseFormReturn<ClientPartne
 		};
 	};
 
+	const { onChange: onCelularChange, ...celularRest } = register("celular");
+
 	return (
 		<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+			{/* Nombres */}
 			<div>
 				<Label htmlFor="partner_primer_nombre">Primer Nombre</Label>
 				<Input id="partner_primer_nombre" {...ur("primer_nombre")} onBlur={onFieldBlur} />
-				{errors.primer_nombre && <p className="text-sm text-red-500 mt-1">{errors.primer_nombre.message}</p>}
+				{errors.primer_nombre && <p className="text-sm text-destructive mt-1">{errors.primer_nombre.message}</p>}
 			</div>
 
 			<div>
@@ -468,7 +496,7 @@ function PartnerFields({ form, onFieldBlur }: { form: UseFormReturn<ClientPartne
 				<Label htmlFor="partner_primer_apellido">Primer Apellido</Label>
 				<Input id="partner_primer_apellido" {...ur("primer_apellido")} onBlur={onFieldBlur} />
 				{errors.primer_apellido && (
-					<p className="text-sm text-red-500 mt-1">{errors.primer_apellido.message}</p>
+					<p className="text-sm text-destructive mt-1">{errors.primer_apellido.message}</p>
 				)}
 			</div>
 
@@ -477,16 +505,21 @@ function PartnerFields({ form, onFieldBlur }: { form: UseFormReturn<ClientPartne
 				<Input id="partner_segundo_apellido" {...ur("segundo_apellido")} onBlur={onFieldBlur} />
 			</div>
 
-			<div className="md:col-span-2">
-				<Label htmlFor="partner_direccion">Dirección</Label>
-				<Input id="partner_direccion" {...ur("direccion")} onBlur={onFieldBlur} />
-				{errors.direccion && <p className="text-sm text-red-500 mt-1">{errors.direccion.message}</p>}
-			</div>
-
+			{/* Contacto */}
 			<div>
 				<Label htmlFor="partner_celular">Celular</Label>
-				<Input id="partner_celular" {...register("celular")} onBlur={onFieldBlur} placeholder="Solo números" />
-				{errors.celular && <p className="text-sm text-red-500 mt-1">{errors.celular.message}</p>}
+				<Input
+					id="partner_celular"
+					inputMode="numeric"
+					placeholder="Solo números"
+					{...celularRest}
+					onChange={(e) => {
+						e.target.value = e.target.value.replace(/\D/g, "");
+						onCelularChange(e);
+					}}
+					onBlur={onFieldBlur}
+				/>
+				{errors.celular && <p className="text-sm text-destructive mt-1">{errors.celular.message}</p>}
 			</div>
 
 			<div>
@@ -498,34 +531,38 @@ function PartnerFields({ form, onFieldBlur }: { form: UseFormReturn<ClientPartne
 					onBlur={onFieldBlur}
 				/>
 				{errors.correo_electronico && (
-					<p className="text-sm text-red-500 mt-1">{errors.correo_electronico.message}</p>
+					<p className="text-sm text-destructive mt-1">{errors.correo_electronico.message}</p>
 				)}
 			</div>
 
+			{/* Dirección */}
+			<div className="md:col-span-2">
+				<Label htmlFor="partner_direccion">Dirección</Label>
+				<Input id="partner_direccion" {...ur("direccion")} onBlur={onFieldBlur} />
+				{errors.direccion && <p className="text-sm text-destructive mt-1">{errors.direccion.message}</p>}
+			</div>
+
+			{/* Datos laborales */}
 			<div>
 				<Label htmlFor="partner_profesion_oficio">Profesión u Oficio</Label>
 				<Input id="partner_profesion_oficio" {...ur("profesion_oficio")} onBlur={onFieldBlur} />
 				{errors.profesion_oficio && (
-					<p className="text-sm text-red-500 mt-1">{errors.profesion_oficio.message}</p>
+					<p className="text-sm text-destructive mt-1">{errors.profesion_oficio.message}</p>
 				)}
 			</div>
 
 			<div>
-				<Label htmlFor="partner_actividad_economica">
-					Actividad Económica
-				</Label>
+				<Label htmlFor="partner_actividad_economica">Actividad Económica</Label>
 				<Input id="partner_actividad_economica" {...ur("actividad_economica")} onBlur={onFieldBlur} />
 				{errors.actividad_economica && (
-					<p className="text-sm text-red-500 mt-1">{errors.actividad_economica.message}</p>
+					<p className="text-sm text-destructive mt-1">{errors.actividad_economica.message}</p>
 				)}
 			</div>
 
 			<div>
-				<Label htmlFor="partner_lugar_trabajo">
-					Lugar de Trabajo
-				</Label>
+				<Label htmlFor="partner_lugar_trabajo">Lugar de Trabajo</Label>
 				<Input id="partner_lugar_trabajo" {...ur("lugar_trabajo")} onBlur={onFieldBlur} />
-				{errors.lugar_trabajo && <p className="text-sm text-red-500 mt-1">{errors.lugar_trabajo.message}</p>}
+				{errors.lugar_trabajo && <p className="text-sm text-destructive mt-1">{errors.lugar_trabajo.message}</p>}
 			</div>
 		</div>
 	);

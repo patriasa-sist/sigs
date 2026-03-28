@@ -35,14 +35,12 @@ import {
 	getDraftTimestamp,
 	formatDraftAge,
 } from "@/utils/clientFormStorage";
-import { FormProgressBar } from "@/components/clientes/FormProgressBar";
 import { ClientTypeSelector } from "@/components/clientes/ClientTypeSelector";
 import { NaturalClientForm } from "@/components/clientes/NaturalClientForm";
 import { UnipersonalClientForm } from "@/components/clientes/UnipersonalClientForm";
 import { JuridicClientForm } from "@/components/clientes/JuridicClientForm";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { ArrowLeft, Save, X } from "lucide-react";
+import { Save, X, ChevronLeft, Users, Check } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import { saveExtraPhones } from "@/app/clientes/celulares/actions";
 
@@ -128,6 +126,8 @@ export default function NuevoClientePage() {
 	const [isSaving, setIsSaving] = useState(false);
 	const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 	const [docExceptions, setDocExceptions] = useState<TipoDocumentoCliente[]>([]);
+	// Track which sidebar sections passed validation after clicking "Guardar"
+	const [validatedSections, setValidatedSections] = useState<boolean[]>([]);
 
 	// Natural client form
 	const naturalForm = useForm<NaturalClientFormData>({
@@ -247,6 +247,7 @@ export default function NuevoClientePage() {
 	// Handle client type selection
 	const handleClientTypeSelect = (type: ClientType) => {
 		setClientType(type);
+		setValidatedSections([]);
 		handleAutoSave();
 	};
 
@@ -704,6 +705,49 @@ export default function NuevoClientePage() {
 		) as TipoDocumentoCliente[];
 	};
 
+	// ---------------------------------------------------------------------------
+	// Section-field mapping for sidebar validation feedback
+	// ---------------------------------------------------------------------------
+	const NATURAL_SECTION_FIELDS: string[][] = [
+		[], // 0: Tipo de Cliente (always valid when clientType is set)
+		["primer_nombre", "segundo_nombre", "primer_apellido", "segundo_apellido", "tipo_documento", "numero_documento", "extension_ci", "nacionalidad", "fecha_nacimiento", "estado_civil", "genero"],
+		["direccion", "correo_electronico", "celular"],
+		["profesion_oficio", "actividad_economica", "lugar_trabajo", "pais_residencia", "nivel_ingresos", "cargo", "anio_ingreso", "nit", "domicilio_comercial"],
+		[], // 4: Documentos (validated separately)
+	];
+
+	const UNIPERSONAL_SECTION_FIELDS: string[][] = [
+		[], // 0: Tipo de Cliente
+		// Sidebar "Datos Personales" groups form sections: Datos Personales + Otros Datos Personales
+		["primer_nombre", "segundo_nombre", "primer_apellido", "segundo_apellido", "tipo_documento", "numero_documento", "extension_ci", "nacionalidad", "fecha_nacimiento", "estado_civil", "genero", "profesion_oficio", "actividad_economica", "lugar_trabajo", "pais_residencia", "cargo", "anio_ingreso"],
+		["direccion", "correo_electronico", "celular"],
+		["razon_social", "nit", "matricula_comercio", "domicilio_comercial", "telefono_comercial", "actividad_economica_comercial", "nivel_ingresos", "correo_electronico_comercial"],
+		["nombre_representante", "ci_representante", "extension_representante"],
+		[], // 5: Documentos
+	];
+
+	const JURIDIC_SECTION_FIELDS: string[][] = [
+		[], // 0: Tipo de Cliente
+		["razon_social", "tipo_sociedad", "tipo_documento", "nit", "matricula_comercio", "pais_constitucion", "actividad_economica"],
+		["direccion_legal", "correo_electronico", "telefono"],
+		["legal_representatives"],
+		[], // 4: Documentos
+	];
+
+	/** Compute per-section validity from form errors after trigger(). */
+	const computeSectionValidity = (
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		errors: Record<string, any>,
+		sectionFields: string[][],
+	): boolean[] => {
+		const errorKeys = new Set(Object.keys(errors));
+		return sectionFields.map((fields, i) => {
+			if (i === 0) return clientType !== null; // Tipo de Cliente
+			if (fields.length === 0) return true; // Documentos checked separately
+			return !fields.some((f) => errorKeys.has(f));
+		});
+	};
+
 	// Handle form submission
 	const handleSubmit = async () => {
 		setIsSaving(true);
@@ -712,6 +756,8 @@ export default function NuevoClientePage() {
 		try {
 			if (clientType === "natural") {
 				const isValid = await naturalForm.trigger();
+				const sectionResults = computeSectionValidity(naturalForm.formState.errors, NATURAL_SECTION_FIELDS);
+				setValidatedSections(sectionResults);
 				if (!isValid) {
 					const fields = getErrorFieldLabels(naturalForm.formState.errors);
 					toast.error("Campos incompletos o inválidos", {
@@ -723,6 +769,7 @@ export default function NuevoClientePage() {
 
 				// Validate required documents
 				if (!validateDocumentsBeforeSave(naturalForm.getValues().documentos, "natural")) {
+					setValidatedSections(prev => { const copy = [...prev]; copy[copy.length - 1] = false; return copy; });
 					setIsSaving(false);
 					return;
 				}
@@ -741,6 +788,8 @@ export default function NuevoClientePage() {
 				unipersonalForm.setValue("nacionalidad_propietario", personal.nacionalidad ?? "");
 
 				const isValid = await unipersonalForm.trigger();
+				const sectionResults = computeSectionValidity(unipersonalForm.formState.errors, UNIPERSONAL_SECTION_FIELDS);
+				setValidatedSections(sectionResults);
 				if (!isValid) {
 					const fields = getErrorFieldLabels(unipersonalForm.formState.errors);
 					toast.error("Campos incompletos o inválidos", {
@@ -752,6 +801,7 @@ export default function NuevoClientePage() {
 
 				// Validate required documents
 				if (!validateDocumentsBeforeSave(unipersonalForm.getValues().documentos, "unipersonal")) {
+					setValidatedSections(prev => { const copy = [...prev]; copy[copy.length - 1] = false; return copy; });
 					setIsSaving(false);
 					return;
 				}
@@ -760,6 +810,8 @@ export default function NuevoClientePage() {
 				toast.success("Cliente unipersonal creado exitosamente");
 			} else if (clientType === "juridica") {
 				const isValid = await juridicForm.trigger();
+				const sectionResults = computeSectionValidity(juridicForm.formState.errors, JURIDIC_SECTION_FIELDS);
+				setValidatedSections(sectionResults);
 				if (!isValid) {
 					const fields = getErrorFieldLabels(juridicForm.formState.errors);
 					toast.error("Campos incompletos o inválidos", {
@@ -771,6 +823,7 @@ export default function NuevoClientePage() {
 
 				// Validate required documents
 				if (!validateDocumentsBeforeSave(juridicForm.getValues().documentos, "juridica")) {
+					setValidatedSections(prev => { const copy = [...prev]; copy[copy.length - 1] = false; return copy; });
 					setIsSaving(false);
 					return;
 				}
@@ -854,64 +907,156 @@ export default function NuevoClientePage() {
 		);
 	}
 
+	// Sidebar sections per client type
+	const sidebarSections: { label: string; detail?: string }[] = clientType === "natural"
+		? [
+			{ label: "Tipo de Cliente", detail: "Persona Natural" },
+			{ label: "Datos Personales" },
+			{ label: "Información de Contacto" },
+			{ label: "Otros Datos" },
+			{ label: "Documentos" },
+		]
+		: clientType === "unipersonal"
+		? [
+			{ label: "Tipo de Cliente", detail: "Unipersonal" },
+			{ label: "Datos Personales" },
+			{ label: "Información de Contacto" },
+			{ label: "Datos Comerciales" },
+			{ label: "Representante Legal" },
+			{ label: "Documentos" },
+		]
+		: clientType === "juridica"
+		? [
+			{ label: "Tipo de Cliente", detail: "Persona Jurídica" },
+			{ label: "Datos de la Empresa" },
+			{ label: "Información de Contacto" },
+			{ label: "Representantes Legales" },
+			{ label: "Documentos" },
+		]
+		: [{ label: "Tipo de Cliente" }];
+
 	return (
-		<div className="container mx-auto py-8 max-w-5xl">
-			{/* Header */}
-			<div className="flex items-center justify-between mb-6">
-				<div className="flex items-center gap-4">
-					<Button variant="ghost" size="sm" onClick={() => router.push("/clientes")}>
-						<ArrowLeft className="h-4 w-4 mr-2" />
-						Volver
-					</Button>
-					<h1 className="text-3xl font-bold">Agregar Nuevo Cliente</h1>
+		<div className="max-w-7xl mx-auto pt-6">
+			{/* Sticky header */}
+			<div className="sticky top-0 z-20 bg-[#F1F4F9] border-b border-[#E2E8F0] -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 pt-4 pb-4 mb-6">
+				<div className="flex items-center justify-between gap-4 max-w-7xl mx-auto">
+					<div className="flex items-center gap-3 min-w-0">
+						<button
+							onClick={() => router.push("/clientes")}
+							className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors shrink-0"
+						>
+							<ChevronLeft className="h-4 w-4" />
+							Clientes
+						</button>
+						<span className="text-[#CBD5E1]">/</span>
+						<Users className="h-6 w-6 text-primary shrink-0" />
+						<div className="min-w-0">
+							<h1 className="text-xl font-semibold text-foreground leading-tight">
+								Agregar Nuevo Cliente
+							</h1>
+							<p className="text-sm text-muted-foreground leading-tight">
+								{clientType
+									? clientType === "natural"
+										? "Persona Natural"
+										: clientType === "unipersonal"
+										? "Unipersonal"
+										: "Persona Jurídica"
+									: "Seleccione el tipo de cliente"}
+							</p>
+						</div>
+					</div>
+					<div className="flex items-center gap-2 shrink-0">
+						<Button variant="ghost" size="sm" onClick={handleCancel} disabled={isSaving} className="text-muted-foreground hover:text-destructive hover:bg-destructive/8">
+							<X className="h-4 w-4 mr-1.5" />
+							Cancelar
+						</Button>
+						{clientType && (
+							<Button onClick={handleSubmit} disabled={isSaving} size="sm">
+								<Save className="h-4 w-4 mr-1.5" />
+								{isSaving ? "Guardando..." : "Guardar Cliente"}
+							</Button>
+						)}
+					</div>
 				</div>
 			</div>
 
-			{/* Progress Bar */}
-			<FormProgressBar currentStep={clientType ? 2 : 1} clientType={clientType} completedSections={{}} />
-
-			{/* Client Type Selector */}
-			<ClientTypeSelector selectedType={clientType} onSelect={handleClientTypeSelect} />
-
-			{/* Form Content */}
-			{clientType === "natural" && (
-				<div className="mt-6">
-					<NaturalClientForm form={naturalForm} partnerForm={partnerForm} onFieldBlur={handleAutoSave} exceptions={docExceptions} />
-				</div>
-			)}
-
-			{clientType === "unipersonal" && (
-				<div className="mt-6">
-					<UnipersonalClientForm
-						form={unipersonalForm}
-						partnerForm={partnerForm}
-						onFieldBlur={handleAutoSave}
-						exceptions={docExceptions}
-					/>
-				</div>
-			)}
-
-			{clientType === "juridica" && (
-				<div className="mt-6">
-					<JuridicClientForm form={juridicForm} onFieldBlur={handleAutoSave} exceptions={docExceptions} />
-				</div>
-			)}
-
-			{/* Action Buttons */}
-			{clientType && (
-				<Card className="mt-8 p-6">
-					<div className="flex items-center justify-between">
-						<Button variant="outline" onClick={handleCancel} disabled={isSaving}>
-							<X className="h-4 w-4 mr-2" />
-							Cancelar
-						</Button>
-						<Button onClick={handleSubmit} disabled={isSaving} className="bg-blue-500 hover:bg-blue-600">
-							<Save className="h-4 w-4 mr-2" />
-							{isSaving ? "Guardando..." : "Guardar Cliente"}
-						</Button>
+			{/* Two-column layout */}
+			<div className="flex gap-8 items-start">
+				{/* Sidebar */}
+				<aside className="hidden lg:block w-52 shrink-0 sticky top-[81px] self-start">
+					<div className="bg-card rounded-lg border border-border shadow-sm overflow-hidden">
+						<div className="px-4 py-3 border-b border-border">
+							<p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+								Secciones
+							</p>
+						</div>
+						<div className="p-3 space-y-0.5">
+							{sidebarSections.map((section, i) => {
+								const isFirst = i === 0;
+								const hasValidation = validatedSections.length > 0;
+								const isCompleted = hasValidation
+									? validatedSections[i] === true
+									: isFirst && clientType !== null;
+								const hasFailed = hasValidation && validatedSections[i] === false;
+								const isPending = !isFirst && clientType !== null && !isCompleted && !hasFailed;
+								const isActive = isFirst && clientType === null;
+								return (
+									<div key={i} className="relative">
+										{i < sidebarSections.length - 1 && (
+											<div className={`absolute left-[15px] top-8 w-px h-3 ${isCompleted ? "bg-[#0D9488]/40" : hasFailed ? "bg-rose-300" : "bg-border"}`} />
+										)}
+										<div className={`flex items-start gap-2.5 px-2 py-2 rounded-md ${isCompleted || isActive ? "bg-primary/8" : hasFailed ? "bg-rose-50" : ""}`}>
+											<div className={`w-[22px] h-[22px] shrink-0 rounded-md flex items-center justify-center text-xs font-semibold mt-0.5 transition-colors ${
+												isCompleted ? "bg-[#0D9488] text-white"
+											: hasFailed ? "bg-rose-500 text-white"
+											: isActive ? "bg-primary text-primary-foreground"
+											: isPending ? "bg-primary/10 text-primary border border-primary/25"
+											: "border-2 border-border text-muted-foreground"
+											}`}>
+												{isCompleted ? <Check className="h-3 w-3" /> : hasFailed ? "!" : i + 1}
+											</div>
+											<div className="flex-1 min-w-0">
+												<p className={`text-sm font-medium leading-tight ${isCompleted || isActive ? "text-primary" : hasFailed ? "text-rose-700" : isPending ? "text-foreground" : "text-muted-foreground"}`}>
+													{section.label}
+												</p>
+												{section.detail && isCompleted && (
+													<p className="text-xs text-muted-foreground truncate mt-0.5 leading-tight">
+														{section.detail}
+													</p>
+												)}
+											</div>
+										</div>
+									</div>
+								);
+							})}
+						</div>
 					</div>
-				</Card>
-			)}
+				</aside>
+
+				{/* Main content */}
+				<div className="flex-1 min-w-0 space-y-6">
+					{/* Client Type Selector */}
+					<ClientTypeSelector selectedType={clientType} onSelect={handleClientTypeSelect} />
+
+					{/* Form Content */}
+					{clientType === "natural" && (
+						<NaturalClientForm form={naturalForm} partnerForm={partnerForm} onFieldBlur={handleAutoSave} exceptions={docExceptions} />
+					)}
+
+					{clientType === "unipersonal" && (
+						<UnipersonalClientForm
+							form={unipersonalForm}
+							partnerForm={partnerForm}
+							onFieldBlur={handleAutoSave}
+							exceptions={docExceptions}
+						/>
+					)}
+
+					{clientType === "juridica" && (
+						<JuridicClientForm form={juridicForm} onFieldBlur={handleAutoSave} exceptions={docExceptions} />
+					)}
+				</div>
+			</div>
 		</div>
 	);
 }

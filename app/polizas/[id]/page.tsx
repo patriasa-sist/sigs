@@ -112,7 +112,8 @@ export default function PolizaDetallePage() {
 	};
 
 	// Verificar si el usuario puede validar (admin, usuario o líder de equipo con póliza pendiente)
-	const puedeValidar = (userRole === "admin" || userRole === "usuario" || isTeamLeader) && poliza?.estado === "pendiente";
+	const puedeValidar =
+		(userRole === "admin" || userRole === "usuario" || isTeamLeader) && poliza?.estado === "pendiente";
 
 	// Abrir modal de confirmación de validación
 	const handleValidar = () => {
@@ -170,10 +171,10 @@ export default function PolizaDetallePage() {
 	};
 
 	if (isLoading) {
-	return (
-			<div className="flex items-center justify-center min-h-screen">
-				<div className="text-center">
-					<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4 mx-auto"></div>
+		return (
+			<div className="flex items-center justify-center min-h-[60vh]">
+				<div className="text-center space-y-3">
+					<div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent mx-auto" />
 					<p className="text-sm text-muted-foreground">Cargando detalles de la póliza…</p>
 				</div>
 			</div>
@@ -196,17 +197,30 @@ export default function PolizaDetallePage() {
 	// Precompute history for sidebar
 	const edicionesRelevantes = (poliza.historial || []).filter((item) => {
 		if (item.accion === "creacion") return false;
-		if (item.accion === "edicion" && item.campos_modificados?.length === 1 && item.campos_modificados[0] === "estado") return false;
+		if (
+			item.accion === "edicion" &&
+			item.campos_modificados?.length === 1 &&
+			item.campos_modificados[0] === "estado"
+		)
+			return false;
 		return true;
 	});
 	const formatCampos = (campos: string[] | null) => {
 		if (!campos || campos.length === 0) return null;
 		const labels: Record<string, string> = {
-			prima_total: "prima", inicio_vigencia: "inicio vigencia", fin_vigencia: "fin vigencia",
-			fecha_emision_compania: "fecha emisión", modalidad_pago: "modalidad pago",
-			compania_aseguradora: "compañía", numero_poliza: "número póliza",
-			responsable: "ejecutivo", regional: "regional", categoria: "categoría",
-			estado: "estado", moneda: "moneda", ramo: "ramo",
+			prima_total: "prima",
+			inicio_vigencia: "inicio vigencia",
+			fin_vigencia: "fin vigencia",
+			fecha_emision_compania: "fecha emisión",
+			modalidad_pago: "modalidad pago",
+			compania_aseguradora: "compañía",
+			numero_poliza: "número póliza",
+			responsable: "ejecutivo",
+			regional: "regional",
+			categoria: "categoría",
+			estado: "estado",
+			moneda: "moneda",
+			ramo: "ramo",
 		};
 		const cf = campos.filter((c) => c !== "estado" || campos.length === 1);
 		return cf.map((c) => labels[c] || c).join(", ");
@@ -230,7 +244,9 @@ export default function PolizaDetallePage() {
 				<div className="flex items-start justify-between gap-4">
 					<div>
 						<div className="flex items-center gap-2 mb-1.5 flex-wrap">
-							<span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getEstadoStyle(poliza.estado)}`}>
+							<span
+								className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getEstadoStyle(poliza.estado)}`}
+							>
 								{getEstadoLabel(poliza.estado)}
 							</span>
 							{poliza.es_renovacion && (
@@ -239,8 +255,12 @@ export default function PolizaDetallePage() {
 								</span>
 							)}
 						</div>
-						<h1 className="text-2xl font-semibold text-foreground font-mono tracking-tight">{poliza.numero_poliza}</h1>
-						<p className="text-sm text-muted-foreground mt-0.5">{poliza.ramo} · {poliza.compania_nombre}</p>
+						<h1 className="text-2xl font-semibold text-foreground font-mono tracking-tight">
+							{poliza.numero_poliza}
+						</h1>
+						<p className="text-sm text-muted-foreground mt-0.5">
+							{poliza.ramo} · {poliza.compania_nombre}
+						</p>
 					</div>
 					<div className="flex items-center gap-2 flex-wrap justify-end shrink-0">
 						{(isAdmin || isTeamLeader) && (
@@ -250,7 +270,11 @@ export default function PolizaDetallePage() {
 							</Button>
 						)}
 						{canEdit && (
-							<Button variant="secondary" size="sm" onClick={() => router.push(`/polizas/${polizaId}/editar`)}>
+							<Button
+								variant="secondary"
+								size="sm"
+								onClick={() => router.push(`/polizas/${polizaId}/editar`)}
+							>
 								<Pencil className="h-4 w-4" />
 								Editar
 							</Button>
@@ -263,11 +287,21 @@ export default function PolizaDetallePage() {
 						)}
 						{puedeValidar && (
 							<>
-								<Button variant="default" size="sm" onClick={handleValidar} disabled={validationLoading !== null}>
+								<Button
+									variant="default"
+									size="sm"
+									onClick={handleValidar}
+									disabled={validationLoading !== null}
+								>
 									<CheckCircle className="h-4 w-4" />
 									{validationLoading === "validar" ? "Validando…" : "Validar"}
 								</Button>
-								<Button variant="destructive" size="sm" onClick={() => setShowRechazoModal(true)} disabled={validationLoading !== null}>
+								<Button
+									variant="destructive"
+									size="sm"
+									onClick={() => setShowRechazoModal(true)}
+									disabled={validationLoading !== null}
+								>
 									<XCircle className="h-4 w-4" />
 									Rechazar
 								</Button>
@@ -283,7 +317,9 @@ export default function PolizaDetallePage() {
 				<div className="lg:col-span-2 space-y-5">
 					{/* Información General */}
 					<div className="bg-card rounded-lg border border-border p-5">
-						<h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-4">Información General</h2>
+						<h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-4">
+							Información General
+						</h2>
 						<div className="grid grid-cols-2 gap-6">
 							<div>
 								<label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5 mb-1">
@@ -334,7 +370,9 @@ export default function PolizaDetallePage() {
 
 					{/* Vigencia */}
 					<div className="bg-card rounded-lg border border-border p-5">
-						<h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-4">Vigencia</h2>
+						<h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-4">
+							Vigencia
+						</h2>
 						<div className="grid grid-cols-3 gap-6">
 							<div>
 								<label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5 mb-1">
@@ -364,7 +402,8 @@ export default function PolizaDetallePage() {
 								Vehículos Asegurados ({poliza.vehiculos.filter((v) => !v._excluido_por).length})
 								{poliza.vehiculos.some((v) => v._excluido_por) && (
 									<span className="text-sm font-normal text-gray-500">
-										({poliza.vehiculos.filter((v) => v._excluido_por).length} excluido{poliza.vehiculos.filter((v) => v._excluido_por).length > 1 ? "s" : ""})
+										({poliza.vehiculos.filter((v) => v._excluido_por).length} excluido
+										{poliza.vehiculos.filter((v) => v._excluido_por).length > 1 ? "s" : ""})
 									</span>
 								)}
 							</h2>
@@ -397,15 +436,27 @@ export default function PolizaDetallePage() {
 										)}
 										<div className="grid grid-cols-3 gap-4">
 											<div>
-												<label className="text-xs font-medium text-muted-foreground">Placa</label>
-												<p className={`text-base font-semibold text-gray-900 ${vehiculo._excluido_por ? "line-through" : ""}`}>{vehiculo.placa}</p>
+												<label className="text-xs font-medium text-muted-foreground">
+													Placa
+												</label>
+												<p
+													className={`text-base font-semibold text-gray-900 ${vehiculo._excluido_por ? "line-through" : ""}`}
+												>
+													{vehiculo.placa}
+												</p>
 											</div>
 											<div>
-												<label className="text-xs font-medium text-muted-foreground">Tipo</label>
-												<p className="text-sm text-foreground">{vehiculo.tipo_vehiculo || "-"}</p>
+												<label className="text-xs font-medium text-muted-foreground">
+													Tipo
+												</label>
+												<p className="text-sm text-foreground">
+													{vehiculo.tipo_vehiculo || "-"}
+												</p>
 											</div>
 											<div>
-												<label className="text-xs font-medium text-muted-foreground">Marca/Modelo</label>
+												<label className="text-xs font-medium text-muted-foreground">
+													Marca/Modelo
+												</label>
 												<p className="text-sm text-foreground">
 													{vehiculo.marca || "-"} {vehiculo.modelo || ""}
 												</p>
@@ -415,55 +466,77 @@ export default function PolizaDetallePage() {
 												<p className="text-sm text-foreground">{vehiculo.ano || "-"}</p>
 											</div>
 											<div>
-												<label className="text-xs font-medium text-muted-foreground">Color</label>
+												<label className="text-xs font-medium text-muted-foreground">
+													Color
+												</label>
 												<p className="text-sm text-foreground">{vehiculo.color || "-"}</p>
 											</div>
 											<div>
 												<label className="text-xs font-medium text-muted-foreground">Uso</label>
-												<p className="text-sm text-foreground capitalize">{vehiculo.uso || "-"}</p>
+												<p className="text-sm text-foreground capitalize">
+													{vehiculo.uso || "-"}
+												</p>
 											</div>
 											<div>
-												<label className="text-xs font-medium text-muted-foreground">Valor Asegurado</label>
+												<label className="text-xs font-medium text-muted-foreground">
+													Valor Asegurado
+												</label>
 												<p className="text-sm font-semibold text-foreground">
 													{formatCurrency(vehiculo.valor_asegurado, poliza.moneda)}
 												</p>
 											</div>
 											<div>
-												<label className="text-xs font-medium text-muted-foreground">Franquicia</label>
+												<label className="text-xs font-medium text-muted-foreground">
+													Franquicia
+												</label>
 												<p className="text-sm text-foreground">
 													{formatCurrency(vehiculo.franquicia, poliza.moneda)}
 												</p>
 											</div>
 											<div>
-												<label className="text-xs font-medium text-muted-foreground">Coaseguro</label>
+												<label className="text-xs font-medium text-muted-foreground">
+													Coaseguro
+												</label>
 												<p className="text-sm text-foreground">
 													{vehiculo.coaseguro != null ? `${vehiculo.coaseguro}%` : "-"}
 												</p>
 											</div>
 											<div>
-												<label className="text-xs font-medium text-muted-foreground">Nro. Chasis</label>
+												<label className="text-xs font-medium text-muted-foreground">
+													Nro. Chasis
+												</label>
 												<p className="text-sm text-foreground">{vehiculo.nro_chasis || "-"}</p>
 											</div>
 											<div>
-												<label className="text-xs font-medium text-muted-foreground">Nro. Motor</label>
+												<label className="text-xs font-medium text-muted-foreground">
+													Nro. Motor
+												</label>
 												<p className="text-sm text-foreground">{vehiculo.nro_motor || "-"}</p>
 											</div>
 											{vehiculo.ejes != null && (
 												<div>
-													<label className="text-xs font-medium text-muted-foreground">Ejes</label>
+													<label className="text-xs font-medium text-muted-foreground">
+														Ejes
+													</label>
 													<p className="text-sm text-foreground">{vehiculo.ejes}</p>
 												</div>
 											)}
 											{vehiculo.nro_asientos != null && (
 												<div>
-													<label className="text-xs font-medium text-muted-foreground">Asientos</label>
+													<label className="text-xs font-medium text-muted-foreground">
+														Asientos
+													</label>
 													<p className="text-sm text-foreground">{vehiculo.nro_asientos}</p>
 												</div>
 											)}
 											{vehiculo.plaza_circulacion && (
 												<div>
-													<label className="text-xs font-medium text-muted-foreground">Plaza de Circulación</label>
-													<p className="text-sm text-foreground">{vehiculo.plaza_circulacion}</p>
+													<label className="text-xs font-medium text-muted-foreground">
+														Plaza de Circulación
+													</label>
+													<p className="text-sm text-foreground">
+														{vehiculo.plaza_circulacion}
+													</p>
 												</div>
 											)}
 										</div>
@@ -484,13 +557,19 @@ export default function PolizaDetallePage() {
 							{/* Regional del asegurado y maternidad */}
 							<div className="mb-4 grid grid-cols-1 md:grid-cols-2 gap-4">
 								<div>
-									<p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Regional del Asegurado</p>
+									<p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+										Regional del Asegurado
+									</p>
 									<p className="text-sm font-medium text-foreground">
-										{poliza.regional_asegurado_nombre || <span className="text-gray-400 italic">Sin dato</span>}
+										{poliza.regional_asegurado_nombre || (
+											<span className="text-gray-400 italic">Sin dato</span>
+										)}
 									</p>
 								</div>
 								<div>
-									<p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Cobertura de Maternidad</p>
+									<p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+										Cobertura de Maternidad
+									</p>
 									<p className="text-sm font-medium text-foreground">
 										{poliza.tiene_maternidad ? "Sí" : "No"}
 									</p>
@@ -500,12 +579,16 @@ export default function PolizaDetallePage() {
 							{/* Niveles de cobertura */}
 							{poliza.niveles_salud && poliza.niveles_salud.length > 0 && (
 								<div className="mb-4 p-4 bg-muted/50 rounded-lg">
-									<h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Niveles de Cobertura</h3>
+									<h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+										Niveles de Cobertura
+									</h3>
 									<div className="grid grid-cols-1 md:grid-cols-3 gap-3">
 										{poliza.niveles_salud.map((nivel) => (
 											<div key={nivel.id} className="bg-white border rounded p-3 text-sm">
 												<p className="font-medium text-gray-900">{nivel.nombre}</p>
-												<p className="text-gray-600">{formatCurrency(nivel.monto, poliza.moneda)}</p>
+												<p className="text-gray-600">
+													{formatCurrency(nivel.monto, poliza.moneda)}
+												</p>
 											</div>
 										))}
 									</div>
@@ -515,24 +598,42 @@ export default function PolizaDetallePage() {
 							{/* Asegurados (contratante/titular) */}
 							{poliza.asegurados_salud && poliza.asegurados_salud.length > 0 && (
 								<div className="mb-4">
-									<h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Asegurados</h3>
+									<h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+										Asegurados
+									</h3>
 									<div className="overflow-x-auto">
 										<table className="w-full">
 											<thead className="border-b border-border">
 												<tr>
-													<th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Nombre</th>
-													<th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">CI/NIT</th>
-													<th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Rol</th>
-													<th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Nivel</th>
+													<th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">
+														Nombre
+													</th>
+													<th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">
+														CI/NIT
+													</th>
+													<th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">
+														Rol
+													</th>
+													<th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">
+														Nivel
+													</th>
 												</tr>
 											</thead>
 											<tbody className="divide-y">
 												{poliza.asegurados_salud.map((a) => (
 													<tr key={a.id} className="hover:bg-muted/40 transition-colors">
-														<td className="px-4 py-2 text-sm font-medium text-foreground">{a.client_name}</td>
-														<td className="px-4 py-2 text-sm text-foreground">{a.client_ci}</td>
-														<td className="px-4 py-2 text-sm text-foreground capitalize">{a.rol}</td>
-														<td className="px-4 py-2 text-sm text-foreground">{a.nivel_nombre || "-"}</td>
+														<td className="px-4 py-2 text-sm font-medium text-foreground">
+															{a.client_name}
+														</td>
+														<td className="px-4 py-2 text-sm text-foreground">
+															{a.client_ci}
+														</td>
+														<td className="px-4 py-2 text-sm text-foreground capitalize">
+															{a.rol}
+														</td>
+														<td className="px-4 py-2 text-sm text-foreground">
+															{a.nivel_nombre || "-"}
+														</td>
 													</tr>
 												))}
 											</tbody>
@@ -545,19 +646,32 @@ export default function PolizaDetallePage() {
 							{poliza.beneficiarios_salud && poliza.beneficiarios_salud.length > 0 && (
 								<div>
 									<h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
-										Beneficiarios ({poliza.beneficiarios_salud.filter((b) => !b._excluido_por).length})
+										Beneficiarios (
+										{poliza.beneficiarios_salud.filter((b) => !b._excluido_por).length})
 									</h3>
 									<div className="overflow-x-auto">
 										<table className="w-full">
 											<thead className="border-b border-border">
 												<tr>
-													<th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Nombre</th>
-													<th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Carnet</th>
-													<th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Fecha Nac.</th>
-													<th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Género</th>
-													<th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Rol</th>
+													<th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">
+														Nombre
+													</th>
+													<th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">
+														Carnet
+													</th>
+													<th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">
+														Fecha Nac.
+													</th>
+													<th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">
+														Género
+													</th>
+													<th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">
+														Rol
+													</th>
 													{poliza.tiene_anexos_activos && (
-														<th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Estado</th>
+														<th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">
+															Estado
+														</th>
 													)}
 												</tr>
 											</thead>
@@ -566,14 +680,30 @@ export default function PolizaDetallePage() {
 													<tr
 														key={b.id}
 														className={`hover:bg-muted/40 transition-colors ${
-															b._excluido_por ? "opacity-50 bg-red-50/30" : b._origen_anexo ? "bg-green-50/30" : ""
+															b._excluido_por
+																? "opacity-50 bg-red-50/30"
+																: b._origen_anexo
+																	? "bg-green-50/30"
+																	: ""
 														}`}
 													>
-														<td className={`px-4 py-2 text-sm font-medium text-gray-900 ${b._excluido_por ? "line-through" : ""}`}>{b.nombre_completo}</td>
-														<td className="px-4 py-2 text-sm text-foreground">{b.carnet}</td>
-														<td className="px-4 py-2 text-sm text-foreground">{formatDate(b.fecha_nacimiento)}</td>
-														<td className="px-4 py-2 text-sm text-foreground">{b.genero}</td>
-														<td className="px-4 py-2 text-sm text-foreground capitalize">{b.rol}</td>
+														<td
+															className={`px-4 py-2 text-sm font-medium text-gray-900 ${b._excluido_por ? "line-through" : ""}`}
+														>
+															{b.nombre_completo}
+														</td>
+														<td className="px-4 py-2 text-sm text-foreground">
+															{b.carnet}
+														</td>
+														<td className="px-4 py-2 text-sm text-foreground">
+															{formatDate(b.fecha_nacimiento)}
+														</td>
+														<td className="px-4 py-2 text-sm text-foreground">
+															{b.genero}
+														</td>
+														<td className="px-4 py-2 text-sm text-foreground capitalize">
+															{b.rol}
+														</td>
 														{poliza.tiene_anexos_activos && (
 															<td className="px-4 py-2">
 																{b._origen_anexo && (
@@ -608,10 +738,15 @@ export default function PolizaDetallePage() {
 
 							{poliza.incendio_asegurados && poliza.incendio_asegurados.length > 0 && (
 								<div className="mb-4 p-4 bg-muted/50 rounded-lg">
-									<h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Asegurados Adicionales</h3>
+									<h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+										Asegurados Adicionales
+									</h3>
 									<div className="grid grid-cols-1 md:grid-cols-2 gap-2">
 										{poliza.incendio_asegurados.map((a) => (
-											<div key={a.id} className="bg-white border rounded p-2 text-sm flex items-center gap-2">
+											<div
+												key={a.id}
+												className="bg-white border rounded p-2 text-sm flex items-center gap-2"
+											>
 												<User className="h-4 w-4 text-gray-400" />
 												<span className="font-medium">{a.client_name}</span>
 												<span className="text-gray-500">CI/NIT: {a.client_ci}</span>
@@ -624,7 +759,8 @@ export default function PolizaDetallePage() {
 							{poliza.incendio_bienes && poliza.incendio_bienes.length > 0 && (
 								<div className="space-y-4">
 									<h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-										Bienes Asegurados ({poliza.incendio_bienes.filter((b) => !b._excluido_por).length})
+										Bienes Asegurados (
+										{poliza.incendio_bienes.filter((b) => !b._excluido_por).length})
 									</h3>
 									{poliza.incendio_bienes.map((bien) => (
 										<div
@@ -656,11 +792,19 @@ export default function PolizaDetallePage() {
 													<label className="text-sm font-medium text-gray-600 flex items-center gap-1">
 														<MapPin className="h-3 w-3" /> Dirección
 													</label>
-													<p className={`text-base text-gray-900 ${bien._excluido_por ? "line-through" : ""}`}>{bien.direccion}</p>
+													<p
+														className={`text-base text-gray-900 ${bien._excluido_por ? "line-through" : ""}`}
+													>
+														{bien.direccion}
+													</p>
 												</div>
 												<div className="text-right">
-													<label className="text-xs font-medium text-muted-foreground">Valor Total</label>
-													<p className="text-sm font-semibold text-foreground">{formatCurrency(bien.valor_total_declarado, poliza.moneda)}</p>
+													<label className="text-xs font-medium text-muted-foreground">
+														Valor Total
+													</label>
+													<p className="text-sm font-semibold text-foreground">
+														{formatCurrency(bien.valor_total_declarado, poliza.moneda)}
+													</p>
 													{bien.es_primer_riesgo && (
 														<span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
 															Primer Riesgo
@@ -674,8 +818,12 @@ export default function PolizaDetallePage() {
 														<tbody>
 															{bien.items.map((item, idx) => (
 																<tr key={idx} className="border-b last:border-0">
-																	<td className="py-1 text-gray-700">{item.nombre}</td>
-																	<td className="py-1 text-right font-medium text-gray-900">{formatCurrency(item.monto, poliza.moneda)}</td>
+																	<td className="py-1 text-gray-700">
+																		{item.nombre}
+																	</td>
+																	<td className="py-1 text-right font-medium text-gray-900">
+																		{formatCurrency(item.monto, poliza.moneda)}
+																	</td>
 																</tr>
 															))}
 														</tbody>
@@ -699,10 +847,15 @@ export default function PolizaDetallePage() {
 
 							{poliza.riesgos_varios_asegurados && poliza.riesgos_varios_asegurados.length > 0 && (
 								<div className="mb-4 p-4 bg-muted/50 rounded-lg">
-									<h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Asegurados</h3>
+									<h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+										Asegurados
+									</h3>
 									<div className="grid grid-cols-1 md:grid-cols-2 gap-2">
 										{poliza.riesgos_varios_asegurados.map((a) => (
-											<div key={a.id} className="bg-white border rounded p-2 text-sm flex items-center gap-2">
+											<div
+												key={a.id}
+												className="bg-white border rounded p-2 text-sm flex items-center gap-2"
+											>
 												<User className="h-4 w-4 text-gray-400" />
 												<span className="font-medium">{a.client_name}</span>
 												<span className="text-gray-500">CI/NIT: {a.client_ci}</span>
@@ -715,7 +868,8 @@ export default function PolizaDetallePage() {
 							{poliza.riesgos_varios_bienes && poliza.riesgos_varios_bienes.length > 0 && (
 								<div className="space-y-4">
 									<h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-										Bienes Asegurados ({poliza.riesgos_varios_bienes.filter((b) => !b._excluido_por).length})
+										Bienes Asegurados (
+										{poliza.riesgos_varios_bienes.filter((b) => !b._excluido_por).length})
 									</h3>
 									{poliza.riesgos_varios_bienes.map((bien) => (
 										<div
@@ -747,11 +901,19 @@ export default function PolizaDetallePage() {
 													<label className="text-sm font-medium text-gray-600 flex items-center gap-1">
 														<MapPin className="h-3 w-3" /> Dirección
 													</label>
-													<p className={`text-base text-gray-900 ${bien._excluido_por ? "line-through" : ""}`}>{bien.direccion}</p>
+													<p
+														className={`text-base text-gray-900 ${bien._excluido_por ? "line-through" : ""}`}
+													>
+														{bien.direccion}
+													</p>
 												</div>
 												<div className="text-right">
-													<label className="text-xs font-medium text-muted-foreground">Valor Total</label>
-													<p className="text-sm font-semibold text-foreground">{formatCurrency(bien.valor_total_declarado, poliza.moneda)}</p>
+													<label className="text-xs font-medium text-muted-foreground">
+														Valor Total
+													</label>
+													<p className="text-sm font-semibold text-foreground">
+														{formatCurrency(bien.valor_total_declarado, poliza.moneda)}
+													</p>
 													{bien.es_primer_riesgo && (
 														<span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
 															Primer Riesgo
@@ -765,8 +927,12 @@ export default function PolizaDetallePage() {
 														<tbody>
 															{bien.items.map((item, idx) => (
 																<tr key={idx} className="border-b last:border-0">
-																	<td className="py-1 text-gray-700">{item.nombre}</td>
-																	<td className="py-1 text-right font-medium text-gray-900">{formatCurrency(item.monto, poliza.moneda)}</td>
+																	<td className="py-1 text-gray-700">
+																		{item.nombre}
+																	</td>
+																	<td className="py-1 text-right font-medium text-gray-900">
+																		{formatCurrency(item.monto, poliza.moneda)}
+																	</td>
 																</tr>
 															))}
 														</tbody>
@@ -790,7 +956,9 @@ export default function PolizaDetallePage() {
 							<div className="grid grid-cols-2 gap-6">
 								<div>
 									<label className="text-xs font-medium text-muted-foreground">Tipo de Póliza</label>
-									<p className="text-sm text-foreground mt-1 capitalize">{poliza.responsabilidad_civil.tipo_poliza}</p>
+									<p className="text-sm text-foreground mt-1 capitalize">
+										{poliza.responsabilidad_civil.tipo_poliza}
+									</p>
 								</div>
 								<div>
 									<label className="text-xs font-medium text-muted-foreground">Valor Asegurado</label>
@@ -812,16 +980,22 @@ export default function PolizaDetallePage() {
 
 							{/* Regional del asegurado */}
 							<div className="mb-4">
-								<p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Regional del Asegurado</p>
+								<p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+									Regional del Asegurado
+								</p>
 								<p className="text-sm font-medium text-foreground">
-									{poliza.regional_asegurado_nombre || <span className="text-gray-400 italic">Sin dato</span>}
+									{poliza.regional_asegurado_nombre || (
+										<span className="text-gray-400 italic">Sin dato</span>
+									)}
 								</p>
 							</div>
 
 							{/* Niveles de cobertura */}
 							{poliza.niveles_cobertura && poliza.niveles_cobertura.length > 0 && (
 								<div className="mb-4">
-									<h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Niveles de Cobertura</h3>
+									<h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+										Niveles de Cobertura
+									</h3>
 									<div className="space-y-3">
 										{poliza.niveles_cobertura.map((nivel) => (
 											<div key={nivel.id} className="border rounded-lg p-3">
@@ -835,10 +1009,17 @@ export default function PolizaDetallePage() {
 												</div>
 												<div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm">
 													{Object.entries(nivel.coberturas).map(([key, cob]) => (
-														<div key={key} className={`p-2 rounded ${cob.habilitado ? "bg-green-50 border border-green-200" : "bg-gray-50 border border-gray-200 opacity-50"}`}>
-															<span className="block text-xs text-gray-600 capitalize">{key.replace(/_/g, " ")}</span>
+														<div
+															key={key}
+															className={`p-2 rounded ${cob.habilitado ? "bg-green-50 border border-green-200" : "bg-gray-50 border border-gray-200 opacity-50"}`}
+														>
+															<span className="block text-xs text-gray-600 capitalize">
+																{key.replace(/_/g, " ")}
+															</span>
 															<span className="font-medium text-gray-900">
-																{cob.habilitado ? formatCurrency(cob.valor, poliza.moneda) : "No incluido"}
+																{cob.habilitado
+																	? formatCurrency(cob.valor, poliza.moneda)
+																	: "No incluido"}
 															</span>
 														</div>
 													))}
@@ -859,17 +1040,29 @@ export default function PolizaDetallePage() {
 										<table className="w-full">
 											<thead className="border-b border-border">
 												<tr>
-													<th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Nombre</th>
-													<th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">CI/NIT</th>
-													{poliza.asegurados_nivel.some(a => a.rol) && (
-														<th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Rol</th>
+													<th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">
+														Nombre
+													</th>
+													<th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">
+														CI/NIT
+													</th>
+													{poliza.asegurados_nivel.some((a) => a.rol) && (
+														<th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">
+															Rol
+														</th>
 													)}
-													<th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Nivel</th>
-													{poliza.asegurados_nivel.some(a => a.cargo) && (
-														<th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Cargo</th>
+													<th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">
+														Nivel
+													</th>
+													{poliza.asegurados_nivel.some((a) => a.cargo) && (
+														<th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">
+															Cargo
+														</th>
 													)}
 													{poliza.tiene_anexos_activos && (
-														<th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Estado</th>
+														<th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">
+															Estado
+														</th>
 													)}
 												</tr>
 											</thead>
@@ -878,17 +1071,33 @@ export default function PolizaDetallePage() {
 													<tr
 														key={a.id}
 														className={`hover:bg-muted/40 transition-colors ${
-															a._excluido_por ? "opacity-50 bg-red-50/30" : a._origen_anexo ? "bg-green-50/30" : ""
+															a._excluido_por
+																? "opacity-50 bg-red-50/30"
+																: a._origen_anexo
+																	? "bg-green-50/30"
+																	: ""
 														}`}
 													>
-														<td className={`px-4 py-2 text-sm font-medium text-gray-900 ${a._excluido_por ? "line-through" : ""}`}>{a.client_name}</td>
-														<td className="px-4 py-2 text-sm text-foreground">{a.client_ci}</td>
-														{poliza.asegurados_nivel!.some(x => x.rol) && (
-															<td className="px-4 py-2 text-sm text-foreground capitalize">{a.rol || "-"}</td>
+														<td
+															className={`px-4 py-2 text-sm font-medium text-gray-900 ${a._excluido_por ? "line-through" : ""}`}
+														>
+															{a.client_name}
+														</td>
+														<td className="px-4 py-2 text-sm text-foreground">
+															{a.client_ci}
+														</td>
+														{poliza.asegurados_nivel!.some((x) => x.rol) && (
+															<td className="px-4 py-2 text-sm text-foreground capitalize">
+																{a.rol || "-"}
+															</td>
 														)}
-														<td className="px-4 py-2 text-sm text-foreground">{a.nivel_nombre || "-"}</td>
-														{poliza.asegurados_nivel!.some(x => x.cargo) && (
-															<td className="px-4 py-2 text-sm text-foreground">{a.cargo || "-"}</td>
+														<td className="px-4 py-2 text-sm text-foreground">
+															{a.nivel_nombre || "-"}
+														</td>
+														{poliza.asegurados_nivel!.some((x) => x.cargo) && (
+															<td className="px-4 py-2 text-sm text-foreground">
+																{a.cargo || "-"}
+															</td>
 														)}
 														{poliza.tiene_anexos_activos && (
 															<td className="px-4 py-2">
@@ -916,20 +1125,35 @@ export default function PolizaDetallePage() {
 							{poliza.beneficiarios_nivel && poliza.beneficiarios_nivel.length > 0 && (
 								<div>
 									<h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
-										Beneficiarios ({poliza.beneficiarios_nivel.filter((b) => !b._excluido_por).length})
+										Beneficiarios (
+										{poliza.beneficiarios_nivel.filter((b) => !b._excluido_por).length})
 									</h3>
 									<div className="overflow-x-auto">
 										<table className="w-full">
 											<thead className="border-b border-border">
 												<tr>
-													<th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Nombre</th>
-													<th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Carnet</th>
-													<th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Fecha Nac.</th>
-													<th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Género</th>
-													<th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Rol</th>
-													<th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Nivel</th>
+													<th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">
+														Nombre
+													</th>
+													<th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">
+														Carnet
+													</th>
+													<th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">
+														Fecha Nac.
+													</th>
+													<th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">
+														Género
+													</th>
+													<th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">
+														Rol
+													</th>
+													<th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">
+														Nivel
+													</th>
 													{poliza.tiene_anexos_activos && (
-														<th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Estado</th>
+														<th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">
+															Estado
+														</th>
 													)}
 												</tr>
 											</thead>
@@ -938,15 +1162,33 @@ export default function PolizaDetallePage() {
 													<tr
 														key={b.id}
 														className={`hover:bg-muted/40 transition-colors ${
-															b._excluido_por ? "opacity-50 bg-red-50/30" : b._origen_anexo ? "bg-green-50/30" : ""
+															b._excluido_por
+																? "opacity-50 bg-red-50/30"
+																: b._origen_anexo
+																	? "bg-green-50/30"
+																	: ""
 														}`}
 													>
-														<td className={`px-4 py-2 text-sm font-medium text-gray-900 ${b._excluido_por ? "line-through" : ""}`}>{b.nombre_completo}</td>
-														<td className="px-4 py-2 text-sm text-foreground">{b.carnet}</td>
-														<td className="px-4 py-2 text-sm text-foreground">{formatDate(b.fecha_nacimiento)}</td>
-														<td className="px-4 py-2 text-sm text-foreground">{b.genero}</td>
-														<td className="px-4 py-2 text-sm text-foreground capitalize">{b.rol}</td>
-														<td className="px-4 py-2 text-sm text-foreground">{b.nivel_nombre || "-"}</td>
+														<td
+															className={`px-4 py-2 text-sm font-medium text-gray-900 ${b._excluido_por ? "line-through" : ""}`}
+														>
+															{b.nombre_completo}
+														</td>
+														<td className="px-4 py-2 text-sm text-foreground">
+															{b.carnet}
+														</td>
+														<td className="px-4 py-2 text-sm text-foreground">
+															{formatDate(b.fecha_nacimiento)}
+														</td>
+														<td className="px-4 py-2 text-sm text-foreground">
+															{b.genero}
+														</td>
+														<td className="px-4 py-2 text-sm text-foreground capitalize">
+															{b.rol}
+														</td>
+														<td className="px-4 py-2 text-sm text-foreground">
+															{b.nivel_nombre || "-"}
+														</td>
 														{poliza.tiene_anexos_activos && (
 															<td className="px-4 py-2">
 																{b._origen_anexo && (
@@ -980,15 +1222,25 @@ export default function PolizaDetallePage() {
 							</h2>
 							<div className="grid grid-cols-2 gap-6">
 								<div className="col-span-2">
-									<label className="text-xs font-medium text-muted-foreground">Materia Asegurada</label>
-									<p className="text-sm text-foreground mt-1">{poliza.transporte.materia_asegurada}</p>
+									<label className="text-xs font-medium text-muted-foreground">
+										Materia Asegurada
+									</label>
+									<p className="text-sm text-foreground mt-1">
+										{poliza.transporte.materia_asegurada}
+									</p>
 								</div>
 								<div>
-									<label className="text-xs font-medium text-muted-foreground">Tipo de Transporte</label>
-									<p className="text-sm text-foreground mt-1 capitalize">{poliza.transporte.tipo_transporte}</p>
+									<label className="text-xs font-medium text-muted-foreground">
+										Tipo de Transporte
+									</label>
+									<p className="text-sm text-foreground mt-1 capitalize">
+										{poliza.transporte.tipo_transporte}
+									</p>
 								</div>
 								<div>
-									<label className="text-xs font-medium text-muted-foreground">Tipo de Embalaje</label>
+									<label className="text-xs font-medium text-muted-foreground">
+										Tipo de Embalaje
+									</label>
 									<p className="text-sm text-foreground mt-1">{poliza.transporte.tipo_embalaje}</p>
 								</div>
 								<div>
@@ -1004,8 +1256,12 @@ export default function PolizaDetallePage() {
 									</p>
 								</div>
 								<div>
-									<label className="text-xs font-medium text-muted-foreground">Fecha de Embarque</label>
-									<p className="text-sm text-foreground mt-1">{formatDate(poliza.transporte.fecha_embarque)}</p>
+									<label className="text-xs font-medium text-muted-foreground">
+										Fecha de Embarque
+									</label>
+									<p className="text-sm text-foreground mt-1">
+										{formatDate(poliza.transporte.fecha_embarque)}
+									</p>
 								</div>
 								<div>
 									<label className="text-xs font-medium text-muted-foreground">Valor Asegurado</label>
@@ -1019,11 +1275,15 @@ export default function PolizaDetallePage() {
 								</div>
 								<div>
 									<label className="text-xs font-medium text-muted-foreground">Fecha Factura</label>
-									<p className="text-sm text-foreground mt-1">{formatDate(poliza.transporte.fecha_factura)}</p>
+									<p className="text-sm text-foreground mt-1">
+										{formatDate(poliza.transporte.fecha_factura)}
+									</p>
 								</div>
 								<div>
 									<label className="text-xs font-medium text-muted-foreground">Modalidad</label>
-									<p className="text-sm text-foreground mt-1 capitalize">{poliza.transporte.modalidad.replace(/_/g, " ")}</p>
+									<p className="text-sm text-foreground mt-1 capitalize">
+										{poliza.transporte.modalidad.replace(/_/g, " ")}
+									</p>
 								</div>
 								<div>
 									<label className="text-xs font-medium text-muted-foreground">Coberturas</label>
@@ -1055,7 +1315,9 @@ export default function PolizaDetallePage() {
 							{/* Niveles AP si existen */}
 							{poliza.niveles_ap_naves && poliza.niveles_ap_naves.length > 0 && (
 								<div className="mb-4 p-4 bg-muted/50 rounded-lg">
-									<h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Niveles de Accidentes Personales</h3>
+									<h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+										Niveles de Accidentes Personales
+									</h3>
 									<div className="grid grid-cols-1 md:grid-cols-2 gap-3">
 										{poliza.niveles_ap_naves.map((nivel) => (
 											<div key={nivel.id} className="bg-white border rounded p-3 text-sm">
@@ -1063,15 +1325,24 @@ export default function PolizaDetallePage() {
 												<div className="grid grid-cols-3 gap-2 text-xs text-gray-600">
 													<div>
 														<span className="block">Muerte Acc.</span>
-														<span className="font-medium text-gray-900">{formatCurrency(nivel.monto_muerte_accidental, poliza.moneda)}</span>
+														<span className="font-medium text-gray-900">
+															{formatCurrency(
+																nivel.monto_muerte_accidental,
+																poliza.moneda,
+															)}
+														</span>
 													</div>
 													<div>
 														<span className="block">Invalidez</span>
-														<span className="font-medium text-gray-900">{formatCurrency(nivel.monto_invalidez, poliza.moneda)}</span>
+														<span className="font-medium text-gray-900">
+															{formatCurrency(nivel.monto_invalidez, poliza.moneda)}
+														</span>
 													</div>
 													<div>
 														<span className="block">Gastos Méd.</span>
-														<span className="font-medium text-gray-900">{formatCurrency(nivel.monto_gastos_medicos, poliza.moneda)}</span>
+														<span className="font-medium text-gray-900">
+															{formatCurrency(nivel.monto_gastos_medicos, poliza.moneda)}
+														</span>
 													</div>
 												</div>
 											</div>
@@ -1108,19 +1379,31 @@ export default function PolizaDetallePage() {
 										)}
 										<div className="grid grid-cols-3 gap-4">
 											<div>
-												<label className="text-xs font-medium text-muted-foreground">Matrícula</label>
-												<p className={`text-base font-semibold text-gray-900 ${nave._excluido_por ? "line-through" : ""}`}>{nave.matricula}</p>
+												<label className="text-xs font-medium text-muted-foreground">
+													Matrícula
+												</label>
+												<p
+													className={`text-base font-semibold text-gray-900 ${nave._excluido_por ? "line-through" : ""}`}
+												>
+													{nave.matricula}
+												</p>
 											</div>
 											<div>
-												<label className="text-xs font-medium text-muted-foreground">Marca/Modelo</label>
-												<p className="text-sm text-foreground">{nave.marca} {nave.modelo}</p>
+												<label className="text-xs font-medium text-muted-foreground">
+													Marca/Modelo
+												</label>
+												<p className="text-sm text-foreground">
+													{nave.marca} {nave.modelo}
+												</p>
 											</div>
 											<div>
 												<label className="text-xs font-medium text-muted-foreground">Año</label>
 												<p className="text-sm text-foreground">{nave.ano}</p>
 											</div>
 											<div>
-												<label className="text-xs font-medium text-muted-foreground">Serie</label>
+												<label className="text-xs font-medium text-muted-foreground">
+													Serie
+												</label>
 												<p className="text-sm text-foreground">{nave.serie}</p>
 											</div>
 											<div>
@@ -1128,24 +1411,34 @@ export default function PolizaDetallePage() {
 												<p className="text-sm text-foreground capitalize">{nave.uso}</p>
 											</div>
 											<div>
-												<label className="text-xs font-medium text-muted-foreground">Pasajeros / Tripulantes</label>
-												<p className="text-sm text-foreground">{nave.nro_pasajeros} / {nave.nro_tripulantes}</p>
+												<label className="text-xs font-medium text-muted-foreground">
+													Pasajeros / Tripulantes
+												</label>
+												<p className="text-sm text-foreground">
+													{nave.nro_pasajeros} / {nave.nro_tripulantes}
+												</p>
 											</div>
 											<div>
-												<label className="text-xs font-medium text-muted-foreground">Valor Casco</label>
+												<label className="text-xs font-medium text-muted-foreground">
+													Valor Casco
+												</label>
 												<p className="text-sm font-semibold text-foreground">
 													{formatCurrency(nave.valor_casco, poliza.moneda)}
 												</p>
 											</div>
 											<div>
-												<label className="text-xs font-medium text-muted-foreground">Resp. Civil</label>
+												<label className="text-xs font-medium text-muted-foreground">
+													Resp. Civil
+												</label>
 												<p className="text-sm font-semibold text-foreground">
 													{formatCurrency(nave.valor_responsabilidad_civil, poliza.moneda)}
 												</p>
 											</div>
 											{nave.nivel_ap_nombre && (
 												<div>
-													<label className="text-xs font-medium text-muted-foreground">Nivel AP</label>
+													<label className="text-xs font-medium text-muted-foreground">
+														Nivel AP
+													</label>
 													<p className="text-sm text-foreground">{nave.nivel_ap_nombre}</p>
 												</div>
 											)}
@@ -1191,34 +1484,50 @@ export default function PolizaDetallePage() {
 										)}
 										<div className="grid grid-cols-3 gap-4">
 											<div>
-												<label className="text-xs font-medium text-muted-foreground">Nro. Serie</label>
-												<p className={`text-base font-semibold text-gray-900 ${equipo._excluido_por ? "line-through" : ""}`}>{equipo.nro_serie}</p>
+												<label className="text-xs font-medium text-muted-foreground">
+													Nro. Serie
+												</label>
+												<p
+													className={`text-base font-semibold text-gray-900 ${equipo._excluido_por ? "line-through" : ""}`}
+												>
+													{equipo.nro_serie}
+												</p>
 											</div>
 											{equipo.placa && (
 												<div>
-													<label className="text-xs font-medium text-muted-foreground">Placa</label>
+													<label className="text-xs font-medium text-muted-foreground">
+														Placa
+													</label>
 													<p className="text-sm text-foreground">{equipo.placa}</p>
 												</div>
 											)}
 											<div>
-												<label className="text-xs font-medium text-muted-foreground">Tipo</label>
+												<label className="text-xs font-medium text-muted-foreground">
+													Tipo
+												</label>
 												<p className="text-sm text-foreground">{equipo.tipo_equipo || "-"}</p>
 											</div>
 											<div>
-												<label className="text-xs font-medium text-muted-foreground">Marca/Modelo</label>
+												<label className="text-xs font-medium text-muted-foreground">
+													Marca/Modelo
+												</label>
 												<p className="text-sm text-foreground">
 													{equipo.marca_equipo || "-"} {equipo.modelo || ""}
 												</p>
 											</div>
 											{equipo.ano != null && (
 												<div>
-													<label className="text-xs font-medium text-muted-foreground">Año</label>
+													<label className="text-xs font-medium text-muted-foreground">
+														Año
+													</label>
 													<p className="text-sm text-foreground">{equipo.ano}</p>
 												</div>
 											)}
 											{equipo.color && (
 												<div>
-													<label className="text-xs font-medium text-muted-foreground">Color</label>
+													<label className="text-xs font-medium text-muted-foreground">
+														Color
+													</label>
 													<p className="text-sm text-foreground">{equipo.color}</p>
 												</div>
 											)}
@@ -1227,35 +1536,49 @@ export default function PolizaDetallePage() {
 												<p className="text-sm text-foreground capitalize">{equipo.uso}</p>
 											</div>
 											<div>
-												<label className="text-xs font-medium text-muted-foreground">Valor Asegurado</label>
+												<label className="text-xs font-medium text-muted-foreground">
+													Valor Asegurado
+												</label>
 												<p className="text-sm font-semibold text-foreground">
 													{formatCurrency(equipo.valor_asegurado, poliza.moneda)}
 												</p>
 											</div>
 											<div>
-												<label className="text-xs font-medium text-muted-foreground">Franquicia</label>
+												<label className="text-xs font-medium text-muted-foreground">
+													Franquicia
+												</label>
 												<p className="text-sm text-foreground">
 													{formatCurrency(equipo.franquicia, poliza.moneda)}
 												</p>
 											</div>
 											<div>
-												<label className="text-xs font-medium text-muted-foreground">Coaseguro</label>
+												<label className="text-xs font-medium text-muted-foreground">
+													Coaseguro
+												</label>
 												<p className="text-sm text-foreground">{equipo.coaseguro}%</p>
 											</div>
 											<div>
-												<label className="text-xs font-medium text-muted-foreground">Nro. Chasis</label>
+												<label className="text-xs font-medium text-muted-foreground">
+													Nro. Chasis
+												</label>
 												<p className="text-sm text-foreground">{equipo.nro_chasis}</p>
 											</div>
 											{equipo.nro_motor && (
 												<div>
-													<label className="text-xs font-medium text-muted-foreground">Nro. Motor</label>
+													<label className="text-xs font-medium text-muted-foreground">
+														Nro. Motor
+													</label>
 													<p className="text-sm text-foreground">{equipo.nro_motor}</p>
 												</div>
 											)}
 											{equipo.plaza_circulacion && (
 												<div>
-													<label className="text-xs font-medium text-muted-foreground">Plaza de Circulación</label>
-													<p className="text-sm text-foreground">{equipo.plaza_circulacion}</p>
+													<label className="text-xs font-medium text-muted-foreground">
+														Plaza de Circulación
+													</label>
+													<p className="text-sm text-foreground">
+														{equipo.plaza_circulacion}
+													</p>
 												</div>
 											)}
 										</div>
@@ -1328,7 +1651,9 @@ export default function PolizaDetallePage() {
 										<>
 											{poliza.cuotas_consolidadas.map((cuota) => {
 												const esCuotaInicial = cuota.numero_cuota === 0;
-												const etiquetaCuota = esCuotaInicial ? "Inicial" : `${cuota.numero_cuota}`;
+												const etiquetaCuota = esCuotaInicial
+													? "Inicial"
+													: `${cuota.numero_cuota}`;
 												return (
 													<tr
 														key={cuota.cuota_original_id}
@@ -1345,7 +1670,13 @@ export default function PolizaDetallePage() {
 														</td>
 														<td className="px-4 py-3 text-sm text-right">
 															{cuota.monto_ajustes !== 0 ? (
-																<span className={cuota.monto_ajustes >= 0 ? "text-green-600 font-medium" : "text-red-600 font-medium"}>
+																<span
+																	className={
+																		cuota.monto_ajustes >= 0
+																			? "text-green-600 font-medium"
+																			: "text-red-600 font-medium"
+																	}
+																>
 																	{cuota.monto_ajustes >= 0 ? "+" : ""}
 																	{formatCurrency(cuota.monto_ajustes, poliza.moneda)}
 																</span>
@@ -1363,7 +1694,7 @@ export default function PolizaDetallePage() {
 															<div className="flex justify-center">
 																<span
 																	className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getEstadoPagoStyle(
-																		cuota.estado
+																		cuota.estado,
 																	)}`}
 																>
 																	{getEstadoPagoLabel(cuota.estado)}
@@ -1375,8 +1706,14 @@ export default function PolizaDetallePage() {
 											})}
 											{/* Vigencia Corrida rows */}
 											{poliza.vigencia_corrida?.map((vc) => (
-												<tr key={`vc-${vc.anexo_id}`} className="bg-purple-50/50 hover:bg-purple-50">
-													<td className="px-4 py-3 text-sm font-medium text-purple-800" colSpan={2}>
+												<tr
+													key={`vc-${vc.anexo_id}`}
+													className="bg-purple-50/50 hover:bg-purple-50"
+												>
+													<td
+														className="px-4 py-3 text-sm font-medium text-purple-800"
+														colSpan={2}
+													>
 														<span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-700 border border-purple-200 mr-2">
 															Vigencia Corrida
 														</span>
@@ -1392,7 +1729,9 @@ export default function PolizaDetallePage() {
 													</td>
 													<td className="px-4 py-3">
 														<div className="flex justify-center">
-															<span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getEstadoPagoStyle(vc.estado)}`}>
+															<span
+																className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getEstadoPagoStyle(vc.estado)}`}
+															>
 																{getEstadoPagoLabel(vc.estado)}
 															</span>
 														</div>
@@ -1428,7 +1767,7 @@ export default function PolizaDetallePage() {
 														<div className="flex justify-center">
 															<span
 																className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getEstadoPagoStyle(
-																	pago.estado
+																	pago.estado,
 																)}`}
 															>
 																{getEstadoPagoLabel(pago.estado)}
@@ -1478,7 +1817,9 @@ export default function PolizaDetallePage() {
 												const supabase = createClient();
 												const { extractStoragePath } = await import("@/utils/storage");
 												const path = extractStoragePath(doc.archivo_url, "polizas-documentos");
-												const { data } = await supabase.storage.from("polizas-documentos").createSignedUrl(path, 3600);
+												const { data } = await supabase.storage
+													.from("polizas-documentos")
+													.createSignedUrl(path, 3600);
 												if (data?.signedUrl) window.open(data.signedUrl, "_blank");
 											}}
 										>
@@ -1492,162 +1833,224 @@ export default function PolizaDetallePage() {
 				</div>
 
 				{/* ── Right Sidebar ─────────────────────────────────── */}
-<div className="lg:col-span-1 lg:sticky lg:top-20 lg:self-start">
-  <Card>
-    <CardContent className="p-5 divide-y divide-border">
+				<div className="lg:col-span-1 lg:sticky lg:top-20 lg:self-start">
+					<Card>
+						<CardContent className="p-5 divide-y divide-border">
+							{/* Prima Total */}
+							<div className="pb-4">
+								<p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">
+									Prima Total
+								</p>
+								<p className="text-3xl font-bold text-foreground tabular-nums">
+									{formatCurrency(poliza.prima_total, poliza.moneda)}
+								</p>
+								<p className="text-xs text-muted-foreground capitalize mt-1">{poliza.modalidad_pago}</p>
+							</div>
 
-      {/* Prima Total */}
-      <div className="pb-4">
-        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Prima Total</p>
-        <p className="text-3xl font-bold text-foreground tabular-nums">{formatCurrency(poliza.prima_total, poliza.moneda)}</p>
-        <p className="text-xs text-muted-foreground capitalize mt-1">{poliza.modalidad_pago}</p>
-      </div>
+							{/* Ajustes por anexos */}
+							{poliza.monto_ajustes_total != null && poliza.monto_ajustes_total !== 0 && (
+								<div className="py-4">
+									<p className="text-xs text-muted-foreground mb-1">Ajuste por Anexos</p>
+									<p
+										className={`text-base font-semibold ${poliza.monto_ajustes_total >= 0 ? "text-emerald-600" : "text-red-600"}`}
+									>
+										{poliza.monto_ajustes_total >= 0 ? "+" : ""}
+										{formatCurrency(poliza.monto_ajustes_total, poliza.moneda)}
+									</p>
+									<p className="text-xs text-muted-foreground mt-3 mb-1">Prima Consolidada</p>
+									<p className="text-xl font-bold text-primary">
+										{formatCurrency(poliza.prima_total + poliza.monto_ajustes_total, poliza.moneda)}
+									</p>
+								</div>
+							)}
 
-      {/* Ajustes por anexos */}
-      {poliza.monto_ajustes_total != null && poliza.monto_ajustes_total !== 0 && (
-        <div className="py-4">
-          <p className="text-xs text-muted-foreground mb-1">Ajuste por Anexos</p>
-          <p className={`text-base font-semibold ${poliza.monto_ajustes_total >= 0 ? "text-emerald-600" : "text-red-600"}`}>
-            {poliza.monto_ajustes_total >= 0 ? "+" : ""}{formatCurrency(poliza.monto_ajustes_total, poliza.moneda)}
-          </p>
-          <p className="text-xs text-muted-foreground mt-3 mb-1">Prima Consolidada</p>
-          <p className="text-xl font-bold text-primary">
-            {formatCurrency(poliza.prima_total + poliza.monto_ajustes_total, poliza.moneda)}
-          </p>
-        </div>
-      )}
+							{/* Prima Neta + Comisión */}
+							<div className="py-4 grid grid-cols-2 gap-3">
+								<div>
+									<p className="text-xs text-muted-foreground mb-0.5">Prima Neta</p>
+									<p className="text-sm font-semibold text-foreground">
+										{formatCurrency(poliza.prima_neta, poliza.moneda)}
+									</p>
+								</div>
+								<div>
+									<p className="text-xs text-muted-foreground mb-0.5">Comisión</p>
+									<p className="text-sm font-semibold text-foreground">
+										{formatCurrency(poliza.comision, poliza.moneda)}
+									</p>
+								</div>
+							</div>
 
-      {/* Prima Neta + Comisión */}
-      <div className="py-4 grid grid-cols-2 gap-3">
-        <div>
-          <p className="text-xs text-muted-foreground mb-0.5">Prima Neta</p>
-          <p className="text-sm font-semibold text-foreground">{formatCurrency(poliza.prima_neta, poliza.moneda)}</p>
-        </div>
-        <div>
-          <p className="text-xs text-muted-foreground mb-0.5">Comisión</p>
-          <p className="text-sm font-semibold text-foreground">{formatCurrency(poliza.comision, poliza.moneda)}</p>
-        </div>
-      </div>
+							{/* Estado de cobro */}
+							<div className="py-4">
+								<div className="flex items-center justify-between mb-2">
+									<p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+										Cobro
+									</p>
+									<span className="text-xs font-semibold text-foreground">
+										{pagosPagados}/{totalPagos} cuotas
+									</span>
+								</div>
+								<div className="w-full bg-muted rounded-full h-1.5 mb-3">
+									<div
+										className="bg-emerald-500 h-1.5 rounded-full transition-all duration-500"
+										style={{ width: `${totalPagos > 0 ? (pagosPagados / totalPagos) * 100 : 0}%` }}
+									/>
+								</div>
+								<div className="grid grid-cols-2 gap-2">
+									<div>
+										<p className="text-xs text-muted-foreground">Pagado</p>
+										<p className="text-sm font-semibold text-emerald-600">
+											{formatCurrency(montoPagado, poliza.moneda)}
+										</p>
+									</div>
+									<div>
+										<p className="text-xs text-muted-foreground">Pendiente</p>
+										<p className="text-sm font-semibold text-yellow-600">
+											{formatCurrency(montoPendiente, poliza.moneda)}
+										</p>
+									</div>
+								</div>
+							</div>
 
-      {/* Estado de cobro */}
-      <div className="py-4">
-        <div className="flex items-center justify-between mb-2">
-          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Cobro</p>
-          <span className="text-xs font-semibold text-foreground">{pagosPagados}/{totalPagos} cuotas</span>
-        </div>
-        <div className="w-full bg-muted rounded-full h-1.5 mb-3">
-          <div
-            className="bg-emerald-500 h-1.5 rounded-full transition-all duration-500"
-            style={{ width: `${totalPagos > 0 ? (pagosPagados / totalPagos) * 100 : 0}%` }}
-          />
-        </div>
-        <div className="grid grid-cols-2 gap-2">
-          <div>
-            <p className="text-xs text-muted-foreground">Pagado</p>
-            <p className="text-sm font-semibold text-emerald-600">{formatCurrency(montoPagado, poliza.moneda)}</p>
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground">Pendiente</p>
-            <p className="text-sm font-semibold text-yellow-600">{formatCurrency(montoPendiente, poliza.moneda)}</p>
-          </div>
-        </div>
-      </div>
+							{/* Vigencia */}
+							<div className="py-4">
+								<p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">
+									Vigencia
+								</p>
+								{(() => {
+									const start = new Date(poliza.inicio_vigencia).getTime();
+									const end = new Date(poliza.fin_vigencia).getTime();
+									const now = Date.now();
+									const progress = Math.min(100, Math.max(0, ((now - start) / (end - start)) * 100));
+									const daysLeft = Math.ceil((end - now) / (1000 * 60 * 60 * 24));
+									const isExpired = daysLeft <= 0;
+									const isCritical = daysLeft > 0 && daysLeft <= 30;
+									const barColor = isExpired
+										? "bg-red-500"
+										: isCritical
+											? "bg-yellow-500"
+											: "bg-primary";
+									const textColor = isExpired
+										? "text-red-600"
+										: isCritical
+											? "text-yellow-600"
+											: "text-muted-foreground";
+									return (
+										<>
+											<div className="flex items-center justify-between text-xs text-muted-foreground mb-1.5">
+												<span className="font-medium text-foreground">
+													{formatDate(poliza.inicio_vigencia)}
+												</span>
+												<span className="font-medium text-foreground">
+													{formatDate(poliza.fin_vigencia)}
+												</span>
+											</div>
+											<div className="w-full bg-muted rounded-full h-1.5">
+												<div
+													className={`h-1.5 rounded-full ${barColor}`}
+													style={{ width: `${progress}%` }}
+												/>
+											</div>
+											<p className={`text-xs mt-1.5 ${textColor}`}>
+												{isExpired ? "Vencida" : `${daysLeft} días restantes`}
+											</p>
+										</>
+									);
+								})()}
+							</div>
 
-      {/* Vigencia */}
-      <div className="py-4">
-        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">Vigencia</p>
-        {(() => {
-          const start = new Date(poliza.inicio_vigencia).getTime();
-          const end = new Date(poliza.fin_vigencia).getTime();
-          const now = Date.now();
-          const progress = Math.min(100, Math.max(0, ((now - start) / (end - start)) * 100));
-          const daysLeft = Math.ceil((end - now) / (1000 * 60 * 60 * 24));
-          const isExpired = daysLeft <= 0;
-          const isCritical = daysLeft > 0 && daysLeft <= 30;
-          const barColor = isExpired ? "bg-red-500" : isCritical ? "bg-yellow-500" : "bg-primary";
-          const textColor = isExpired ? "text-red-600" : isCritical ? "text-yellow-600" : "text-muted-foreground";
-          return (
-            <>
-              <div className="flex items-center justify-between text-xs text-muted-foreground mb-1.5">
-                <span className="font-medium text-foreground">{formatDate(poliza.inicio_vigencia)}</span>
-                <span className="font-medium text-foreground">{formatDate(poliza.fin_vigencia)}</span>
-              </div>
-              <div className="w-full bg-muted rounded-full h-1.5">
-                <div className={`h-1.5 rounded-full ${barColor}`} style={{ width: `${progress}%` }} />
-              </div>
-              <p className={`text-xs mt-1.5 ${textColor}`}>
-                {isExpired ? "Vencida" : `${daysLeft} días restantes`}
-              </p>
-            </>
-          );
-        })()}
-      </div>
+							{/* Auditoría + historial */}
+							<div className="pt-4 space-y-1.5 text-xs text-muted-foreground">
+								<p>
+									<span className="font-medium text-foreground">Creado</span>{" "}
+									{formatDate(poliza.created_at)}
+									{poliza.creador_nombre && ` por ${poliza.creador_nombre}`}
+								</p>
+								{poliza.fecha_validacion && (
+									<p>
+										<span className="font-medium text-foreground">Validado</span>{" "}
+										{formatDate(poliza.fecha_validacion)}
+										{poliza.validador_nombre && ` por ${poliza.validador_nombre}`}
+									</p>
+								)}
 
-      {/* Auditoría + historial */}
-      <div className="pt-4 space-y-1.5 text-xs text-muted-foreground">
-        <p><span className="font-medium text-foreground">Creado</span>{" "}{formatDate(poliza.created_at)}{poliza.creador_nombre && ` por ${poliza.creador_nombre}`}</p>
-        {poliza.fecha_validacion && (
-          <p><span className="font-medium text-foreground">Validado</span>{" "}{formatDate(poliza.fecha_validacion)}{poliza.validador_nombre && ` por ${poliza.validador_nombre}`}</p>
-        )}
+								{/* Rechazo */}
+								{poliza.estado === "rechazada" && poliza.fecha_rechazo && (
+									<div className="mt-3 p-3 rounded-md bg-orange-50 border border-orange-200">
+										<p className="font-medium text-orange-800 mb-1">Rechazada</p>
+										<p className="text-orange-700">
+											{formatDate(poliza.fecha_rechazo)}
+											{poliza.rechazador_nombre && ` por ${poliza.rechazador_nombre}`}
+										</p>
+										{poliza.motivo_rechazo && (
+											<p className="text-orange-900 mt-1.5">
+												<span className="font-medium">Motivo:</span> {poliza.motivo_rechazo}
+											</p>
+										)}
+										{poliza.puede_editar_hasta && (
+											<p
+												className={`mt-1 ${new Date(poliza.puede_editar_hasta) > new Date() ? "text-green-700" : "text-red-600"}`}
+											>
+												{new Date(poliza.puede_editar_hasta) > new Date()
+													? `Puede editar hasta: ${formatDate(poliza.puede_editar_hasta)}`
+													: "Ventana de edición expirada"}
+											</p>
+										)}
+									</div>
+								)}
 
-        {/* Rechazo */}
-        {poliza.estado === "rechazada" && poliza.fecha_rechazo && (
-          <div className="mt-3 p-3 rounded-md bg-orange-50 border border-orange-200">
-            <p className="font-medium text-orange-800 mb-1">Rechazada</p>
-            <p className="text-orange-700">{formatDate(poliza.fecha_rechazo)}{poliza.rechazador_nombre && ` por ${poliza.rechazador_nombre}`}</p>
-            {poliza.motivo_rechazo && (
-              <p className="text-orange-900 mt-1.5"><span className="font-medium">Motivo:</span> {poliza.motivo_rechazo}</p>
-            )}
-            {poliza.puede_editar_hasta && (
-              <p className={`mt-1 ${new Date(poliza.puede_editar_hasta) > new Date() ? "text-green-700" : "text-red-600"}`}>
-                {new Date(poliza.puede_editar_hasta) > new Date()
-                  ? `Puede editar hasta: ${formatDate(poliza.puede_editar_hasta)}`
-                  : "Ventana de edición expirada"}
-              </p>
-            )}
-          </div>
-        )}
+								{/* Historial */}
+								{edicionesRelevantes.length > 0 && (
+									<div className="mt-3 pt-3 border-t border-border">
+										<p className="font-medium text-foreground mb-2">Historial</p>
+										<div className="space-y-1.5 max-h-36 overflow-y-auto">
+											{edicionesRelevantes.map((item) => {
+												const isAnexo = item.accion.startsWith("anexo_");
+												if (isAnexo) {
+													const color =
+														item.accion === "anexo_validacion"
+															? "text-emerald-700"
+															: item.accion === "anexo_rechazo"
+																? "text-red-700"
+																: "text-primary";
+													return (
+														<p key={item.id} className={color}>
+															{formatDate(item.timestamp)} · {item.descripcion}
+															{item.usuario_nombre && (
+																<span className="text-muted-foreground">
+																	{" "}
+																	por {item.usuario_nombre}
+																</span>
+															)}
+														</p>
+													);
+												}
+												const camposTexto = formatCampos(item.campos_modificados);
+												return (
+													<p key={item.id}>
+														{formatDate(item.timestamp)} ·{" "}
+														{item.usuario_nombre || "Usuario"} modificó
+														{camposTexto && `: ${camposTexto}`}
+													</p>
+												);
+											})}
+										</div>
+									</div>
+								)}
+							</div>
+						</CardContent>
+					</Card>
+				</div>
 
-        {/* Historial */}
-        {edicionesRelevantes.length > 0 && (
-          <div className="mt-3 pt-3 border-t border-border">
-            <p className="font-medium text-foreground mb-2">Historial</p>
-            <div className="space-y-1.5 max-h-36 overflow-y-auto">
-              {edicionesRelevantes.map((item) => {
-                const isAnexo = item.accion.startsWith("anexo_");
-                if (isAnexo) {
-                  const color = item.accion === "anexo_validacion" ? "text-emerald-700" : item.accion === "anexo_rechazo" ? "text-red-700" : "text-primary";
-                  return (
-                    <p key={item.id} className={color}>
-                      {formatDate(item.timestamp)} · {item.descripcion}
-                      {item.usuario_nombre && <span className="text-muted-foreground"> por {item.usuario_nombre}</span>}
-                    </p>
-                  );
-                }
-                const camposTexto = formatCampos(item.campos_modificados);
-                return (
-                  <p key={item.id}>
-                    {formatDate(item.timestamp)} · {item.usuario_nombre || "Usuario"} modificó{camposTexto && `: ${camposTexto}`}
-                  </p>
-                );
-              })}
-            </div>
-          </div>
-        )}
-      </div>
-    </CardContent>
-  </Card>
-</div>
-
-{/* ── Anexos (full width) ──────────────────────────── */}
-<div className="lg:col-span-3">
-  <AnexoDetalleSection
-    polizaId={polizaId}
-    moneda={poliza.moneda}
-    puedeValidar={userRole === "admin" || userRole === "usuario" || isTeamLeader}
-    onAnexoValidado={cargarDetalle}
-  />
-</div>
+				{/* ── Anexos (full width) ──────────────────────────── */}
+				<div className="lg:col-span-3">
+					<AnexoDetalleSection
+						polizaId={polizaId}
+						moneda={poliza.moneda}
+						puedeValidar={userRole === "admin" || userRole === "usuario" || isTeamLeader}
+						onAnexoValidado={cargarDetalle}
+					/>
+				</div>
 			</div>
 
 			{/* Validation Confirmation Modal */}
@@ -1655,13 +2058,17 @@ export default function PolizaDetallePage() {
 				isOpen={showValidarModal}
 				onClose={() => setShowValidarModal(false)}
 				onConfirm={handleValidarConfirm}
-				poliza={poliza ? {
-					id: poliza.id,
-					numero_poliza: poliza.numero_poliza,
-					prima_total: poliza.prima_total,
-					moneda: poliza.moneda,
-					asegurado: poliza.client_name,
-				} : null}
+				poliza={
+					poliza
+						? {
+								id: poliza.id,
+								numero_poliza: poliza.numero_poliza,
+								prima_total: poliza.prima_total,
+								moneda: poliza.moneda,
+								asegurado: poliza.client_name,
+							}
+						: null
+				}
 				isLoading={validationLoading === "validar"}
 			/>
 

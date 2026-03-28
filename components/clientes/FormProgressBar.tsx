@@ -1,6 +1,7 @@
 "use client";
 
 import { ClientType } from "@/types/clientForm";
+import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Step {
@@ -23,7 +24,6 @@ interface FormProgressBarProps {
 }
 
 export function FormProgressBar({ currentStep, clientType, completedSections }: FormProgressBarProps) {
-	// Generate steps based on client type
 	const getSteps = (): Step[] => {
 		if (!clientType) {
 			return [
@@ -52,7 +52,6 @@ export function FormProgressBar({ currentStep, clientType, completedSections }: 
 				{ number: 4, label: "Guardar", completed: false, active: currentStep === 4 },
 			];
 		} else {
-			// juridico
 			return [
 				{ number: 1, label: "Tipo", completed: true, active: currentStep === 1 },
 				{
@@ -75,59 +74,56 @@ export function FormProgressBar({ currentStep, clientType, completedSections }: 
 	const steps = getSteps();
 
 	return (
-		<div className="w-full py-8">
-			<div className="flex items-center justify-center">
-				{steps.map((step, index) => (
-					<div key={step.number} className="flex items-center">
-						{/* Step Circle */}
-						<div className="flex flex-col items-center">
-							<div
-								className={cn(
-									"w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold transition-all",
-									step.completed
-										? "bg-green-500 text-white"
-										: step.active
-											? "bg-blue-500 text-white"
-											: "bg-gray-200 text-gray-500"
-								)}
-							>
-								{step.completed ? (
-									<svg
-										className="w-5 h-5"
-										fill="none"
-										strokeLinecap="round"
-										strokeLinejoin="round"
-										strokeWidth="2"
-										viewBox="0 0 24 24"
-										stroke="currentColor"
-									>
-										<path d="M5 13l4 4L19 7"></path>
-									</svg>
-								) : (
-									step.number
-								)}
-							</div>
-							<span
-								className={cn(
-									"text-xs mt-2 text-center font-medium",
-									step.active ? "text-blue-600" : "text-gray-500"
-								)}
-							>
-								{step.label}
-							</span>
+		<div className="w-full py-6">
+			<div className="relative flex items-start justify-between max-w-xl mx-auto px-6">
+				{/* Background track — 2px, slate-300 para visibilidad */}
+				<div className="absolute top-5 left-6 right-6 h-0.5 bg-slate-300" aria-hidden="true" />
+
+				{/* Progress fill — petrol teal, animado */}
+				{(() => {
+					const completedCount = steps.filter(
+						(s, i) => i < steps.length - 1 && (s.completed || s.active),
+					).length;
+					const totalSegments = steps.length - 1;
+					const fillPercent = totalSegments > 0 ? (completedCount / totalSegments) * 100 : 0;
+					return (
+						<div
+							className="absolute top-5 left-6 h-0.5 bg-[#004F69] transition-all duration-500"
+							style={{ width: `calc(${fillPercent}% * (100% - 3rem) / 100%)` }}
+							aria-hidden="true"
+						/>
+					);
+				})()}
+
+				{steps.map((step) => (
+					<div key={step.number} className="relative flex flex-col items-center z-10 gap-2">
+						{/* Step bubble — 40px, contraste alto */}
+						<div
+							className={cn(
+								"w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 text-sm font-bold select-none",
+								step.completed
+									? "bg-[#0D9488] text-white shadow-sm"
+									: step.active
+										? "bg-[#004F69] text-white shadow-md ring-4 ring-[#004F69]/20"
+										: "bg-white text-slate-400 border-2 border-slate-300",
+							)}
+						>
+							{step.completed ? <Check className="w-4 h-4" strokeWidth={3} /> : step.number}
 						</div>
 
-						{/* Connecting Line */}
-						{index < steps.length - 1 && (
-							<div
-								className={cn(
-									"w-16 h-1 mx-2 transition-all",
-									steps[index + 1].completed || steps[index + 1].active
-										? "bg-blue-500"
-										: "bg-gray-200"
-								)}
-							/>
-						)}
+						{/* Label — 12px, peso medium, contraste legible */}
+						<span
+							className={cn(
+								"text-xs font-medium text-center leading-tight max-w-[80px]",
+								step.completed
+									? "text-[#0D9488]"
+									: step.active
+										? "text-[#004F69] font-semibold"
+										: "text-slate-400",
+							)}
+						>
+							{step.label}
+						</span>
 					</div>
 				))}
 			</div>

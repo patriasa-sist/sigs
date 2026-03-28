@@ -137,7 +137,7 @@ export function PagosYDocumentos({
 				}
 			}
 		},
-		[userId, documentos, onChangeDocumentos]
+		[userId, documentos, onChangeDocumentos, supabase.storage]
 	);
 
 	const { getRootProps, getInputProps, isDragActive } = useDropzone({

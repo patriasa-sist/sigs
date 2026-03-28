@@ -261,15 +261,25 @@ Shadow color should be slightly tinted toward slate, not pure black:
 ### Phase 3: Page-by-page Redesign
 
 - [x] Home page (module grid)
+
 - [x] Navbar
 - [x] Polizas listing
+
 - [x] Polizas modals
 - [x] Nueva Poliza form
-- [ ] Clientes listing
-- [ ] New client form
-- [ ] Gerencia dashboard
+
+- [x] Clientes listing
+- [x] Clientes modal
+- [x] New client form
+
+- [ ] Cobranzas listing
+- [ ] Cobranzas modals
+- [ ] Cobranzas payment modals
+- [ ] Gerencia 3 dashboards
 - [ ] Gerencia validacion
-- [ ] Client pages
+- [ ] Siniestros listing
+- [ ] Siniestros modals
+- [ ] New siniestros form
 - [ ] Vencimientos
 
 ### Phase 4: Polish

@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React from "react";
 import { UseFormReturn, Controller, useFieldArray } from "react-hook-form";
@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Trash2 } from "lucide-react";
 import { ClienteDocumentUpload } from "./ClienteDocumentUpload";
+import { cn } from "@/lib/utils";
 
 interface JuridicClientFormProps {
 	form: UseFormReturn<JuridicClientFormData>;
@@ -43,6 +44,9 @@ export function JuridicClientForm({ form, onFieldBlur, exceptions = [] }: Juridi
 		};
 	};
 
+	// Shorthand for error border class
+	const eb = (hasErr: boolean) => (hasErr ? "border-destructive focus-visible:ring-destructive/20" : "");
+
 	const { fields, append, remove } = useFieldArray({
 		control,
 		name: "legal_representatives",
@@ -67,20 +71,21 @@ export function JuridicClientForm({ form, onFieldBlur, exceptions = [] }: Juridi
 	return (
 		<div className="space-y-6">
 			{/* SECCIÓN 1: DATOS DE LA EMPRESA */}
-			<FormSection title="Datos de la Empresa" description="Información de la persona jurídica">
+			<FormSection title="Datos de la Empresa" description="Información de la persona jurídica" required>
 				<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 					<div className="md:col-span-2">
 						<Label htmlFor="razon_social">
-							Razón Social <span className="text-red-500">*</span>
+							Razón Social <span className="text-destructive">*</span>
 						</Label>
 						<Input
 							id="razon_social"
 							{...ur("razon_social")}
 							onBlur={onFieldBlur}
 							placeholder="Empresa ABC S.R.L."
+							className={eb(!!errors.razon_social)}
 						/>
 						{errors.razon_social && (
-							<p className="text-sm text-red-500 mt-1">{errors.razon_social.message}</p>
+							<p className="text-sm text-destructive mt-1">{errors.razon_social.message}</p>
 						)}
 					</div>
 
@@ -91,7 +96,7 @@ export function JuridicClientForm({ form, onFieldBlur, exceptions = [] }: Juridi
 							control={control}
 							render={({ field }) => (
 								<Select value={field.value} onValueChange={field.onChange}>
-									<SelectTrigger>
+									<SelectTrigger className={cn("w-full", eb(!!errors.tipo_sociedad))}>
 										<SelectValue placeholder="Seleccionar" />
 									</SelectTrigger>
 									<SelectContent>
@@ -105,16 +110,16 @@ export function JuridicClientForm({ form, onFieldBlur, exceptions = [] }: Juridi
 							)}
 						/>
 						{errors.tipo_sociedad && (
-							<p className="text-sm text-red-500 mt-1">{errors.tipo_sociedad.message}</p>
+							<p className="text-sm text-destructive mt-1">{errors.tipo_sociedad.message}</p>
 						)}
 					</div>
 
 					<div>
 						<Label htmlFor="nit">
-							NIT <span className="text-red-500">*</span>
+							NIT <span className="text-destructive">*</span>
 						</Label>
-						<Input id="nit" {...register("nit")} onBlur={onFieldBlur} placeholder="Min. 7 dígitos" />
-						{errors.nit && <p className="text-sm text-red-500 mt-1">{errors.nit.message}</p>}
+						<Input id="nit" {...register("nit")} onBlur={onFieldBlur} placeholder="Min. 7 dígitos" className={eb(!!errors.nit)} />
+						{errors.nit && <p className="text-sm text-destructive mt-1">{errors.nit.message}</p>}
 					</div>
 
 					<div>
@@ -124,60 +129,63 @@ export function JuridicClientForm({ form, onFieldBlur, exceptions = [] }: Juridi
 							{...register("matricula_comercio")}
 							onBlur={onFieldBlur}
 							placeholder="Min. 7 caracteres"
+							className={eb(!!errors.matricula_comercio)}
 						/>
 						{errors.matricula_comercio && (
-							<p className="text-sm text-red-500 mt-1">{errors.matricula_comercio.message}</p>
+							<p className="text-sm text-destructive mt-1">{errors.matricula_comercio.message}</p>
 						)}
 					</div>
 
 					<div>
 						<Label htmlFor="pais_constitucion">
-							País de Constitución <span className="text-red-500">*</span>
+							País de Constitución <span className="text-destructive">*</span>
 						</Label>
 						<Input
 							id="pais_constitucion"
 							{...ur("pais_constitucion")}
 							onBlur={onFieldBlur}
 							defaultValue="Bolivia"
+							className={eb(!!errors.pais_constitucion)}
 						/>
 						{errors.pais_constitucion && (
-							<p className="text-sm text-red-500 mt-1">{errors.pais_constitucion.message}</p>
+							<p className="text-sm text-destructive mt-1">{errors.pais_constitucion.message}</p>
 						)}
 					</div>
 
 					<div className="md:col-span-2">
 						<Label htmlFor="actividad_economica">
-							Actividad Económica <span className="text-red-500">*</span>
+							Actividad Económica <span className="text-destructive">*</span>
 						</Label>
 						<Input
 							id="actividad_economica"
 							{...ur("actividad_economica")}
 							onBlur={onFieldBlur}
 							placeholder="Comercio al por mayor"
+							className={eb(!!errors.actividad_economica)}
 						/>
 						{errors.actividad_economica && (
-							<p className="text-sm text-red-500 mt-1">{errors.actividad_economica.message}</p>
+							<p className="text-sm text-destructive mt-1">{errors.actividad_economica.message}</p>
 						)}
 					</div>
-
 				</div>
 			</FormSection>
 
 			{/* SECCIÓN 2: INFORMACIÓN DE CONTACTO */}
-			<FormSection title="Información de Contacto" description="Datos de contacto de la empresa">
+			<FormSection title="Información de Contacto" description="Datos de contacto de la empresa" required>
 				<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 					<div className="md:col-span-2">
 						<Label htmlFor="direccion_legal">
-							Dirección Legal <span className="text-red-500">*</span>
+							Dirección Legal <span className="text-destructive">*</span>
 						</Label>
 						<Input
 							id="direccion_legal"
 							{...ur("direccion_legal")}
 							onBlur={onFieldBlur}
 							placeholder="Av. Principal #123, Zona Centro"
+							className={eb(!!errors.direccion_legal)}
 						/>
 						{errors.direccion_legal && (
-							<p className="text-sm text-red-500 mt-1">{errors.direccion_legal.message}</p>
+							<p className="text-sm text-destructive mt-1">{errors.direccion_legal.message}</p>
 						)}
 					</div>
 
@@ -189,9 +197,10 @@ export function JuridicClientForm({ form, onFieldBlur, exceptions = [] }: Juridi
 							{...register("correo_electronico")}
 							onBlur={onFieldBlur}
 							placeholder="contacto@empresa.com"
+							className={eb(!!errors.correo_electronico)}
 						/>
 						{errors.correo_electronico && (
-							<p className="text-sm text-red-500 mt-1">{errors.correo_electronico.message}</p>
+							<p className="text-sm text-destructive mt-1">{errors.correo_electronico.message}</p>
 						)}
 					</div>
 
@@ -202,8 +211,9 @@ export function JuridicClientForm({ form, onFieldBlur, exceptions = [] }: Juridi
 							{...register("telefono")}
 							onBlur={onFieldBlur}
 							placeholder="Solo números, min. 5 dígitos"
+							className={eb(!!errors.telefono)}
 						/>
-						{errors.telefono && <p className="text-sm text-red-500 mt-1">{errors.telefono.message}</p>}
+						{errors.telefono && <p className="text-sm text-destructive mt-1">{errors.telefono.message}</p>}
 					</div>
 
 					<div className="md:col-span-2">
@@ -222,6 +232,7 @@ export function JuridicClientForm({ form, onFieldBlur, exceptions = [] }: Juridi
 			<FormSection
 				title="Representantes Legales"
 				description="Información de los representantes legales (mínimo 1 requerido)"
+				required
 			>
 				<div className="space-y-6">
 					{fields.length === 0 && (
@@ -245,7 +256,7 @@ export function JuridicClientForm({ form, onFieldBlur, exceptions = [] }: Juridi
 										variant="ghost"
 										size="sm"
 										onClick={() => remove(index)}
-										className="text-red-500 hover:text-red-700"
+										className="text-destructive hover:text-destructive/80"
 									>
 										<Trash2 className="h-4 w-4" />
 									</Button>
@@ -255,15 +266,16 @@ export function JuridicClientForm({ form, onFieldBlur, exceptions = [] }: Juridi
 							<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 								<div>
 									<Label htmlFor={`rep_${index}_primer_nombre`}>
-										Primer Nombre <span className="text-red-500">*</span>
+										Primer Nombre <span className="text-destructive">*</span>
 									</Label>
 									<Input
 										id={`rep_${index}_primer_nombre`}
 										{...ur(`legal_representatives.${index}.primer_nombre`)}
 										onBlur={onFieldBlur}
+										className={eb(!!errors.legal_representatives?.[index]?.primer_nombre)}
 									/>
 									{errors.legal_representatives?.[index]?.primer_nombre && (
-										<p className="text-sm text-red-500 mt-1">
+										<p className="text-sm text-destructive mt-1">
 											{errors.legal_representatives[index]?.primer_nombre?.message}
 										</p>
 									)}
@@ -280,15 +292,16 @@ export function JuridicClientForm({ form, onFieldBlur, exceptions = [] }: Juridi
 
 								<div>
 									<Label htmlFor={`rep_${index}_primer_apellido`}>
-										Primer Apellido <span className="text-red-500">*</span>
+										Primer Apellido <span className="text-destructive">*</span>
 									</Label>
 									<Input
 										id={`rep_${index}_primer_apellido`}
 										{...ur(`legal_representatives.${index}.primer_apellido`)}
 										onBlur={onFieldBlur}
+										className={eb(!!errors.legal_representatives?.[index]?.primer_apellido)}
 									/>
 									{errors.legal_representatives?.[index]?.primer_apellido && (
-										<p className="text-sm text-red-500 mt-1">
+										<p className="text-sm text-destructive mt-1">
 											{errors.legal_representatives[index]?.primer_apellido?.message}
 										</p>
 									)}
@@ -305,14 +318,14 @@ export function JuridicClientForm({ form, onFieldBlur, exceptions = [] }: Juridi
 
 								<div>
 									<Label htmlFor={`rep_${index}_tipo_documento`}>
-										Tipo de Documento <span className="text-red-500">*</span>
+										Tipo de Documento <span className="text-destructive">*</span>
 									</Label>
 									<Controller
 										name={`legal_representatives.${index}.tipo_documento`}
 										control={control}
 										render={({ field }) => (
 											<Select value={field.value} onValueChange={field.onChange}>
-												<SelectTrigger>
+												<SelectTrigger className={cn("w-full", eb(!!errors.legal_representatives?.[index]?.tipo_documento))}>
 													<SelectValue placeholder="Seleccionar" />
 												</SelectTrigger>
 												<SelectContent>
@@ -326,7 +339,7 @@ export function JuridicClientForm({ form, onFieldBlur, exceptions = [] }: Juridi
 										)}
 									/>
 									{errors.legal_representatives?.[index]?.tipo_documento && (
-										<p className="text-sm text-red-500 mt-1">
+										<p className="text-sm text-destructive mt-1">
 											{errors.legal_representatives[index]?.tipo_documento?.message}
 										</p>
 									)}
@@ -334,16 +347,17 @@ export function JuridicClientForm({ form, onFieldBlur, exceptions = [] }: Juridi
 
 								<div>
 									<Label htmlFor={`rep_${index}_numero_documento`}>
-										Número de Documento <span className="text-red-500">*</span>
+										Número de Documento <span className="text-destructive">*</span>
 									</Label>
 									<Input
 										id={`rep_${index}_numero_documento`}
 										{...register(`legal_representatives.${index}.numero_documento`)}
 										onBlur={onFieldBlur}
 										placeholder="Min. 6 caracteres"
+										className={eb(!!errors.legal_representatives?.[index]?.numero_documento)}
 									/>
 									{errors.legal_representatives?.[index]?.numero_documento && (
-										<p className="text-sm text-red-500 mt-1">
+										<p className="text-sm text-destructive mt-1">
 											{errors.legal_representatives[index]?.numero_documento?.message}
 										</p>
 									)}
@@ -388,9 +402,10 @@ export function JuridicClientForm({ form, onFieldBlur, exceptions = [] }: Juridi
 										{...register(`legal_representatives.${index}.correo_electronico`)}
 										onBlur={onFieldBlur}
 										placeholder="representante@empresa.com"
+										className={eb(!!errors.legal_representatives?.[index]?.correo_electronico)}
 									/>
 									{errors.legal_representatives?.[index]?.correo_electronico && (
-										<p className="text-sm text-red-500 mt-1">
+										<p className="text-sm text-destructive mt-1">
 											{errors.legal_representatives[index]?.correo_electronico?.message}
 										</p>
 									)}
@@ -405,7 +420,7 @@ export function JuridicClientForm({ form, onFieldBlur, exceptions = [] }: Juridi
 					</Button>
 
 					{errors.legal_representatives?.root && (
-						<p className="text-sm text-red-500">{errors.legal_representatives.root.message}</p>
+						<p className="text-sm text-destructive">{errors.legal_representatives.root.message}</p>
 					)}
 				</div>
 			</FormSection>
@@ -414,6 +429,7 @@ export function JuridicClientForm({ form, onFieldBlur, exceptions = [] }: Juridi
 			<FormSection
 				title="Documentos del Cliente"
 				description="Cargue los documentos requeridos de la persona jurídica"
+				required
 			>
 				<ClienteDocumentUpload
 					clientType="juridica"
