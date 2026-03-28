@@ -1,7 +1,7 @@
 # SIGS Design System — "Petrol Corporate"
 
-> A refined, low-fatigue design language for an insurance management platform
-> used 8+ hours daily by professionals aged 40+.
+> A modern, refined, corporate, low-fatigue design language for an insurance management platform
+> used 8+ hours daily by professionals aged 50+.
 
 ---
 
@@ -272,10 +272,13 @@ Shadow color should be slightly tinted toward slate, not pure black:
 - [x] Clientes modal
 - [x] New client form
 
+- [x] Gerencia 3 dashboards
+- [x] Gerencia reportes
+- [x] Gerencia nuevas metricas
+
 - [ ] Cobranzas listing
 - [ ] Cobranzas modals
 - [ ] Cobranzas payment modals
-- [ ] Gerencia 3 dashboards
 - [ ] Gerencia validacion
 - [ ] Siniestros listing
 - [ ] Siniestros modals

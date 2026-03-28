@@ -1,4 +1,7 @@
+"use client";
+
 import { Card, CardContent } from "@/components/ui/card";
+import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 interface KPICardProps {
@@ -7,12 +10,14 @@ interface KPICardProps {
 	icon: LucideIcon;
 	format?: "currency" | "number" | "percent";
 	moneda?: string;
+	/** Porcentaje de variación YoY. null = sin datos previos, no muestra badge. */
+	trend?: number | null;
 }
 
 function formatValue(
 	value: number | string | null,
 	format: "currency" | "number" | "percent" = "number",
-	moneda = "Bs"
+	moneda = "Bs",
 ): string {
 	if (value === null || value === undefined) return "—";
 	const num = typeof value === "string" ? parseFloat(value) : value;
@@ -27,17 +32,54 @@ function formatValue(
 	return num.toLocaleString("es-BO");
 }
 
-export default function KPICard({ title, value, icon: Icon, format = "number", moneda }: KPICardProps) {
+function TrendBadge({ pct }: { pct: number }) {
+	const abs = Math.abs(pct);
+	const label = `${abs < 0.1 ? "0.0" : abs.toFixed(1)}%`;
+
+	if (Math.abs(pct) < 0.1) {
+		return (
+			<span className="inline-flex items-center gap-0.5 text-xs font-medium text-muted-foreground">
+				<Minus className="h-3 w-3" />
+				{label}
+			</span>
+		);
+	}
+
+	if (pct > 0) {
+		return (
+			<span className="inline-flex items-center gap-0.5 text-xs font-medium text-teal-700">
+				<TrendingUp className="h-3 w-3" />+{label}
+			</span>
+		);
+	}
+
 	return (
-		<Card>
-			<CardContent className="pt-6">
-				<div className="flex items-center justify-between">
-					<div className="space-y-1">
-						<p className="text-sm text-muted-foreground">{title}</p>
-						<p className="text-2xl font-bold">{formatValue(value, format, moneda)}</p>
+		<span className="inline-flex items-center gap-0.5 text-xs font-medium text-red-600">
+			<TrendingDown className="h-3 w-3" />
+			{label}
+		</span>
+	);
+}
+
+export default function KPICard({ title, value, icon: Icon, format = "number", moneda, trend }: KPICardProps) {
+	return (
+		<Card className="shadow-sm">
+			<CardContent className="p-5">
+				<div className="flex items-start justify-between gap-3">
+					<div className="space-y-1 min-w-0">
+						<p className="text-sm text-muted-foreground leading-tight">{title}</p>
+						<p className="text-2xl font-semibold text-foreground tracking-tight truncate">
+							{formatValue(value, format, moneda)}
+						</p>
+						{trend !== undefined && trend !== null && (
+							<div className="flex items-center gap-1">
+								<TrendBadge pct={trend} />
+								<span className="text-xs text-muted-foreground">vs año anterior</span>
+							</div>
+						)}
 					</div>
-					<div className="p-3 bg-primary/10 rounded-full">
-						<Icon className="h-5 w-5 text-primary" />
+					<div className="p-2 bg-primary/8 rounded-md shrink-0">
+						<Icon className="h-4 w-4 text-primary" />
 					</div>
 				</div>
 			</CardContent>

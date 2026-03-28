@@ -38,13 +38,26 @@ export default async function GerenciaPage() {
 		colocacion: { nuevas: 0, renovadas: 0, anuladas: 0 },
 		topResponsables: [],
 		topDirectoresCartera: [],
+		vencimientosProximos: [],
+		resumenVencimientos: { en_30_dias: 0, en_60_dias: 0, en_90_dias: 0 },
+		distribucionMoneda: [],
+		funnelProduccion: { total: 0, activas: 0, pendientes: 0, canceladas: 0, tasa_aprobacion: 0 },
+		trends: { prima_total_mes: null, prima_acumulada_anio: null, comisiones_mes: null, cantidad_polizas_mes: null },
 	};
 
 	const emptyCobranzas = {
-		kpis: { cuotas_pendientes: 0, monto_pendiente: 0, cuotas_vencidas: 0, monto_vencido: 0, monto_cobrado_mes: 0, tasa_cobranza: 0 },
+		kpis: {
+			cuotas_pendientes: 0,
+			monto_pendiente: 0,
+			cuotas_vencidas: 0,
+			monto_vencido: 0,
+			monto_cobrado_mes: 0,
+			tasa_cobranza: 0,
+		},
 		cobradoVsPendiente: [],
 		distribucionEstados: [],
 		proximasCuotas: [],
+		agingMorosidad: [],
 	};
 
 	const emptySiniestros = {
@@ -56,20 +69,20 @@ export default async function GerenciaPage() {
 
 	return (
 		<div className="flex-1 w-full">
-			<div className="container mx-auto py-8 px-4">
-				<div className="flex items-center justify-between mb-8">
-					<div className="flex items-center gap-4">
-						<BarChart3 className="h-8 w-8 text-primary" />
+			<div className="max-w-7xl mx-auto pt-6 pb-8 px-4 sm:px-6 lg:px-8">
+				<div className="flex items-center justify-between mb-6">
+					<div className="flex items-center gap-3">
+						<div className="p-2 bg-primary/10 rounded-md">
+							<BarChart3 className="h-5 w-5 text-primary" />
+						</div>
 						<div>
-							<h1 className="text-3xl font-bold text-gray-900">Dashboard Gerencial</h1>
-							<p className="text-gray-600 mt-1">
-								Estadísticas de producción, cobranzas y siniestros
-							</p>
+							<h1 className="text-2xl font-semibold text-foreground">Dashboard Gerencial</h1>
+							<p className="text-sm text-muted-foreground">Producción, cobranzas y siniestros</p>
 						</div>
 					</div>
 					{canExportar && (
 						<Link href="/gerencia/reportes">
-							<Button variant="outline" className="gap-2">
+							<Button size="sm" className="gap-2">
 								<FileSpreadsheet className="h-4 w-4" />
 								Reportes
 							</Button>

@@ -3,13 +3,8 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Download, AlertCircle, FileSpreadsheet } from "lucide-react";
 import {
@@ -36,9 +31,8 @@ const MESES = [
 	{ value: 12, label: "Diciembre" },
 ];
 
-// Generar años desde 2020 hasta el actual + 1
 const currentYear = new Date().getFullYear();
-const ANIOS = Array.from({ length: currentYear - 2020 + 2 }, (_, i) => 2020 + i);
+const ANIOS = Array.from({ length: 4 }, (_, i) => 2025 + i);
 
 export default function ExportarContable() {
 	const currentMonth = new Date().getMonth() + 1;
@@ -171,9 +165,7 @@ export default function ExportarContable() {
 					inicio_vigencia: row.inicio_vigencia
 						? new Date(row.inicio_vigencia).toLocaleDateString("es-BO")
 						: "",
-					fin_vigencia: row.fin_vigencia
-						? new Date(row.fin_vigencia).toLocaleDateString("es-BO")
-						: "",
+					fin_vigencia: row.fin_vigencia ? new Date(row.fin_vigencia).toLocaleDateString("es-BO") : "",
 					numero_cuota: row.numero_cuota,
 					monto_cuota_pt: row.monto_cuota_pt,
 					monto_cuota_pn: row.monto_cuota_pn ?? "",
@@ -240,164 +232,156 @@ export default function ExportarContable() {
 			window.URL.revokeObjectURL(url);
 		} catch (err) {
 			console.error("Error exporting:", err);
-			setError(
-				err instanceof Error ? err.message : "Error al generar el archivo Excel"
-			);
+			setError(err instanceof Error ? err.message : "Error al generar el archivo Excel");
 		} finally {
 			setLoading(false);
 		}
 	};
 
 	return (
-		<div className="rounded-lg border p-6 space-y-6">
-			<div className="flex items-center justify-between">
+		<Card>
+			<CardHeader>
+				<div className="flex items-center gap-3">
+					<div className="flex items-center justify-center w-8 h-8 rounded-md bg-primary/10">
+						<FileSpreadsheet className="h-4 w-4 text-primary" />
+					</div>
+					<div>
+						<CardTitle className="text-lg">Reporte Contable</CardTitle>
+						<CardDescription>
+							Exporta el reporte contable mensual con cuotas, prima neta, comisiones y factores de cálculo
+						</CardDescription>
+					</div>
+				</div>
+			</CardHeader>
+
+			<CardContent className="space-y-5">
 				<div>
-					<h3 className="text-lg font-semibold">
-						Reporte Contable
-					</h3>
-					<p className="text-sm text-muted-foreground mt-1">
-						Exporta el reporte contable mensual con cuotas, prima neta, comisiones
-						y factores de cálculo
-					</p>
+					<p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">Filtros</p>
+					<div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
+						<div className="space-y-1.5">
+							<Label className="text-sm">Mes</Label>
+							<Select value={mes.toString()} onValueChange={(value) => setMes(Number(value))}>
+								<SelectTrigger className="w-full truncate">
+									<SelectValue />
+								</SelectTrigger>
+								<SelectContent>
+									{MESES.map((m) => (
+										<SelectItem key={m.value} value={m.value.toString()}>
+											{m.label}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+						</div>
+
+						<div className="space-y-1.5">
+							<Label className="text-sm">Año</Label>
+							<Select value={anio.toString()} onValueChange={(value) => setAnio(Number(value))}>
+								<SelectTrigger className="w-full truncate">
+									<SelectValue />
+								</SelectTrigger>
+								<SelectContent>
+									{ANIOS.map((a) => (
+										<SelectItem key={a} value={a.toString()}>
+											{a}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+						</div>
+
+						<div className="space-y-1.5">
+							<Label className="text-sm">Estado Póliza</Label>
+							<Select
+								value={estadoPoliza}
+								onValueChange={(value) => setEstadoPoliza(value as "activa" | "all")}
+							>
+								<SelectTrigger className="w-full truncate">
+									<SelectValue />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="all">Todas</SelectItem>
+									<SelectItem value="activa">Solo Activas</SelectItem>
+								</SelectContent>
+							</Select>
+						</div>
+
+						<div className="space-y-1.5">
+							<Label className="text-sm">Regional</Label>
+							<Select
+								value={regionalId || "all"}
+								onValueChange={(value) => setRegionalId(value === "all" ? "" : value)}
+							>
+								<SelectTrigger className="w-full truncate">
+									<SelectValue placeholder="Todas" />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="all">Todas</SelectItem>
+									{regionales.map((r) => (
+										<SelectItem key={r.id} value={r.id}>
+											{r.nombre}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+						</div>
+
+						<div className="space-y-1.5">
+							<Label className="text-sm">Compañía</Label>
+							<Select
+								value={companiaId || "all"}
+								onValueChange={(value) => setCompaniaId(value === "all" ? "" : value)}
+							>
+								<SelectTrigger className="w-full truncate">
+									<SelectValue placeholder="Todas" />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="all">Todas</SelectItem>
+									{companias.map((c) => (
+										<SelectItem key={c.id} value={c.id}>
+											{c.nombre}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+						</div>
+
+						<div className="space-y-1.5">
+							<Label className="text-sm">Equipo</Label>
+							<Select
+								value={equipoId || "all"}
+								onValueChange={(value) => setEquipoId(value === "all" ? "" : value)}
+							>
+								<SelectTrigger className="w-full truncate">
+									<SelectValue placeholder="Todos" />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="all">Todos</SelectItem>
+									{equipos.map((e) => (
+										<SelectItem key={e.id} value={e.id}>
+											{e.nombre}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+						</div>
+					</div>
 				</div>
-				<FileSpreadsheet className="h-6 w-6 text-muted-foreground" />
-			</div>
 
-			<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
-				{/* Mes */}
-				<div className="space-y-2">
-					<Label>Mes</Label>
-					<Select
-						value={mes.toString()}
-						onValueChange={(value) => setMes(Number(value))}
-					>
-						<SelectTrigger>
-							<SelectValue />
-						</SelectTrigger>
-						<SelectContent>
-							{MESES.map((m) => (
-								<SelectItem key={m.value} value={m.value.toString()}>
-									{m.label}
-								</SelectItem>
-							))}
-						</SelectContent>
-					</Select>
-				</div>
+				{error && (
+					<Alert variant="destructive">
+						<AlertCircle className="h-4 w-4" />
+						<AlertDescription>{error}</AlertDescription>
+					</Alert>
+				)}
+			</CardContent>
 
-				{/* Año */}
-				<div className="space-y-2">
-					<Label>Año</Label>
-					<Select
-						value={anio.toString()}
-						onValueChange={(value) => setAnio(Number(value))}
-					>
-						<SelectTrigger>
-							<SelectValue />
-						</SelectTrigger>
-						<SelectContent>
-							{ANIOS.map((a) => (
-								<SelectItem key={a} value={a.toString()}>
-									{a}
-								</SelectItem>
-							))}
-						</SelectContent>
-					</Select>
-				</div>
-
-				{/* Estado Póliza */}
-				<div className="space-y-2">
-					<Label>Estado Póliza</Label>
-					<Select
-						value={estadoPoliza}
-						onValueChange={(value) => setEstadoPoliza(value as "activa" | "all")}
-					>
-						<SelectTrigger>
-							<SelectValue />
-						</SelectTrigger>
-						<SelectContent>
-							<SelectItem value="all">Todas</SelectItem>
-							<SelectItem value="activa">Solo Activas</SelectItem>
-						</SelectContent>
-					</Select>
-				</div>
-
-				{/* Regional */}
-				<div className="space-y-2">
-					<Label>Regional</Label>
-					<Select
-						value={regionalId || "all"}
-						onValueChange={(value) => setRegionalId(value === "all" ? "" : value)}
-					>
-						<SelectTrigger>
-							<SelectValue placeholder="Todas" />
-						</SelectTrigger>
-						<SelectContent>
-							<SelectItem value="all">Todas</SelectItem>
-							{regionales.map((r) => (
-								<SelectItem key={r.id} value={r.id}>
-									{r.nombre}
-								</SelectItem>
-							))}
-						</SelectContent>
-					</Select>
-				</div>
-
-				{/* Compañía */}
-				<div className="space-y-2">
-					<Label>Compañía</Label>
-					<Select
-						value={companiaId || "all"}
-						onValueChange={(value) => setCompaniaId(value === "all" ? "" : value)}
-					>
-						<SelectTrigger>
-							<SelectValue placeholder="Todas" />
-						</SelectTrigger>
-						<SelectContent>
-							<SelectItem value="all">Todas</SelectItem>
-							{companias.map((c) => (
-								<SelectItem key={c.id} value={c.id}>
-									{c.nombre}
-								</SelectItem>
-							))}
-						</SelectContent>
-					</Select>
-				</div>
-
-				{/* Equipo */}
-				<div className="space-y-2">
-					<Label>Equipo</Label>
-					<Select
-						value={equipoId || "all"}
-						onValueChange={(value) => setEquipoId(value === "all" ? "" : value)}
-					>
-						<SelectTrigger>
-							<SelectValue placeholder="Todos" />
-						</SelectTrigger>
-						<SelectContent>
-							<SelectItem value="all">Todos</SelectItem>
-							{equipos.map((e) => (
-								<SelectItem key={e.id} value={e.id}>
-									{e.nombre}
-								</SelectItem>
-							))}
-						</SelectContent>
-					</Select>
-				</div>
-			</div>
-
-			{error && (
-				<Alert variant="destructive">
-					<AlertCircle className="h-4 w-4" />
-					<AlertDescription>{error}</AlertDescription>
-				</Alert>
-			)}
-
-			<div className="flex justify-end">
-				<Button onClick={handleExport} disabled={loading} size="lg">
+			<CardFooter className="justify-end border-t pt-4">
+				<Button onClick={handleExport} disabled={loading}>
 					<Download className="h-4 w-4 mr-2" />
 					{loading ? "Exportando..." : "Exportar a Excel"}
 				</Button>
-			</div>
-		</div>
+			</CardFooter>
+		</Card>
 	);
 }

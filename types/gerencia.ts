@@ -52,6 +52,44 @@ export type DirectorCarteraStats = {
 	prima_total: number;
 };
 
+export type VencimientoProximo = {
+	numero_poliza: string;
+	cliente: string;
+	ramo: string;
+	fin_vigencia: string;
+	dias_restantes: number;
+	prima_total: number;
+	moneda: string;
+};
+
+export type ResumenVencimientos = {
+	en_30_dias: number;
+	en_60_dias: number;
+	en_90_dias: number;
+};
+
+export type DistribucionMoneda = {
+	moneda: string;
+	cantidad_polizas: number;
+	prima_total: number;
+};
+
+/** null = no hay datos del año anterior para ese período */
+export type KPITrends = {
+	prima_total_mes: number | null;
+	prima_acumulada_anio: number | null;
+	comisiones_mes: number | null;
+	cantidad_polizas_mes: number | null;
+};
+
+export type FunnelProduccion = {
+	total: number;
+	pendientes: number;
+	activas: number;
+	canceladas: number;
+	tasa_aprobacion: number; // activas / (activas + canceladas) * 100
+};
+
 export type EstadisticasProduccion = {
 	kpis: KPIProduccion;
 	primaPorMes: PrimaPorMes[];
@@ -59,6 +97,11 @@ export type EstadisticasProduccion = {
 	colocacion: ColocacionPolizas;
 	topResponsables: ProduccionPorResponsable[];
 	topDirectoresCartera: DirectorCarteraStats[];
+	vencimientosProximos: VencimientoProximo[];
+	resumenVencimientos: ResumenVencimientos;
+	distribucionMoneda: DistribucionMoneda[];
+	funnelProduccion: FunnelProduccion;
+	trends: KPITrends;
 };
 
 // ============================================
@@ -95,11 +138,18 @@ export type ProximaCuotaPorVencer = {
 	moneda: string;
 };
 
+export type AgingTranche = {
+	tranche: string;
+	cantidad: number;
+	monto: number;
+};
+
 export type EstadisticasCobranzas = {
 	kpis: KPICobranzas;
 	cobradoVsPendiente: CobradoVsPendientePorMes[];
 	distribucionEstados: DistribucionEstadosPago[];
 	proximasCuotas: ProximaCuotaPorVencer[];
+	agingMorosidad: AgingTranche[];
 };
 
 // ============================================
@@ -156,6 +206,4 @@ export type FiltrosData = {
 // RESPONSE GENÉRICO
 // ============================================
 
-export type GerenciaResponse<T> =
-	| { success: true; data: T }
-	| { success: false; error: string };
+export type GerenciaResponse<T> = { success: true; data: T } | { success: false; error: string };

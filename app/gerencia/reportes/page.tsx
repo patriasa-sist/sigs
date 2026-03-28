@@ -1,5 +1,4 @@
 import { requirePermission } from "@/utils/auth/helpers";
-import { FileSpreadsheet } from "lucide-react";
 import ExportarProduccion from "@/components/gerencia/ExportarProduccion";
 import ExportarContable from "@/components/gerencia/ExportarContable";
 
@@ -7,23 +6,18 @@ export default async function ReportesPage() {
 	await requirePermission("gerencia.exportar");
 
 	return (
-		<div className="flex-1 w-full flex flex-col gap-6">
-			{/* Header */}
-			<div className="flex items-center gap-4">
-				<FileSpreadsheet className="h-8 w-8 text-primary" />
-				<div>
-					<h1 className="text-3xl font-bold text-gray-900">Reportes</h1>
-					<p className="text-gray-600 mt-1">
-						Genera reportes consolidados para análisis y gestión
-					</p>
-				</div>
+		<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-8">
+			<div className="mb-8">
+				<h1 className="text-2xl font-semibold text-foreground">Reportes</h1>
+				<p className="text-sm text-muted-foreground mt-1">
+					Genera reportes consolidados para análisis y gestión
+				</p>
 			</div>
 
-			{/* Reporte de Producción (nuevo) */}
-			<ExportarProduccion />
-
-			{/* Reporte Contable (ex Producción) */}
-			<ExportarContable />
+			<div className="space-y-6">
+				<ExportarProduccion />
+				<ExportarContable />
+			</div>
 		</div>
 	);
 }

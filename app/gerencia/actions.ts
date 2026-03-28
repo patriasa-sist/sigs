@@ -20,12 +20,15 @@ import type {
 	SiniestrosPorMes,
 	SiniestrosPorRamo,
 	SiniestroAbierto,
+	VencimientoProximo,
+	ResumenVencimientos,
+	DistribucionMoneda,
+	AgingTranche,
+	FunnelProduccion,
+	KPITrends,
 } from "@/types/gerencia";
 
-const MESES_LABELS = [
-	"Ene", "Feb", "Mar", "Abr", "May", "Jun",
-	"Jul", "Ago", "Sep", "Oct", "Nov", "Dic",
-];
+const MESES_LABELS = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
 
 /**
  * Calcula rango de fechas según filtros.
@@ -51,7 +54,7 @@ function calcularRangos(filtros: GerenciaFiltros) {
 // ============================================
 
 export async function obtenerEstadisticasProduccion(
-	filtros: GerenciaFiltros
+	filtros: GerenciaFiltros,
 ): Promise<GerenciaResponse<EstadisticasProduccion>> {
 	const { allowed } = await checkPermission("gerencia.ver");
 	if (!allowed) return { success: false, error: "Sin permiso" };
@@ -77,18 +80,22 @@ export async function obtenerEstadisticasProduccion(
 		// Query 1: pólizas productivas (activa/pendiente/renovada) para KPIs, charts
 		let prodQuery = supabase
 			.from("polizas")
-			.select(`
+			.select(
+				`
 				id,
 				prima_total,
 				comision_empresa,
 				ramo,
 				es_renovacion,
 				inicio_vigencia,
+				moneda,
+				estado,
 				responsable_id,
 				client_id,
 				responsable:profiles!responsable_id ( full_name ),
 				director_cartera:directores_cartera!director_cartera_id ( nombre, apellidos )
-			`)
+			`,
+			)
 			.in("estado", ["activa", "pendiente", "renovada"])
 			.gte("inicio_vigencia", fechaAnioDesde)
 			.lte("inicio_vigencia", fechaAnioHasta);
@@ -101,25 +108,74 @@ export async function obtenerEstadisticasProduccion(
 			.gte("inicio_vigencia", fechaAnioDesde)
 			.lte("inicio_vigencia", fechaAnioHasta);
 
-		// Aplicar filtros comunes a ambas queries
+		// Query 3: pólizas activas por vencer en los próximos 90 días
+		const hoyVenc = new Date().toISOString().split("T")[0];
+		const en90Dias = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+		let vencQuery = supabase
+			.from("polizas")
+			.select(
+				`
+				numero_poliza,
+				fin_vigencia,
+				prima_total,
+				moneda,
+				ramo,
+				responsable_id,
+				client:clients!client_id (
+					client_type,
+					natural_clients ( primer_nombre, primer_apellido ),
+					juridic_clients ( razon_social )
+				)
+			`,
+			)
+			.eq("estado", "activa")
+			.gte("fin_vigencia", hoyVenc)
+			.lte("fin_vigencia", en90Dias)
+			.order("fin_vigencia");
+
+		// Query 4: año anterior (mismas fechas, año -1) para YoY
+		const prevAnio = filtros.anio - 1;
+		const prevAnioDesde = `${prevAnio}-01-01`;
+		const prevAnioHasta = `${prevAnio}-12-31`;
+		const prevFechaDesde = filtros.mes ? `${prevAnio}-${String(filtros.mes).padStart(2, "0")}-01` : prevAnioDesde;
+		const prevFechaHasta = filtros.mes
+			? `${prevAnio}-${String(filtros.mes).padStart(2, "0")}-${new Date(prevAnio, filtros.mes, 0).getDate()}`
+			: prevAnioHasta;
+
+		let prevQuery = supabase
+			.from("polizas")
+			.select("prima_total, comision_empresa, inicio_vigencia")
+			.in("estado", ["activa", "pendiente", "renovada"])
+			.gte("inicio_vigencia", prevAnioDesde)
+			.lte("inicio_vigencia", prevAnioHasta);
+
+		// Aplicar filtros comunes a las cuatro queries
 		if (scope.needsScoping) {
 			prodQuery = prodQuery.in("responsable_id", scope.teamMemberIds);
 			anulQuery = anulQuery.in("responsable_id", scope.teamMemberIds);
+			vencQuery = vencQuery.in("responsable_id", scope.teamMemberIds);
+			prevQuery = prevQuery.in("responsable_id", scope.teamMemberIds);
 		}
 		if (filtros.regional_id) {
 			prodQuery = prodQuery.eq("regional_id", filtros.regional_id);
 			anulQuery = anulQuery.eq("regional_id", filtros.regional_id);
+			vencQuery = vencQuery.eq("regional_id", filtros.regional_id);
+			prevQuery = prevQuery.eq("regional_id", filtros.regional_id);
 		}
 		if (filtros.compania_id) {
 			prodQuery = prodQuery.eq("compania_aseguradora_id", filtros.compania_id);
 			anulQuery = anulQuery.eq("compania_aseguradora_id", filtros.compania_id);
+			vencQuery = vencQuery.eq("compania_aseguradora_id", filtros.compania_id);
+			prevQuery = prevQuery.eq("compania_aseguradora_id", filtros.compania_id);
 		}
 		if (equipoMemberIds) {
 			prodQuery = prodQuery.in("responsable_id", equipoMemberIds);
 			anulQuery = anulQuery.in("responsable_id", equipoMemberIds);
+			vencQuery = vencQuery.in("responsable_id", equipoMemberIds);
+			prevQuery = prevQuery.in("responsable_id", equipoMemberIds);
 		}
 
-		const [prodRes, anulRes] = await Promise.all([prodQuery, anulQuery]);
+		const [prodRes, anulRes, vencRes, prevRes] = await Promise.all([prodQuery, anulQuery, vencQuery, prevQuery]);
 
 		if (prodRes.error) {
 			console.error("Error fetching polizas for stats:", prodRes.error);
@@ -133,16 +189,16 @@ export async function obtenerEstadisticasProduccion(
 		const polizasPeriodo = esAnual
 			? rows
 			: rows.filter((p) => {
-				const d = p.inicio_vigencia as string;
-				return d >= fechaDesde && d <= fechaHasta;
-			});
+					const d = p.inicio_vigencia as string;
+					return d >= fechaDesde && d <= fechaHasta;
+				});
 
 		const anuladasPeriodo = esAnual
 			? anuladas
 			: anuladas.filter((p) => {
-				const d = p.inicio_vigencia as string;
-				return d >= fechaDesde && d <= fechaHasta;
-			});
+					const d = p.inicio_vigencia as string;
+					return d >= fechaDesde && d <= fechaHasta;
+				});
 
 		const kpis = {
 			prima_total_mes: polizasPeriodo.reduce((sum, p) => sum + Number(p.prima_total || 0), 0),
@@ -158,9 +214,11 @@ export async function obtenerEstadisticasProduccion(
 			const mes = new Date(p.inicio_vigencia as string).getMonth() + 1;
 			primaPorMesMap.set(mes, (primaPorMesMap.get(mes) || 0) + Number(p.prima_total || 0));
 		}
-		const primaPorMes: PrimaPorMes[] = Array.from(primaPorMesMap.entries()).map(
-			([mes, prima]) => ({ mes, label: MESES_LABELS[mes - 1], prima_total: prima })
-		);
+		const primaPorMes: PrimaPorMes[] = Array.from(primaPorMesMap.entries()).map(([mes, prima]) => ({
+			mes,
+			label: MESES_LABELS[mes - 1],
+			prima_total: prima,
+		}));
 
 		// Comisiones por ramo (período seleccionado)
 		const ramoComisionMap = new Map<string, number>();
@@ -224,9 +282,116 @@ export async function obtenerEstadisticasProduccion(
 			.sort((a, b) => b.cantidad_polizas - a.cantidad_polizas)
 			.slice(0, 10);
 
+		// YoY trends
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		const prevRows = (prevRes.data || []) as Array<any>;
+		const prevPeriodo = esAnual
+			? prevRows
+			: prevRows.filter((p) => {
+					const d = p.inicio_vigencia as string;
+					return d >= prevFechaDesde && d <= prevFechaHasta;
+				});
+
+		function yoyPct(curr: number, prev: number): number | null {
+			if (prev === 0) return null; // sin datos previos
+			return ((curr - prev) / prev) * 100;
+		}
+
+		const prevPrimaMes = prevPeriodo.reduce((s, p) => s + Number(p.prima_total || 0), 0);
+		const prevPrimaAnio = prevRows.reduce((s, p) => s + Number(p.prima_total || 0), 0);
+		const prevComisionesMes = prevPeriodo.reduce((s, p) => s + Number(p.comision_empresa || 0), 0);
+		const prevCantidadMes = prevPeriodo.length;
+
+		const trends: KPITrends = {
+			prima_total_mes: yoyPct(kpis.prima_total_mes, prevPrimaMes),
+			prima_acumulada_anio: yoyPct(kpis.prima_acumulada_anio, prevPrimaAnio),
+			comisiones_mes: yoyPct(kpis.comisiones_mes, prevComisionesMes),
+			cantidad_polizas_mes: yoyPct(kpis.cantidad_polizas_mes, prevCantidadMes),
+		};
+
+		// Funnel producción (período seleccionado)
+		const funnelActivas = polizasPeriodo.filter((p) => p.estado === "activa" || p.estado === "renovada").length;
+		const funnelPendientes = polizasPeriodo.filter((p) => p.estado === "pendiente").length;
+		const funnelCanceladas = anuladasPeriodo.length;
+		const funnelTotal = funnelActivas + funnelPendientes + funnelCanceladas;
+		const decididas = funnelActivas + funnelCanceladas;
+		const funnelProduccion: FunnelProduccion = {
+			total: funnelTotal,
+			activas: funnelActivas,
+			pendientes: funnelPendientes,
+			canceladas: funnelCanceladas,
+			tasa_aprobacion: decididas > 0 ? (funnelActivas / decididas) * 100 : 0,
+		};
+
+		// Distribución por moneda (período seleccionado)
+		const monedaMap = new Map<string, { cantidad: number; prima: number }>();
+		for (const p of polizasPeriodo) {
+			const moneda = (p.moneda as string) || "Bs";
+			const existing = monedaMap.get(moneda) || { cantidad: 0, prima: 0 };
+			existing.cantidad += 1;
+			existing.prima += Number(p.prima_total || 0);
+			monedaMap.set(moneda, existing);
+		}
+		const distribucionMoneda: DistribucionMoneda[] = Array.from(monedaMap.entries())
+			.map(([moneda, data]) => ({
+				moneda,
+				cantidad_polizas: data.cantidad,
+				prima_total: data.prima,
+			}))
+			.sort((a, b) => b.prima_total - a.prima_total);
+
+		// Vencimientos próximos 90 días
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		const vencRows = (vencRes.data || []) as Array<any>;
+		const hoyMs = Date.now();
+
+		const vencimientosProximos: VencimientoProximo[] = vencRows.slice(0, 30).map((p) => {
+			let cliente = "N/A";
+			const c = p.client;
+			if (c?.client_type === "natural" && c.natural_clients) {
+				cliente = `${c.natural_clients.primer_nombre || ""} ${c.natural_clients.primer_apellido || ""}`.trim();
+			} else if (c?.juridic_clients) {
+				cliente = c.juridic_clients.razon_social || "N/A";
+			}
+			const diasRestantes = Math.round((new Date(p.fin_vigencia).getTime() - hoyMs) / (1000 * 60 * 60 * 24));
+			return {
+				numero_poliza: p.numero_poliza || "N/A",
+				cliente,
+				ramo: p.ramo || "N/A",
+				fin_vigencia: p.fin_vigencia,
+				dias_restantes: diasRestantes,
+				prima_total: Number(p.prima_total || 0),
+				moneda: p.moneda || "Bs",
+			};
+		});
+
+		const resumenVencimientos: ResumenVencimientos = {
+			en_30_dias: vencRows.filter((p) => {
+				const d = Math.round((new Date(p.fin_vigencia).getTime() - hoyMs) / (1000 * 60 * 60 * 24));
+				return d <= 30;
+			}).length,
+			en_60_dias: vencRows.filter((p) => {
+				const d = Math.round((new Date(p.fin_vigencia).getTime() - hoyMs) / (1000 * 60 * 60 * 24));
+				return d <= 60;
+			}).length,
+			en_90_dias: vencRows.length,
+		};
+
 		return {
 			success: true,
-			data: { kpis, primaPorMes, comisionesPorRamo, colocacion, topResponsables, topDirectoresCartera },
+			data: {
+				kpis,
+				primaPorMes,
+				comisionesPorRamo,
+				colocacion,
+				topResponsables,
+				topDirectoresCartera,
+				vencimientosProximos,
+				resumenVencimientos,
+				distribucionMoneda,
+				funnelProduccion,
+				trends,
+			},
 		};
 	} catch (err) {
 		console.error("Error in obtenerEstadisticasProduccion:", err);
@@ -239,7 +404,7 @@ export async function obtenerEstadisticasProduccion(
 // ============================================
 
 export async function obtenerEstadisticasCobranzas(
-	filtros: GerenciaFiltros
+	filtros: GerenciaFiltros,
 ): Promise<GerenciaResponse<EstadisticasCobranzas>> {
 	const { allowed } = await checkPermission("gerencia.ver");
 	if (!allowed) return { success: false, error: "Sin permiso" };
@@ -253,7 +418,8 @@ export async function obtenerEstadisticasCobranzas(
 		// Query pagos con poliza join para scoping
 		let query = supabase
 			.from("polizas_pagos")
-			.select(`
+			.select(
+				`
 				id,
 				monto,
 				fecha_vencimiento,
@@ -272,7 +438,8 @@ export async function obtenerEstadisticasCobranzas(
 						juridic_clients ( razon_social )
 					)
 				)
-			`)
+			`,
+			)
 			.gte("fecha_vencimiento", fechaAnioDesde)
 			.lte("fecha_vencimiento", fechaAnioHasta);
 
@@ -291,7 +458,10 @@ export async function obtenerEstadisticasCobranzas(
 				.select("user_id")
 				.eq("equipo_id", filtros.equipo_id);
 			if (members && members.length > 0) {
-				query = query.in("poliza.responsable_id", members.map((m) => m.user_id));
+				query = query.in(
+					"poliza.responsable_id",
+					members.map((m) => m.user_id),
+				);
 			}
 		}
 
@@ -307,19 +477,13 @@ export async function obtenerEstadisticasCobranzas(
 		// Período seleccionado: si anual usa todas, sino filtra por mes
 		const cuotasPeriodo = esAnual
 			? rows
-			: rows.filter(
-				(p) => p.fecha_vencimiento >= fechaDesde && p.fecha_vencimiento <= fechaHasta
-			);
+			: rows.filter((p) => p.fecha_vencimiento >= fechaDesde && p.fecha_vencimiento <= fechaHasta);
 
 		// Determinar estado real: "pendiente" con fecha pasada = "vencido"
 		const hoyStr = new Date().toISOString().split("T")[0];
 
-		const pendientes = cuotasPeriodo.filter(
-			(p) => p.estado === "pendiente" && p.fecha_vencimiento >= hoyStr
-		);
-		const vencidas = cuotasPeriodo.filter(
-			(p) => p.estado === "pendiente" && p.fecha_vencimiento < hoyStr
-		);
+		const pendientes = cuotasPeriodo.filter((p) => p.estado === "pendiente" && p.fecha_vencimiento >= hoyStr);
+		const vencidas = cuotasPeriodo.filter((p) => p.estado === "pendiente" && p.fecha_vencimiento < hoyStr);
 		const pagadas = cuotasPeriodo.filter((p) => p.estado === "pagado");
 
 		const montoPendiente = pendientes.reduce((s, p) => s + Number(p.monto || 0), 0);
@@ -351,15 +515,12 @@ export async function obtenerEstadisticasCobranzas(
 				pendienteMap.set(mes, (pendienteMap.get(mes) || 0) + Number(p.monto || 0));
 			}
 		}
-		const cobradoVsPendiente: CobradoVsPendientePorMes[] = Array.from(
-			{ length: 12 },
-			(_, i) => ({
-				mes: i + 1,
-				label: MESES_LABELS[i],
-				cobrado: cobradoMap.get(i + 1) || 0,
-				pendiente: pendienteMap.get(i + 1) || 0,
-			})
-		);
+		const cobradoVsPendiente: CobradoVsPendientePorMes[] = Array.from({ length: 12 }, (_, i) => ({
+			mes: i + 1,
+			label: MESES_LABELS[i],
+			cobrado: cobradoMap.get(i + 1) || 0,
+			pendiente: pendienteMap.get(i + 1) || 0,
+		}));
 
 		// Distribución estados de pago (período seleccionado)
 		// Usar estado calculado: pendiente con fecha pasada = vencido
@@ -374,19 +535,15 @@ export async function obtenerEstadisticasCobranzas(
 			existing.monto += Number(p.monto || 0);
 			estadoMap.set(estado, existing);
 		}
-		const distribucionEstados: DistribucionEstadosPago[] = Array.from(estadoMap.entries())
-			.map(([estado, data]) => ({ estado, ...data }));
+		const distribucionEstados: DistribucionEstadosPago[] = Array.from(estadoMap.entries()).map(
+			([estado, data]) => ({ estado, ...data }),
+		);
 
 		// Próximas cuotas por vencer (30 días desde hoy)
 		const en30Dias = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
 
 		const proximasCuotas: ProximaCuotaPorVencer[] = rows
-			.filter(
-				(p) =>
-					p.estado === "pendiente" &&
-					p.fecha_vencimiento >= hoyStr &&
-					p.fecha_vencimiento <= en30Dias
-			)
+			.filter((p) => p.estado === "pendiente" && p.fecha_vencimiento >= hoyStr && p.fecha_vencimiento <= en30Dias)
 			.sort((a, b) => a.fecha_vencimiento.localeCompare(b.fecha_vencimiento))
 			.slice(0, 20)
 			.map((p) => {
@@ -395,7 +552,8 @@ export async function obtenerEstadisticasCobranzas(
 				if (poliza?.client) {
 					const c = poliza.client;
 					if (c.client_type === "natural" && c.natural_clients) {
-						cliente = `${c.natural_clients.primer_nombre || ""} ${c.natural_clients.primer_apellido || ""}`.trim();
+						cliente =
+							`${c.natural_clients.primer_nombre || ""} ${c.natural_clients.primer_apellido || ""}`.trim();
 					} else if (c.juridic_clients) {
 						cliente = c.juridic_clients.razon_social || "N/A";
 					}
@@ -409,9 +567,36 @@ export async function obtenerEstadisticasCobranzas(
 				};
 			});
 
+		// Aging de morosidad: cuotas vencidas agrupadas por tramos de días
+		const agingOrder = ["1-30 días", "31-60 días", "61-90 días", "90+ días"];
+		const agingMap = new Map<string, { cantidad: number; monto: number }>(
+			agingOrder.map((t) => [t, { cantidad: 0, monto: 0 }]),
+		);
+		const hoyAging = new Date();
+		for (const p of vencidas) {
+			const diasVencido = Math.round(
+				(hoyAging.getTime() - new Date(p.fecha_vencimiento).getTime()) / (1000 * 60 * 60 * 24),
+			);
+			const tranche =
+				diasVencido <= 30
+					? "1-30 días"
+					: diasVencido <= 60
+						? "31-60 días"
+						: diasVencido <= 90
+							? "61-90 días"
+							: "90+ días";
+			const slot = agingMap.get(tranche)!;
+			slot.cantidad += 1;
+			slot.monto += Number(p.monto || 0);
+		}
+		const agingMorosidad: AgingTranche[] = agingOrder.map((tranche) => ({
+			tranche,
+			...agingMap.get(tranche)!,
+		}));
+
 		return {
 			success: true,
-			data: { kpis, cobradoVsPendiente, distribucionEstados, proximasCuotas },
+			data: { kpis, cobradoVsPendiente, distribucionEstados, proximasCuotas, agingMorosidad },
 		};
 	} catch (err) {
 		console.error("Error in obtenerEstadisticasCobranzas:", err);
@@ -424,7 +609,7 @@ export async function obtenerEstadisticasCobranzas(
 // ============================================
 
 export async function obtenerEstadisticasSiniestros(
-	filtros: GerenciaFiltros
+	filtros: GerenciaFiltros,
 ): Promise<GerenciaResponse<EstadisticasSiniestros>> {
 	const { allowed } = await checkPermission("gerencia.ver");
 	if (!allowed) return { success: false, error: "Sin permiso" };
@@ -438,7 +623,8 @@ export async function obtenerEstadisticasSiniestros(
 		// Query siniestros del año con poliza join
 		let query = supabase
 			.from("siniestros")
-			.select(`
+			.select(
+				`
 				id,
 				codigo_siniestro,
 				fecha_siniestro,
@@ -458,7 +644,8 @@ export async function obtenerEstadisticasSiniestros(
 						juridic_clients ( razon_social )
 					)
 				)
-			`)
+			`,
+			)
 			.gte("fecha_siniestro", fechaAnioDesde)
 			.lte("fecha_siniestro", fechaAnioHasta);
 
@@ -479,12 +666,7 @@ export async function obtenerEstadisticasSiniestros(
 		const abiertos = rows.filter((s) => s.estado === "abierto");
 		const cerradosPeriodo = esAnual
 			? rows.filter((s) => s.fecha_cierre)
-			: rows.filter(
-				(s) =>
-					s.fecha_cierre &&
-					s.fecha_cierre >= fechaDesde &&
-					s.fecha_cierre <= fechaHasta
-			);
+			: rows.filter((s) => s.fecha_cierre && s.fecha_cierre >= fechaDesde && s.fecha_cierre <= fechaHasta);
 
 		let promedioDias: number | null = null;
 		if (cerradosPeriodo.length > 0) {
@@ -518,23 +700,20 @@ export async function obtenerEstadisticasSiniestros(
 				cerradosMesMap.set(mesC, (cerradosMesMap.get(mesC) || 0) + 1);
 			}
 		}
-		const siniestrosPorMes: SiniestrosPorMes[] = Array.from(
-			{ length: 12 },
-			(_, i) => ({
-				mes: i + 1,
-				label: MESES_LABELS[i],
-				abiertos: abiertosMesMap.get(i + 1) || 0,
-				cerrados: cerradosMesMap.get(i + 1) || 0,
-			})
-		);
+		const siniestrosPorMes: SiniestrosPorMes[] = Array.from({ length: 12 }, (_, i) => ({
+			mes: i + 1,
+			label: MESES_LABELS[i],
+			abiertos: abiertosMesMap.get(i + 1) || 0,
+			cerrados: cerradosMesMap.get(i + 1) || 0,
+		}));
 
 		// Por ramo (período seleccionado)
 		const siniestrosPeriodo = esAnual
 			? rows
 			: rows.filter((s) => {
-				const d = s.fecha_siniestro as string;
-				return d >= fechaDesde && d <= fechaHasta;
-			});
+					const d = s.fecha_siniestro as string;
+					return d >= fechaDesde && d <= fechaHasta;
+				});
 
 		const ramoMap = new Map<string, number>();
 		for (const s of siniestrosPeriodo) {
@@ -556,13 +735,14 @@ export async function obtenerEstadisticasSiniestros(
 				if (poliza?.client) {
 					const c = poliza.client;
 					if (c.client_type === "natural" && c.natural_clients) {
-						cliente = `${c.natural_clients.primer_nombre || ""} ${c.natural_clients.primer_apellido || ""}`.trim();
+						cliente =
+							`${c.natural_clients.primer_nombre || ""} ${c.natural_clients.primer_apellido || ""}`.trim();
 					} else if (c.juridic_clients) {
 						cliente = c.juridic_clients.razon_social || "N/A";
 					}
 				}
 				const diasAbierto = Math.round(
-					(hoy.getTime() - new Date(s.fecha_siniestro).getTime()) / (1000 * 60 * 60 * 24)
+					(hoy.getTime() - new Date(s.fecha_siniestro).getTime()) / (1000 * 60 * 60 * 24),
 				);
 				return {
 					codigo_siniestro: s.codigo_siniestro || "N/A",
