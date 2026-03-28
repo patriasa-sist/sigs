@@ -153,7 +153,6 @@ export function Navbar() {
 	return (
 		<nav className="bg-card border-b border-border px-4 sm:px-6 lg:px-8">
 			<div className="flex items-center h-14 gap-6">
-
 				{/* Logo */}
 				<Link href="/" className="flex items-center gap-2.5 hover:opacity-80 transition-opacity shrink-0">
 					<Image
@@ -175,6 +174,15 @@ export function Navbar() {
 							<span>Dashboard</span>
 						</Button>
 					</Link>
+
+					{can("clientes.ver") && (
+						<Link href="/clientes">
+							<Button variant="ghost" size="sm" className="gap-2">
+								<Users className="h-4 w-4" />
+								<span>Clientes</span>
+							</Button>
+						</Link>
+					)}
 
 					{can("polizas.ver") && (
 						<Link href="/polizas">
@@ -308,7 +316,6 @@ export function Navbar() {
 						</DropdownMenuItem>
 					</DropdownMenuContent>
 				</DropdownMenu>
-
 			</div>
 		</nav>
 	);

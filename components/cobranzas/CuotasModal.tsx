@@ -1,10 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+	Dialog,
+	DialogContent,
+	DialogHeader,
+	DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import {
 	Phone,
 	Mail,
@@ -18,10 +21,20 @@ import {
 	Send,
 	Paperclip,
 	Loader2,
+	AlertCircle,
 } from "lucide-react";
 import type { PolizaConPagos, CuotaPago, PolizaConPagosExtendida } from "@/types/cobranza";
-import { obtenerDetallePolizaParaCuotas, prepararDatosAvisoMora, obtenerComprobanteCuota } from "@/app/cobranzas/actions";
-import { enviarRecordatorioWhatsApp, enviarRecordatorioEmail, formatearFecha, formatearMonto } from "@/utils/cobranza";
+import {
+	obtenerDetallePolizaParaCuotas,
+	prepararDatosAvisoMora,
+	obtenerComprobanteCuota,
+} from "@/app/cobranzas/actions";
+import {
+	enviarRecordatorioWhatsApp,
+	enviarRecordatorioEmail,
+	formatearFecha,
+	formatearMonto,
+} from "@/utils/cobranza";
 import { generarURLWhatsApp } from "@/utils/whatsapp";
 import { contarCuotasVencidas, obtenerEstadoReal } from "@/utils/estadoCuota";
 import RegistrarProrrogaModal from "./RegistrarProrrogaModal";
@@ -34,41 +47,51 @@ interface CuotasModalProps {
 	onSelectQuota: (cuota: CuotaPago) => void;
 }
 
-/**
- * MEJORAS #3, #4, #7, #8: Modal mejorado de cuotas con:
- * - Información de contacto del cliente (teléfono, correo)
- * - Datos específicos según el ramo (placas, asegurados, ubicaciones)
- * - Botones de recordatorio por WhatsApp y Email
- * - Botón "Registrar Prórroga"
- * - Botón "Generar Aviso de Mora" (si 3+ cuotas vencidas)
- */
-export default function CuotasModal({ poliza, open, onClose, onSelectQuota }: CuotasModalProps) {
+/** Status badge using design system palette and rounded-md */
+function EstadoBadge({ estado }: { estado: string }) {
+	const styles: Record<string, string> = {
+		pendiente: "bg-amber-50 text-amber-800 border-amber-200",
+		vencido:   "bg-rose-50  text-rose-800  border-rose-200",
+		parcial:   "bg-orange-50 text-orange-800 border-orange-200",
+		pagado:    "bg-teal-50  text-teal-800  border-teal-200",
+	};
+	return (
+		<span
+			className={`inline-flex items-center text-xs font-medium border px-2 py-0.5 rounded-md ${
+				styles[estado] ?? "bg-secondary text-secondary-foreground border-border"
+			}`}
+		>
+			{estado.charAt(0).toUpperCase() + estado.slice(1)}
+		</span>
+	);
+}
+
+export default function CuotasModal({
+	poliza,
+	open,
+	onClose,
+	onSelectQuota,
+}: CuotasModalProps) {
 	const [polizaExtendida, setPolizaExtendida] = useState<PolizaConPagosExtendida | null>(null);
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
-	// Modal states
 	const [selectedCuotaProrroga, setSelectedCuotaProrroga] = useState<CuotaPago | null>(null);
 	const [prorrogaModalOpen, setProrrogaModalOpen] = useState(false);
 	const [generatingPDF, setGeneratingPDF] = useState(false);
 	const [loadingComprobante, setLoadingComprobante] = useState<string | null>(null);
 
 	useEffect(() => {
-		if (open && poliza) {
-			loadExtendedData();
-		}
-	// eslint-disable-next-line react-hooks/exhaustive-deps
+		if (open && poliza) loadExtendedData();
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [open, poliza]);
 
 	const loadExtendedData = async () => {
 		if (!poliza) return;
-
 		setLoading(true);
 		setError(null);
-
 		try {
 			const response = await obtenerDetallePolizaParaCuotas(poliza.id);
-
 			if (response.success && response.data) {
 				setPolizaExtendida(response.data);
 			} else {
@@ -84,50 +107,38 @@ export default function CuotasModal({ poliza, open, onClose, onSelectQuota }: Cu
 
 	const handleGenerarAvisoMora = async () => {
 		if (!poliza) return;
-
 		setGeneratingPDF(true);
 		setError(null);
-
 		try {
 			const response = await prepararDatosAvisoMora(poliza.id);
-
 			if (response.success && response.data) {
 				const avisoData = response.data;
-
-				// Generate and download PDF
 				const { generarYDescargarAvisoMoraPDF } = await import("@/utils/cobranza");
 				await generarYDescargarAvisoMoraPDF(avisoData);
-
-				// Show success message
 				toast.success("PDF de aviso de mora generado", {
-					description: "El documento se ha descargado correctamente"
+					description: "El documento se ha descargado correctamente",
 				});
-
-				// Open WhatsApp with message
 				const mensaje = `Estimado/a cliente, se ha generado un aviso de mora para su póliza ${poliza.numero_poliza}. Tiene ${avisoData.cuotas_vencidas.length} cuotas vencidas por un total de ${formatearMonto(avisoData.total_adeudado, poliza.moneda)}. Por favor, regularice su situación a la brevedad. Adjunto encontrará el documento detallado.`;
-
-				const telefono = polizaExtendida?.contacto?.celular || polizaExtendida?.contacto?.telefono;
+				const telefono =
+					polizaExtendida?.contacto?.celular || polizaExtendida?.contacto?.telefono;
 				if (telefono) {
-					const url = generarURLWhatsApp(telefono, mensaje);
-					window.open(url, "_blank");
+					window.open(generarURLWhatsApp(telefono, mensaje), "_blank");
 				} else {
 					toast.warning("Sin número de teléfono", {
-						description: "No se encontró número de contacto para enviar por WhatsApp"
+						description: "No se encontró contacto para enviar por WhatsApp",
 					});
 				}
 			} else {
 				setError(response.error || "Error al preparar aviso de mora");
 				toast.error("Error al generar aviso", {
-					description: response.error || "No se pudo preparar el aviso de mora"
+					description: response.error || "No se pudo preparar el aviso de mora",
 				});
 			}
 		} catch (err) {
 			console.error("Error generating aviso de mora:", err);
-			const errorMessage = err instanceof Error ? err.message : "Error al generar aviso de mora";
-			setError(errorMessage);
-			toast.error("Error al generar PDF", {
-				description: errorMessage
-			});
+			const msg = err instanceof Error ? err.message : "Error al generar aviso de mora";
+			setError(msg);
+			toast.error("Error al generar PDF", { description: msg });
 		} finally {
 			setGeneratingPDF(false);
 		}
@@ -135,7 +146,6 @@ export default function CuotasModal({ poliza, open, onClose, onSelectQuota }: Cu
 
 	const handleWhatsAppReminder = (cuota: CuotaPago) => {
 		if (!polizaExtendida) return;
-
 		enviarRecordatorioWhatsApp(
 			cuota,
 			polizaExtendida,
@@ -146,7 +156,6 @@ export default function CuotasModal({ poliza, open, onClose, onSelectQuota }: Cu
 
 	const handleEmailReminder = (cuota: CuotaPago) => {
 		if (!polizaExtendida) return;
-
 		enviarRecordatorioEmail(
 			cuota,
 			polizaExtendida,
@@ -164,9 +173,9 @@ export default function CuotasModal({ poliza, open, onClose, onSelectQuota }: Cu
 		setProrrogaModalOpen(false);
 		setSelectedCuotaProrroga(null);
 		toast.success("Prórroga registrada exitosamente", {
-			description: "La fecha de vencimiento ha sido actualizada"
+			description: "La fecha de vencimiento ha sido actualizada",
 		});
-		loadExtendedData(); // Reload data
+		loadExtendedData();
 	};
 
 	const handleVerComprobante = async (cuota: CuotaPago) => {
@@ -177,7 +186,7 @@ export default function CuotasModal({ poliza, open, onClose, onSelectQuota }: Cu
 				window.open(response.data.publicUrl, "_blank");
 			} else {
 				toast.info("Sin comprobante", {
-					description: response.error || "No se encontró comprobante para esta cuota"
+					description: response.error || "No se encontró comprobante para esta cuota",
 				});
 			}
 		} catch {
@@ -189,401 +198,454 @@ export default function CuotasModal({ poliza, open, onClose, onSelectQuota }: Cu
 
 	if (!poliza) return null;
 
-	const formatCurrency = (amount: number) => {
-		return new Intl.NumberFormat("es-BO", {
+	const formatCurrency = (amount: number) =>
+		new Intl.NumberFormat("es-BO", {
 			style: "decimal",
 			minimumFractionDigits: 2,
 			maximumFractionDigits: 2,
 		}).format(amount);
-	};
 
-	const getEstadoBadge = (estado: string) => {
-		switch (estado) {
-			case "pendiente":
-				return <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">Pendiente</Badge>;
-			case "vencido":
-				return <Badge variant="destructive">Vencido</Badge>;
-			case "parcial":
-				return <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">Parcial</Badge>;
-			case "pagado":
-				return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Pagado</Badge>;
-			default:
-				return <Badge variant="outline">{estado}</Badge>;
-		}
-	};
+	const puedeRegistrarPago = (estado: string) =>
+		estado === "pendiente" || estado === "vencido" || estado === "parcial";
 
-	const puedeRegistrarPago = (estado: string) => {
-		return estado === "pendiente" || estado === "vencido" || estado === "parcial";
-	};
-
-	const puedeProrroga = (estado: string) => {
-		return estado === "pendiente" || estado === "vencido" || estado === "parcial";
-	};
+	const puedeProrroga = (estado: string) =>
+		estado === "pendiente" || estado === "vencido" || estado === "parcial";
 
 	const cuotasVencidas = contarCuotasVencidas(poliza.cuotas || []);
 	const puedeGenerarAvisoMora = cuotasVencidas >= 3;
 
+	const telefono =
+		polizaExtendida?.contacto?.celular || polizaExtendida?.contacto?.telefono;
+	const correo = polizaExtendida?.contacto?.correo;
+
 	return (
 		<>
 			<Dialog open={open} onOpenChange={onClose}>
-				<DialogContent className="!max-w-[95vw] sm:!max-w-[95vw] md:!max-w-[95vw] lg:!max-w-[95vw] w-full max-h-[90vh] overflow-y-auto">
+				<DialogContent className="sm:max-w-5xl max-h-[90vh] overflow-y-auto">
 					<DialogHeader>
-						<DialogTitle className="text-xl">
-							Cuotas de Póliza {poliza.numero_poliza}
+						<DialogTitle className="text-xl font-semibold">
+							Cuotas de Póliza{" "}
+							<span className="text-primary">{poliza.numero_poliza}</span>
 						</DialogTitle>
-						<DialogDescription asChild>
-							<div className="space-y-1 text-sm text-muted-foreground">
-								<div><span className="font-semibold">Cliente:</span> {poliza.client.nombre_completo}</div>
-								<div><span className="font-semibold">Compañía:</span> {poliza.compania.nombre}</div>
-								<div><span className="font-semibold">Ramo:</span> {poliza.ramo}</div>
-								<div><span className="font-semibold">Prima Total:</span> {poliza.moneda} {formatCurrency(poliza.prima_total)}</div>
-							</div>
-						</DialogDescription>
 					</DialogHeader>
 
+					{/* Policy summary strip */}
+					<div className="rounded-md border border-border bg-secondary px-4 py-3 text-sm">
+						<div className="flex flex-wrap gap-x-8 gap-y-2">
+							<div>
+								<p className="text-xs text-muted-foreground">Cliente</p>
+								<p className="font-medium mt-0.5">{poliza.client.nombre_completo}</p>
+							</div>
+							<div>
+								<p className="text-xs text-muted-foreground">Compañía</p>
+								<p className="font-medium mt-0.5">{poliza.compania.nombre}</p>
+							</div>
+							<div>
+								<p className="text-xs text-muted-foreground">Ramo</p>
+								<p className="font-medium mt-0.5">{poliza.ramo}</p>
+							</div>
+							<div>
+								<p className="text-xs text-muted-foreground">Prima Total</p>
+								<p className="font-semibold tabular-nums mt-0.5">
+									{poliza.moneda} {formatCurrency(poliza.prima_total)}
+								</p>
+							</div>
+						</div>
+					</div>
+
+					{/* Loading state */}
 					{loading && (
-						<div className="text-center py-4 text-muted-foreground">
-							Cargando información...
+						<div className="flex items-center justify-center gap-2 py-6 text-sm text-muted-foreground">
+							<Loader2 className="h-4 w-4 animate-spin" />
+							Cargando información…
 						</div>
 					)}
 
+					{/* Error state */}
 					{error && (
-						<div className="rounded-md bg-red-50 p-3 text-sm text-red-700 border border-red-200">
-							{error}
+						<div className="flex items-start gap-2.5 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2.5 text-sm text-destructive">
+							<AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+							<span>{error}</span>
 						</div>
 					)}
 
 					{!loading && polizaExtendida && (
-						<>
-							{/* MEJORA #3: Contact Information Section */}
-							<div className="rounded-md border p-4 bg-muted/30">
-								<h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
-									<Users className="h-4 w-4" />
+						<div className="space-y-4">
+							{/* Contact info */}
+							<div className="rounded-md border border-border p-4">
+								<h3 className="text-sm font-medium text-foreground mb-3 flex items-center gap-2">
+									<Users className="h-4 w-4 text-primary" />
 									Información de Contacto
 								</h3>
-								<div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-									{/* Client Name */}
-									<div className="flex items-center gap-2 col-span-full">
-										<Users className="h-4 w-4 text-muted-foreground" />
-										<span className="font-medium">Cliente:</span>
-										<span>{polizaExtendida.client.nombre_completo}</span>
-									</div>
-
+								<div className="grid grid-cols-2 gap-x-8 gap-y-3 text-sm">
 									{/* Phone */}
-									{(polizaExtendida.contacto.celular || polizaExtendida.contacto.telefono) ? (
-										<div className="flex items-center gap-2">
-											<Phone className="h-4 w-4 text-muted-foreground" />
-											<span className="font-medium">Teléfono:</span>
-											<Button
-												variant="link"
-												size="sm"
-												className="h-auto p-0 text-blue-600"
+									<div>
+										<p className="text-xs text-muted-foreground mb-0.5 flex items-center gap-1">
+											<Phone className="h-3 w-3" />
+											Teléfono
+										</p>
+										{telefono ? (
+											<button
 												onClick={() => {
-													const tel = polizaExtendida.contacto.celular || polizaExtendida.contacto.telefono;
-													if (tel) {
-														const url = generarURLWhatsApp(tel, "");
-														window.open(url, "_blank");
-													}
+													const url = generarURLWhatsApp(telefono, "");
+													window.open(url, "_blank");
 												}}
+												className="flex items-center gap-1.5 text-primary hover:underline font-medium"
 											>
-												<MessageCircle className="h-3 w-3 mr-1" />
-												{polizaExtendida.contacto.celular || polizaExtendida.contacto.telefono}
-											</Button>
-										</div>
-									) : (
-										<div className="flex items-center gap-2 text-muted-foreground">
-											<Phone className="h-4 w-4" />
-											<span className="font-medium">Teléfono:</span>
-											<span>No disponible</span>
-										</div>
-									)}
+												<MessageCircle className="h-3.5 w-3.5" />
+												{telefono}
+											</button>
+										) : (
+											<span className="text-muted-foreground">No disponible</span>
+										)}
+									</div>
 
 									{/* Email */}
-									{polizaExtendida.contacto.correo ? (
-										<div className="flex items-center gap-2">
-											<Mail className="h-4 w-4 text-muted-foreground" />
-											<span className="font-medium">Correo:</span>
+									<div>
+										<p className="text-xs text-muted-foreground mb-0.5 flex items-center gap-1">
+											<Mail className="h-3 w-3" />
+											Correo
+										</p>
+										{correo ? (
 											<a
-												href={`mailto:${polizaExtendida.contacto.correo}`}
-												className="text-blue-600 hover:underline"
+												href={`mailto:${correo}`}
+												className="text-primary hover:underline font-medium"
 											>
-												{polizaExtendida.contacto.correo}
+												{correo}
 											</a>
-										</div>
-									) : (
-										<div className="flex items-center gap-2 text-muted-foreground">
-											<Mail className="h-4 w-4" />
-											<span className="font-medium">Correo:</span>
-											<span>No disponible</span>
-										</div>
-									)}
-
-									{/* Vigencia dates */}
-									<div className="flex items-center gap-2">
-										<Calendar className="h-4 w-4 text-muted-foreground" />
-										<span className="font-medium">Inicio vigencia:</span>
-										<span>{formatearFecha(polizaExtendida.inicio_vigencia, "corto")}</span>
+										) : (
+											<span className="text-muted-foreground">No disponible</span>
+										)}
 									</div>
 
-									<div className="flex items-center gap-2">
-										<Clock className="h-4 w-4 text-muted-foreground" />
-										<span className="font-medium">Fin vigencia:</span>
-										<span>{formatearFecha(polizaExtendida.fin_vigencia, "corto")}</span>
+									{/* Vigencia */}
+									<div>
+										<p className="text-xs text-muted-foreground mb-0.5 flex items-center gap-1">
+											<Calendar className="h-3 w-3" />
+											Inicio vigencia
+										</p>
+										<p className="font-medium">
+											{formatearFecha(polizaExtendida.inicio_vigencia, "corto")}
+										</p>
+									</div>
+
+									<div>
+										<p className="text-xs text-muted-foreground mb-0.5 flex items-center gap-1">
+											<Clock className="h-3 w-3" />
+											Fin vigencia
+										</p>
+										<p className="font-medium">
+											{formatearFecha(polizaExtendida.fin_vigencia, "corto")}
+										</p>
 									</div>
 								</div>
 							</div>
 
-							{/* MEJORA #3: Ramo-Specific Data Section */}
+							{/* Ramo-specific data */}
 							{polizaExtendida.datos_ramo && (
-								<div className="rounded-md border p-4 bg-muted/30">
+								<div className="rounded-md border border-border p-4">
+									{/* Automotor */}
 									{polizaExtendida.datos_ramo.tipo === "automotor" && (
 										<>
-											<h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
-												<Car className="h-4 w-4" />
+											<h3 className="text-sm font-medium text-foreground mb-3 flex items-center gap-2">
+												<Car className="h-4 w-4 text-primary" />
 												Vehículos Asegurados ({polizaExtendida.datos_ramo.vehiculos.length})
 											</h3>
-											<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+											<div className="grid grid-cols-2 md:grid-cols-3 gap-2">
 												{polizaExtendida.datos_ramo.vehiculos.map((vehiculo) => (
-													<div key={vehiculo.id} className="border rounded-md p-3 bg-background">
-														<div className="font-semibold text-blue-600">{vehiculo.placa}</div>
-														<div className="text-sm text-muted-foreground">
-															{vehiculo.marca} {vehiculo.modelo} {vehiculo.ano}
-														</div>
-														<div className="text-xs text-muted-foreground mt-1">
-															{polizaExtendida.moneda} {formatCurrency(vehiculo.valor_asegurado)}
-														</div>
+													<div
+														key={vehiculo.id}
+														className="rounded-md border border-border bg-card p-3"
+													>
+														<p className="font-semibold text-primary text-sm">
+															{vehiculo.placa}
+														</p>
+														<p className="text-xs text-muted-foreground mt-0.5">
+															{[vehiculo.marca, vehiculo.modelo, vehiculo.ano]
+																.filter(Boolean)
+																.join(" ")}
+														</p>
+														<p className="text-xs font-medium text-foreground mt-1.5 tabular-nums">
+															{polizaExtendida.moneda}{" "}
+															{formatCurrency(vehiculo.valor_asegurado)}
+														</p>
 													</div>
 												))}
 											</div>
 										</>
 									)}
 
+									{/* Salud / Vida / AP / Sepelio */}
 									{(polizaExtendida.datos_ramo.tipo === "salud" ||
-									  polizaExtendida.datos_ramo.tipo === "vida" ||
-									  polizaExtendida.datos_ramo.tipo === "ap" ||
-									  polizaExtendida.datos_ramo.tipo === "sepelio") && (
+										polizaExtendida.datos_ramo.tipo === "vida" ||
+										polizaExtendida.datos_ramo.tipo === "ap" ||
+										polizaExtendida.datos_ramo.tipo === "sepelio") && (
 										<>
-											<h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
-												<Users className="h-4 w-4" />
+											<h3 className="text-sm font-medium text-foreground mb-3 flex items-center gap-2">
+												<Users className="h-4 w-4 text-primary" />
 												Asegurados ({polizaExtendida.datos_ramo.asegurados.length})
 											</h3>
 											{polizaExtendida.datos_ramo.asegurados.length > 0 ? (
 												<div className="space-y-2">
 													{polizaExtendida.datos_ramo.asegurados.map((asegurado, idx) => (
-														<div key={idx} className="text-sm border-l-2 border-blue-500 pl-3">
-															<div className="font-medium">{asegurado.client_name}</div>
-															<div className="text-muted-foreground">CI: {asegurado.client_ci}</div>
-															{asegurado.nivel_nombre && (
-																<div className="text-xs text-muted-foreground">
-																	Nivel: {asegurado.nivel_nombre}
-																</div>
-															)}
-															{asegurado.cargo && (
-																<div className="text-xs text-muted-foreground">
-																	Cargo: {asegurado.cargo}
-																</div>
-															)}
+														<div
+															key={idx}
+															className="border-l-2 border-l-primary pl-3 py-0.5 text-sm"
+														>
+															<p className="font-medium">{asegurado.client_name}</p>
+															<p className="text-xs text-muted-foreground">
+																CI: {asegurado.client_ci}
+																{asegurado.nivel_nombre &&
+																	` · Nivel: ${asegurado.nivel_nombre}`}
+																{asegurado.cargo && ` · ${asegurado.cargo}`}
+															</p>
 														</div>
 													))}
 												</div>
 											) : (
 												<p className="text-sm text-muted-foreground">
-													No hay asegurados registrados (datos en proceso de migración)
+													No hay asegurados registrados
 												</p>
 											)}
 											{polizaExtendida.datos_ramo.producto && (
-												<div className="mt-2 text-sm">
-													<span className="font-medium">Producto:</span> {polizaExtendida.datos_ramo.producto}
-												</div>
-											)}
-										</>
-									)}
-
-									{polizaExtendida.datos_ramo.tipo === "incendio" && (
-										<>
-											<h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
-												<MapPin className="h-4 w-4" />
-												Ubicaciones Aseguradas
-											</h3>
-											{polizaExtendida.datos_ramo.ubicaciones.length > 0 ? (
-												<div className="space-y-2">
-													{polizaExtendida.datos_ramo.ubicaciones.map((ubicacion, idx) => (
-														<div key={idx} className="text-sm flex items-start gap-2">
-															<MapPin className="h-4 w-4 text-blue-500 mt-0.5" />
-															<span>{ubicacion}</span>
-														</div>
-													))}
-												</div>
-											) : (
-												<p className="text-sm text-muted-foreground">
-													No hay ubicaciones registradas (datos en proceso de migración)
+												<p className="text-sm mt-2">
+													<span className="font-medium text-muted-foreground">
+														Producto:
+													</span>{" "}
+													{polizaExtendida.datos_ramo.producto}
 												</p>
 											)}
 										</>
 									)}
 
+									{/* Incendio */}
+									{polizaExtendida.datos_ramo.tipo === "incendio" && (
+										<>
+											<h3 className="text-sm font-medium text-foreground mb-3 flex items-center gap-2">
+												<MapPin className="h-4 w-4 text-primary" />
+												Ubicaciones Aseguradas
+											</h3>
+											{polizaExtendida.datos_ramo.ubicaciones.length > 0 ? (
+												<div className="space-y-1.5">
+													{polizaExtendida.datos_ramo.ubicaciones.map((ub, idx) => (
+														<div key={idx} className="flex items-start gap-2 text-sm">
+															<MapPin className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+															<span>{ub}</span>
+														</div>
+													))}
+												</div>
+											) : (
+												<p className="text-sm text-muted-foreground">
+													No hay ubicaciones registradas
+												</p>
+											)}
+										</>
+									)}
+
+									{/* Otros */}
 									{polizaExtendida.datos_ramo.tipo === "otros" && (
-										<div className="text-sm text-muted-foreground">
+										<p className="text-sm text-muted-foreground">
 											{polizaExtendida.datos_ramo.descripcion}
-										</div>
+										</p>
 									)}
 								</div>
 							)}
 
-							<Separator />
-
-							{/* MEJORA #4: Aviso de Mora Button */}
+							{/* Aviso de Mora */}
 							{puedeGenerarAvisoMora && (
-								<div className="rounded-md border-2 border-red-200 bg-red-50 p-3">
-									<div className="flex items-center justify-between">
-										<div className="flex items-center gap-2 text-red-700">
-											<FileWarning className="h-5 w-5" />
+								<div className="rounded-md border border-destructive/30 bg-destructive/5 px-4 py-3">
+									<div className="flex items-start justify-between gap-4">
+										<div className="flex items-start gap-3">
+											<FileWarning className="h-5 w-5 text-destructive mt-0.5 shrink-0" />
 											<div>
-												<div className="font-semibold">Mora Detectada</div>
-												<div className="text-sm">
-													Esta póliza tiene {cuotasVencidas} cuotas vencidas
-												</div>
+												<p className="text-sm font-semibold text-destructive">
+													Mora Detectada
+												</p>
+												<p className="text-xs text-muted-foreground mt-0.5">
+													{cuotasVencidas} cuotas vencidas — requiere aviso formal
+												</p>
 											</div>
 										</div>
 										<Button
 											variant="destructive"
+											size="sm"
 											onClick={handleGenerarAvisoMora}
 											disabled={generatingPDF}
+											className="shrink-0"
 										>
-											{generatingPDF ? "Generando..." : "Generar Aviso de Mora"}
+											{generatingPDF ? (
+												<>
+													<Loader2 className="h-4 w-4 animate-spin mr-1.5" />
+													Generando…
+												</>
+											) : (
+												"Generar Aviso de Mora"
+											)}
 										</Button>
 									</div>
 								</div>
 							)}
-						</>
+						</div>
 					)}
 
-					{/* Quotas Table */}
-					<div className="mt-4">
-						<div className="rounded-md border">
-							<table className="w-full">
-								<thead className="bg-muted/50">
-									<tr>
-										<th className="p-3 text-left text-sm font-medium">N° Cuota</th>
-										<th className="p-3 text-left text-sm font-medium">Monto</th>
-										<th className="p-3 text-left text-sm font-medium">F. Vencimiento</th>
-										<th className="p-3 text-left text-sm font-medium">F. Pago</th>
-										<th className="p-3 text-left text-sm font-medium">Estado</th>
-										<th className="p-3 text-left text-sm font-medium">Acciones</th>
-									</tr>
-								</thead>
-								<tbody>
-									{poliza.cuotas.map((cuota, index) => (
-										<tr
-											key={cuota.id}
-											className={index % 2 === 0 ? "bg-background" : "bg-muted/30"}
-										>
-											<td className="p-3 text-sm">{cuota.numero_cuota}</td>
-											<td className="p-3 text-sm font-medium">
-												{poliza.moneda} {formatCurrency(cuota.monto)}
-											</td>
-											<td className="p-3 text-sm">
-												<div className="flex flex-col gap-1">
-													<span>{formatearFecha(cuota.fecha_vencimiento, "corto")}</span>
-													{cuota.fecha_vencimiento_original && (
-														<div className="flex items-center gap-1">
-															<Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-xs">
-																Prorrogada
-															</Badge>
-															<span className="text-xs text-muted-foreground">
-																(Original: {formatearFecha(cuota.fecha_vencimiento_original, "corto")})
-															</span>
-														</div>
-													)}
-												</div>
-											</td>
-											<td className="p-3 text-sm">
-												{cuota.fecha_pago ? formatearFecha(cuota.fecha_pago, "corto") : "-"}
-											</td>
-											<td className="p-3 text-sm">{getEstadoBadge(obtenerEstadoReal(cuota))}</td>
-											<td className="p-3 text-sm">
-												<div className="flex items-center gap-2 flex-wrap">
-													{/* Registrar Pago */}
-													{puedeRegistrarPago(obtenerEstadoReal(cuota)) && (
-														<Button
-															size="sm"
-															variant="default"
-															onClick={() => {
-																onSelectQuota(cuota);
-																onClose();
-															}}
-														>
-															Registrar Pago
-														</Button>
-													)}
-
-													{/* MEJORA #8: Registrar Prórroga */}
-													{puedeProrroga(obtenerEstadoReal(cuota)) && (
-														<Button
-															size="sm"
-															variant="outline"
-															onClick={() => handleOpenProrroga(cuota)}
-														>
-															Prórroga
-														</Button>
-													)}
-
-													{/* MEJORA #7: WhatsApp Reminder */}
-													{polizaExtendida && (polizaExtendida.contacto.celular || polizaExtendida.contacto.telefono) && (
-														<Button
-															size="sm"
-															variant="ghost"
-															onClick={() => handleWhatsAppReminder(cuota)}
-															title="Enviar recordatorio por WhatsApp"
-														>
-															<MessageCircle className="h-4 w-4 text-green-600" />
-														</Button>
-													)}
-
-													{/* MEJORA #7: Email Reminder */}
-													{polizaExtendida && polizaExtendida.contacto.correo && (
-														<Button
-															size="sm"
-															variant="ghost"
-															onClick={() => handleEmailReminder(cuota)}
-															title="Enviar recordatorio por Email"
-														>
-															<Send className="h-4 w-4 text-blue-600" />
-														</Button>
-													)}
-
-													{obtenerEstadoReal(cuota) === "pagado" && (
-														<Button
-															size="sm"
-															variant="outline"
-															onClick={() => handleVerComprobante(cuota)}
-															disabled={loadingComprobante === cuota.id}
-															title="Ver comprobante de pago"
-														>
-															{loadingComprobante === cuota.id ? (
-																<Loader2 className="h-4 w-4 animate-spin" />
-															) : (
-																<Paperclip className="h-4 w-4" />
-															)}
-															<span className="ml-1">Comprobante</span>
-														</Button>
-													)}
-												</div>
-											</td>
+					{/* Quotas table */}
+					<div>
+						{poliza.cuotas.length > 0 ? (
+							<div className="rounded-md border border-border overflow-hidden">
+								<table className="w-full">
+									<thead className="bg-secondary text-secondary-foreground">
+										<tr>
+											<th className="px-4 py-3 text-left text-sm font-medium w-12">N°</th>
+											<th className="px-4 py-3 text-left text-sm font-medium">Monto</th>
+											<th className="px-4 py-3 text-left text-sm font-medium">Vencimiento</th>
+											<th className="px-4 py-3 text-left text-sm font-medium">F. Pago</th>
+											<th className="px-4 py-3 text-left text-sm font-medium">Estado</th>
+											<th className="px-4 py-3 text-right text-sm font-medium">Acciones</th>
 										</tr>
-									))}
-								</tbody>
-							</table>
-						</div>
+									</thead>
+									<tbody>
+										{poliza.cuotas.map((cuota) => {
+											const estadoReal = obtenerEstadoReal(cuota);
+											const hasPhone = !!(
+												polizaExtendida?.contacto?.celular ||
+												polizaExtendida?.contacto?.telefono
+											);
+											const hasEmail = !!polizaExtendida?.contacto?.correo;
 
-						{poliza.cuotas.length === 0 && (
-							<div className="text-center py-8 text-muted-foreground">
+											return (
+												<tr
+													key={cuota.id}
+													className={`border-b border-border hover:bg-secondary/50 transition-colors duration-150 border-l-2 ${
+														estadoReal === "vencido"
+															? "border-l-destructive"
+															: "border-l-transparent"
+													}`}
+												>
+													{/* N° */}
+													<td className="px-4 py-3 text-sm font-medium">
+														{cuota.numero_cuota}
+													</td>
+
+													{/* Monto */}
+													<td className="px-4 py-3 text-sm font-medium tabular-nums whitespace-nowrap">
+														{poliza.moneda} {formatCurrency(cuota.monto)}
+													</td>
+
+													{/* Vencimiento */}
+													<td className="px-4 py-3 text-sm">
+														<div>
+															{formatearFecha(cuota.fecha_vencimiento, "corto")}
+														</div>
+														{cuota.fecha_vencimiento_original && (
+															<div className="mt-0.5">
+																<span className="inline-block text-xs bg-sky-50 text-sky-800 border border-sky-200 px-1.5 py-0.5 rounded-md">
+																	Prorrogada
+																</span>
+															</div>
+														)}
+													</td>
+
+													{/* Fecha de pago */}
+													<td className="px-4 py-3 text-sm text-muted-foreground">
+														{cuota.fecha_pago
+															? formatearFecha(cuota.fecha_pago, "corto")
+															: "—"}
+													</td>
+
+													{/* Estado */}
+													<td className="px-4 py-3">
+														<EstadoBadge estado={estadoReal} />
+													</td>
+
+													{/* Acciones */}
+													<td className="px-4 py-3">
+														<div className="flex items-center justify-end gap-1.5 flex-wrap">
+															{/* Primary: Registrar Pago */}
+															{puedeRegistrarPago(estadoReal) && (
+																<Button
+																	size="sm"
+																	variant="default"
+																	onClick={() => {
+																		onSelectQuota(cuota);
+																		onClose();
+																	}}
+																>
+																	Registrar Pago
+																</Button>
+															)}
+
+															{/* Secondary: Prórroga */}
+															{puedeProrroga(estadoReal) && (
+																<Button
+																	size="sm"
+																	variant="outline"
+																	onClick={() => handleOpenProrroga(cuota)}
+																>
+																	Prórroga
+																</Button>
+															)}
+
+															{/* Ghost: WhatsApp */}
+															{polizaExtendida && hasPhone && (
+																<Button
+																	size="icon"
+																	variant="ghost"
+																	className="h-8 w-8"
+																	onClick={() => handleWhatsAppReminder(cuota)}
+																	title="Enviar recordatorio por WhatsApp"
+																>
+																	<MessageCircle className="h-4 w-4 text-success" />
+																</Button>
+															)}
+
+															{/* Ghost: Email */}
+															{polizaExtendida && hasEmail && (
+																<Button
+																	size="icon"
+																	variant="ghost"
+																	className="h-8 w-8"
+																	onClick={() => handleEmailReminder(cuota)}
+																	title="Enviar recordatorio por Email"
+																>
+																	<Send className="h-4 w-4 text-info" />
+																</Button>
+															)}
+
+															{/* Comprobante */}
+															{estadoReal === "pagado" && (
+																<Button
+																	size="sm"
+																	variant="ghost"
+																	onClick={() => handleVerComprobante(cuota)}
+																	disabled={loadingComprobante === cuota.id}
+																	title="Ver comprobante de pago"
+																	className="gap-1"
+																>
+																	{loadingComprobante === cuota.id ? (
+																		<Loader2 className="h-4 w-4 animate-spin" />
+																	) : (
+																		<Paperclip className="h-4 w-4" />
+																	)}
+																	Comprobante
+																</Button>
+															)}
+														</div>
+													</td>
+												</tr>
+											);
+										})}
+									</tbody>
+								</table>
+							</div>
+						) : (
+							<div className="text-center py-10 text-muted-foreground text-sm">
 								No hay cuotas registradas para esta póliza
 							</div>
 						)}
 					</div>
 
-					<div className="mt-4 flex justify-end">
+					{/* Footer */}
+					<div className="flex justify-end pt-1">
 						<Button variant="outline" onClick={onClose}>
 							Cerrar
 						</Button>
@@ -591,7 +653,6 @@ export default function CuotasModal({ poliza, open, onClose, onSelectQuota }: Cu
 				</DialogContent>
 			</Dialog>
 
-			{/* MEJORA #8: Prórroga Modal */}
 			<RegistrarProrrogaModal
 				cuota={selectedCuotaProrroga}
 				poliza={poliza}

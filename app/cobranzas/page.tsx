@@ -3,31 +3,30 @@ import Dashboard from "@/components/cobranzas/Dashboard";
 import { obtenerPolizasConPendientes } from "./actions";
 
 export const metadata = {
-	title: "Cobranzas - Gestión de Pagos",
+	title: "Cobranzas — Gestión de Pagos",
 	description: "Módulo de cobranzas para gestionar pagos de pólizas activas",
 };
 
 export default async function CobranzasPage() {
 	await requirePermission("cobranzas.ver");
 
-	// Obtener pólizas con pagos pendientes
 	const result = await obtenerPolizasConPendientes();
 
 	return (
-		<div className="container mx-auto py-8 px-4">
-			<div className="mb-8">
-				<h1 className="text-3xl font-bold mb-2">Gestión de Cobranzas</h1>
-				<p className="text-gray-600 dark:text-gray-400">
-					Administra los pagos de las pólizas activas y registra cobranzas
+		<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-8">
+			<div className="mb-6">
+				<h1 className="text-2xl font-semibold text-foreground">Cobranzas</h1>
+				<p className="text-sm text-muted-foreground mt-1">
+					Gestión de pagos y cuotas de pólizas activas
 				</p>
 			</div>
 
 			{result.success && result.data ? (
 				<Dashboard polizasIniciales={result.data.polizas} statsIniciales={result.data.stats} />
 			) : (
-				<div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 text-red-800 dark:text-red-200">
-					<p className="font-semibold">Error al cargar datos</p>
-					<p className="text-sm mt-1">{result.error}</p>
+				<div className="border border-destructive/30 rounded-md p-4 text-destructive bg-destructive/5">
+					<p className="font-medium text-sm">Error al cargar datos de cobranzas</p>
+					<p className="text-xs text-muted-foreground mt-1">{result.error}</p>
 				</div>
 			)}
 		</div>

@@ -14,56 +14,72 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ChevronLeft, ChevronRight, Search, ArrowUpDown, ArrowUp, ArrowDown, X, FilterX, Loader2 } from "lucide-react";
+import {
+	Search,
+	ArrowUpDown,
+	ArrowUp,
+	ArrowDown,
+	X,
+	FilterX,
+	Loader2,
+	Download,
+	ChevronDown,
+	AlertCircle,
+} from "lucide-react";
 import { obtenerPolizasConPendientes } from "@/app/cobranzas/actions";
 import StatsCards from "./StatsCards";
 import CuotasModal from "./CuotasModal";
 import RegistrarPagoModal from "./RegistrarPagoModal";
 import RedistribucionModal from "./RedistribucionModal";
 import ExportarReporte from "./ExportarReporte";
-import type { PolizaConPagos, CobranzaStats, CuotaPago, ExcessPaymentDistribution, SortFieldEnhanced } from "@/types/cobranza";
+import type {
+	PolizaConPagos,
+	CobranzaStats,
+	CuotaPago,
+	ExcessPaymentDistribution,
+	SortFieldEnhanced,
+} from "@/types/cobranza";
 
 interface DashboardProps {
 	polizasIniciales: PolizaConPagos[];
 	statsIniciales: CobranzaStats;
 }
 
-const ITEMS_PER_PAGE = 25;
+const ALL = "__all__";
+
+/** Inline sort icon component — avoids repeating the arrow logic per column */
+function SortIcon({
+	field,
+	currentField,
+	direction,
+}: {
+	field: SortFieldEnhanced;
+	currentField: SortFieldEnhanced | null;
+	direction: "asc" | "desc";
+}) {
+	if (currentField !== field)
+		return <ArrowUpDown className="h-3.5 w-3.5 opacity-40" />;
+	return direction === "asc" ? (
+		<ArrowUp className="h-3.5 w-3.5 text-primary" />
+	) : (
+		<ArrowDown className="h-3.5 w-3.5 text-primary" />
+	);
+}
 
 export default function Dashboard({ polizasIniciales, statsIniciales }: DashboardProps) {
-	// State for data
+	// ── Data ──────────────────────────────────────────────────────────
 	const [polizas, setPolizas] = useState<PolizaConPagos[]>(polizasIniciales);
 	const [stats] = useState<CobranzaStats>(statsIniciales);
 
-	// Toggle for showing fully paid policies
+	// Lazy-load all policies (including fully paid) on first toggle
 	const [mostrarPagadas, setMostrarPagadas] = useState(false);
 	const [allPolizas, setAllPolizas] = useState<PolizaConPagos[] | null>(null);
 	const [isPending, startTransition] = useTransition();
 
-	const handleTogglePagadas = useCallback((checked: boolean) => {
-		setMostrarPagadas(checked);
-		setCurrentPage(1);
+	// ── UI state ──────────────────────────────────────────────────────
+	const [showExport, setShowExport] = useState(false);
 
-		if (checked) {
-			// Lazy fetch: only load all policies on first toggle
-			if (allPolizas === null) {
-				startTransition(async () => {
-					const result = await obtenerPolizasConPendientes(true);
-					if (result.success && result.data) {
-						setAllPolizas(result.data.polizas);
-						setPolizas(result.data.polizas);
-					}
-				});
-			} else {
-				setPolizas(allPolizas);
-			}
-		} else {
-			setPolizas(polizasIniciales);
-		}
-	}, [allPolizas, polizasIniciales]);
-
-	// State for filters
-	const ALL = "__all__";
+	// ── Filters ───────────────────────────────────────────────────────
 	const [searchTerm, setSearchTerm] = useState("");
 	const [filters, setFilters] = useState({
 		ramo: ALL,
@@ -71,59 +87,96 @@ export default function Dashboard({ polizasIniciales, statsIniciales }: Dashboar
 		ejecutivo: ALL,
 		regional: ALL,
 	});
+	const [soloVencidas, setSoloVencidas] = useState(false);
 	const [currentPage, setCurrentPage] = useState(1);
 
-	// MEJORA #5 & #6: Sorting state
-	const [sortField, setSortField] = useState<SortFieldEnhanced | null>(null);
-	const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+	// ── Pagination ────────────────────────────────────────────────────
+	const [pageSize] = useState(20);
 
-	// State for modals
+	// ── Sorting — default: cuotas_vencidas DESC (most urgent first) ───
+	const [sortField, setSortField] = useState<SortFieldEnhanced | null>("cuotas_vencidas");
+	const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
+
+	// ── Modal state ───────────────────────────────────────────────────
 	const [selectedPoliza, setSelectedPoliza] = useState<PolizaConPagos | null>(null);
 	const [selectedCuota, setSelectedCuota] = useState<CuotaPago | null>(null);
 	const [excessData, setExcessData] = useState<ExcessPaymentDistribution | null>(null);
-
-	// Modal visibility
 	const [cuotasModalOpen, setCuotasModalOpen] = useState(false);
 	const [pagoModalOpen, setPagoModalOpen] = useState(false);
 	const [redistribucionModalOpen, setRedistribucionModalOpen] = useState(false);
 
-	// Format helpers
-	const formatCurrency = (amount: number) => {
-		return new Intl.NumberFormat("es-BO", {
+	// ── Helpers ───────────────────────────────────────────────────────
+	const formatCurrency = (amount: number) =>
+		new Intl.NumberFormat("es-BO", {
 			style: "decimal",
 			minimumFractionDigits: 2,
 			maximumFractionDigits: 2,
 		}).format(amount);
-	};
 
-	// MEJORA #5 & #6: Handle column sorting
+	const handleTogglePagadas = useCallback(
+		(checked: boolean) => {
+			setMostrarPagadas(checked);
+			setCurrentPage(1);
+			if (checked) {
+				if (allPolizas === null) {
+					startTransition(async () => {
+						const result = await obtenerPolizasConPendientes(true);
+						if (result.success && result.data) {
+							setAllPolizas(result.data.polizas);
+							setPolizas(result.data.polizas);
+						}
+					});
+				} else {
+					setPolizas(allPolizas);
+				}
+			} else {
+				setPolizas(polizasIniciales);
+			}
+		},
+		[allPolizas, polizasIniciales]
+	);
+
 	const handleSort = (field: SortFieldEnhanced) => {
 		if (sortField === field) {
-			// Toggle direction
-			setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+			setSortDirection((d) => (d === "asc" ? "desc" : "asc"));
 		} else {
-			// New field
 			setSortField(field);
 			setSortDirection("asc");
 		}
-		setCurrentPage(1); // Reset to first page
+		setCurrentPage(1);
 	};
 
-	// Derive unique filter options from loaded data
-	const filterOptions = useMemo(() => ({
-		ramos: [...new Set(polizas.map((p) => p.ramo))].filter(Boolean).sort(),
-		companias: [...new Set(polizas.map((p) => p.compania.nombre))].filter((v) => v !== "N/A").sort(),
-		ejecutivos: [...new Set(polizas.map((p) => p.responsable.full_name))].filter((v) => v !== "N/A").sort(),
-		regionales: [...new Set(polizas.map((p) => p.regional.nombre))].filter((v) => v !== "N/A").sort(),
-	}), [polizas]);
+	// ── Derived filter options from loaded data ───────────────────────
+	const filterOptions = useMemo(
+		() => ({
+			ramos: [...new Set(polizas.map((p) => p.ramo))].filter(Boolean).sort(),
+			companias: [...new Set(polizas.map((p) => p.compania.nombre))]
+				.filter((v) => v !== "N/A")
+				.sort(),
+			ejecutivos: [...new Set(polizas.map((p) => p.responsable.full_name))]
+				.filter((v) => v !== "N/A")
+				.sort(),
+			regionales: [...new Set(polizas.map((p) => p.regional.nombre))]
+				.filter((v) => v !== "N/A")
+				.sort(),
+		}),
+		[polizas]
+	);
 
-	const hasActiveFilters = searchTerm.trim() !== "" || Object.values(filters).some((v) => v !== ALL);
+	const hasActiveFilters =
+		searchTerm.trim() !== "" ||
+		Object.values(filters).some((v) => v !== ALL) ||
+		soloVencidas;
 
 	const activeFilterLabels: { key: string; label: string; value: string }[] = [];
-	if (filters.ramo !== ALL) activeFilterLabels.push({ key: "ramo", label: "Ramo", value: filters.ramo });
-	if (filters.compania !== ALL) activeFilterLabels.push({ key: "compania", label: "Compañía", value: filters.compania });
-	if (filters.ejecutivo !== ALL) activeFilterLabels.push({ key: "ejecutivo", label: "Ejecutivo", value: filters.ejecutivo });
-	if (filters.regional !== ALL) activeFilterLabels.push({ key: "regional", label: "Regional", value: filters.regional });
+	if (filters.ramo !== ALL)
+		activeFilterLabels.push({ key: "ramo", label: "Ramo", value: filters.ramo });
+	if (filters.compania !== ALL)
+		activeFilterLabels.push({ key: "compania", label: "Compañía", value: filters.compania });
+	if (filters.ejecutivo !== ALL)
+		activeFilterLabels.push({ key: "ejecutivo", label: "Ejecutivo", value: filters.ejecutivo });
+	if (filters.regional !== ALL)
+		activeFilterLabels.push({ key: "regional", label: "Regional", value: filters.regional });
 
 	const clearFilter = (key: string) => {
 		setFilters((prev) => ({ ...prev, [key]: ALL }));
@@ -132,30 +185,35 @@ export default function Dashboard({ polizasIniciales, statsIniciales }: Dashboar
 	const clearAllFilters = () => {
 		setSearchTerm("");
 		setFilters({ ramo: ALL, compania: ALL, ejecutivo: ALL, regional: ALL });
+		setSoloVencidas(false);
+		setCurrentPage(1);
 	};
 
-	// Filter and sort logic
+	// ── Filter + sort ─────────────────────────────────────────────────
 	const filteredData = useMemo(() => {
 		let filtered = polizas.filter((poliza) => {
+			// Quick filter: solo vencidas
+			if (soloVencidas && poliza.cuotas_vencidas === 0) return false;
+
+			// Search
 			const searchLower = searchTerm.toLowerCase();
 			const matchesSearch =
 				poliza.numero_poliza.toLowerCase().includes(searchLower) ||
 				poliza.client.nombre_completo.toLowerCase().includes(searchLower) ||
 				poliza.client.documento.toLowerCase().includes(searchLower) ||
 				poliza.compania.nombre.toLowerCase().includes(searchLower);
-
 			if (!matchesSearch) return false;
 
-			// Apply dropdown filters
+			// Dropdown filters
 			if (filters.ramo !== ALL && poliza.ramo !== filters.ramo) return false;
 			if (filters.compania !== ALL && poliza.compania.nombre !== filters.compania) return false;
-			if (filters.ejecutivo !== ALL && poliza.responsable.full_name !== filters.ejecutivo) return false;
+			if (filters.ejecutivo !== ALL && poliza.responsable.full_name !== filters.ejecutivo)
+				return false;
 			if (filters.regional !== ALL && poliza.regional.nombre !== filters.regional) return false;
 
 			return true;
 		});
 
-		// Apply sorting if active
 		if (sortField) {
 			filtered = [...filtered].sort((a, b) => {
 				let valueA: string | number;
@@ -174,17 +232,19 @@ export default function Dashboard({ polizasIniciales, statsIniciales }: Dashboar
 						valueA = a.compania.nombre.toLowerCase();
 						valueB = b.compania.nombre.toLowerCase();
 						break;
-					case "fecha_vencimiento":
-						// Find earliest unpaid quota
-						const cuotasNoPagadasA = a.cuotas.filter(c => c.estado !== "pagado");
-						const cuotasNoPagadasB = b.cuotas.filter(c => c.estado !== "pagado");
-						valueA = cuotasNoPagadasA.length > 0
-							? Math.min(...cuotasNoPagadasA.map(c => new Date(c.fecha_vencimiento).getTime()))
-							: Infinity;
-						valueB = cuotasNoPagadasB.length > 0
-							? Math.min(...cuotasNoPagadasB.map(c => new Date(c.fecha_vencimiento).getTime()))
-							: Infinity;
+					case "fecha_vencimiento": {
+						const noPagadasA = a.cuotas.filter((c) => c.estado !== "pagado");
+						const noPagadasB = b.cuotas.filter((c) => c.estado !== "pagado");
+						valueA =
+							noPagadasA.length > 0
+								? Math.min(...noPagadasA.map((c) => new Date(c.fecha_vencimiento).getTime()))
+								: Infinity;
+						valueB =
+							noPagadasB.length > 0
+								? Math.min(...noPagadasB.map((c) => new Date(c.fecha_vencimiento).getTime()))
+								: Infinity;
 						break;
+					}
 					case "monto_pendiente":
 						valueA = a.total_pendiente;
 						valueB = b.total_pendiente;
@@ -209,7 +269,6 @@ export default function Dashboard({ polizasIniciales, statsIniciales }: Dashboar
 						return 0;
 				}
 
-				// Compare values
 				if (valueA < valueB) return sortDirection === "asc" ? -1 : 1;
 				if (valueA > valueB) return sortDirection === "asc" ? 1 : -1;
 				return 0;
@@ -217,17 +276,13 @@ export default function Dashboard({ polizasIniciales, statsIniciales }: Dashboar
 		}
 
 		return filtered;
-	}, [polizas, searchTerm, filters, sortField, sortDirection]);
-
-	const totalPages = Math.ceil(filteredData.length / ITEMS_PER_PAGE);
+	}, [polizas, searchTerm, filters, sortField, sortDirection, soloVencidas]);
 
 	const paginatedData = useMemo(() => {
-		const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-		const endIndex = startIndex + ITEMS_PER_PAGE;
-		return filteredData.slice(startIndex, endIndex);
-	}, [filteredData, currentPage]);
+		const start = (currentPage - 1) * pageSize;
+		return filteredData.slice(start, start + pageSize);
+	}, [filteredData, currentPage, pageSize]);
 
-	// Reset to page 1 when search or filters change
 	const handleSearchChange = useCallback((value: string) => {
 		setSearchTerm(value);
 		setCurrentPage(1);
@@ -238,7 +293,7 @@ export default function Dashboard({ polizasIniciales, statsIniciales }: Dashboar
 		setCurrentPage(1);
 	}, []);
 
-	// Handlers for modals
+	// ── Modal handlers ────────────────────────────────────────────────
 	const handleVerCuotas = (poliza: PolizaConPagos) => {
 		setSelectedPoliza(poliza);
 		setCuotasModalOpen(true);
@@ -251,130 +306,200 @@ export default function Dashboard({ polizasIniciales, statsIniciales }: Dashboar
 
 	const handlePagoSuccess = (excessDataResult?: ExcessPaymentDistribution) => {
 		setPagoModalOpen(false);
-
 		if (excessDataResult) {
-			// Open redistribution modal
 			setExcessData(excessDataResult);
 			setRedistribucionModalOpen(true);
 		} else {
-			// Refresh page to get updated data
 			window.location.reload();
 		}
 	};
 
 	const handleRedistribucionSuccess = () => {
 		setRedistribucionModalOpen(false);
-		// Refresh page to get updated data
 		window.location.reload();
 	};
 
+	// ── Render ────────────────────────────────────────────────────────
 	return (
 		<div className="space-y-6">
-			{/* Statistics Cards */}
+			{/* KPI stats */}
 			<StatsCards stats={stats} />
 
-			{/* Export Section */}
-			<ExportarReporte />
+			{/* Export toggle */}
+			<div>
+				<Button
+					variant="outline"
+					size="sm"
+					onClick={() => setShowExport((v) => !v)}
+					className="gap-2"
+				>
+					<Download className="h-4 w-4" />
+					Exportar Reporte
+					<ChevronDown
+						className={`h-4 w-4 transition-transform duration-200 ${
+							showExport ? "rotate-180" : ""
+						}`}
+					/>
+				</Button>
+			</div>
 
-			{/* Filters Section */}
+			{showExport && (
+				<Card>
+					<CardContent className="pt-5">
+						<ExportarReporte />
+					</CardContent>
+				</Card>
+			)}
+
+			{/* ── Filter bar ───────────────────────────────────────────── */}
 			<Card>
-				<CardHeader>
-					<CardTitle>Filtros</CardTitle>
-				</CardHeader>
-				<CardContent className="space-y-4">
-					{/* Search Input */}
-					<div className="relative">
-						<Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-						<Input
-							placeholder="Buscar por póliza, cliente, CI/NIT o compañía..."
-							value={searchTerm}
-							onChange={(e) => handleSearchChange(e.target.value)}
-							className="pl-10"
-						/>
-						{searchTerm && (
-							<button
-								onClick={() => handleSearchChange("")}
-								className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-							>
-								<X className="h-4 w-4" />
-							</button>
-						)}
-					</div>
-
-					{/* Dropdown Filters */}
+				<CardContent className="py-4 space-y-3">
+					{/* Row 1: Search + selects + quick filter + clear */}
 					<div className="flex flex-wrap items-center gap-3">
+						{/* Search */}
+						<div className="relative flex-1 min-w-[200px]">
+							<Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+							<Input
+								placeholder="Buscar por póliza, cliente, CI/NIT o compañía…"
+								value={searchTerm}
+								onChange={(e) => handleSearchChange(e.target.value)}
+								className="pl-9 h-9"
+							/>
+							{searchTerm && (
+								<button
+									onClick={() => handleSearchChange("")}
+									className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+								>
+									<X className="h-3.5 w-3.5" />
+								</button>
+							)}
+						</div>
+
 						<Select value={filters.ramo} onValueChange={(v) => handleFilterChange("ramo", v)}>
-							<SelectTrigger size="sm"><SelectValue placeholder="Ramo" /></SelectTrigger>
+							<SelectTrigger size="sm" className="w-[130px]">
+								<SelectValue placeholder="Ramo" />
+							</SelectTrigger>
 							<SelectContent>
 								<SelectItem value={ALL}>Todos los ramos</SelectItem>
 								{filterOptions.ramos.map((r) => (
-									<SelectItem key={r} value={r}>{r}</SelectItem>
+									<SelectItem key={r} value={r}>
+										{r}
+									</SelectItem>
 								))}
 							</SelectContent>
 						</Select>
 
-						<Select value={filters.compania} onValueChange={(v) => handleFilterChange("compania", v)}>
-							<SelectTrigger size="sm"><SelectValue placeholder="Compañía" /></SelectTrigger>
+						<Select
+							value={filters.compania}
+							onValueChange={(v) => handleFilterChange("compania", v)}
+						>
+							<SelectTrigger size="sm" className="w-[155px]">
+								<SelectValue placeholder="Compañía" />
+							</SelectTrigger>
 							<SelectContent>
 								<SelectItem value={ALL}>Todas las compañías</SelectItem>
 								{filterOptions.companias.map((c) => (
-									<SelectItem key={c} value={c}>{c}</SelectItem>
+									<SelectItem key={c} value={c}>
+										{c}
+									</SelectItem>
 								))}
 							</SelectContent>
 						</Select>
 
-						<Select value={filters.ejecutivo} onValueChange={(v) => handleFilterChange("ejecutivo", v)}>
-							<SelectTrigger size="sm"><SelectValue placeholder="Ejecutivo" /></SelectTrigger>
+						<Select
+							value={filters.ejecutivo}
+							onValueChange={(v) => handleFilterChange("ejecutivo", v)}
+						>
+							<SelectTrigger size="sm" className="w-[155px]">
+								<SelectValue placeholder="Ejecutivo" />
+							</SelectTrigger>
 							<SelectContent>
 								<SelectItem value={ALL}>Todos los ejecutivos</SelectItem>
 								{filterOptions.ejecutivos.map((ej) => (
-									<SelectItem key={ej} value={ej}>{ej}</SelectItem>
+									<SelectItem key={ej} value={ej}>
+										{ej}
+									</SelectItem>
 								))}
 							</SelectContent>
 						</Select>
 
-						<Select value={filters.regional} onValueChange={(v) => handleFilterChange("regional", v)}>
-							<SelectTrigger size="sm"><SelectValue placeholder="Regional" /></SelectTrigger>
+						<Select
+							value={filters.regional}
+							onValueChange={(v) => handleFilterChange("regional", v)}
+						>
+							<SelectTrigger size="sm" className="w-[140px]">
+								<SelectValue placeholder="Regional" />
+							</SelectTrigger>
 							<SelectContent>
 								<SelectItem value={ALL}>Todas las regionales</SelectItem>
 								{filterOptions.regionales.map((r) => (
-									<SelectItem key={r} value={r}>{r}</SelectItem>
+									<SelectItem key={r} value={r}>
+										{r}
+									</SelectItem>
 								))}
 							</SelectContent>
 						</Select>
 
+						{/* Quick filter: Solo Vencidas */}
+						<Button
+							variant="outline"
+							size="sm"
+							onClick={() => {
+								setSoloVencidas((v) => !v);
+								setCurrentPage(1);
+							}}
+							className={`gap-1.5 transition-colors ${
+								soloVencidas
+									? "bg-destructive hover:bg-destructive/90 text-white border-destructive"
+									: "text-destructive border-destructive/40 hover:bg-destructive/5 hover:border-destructive/70"
+							}`}
+						>
+							<AlertCircle className="h-3.5 w-3.5" />
+							Solo Vencidas
+						</Button>
+
 						{hasActiveFilters && (
-							<Button variant="ghost" size="sm" onClick={clearAllFilters} className="text-muted-foreground hover:text-foreground gap-1">
+							<Button
+								variant="ghost"
+								size="sm"
+								onClick={clearAllFilters}
+								className="text-muted-foreground hover:text-foreground gap-1"
+							>
 								<FilterX className="h-4 w-4" />
 								Limpiar
 							</Button>
 						)}
 					</div>
 
-					{/* Active Filter Chips + Toggle */}
+					{/* Row 2: Active filter chips (left) + Incluir pagadas toggle (right) */}
 					<div className="flex flex-wrap items-center justify-between gap-2">
 						<div className="flex flex-wrap items-center gap-2">
 							{activeFilterLabels.map((f) => (
-								<Badge key={f.key} variant="secondary" className="gap-1 pr-1">
+								<Badge key={f.key} variant="secondary" className="gap-1 pr-1 rounded-md">
 									{f.label}: {f.value}
 									<button
 										onClick={() => clearFilter(f.key)}
-										className="ml-1 rounded-full hover:bg-muted p-0.5"
+										className="ml-1 hover:bg-muted rounded p-0.5"
 									>
 										<X className="h-3 w-3" />
 									</button>
 								</Badge>
 							))}
 						</div>
-						<div className="flex items-center gap-2">
-							{isPending && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+						<div className="flex items-center gap-2 ml-auto">
+							{isPending && (
+								<Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+							)}
 							<Switch
 								id="mostrar-pagadas"
 								checked={mostrarPagadas}
 								onCheckedChange={handleTogglePagadas}
 								disabled={isPending}
 							/>
-							<Label htmlFor="mostrar-pagadas" className="text-sm cursor-pointer">
+							<Label
+								htmlFor="mostrar-pagadas"
+								className="text-sm cursor-pointer text-muted-foreground"
+							>
 								Incluir pagadas
 							</Label>
 						</div>
@@ -382,176 +507,159 @@ export default function Dashboard({ polizasIniciales, statsIniciales }: Dashboar
 				</CardContent>
 			</Card>
 
-			{/* Results Table */}
+			{/* ── Results table ─────────────────────────────────────────── */}
 			<Card>
-				<CardHeader>
-					<div className="flex items-center justify-between">
-						<CardTitle>
-							{mostrarPagadas ? "Todas las Pólizas" : "Pólizas con Cuotas Pendientes"} ({filteredData.length})
-						</CardTitle>
-					</div>
+				<CardHeader className="pb-0">
+					<CardTitle className="text-base font-medium text-foreground">
+						{mostrarPagadas ? "Todas las Pólizas" : "Pólizas con Cuotas Pendientes"}
+						<span className="ml-2 text-sm font-normal text-muted-foreground">
+							({filteredData.length})
+						</span>
+					</CardTitle>
 				</CardHeader>
-				<CardContent>
-					{paginatedData.length > 0 ? (
-						<div className="space-y-4">
-							{/* Table */}
-							<div className="rounded-md border overflow-x-auto">
-								<table className="w-full">
-									<thead className="bg-muted/50">
-										<tr>
-											{/* Sortable: N° Póliza */}
-											<th className="p-3 text-left text-sm font-medium">
-												<button
-													onClick={() => handleSort("numero_poliza")}
-													className="flex items-center gap-1 hover:text-primary transition-colors"
-												>
-													N° Póliza
-													{sortField === "numero_poliza" ? (
-														sortDirection === "asc" ? (
-															<ArrowUp className="h-4 w-4" />
-														) : (
-															<ArrowDown className="h-4 w-4" />
-														)
-													) : (
-														<ArrowUpDown className="h-4 w-4 opacity-50" />
-													)}
-												</button>
-											</th>
 
-											{/* Sortable: Cliente */}
-											<th className="p-3 text-left text-sm font-medium">
+				<CardContent className="p-0 mt-3">
+					{paginatedData.length > 0 ? (
+						<>
+							<div className="overflow-x-auto border-t border-border">
+								<table className="w-full">
+									<thead className="bg-secondary text-secondary-foreground">
+										<tr>
+											<th className="px-4 py-3 text-left text-sm font-medium">
 												<button
 													onClick={() => handleSort("cliente")}
-													className="flex items-center gap-1 hover:text-primary transition-colors"
+													className="flex items-center gap-1.5 hover:text-primary transition-colors"
 												>
 													Cliente
-													{sortField === "cliente" ? (
-														sortDirection === "asc" ? (
-															<ArrowUp className="h-4 w-4" />
-														) : (
-															<ArrowDown className="h-4 w-4" />
-														)
-													) : (
-														<ArrowUpDown className="h-4 w-4 opacity-50" />
-													)}
+													<SortIcon
+														field="cliente"
+														currentField={sortField}
+														direction={sortDirection}
+													/>
 												</button>
 											</th>
-
-											{/* Non-sortable: CI/NIT */}
-											<th className="p-3 text-left text-sm font-medium">CI/NIT</th>
-
-											{/* Sortable: Compañía */}
-											<th className="p-3 text-left text-sm font-medium">
+											<th className="px-4 py-3 text-left text-sm font-medium">
+												<button
+													onClick={() => handleSort("numero_poliza")}
+													className="flex items-center gap-1.5 hover:text-primary transition-colors"
+												>
+													Póliza
+													<SortIcon
+														field="numero_poliza"
+														currentField={sortField}
+														direction={sortDirection}
+													/>
+												</button>
+											</th>
+											<th className="px-4 py-3 text-left text-sm font-medium">
 												<button
 													onClick={() => handleSort("compania")}
-													className="flex items-center gap-1 hover:text-primary transition-colors"
+													className="flex items-center gap-1.5 hover:text-primary transition-colors"
 												>
 													Compañía
-													{sortField === "compania" ? (
-														sortDirection === "asc" ? (
-															<ArrowUp className="h-4 w-4" />
-														) : (
-															<ArrowDown className="h-4 w-4" />
-														)
-													) : (
-														<ArrowUpDown className="h-4 w-4 opacity-50" />
-													)}
+													<SortIcon
+														field="compania"
+														currentField={sortField}
+														direction={sortDirection}
+													/>
 												</button>
 											</th>
-
-											{/* Sortable: Cuotas Pendientes */}
-											<th className="p-3 text-left text-sm font-medium">
-												<button
-													onClick={() => handleSort("cuotas_pendientes")}
-													className="flex items-center gap-1 hover:text-primary transition-colors"
-												>
-													C. Pendientes
-													{sortField === "cuotas_pendientes" ? (
-														sortDirection === "asc" ? (
-															<ArrowUp className="h-4 w-4" />
-														) : (
-															<ArrowDown className="h-4 w-4" />
-														)
-													) : (
-														<ArrowUpDown className="h-4 w-4 opacity-50" />
-													)}
-												</button>
-											</th>
-
-											{/* Sortable: Cuotas Vencidas */}
-											<th className="p-3 text-left text-sm font-medium">
+											<th className="px-4 py-3 text-left text-sm font-medium">
 												<button
 													onClick={() => handleSort("cuotas_vencidas")}
-													className="flex items-center gap-1 hover:text-primary transition-colors"
+													className="flex items-center gap-1.5 hover:text-primary transition-colors"
 												>
-													C. Vencidas
-													{sortField === "cuotas_vencidas" ? (
-														sortDirection === "asc" ? (
-															<ArrowUp className="h-4 w-4" />
-														) : (
-															<ArrowDown className="h-4 w-4" />
-														)
-													) : (
-														<ArrowUpDown className="h-4 w-4 opacity-50" />
-													)}
+													Cuotas
+													<SortIcon
+														field="cuotas_vencidas"
+														currentField={sortField}
+														direction={sortDirection}
+													/>
 												</button>
 											</th>
-
-											{/* Sortable: Total Pendiente */}
-											<th className="p-3 text-left text-sm font-medium">
+											<th className="px-4 py-3 text-left text-sm font-medium">
 												<button
 													onClick={() => handleSort("monto_pendiente")}
-													className="flex items-center gap-1 hover:text-primary transition-colors"
+													className="flex items-center gap-1.5 hover:text-primary transition-colors"
 												>
-													Total Pendiente
-													{sortField === "monto_pendiente" ? (
-														sortDirection === "asc" ? (
-															<ArrowUp className="h-4 w-4" />
-														) : (
-															<ArrowDown className="h-4 w-4" />
-														)
-													) : (
-														<ArrowUpDown className="h-4 w-4 opacity-50" />
-													)}
+													Pendiente
+													<SortIcon
+														field="monto_pendiente"
+														currentField={sortField}
+														direction={sortDirection}
+													/>
 												</button>
 											</th>
-
-											{/* Non-sortable: Acciones */}
-											<th className="p-3 text-left text-sm font-medium">Acciones</th>
+											<th className="px-4 py-3 text-right text-sm font-medium">
+												Acciones
+											</th>
 										</tr>
 									</thead>
 									<tbody>
-										{paginatedData.map((poliza, index) => (
+										{paginatedData.map((poliza) => (
 											<tr
 												key={poliza.id}
-												className={index % 2 === 0 ? "bg-background" : "bg-muted/30"}
+												className={`border-b border-border hover:bg-secondary/50 transition-colors duration-150 border-l-2 ${
+													poliza.cuotas_vencidas > 0
+														? "border-l-destructive"
+														: "border-l-transparent"
+												}`}
 											>
-												<td className="p-3 text-sm font-medium">{poliza.numero_poliza}</td>
-												<td className="p-3 text-sm max-w-[200px] truncate">
-													{poliza.client.nombre_completo}
+												{/* Cliente: nombre + documento */}
+												<td className="px-4 py-3">
+													<div className="font-medium text-sm text-foreground truncate max-w-[200px]">
+														{poliza.client.nombre_completo}
+													</div>
+													<div className="text-xs text-muted-foreground mt-0.5">
+														{poliza.client.documento}
+													</div>
 												</td>
-												<td className="p-3 text-sm">{poliza.client.documento}</td>
-												<td className="p-3 text-sm max-w-[150px] truncate">
+
+												{/* Póliza: número + ramo badge */}
+												<td className="px-4 py-3">
+													<div className="font-medium text-sm text-foreground">
+														{poliza.numero_poliza}
+													</div>
+													<div className="mt-0.5">
+														<span className="inline-block text-xs bg-secondary text-secondary-foreground px-1.5 py-0.5 rounded-md">
+															{poliza.ramo}
+														</span>
+													</div>
+												</td>
+
+												{/* Compañía */}
+												<td className="px-4 py-3 text-sm text-foreground max-w-[150px] truncate">
 													{poliza.compania.nombre}
 												</td>
-												<td className="p-3 text-sm text-center">
-													<span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 font-semibold">
-														{poliza.cuotas_pendientes}
-													</span>
+
+												{/* Cuotas: vencidas + pendientes badges */}
+												<td className="px-4 py-3">
+													<div className="flex items-center gap-1.5 flex-wrap">
+														{poliza.cuotas_vencidas > 0 && (
+															<span className="inline-flex items-center gap-1 text-xs font-semibold bg-rose-50 text-rose-800 border border-rose-200 px-2 py-0.5 rounded-md">
+																<AlertCircle className="h-3 w-3" />
+																{poliza.cuotas_vencidas} venc.
+															</span>
+														)}
+														{poliza.cuotas_pendientes > 0 && (
+															<span className="inline-flex items-center text-xs font-medium bg-amber-50 text-amber-800 border border-amber-200 px-2 py-0.5 rounded-md">
+																{poliza.cuotas_pendientes} pend.
+															</span>
+														)}
+														{poliza.cuotas_vencidas === 0 &&
+															poliza.cuotas_pendientes === 0 && (
+																<span className="text-xs text-muted-foreground">Al día</span>
+															)}
+													</div>
 												</td>
-												<td className="p-3 text-sm text-center">
-													{poliza.cuotas_vencidas > 0 ? (
-														<span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200 font-semibold">
-															{poliza.cuotas_vencidas}
-														</span>
-													) : (
-														<span className="text-muted-foreground">-</span>
-													)}
-												</td>
-												<td className="p-3 text-sm font-medium">
+
+												{/* Monto pendiente */}
+												<td className="px-4 py-3 text-sm font-medium text-foreground tabular-nums whitespace-nowrap">
 													{poliza.moneda} {formatCurrency(poliza.total_pendiente)}
 												</td>
-												<td className="p-3 text-sm">
+
+												{/* Acciones */}
+												<td className="px-4 py-3 text-right">
 													<Button
 														size="sm"
 														variant="default"
@@ -567,54 +675,87 @@ export default function Dashboard({ polizasIniciales, statsIniciales }: Dashboar
 							</div>
 
 							{/* Pagination */}
-							{totalPages > 1 && (
-								<div className="flex items-center justify-between">
-									<p className="text-sm text-muted-foreground">
-										Página {currentPage} de {totalPages} ({filteredData.length} resultados)
-									</p>
-									<div className="flex items-center space-x-2">
-										<Button
-											variant="outline"
-											size="sm"
-											onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-											disabled={currentPage === 1}
-										>
-											<ChevronLeft className="h-4 w-4" />
-											Anterior
-										</Button>
-										<Button
-											variant="outline"
-											size="sm"
-											onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-											disabled={currentPage === totalPages}
-										>
-											Siguiente
-											<ChevronRight className="h-4 w-4" />
-										</Button>
+							{(() => {
+								const totalPages = Math.ceil(filteredData.length / pageSize);
+								if (totalPages <= 1) return null;
+								const startIndex = (currentPage - 1) * pageSize;
+								return (
+									<div className="flex items-center justify-between px-4 py-3 border-t border-border">
+										<p className="text-xs text-muted-foreground">
+											{startIndex + 1}–{Math.min(startIndex + pageSize, filteredData.length)} de {filteredData.length}
+										</p>
+										<div className="flex items-center gap-1">
+											<Button
+												variant="outline"
+												size="sm"
+												onClick={() => setCurrentPage((p) => p - 1)}
+												disabled={currentPage === 1}
+												className="h-7 px-2.5 text-xs"
+											>
+												Anterior
+											</Button>
+											{Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+												let pageNum: number;
+												if (totalPages <= 5) pageNum = i + 1;
+												else if (currentPage <= 3) pageNum = i + 1;
+												else if (currentPage >= totalPages - 2) pageNum = totalPages - 4 + i;
+												else pageNum = currentPage - 2 + i;
+												return (
+													<Button
+														key={pageNum}
+														variant={currentPage === pageNum ? "default" : "ghost"}
+														size="sm"
+														onClick={() => setCurrentPage(pageNum)}
+														className="h-7 w-7 p-0 text-xs"
+													>
+														{pageNum}
+													</Button>
+												);
+											})}
+											<Button
+												variant="outline"
+												size="sm"
+												onClick={() => setCurrentPage((p) => p + 1)}
+												disabled={currentPage === Math.ceil(filteredData.length / pageSize)}
+												className="h-7 px-2.5 text-xs"
+											>
+												Siguiente
+											</Button>
+										</div>
 									</div>
-								</div>
-							)}
-						</div>
+								);
+							})()}
+						</>
 					) : (
-						<div className="text-center py-12">
-							<p className="text-muted-foreground text-lg">
+						<div className="text-center py-16 border-t border-border">
+							<p className="text-muted-foreground">
 								{hasActiveFilters
-									? "No se encontraron pólizas que coincidan con los filtros aplicados"
+									? "No hay pólizas que coincidan con los filtros aplicados"
 									: "No hay pólizas con cuotas pendientes"}
 							</p>
+							{hasActiveFilters && (
+								<Button
+									variant="ghost"
+									size="sm"
+									onClick={clearAllFilters}
+									className="mt-3 gap-1"
+								>
+									<FilterX className="h-4 w-4" />
+									Limpiar filtros
+								</Button>
+							)}
 						</div>
 					)}
 				</CardContent>
 			</Card>
 
-			{/* Modals */}
+			{/* ── Modals ────────────────────────────────────────────────── */}
 			<CuotasModal
 				poliza={selectedPoliza}
 				open={cuotasModalOpen}
 				onClose={() => setCuotasModalOpen(false)}
 				onSelectQuota={handleSelectCuota}
 			/>
-
 			<RegistrarPagoModal
 				cuota={selectedCuota}
 				poliza={selectedPoliza}
@@ -622,7 +763,6 @@ export default function Dashboard({ polizasIniciales, statsIniciales }: Dashboar
 				onClose={() => setPagoModalOpen(false)}
 				onSuccess={handlePagoSuccess}
 			/>
-
 			<RedistribucionModal
 				excessData={excessData}
 				open={redistribucionModalOpen}

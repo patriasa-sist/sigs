@@ -1,15 +1,26 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+	Dialog,
+	DialogContent,
+	DialogHeader,
+	DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { AlertCircle, CheckCircle, DollarSign, Upload, FileText, X } from "lucide-react";
+import {
+	AlertCircle,
+	CheckCircle,
+	DollarSign,
+	Upload,
+	FileText,
+	X,
+	CreditCard,
+} from "lucide-react";
 import { registrarPago, obtenerCuotasPendientesPorPoliza, subirComprobantePago } from "@/app/cobranzas/actions";
 import type { CuotaPago, PolizaConPagos, ExcessPaymentDistribution, TipoComprobante } from "@/types/cobranza";
 import { validarTamanoArchivo, validarTipoArchivo, formatearTamanoArchivo, formatearFecha } from "@/utils/cobranza";
@@ -22,20 +33,28 @@ interface RegistrarPagoModalProps {
 	onSuccess: (excessData?: ExcessPaymentDistribution) => void;
 }
 
-export default function RegistrarPagoModal({ cuota, poliza, open, onClose, onSuccess }: RegistrarPagoModalProps) {
+export default function RegistrarPagoModal({
+	cuota,
+	poliza,
+	open,
+	onClose,
+	onSuccess,
+}: RegistrarPagoModalProps) {
 	const [montoPagado, setMontoPagado] = useState<string>("");
 	const [fechaPago, setFechaPago] = useState<string>("");
 	const [observaciones, setObservaciones] = useState<string>("");
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
-	// MEJORA #1: File upload states
 	const [selectedFile, setSelectedFile] = useState<File | null>(null);
 	const [tipoComprobante, setTipoComprobante] = useState<TipoComprobante>("factura");
 	const [fileError, setFileError] = useState<string | null>(null);
+	const [isDragging, setIsDragging] = useState(false);
+
+	const dropZoneRef = useRef<HTMLDivElement>(null);
+	const fileInputRef = useRef<HTMLInputElement>(null);
 
 	useEffect(() => {
-		// Reset form when modal opens
 		if (open && cuota) {
 			setMontoPagado(cuota.monto.toString());
 			setFechaPago(new Date().toISOString().split("T")[0]);
@@ -47,20 +66,17 @@ export default function RegistrarPagoModal({ cuota, poliza, open, onClose, onSuc
 		}
 	}, [open, cuota]);
 
-	const formatCurrency = (amount: number) => {
-		return new Intl.NumberFormat("es-BO", {
+	const formatCurrency = (amount: number) =>
+		new Intl.NumberFormat("es-BO", {
 			style: "decimal",
 			minimumFractionDigits: 2,
 			maximumFractionDigits: 2,
 		}).format(amount);
-	};
 
 	const getTipoPago = () => {
 		if (!cuota || !montoPagado) return null;
-
 		const monto = parseFloat(montoPagado);
 		if (isNaN(monto)) return null;
-
 		if (monto < cuota.monto) return "parcial";
 		if (monto === cuota.monto) return "exacto";
 		return "exceso";
@@ -80,88 +96,55 @@ export default function RegistrarPagoModal({ cuota, poliza, open, onClose, onSuc
 		return Math.max(0, cuota.monto - monto);
 	};
 
-	// Ref for the drop zone and file input
-	const dropZoneRef = useRef<HTMLDivElement>(null);
-	const fileInputRef = useRef<HTMLInputElement>(null);
-	const [isDragging, setIsDragging] = useState(false);
-
-	// Shared file validation and selection
 	const processFile = useCallback((file: File) => {
 		setFileError(null);
-
 		const sizeValidation = validarTamanoArchivo(file);
 		if (!sizeValidation.valid) {
 			setFileError(sizeValidation.error || "Error de validación");
 			setSelectedFile(null);
 			return;
 		}
-
 		const typeValidation = validarTipoArchivo(file);
 		if (!typeValidation.valid) {
 			setFileError(typeValidation.error || "Error de validación");
 			setSelectedFile(null);
 			return;
 		}
-
 		setSelectedFile(file);
 	}, []);
 
-	// Handle traditional file input change
 	const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const file = e.target.files?.[0];
-		if (!file) {
-			setSelectedFile(null);
-			setFileError(null);
-			return;
-		}
+		if (!file) { setSelectedFile(null); setFileError(null); return; }
 		processFile(file);
 	};
 
-	// Drag & drop handlers
 	const handleDragOver = useCallback((e: React.DragEvent) => {
-		e.preventDefault();
-		e.stopPropagation();
-		setIsDragging(true);
+		e.preventDefault(); e.stopPropagation(); setIsDragging(true);
 	}, []);
 
 	const handleDragLeave = useCallback((e: React.DragEvent) => {
-		e.preventDefault();
-		e.stopPropagation();
-		setIsDragging(false);
+		e.preventDefault(); e.stopPropagation(); setIsDragging(false);
 	}, []);
 
-	const handleDrop = useCallback(
-		(e: React.DragEvent) => {
-			e.preventDefault();
-			e.stopPropagation();
-			setIsDragging(false);
+	const handleDrop = useCallback((e: React.DragEvent) => {
+		e.preventDefault(); e.stopPropagation(); setIsDragging(false);
+		const file = e.dataTransfer.files?.[0];
+		if (file) processFile(file);
+	}, [processFile]);
 
-			const file = e.dataTransfer.files?.[0];
-			if (file) processFile(file);
-		},
-		[processFile],
-	);
-
-	// Paste handler (Ctrl+V)
 	useEffect(() => {
 		if (!open || selectedFile) return;
-
 		const handlePaste = (e: ClipboardEvent) => {
 			const items = e.clipboardData?.items;
 			if (!items) return;
-
 			for (const item of items) {
 				if (item.kind === "file") {
 					const file = item.getAsFile();
-					if (file) {
-						e.preventDefault();
-						processFile(file);
-						return;
-					}
+					if (file) { e.preventDefault(); processFile(file); return; }
 				}
 			}
 		};
-
 		document.addEventListener("paste", handlePaste);
 		return () => document.removeEventListener("paste", handlePaste);
 	}, [open, selectedFile, processFile]);
@@ -174,7 +157,6 @@ export default function RegistrarPagoModal({ cuota, poliza, open, onClose, onSuc
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
-
 		if (!cuota || !poliza) return;
 
 		const monto = parseFloat(montoPagado);
@@ -183,7 +165,6 @@ export default function RegistrarPagoModal({ cuota, poliza, open, onClose, onSuc
 			return;
 		}
 
-		// MEJORA #1: Validate file is required
 		if (!selectedFile) {
 			setError("Debe adjuntar un comprobante de pago (obligatorio)");
 			return;
@@ -193,7 +174,6 @@ export default function RegistrarPagoModal({ cuota, poliza, open, onClose, onSuc
 		setError(null);
 
 		try {
-			// First, register the payment
 			const result = await registrarPago({
 				cuota_id: cuota.id,
 				monto_pagado: monto,
@@ -202,25 +182,17 @@ export default function RegistrarPagoModal({ cuota, poliza, open, onClose, onSuc
 			});
 
 			if (result.success && result.data) {
-				// MEJORA #1: Upload comprobante after successful payment
 				const formData = new FormData();
 				formData.append("file", selectedFile);
 				formData.append("tipo_archivo", tipoComprobante);
-
 				const uploadResult = await subirComprobantePago(cuota.id, formData);
-
 				if (!uploadResult.success) {
 					console.error("Warning: Failed to upload comprobante:", uploadResult.error);
-					// Don't fail the whole operation, just log the error
 				}
 
-				// Si hay exceso, preparar datos para redistribución
 				if (result.data.tipo_pago === "exceso" && result.data.exceso_generado) {
-					// Obtener cuotas pendientes de la misma póliza
 					const cuotasPendientesResult = await obtenerCuotasPendientesPorPoliza(poliza.id);
-
 					if (cuotasPendientesResult.success && cuotasPendientesResult.data) {
-						// Preparar estructura de redistribución
 						const excessData: ExcessPaymentDistribution = {
 							poliza_id: poliza.id,
 							cuota_origen_id: cuota.id,
@@ -235,7 +207,6 @@ export default function RegistrarPagoModal({ cuota, poliza, open, onClose, onSuc
 							total_distribuido: 0,
 							saldo_restante: result.data.exceso_generado,
 						};
-
 						onSuccess(excessData);
 					} else {
 						onSuccess();
@@ -261,32 +232,41 @@ export default function RegistrarPagoModal({ cuota, poliza, open, onClose, onSuc
 
 	return (
 		<Dialog open={open} onOpenChange={onClose}>
-			<DialogContent className="max-w-2xl">
+			<DialogContent className="sm:max-w-lg">
 				<DialogHeader>
-					<DialogTitle>Registrar Pago - Cuota #{cuota.numero_cuota}</DialogTitle>
-					<DialogDescription asChild>
-						<div className="space-y-1 text-sm text-muted-foreground">
-							<div>
-								<span className="font-semibold">Póliza:</span> {poliza.numero_poliza}
-							</div>
-							<div>
-								<span className="font-semibold">Cliente:</span> {poliza.client.nombre_completo}
-							</div>
-							<div>
-								<span className="font-semibold">Monto de la cuota:</span> {poliza.moneda}{" "}
-								{formatCurrency(cuota.monto)}
-							</div>
-							<div>
-								<span className="font-semibold">Fecha vencimiento:</span>{" "}
-								{formatearFecha(cuota.fecha_vencimiento)}
-							</div>
-						</div>
-					</DialogDescription>
+					<DialogTitle className="flex items-center gap-2">
+						<CreditCard className="h-5 w-5 text-primary" />
+						Registrar Pago — Cuota #{cuota.numero_cuota}
+					</DialogTitle>
 				</DialogHeader>
 
-				<form onSubmit={handleSubmit} className="space-y-4">
-					{/* Monto Pagado */}
-					<div className="space-y-2">
+				{/* Context strip */}
+				<div className="rounded-md border border-border bg-secondary px-4 py-3 text-sm">
+					<div className="grid grid-cols-2 gap-x-6 gap-y-2">
+						<div>
+							<p className="text-xs text-muted-foreground">Póliza</p>
+							<p className="font-medium mt-0.5">{poliza.numero_poliza}</p>
+						</div>
+						<div>
+							<p className="text-xs text-muted-foreground">Cliente</p>
+							<p className="font-medium mt-0.5 truncate">{poliza.client.nombre_completo}</p>
+						</div>
+						<div>
+							<p className="text-xs text-muted-foreground">Monto de cuota</p>
+							<p className="font-semibold tabular-nums mt-0.5">
+								{poliza.moneda} {formatCurrency(cuota.monto)}
+							</p>
+						</div>
+						<div>
+							<p className="text-xs text-muted-foreground">Vencimiento</p>
+							<p className="font-medium mt-0.5">{formatearFecha(cuota.fecha_vencimiento)}</p>
+						</div>
+					</div>
+				</div>
+
+				<form onSubmit={handleSubmit} className="space-y-5">
+					{/* Monto pagado + inline payment type indicator */}
+					<div className="space-y-1.5">
 						<Label htmlFor="monto">Monto Pagado *</Label>
 						<Input
 							id="monto"
@@ -295,166 +275,170 @@ export default function RegistrarPagoModal({ cuota, poliza, open, onClose, onSuc
 							min="0"
 							value={montoPagado}
 							onChange={(e) => setMontoPagado(e.target.value)}
+							className="h-10 tabular-nums"
 							required
 						/>
+						{/* Inline payment type feedback */}
+						{tipoPago && montoPagado && (
+							<div
+								className={`flex items-center justify-between rounded-md border px-3 py-2 text-sm ${
+									tipoPago === "exacto"
+										? "border-teal-200 bg-teal-50 text-teal-800"
+										: tipoPago === "parcial"
+										? "border-amber-200 bg-amber-50 text-amber-800"
+										: "border-sky-200 bg-sky-50 text-sky-800"
+								}`}
+							>
+								<div className="flex items-center gap-1.5 font-medium">
+									{tipoPago === "exacto" && <CheckCircle className="h-3.5 w-3.5" />}
+									{tipoPago === "parcial" && <AlertCircle className="h-3.5 w-3.5" />}
+									{tipoPago === "exceso" && <DollarSign className="h-3.5 w-3.5" />}
+									{tipoPago === "exacto"
+										? "Pago Completo"
+										: tipoPago === "parcial"
+										? "Pago Parcial"
+										: "Pago con Exceso"}
+								</div>
+								<span className="text-xs tabular-nums">
+									{tipoPago === "parcial" &&
+										`Saldo: ${poliza.moneda} ${formatCurrency(saldoPendiente)}`}
+									{tipoPago === "exceso" &&
+										`Exceso: ${poliza.moneda} ${formatCurrency(exceso)}`}
+									{tipoPago === "exacto" && "La cuota quedará pagada"}
+								</span>
+							</div>
+						)}
 					</div>
 
-					{/* Fecha de Pago */}
-					<div className="space-y-2">
+					{/* Fecha de pago */}
+					<div className="space-y-1.5">
 						<Label htmlFor="fecha">Fecha de Pago Compañía *</Label>
 						<Input
 							id="fecha"
 							type="date"
 							value={fechaPago}
 							onChange={(e) => setFechaPago(e.target.value)}
+							className="h-10"
 							required
 						/>
 					</div>
 
-					{/* Observaciones */}
+					{/* Comprobante */}
 					<div className="space-y-2">
-						<Label htmlFor="observaciones">Observaciones</Label>
+						<Label>
+							Comprobante de Pago *
+						</Label>
+
+						{/* Tipo de comprobante */}
+						<Select
+							value={tipoComprobante}
+							onValueChange={(value) => setTipoComprobante(value as TipoComprobante)}
+						>
+							<SelectTrigger className="h-9">
+								<SelectValue placeholder="Tipo de comprobante" />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value="factura">Factura</SelectItem>
+								<SelectItem value="recibo">Recibo</SelectItem>
+								<SelectItem value="comprobante_deposito">Comprobante de Depósito</SelectItem>
+								<SelectItem value="otro">Otro</SelectItem>
+							</SelectContent>
+						</Select>
+
+						{/* File upload */}
+						{!selectedFile ? (
+							<div
+								ref={dropZoneRef}
+								onDragOver={handleDragOver}
+								onDragLeave={handleDragLeave}
+								onDrop={handleDrop}
+								onClick={() => fileInputRef.current?.click()}
+								className={`flex flex-col items-center gap-1.5 rounded-md border-2 border-dashed cursor-pointer py-5 px-4 transition-colors ${
+									isDragging
+										? "border-primary bg-primary/5"
+										: "border-border hover:border-primary/60 hover:bg-secondary/50"
+								}`}
+							>
+								<Upload
+									className={`h-7 w-7 ${
+										isDragging ? "text-primary" : "text-muted-foreground"
+									}`}
+								/>
+								<p className="text-sm text-muted-foreground text-center">
+									Arrastra un archivo, pega con Ctrl+V o haz clic aquí
+								</p>
+								<p className="text-xs text-muted-foreground">
+									JPG, PNG, WebP o PDF (máx. 10 MB)
+								</p>
+								<input
+									ref={fileInputRef}
+									type="file"
+									className="hidden"
+									accept="image/jpeg,image/jpg,image/png,image/webp,application/pdf"
+									onChange={handleFileChange}
+								/>
+							</div>
+						) : (
+							<div className="flex items-center justify-between rounded-md border border-border bg-secondary px-3 py-2.5">
+								<div className="flex items-center gap-2.5">
+									<FileText className="h-5 w-5 text-primary shrink-0" />
+									<div>
+										<p className="text-sm font-medium truncate max-w-[250px]">
+											{selectedFile.name}
+										</p>
+										<p className="text-xs text-muted-foreground">
+											{formatearTamanoArchivo(selectedFile.size)}
+										</p>
+									</div>
+								</div>
+								<Button
+									type="button"
+									variant="ghost"
+									size="icon"
+									className="h-7 w-7 shrink-0"
+									onClick={handleRemoveFile}
+								>
+									<X className="h-4 w-4" />
+								</Button>
+							</div>
+						)}
+
+						{fileError && (
+							<p className="text-xs text-destructive">{fileError}</p>
+						)}
+					</div>
+
+					{/* Observaciones (optional) */}
+					<div className="space-y-1.5">
+						<Label htmlFor="observaciones">
+							Observaciones{" "}
+							<span className="text-muted-foreground font-normal">(opcional)</span>
+						</Label>
 						<Textarea
 							id="observaciones"
 							value={observaciones}
 							onChange={(e) => setObservaciones(e.target.value)}
-							rows={3}
-							placeholder="Notas adicionales sobre el pago..."
+							rows={2}
+							placeholder="Notas adicionales sobre el pago…"
+							className="resize-none"
 						/>
 					</div>
 
-					{/* MEJORA #1: Comprobante Upload */}
-					<div className="space-y-2">
-						<Label htmlFor="comprobante">Comprobante de Pago *</Label>
-						<div className="space-y-2">
-							{/* Tipo de comprobante */}
-							<Select
-								value={tipoComprobante}
-								onValueChange={(value) => setTipoComprobante(value as TipoComprobante)}
-							>
-								<SelectTrigger>
-									<SelectValue placeholder="Seleccione tipo de comprobante" />
-								</SelectTrigger>
-								<SelectContent>
-									<SelectItem value="factura">Factura</SelectItem>
-									<SelectItem value="recibo">Recibo</SelectItem>
-									<SelectItem value="comprobante_deposito">Comprobante de Depósito</SelectItem>
-									<SelectItem value="otro">Otro</SelectItem>
-								</SelectContent>
-							</Select>
-
-							{/* File input with drag & drop, paste, and click */}
-							{!selectedFile ? (
-								<div
-									ref={dropZoneRef}
-									onDragOver={handleDragOver}
-									onDragLeave={handleDragLeave}
-									onDrop={handleDrop}
-									onClick={() => fileInputRef.current?.click()}
-									className={`border-2 border-dashed rounded-lg p-4 cursor-pointer transition-colors ${
-										isDragging ? "border-primary bg-primary/5" : "hover:border-primary"
-									}`}
-								>
-									<div className="flex flex-col items-center">
-										<Upload
-											className={`h-8 w-8 mb-2 ${isDragging ? "text-primary" : "text-muted-foreground"}`}
-										/>
-										<span className="text-sm text-muted-foreground">
-											Arrastra un archivo, pega con Ctrl+V o haz click aquí
-										</span>
-										<span className="text-xs text-muted-foreground mt-1">
-											JPG, PNG, WebP o PDF (máx. 10MB)
-										</span>
-										<input
-											ref={fileInputRef}
-											type="file"
-											className="hidden"
-											accept="image/jpeg,image/jpg,image/png,image/webp,application/pdf"
-											onChange={handleFileChange}
-										/>
-									</div>
-								</div>
-							) : (
-								<div className="border rounded-lg p-3 bg-muted/30">
-									<div className="flex items-center justify-between">
-										<div className="flex items-center gap-2">
-											<FileText className="h-5 w-5 text-blue-500" />
-											<div>
-												<p className="text-sm font-medium">{selectedFile.name}</p>
-												<p className="text-xs text-muted-foreground">
-													{formatearTamanoArchivo(selectedFile.size)}
-												</p>
-											</div>
-										</div>
-										<Button type="button" variant="ghost" size="sm" onClick={handleRemoveFile}>
-											<X className="h-4 w-4" />
-										</Button>
-									</div>
-								</div>
-							)}
-
-							{fileError && <p className="text-sm text-red-600">{fileError}</p>}
-						</div>
-					</div>
-
-					{/* Indicador de tipo de pago */}
-					{tipoPago && montoPagado && (
-						<div className="rounded-lg border p-4 space-y-2">
-							{tipoPago === "parcial" && (
-								<>
-									<Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
-										Pago Parcial
-									</Badge>
-									<p className="text-sm text-muted-foreground">
-										Saldo pendiente: {poliza.moneda} {formatCurrency(saldoPendiente)}
-									</p>
-								</>
-							)}
-
-							{tipoPago === "exacto" && (
-								<>
-									<Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-										<CheckCircle className="h-3 w-3 mr-1" />
-										Pago Completo
-									</Badge>
-									<p className="text-sm text-muted-foreground">
-										La cuota quedará marcada como pagada
-									</p>
-								</>
-							)}
-
-							{tipoPago === "exceso" && (
-								<>
-									<Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-										<DollarSign className="h-3 w-3 mr-1" />
-										Pago con Exceso
-									</Badge>
-									<p className="text-sm text-muted-foreground">
-										Exceso: {poliza.moneda} {formatCurrency(exceso)}
-									</p>
-									<p className="text-xs text-muted-foreground">
-										Podrás redistribuir el exceso entre otras cuotas pendientes
-									</p>
-								</>
-							)}
-						</div>
-					)}
-
-					{/* Error message */}
+					{/* Error */}
 					{error && (
-						<Alert variant="destructive">
-							<AlertCircle className="h-4 w-4" />
-							<AlertDescription>{error}</AlertDescription>
-						</Alert>
+						<div className="flex items-start gap-2.5 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2.5 text-sm text-destructive">
+							<AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+							<span>{error}</span>
+						</div>
 					)}
 
-					{/* Buttons */}
-					<div className="flex justify-end space-x-2">
+					{/* Actions */}
+					<div className="flex justify-end gap-2 pt-1">
 						<Button type="button" variant="outline" onClick={onClose} disabled={loading}>
 							Cancelar
 						</Button>
 						<Button type="submit" disabled={loading || !selectedFile}>
-							{loading ? "Registrando..." : "Confirmar Pago"}
+							{loading ? "Registrando…" : "Confirmar Pago"}
 						</Button>
 					</div>
 				</form>
