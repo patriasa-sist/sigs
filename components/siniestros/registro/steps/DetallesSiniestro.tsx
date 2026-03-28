@@ -15,6 +15,8 @@ import type { DetallesSiniestro, ContactoSiniestro, Moneda } from "@/types/sinie
 interface DetallesSiniestroProps {
 	detalles: DetallesSiniestro | null;
 	onDetallesChange: (detalles: DetallesSiniestro) => void;
+	/** Incrementar para activar validación inline (patrón trigger) */
+	validationTrigger?: number;
 }
 
 type Regional = {
@@ -32,7 +34,7 @@ type UsuarioResponsable = {
 
 const MONEDAS: Moneda[] = ["Bs", "USD", "USDT", "UFV"];
 
-export default function DetallesSiniestroStep({ detalles, onDetallesChange }: DetallesSiniestroProps) {
+export default function DetallesSiniestroStep({ detalles, onDetallesChange, validationTrigger }: DetallesSiniestroProps) {
 	const [regionales, setRegionales] = useState<Regional[]>([]);
 	const [responsables, setResponsables] = useState<UsuarioResponsable[]>([]);
 	const [usuarioActualId, setUsuarioActualId] = useState<string | null>(null);
@@ -85,6 +87,26 @@ export default function DetallesSiniestroStep({ detalles, onDetallesChange }: De
 
 		cargarResponsables();
 	}, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+	// Cuando el padre incrementa validationTrigger, mostrar errores inline
+	useEffect(() => {
+		if (!validationTrigger) return;
+		const e: Record<string, string> = {};
+		if (!detalles?.fecha_siniestro) e.fecha_siniestro = "La fecha del siniestro es obligatoria";
+		if (!detalles?.fecha_reporte) e.fecha_reporte = "La fecha de reporte es obligatoria";
+		if (!detalles?.fecha_reporte_compania) e.fecha_reporte_compania = "La fecha de reporte a la compañía es obligatoria";
+		if (!detalles?.lugar_hecho || detalles.lugar_hecho.trim().length < 5)
+			e.lugar_hecho = "El lugar del hecho es obligatorio (mínimo 5 caracteres)";
+		if (!detalles?.departamento_id) e.departamento_id = "Debe seleccionar un departamento";
+		if (!detalles?.monto_reserva || detalles.monto_reserva <= 0)
+			e.monto_reserva = "El monto de reserva debe ser mayor a 0";
+		if (!detalles?.moneda) e.moneda = "Debe seleccionar una moneda";
+		if (!detalles?.descripcion || detalles.descripcion.trim().length < 20)
+			e.descripcion = "La descripción debe tener al menos 20 caracteres";
+		if (!detalles?.contactos || detalles.contactos.length === 0)
+			e.contactos = "Debe agregar al menos un contacto";
+		setErrores(e);
+	}, [validationTrigger]); // eslint-disable-line react-hooks/exhaustive-deps
 
 	const handleFieldChange = (field: keyof DetallesSiniestro, value: string | number | ContactoSiniestro[]) => {
 		const nuevosDetalles = {
@@ -151,19 +173,10 @@ export default function DetallesSiniestroStep({ detalles, onDetallesChange }: De
 			<CardHeader>
 				<CardTitle>Paso 2: Detalles del Siniestro</CardTitle>
 				<CardDescription>
-					Ingresa los datos específicos del siniestro: fechas, lugar, monto de reserva y descripción
+					Fechas, lugar del hecho, monto de reserva y contactos
 				</CardDescription>
 			</CardHeader>
 			<CardContent className="space-y-6">
-				{/* Advertencia importante */}
-				<div className="flex items-start gap-2 text-sm bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
-					<AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
-					<p className="text-amber-900 dark:text-amber-100">
-						Todos los campos marcados con (*) son obligatorios. Asegúrate de completar la información
-						correctamente.
-					</p>
-				</div>
-
 				{/* Fechas - Primera fila */}
 				<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 					<div className="space-y-2">
@@ -369,6 +382,9 @@ export default function DetallesSiniestroStep({ detalles, onDetallesChange }: De
 					<Label>
 						Contactos <span className="text-destructive">*</span>
 					</Label>
+					{errores.contactos && (
+						<p className="text-sm text-destructive">{errores.contactos}</p>
+					)}
 					<p className="text-xs text-muted-foreground">
 						Agrega contactos relacionados al siniestro (cliente, ajustador, perito, etc.)
 					</p>

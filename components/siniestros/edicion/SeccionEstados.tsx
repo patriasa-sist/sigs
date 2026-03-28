@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useRouter } from "next/navigation";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -13,7 +14,6 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
 import { Clock, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import { obtenerEstadosCatalogo, cambiarEstadoSiniestro } from "@/app/siniestros/actions";
 import type { EstadoSiniestroCatalogo, EstadoActualSiniestro } from "@/types/siniestro";
@@ -26,6 +26,7 @@ interface SeccionEstadosProps {
 }
 
 export default function SeccionEstados({ siniestroId, estadoActual, estadoSiniestro }: SeccionEstadosProps) {
+	const router = useRouter();
 	const [estados, setEstados] = useState<EstadoSiniestroCatalogo[]>([]);
 	const [estadoSeleccionado, setEstadoSeleccionado] = useState<string>("");
 	const [loading, setLoading] = useState(true);
@@ -85,10 +86,7 @@ export default function SeccionEstados({ siniestroId, estadoActual, estadoSinies
 					});
 				}
 
-				// Recargar historial
-				await loadData();
-				// Recargar página para actualizar
-				window.location.reload();
+				router.refresh();
 			} else {
 				toast.error(response.error || "Error al cambiar estado");
 			}
@@ -119,70 +117,74 @@ export default function SeccionEstados({ siniestroId, estadoActual, estadoSinies
 	return (
 		<>
 			<Card>
-				<CardHeader>
-					<CardTitle className="text-lg flex items-center gap-2">
-						<Clock className="h-5 w-5 text-primary" />
+				<CardContent className="p-4 space-y-4">
+					{/* Encabezado */}
+					<div className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">
+						<Clock className="h-3.5 w-3.5 text-primary" />
 						Etapa del Seguimiento
-					</CardTitle>
-				</CardHeader>
-				<CardContent className="space-y-4">
+					</div>
+
 					{/* Estado Actual */}
 					{estadoActual?.estado_actual_nombre && (
-						<div className="bg-secondary/30 rounded-lg p-3 border">
-							<p className="text-sm text-muted-foreground mb-1">Estado Actual:</p>
-							<div className="flex items-center justify-between">
-								<Badge variant="outline" className="text-base">
-									{estadoActual.estado_actual_nombre}
-								</Badge>
-								{estadoActual.estado_actual_fecha && (
-									<span className="text-xs text-muted-foreground">
-										{new Date(estadoActual.estado_actual_fecha).toLocaleDateString("es-BO")}
-									</span>
-								)}
-							</div>
+						<div>
+							<p className="text-xs text-muted-foreground mb-1">Estado actual</p>
+							<p className="text-sm font-medium text-foreground leading-snug">
+								{estadoActual.estado_actual_nombre}
+							</p>
+							{estadoActual.estado_actual_fecha && (
+								<p className="text-xs text-muted-foreground mt-0.5">
+									{new Date(estadoActual.estado_actual_fecha).toLocaleDateString("es-BO")}
+								</p>
+							)}
 							{estadoActual.estado_actual_observacion && (
-								<p className="text-sm text-muted-foreground mt-2 italic">
+								<p className="text-xs text-muted-foreground mt-1 italic">
 									&quot;{estadoActual.estado_actual_observacion}&quot;
 								</p>
 							)}
 						</div>
 					)}
 
+					{/* Separador */}
+					{estadoActual?.estado_actual_nombre && puedeEditarEstado && (
+						<div className="border-t border-border" />
+					)}
+
 					{/* Selector de Nuevo Estado */}
 					{puedeEditarEstado ? (
-						<div className="space-y-3">
+						<div className="space-y-2">
+							<Button
+								onClick={handleOpenModal}
+								disabled={!estadoSeleccionado}
+								className="w-full"
+								size="sm"
+							>
+								<CheckCircle2 className="mr-2 h-4 w-4" />
+								Aplicar cambio de etapa
+							</Button>
 							<div>
-								<Label htmlFor="estado-select">Cambiar Etapa</Label>
-								<div className="flex gap-2 mt-1">
-									<Select value={estadoSeleccionado} onValueChange={setEstadoSeleccionado}>
-										<SelectTrigger id="estado-select" className="flex-1">
-											<SelectValue placeholder="Seleccionar etapa..." />
-										</SelectTrigger>
-										<SelectContent>
-											{estados.map((estado) => (
-												<SelectItem key={estado.id} value={estado.id}>
-													{estado.nombre}
-												</SelectItem>
-											))}
-										</SelectContent>
-									</Select>
-									<Button onClick={handleOpenModal} disabled={!estadoSeleccionado}>
-										<CheckCircle2 className="mr-2 h-4 w-4" />
-										Cambiar
-									</Button>
-								</div>
+								<Label htmlFor="estado-select" className="text-xs text-muted-foreground">
+									Nueva etapa
+								</Label>
+								<Select value={estadoSeleccionado} onValueChange={setEstadoSeleccionado}>
+									<SelectTrigger id="estado-select" className="mt-1 h-auto min-h-9 py-4 px-3 text-sm [&>span]:whitespace-normal [&>span]:text-left [&>span]:leading-snug [&>span]:pr-2">
+										<SelectValue placeholder="Seleccionar etapa..." />
+									</SelectTrigger>
+									<SelectContent>
+										{estados.map((estado) => (
+											<SelectItem key={estado.id} value={estado.id} className="whitespace-normal">
+												{estado.nombre}
+											</SelectItem>
+										))}
+									</SelectContent>
+								</Select>
 							</div>
 						</div>
 					) : (
-						<div className="bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-900 rounded-lg p-3">
-							<div className="flex items-center gap-2 text-yellow-800 dark:text-yellow-200 text-sm">
-								<AlertCircle className="h-4 w-4" />
-								<span>Los estados solo pueden cambiarse cuando el siniestro está abierto</span>
-							</div>
+						<div className="flex items-start gap-2 text-xs text-muted-foreground">
+							<AlertCircle className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
+							<span>Solo editable cuando el siniestro está abierto</span>
 						</div>
 					)}
-
-					{/* Nota: El historial de estados se muestra en el tab "Historial" junto con todos los cambios del siniestro */}
 				</CardContent>
 			</Card>
 

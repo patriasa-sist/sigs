@@ -8,6 +8,53 @@ interface HistorialCronologicoProps {
 	historial: HistorialSiniestro[];
 }
 
+// Etiquetas legibles para campos conocidos
+const FIELD_LABELS: Record<string, string> = {
+	nombre: "Nombre",
+	telefono: "Teléfono",
+	correo: "Correo",
+	estado: "Estado",
+	etapa: "Etapa",
+	responsable: "Responsable",
+	motivo: "Motivo",
+	observacion: "Observación",
+	tipo: "Tipo",
+	archivo: "Archivo",
+	fecha: "Fecha",
+	monto: "Monto",
+	descripcion: "Descripción",
+	lugar_hecho: "Lugar del hecho",
+	fecha_siniestro: "Fecha del siniestro",
+	fecha_reporte: "Fecha de reporte",
+	nombre_estado: "Nuevo estado",
+};
+
+function DetallesHistorial({ detalles }: { detalles: Record<string, unknown> }) {
+	const entries = Object.entries(detalles).filter(([, v]) => v !== null && v !== undefined && v !== "");
+	if (entries.length === 0) return null;
+	return (
+		<div className="mt-2 p-2 bg-secondary/50 rounded text-xs space-y-1">
+			{entries.map(([key, value]) => {
+				const label = FIELD_LABELS[key] || key.replace(/_/g, " ");
+				let display: string;
+				if (typeof value === "object") {
+					display = JSON.stringify(value);
+				} else {
+					display = String(value);
+				}
+				// Truncate long values
+				if (display.length > 120) display = display.slice(0, 120) + "…";
+				return (
+					<div key={key} className="flex gap-1.5">
+						<span className="text-muted-foreground capitalize min-w-[80px]">{label}:</span>
+						<span className="font-medium break-all">{display}</span>
+					</div>
+				);
+			})}
+		</div>
+	);
+}
+
 const ACCION_ICONS = {
 	created: <Circle className="h-4 w-4 text-green-500" />,
 	updated: <Edit className="h-4 w-4 text-blue-500" />,
@@ -127,13 +174,8 @@ export default function HistorialCronologico({ historial }: HistorialCronologico
 										</>
 									)}
 
-									{item.detalles && (
-										<div className="mt-2 p-2 bg-secondary/50 rounded text-xs">
-											<p className="text-muted-foreground mb-1">Detalles adicionales:</p>
-											<pre className="whitespace-pre-wrap font-mono text-xs">
-												{JSON.stringify(item.detalles, null, 2)}
-											</pre>
-										</div>
+									{item.detalles && Object.keys(item.detalles).length > 0 && (
+										<DetallesHistorial detalles={item.detalles} />
 									)}
 								</div>
 							</div>

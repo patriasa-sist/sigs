@@ -12,12 +12,13 @@ interface CoberturasProps {
 	ramo: string;
 	coberturas: CoberturasStep | null;
 	onCoberturasChange: (coberturas: CoberturasStep) => void;
+	showMinError?: boolean;
 }
 
 // UUID real de la cobertura "Gestión comercial" en coberturas_catalogo
 const GESTION_COMERCIAL_ID = "a5eb5c20-fcd7-4147-85da-c753956eba81";
 
-export default function CoberturasStepComponent({ ramo, coberturas, onCoberturasChange }: CoberturasProps) {
+export default function CoberturasStepComponent({ ramo, coberturas, onCoberturasChange, showMinError }: CoberturasProps) {
 	const [gestionComercialSeleccionada, setGestionComercialSeleccionada] = useState(false);
 
 	// Inicializar estado si Gestión comercial ya está seleccionada
@@ -76,6 +77,14 @@ export default function CoberturasStepComponent({ ramo, coberturas, onCoberturas
 				</CardDescription>
 			</CardHeader>
 			<CardContent className="space-y-4">
+				{/* Error inline si no hay coberturas seleccionadas */}
+				{showMinError && (
+					<p className="text-sm text-destructive flex items-center gap-1.5">
+						<AlertCircle className="h-3.5 w-3.5" />
+						Debe seleccionar al menos una cobertura
+					</p>
+				)}
+
 				{/* Información del ramo */}
 				<div className="flex items-start gap-2 text-sm bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
 					<AlertCircle className="h-4 w-4 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />

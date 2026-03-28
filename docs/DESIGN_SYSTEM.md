@@ -276,14 +276,17 @@ Shadow color should be slightly tinted toward slate, not pure black:
 - [x] Gerencia reportes
 - [x] Gerencia nuevas metricas
 
-- [ ] Cobranzas listing
-- [ ] Cobranzas modals
-- [ ] Cobranzas payment modals
-- [ ] Gerencia validacion
-- [ ] Siniestros listing
-- [ ] Siniestros modals
-- [ ] New siniestros form
-- [ ] Vencimientos
+- [x] Cobranzas listing
+- [x] Cobranzas modals
+- [x] Cobranzas payment modals
+
+- [x] Gerencia validacion
+
+- [x] Siniestros listing
+- [x] Siniestros modals
+- [x] New siniestros form
+
+- [ ] Administración
 
 ### Phase 4: Polish
 

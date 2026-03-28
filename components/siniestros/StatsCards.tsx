@@ -1,76 +1,127 @@
 "use client";
 
 import { memo } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { AlertTriangle, XCircle, Ban, CheckCircle, DollarSign, TrendingUp } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { AlertTriangle, CheckCircle2, DollarSign, FolderOpen } from "lucide-react";
 import type { SiniestrosStats } from "@/types/siniestro";
 
 interface StatsCardsProps {
 	stats: SiniestrosStats;
+	requierenAtencionCount: number;
 }
 
-function StatsCards({ stats }: StatsCardsProps) {
-	const cards = [
-		{
-			title: "Siniestros Abiertos",
-			value: stats.total_abiertos,
-			icon: AlertTriangle,
-			color: "text-yellow-600 dark:text-yellow-400",
-			bgColor: "bg-yellow-50 dark:bg-yellow-900/20",
-		},
-		{
-			title: "Cerrados este Mes",
-			value: stats.total_cerrados_mes,
-			icon: TrendingUp,
-			color: "text-blue-600 dark:text-blue-400",
-			bgColor: "bg-blue-50 dark:bg-blue-900/20",
-		},
-		{
-			title: "Rechazados",
-			value: stats.siniestros_por_estado.rechazado,
-			icon: XCircle,
-			color: "text-red-600 dark:text-red-400",
-			bgColor: "bg-red-50 dark:bg-red-900/20",
-		},
-		{
-			title: "Declinados",
-			value: stats.siniestros_por_estado.declinado,
-			icon: Ban,
-			color: "text-gray-600 dark:text-gray-400",
-			bgColor: "bg-gray-50 dark:bg-gray-900/20",
-		},
-		{
-			title: "Concluidos",
-			value: stats.siniestros_por_estado.concluido,
-			icon: CheckCircle,
-			color: "text-green-600 dark:text-green-400",
-			bgColor: "bg-green-50 dark:bg-green-900/20",
-		},
-		{
-			title: "Monto Total Reservado",
-			value: `Bs ${stats.monto_total_reservado.toLocaleString("es-BO", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-			icon: DollarSign,
-			color: "text-purple-600 dark:text-purple-400",
-			bgColor: "bg-purple-50 dark:bg-purple-900/20",
-			isAmount: true,
-		},
-	];
+function StatsCards({ stats, requierenAtencionCount }: StatsCardsProps) {
+	const totalCerrados =
+		stats.siniestros_por_estado.rechazado +
+		stats.siniestros_por_estado.declinado +
+		stats.siniestros_por_estado.concluido;
+
+	const tieneAtencion = requierenAtencionCount > 0;
 
 	return (
-		<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-			{cards.map((card, index) => (
-				<Card key={index} className={card.bgColor}>
-					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-						<CardTitle className="text-sm font-medium">{card.title}</CardTitle>
-						<card.icon className={`h-4 w-4 ${card.color}`} />
-					</CardHeader>
-					<CardContent>
-						<div className={`text-2xl font-bold ${card.color}`}>
-							{card.isAmount ? card.value : card.value.toLocaleString()}
+		<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+			{/* Abiertos */}
+			<Card className="bg-card shadow-sm">
+				<CardContent className="p-5">
+					<div className="flex items-start justify-between gap-3">
+						<div className="min-w-0">
+							<p className="text-sm text-muted-foreground">Abiertos</p>
+							<p className="text-2xl font-semibold text-foreground mt-1 tabular-nums">
+								{stats.total_abiertos}
+							</p>
 						</div>
-					</CardContent>
-				</Card>
-			))}
+						<div className="p-2 rounded-md bg-secondary flex-shrink-0">
+							<FolderOpen className="h-4 w-4 text-primary" />
+						</div>
+					</div>
+				</CardContent>
+			</Card>
+
+			{/* Requieren atención — borde izquierdo ámbar si hay casos */}
+			<Card
+				className={
+					tieneAtencion
+						? "bg-card shadow-sm border-amber-200"
+						: "bg-card shadow-sm"
+				}
+				style={tieneAtencion ? { borderLeftWidth: "3px", borderLeftColor: "#F59E0B" } : undefined}
+			>
+				<CardContent className="p-5">
+					<div className="flex items-start justify-between gap-3">
+						<div className="min-w-0">
+							<p className="text-sm text-muted-foreground">Sin actualizar +10 días</p>
+							<p
+								className={`text-2xl font-semibold mt-1 tabular-nums ${
+									tieneAtencion ? "text-amber-700" : "text-foreground"
+								}`}
+							>
+								{requierenAtencionCount}
+							</p>
+						</div>
+						<div
+							className={`p-2 rounded-md flex-shrink-0 ${
+								tieneAtencion ? "bg-amber-50" : "bg-secondary"
+							}`}
+						>
+							<AlertTriangle
+								className={`h-4 w-4 ${tieneAtencion ? "text-amber-600" : "text-muted-foreground"}`}
+							/>
+						</div>
+					</div>
+				</CardContent>
+			</Card>
+
+			{/* Cerrados total */}
+			<Card className="bg-card shadow-sm">
+				<CardContent className="p-5">
+					<div className="flex items-start justify-between gap-3">
+						<div className="min-w-0">
+							<p className="text-sm text-muted-foreground">Cerrados total</p>
+							<p className="text-2xl font-semibold text-foreground mt-1 tabular-nums">
+								{totalCerrados}
+							</p>
+							<div className="flex gap-3 mt-2">
+								<span className="text-xs text-muted-foreground">
+									{stats.siniestros_por_estado.concluido} concluidos
+								</span>
+								<span className="text-xs text-muted-foreground">
+									{stats.siniestros_por_estado.rechazado} rechazados
+								</span>
+								<span className="text-xs text-muted-foreground">
+									{stats.siniestros_por_estado.declinado} declinados
+								</span>
+							</div>
+						</div>
+						<div className="p-2 rounded-md bg-secondary flex-shrink-0">
+							<CheckCircle2 className="h-4 w-4 text-primary" />
+						</div>
+					</div>
+				</CardContent>
+			</Card>
+
+			{/* Monto total reservado */}
+			<Card className="bg-card shadow-sm">
+				<CardContent className="p-5">
+					<div className="flex items-start justify-between gap-3">
+						<div className="min-w-0">
+							<p className="text-sm text-muted-foreground">Monto total reservado</p>
+							<p className="text-xl font-semibold text-foreground mt-1 tabular-nums">
+								Bs{" "}
+								{stats.monto_total_reservado.toLocaleString("es-BO", {
+									minimumFractionDigits: 0,
+									maximumFractionDigits: 0,
+								})}
+							</p>
+							<p className="text-xs text-muted-foreground mt-2">
+								{stats.total_cerrados_mes} cerrado{stats.total_cerrados_mes !== 1 ? "s" : ""} este mes
+							</p>
+						</div>
+						<div className="p-2 rounded-md bg-secondary flex-shrink-0">
+							<DollarSign className="h-4 w-4 text-primary" />
+						</div>
+					</div>
+				</CardContent>
+			</Card>
 		</div>
 	);
 }

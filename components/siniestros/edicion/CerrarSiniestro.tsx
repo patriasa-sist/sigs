@@ -17,7 +17,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Lock, Upload, X, AlertTriangle, Loader2, CheckCircle } from "lucide-react";
+import { Lock, Upload, X, AlertTriangle, Loader2, FileText } from "lucide-react";
 import { cerrarSiniestro, generarWhatsAppCierreSiniestro } from "@/app/siniestros/actions";
 import { toast } from "sonner";
 import {
@@ -313,23 +313,78 @@ export default function CerrarSiniestro({ siniestroId, numeroPoliza }: CerrarSin
 		}
 	};
 
-	// Componente de archivo subido
-	const FilePreview = ({ file, onRemove }: { file: DocumentoSiniestro; onRemove: () => void }) => (
-		<div className="mt-2 p-3 bg-muted rounded-lg flex items-center justify-between">
-			<div className="flex items-center gap-2 flex-1 min-w-0">
-				<CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
-				<div className="flex-1 min-w-0">
-					<p className="text-sm font-medium truncate">{file.nombre_archivo}</p>
-					<p className="text-xs text-muted-foreground">
-						{file.tamano_bytes ? (file.tamano_bytes / 1024).toFixed(1) : 0} KB
-					</p>
+	// Zona de drop reutilizable
+	const DropZone = ({
+		id,
+		file,
+		accept,
+		hint,
+		onFile,
+		onRemove,
+	}: {
+		id: string;
+		file: DocumentoSiniestro | null;
+		accept: string;
+		hint: string;
+		onFile: (e: React.ChangeEvent<HTMLInputElement>) => void;
+		onRemove: () => void;
+	}) => {
+		const [dragging, setDragging] = useState(false);
+
+		const handleDrop = (e: React.DragEvent) => {
+			e.preventDefault();
+			setDragging(false);
+			const f = e.dataTransfer.files?.[0];
+			if (!f) return;
+			const synth = { target: { files: e.dataTransfer.files } } as unknown as React.ChangeEvent<HTMLInputElement>;
+			onFile(synth);
+		};
+
+		if (file) {
+			return (
+				<div className="flex items-center gap-3 p-3 rounded-lg border bg-secondary/30">
+					<FileText className="h-5 w-5 text-primary flex-shrink-0" />
+					<div className="flex-1 min-w-0">
+						<p className="text-sm font-medium truncate">{file.nombre_archivo}</p>
+						<p className="text-xs text-muted-foreground">
+							{file.tamano_bytes ? (file.tamano_bytes / 1024).toFixed(1) : 0} KB
+						</p>
+					</div>
+					<Button variant="ghost" size="sm" onClick={onRemove} type="button" className="flex-shrink-0">
+						<X className="h-4 w-4" />
+					</Button>
 				</div>
-			</div>
-			<Button variant="ghost" size="sm" onClick={onRemove} type="button">
-				<X className="h-4 w-4" />
-			</Button>
-		</div>
-	);
+			);
+		}
+
+		return (
+			<label
+				htmlFor={id}
+				className={`flex flex-col items-center justify-center gap-2 p-6 rounded-lg border-2 border-dashed cursor-pointer transition-colors ${
+					dragging
+						? "border-primary bg-primary/5"
+						: "border-border hover:border-primary/50 hover:bg-secondary/30"
+				}`}
+				onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+				onDragLeave={() => setDragging(false)}
+				onDrop={handleDrop}
+			>
+				<Upload className="h-8 w-8 text-muted-foreground" />
+				<div className="text-center">
+					<p className="text-sm font-medium text-foreground">Arrastra aquí o haz clic para seleccionar</p>
+					<p className="text-xs text-muted-foreground mt-0.5">{hint}</p>
+				</div>
+				<input
+					id={id}
+					type="file"
+					accept={accept}
+					className="sr-only"
+					onChange={onFile}
+				/>
+			</label>
+		);
+	};
+
 
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>
@@ -408,25 +463,14 @@ export default function CerrarSiniestro({ siniestroId, numeroPoliza }: CerrarSin
 							<Label htmlFor="carta-rechazo">
 								Carta de Rechazo <span className="text-red-500">*</span>
 							</Label>
-							<div className="border-2 border-dashed rounded-lg p-6 text-center">
-								{!cartaRechazo ? (
-									<div>
-										<Upload className="mx-auto h-12 w-12 text-muted-foreground" />
-										<p className="mt-2 text-sm text-muted-foreground">
-											Adjuntar carta de rechazo (PDF, JPG, PNG, DOC)
-										</p>
-										<Input
-											id="carta-rechazo"
-											type="file"
-											accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
-											className="mt-2"
-											onChange={(e) => handleFileUpload(e, "carta_rechazo")}
-										/>
-									</div>
-								) : (
-									<FilePreview file={cartaRechazo} onRemove={() => clearFile("carta_rechazo")} />
-								)}
-							</div>
+							<DropZone
+								id="carta-rechazo"
+								file={cartaRechazo}
+								accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+								hint="PDF, JPG, PNG, DOC — máx. 20MB"
+								onFile={(e) => handleFileUpload(e, "carta_rechazo")}
+								onRemove={() => clearFile("carta_rechazo")}
+							/>
 						</div>
 					</TabsContent>
 
@@ -454,25 +498,14 @@ export default function CerrarSiniestro({ siniestroId, numeroPoliza }: CerrarSin
 							<Label htmlFor="carta-respaldo">
 								Carta de Respaldo <span className="text-red-500">*</span>
 							</Label>
-							<div className="border-2 border-dashed rounded-lg p-6 text-center">
-								{!cartaRespaldo ? (
-									<div>
-										<Upload className="mx-auto h-12 w-12 text-muted-foreground" />
-										<p className="mt-2 text-sm text-muted-foreground">
-											Adjuntar carta de respaldo (PDF, JPG, PNG, DOC)
-										</p>
-										<Input
-											id="carta-respaldo"
-											type="file"
-											accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
-											className="mt-2"
-											onChange={(e) => handleFileUpload(e, "carta_respaldo")}
-										/>
-									</div>
-								) : (
-									<FilePreview file={cartaRespaldo} onRemove={() => clearFile("carta_respaldo")} />
-								)}
-							</div>
+							<DropZone
+								id="carta-respaldo"
+								file={cartaRespaldo}
+								accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+								hint="PDF, JPG, PNG, DOC — máx. 20MB"
+								onFile={(e) => handleFileUpload(e, "carta_respaldo")}
+								onRemove={() => clearFile("carta_respaldo")}
+							/>
 						</div>
 					</TabsContent>
 
@@ -484,46 +517,28 @@ export default function CerrarSiniestro({ siniestroId, numeroPoliza }: CerrarSin
 								<Label htmlFor="archivo-uif">
 									Archivo UIF <span className="text-red-500">*</span>
 								</Label>
-								<div className="border-2 border-dashed rounded-lg p-4 text-center">
-									{!archivoUIF ? (
-										<div>
-											<Upload className="mx-auto h-8 w-8 text-muted-foreground" />
-											<p className="mt-1 text-xs text-muted-foreground">UIF (PDF)</p>
-											<Input
-												id="archivo-uif"
-												type="file"
-												accept=".pdf"
-												className="mt-2 text-xs"
-												onChange={(e) => handleFileUpload(e, "archivo_uif")}
-											/>
-										</div>
-									) : (
-										<FilePreview file={archivoUIF} onRemove={() => clearFile("archivo_uif")} />
-									)}
-								</div>
+								<DropZone
+									id="archivo-uif"
+									file={archivoUIF}
+									accept=".pdf"
+									hint="Solo PDF"
+									onFile={(e) => handleFileUpload(e, "archivo_uif")}
+									onRemove={() => clearFile("archivo_uif")}
+								/>
 							</div>
 
 							<div className="space-y-2">
 								<Label htmlFor="archivo-pep">
 									Archivo PEP <span className="text-red-500">*</span>
 								</Label>
-								<div className="border-2 border-dashed rounded-lg p-4 text-center">
-									{!archivoPEP ? (
-										<div>
-											<Upload className="mx-auto h-8 w-8 text-muted-foreground" />
-											<p className="mt-1 text-xs text-muted-foreground">PEP (PDF)</p>
-											<Input
-												id="archivo-pep"
-												type="file"
-												accept=".pdf"
-												className="mt-2 text-xs"
-												onChange={(e) => handleFileUpload(e, "archivo_pep")}
-											/>
-										</div>
-									) : (
-										<FilePreview file={archivoPEP} onRemove={() => clearFile("archivo_pep")} />
-									)}
-								</div>
+								<DropZone
+									id="archivo-pep"
+									file={archivoPEP}
+									accept=".pdf"
+									hint="Solo PDF"
+									onFile={(e) => handleFileUpload(e, "archivo_pep")}
+									onRemove={() => clearFile("archivo_pep")}
+								/>
 							</div>
 						</div>
 

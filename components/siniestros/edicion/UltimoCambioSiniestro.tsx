@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Clock, ExternalLink } from "lucide-react";
 import type { HistorialSiniestro } from "@/types/siniestro";
@@ -37,13 +37,11 @@ export default function UltimoCambioSiniestro({ historial, onVerHistorialComplet
 
 	return (
 		<Card className="border-l-4 border-l-blue-500 bg-blue-50/30 dark:bg-blue-950/10">
-			<CardHeader className="pb-3">
-				<CardTitle className="text-base flex items-center gap-2">
-					<Clock className="h-4 w-4 text-blue-600" />
+			<CardContent className="p-4 space-y-2">
+				<div className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">
+					<Clock className="h-3.5 w-3.5 text-blue-600" />
 					Último Cambio
-				</CardTitle>
-			</CardHeader>
-			<CardContent className="space-y-3">
+				</div>
 				<div>
 					<p className="font-medium text-sm">{ACCION_LABELS[ultimoCambio.accion] || ultimoCambio.accion}</p>
 

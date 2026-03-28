@@ -47,7 +47,7 @@ export default function BotonWhatsAppRegistro({ siniestroId }: BotonWhatsAppRegi
 			) : (
 				<>
 					<MessageCircle className="mr-2 h-4 w-4" />
-					Enviar confirmación por WhatsApp
+					Enviar WhatsApp
 				</>
 			)}
 		</Button>

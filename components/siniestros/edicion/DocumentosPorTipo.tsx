@@ -312,7 +312,7 @@ export default function DocumentosPorTipo({
 									<div key={doc.id} className="border rounded-lg p-3 space-y-2">
 										{/* Miniatura o icono */}
 										<div className="aspect-video bg-secondary rounded-md flex items-center justify-center overflow-hidden">
-											{esImagen(doc.nombre_archivo) ? (
+											{esImagen(doc.nombre_archivo) && obtenerUrlArchivo(doc.archivo_url) ? (
 												// eslint-disable-next-line @next/next/no-img-element
 											<img src={obtenerUrlArchivo(doc.archivo_url)} alt={doc.nombre_archivo} className="w-full h-full object-cover" />
 											) : (

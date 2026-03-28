@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -20,6 +21,7 @@ export default function AgregarObservacion({
 	observacionesIniciales,
 	estadoSiniestro,
 }: AgregarObservacionProps) {
+	const router = useRouter();
 	const [observacion, setObservacion] = useState("");
 	const [loading, setLoading] = useState(false);
 	const [observaciones, setObservaciones] = useState<ObservacionSiniestro[]>(observacionesIniciales);
@@ -50,9 +52,7 @@ export default function AgregarObservacion({
 
 				setObservaciones([nuevaObservacion, ...observaciones]);
 				setObservacion("");
-
-				// Reload page to get updated data from server
-				window.location.reload();
+				router.refresh();
 			} else {
 				toast.error(result.error || "Error al agregar observación");
 			}
@@ -62,7 +62,7 @@ export default function AgregarObservacion({
 		} finally {
 			setLoading(false);
 		}
-	}, [observacion, siniestroId, observaciones]);
+	}, [observacion, siniestroId, observaciones, router]);
 
 	return (
 		<div className="space-y-4">
