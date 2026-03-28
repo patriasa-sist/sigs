@@ -5,14 +5,7 @@ import { useRouter } from "next/navigation";
 import { CheckCircle, XCircle, Eye, AlertTriangle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-	Table,
-	TableBody,
-	TableCell,
-	TableHead,
-	TableHeader,
-	TableRow,
-} from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
 	Dialog,
 	DialogContent,
@@ -31,9 +24,9 @@ type Props = {
 };
 
 const TIPO_BADGE = {
-	inclusion: { label: "Inclusión", className: "bg-green-100 text-green-700 border-green-200" },
-	exclusion: { label: "Exclusión", className: "bg-orange-100 text-orange-700 border-orange-200" },
-	anulacion: { label: "Anulación", className: "bg-red-100 text-red-700 border-red-200" },
+	inclusion: { label: "Inclusión", className: "bg-teal-50 text-teal-800 border-teal-200" },
+	exclusion: { label: "Exclusión", className: "bg-amber-50 text-amber-800 border-amber-200" },
+	anulacion: { label: "Anulación", className: "bg-rose-50 text-rose-800 border-rose-200" },
 };
 
 export default function AnexosPendientesTable({ anexos: initialAnexos }: Props) {
@@ -63,9 +56,10 @@ export default function AnexosPendientesTable({ anexos: initialAnexos }: Props) 
 		if (result.success) {
 			setAnexos((prev) => prev.filter((a) => a.id !== selectedAnexo.id));
 			toast.success("Anexo validado exitosamente", {
-				description: selectedAnexo.tipo_anexo === "anulacion"
-					? "La póliza ha sido anulada"
-					: `Anexo ${selectedAnexo.numero_anexo} activado`,
+				description:
+					selectedAnexo.tipo_anexo === "anulacion"
+						? "La póliza ha sido anulada"
+						: `Anexo ${selectedAnexo.numero_anexo} activado`,
 			});
 		} else {
 			toast.error("Error al validar", { description: result.error });
@@ -95,10 +89,12 @@ export default function AnexosPendientesTable({ anexos: initialAnexos }: Props) 
 
 	if (anexos.length === 0) {
 		return (
-			<div className="text-center py-12 text-gray-500">
-				<CheckCircle className="h-12 w-12 mx-auto mb-4 text-green-300" />
-				<p className="text-lg font-medium">No hay anexos pendientes</p>
-				<p className="text-sm">Todos los anexos han sido procesados</p>
+			<div className="flex flex-col items-center justify-center py-16 text-center">
+				<span className="flex h-12 w-12 items-center justify-center rounded-full bg-accent-bg mb-4">
+					<CheckCircle className="h-6 w-6 text-accent" />
+				</span>
+				<p className="text-sm font-medium text-foreground">Sin anexos pendientes</p>
+				<p className="text-sm text-muted-foreground mt-1">Todos los anexos han sido procesados</p>
 			</div>
 		);
 	}
@@ -136,9 +132,15 @@ export default function AnexosPendientesTable({ anexos: initialAnexos }: Props) 
 									<TableCell className="py-1.5">{anexo.ramo}</TableCell>
 									<TableCell className="py-1.5 text-right">
 										{anexo.monto_ajuste_total !== 0 ? (
-											<span className={anexo.monto_ajuste_total >= 0 ? "text-green-600" : "text-red-600"}>
+											<span
+												className={
+													anexo.monto_ajuste_total >= 0 ? "text-accent" : "text-destructive"
+												}
+											>
 												{anexo.monto_ajuste_total >= 0 ? "+" : ""}
-												{anexo.monto_ajuste_total.toLocaleString("es-BO", { minimumFractionDigits: 2 })}
+												{anexo.monto_ajuste_total.toLocaleString("es-BO", {
+													minimumFractionDigits: 2,
+												})}
 											</span>
 										) : (
 											<span className="text-muted-foreground">-</span>
@@ -157,7 +159,9 @@ export default function AnexosPendientesTable({ anexos: initialAnexos }: Props) 
 												variant="ghost"
 												size="icon"
 												className="h-7 w-7"
-												onClick={() => router.push(`/polizas/${anexo.poliza_id}#anexo-${anexo.id}`)}
+												onClick={() =>
+													router.push(`/polizas/${anexo.poliza_id}#anexo-${anexo.id}`)
+												}
 												title="Ver en póliza"
 											>
 												<Eye className="h-4 w-4" />
@@ -165,7 +169,7 @@ export default function AnexosPendientesTable({ anexos: initialAnexos }: Props) 
 											<Button
 												variant="ghost"
 												size="icon"
-												className="h-7 w-7 text-green-600 hover:text-green-700 hover:bg-green-50"
+												className="h-7 w-7 text-accent hover:text-accent hover:bg-accent-bg"
 												disabled={isLoading}
 												onClick={() => openDialog(anexo, "validar")}
 												title="Validar"
@@ -179,7 +183,7 @@ export default function AnexosPendientesTable({ anexos: initialAnexos }: Props) 
 											<Button
 												variant="ghost"
 												size="icon"
-												className="h-7 w-7 text-red-600 hover:text-red-700 hover:bg-red-50"
+												className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/5"
 												disabled={isLoading}
 												onClick={() => openDialog(anexo, "rechazar")}
 												title="Rechazar"
@@ -199,16 +203,13 @@ export default function AnexosPendientesTable({ anexos: initialAnexos }: Props) 
 			<Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
 				<DialogContent>
 					<DialogHeader>
-						<DialogTitle>
-							{dialogType === "validar" ? "Validar Anexo" : "Rechazar Anexo"}
-						</DialogTitle>
+						<DialogTitle>{dialogType === "validar" ? "Validar Anexo" : "Rechazar Anexo"}</DialogTitle>
 						<DialogDescription>
 							{dialogType === "validar" ? (
 								<>
-									¿Confirma la validación del anexo{" "}
-									<strong>{selectedAnexo?.numero_anexo}</strong>?
+									¿Confirma la validación del anexo <strong>{selectedAnexo?.numero_anexo}</strong>?
 									{selectedAnexo?.tipo_anexo === "anulacion" && (
-										<span className="block mt-2 text-red-600 font-medium">
+										<span className="block mt-2 text-destructive font-medium">
 											<AlertTriangle className="h-4 w-4 inline mr-1" />
 											Esto anulará la póliza permanentemente
 										</span>
@@ -237,10 +238,7 @@ export default function AnexosPendientesTable({ anexos: initialAnexos }: Props) 
 							Cancelar
 						</Button>
 						{dialogType === "validar" ? (
-							<Button
-								onClick={handleValidar}
-								className="bg-green-600 hover:bg-green-700"
-							>
+							<Button onClick={handleValidar} className="bg-green-600 hover:bg-green-700">
 								<CheckCircle className="h-4 w-4 mr-1" />
 								Validar
 							</Button>

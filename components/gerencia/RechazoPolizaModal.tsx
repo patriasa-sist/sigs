@@ -4,6 +4,7 @@ import { useState } from "react";
 import {
 	Dialog,
 	DialogContent,
+	DialogDescription,
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
@@ -89,6 +90,9 @@ export function RechazoPolizaModal({
 								<DialogTitle className="text-base font-semibold text-foreground leading-tight">
 									Rechazar póliza
 								</DialogTitle>
+								<DialogDescription className="sr-only">
+									Ingresa el motivo del rechazo para notificar al responsable
+								</DialogDescription>
 								<p className="text-xs text-muted-foreground mt-0.5 font-mono">
 									{poliza.numero_poliza}
 									<span className="ml-2 not-italic font-sans text-muted-foreground/70">

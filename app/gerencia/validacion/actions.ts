@@ -13,7 +13,7 @@ import { enviarEmailRechazoPoliza } from "@/utils/resend";
 async function checkTeamLeaderForPolicy(
 	supabase: Awaited<ReturnType<typeof createClient>>,
 	userId: string,
-	responsableId: string
+	responsableId: string,
 ): Promise<boolean> {
 	const { data: leaderTeams } = await supabase
 		.from("equipo_miembros")
@@ -60,7 +60,8 @@ export async function obtenerPolizasPendientes() {
 		// Obtener pólizas pendientes con joins
 		let query = supabase
 			.from("polizas")
-			.select(`
+			.select(
+				`
 				id,
 				numero_poliza,
 				ramo,
@@ -84,7 +85,8 @@ export async function obtenerPolizasPendientes() {
 				created_by_user:profiles!created_by (
 					full_name
 				)
-			`)
+			`,
+			)
 			.eq("estado", "pendiente")
 			.order("created_at", { ascending: false });
 
@@ -191,6 +193,126 @@ export async function validarPoliza(polizaId: string) {
 }
 
 /**
+ * Obtiene el detalle completo de una póliza para su revisión en el panel de validación.
+ * Carga: datos básicos, cliente, vehículos (Automotor) y cuotas de pago.
+ */
+export async function obtenerDetallePolizaParaValidacion(polizaId: string) {
+	const supabase = await createClient();
+
+	try {
+		const { data: poliza, error } = await supabase
+			.from("polizas")
+			.select(
+				`
+				id, numero_poliza, ramo, prima_total, prima_neta, moneda,
+				modalidad_pago,
+				inicio_vigencia, fin_vigencia,
+				client_id,
+				compania:companias_aseguradoras!compania_aseguradora_id(nombre),
+				responsable:profiles!responsable_id(full_name),
+				regional:regionales!regional_id(nombre),
+				created_by_user:profiles!created_by(full_name),
+				pagos:polizas_pagos(
+					id, numero_cuota, monto, fecha_vencimiento, fecha_pago, estado
+				)
+			`,
+			)
+			.eq("id", polizaId)
+			.single();
+
+		if (error || !poliza) {
+			console.error("[obtenerDetallePolizaParaValidacion] error:", error, "polizaId:", polizaId);
+			return { success: false as const, error: "Póliza no encontrada" };
+		}
+
+		// Ordenar cuotas por numero_cuota en el cliente (evita .order con referencedTable)
+		if (Array.isArray(poliza.pagos)) {
+			(poliza.pagos as Array<{ numero_cuota: number }>).sort(
+				(a, b) => a.numero_cuota - b.numero_cuota,
+			);
+		}
+
+		// Resolver nombre del cliente según su tipo
+		let clienteNombre = "Sin cliente";
+		if (poliza.client_id) {
+			const { data: client } = await supabase
+				.from("clients")
+				.select("client_type")
+				.eq("id", poliza.client_id)
+				.single();
+
+			if (client?.client_type === "natural" || client?.client_type === "unipersonal") {
+				const { data: nc } = await supabase
+					.from("natural_clients")
+					.select(
+						"primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, tipo_documento, numero_documento",
+					)
+					.eq("client_id", poliza.client_id)
+					.single();
+				if (nc) {
+					const nombre = [nc.primer_nombre, nc.segundo_nombre].filter(Boolean).join(" ");
+					const apellido = [nc.primer_apellido, nc.segundo_apellido].filter(Boolean).join(" ");
+					clienteNombre = `${nombre} ${apellido}`.trim();
+				}
+			} else if (client?.client_type === "juridica") {
+				const { data: jc } = await supabase
+					.from("juridic_clients")
+					.select("razon_social")
+					.eq("client_id", poliza.client_id)
+					.single();
+				if (jc) clienteNombre = jc.razon_social;
+			}
+		}
+
+		// Vehículos (solo Automotor)
+		let vehiculos: Array<{
+			id: string;
+			placa: string;
+			valor_asegurado: number;
+			franquicia: number;
+			nro_chasis: string;
+			uso: string;
+			coaseguro: number;
+			modelo: string | null;
+			ano: number | null;
+			color: string | null;
+			tipo_vehiculo: { nombre: string } | null;
+			marca: { nombre: string } | null;
+		}> = [];
+
+		if (poliza.ramo === "Automotor") {
+			const { data: veh } = await supabase
+				.from("polizas_automotor_vehiculos")
+				.select(
+					`
+					id, placa, valor_asegurado, franquicia, nro_chasis, uso, coaseguro,
+					modelo, ano, color,
+					tipo_vehiculo:tipos_vehiculo!tipo_vehiculo_id(nombre),
+					marca:marcas_vehiculo!marca_id(nombre)
+				`,
+				)
+				.eq("poliza_id", polizaId)
+				.order("created_at", { ascending: true });
+			if (veh) vehiculos = veh as unknown as typeof vehiculos;
+		}
+
+		return {
+			success: true as const,
+			detalle: {
+				...poliza,
+				clienteNombre,
+				vehiculos,
+			},
+		};
+	} catch (error) {
+		return {
+			success: false as const,
+			error: error instanceof Error ? error.message : "Error desconocido",
+		};
+	}
+}
+
+/**
  * Rechaza una póliza con motivo obligatorio
  * Cambia el estado a "rechazada" y otorga permiso de edición por 1 día
  */
@@ -219,7 +341,8 @@ export async function rechazarPoliza(polizaId: string, motivo: string) {
 		// Verificar que la póliza exista, esté pendiente y traer datos para el email
 		const { data: poliza } = await supabase
 			.from("polizas")
-			.select(`
+			.select(
+				`
 				id,
 				estado,
 				numero_poliza,
@@ -229,7 +352,8 @@ export async function rechazarPoliza(polizaId: string, motivo: string) {
 					full_name,
 					email
 				)
-			`)
+			`,
+			)
 			.eq("id", polizaId)
 			.single();
 
@@ -288,11 +412,7 @@ export async function rechazarPoliza(polizaId: string, motivo: string) {
 		});
 
 		// Obtener nombre del que rechaza para el email
-		const { data: rejector } = await supabase
-			.from("profiles")
-			.select("full_name")
-			.eq("id", user.id)
-			.single();
+		const { data: rejector } = await supabase.from("profiles").select("full_name").eq("id", user.id).single();
 
 		// Obtener email del líder del equipo del responsable para CC
 		let ccLider: string | undefined;

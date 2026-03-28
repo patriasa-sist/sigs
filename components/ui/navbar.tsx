@@ -158,9 +158,10 @@ export function Navbar() {
 					<Image
 						src="/patria-horizontal.png"
 						alt="Patria S.A."
-						width={120}
-						height={32}
-						style={{ height: "2rem", width: "auto" }}
+						width={0}
+						height={0}
+						sizes="120px"
+						className="h-8 w-auto"
 						priority
 					/>
 					<span className="text-[10px] text-muted-foreground font-mono leading-none">v{version}</span>
