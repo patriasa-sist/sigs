@@ -72,8 +72,8 @@ const Dashboard = () => {
 			icon: Wrench,
 			link: "/siniestros",
 			sections: [
-				{ name: "Registro Siniestros", icon: ClipboardList },
-				{ name: "Perfil de cliente", icon: UserCheck },
+				{ name: "Registro de Siniestros", icon: ClipboardList },
+				{ name: "Seguimiento de Siniestros", icon: UserCheck },
 			],
 		},
 		{
@@ -86,7 +86,7 @@ const Dashboard = () => {
 				{ name: "Usuarios", icon: Users },
 				{ name: "Ramos", icon: BookOpen },
 				{ name: "Aseguradoras", icon: Building2 },
-				{ name: "Cartera", icon: CreditCard },
+				{ name: "Equipos", icon: CreditCard },
 			],
 		},
 		{
@@ -96,8 +96,8 @@ const Dashboard = () => {
 			icon: DollarSign,
 			link: "/cobranzas",
 			sections: [
-				{ name: "Busqueda de pólizas", icon: Building2 },
-				{ name: "Reportes", icon: FileText },
+				{ name: "Seguimiento de cobros", icon: Building2 },
+				{ name: "Prorrogas", icon: FileText },
 			],
 		},
 		{
@@ -106,9 +106,7 @@ const Dashboard = () => {
 			description: "Control de cumplimiento y excepciones documentales",
 			icon: Eye,
 			link: "/auditoria",
-			sections: [
-				{ name: "Excepciones de Documentos", icon: FileText },
-			],
+			sections: [{ name: "Excepciones de Documentos", icon: FileText }],
 		},
 	];
 
@@ -118,7 +116,9 @@ const Dashboard = () => {
 				{/* Welcome Section */}
 				<div className="mb-8">
 					<h2 className="text-2xl font-semibold text-foreground mb-1">Bienvenido al Sistema de Gestión</h2>
-					<p className="text-muted-foreground">Selecciona un módulo para acceder a las funcionalidades del sistema</p>
+					<p className="text-muted-foreground">
+						Selecciona un módulo para acceder a las funcionalidades del sistema
+					</p>
 				</div>
 
 				{/* Main Modules */}
@@ -137,9 +137,7 @@ const Dashboard = () => {
 										</div>
 										<div>
 											<CardTitle className="text-base text-foreground">{module.title}</CardTitle>
-											<CardDescription className="text-sm">
-												{module.description}
-											</CardDescription>
+											<CardDescription className="text-sm">{module.description}</CardDescription>
 										</div>
 									</div>
 								</CardHeader>
