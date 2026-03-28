@@ -964,12 +964,7 @@ export async function obtenerDetallePolizaParaCuotas(polizaId: string): Promise<
 			return { success: false, error: "Póliza no encontrada" };
 		}
 
-		// DEBUG: Log the raw data from Supabase
-		console.log("=== DEBUG: Poliza data from Supabase ===");
-		console.log("Client:", JSON.stringify(poliza.client, null, 2));
-		console.log("Client type:", poliza.client?.client_type);
-		console.log("Natural clients:", poliza.client?.natural_clients);
-		console.log("Juridic clients:", poliza.client?.juridic_clients);
+
 
 		// Extract contact info based on client type
 		let contacto: ContactoCliente = {
