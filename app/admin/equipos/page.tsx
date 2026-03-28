@@ -22,8 +22,8 @@ export default async function EquiposPage() {
 			<div className="flex items-center gap-4">
 				<Users className="h-8 w-8 text-primary" />
 				<div>
-					<h1 className="text-3xl font-bold text-gray-900">Gestión de Equipos</h1>
-					<p className="text-gray-500">
+					<h1 className="text-2xl font-semibold text-foreground">Gestión de Equipos</h1>
+					<p className="text-muted-foreground text-sm mt-1">
 						Crea equipos y asigna agentes y comerciales para compartir datos entre miembros
 					</p>
 				</div>

@@ -5,43 +5,154 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { createClient } from "@/utils/supabase/client";
 import { marcarInvitacionUsada } from "@/app/admin/invitations/actions";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, Suspense } from "react";
-import { Loader2, AlertTriangle } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Loader2, ShieldCheck } from "lucide-react";
+import Image from "next/image";
 
 const passwordSchema = z
 	.string()
-	.min(8, { message: "Minimo 8 caracteres requeridos." })
-	.max(50, { message: "Maximo 50 caracteres." })
-	.regex(/(?=.*[A-Z])/, { message: "Al menos una letra mayuscula." })
-	.regex(/(?=.*[a-z])/, { message: "Al menos una letra minuscula." })
-	.regex(/(?=.*\d)/, { message: "Al menos un numero." })
-	.regex(/[$&+,:;=?@#|'<>.^*()%!-]/, { message: "Al menos un caracter especial." });
+	.min(8, { message: "Mínimo 8 caracteres requeridos." })
+	.max(50, { message: "Máximo 50 caracteres." })
+	.regex(/(?=.*[A-Z])/, { message: "Al menos una letra mayúscula." })
+	.regex(/(?=.*[a-z])/, { message: "Al menos una letra minúscula." })
+	.regex(/(?=.*\d)/, { message: "Al menos un número." })
+	.regex(/[$&+,:;=?@#|'<>.^*()%!-]/, { message: "Al menos un carácter especial." });
 
 const formSchema = z
 	.object({
-		email: z.email("Formato de correo invalido."),
+		email: z.email("Formato de correo inválido."),
 		fullName: z.string().min(2, "El nombre debe tener al menos 2 caracteres.").max(100, "El nombre es demasiado largo."),
 		password: passwordSchema,
 		confirmPassword: passwordSchema,
 	})
 	.refine(({ password, confirmPassword }) => password === confirmPassword, {
 		path: ["confirmPassword"],
-		message: "Contraseñas no coinciden.",
+		message: "Las contraseñas no coinciden.",
 	});
 
+// ── Brand panel (shared across all states) ──────────────────────────────────
+function BrandPanel() {
+	return (
+		<div className="hidden lg:flex lg:w-[42%] bg-primary flex-col justify-between p-10 relative overflow-hidden select-none">
+			{/* Decorative geometry */}
+			<div className="absolute -top-24 -right-24 w-96 h-96 rounded-full bg-white/[0.04]" />
+			<div className="absolute top-1/3 -right-16 w-56 h-56 rounded-full bg-white/[0.04]" />
+			<div className="absolute -bottom-20 -left-16 w-72 h-72 rounded-full bg-white/[0.05]" />
+			<div className="absolute bottom-32 right-8 w-24 h-24 rounded-full bg-white/[0.06]" />
+
+			{/* Top: logo */}
+			<div>
+				<Image
+					src="/patria-horizontal.png"
+					alt="Patria S.A."
+					width={280}
+					height={72}
+					style={{ height: "4rem", width: "auto", filter: "brightness(0) invert(1)", opacity: 0.9 }}
+					priority
+				/>
+			</div>
+
+			{/* Middle: brand statement */}
+			<div className="space-y-4">
+				<div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-white/10 w-fit">
+					<ShieldCheck className="h-3.5 w-3.5 text-white/70" />
+					<span className="text-xs text-white/70 font-medium tracking-wide">Uso exclusivo interno</span>
+				</div>
+				<h2 className="text-3xl font-semibold text-white leading-snug tracking-tight">
+					Configura tu<br />acceso al sistema
+				</h2>
+				<p className="text-white/50 text-sm leading-relaxed max-w-xs">
+					Sigue las instrucciones para establecer tu contraseña y completar el registro de tu cuenta.
+				</p>
+			</div>
+
+			{/* Bottom: version */}
+			<p className="text-white/30 text-xs">
+				Patria S.A. · Acceso restringido
+			</p>
+		</div>
+	);
+}
+
+// ── Shared page shell ────────────────────────────────────────────────────────
+function PageShell({ children }: { children: React.ReactNode }) {
+	return (
+		<div className="flex h-screen overflow-hidden">
+			<BrandPanel />
+			<div className="flex-1 flex items-center justify-center bg-background px-6 py-10">
+				{children}
+			</div>
+		</div>
+	);
+}
+
+// ── Loading state ────────────────────────────────────────────────────────────
+function LoadingState() {
+	return (
+		<PageShell>
+			<div className="w-full max-w-sm space-y-6">
+				<div className="lg:hidden flex justify-center">
+					<Image src="/patria-horizontal.png" alt="Patria S.A." width={180} height={46}
+						style={{ height: "2.75rem", width: "auto" }} />
+				</div>
+				<div className="flex flex-col items-center gap-3 text-center">
+					<Loader2 className="h-8 w-8 animate-spin text-primary" />
+					<p className="text-sm text-muted-foreground">Validando invitación…</p>
+				</div>
+			</div>
+		</PageShell>
+	);
+}
+
+// ── Invalid invite state ─────────────────────────────────────────────────────
+function InvalidInviteState({ onGoToLogin }: { onGoToLogin: () => void }) {
+	return (
+		<PageShell>
+			<div className="w-full max-w-sm space-y-6">
+				<div className="lg:hidden flex justify-center">
+					<Image src="/patria-horizontal.png" alt="Patria S.A." width={180} height={46}
+						style={{ height: "2.75rem", width: "auto" }} />
+				</div>
+
+				<div className="space-y-1">
+					<h1 className="text-xl font-semibold text-foreground">Enlace inválido</h1>
+					<p className="text-sm text-muted-foreground">
+						No se pudo verificar la invitación.
+					</p>
+				</div>
+
+				<Card>
+					<CardContent className="p-6 space-y-4">
+						<div className="flex items-start gap-3 rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3">
+							<AlertTriangle className="h-5 w-5 text-destructive mt-0.5 shrink-0" />
+							<div className="space-y-1">
+								<p className="text-sm font-medium text-destructive">Invitación no válida</p>
+								<p className="text-xs text-muted-foreground">
+									Este enlace de invitación es inválido, ha expirado o ya fue utilizado. Contacta al administrador del sistema para obtener una nueva invitación.
+								</p>
+							</div>
+						</div>
+						<Button onClick={onGoToLogin} className="w-full">
+							Volver al inicio de sesión
+						</Button>
+					</CardContent>
+				</Card>
+			</div>
+		</PageShell>
+	);
+}
+
+// ── Main signup content ──────────────────────────────────────────────────────
 function SignUpContent() {
 	const router = useRouter();
 	const searchParams = useSearchParams();
-	// Extract query parameters from the URL. The invitation email template
-	// includes `confirmation_url` and `email`. If either is missing we
-	// immediately redirect back to the login page.
 	const confirmationUrl = searchParams.get("confirmation_url");
 	const emailParam = searchParams.get("email");
 
@@ -61,11 +172,7 @@ function SignUpContent() {
 		},
 	});
 
-	// Validate invitation token on component mount
 	useEffect(() => {
-		// Immediately validate the confirmation URL and token when the component
-		// mounts. If the token is valid a session will be created and we show
-		// the password form. Otherwise we redirect to the login page.
 		const verifyInvitation = async () => {
 			if (!confirmationUrl || !emailParam) {
 				toast.error("Enlace de invitación inválido");
@@ -75,101 +182,46 @@ function SignUpContent() {
 
 			try {
 				const supabase = createClient();
-				// Parse the token_hash (or token) and type from the confirmation URL.
 				const url = new URL(confirmationUrl);
 				const tokenHash = url.searchParams.get("token_hash") || url.searchParams.get("token");
 				const type = url.searchParams.get("type") || "invite";
 
-				if (!tokenHash) {
-					throw new Error("Token faltante");
-				}
+				if (!tokenHash) throw new Error("Token faltante");
 
-				// Call verifyOtp to exchange the invite token for a session. According
-				// to Supabase docs the type for email invitations is `invite`.
 				const { data, error } = await supabase.auth.verifyOtp({
 					type: (type as "invite") || "invite",
 					token_hash: tokenHash,
 				});
-				// If the invitation is invalid throw
+
 				if (error || !data?.user) {
 					throw error || new Error("Token de invitación inválido o expirado");
 				}
-				// sets the email on the form
+
 				setInviteEmail(emailParam);
 				form.setValue("email", emailParam);
-
-				/* old verification code against invitation tables
-				const { data: invitation, error } = await supabase
-					.from("invitations")
-					.select("email, expires_at, used_at")
-					.eq("token", token)
-					.single();
-
-				if (error || !invitation) {
-					toast.error("Invalid or expired invitation");
-					router.push("/auth/login");
-					return;
-				}
-
-				if (invitation.used_at) {
-					toast.error("This invitation has already been used");
-					router.push("/auth/login");
-					return;
-				}
-
-				if (new Date(invitation.expires_at) < new Date()) {
-					toast.error("This invitation has expired");
-					router.push("/auth/login");
-					return;
-				}
-
-				// Check if user already exists
-				const { data: existingUser } = await supabase.auth.admin.listUsers();
-				const userExists = existingUser?.users?.some((u) => u.email === invitation.email);
-
-				if (userExists) {
-					toast.error("An account with this email already exists");
-					router.push("/auth/login");
-					return;
-				}
-
-				// Use email from URL parameter if available, otherwise use invitation email
-				const emailToUse = emailFromUrl || invitation.email;
-				form.setValue("email", emailToUse);*/
-				//confirm the invitation is valid flag
 				setIsValidInvite(true);
 			} catch (err) {
 				console.error("Error verifying invitation", err);
-				toast.error("This invitation link is invalid or has expired.");
-				router.push("/auth/login");
+				setIsValidInvite(false);
 			} finally {
 				setIsLoading(false);
 			}
 		};
 
 		verifyInvitation();
-	}, [confirmationUrl, emailParam, router, form]); //aded form just to get rid of linter warning
+	}, [confirmationUrl, emailParam, router, form]);
 
-	// Handle password submission.
-	/* 
-	After verifying the invitation token the user has a session and we only need to set the new password. 
-	If successful redirect back to the login page.
-    */
 	const onSubmit = async (values: z.infer<typeof formSchema>) => {
 		setIsSubmitting(true);
 		try {
 			const supabase = createClient();
 
-			// Update the user's password and metadata
 			const { error, data } = await supabase.auth.updateUser({
 				password: values.password,
 			});
-			// Throw if there is an error updating the password
-			if (error) {
-				throw error;
-			}
 
-			// Update the profile with full_name
+			if (error) throw error;
+
 			if (data?.user) {
 				const { error: profileError } = await supabase
 					.from("profiles")
@@ -178,11 +230,9 @@ function SignUpContent() {
 
 				if (profileError) {
 					console.error("Failed to update profile with full name:", profileError);
-					// Don't throw as password is already set
 				}
 			}
 
-			// Mark invitation as used via server action (bypasses RLS)
 			if (emailParam) {
 				const result = await marcarInvitacionUsada(emailParam);
 				if (!result.success) {
@@ -190,7 +240,7 @@ function SignUpContent() {
 				}
 			}
 
-			toast.success("Contraseña actualizada exitosamente. Ahora puedes iniciar sesión.");
+			toast.success("Cuenta configurada exitosamente. Ahora puedes iniciar sesión.");
 			router.push("/auth/login");
 		} catch (err: unknown) {
 			console.error("Failed to set password", err);
@@ -201,148 +251,137 @@ function SignUpContent() {
 		}
 	};
 
-	// Loading state while verifying the invite token
-	if (isLoading) {
-		return (
-			<div className="flex justify-center items-center min-h-screen">
-				<div className="flex items-center space-x-2">
-					<Loader2 className="h-4 w-4 animate-spin" />
-					<span>Validando invitación...</span>
-				</div>
-			</div>
-		);
-	}
+	if (isLoading) return <LoadingState />;
+	if (!isValidInvite) return <InvalidInviteState onGoToLogin={() => router.push("/auth/login")} />;
 
-	// If invite is invalid show an error card
-	if (!isValidInvite) {
-		return (
-			<div className="flex justify-center items-center min-h-screen">
-				<Card className="w-full max-w-md">
-					<CardHeader className="text-center">
-						<div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-100">
-							<AlertTriangle className="h-6 w-6 text-red-600" />
-						</div>
-						<CardTitle>Invitación Inválida</CardTitle>
-						<CardDescription>
-							Este enlace de invitación es inválido, ha expirado o ya ha sido utilizado.
-						</CardDescription>
-					</CardHeader>
-					<CardContent>
-						<Button onClick={() => router.push("/auth/login")} className="w-full">
-							Ir al Inicio de Sesión
-						</Button>
+	return (
+		<PageShell>
+			<div className="w-full max-w-sm space-y-6">
+
+				{/* Mobile-only logo */}
+				<div className="lg:hidden flex justify-center">
+					<Image src="/patria-horizontal.png" alt="Patria S.A." width={180} height={46}
+						style={{ height: "2.75rem", width: "auto" }} />
+				</div>
+
+				{/* Heading */}
+				<div className="space-y-1">
+					<h1 className="text-xl font-semibold text-foreground">Completa tu registro</h1>
+					<p className="text-sm text-muted-foreground">
+						Establece tu nombre y contraseña para activar tu acceso.
+					</p>
+				</div>
+
+				{/* Form card */}
+				<Card>
+					<CardContent className="p-6">
+						<Form {...form}>
+							<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+
+								{/* Email (read-only) */}
+								<FormField
+									control={form.control}
+									name="email"
+									render={({ field }) => (
+										<FormItem>
+											<FormLabel>Correo electrónico</FormLabel>
+											<FormControl>
+												<Input
+													type="email"
+													disabled
+													{...field}
+													className="bg-muted text-muted-foreground"
+												/>
+											</FormControl>
+											<p className="text-xs text-muted-foreground mt-1">
+												Correo asignado por el administrador. No puede modificarse.
+											</p>
+											<FormMessage />
+										</FormItem>
+									)}
+								/>
+
+								{/* Full name */}
+								<FormField
+									control={form.control}
+									name="fullName"
+									render={({ field }) => (
+										<FormItem>
+											<FormLabel>Nombre completo</FormLabel>
+											<FormControl>
+												<Input
+													type="text"
+													placeholder="Juan Pérez García"
+													autoComplete="name"
+													{...field}
+												/>
+											</FormControl>
+											<FormMessage />
+										</FormItem>
+									)}
+								/>
+
+								{/* Password */}
+								<FormField
+									control={form.control}
+									name="password"
+									render={({ field }) => (
+										<FormItem>
+											<FormLabel>Contraseña</FormLabel>
+											<FormControl>
+												<PasswordInput autoComplete="new-password" {...field} />
+											</FormControl>
+											<p className="text-xs text-muted-foreground mt-1">
+												Mínimo 8 caracteres, mayúscula, minúscula, número y carácter especial.
+											</p>
+											<FormMessage />
+										</FormItem>
+									)}
+								/>
+
+								{/* Confirm password */}
+								<FormField
+									control={form.control}
+									name="confirmPassword"
+									render={({ field }) => (
+										<FormItem>
+											<FormLabel>Confirmar contraseña</FormLabel>
+											<FormControl>
+												<PasswordInput autoComplete="new-password" {...field} />
+											</FormControl>
+											<FormMessage />
+										</FormItem>
+									)}
+								/>
+
+								{/* Submit */}
+								<Button type="submit" className="w-full mt-1" disabled={isSubmitting}>
+									{isSubmitting ? (
+										<>
+											<Loader2 className="h-4 w-4 animate-spin" />
+											Configurando cuenta…
+										</>
+									) : (
+										<>
+											<CheckCircle2 className="h-4 w-4" />
+											Activar cuenta
+										</>
+									)}
+								</Button>
+
+							</form>
+						</Form>
 					</CardContent>
 				</Card>
+
 			</div>
-		);
-	}
-
-	// Once the token is verified render the password form.
-	return (
-		<div className="flex justify-center items-center min-h-screen p-4">
-			<Card className="w-full max-w-md">
-				<CardHeader>
-					<CardTitle className="text-2xl text-center">Completa tu Registro</CardTitle>
-					<CardDescription className="text-center">
-						Has sido invitado a unirte al sistema. Por favor configura tu contraseña para completar
-						el registro.
-					</CardDescription>
-				</CardHeader>
-				<CardContent>
-					<Form {...form}>
-						<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-							<FormField
-								control={form.control}
-								name="email"
-								render={({ field }) => (
-									<FormItem>
-										<FormLabel>Correo Electrónico</FormLabel>
-										<FormControl>
-											<Input type="email" disabled={true} {...field} className="bg-muted" />
-										</FormControl>
-										<FormDescription>Este correo fue proporcionado en tu invitación</FormDescription>
-										<FormMessage />
-									</FormItem>
-								)}
-							/>
-
-							<FormField
-								control={form.control}
-								name="fullName"
-								render={({ field }) => (
-									<FormItem>
-										<FormLabel>Nombre Completo</FormLabel>
-										<FormControl>
-											<Input type="text" placeholder="Juan Pérez García" {...field} />
-										</FormControl>
-										<FormDescription>Ingresa tu nombre completo</FormDescription>
-										<FormMessage />
-									</FormItem>
-								)}
-							/>
-
-							<FormField
-								control={form.control}
-								name="password"
-								render={({ field }) => (
-									<FormItem>
-										<FormLabel>Contraseña</FormLabel>
-										<FormControl>
-											<PasswordInput autoComplete="new-password" {...field} />
-										</FormControl>
-										<FormDescription>
-											Crea una contraseña segura con al menos 8 caracteres
-										</FormDescription>
-										<FormMessage />
-									</FormItem>
-								)}
-							/>
-
-							<FormField
-								control={form.control}
-								name="confirmPassword"
-								render={({ field }) => (
-									<FormItem>
-										<FormLabel>Confirmar Contraseña</FormLabel>
-										<FormControl>
-											<PasswordInput autoComplete="new-password" {...field} />
-										</FormControl>
-										<FormDescription>Vuelve a ingresar tu contraseña para confirmar</FormDescription>
-										<FormMessage />
-									</FormItem>
-								)}
-							/>
-
-							<Button type="submit" className="w-full" disabled={isSubmitting}>
-								{isSubmitting ? (
-									<>
-										<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-										Configurando Contraseña...
-									</>
-								) : (
-									"Completar Registro"
-								)}
-							</Button>
-						</form>
-					</Form>
-				</CardContent>
-			</Card>
-		</div>
+		</PageShell>
 	);
 }
 
 export default function SignUp() {
 	return (
-		<Suspense
-			fallback={
-				<div className="flex justify-center items-center min-h-screen">
-					<div className="flex items-center space-x-2">
-						<Loader2 className="h-4 w-4 animate-spin" />
-						<span>Cargando...</span>
-					</div>
-				</div>
-			}
-		>
+		<Suspense fallback={<LoadingState />}>
 			<SignUpContent />
 		</Suspense>
 	);

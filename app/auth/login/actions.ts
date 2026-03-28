@@ -37,7 +37,7 @@ function getUserRoleFromToken(accessToken: string): string | null {
 	}
 }
 
-export async function login(formData: FormData) {
+export async function login(formData: FormData): Promise<{ error: string } | void> {
 	const supabase = await createClient();
 
 	// Extract and validate form data
@@ -50,7 +50,7 @@ export async function login(formData: FormData) {
 	const validationResult = loginSchema.safeParse(rawData);
 
 	if (!validationResult.success) {
-		redirect("/auth/error?error=Invalid input data");
+		return { error: "Datos de acceso inválidos." };
 	}
 
 	const { email, password, otp } = validationResult.data;
@@ -62,12 +62,11 @@ export async function login(formData: FormData) {
 	});
 
 	if (authError) {
-		const errorMsg = encodeURIComponent(authError.message);
-		redirect(`/auth/error?error=${errorMsg}`);
+		return { error: "Correo o contraseña incorrectos." };
 	}
 
 	if (!authData.user || !authData.session) {
-		redirect("/auth/error?error=Authentication%20failed");
+		return { error: "Error de autenticación. Intenta de nuevo." };
 	}
 
 	// Obtener el rol directamente del JWT (sin consulta adicional a BD)
@@ -92,8 +91,7 @@ export async function login(formData: FormData) {
 		);
 
 		if (upsertProfileError) {
-			const errorMsg = encodeURIComponent(upsertProfileError.message);
-			redirect(`/auth/error?error=${errorMsg}`);
+			return { error: "Error al configurar el perfil de usuario." };
 		}
 
 		userRole = "invitado";

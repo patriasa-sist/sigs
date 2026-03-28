@@ -38,7 +38,7 @@ export default async function ManageInvitationsPage() {
 				label: "Usada",
 				variant: "secondary" as const,
 				icon: CheckCircle,
-				color: "text-green-600",
+				color: "text-accent",
 			};
 		}
 		if (new Date(invitation.expires_at) < new Date()) {
@@ -46,14 +46,14 @@ export default async function ManageInvitationsPage() {
 				label: "Expirada",
 				variant: "destructive" as const,
 				icon: XCircle,
-				color: "text-red-600",
+				color: "text-destructive",
 			};
 		}
 		return {
 			label: "Pendiente",
 			variant: "default" as const,
 			icon: Clock,
-			color: "text-blue-600",
+			color: "text-primary",
 		};
 	};
 
@@ -62,8 +62,8 @@ export default async function ManageInvitationsPage() {
 			{/* Header */}
 			<div className="flex items-center gap-4">
 				<div>
-					<h1 className="text-3xl font-bold text-gray-900">Gestión de Invitaciones</h1>
-					<p className="text-gray-600 mt-1">Administrar registros de invitaciones</p>
+					<h1 className="text-2xl font-semibold text-foreground">Gestión de Invitaciones</h1>
+					<p className="text-muted-foreground text-sm mt-1">Administrar registros de invitaciones</p>
 				</div>
 			</div>
 
@@ -71,14 +71,14 @@ export default async function ManageInvitationsPage() {
 			<InviteForm />
 
 			{/* Info Alert */}
-			<div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+			<div className="border border-border rounded-lg p-4 bg-secondary/40">
 				<div className="flex gap-3 items-start">
-					<AlertCircle className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5" />
+					<AlertCircle className="h-5 w-5 text-muted-foreground mt-0.5 shrink-0" />
 					<div className="flex-1">
-						<h3 className="text-sm font-medium text-blue-900 dark:text-blue-100">
+						<h3 className="text-sm font-medium text-foreground">
 							Acerca de la Gestión de Invitaciones
 						</h3>
-						<p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
+						<p className="text-sm text-muted-foreground mt-1">
 							Eliminar una invitación removerá tanto el registro de invitación como el perfil de usuario
 							asociado si el usuario no ha completado su registro. Esta acción no se puede deshacer.
 						</p>

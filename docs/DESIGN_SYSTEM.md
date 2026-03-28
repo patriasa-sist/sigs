@@ -286,6 +286,9 @@ Shadow color should be slightly tinted toward slate, not pure black:
 - [x] Siniestros modals
 - [x] New siniestros form
 
+- [x] Login
+- [x] Register
+
 - [ ] Administración
 
 ### Phase 4: Polish

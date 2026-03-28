@@ -23,8 +23,8 @@ export default async function PermisosPage() {
 			<div className="flex items-center gap-4">
 				<Shield className="h-8 w-8 text-primary" />
 				<div>
-					<h1 className="text-3xl font-bold text-gray-900">Gestión de Permisos</h1>
-					<p className="text-gray-500">
+					<h1 className="text-2xl font-semibold text-foreground">Gestión de Permisos</h1>
+					<p className="text-muted-foreground text-sm mt-1">
 						Configura qué puede hacer cada rol y asigna permisos extra a usuarios
 					</p>
 				</div>

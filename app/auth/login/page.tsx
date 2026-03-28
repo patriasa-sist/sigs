@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
 import { InputOTP, InputOTPGroup, InputOTPSeparator, InputOTPSlot } from "@/components/ui/input-otp";
 import { Card, CardContent } from "@/components/ui/card";
-import { Loader2, ShieldCheck } from "lucide-react";
+import { AlertCircle, Loader2, ShieldCheck } from "lucide-react";
 import Image from "next/image";
 import { login } from "./actions";
 
@@ -28,6 +28,7 @@ const formSchema = z.object({
 
 export default function LoginPage() {
 	const [isLoading, setIsLoading] = useState(false);
+	const [serverError, setServerError] = useState<string | null>(null);
 
 	const form = useForm<z.infer<typeof formSchema>>({
 		resolver: zodResolver(formSchema),
@@ -36,12 +37,16 @@ export default function LoginPage() {
 
 	async function onSubmit(values: z.infer<typeof formSchema>) {
 		setIsLoading(true);
+		setServerError(null);
 		try {
 			const formData = new FormData();
 			formData.append("email", values.email);
 			formData.append("password", values.password);
 			formData.append("otp", values.otp);
-			await login(formData);
+			const result = await login(formData);
+			if (result?.error) {
+				setServerError(result.error);
+			}
 		} finally {
 			setIsLoading(false);
 		}
@@ -184,6 +189,14 @@ export default function LoginPage() {
 											</FormItem>
 										)}
 									/>
+
+									{/* Server error */}
+									{serverError && (
+										<div className="flex items-center gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2.5 text-sm text-destructive">
+											<AlertCircle className="h-4 w-4 shrink-0" />
+											<span>{serverError}</span>
+										</div>
+									)}
 
 									{/* Submit */}
 									<Button

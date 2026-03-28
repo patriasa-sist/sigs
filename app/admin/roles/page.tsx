@@ -25,7 +25,7 @@ export default async function AdminRolesPage() {
 				<div className="w-full">
 					<Card>
 						<CardHeader>
-							<CardTitle className="text-red-600">Error al Cargar Usuarios</CardTitle>
+							<CardTitle className="text-destructive">Error al Cargar Usuarios</CardTitle>
 						</CardHeader>
 						<CardContent>
 							<p className="text-sm text-muted-foreground">
@@ -52,8 +52,8 @@ export default async function AdminRolesPage() {
 			<div className="w-full">
 				<div className="flex items-center justify-between">
 					<div>
-						<h1 className="text-3xl font-bold text-gray-900">Gestión de Roles de Usuario</h1>
-						<p className="text-gray-600 mt-1">Administrar permisos y roles de usuarios</p>
+						<h1 className="text-2xl font-semibold text-foreground">Gestión de Roles de Usuario</h1>
+						<p className="text-muted-foreground text-sm mt-1">Administrar permisos y roles de usuarios</p>
 					</div>
 					<Badge variant="secondary" className="px-3 py-1">
 						<Shield className="w-4 h-4 mr-1" />
@@ -65,13 +65,13 @@ export default async function AdminRolesPage() {
 			{/* Statistics Cards */}
 			<div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
 				{/* Total Users Card */}
-				<Card className="bg-gradient-to-br from-purple-50 to-white">
+				<Card>
 					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-4">
 						<CardTitle className="text-xs font-medium">Total</CardTitle>
-						<Users className="h-3 w-3 text-purple-600" />
+						<Users className="h-3 w-3 text-muted-foreground" />
 					</CardHeader>
 					<CardContent className="pb-3">
-						<div className="text-xl font-bold text-purple-600">{totalUsers}</div>
+						<div className="text-xl font-semibold text-foreground">{totalUsers}</div>
 					</CardContent>
 				</Card>
 
@@ -80,13 +80,13 @@ export default async function AdminRolesPage() {
 					const config = getRoleConfig(role);
 					const Icon = config.icon;
 					return (
-						<Card key={role} className={`bg-gradient-to-br ${config.colorClasses.gradient}`}>
+						<Card key={role}>
 							<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-4">
 								<CardTitle className="text-xs font-medium">{getRoleLabel(role)}</CardTitle>
-								<Icon className={`h-3 w-3 ${config.colorClasses.text}`} />
+								<Icon className="h-3 w-3 text-muted-foreground" />
 							</CardHeader>
 							<CardContent className="pb-3">
-								<div className={`text-xl font-bold ${config.colorClasses.text}`}>
+								<div className="text-xl font-semibold text-foreground">
 									{roleCounts[role]}
 								</div>
 							</CardContent>
@@ -103,15 +103,15 @@ export default async function AdminRolesPage() {
 				</CardHeader>
 				<CardContent>
 					{users && users.length > 0 ? (
-						<div className="space-y-4">
+						<div className="space-y-2">
 							{users.map((user) => (
 								<div
 									key={user.id}
-									className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors"
+									className="flex items-center justify-between px-4 py-3 border border-border rounded-lg hover:bg-secondary/50 transition-colors"
 								>
 									<div className="space-y-1">
 										<div className="flex items-center space-x-3">
-											<div className="font-medium text-sm">{user.email}</div>
+											<div className="font-medium text-sm text-foreground">{user.email}</div>
 											<Badge
 												variant={user.role === "admin" ? "default" : "secondary"}
 												className="text-xs"
@@ -166,15 +166,15 @@ export default async function AdminRolesPage() {
 			</Card>
 
 			{/* Security Notice */}
-			<Card className="border-yellow-200 bg-yellow-50">
+			<Card>
 				<CardHeader>
-					<CardTitle className="text-yellow-800 text-sm flex items-center">
-						<Shield className="w-4 h-4 mr-2" />
+					<CardTitle className="text-sm flex items-center gap-2">
+						<Shield className="w-4 h-4 text-muted-foreground" />
 						Aviso de Seguridad
 					</CardTitle>
 				</CardHeader>
 				<CardContent>
-					<div className="text-sm text-yellow-700 space-y-2">
+					<div className="text-sm text-muted-foreground space-y-1.5">
 						<p>• No puedes remover tus propios privilegios de admin para prevenir bloqueo del sistema</p>
 						<p>• Todos los cambios de roles son registrados y auditados automáticamente</p>
 						<p>• Los triggers de base de datos previenen intentos de escalación no autorizados</p>

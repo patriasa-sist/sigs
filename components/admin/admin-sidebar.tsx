@@ -2,77 +2,45 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Users, Mail, Shield, FileText, BarChart3, FileSpreadsheet, Building2, Layers, Package, Tag, LayoutDashboard } from "lucide-react";
 import {
-	Accordion,
-	AccordionContent,
-	AccordionItem,
-	AccordionTrigger,
-} from "@/components/ui/accordion";
+	Users, Mail, Shield, Lock, UsersRound, ArrowRightLeft,
+	BarChart3, Building2, Layers, Package, Tag, LayoutDashboard,
+	ChevronLeft, Settings, UserCircle,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const navigationItems = [
+const navigationGroups = [
 	{
-		title: "Administración de Usuarios",
-		icon: Users,
+		label: "Usuarios y Acceso",
 		items: [
-			{
-				title: "Gestionar Usuarios",
-				href: "/admin/users",
-				icon: Users,
-			},
-			{
-				title: "Gestionar Roles",
-				href: "/admin/roles",
-				icon: Shield,
-			},
-			{
-				title: "Gestionar Invitaciones",
-				href: "/admin/invitations",
-				icon: Mail,
-			},
+			{ href: "/admin/users", icon: Users, label: "Usuarios" },
+			{ href: "/admin/roles", icon: Shield, label: "Roles" },
+			{ href: "/admin/invitations", icon: Mail, label: "Invitaciones" },
+			{ href: "/admin/permisos", icon: Lock, label: "Permisos" },
 		],
 	},
 	{
-		title: "Reportes",
-		icon: BarChart3,
+		label: "Equipos y Datos",
 		items: [
-			{
-				title: "Producción Mensual",
-				href: "/gerencia/reportes",
-				icon: FileSpreadsheet,
-			},
+			{ href: "/admin/equipos", icon: UsersRound, label: "Equipos" },
+			{ href: "/admin/transferencias", icon: ArrowRightLeft, label: "Transferencias" },
+			{ href: "/admin/dashboard-equipos", icon: BarChart3, label: "Dashboard Equipos" },
 		],
 	},
 	{
-		title: "Seguros",
-		icon: FileText,
+		label: "Catálogos de Seguros",
 		items: [
-			{
-				title: "Panel General",
-				href: "/admin/seguros",
-				icon: LayoutDashboard,
-			},
-			{
-				title: "Aseguradoras",
-				href: "/admin/seguros/aseguradoras",
-				icon: Building2,
-			},
-			{
-				title: "Ramos de Seguros",
-				href: "/admin/seguros/ramos",
-				icon: Layers,
-			},
-			{
-				title: "Productos",
-				href: "/admin/seguros/productos",
-				icon: Package,
-			},
-			{
-				title: "Categorías",
-				href: "/admin/seguros/categorias",
-				icon: Tag,
-			},
+			{ href: "/admin/seguros", icon: LayoutDashboard, label: "Panel General" },
+			{ href: "/admin/seguros/aseguradoras", icon: Building2, label: "Aseguradoras" },
+			{ href: "/admin/seguros/ramos", icon: Layers, label: "Ramos" },
+			{ href: "/admin/seguros/categorias", icon: Tag, label: "Categorías" },
+			{ href: "/admin/seguros/productos", icon: Package, label: "Productos" },
+		],
+	},
+	{
+		label: "Gestión Comercial",
+		items: [
+			{ href: "/admin/directores-cartera", icon: UserCircle, label: "Directores de Cartera" },
 		],
 	},
 ];
@@ -81,55 +49,54 @@ export function AdminSidebar() {
 	const pathname = usePathname();
 
 	return (
-		<aside className="w-64 border-r bg-muted/40 p-4">
-			<div className="mb-6">
-				<h2 className="text-lg font-semibold px-4">Panel de Administración</h2>
+		<aside className="w-60 shrink-0 flex flex-col bg-card border-r border-border overflow-y-auto">
+			{/* Header */}
+			<div className="px-4 py-4 border-b border-border">
+				<div className="flex items-center gap-2 mb-3">
+					<Settings className="h-4 w-4 text-primary" />
+					<span className="text-sm font-semibold text-foreground">Administración</span>
+				</div>
+				<Link
+					href="/"
+					className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+				>
+					<ChevronLeft className="h-3 w-3" />
+					Volver al sistema
+				</Link>
 			</div>
 
-			<Accordion type="single" collapsible defaultValue="item-0" className="space-y-2">
-				{navigationItems.map((section, index) => (
-					<AccordionItem
-						key={index}
-						value={`item-${index}`}
-						className="border rounded-lg px-2"
-					>
-						<AccordionTrigger
-							className="hover:no-underline py-2 px-2"
-						>
-							<div className="flex items-center gap-2">
-								<section.icon className="h-4 w-4" />
-								<span className="text-sm font-medium">{section.title}</span>
-							</div>
-						</AccordionTrigger>
-						<AccordionContent className="pb-2 pt-1">
-							<div className="space-y-1">
-								{section.items.map((item) => {
-									const Icon = item.icon;
-									const isActive = pathname === item.href;
-
-									return (
-										<Link
-											key={item.href}
-											href={item.href}
-											prefetch={true}
-											className={cn(
-												"flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors",
-												isActive
-													? "bg-primary text-primary-foreground"
-													: "hover:bg-accent hover:text-accent-foreground"
-											)}
-										>
-											<Icon className="h-4 w-4" />
-											<span>{item.title}</span>
-										</Link>
-									);
-								})}
-							</div>
-						</AccordionContent>
-					</AccordionItem>
+			{/* Navigation */}
+			<nav className="flex-1 px-3 py-4 space-y-5">
+				{navigationGroups.map((group) => (
+					<div key={group.label}>
+						<p className="px-2 mb-1.5 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+							{group.label}
+						</p>
+						<div className="space-y-0.5">
+							{group.items.map((item) => {
+								const Icon = item.icon;
+								const isActive = pathname === item.href;
+								return (
+									<Link
+										key={item.href}
+										href={item.href}
+										prefetch={true}
+										className={cn(
+											"flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm transition-colors",
+											isActive
+												? "bg-primary/10 text-primary font-medium"
+												: "text-muted-foreground hover:text-foreground hover:bg-secondary"
+										)}
+									>
+										<Icon className="h-4 w-4 shrink-0" />
+										<span>{item.label}</span>
+									</Link>
+								);
+							})}
+						</div>
+					</div>
 				))}
-			</Accordion>
-
+			</nav>
 		</aside>
 	);
 }

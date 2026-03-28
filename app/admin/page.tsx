@@ -1,18 +1,8 @@
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-	Users,
-	Mail,
-	ShieldCheck,
-	Lock,
-	UsersRound,
-	ArrowRightLeft,
-	BarChart3,
-	Building2,
-	Layers,
-	Tag,
-	Package,
-	UserCircle,
+	Users, Mail, ShieldCheck, Lock, UsersRound, ArrowRightLeft,
+	BarChart3, Building2, Layers, Tag, Package, UserCircle, Settings,
 } from "lucide-react";
 
 const adminSections = [
@@ -112,29 +102,40 @@ const adminSections = [
 
 export default async function AdminPage() {
 	return (
-		<div className="flex-1 w-full space-y-6">
-			<div>
-				<h1 className="text-2xl font-bold">Panel de Administración</h1>
-				<p className="text-muted-foreground text-sm mt-1">
-					Gestiona usuarios, equipos, permisos y catálogos del sistema
-				</p>
+		<div className="max-w-7xl mx-auto space-y-8">
+			{/* Page header */}
+			<div className="flex items-center gap-3 pb-4 border-b border-border">
+				<div className="p-2 rounded-md bg-primary/10">
+					<Settings className="h-5 w-5 text-primary" />
+				</div>
+				<div>
+					<h1 className="text-2xl font-semibold text-foreground">Panel de Administración</h1>
+					<p className="text-sm text-muted-foreground mt-0.5">
+						Gestiona usuarios, equipos, permisos y catálogos del sistema
+					</p>
+				</div>
 			</div>
 
+			{/* Sections */}
 			{adminSections.map((section) => (
 				<div key={section.title}>
-					<h2 className="text-lg font-semibold mb-3">{section.title}</h2>
+					<h2 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3 px-0.5">
+						{section.title}
+					</h2>
 					<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
 						{section.items.map((item) => (
 							<Link key={item.href} href={item.href}>
-								<Card className="hover:border-primary/50 hover:shadow-sm transition-all cursor-pointer h-full">
+								<Card className="hover:border-primary/30 hover:shadow-md transition-all cursor-pointer h-full">
 									<CardHeader className="pb-2">
-										<CardTitle className="text-base flex items-center gap-2">
-											<item.icon className="h-4 w-4 text-primary" />
-											{item.label}
+										<CardTitle className="text-sm font-medium flex items-center gap-2.5">
+											<item.icon className="h-4 w-4 text-primary shrink-0" />
+											<span className="text-foreground">{item.label}</span>
 										</CardTitle>
 									</CardHeader>
 									<CardContent>
-										<CardDescription>{item.description}</CardDescription>
+										<CardDescription className="text-xs leading-relaxed">
+											{item.description}
+										</CardDescription>
 									</CardContent>
 								</Card>
 							</Link>

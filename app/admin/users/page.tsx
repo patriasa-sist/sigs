@@ -51,8 +51,8 @@ export default async function ManageUsersPage() {
 			{/* Header */}
 			<div className="flex items-center gap-4">
 				<div>
-					<h1 className="text-3xl font-bold text-gray-900">Gestión de Usuarios</h1>
-					<p className="text-gray-600 mt-1">Administrar información de usuarios</p>
+					<h1 className="text-2xl font-semibold text-foreground">Gestión de Usuarios</h1>
+					<p className="text-muted-foreground text-sm mt-1">Administrar información de usuarios</p>
 				</div>
 			</div>
 
@@ -64,7 +64,7 @@ export default async function ManageUsersPage() {
 						<Users className="h-4 w-4 text-muted-foreground" />
 					</CardHeader>
 					<CardContent>
-						<div className="text-2xl font-bold">{totalUsers || 0}</div>
+						<div className="text-2xl font-semibold text-foreground">{totalUsers || 0}</div>
 						<p className="text-xs text-muted-foreground">Todos los usuarios registrados</p>
 					</CardContent>
 				</Card>
@@ -75,7 +75,7 @@ export default async function ManageUsersPage() {
 						<Shield className="h-4 w-4 text-muted-foreground" />
 					</CardHeader>
 					<CardContent>
-						<div className="text-2xl font-bold text-blue-600">{adminUsers || 0}</div>
+						<div className="text-2xl font-semibold text-primary">{adminUsers || 0}</div>
 						<p className="text-xs text-muted-foreground">Usuarios administradores</p>
 					</CardContent>
 				</Card>
@@ -86,7 +86,7 @@ export default async function ManageUsersPage() {
 						<User className="h-4 w-4 text-muted-foreground" />
 					</CardHeader>
 					<CardContent>
-						<div className="text-2xl font-bold text-green-600">{regularUsers || 0}</div>
+						<div className="text-2xl font-semibold text-accent">{regularUsers || 0}</div>
 						<p className="text-xs text-muted-foreground">Usuarios estándar</p>
 					</CardContent>
 				</Card>
@@ -143,8 +143,8 @@ export default async function ManageUsersPage() {
 												</Badge>
 											</TableCell>
 											<TableCell>
-												<div className="flex items-center gap-2 text-sm">
-													<Calendar className="h-4 w-4 text-muted-foreground" />
+												<div className="flex items-center gap-2 text-sm text-muted-foreground">
+													<Calendar className="h-4 w-4" />
 													{new Date(user.created_at).toLocaleDateString()}
 												</div>
 											</TableCell>
