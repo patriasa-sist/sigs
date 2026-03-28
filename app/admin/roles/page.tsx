@@ -8,11 +8,9 @@ import { UserRoleManager } from "@/app/admin/roles/components/UserRoleManager";
 import { VALID_ROLES, getRoleConfig, getRoleLabel } from "@/utils/auth/roles";
 
 export default async function AdminRolesPage() {
-	// Ensure user is admin
 	const adminProfile = await requireAdmin();
 	const supabase = await createClient();
 
-	// Get all users with their profiles
 	const { data: users, error } = await supabase
 		.from("profiles")
 		.select("id, email, role, created_at, updated_at")
@@ -22,144 +20,134 @@ export default async function AdminRolesPage() {
 		console.error("Error fetching users:", error);
 		return (
 			<div className="flex-1 w-full flex flex-col gap-8">
-				<div className="w-full">
-					<Card>
-						<CardHeader>
-							<CardTitle className="text-destructive">Error al Cargar Usuarios</CardTitle>
-						</CardHeader>
-						<CardContent>
-							<p className="text-sm text-muted-foreground">
-								No se pudo cargar los datos de usuario. Por favor verifica tu conexión a la base de datos y permisos.
-							</p>
-						</CardContent>
-					</Card>
-				</div>
+				<Card>
+					<CardHeader>
+						<CardTitle className="text-destructive">Error al Cargar Usuarios</CardTitle>
+					</CardHeader>
+					<CardContent>
+						<p className="text-sm text-muted-foreground">
+							No se pudo cargar los datos de usuario. Verifica la conexión a la base de datos.
+						</p>
+					</CardContent>
+				</Card>
 			</div>
 		);
 	}
 
-	// Calculate statistics
 	const totalUsers = users?.length || 0;
-	// Generate role counts dynamically
 	const roleCounts = VALID_ROLES.reduce((acc, role) => {
-		acc[role] = users?.filter((user) => user.role === role).length || 0;
+		acc[role] = users?.filter((u) => u.role === role).length || 0;
 		return acc;
 	}, {} as Record<string, number>);
 
 	return (
-		<div className="flex-1 w-full flex flex-col gap-8">
+		<div className="flex-1 w-full flex flex-col gap-6">
 			{/* Header */}
-			<div className="w-full">
-				<div className="flex items-center justify-between">
-					<div>
-						<h1 className="text-2xl font-semibold text-foreground">Gestión de Roles de Usuario</h1>
-						<p className="text-muted-foreground text-sm mt-1">Administrar permisos y roles de usuarios</p>
-					</div>
-					<Badge variant="secondary" className="px-3 py-1">
-						<Shield className="w-4 h-4 mr-1" />
-						Panel de Admin
-					</Badge>
+			<div className="flex items-center justify-between">
+				<div>
+					<h1 className="text-2xl font-semibold text-foreground">Gestión de Roles</h1>
+					<p className="text-muted-foreground text-sm mt-1">Administrar permisos y roles de usuarios</p>
 				</div>
+				<Badge variant="secondary" className="px-3 py-1">
+					<Shield className="w-4 h-4 mr-1" />
+					Panel de Admin
+				</Badge>
 			</div>
 
-			{/* Statistics Cards */}
-			<div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
-				{/* Total Users Card */}
-				<Card>
-					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-4">
-						<CardTitle className="text-xs font-medium">Total</CardTitle>
-						<Users className="h-3 w-3 text-muted-foreground" />
-					</CardHeader>
-					<CardContent className="pb-3">
-						<div className="text-xl font-semibold text-foreground">{totalUsers}</div>
-					</CardContent>
-				</Card>
+			{/* Compact stats bar */}
+			<Card>
+				<CardContent className="py-4 px-5">
+					<div className="flex flex-wrap items-center gap-x-5 gap-y-3">
+						{/* Total */}
+						<div className="flex items-center gap-2">
+							<span className="text-2xl font-semibold text-foreground">{totalUsers}</span>
+							<span className="text-xs text-muted-foreground leading-tight">
+								usuarios<br />en total
+							</span>
+						</div>
 
-				{/* Dynamic Role Cards */}
-				{VALID_ROLES.map((role) => {
-					const config = getRoleConfig(role);
-					const Icon = config.icon;
-					return (
-						<Card key={role}>
-							<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-4">
-								<CardTitle className="text-xs font-medium">{getRoleLabel(role)}</CardTitle>
-								<Icon className="h-3 w-3 text-muted-foreground" />
-							</CardHeader>
-							<CardContent className="pb-3">
-								<div className="text-xl font-semibold text-foreground">
-									{roleCounts[role]}
+						<div className="hidden sm:block h-8 w-px bg-border" />
+
+						{/* Per-role counts */}
+						{VALID_ROLES.map((role) => {
+							const config = getRoleConfig(role);
+							const Icon = config.icon;
+							return (
+								<div key={role} className="flex items-center gap-1.5 min-w-0">
+									<Icon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+									<span className="text-sm font-semibold text-foreground">
+										{roleCounts[role]}
+									</span>
+									<span className="text-xs text-muted-foreground truncate">
+										{getRoleLabel(role)}
+									</span>
 								</div>
-							</CardContent>
-						</Card>
-					);
-				})}
-			</div>
+							);
+						})}
+					</div>
+				</CardContent>
+			</Card>
 
 			{/* Users Table */}
 			<Card>
-				<CardHeader>
-					<CardTitle>Todos los Usuarios</CardTitle>
-					<CardDescription>Ver y administrar roles de usuario. Los cambios se aplican inmediatamente.</CardDescription>
+				<CardHeader className="pb-3">
+					<CardTitle className="text-base">Todos los Usuarios</CardTitle>
+					<CardDescription>Los cambios de rol se aplican inmediatamente.</CardDescription>
 				</CardHeader>
-				<CardContent>
+				<CardContent className="p-0">
 					{users && users.length > 0 ? (
-						<div className="space-y-2">
-							{users.map((user) => (
-								<div
-									key={user.id}
-									className="flex items-center justify-between px-4 py-3 border border-border rounded-lg hover:bg-secondary/50 transition-colors"
-								>
-									<div className="space-y-1">
-										<div className="flex items-center space-x-3">
-											<div className="font-medium text-sm text-foreground">{user.email}</div>
-											<Badge
-												variant={user.role === "admin" ? "default" : "secondary"}
-												className="text-xs"
-											>
-												{(() => {
-													const config = getRoleConfig(user.role);
-													const Icon = config.icon;
-													return (
-														<>
-															<Icon className="w-3 h-3 mr-1" />
-															{getRoleLabel(user.role)}
-														</>
-													);
-												})()}
-											</Badge>
-											{user.id === adminProfile.id && (
-												<Badge variant="outline" className="text-xs">
-													Tú
-												</Badge>
-											)}
-										</div>
-										<div className="flex items-center space-x-4 text-xs text-muted-foreground">
-											<div className="flex items-center space-x-1">
-												<Calendar className="w-3 h-3" />
-												<span>Registrado: {new Date(user.created_at).toLocaleDateString()}</span>
-											</div>
-											<div>
-												<span>Actualizado: {new Date(user.updated_at).toLocaleDateString()}</span>
+						<div className="divide-y divide-border">
+							{users.map((user) => {
+								const config = getRoleConfig(user.role);
+								const Icon = config.icon;
+								return (
+									<div
+										key={user.id}
+										className="flex items-center justify-between px-5 py-3 hover:bg-secondary/40 transition-colors"
+									>
+										{/* Left: user info */}
+										<div className="flex items-center gap-3 min-w-0">
+											<div className="flex flex-col min-w-0">
+												<div className="flex items-center gap-2 flex-wrap">
+													<span className="text-sm font-medium text-foreground truncate">
+														{user.email}
+													</span>
+													{user.id === adminProfile.id && (
+														<Badge variant="outline" className="text-xs shrink-0">
+															Tú
+														</Badge>
+													)}
+												</div>
+												<div className="flex items-center gap-3 mt-0.5 text-xs text-muted-foreground">
+													<span className="flex items-center gap-1">
+														<Calendar className="h-3 w-3" />
+														{new Date(user.created_at).toLocaleDateString("es-BO")}
+													</span>
+												</div>
 											</div>
 										</div>
-									</div>
 
-									<div className="flex items-center space-x-2">
-										<UserRoleManager
-											userId={user.id}
-											currentRole={user.role}
-											userEmail={user.email}
-											isCurrentUser={user.id === adminProfile.id}
-										/>
+										{/* Right: current badge + selector */}
+										<div className="flex items-center gap-3 shrink-0">
+											<Badge variant="secondary" className="text-xs hidden sm:flex items-center gap-1">
+												<Icon className="h-3 w-3" />
+												{getRoleLabel(user.role)}
+											</Badge>
+											<UserRoleManager
+												userId={user.id}
+												currentRole={user.role}
+												userEmail={user.email}
+												isCurrentUser={user.id === adminProfile.id}
+											/>
+										</div>
 									</div>
-								</div>
-							))}
+								);
+							})}
 						</div>
 					) : (
-						<div className="text-center py-8">
-							<Users className="mx-auto h-12 w-12 text-muted-foreground" />
-							<h3 className="mt-2 text-sm font-semibold text-muted-foreground">No se encontraron usuarios</h3>
-							<p className="mt-1 text-sm text-muted-foreground">Todavía no hay usuarios en el sistema.</p>
+						<div className="text-center py-12">
+							<Users className="mx-auto h-10 w-10 text-muted-foreground" />
+							<p className="mt-3 text-sm text-muted-foreground">No se encontraron usuarios</p>
 						</div>
 					)}
 				</CardContent>
@@ -167,19 +155,18 @@ export default async function AdminRolesPage() {
 
 			{/* Security Notice */}
 			<Card>
-				<CardHeader>
-					<CardTitle className="text-sm flex items-center gap-2">
-						<Shield className="w-4 h-4 text-muted-foreground" />
+				<CardHeader className="pb-2">
+					<CardTitle className="text-sm flex items-center gap-2 text-muted-foreground font-medium">
+						<Shield className="w-4 h-4" />
 						Aviso de Seguridad
 					</CardTitle>
 				</CardHeader>
 				<CardContent>
-					<div className="text-sm text-muted-foreground space-y-1.5">
-						<p>• No puedes remover tus propios privilegios de admin para prevenir bloqueo del sistema</p>
-						<p>• Todos los cambios de roles son registrados y auditados automáticamente</p>
-						<p>• Los triggers de base de datos previenen intentos de escalación no autorizados</p>
-						<p>• Los cambios se aplican inmediatamente en todas las sesiones de usuario</p>
-					</div>
+					<ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+						<li>No puedes remover tus propios privilegios de admin</li>
+						<li>Todos los cambios de roles son registrados automáticamente</li>
+						<li>Los cambios se aplican inmediatamente en todas las sesiones activas</li>
+					</ul>
 				</CardContent>
 			</Card>
 		</div>

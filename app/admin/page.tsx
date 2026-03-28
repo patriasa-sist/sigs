@@ -1,8 +1,19 @@
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-	Users, Mail, ShieldCheck, Lock, UsersRound, ArrowRightLeft,
-	BarChart3, Building2, Layers, Tag, Package, UserCircle, Settings,
+	Users,
+	Mail,
+	ShieldCheck,
+	Lock,
+	UsersRound,
+	ArrowRightLeft,
+	BarChart3,
+	Building2,
+	Layers,
+	Tag,
+	Package,
+	UserCircle,
+	Settings,
 } from "lucide-react";
 
 const adminSections = [
@@ -39,22 +50,22 @@ const adminSections = [
 		title: "Equipos y Datos",
 		items: [
 			{
+				href: "/admin/dashboard-equipos",
+				icon: BarChart3,
+				label: "Dashboard Equipos",
+				description: "Métricas de producción por equipo",
+			},
+			{
 				href: "/admin/equipos",
 				icon: UsersRound,
-				label: "Equipos",
+				label: "Administrar Equipos",
 				description: "Crear equipos y asignar miembros",
 			},
 			{
 				href: "/admin/transferencias",
 				icon: ArrowRightLeft,
-				label: "Transferencias",
+				label: "Transferencia de Datos",
 				description: "Transferir pólizas y clientes entre usuarios",
-			},
-			{
-				href: "/admin/dashboard-equipos",
-				icon: BarChart3,
-				label: "Dashboard Equipos",
-				description: "Métricas de producción por equipo",
 			},
 		],
 	},

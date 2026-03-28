@@ -172,7 +172,7 @@ export function Navbar() {
 					<Link href="/">
 						<Button variant="ghost" size="sm" className="gap-2">
 							<Home className="h-4 w-4" />
-							<span>Dashboard</span>
+							<span>Inicio</span>
 						</Button>
 					</Link>
 
@@ -190,6 +190,42 @@ export function Navbar() {
 							<Button variant="ghost" size="sm" className="gap-2">
 								<FileText className="h-4 w-4" />
 								<span>Pólizas</span>
+							</Button>
+						</Link>
+					)}
+
+					{can("cobranzas.ver") && (
+						<Link href="/cobranzas">
+							<Button variant="ghost" size="sm" className="gap-2">
+								<DollarSign className="h-4 w-4" />
+								<span>Cobranza</span>
+							</Button>
+						</Link>
+					)}
+
+					{can("siniestros.ver") && (
+						<Link href="/siniestros">
+							<Button variant="ghost" size="sm" className="gap-2">
+								<FileWarning className="h-4 w-4" />
+								<span>Siniestros</span>
+							</Button>
+						</Link>
+					)}
+
+					{can("polizas.validar") && (
+						<Link href="/gerencia/validacion">
+							<Button variant="ghost" size="sm" className="gap-2">
+								<CheckSquare className="h-4 w-4" />
+								<span>Validación</span>
+							</Button>
+						</Link>
+					)}
+
+					{can("auditoria.ver") && (
+						<Link href="/auditoria">
+							<Button variant="ghost" size="sm" className="gap-2">
+								<Eye className="h-4 w-4" />
+								<span>Auditoría</span>
 							</Button>
 						</Link>
 					)}
@@ -222,42 +258,6 @@ export function Navbar() {
 								)}
 							</DropdownMenuContent>
 						</DropdownMenu>
-					)}
-
-					{can("polizas.validar") && (
-						<Link href="/gerencia/validacion">
-							<Button variant="ghost" size="sm" className="gap-2">
-								<CheckSquare className="h-4 w-4" />
-								<span>Validación</span>
-							</Button>
-						</Link>
-					)}
-
-					{can("cobranzas.ver") && (
-						<Link href="/cobranzas">
-							<Button variant="ghost" size="sm" className="gap-2">
-								<DollarSign className="h-4 w-4" />
-								<span>Cobranzas</span>
-							</Button>
-						</Link>
-					)}
-
-					{can("siniestros.ver") && (
-						<Link href="/siniestros">
-							<Button variant="ghost" size="sm" className="gap-2">
-								<FileWarning className="h-4 w-4" />
-								<span>Siniestros</span>
-							</Button>
-						</Link>
-					)}
-
-					{can("auditoria.ver") && (
-						<Link href="/auditoria">
-							<Button variant="ghost" size="sm" className="gap-2">
-								<Eye className="h-4 w-4" />
-								<span>Auditoría</span>
-							</Button>
-						</Link>
 					)}
 				</div>
 

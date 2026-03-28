@@ -1,8 +1,9 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { FileText, Users, AlertTriangle, DollarSign } from "lucide-react";
+import { FileText, Users, AlertTriangle, DollarSign, UsersRound } from "lucide-react";
+import Link from "next/link";
 import type { EquipoMetricas } from "@/app/admin/dashboard-equipos/actions";
 
 type Props = {
@@ -16,16 +17,39 @@ function formatCurrency(amount: number): string {
 	}).format(amount);
 }
 
+type StatItemProps = {
+	icon: React.ElementType;
+	label: string;
+	value: string | number;
+	sub?: string;
+};
+
+function StatItem({ icon: Icon, label, value, sub }: StatItemProps) {
+	return (
+		<div className="flex flex-col gap-0.5">
+			<div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+				<Icon className="h-3.5 w-3.5 shrink-0" />
+				{label}
+			</div>
+			<p className="text-lg font-semibold text-foreground leading-none">{value}</p>
+			{sub && <p className="text-xs text-muted-foreground">{sub}</p>}
+		</div>
+	);
+}
+
 export default function DashboardEquipos({ metricas }: Props) {
 	if (metricas.length === 0) {
 		return (
 			<Card>
-				<CardContent className="pt-6 text-center text-gray-500">
-					No hay equipos creados. Crea equipos desde la sección de{" "}
-					<a href="/admin/equipos" className="text-primary hover:underline">
-						Gestión de Equipos
-					</a>
-					.
+				<CardContent className="pt-10 pb-10 text-center">
+					<UsersRound className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+					<p className="text-sm text-muted-foreground">
+						No hay equipos creados. Crea equipos desde la sección de{" "}
+						<Link href="/admin/equipos" className="text-primary hover:underline">
+							Gestión de Equipos
+						</Link>
+						.
+					</p>
 				</CardContent>
 			</Card>
 		);
@@ -48,40 +72,40 @@ export default function DashboardEquipos({ metricas }: Props) {
 			{/* Resumen general */}
 			<div className="grid grid-cols-2 md:grid-cols-4 gap-4">
 				<Card>
-					<CardContent className="pt-4 pb-4">
-						<div className="flex items-center gap-2 text-sm text-gray-500">
-							<FileText className="h-4 w-4" />
+					<CardContent className="p-5">
+						<div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+							<FileText className="h-3.5 w-3.5" />
 							Total Pólizas
 						</div>
-						<p className="text-2xl font-bold mt-1">{totales.polizas}</p>
-						<p className="text-xs text-gray-400">{totales.polizasActivas} activas</p>
+						<p className="text-2xl font-semibold text-foreground">{totales.polizas}</p>
+						<p className="text-xs text-muted-foreground mt-0.5">{totales.polizasActivas} activas</p>
 					</CardContent>
 				</Card>
 				<Card>
-					<CardContent className="pt-4 pb-4">
-						<div className="flex items-center gap-2 text-sm text-gray-500">
-							<Users className="h-4 w-4" />
+					<CardContent className="p-5">
+						<div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+							<Users className="h-3.5 w-3.5" />
 							Total Clientes
 						</div>
-						<p className="text-2xl font-bold mt-1">{totales.clientes}</p>
+						<p className="text-2xl font-semibold text-foreground">{totales.clientes}</p>
 					</CardContent>
 				</Card>
 				<Card>
-					<CardContent className="pt-4 pb-4">
-						<div className="flex items-center gap-2 text-sm text-gray-500">
-							<AlertTriangle className="h-4 w-4" />
+					<CardContent className="p-5">
+						<div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+							<AlertTriangle className="h-3.5 w-3.5" />
 							Siniestros Abiertos
 						</div>
-						<p className="text-2xl font-bold mt-1">{totales.siniestros}</p>
+						<p className="text-2xl font-semibold text-foreground">{totales.siniestros}</p>
 					</CardContent>
 				</Card>
 				<Card>
-					<CardContent className="pt-4 pb-4">
-						<div className="flex items-center gap-2 text-sm text-gray-500">
-							<DollarSign className="h-4 w-4" />
+					<CardContent className="p-5">
+						<div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+							<DollarSign className="h-3.5 w-3.5" />
 							Prima Total (Activas)
 						</div>
-						<p className="text-2xl font-bold mt-1">Bs {formatCurrency(totales.prima)}</p>
+						<p className="text-xl font-semibold text-foreground">Bs {formatCurrency(totales.prima)}</p>
 					</CardContent>
 				</Card>
 			</div>
@@ -89,52 +113,61 @@ export default function DashboardEquipos({ metricas }: Props) {
 			{/* Cards por equipo */}
 			<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
 				{metricas.map((equipo) => (
-					<Card key={equipo.equipo_id}>
-						<CardHeader className="pb-3">
-							<CardTitle className="text-lg flex items-center justify-between">
-								{equipo.equipo_nombre}
-								<Badge variant="outline">{equipo.miembros.length} miembros</Badge>
-							</CardTitle>
+					<Card key={equipo.equipo_id} className="flex flex-col">
+						<CardHeader className="pb-0 pt-5 px-5">
+							<div className="flex items-center justify-between gap-2">
+								<h3 className="text-sm font-semibold text-foreground truncate">
+									{equipo.equipo_nombre}
+								</h3>
+								<Badge variant="secondary" className="shrink-0 text-xs">
+									{equipo.miembros.length} {equipo.miembros.length === 1 ? "miembro" : "miembros"}
+								</Badge>
+							</div>
 						</CardHeader>
-						<CardContent className="space-y-4">
-							{/* Métricas */}
-							<div className="grid grid-cols-2 gap-3">
-								<div className="bg-blue-50 rounded-lg p-3">
-									<p className="text-xs text-blue-600 font-medium">Pólizas</p>
-									<p className="text-xl font-bold text-blue-700">{equipo.total_polizas}</p>
-									<p className="text-xs text-blue-500">{equipo.total_polizas_activas} activas</p>
-								</div>
-								<div className="bg-green-50 rounded-lg p-3">
-									<p className="text-xs text-green-600 font-medium">Clientes</p>
-									<p className="text-xl font-bold text-green-700">{equipo.total_clientes}</p>
-								</div>
-								<div className="bg-orange-50 rounded-lg p-3">
-									<p className="text-xs text-orange-600 font-medium">Siniestros</p>
-									<p className="text-xl font-bold text-orange-700">{equipo.total_siniestros_abiertos}</p>
-									<p className="text-xs text-orange-500">abiertos</p>
-								</div>
-								<div className="bg-purple-50 rounded-lg p-3">
-									<p className="text-xs text-purple-600 font-medium">Prima Total</p>
-									<p className="text-lg font-bold text-purple-700">
-										{formatCurrency(equipo.prima_total)}
-									</p>
-									<p className="text-xs text-purple-500">Bs</p>
-								</div>
+
+						<CardContent className="flex flex-col flex-1 gap-4 p-5 pt-4">
+							{/* Métricas — 4 stats en grid 2x2, sin fondos de color */}
+							<div className="grid grid-cols-2 gap-x-6 gap-y-4 py-3 border-y border-border">
+								<StatItem
+									icon={FileText}
+									label="Pólizas"
+									value={equipo.total_polizas}
+									sub={`${equipo.total_polizas_activas} activas`}
+								/>
+								<StatItem
+									icon={Users}
+									label="Clientes"
+									value={equipo.total_clientes}
+								/>
+								<StatItem
+									icon={AlertTriangle}
+									label="Siniestros"
+									value={equipo.total_siniestros_abiertos}
+									sub="abiertos"
+								/>
+								<StatItem
+									icon={DollarSign}
+									label="Prima Total"
+									value={formatCurrency(equipo.prima_total)}
+									sub="Bs"
+								/>
 							</div>
 
 							{/* Miembros */}
 							<div>
-								<p className="text-xs text-gray-500 font-medium mb-2">Miembros</p>
-								<div className="flex flex-wrap gap-1">
-									{equipo.miembros.map((m) => (
-										<Badge key={m.id} variant="secondary" className="text-xs">
-											{m.full_name} ({m.role})
-										</Badge>
-									))}
-									{equipo.miembros.length === 0 && (
-										<span className="text-xs text-gray-400">Sin miembros</span>
-									)}
-								</div>
+								<p className="text-xs font-medium text-muted-foreground mb-2">Miembros</p>
+								{equipo.miembros.length === 0 ? (
+									<span className="text-xs text-muted-foreground">Sin miembros asignados</span>
+								) : (
+									<div className="flex flex-wrap gap-1.5">
+										{equipo.miembros.map((m) => (
+											<Badge key={m.id} variant="outline" className="text-xs font-normal">
+												{m.full_name}
+												<span className="ml-1 text-muted-foreground">({m.role})</span>
+											</Badge>
+										))}
+									</div>
+								)}
 							</div>
 						</CardContent>
 					</Card>

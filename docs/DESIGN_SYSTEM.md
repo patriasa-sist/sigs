@@ -288,8 +288,7 @@ Shadow color should be slightly tinted toward slate, not pure black:
 
 - [x] Login
 - [x] Register
-
-- [ ] Administración
+- [x] Administración
 
 ### Phase 4: Polish
 

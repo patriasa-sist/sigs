@@ -19,8 +19,8 @@ export default async function DashboardEquiposPage() {
 			<div className="flex items-center gap-4">
 				<BarChart3 className="h-8 w-8 text-primary" />
 				<div>
-					<h1 className="text-3xl font-bold text-gray-900">Dashboard por Equipo</h1>
-					<p className="text-gray-500">
+					<h1 className="text-2xl font-semibold text-foreground">Dashboard por Equipo</h1>
+					<p className="text-muted-foreground text-sm mt-1">
 						Métricas de producción agrupadas por equipo de trabajo
 					</p>
 				</div>
