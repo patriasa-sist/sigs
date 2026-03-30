@@ -4,6 +4,7 @@ import React from "react";
 import { pdf } from "@react-pdf/renderer";
 import type { CuotaPago, PolizaConPagos, ContactoCliente, Moneda, AvisoMoraData } from "@/types/cobranza";
 import { cleanPhoneNumber } from "./whatsapp";
+import { obtenerEstadoReal } from "./estadoCuota";
 
 /**
  * MEJORA #7: Genera mensaje cordial de recordatorio de pago para WhatsApp o Email
@@ -33,7 +34,7 @@ Nos comunicamos con usted para recordarle el vencimiento de la cuota N° ${cuota
 
 Monto: ${formatCurrency(cuota.monto, poliza.moneda)}
 Fecha de vencimiento: ${formatDate(cuota.fecha_vencimiento)}
-Estado: ${cuota.estado === "vencido" ? "VENCIDA" : cuota.estado === "pendiente" ? "Por vencer" : "Pago parcial"}
+Estado: ${obtenerEstadoReal(cuota) === "vencido" ? "VENCIDA" : obtenerEstadoReal(cuota) === "pendiente" ? "Por vencer" : "Pago parcial"}
 
 Por favor, realice el pago a la brevedad posible para mantener su cobertura activa.
 
