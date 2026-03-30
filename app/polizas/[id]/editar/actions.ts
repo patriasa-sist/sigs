@@ -1019,11 +1019,18 @@ export async function actualizarPoliza(
 
 		// 3. Update vehicles for Automotor ramo
 		if (formState.datos_especificos?.tipo_ramo === "Automotores") {
-			// Delete existing vehicles
-			await supabase
+			const supabaseAdmin = createAdminClient();
+
+			// Delete existing vehicles (requires admin client — RLS restricts DELETE to admin role)
+			const { error: delVehError } = await supabaseAdmin
 				.from("polizas_automotor_vehiculos")
 				.delete()
 				.eq("poliza_id", polizaId);
+
+			if (delVehError) {
+				console.error("[actualizarPoliza] Error deleting vehicles:", delVehError);
+				return { success: false, error: "Error al actualizar vehículos" };
+			}
 
 			// Insert new vehicles
 			const vehiculos = formState.datos_especificos.datos.vehiculos.map(
@@ -1048,7 +1055,14 @@ export async function actualizarPoliza(
 			);
 
 			if (vehiculos.length > 0) {
-				await supabase.from("polizas_automotor_vehiculos").insert(vehiculos);
+				const { error: insVehError } = await supabaseAdmin
+					.from("polizas_automotor_vehiculos")
+					.insert(vehiculos);
+
+				if (insVehError) {
+					console.error("[actualizarPoliza] Error inserting vehicles:", insVehError);
+					return { success: false, error: "Error al guardar vehículos actualizados" };
+				}
 			}
 		}
 
