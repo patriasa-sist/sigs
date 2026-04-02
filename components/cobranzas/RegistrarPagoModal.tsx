@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import {
 	Dialog,
 	DialogContent,
+	DialogDescription,
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
@@ -47,6 +48,7 @@ export default function RegistrarPagoModal({
 	const [error, setError] = useState<string | null>(null);
 
 	const [selectedFile, setSelectedFile] = useState<File | null>(null);
+	const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 	const [tipoComprobante, setTipoComprobante] = useState<TipoComprobante>("factura");
 	const [fileError, setFileError] = useState<string | null>(null);
 	const [isDragging, setIsDragging] = useState(false);
@@ -61,6 +63,7 @@ export default function RegistrarPagoModal({
 			setObservaciones("");
 			setError(null);
 			setSelectedFile(null);
+			setPreviewUrl(null);
 			setTipoComprobante("factura");
 			setFileError(null);
 		}
@@ -102,15 +105,23 @@ export default function RegistrarPagoModal({
 		if (!sizeValidation.valid) {
 			setFileError(sizeValidation.error || "Error de validación");
 			setSelectedFile(null);
+			setPreviewUrl(null);
 			return;
 		}
 		const typeValidation = validarTipoArchivo(file);
 		if (!typeValidation.valid) {
 			setFileError(typeValidation.error || "Error de validación");
 			setSelectedFile(null);
+			setPreviewUrl(null);
 			return;
 		}
 		setSelectedFile(file);
+		if (file.type.startsWith("image/")) {
+			const url = URL.createObjectURL(file);
+			setPreviewUrl(url);
+		} else {
+			setPreviewUrl(null);
+		}
 	}, []);
 
 	const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -150,7 +161,9 @@ export default function RegistrarPagoModal({
 	}, [open, selectedFile, processFile]);
 
 	const handleRemoveFile = () => {
+		if (previewUrl) URL.revokeObjectURL(previewUrl);
 		setSelectedFile(null);
+		setPreviewUrl(null);
 		setFileError(null);
 		if (fileInputRef.current) fileInputRef.current.value = "";
 	};
@@ -238,6 +251,9 @@ export default function RegistrarPagoModal({
 						<CreditCard className="h-5 w-5 text-primary" />
 						Registrar Pago — Cuota #{cuota.numero_cuota}
 					</DialogTitle>
+					<DialogDescription className="sr-only">
+						Formulario para registrar el pago de una cuota
+					</DialogDescription>
 				</DialogHeader>
 
 				{/* Context strip */}
@@ -379,27 +395,52 @@ export default function RegistrarPagoModal({
 								/>
 							</div>
 						) : (
-							<div className="flex items-center justify-between rounded-md border border-border bg-secondary px-3 py-2.5">
-								<div className="flex items-center gap-2.5">
-									<FileText className="h-5 w-5 text-primary shrink-0" />
-									<div>
-										<p className="text-sm font-medium truncate max-w-[250px]">
-											{selectedFile.name}
-										</p>
-										<p className="text-xs text-muted-foreground">
-											{formatearTamanoArchivo(selectedFile.size)}
-										</p>
+							<div className="rounded-md border border-border bg-secondary overflow-hidden">
+								{previewUrl && (
+									<a href={previewUrl} target="_blank" rel="noopener noreferrer" className="block">
+										<img
+											src={previewUrl}
+											alt="Vista previa"
+											className="w-full max-h-48 object-contain bg-black/5"
+										/>
+									</a>
+								)}
+								{!previewUrl && selectedFile.type === "application/pdf" && (
+									<button
+										type="button"
+										className="flex items-center gap-2 px-3 py-2 text-sm text-primary hover:underline w-full"
+										onClick={() => {
+											const url = URL.createObjectURL(selectedFile);
+											window.open(url, "_blank");
+											setTimeout(() => URL.revokeObjectURL(url), 10000);
+										}}
+									>
+										<FileText className="h-4 w-4 shrink-0" />
+										Abrir PDF para verificar
+									</button>
+								)}
+								<div className="flex items-center justify-between px-3 py-2">
+									<div className="flex items-center gap-2">
+										<FileText className="h-4 w-4 text-primary shrink-0" />
+										<div>
+											<p className="text-sm font-medium truncate max-w-[220px]">
+												{selectedFile.name}
+											</p>
+											<p className="text-xs text-muted-foreground">
+												{formatearTamanoArchivo(selectedFile.size)}
+											</p>
+										</div>
 									</div>
+									<Button
+										type="button"
+										variant="ghost"
+										size="icon"
+										className="h-7 w-7 shrink-0"
+										onClick={handleRemoveFile}
+									>
+										<X className="h-4 w-4" />
+									</Button>
 								</div>
-								<Button
-									type="button"
-									variant="ghost"
-									size="icon"
-									className="h-7 w-7 shrink-0"
-									onClick={handleRemoveFile}
-								>
-									<X className="h-4 w-4" />
-								</Button>
 							</div>
 						)}
 
