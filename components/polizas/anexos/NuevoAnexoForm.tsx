@@ -193,7 +193,12 @@ export function NuevoAnexoForm() {
 					userId={userId}
 					onChangeCuotas={handleChangeCuotas}
 					onChangeVigenciaCorrida={handleChangeVigenciaCorrida}
-					onChangeDocumentos={(docs) => setFormState((prev) => ({ ...prev, documentos: docs }))}
+					onChangeDocumentos={(docs) =>
+					setFormState((prev) => ({
+						...prev,
+						documentos: typeof docs === "function" ? docs(prev.documentos) : docs,
+					}))
+				}
 					onSiguiente={() => setFormState((prev) => ({ ...prev, paso_actual: 5 }))}
 					onAnterior={() => {
 						const pasoAnterior = formState.config?.tipo_anexo === "anulacion" ? 2 : 3;

@@ -27,7 +27,7 @@ type Props = {
 	userId: string | null;
 	onChangeCuotas: (cuotas: CuotaAjuste[]) => void;
 	onChangeVigenciaCorrida: (vc: VigenciaCorrida | null) => void;
-	onChangeDocumentos: (docs: DocumentoPoliza[]) => void;
+	onChangeDocumentos: (docs: DocumentoPoliza[] | ((prev: DocumentoPoliza[]) => DocumentoPoliza[])) => void;
 	onSiguiente: () => void;
 	onAnterior: () => void;
 };
@@ -84,6 +84,12 @@ export function PagosYDocumentos({
 		onChangeCuotas(updated);
 	};
 
+	const handleFechaChange = (idx: number, value: string) => {
+		const updated = [...cuotasAjuste];
+		updated[idx] = { ...updated[idx], fecha_vencimiento: value };
+		onChangeCuotas(updated);
+	};
+
 	// File upload
 	const onDrop = useCallback(
 		async (acceptedFiles: File[]) => {
@@ -92,14 +98,17 @@ export function PagosYDocumentos({
 			for (const file of acceptedFiles) {
 				if (file.size > 20 * 1024 * 1024) continue;
 
+				const tempKey = `${file.name}-${Date.now()}`;
+
 				const newDoc: DocumentoPoliza = {
 					tipo_documento: "Documento de Anexo",
 					nombre_archivo: file.name,
 					tamano_bytes: file.size,
 					upload_status: "uploading",
-				};
+					_tempKey: tempKey,
+				} as DocumentoPoliza & { _tempKey: string };
 
-				onChangeDocumentos([...documentos, newDoc]);
+				onChangeDocumentos((prev) => [...prev, newDoc]);
 
 				try {
 					const storagePath = generateTempStoragePath(userId, sessionIdRef.current, file.name);
@@ -109,27 +118,26 @@ export function PagosYDocumentos({
 						.upload(storagePath, file);
 
 					if (uploadError) {
-						onChangeDocumentos(
-							documentos.map((d) =>
-								d.nombre_archivo === file.name
+						onChangeDocumentos((prev) =>
+							prev.map((d) =>
+								(d as DocumentoPoliza & { _tempKey?: string })._tempKey === tempKey
 									? { ...d, upload_status: "error" as const, upload_error: uploadError.message }
 									: d
 							)
 						);
 					} else {
-						onChangeDocumentos([
-							...documentos.filter((d) => d.nombre_archivo !== file.name),
-							{
-								...newDoc,
-								storage_path: storagePath,
-								upload_status: "uploaded" as const,
-							},
-						]);
+						onChangeDocumentos((prev) =>
+							prev.map((d) =>
+								(d as DocumentoPoliza & { _tempKey?: string })._tempKey === tempKey
+									? { ...d, storage_path: storagePath, upload_status: "uploaded" as const }
+									: d
+							)
+						);
 					}
 				} catch {
-					onChangeDocumentos(
-						documentos.map((d) =>
-							d.nombre_archivo === file.name
+					onChangeDocumentos((prev) =>
+						prev.map((d) =>
+							(d as DocumentoPoliza & { _tempKey?: string })._tempKey === tempKey
 								? { ...d, upload_status: "error" as const, upload_error: "Error de conexión" }
 								: d
 						)
@@ -137,7 +145,7 @@ export function PagosYDocumentos({
 				}
 			}
 		},
-		[userId, documentos, onChangeDocumentos, supabase.storage]
+		[userId, onChangeDocumentos, supabase.storage]
 	);
 
 	const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -211,7 +219,18 @@ export function PagosYDocumentos({
 										className={!cuota.es_modificable ? "bg-gray-50 opacity-60" : ""}
 									>
 										<td className="px-4 py-2">{cuota.numero_cuota}</td>
-										<td className="px-4 py-2">{formatDate(cuota.fecha_vencimiento)}</td>
+										<td className="px-4 py-2">
+									{cuota.es_modificable ? (
+										<Input
+											type="date"
+											value={cuota.fecha_vencimiento}
+											onChange={(e) => handleFechaChange(idx, e.target.value)}
+											className="w-36"
+										/>
+									) : (
+										formatDate(cuota.fecha_vencimiento)
+									)}
+								</td>
 										<td className="px-4 py-2 text-right">
 											{formatCurrency(cuota.monto_original, moneda)}
 										</td>
