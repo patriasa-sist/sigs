@@ -15,7 +15,6 @@
 "use server";
 
 import { createClient } from "@/utils/supabase/server";
-import { getDataScopeFilter } from "@/utils/auth/helpers";
 import {
 	ClientViewModel,
 	ClientQueryResult,
@@ -126,19 +125,10 @@ export async function getAllClients(options?: {
 
 		console.log(`[getAllClients] User ${user.email} fetching clients (page ${page}, size ${pageSize})`);
 
-		// Verificar si necesita aislamiento de datos
-		const scope = await getDataScopeFilter();
-
 		// Get total count first (lightweight query)
-		let countQuery = supabase
+		const { count: totalRecords, error: countError } = await supabase
 			.from("clients")
 			.select("*", { count: "exact", head: true });
-
-		if (scope.needsScoping) {
-			countQuery = countQuery.in("commercial_owner_id", scope.teamMemberIds);
-		}
-
-		const { count: totalRecords, error: countError } = await countQuery;
 
 		if (countError) {
 			console.error("[getAllClients] Error counting clients:", countError);
@@ -151,7 +141,7 @@ export async function getAllClients(options?: {
 
 		// Query base clients with type-specific data (paginated)
 		// Note: executive is fetched separately via profiles_public view for RLS compliance
-		let clientsQuery = supabase
+		const { data: clientsData, error: clientsError } = await supabase
 			.from("clients")
 			.select(
 				`
@@ -163,12 +153,6 @@ export async function getAllClients(options?: {
 			)
 			.order("created_at", { ascending: false })
 			.range(offset, offset + pageSize - 1);
-
-		if (scope.needsScoping) {
-			clientsQuery = clientsQuery.in("commercial_owner_id", scope.teamMemberIds);
-		}
-
-		const { data: clientsData, error: clientsError } = await clientsQuery;
 
 		if (clientsError) {
 			console.error("[getAllClients] Error fetching clients:", clientsError);
@@ -403,15 +387,6 @@ export async function getClientById(clientId: string): Promise<ActionResult<Clie
 			};
 		}
 
-		// Verificar scoping por equipo
-		const scope = await getDataScopeFilter('clientes');
-		if (scope.needsScoping && clientData.commercial_owner_id && !scope.teamMemberIds.includes(clientData.commercial_owner_id)) {
-			return {
-				success: false,
-				error: "No tiene acceso a este cliente",
-			};
-		}
-
 		// Fetch commercial owner from profiles_public view (restricted public access)
 		let executiveData: { id: string; full_name: string; email: string } | null = null;
 		if (clientData.commercial_owner_id) {
@@ -638,6 +613,87 @@ export async function getClientActivePolicyCounts(): Promise<ActionResult<Map<st
 			error: getErrorMessage(error),
 			details: error,
 		};
+	}
+}
+
+// ============================================
+// DUPLICATE DETECTION (early warning during client creation)
+// ============================================
+
+export type VerificarDocumentoResult = {
+	existe: boolean;
+	client_id: string | null;
+	nombre: string | null;
+};
+
+export type VerificarNitResult = {
+	existe: boolean;
+	client_id: string | null;
+	nombre: string | null;
+	tipo_cliente: string | null;
+};
+
+/**
+ * Check if a natural client with the given document already exists.
+ * Used for early duplicate detection during client creation.
+ */
+export async function verificarDocumentoExistente(
+	tipo_documento: string,
+	numero_documento: string,
+): Promise<ActionResult<VerificarDocumentoResult>> {
+	try {
+		const { supabase } = await getAuthenticatedClient();
+
+		const { data, error } = await supabase.rpc("verificar_documento_existente", {
+			p_tipo_documento: tipo_documento,
+			p_numero_documento: numero_documento,
+		});
+
+		if (error) {
+			console.error("[verificarDocumentoExistente] RPC error:", error);
+			return { success: false, error: "Error al verificar documento", details: error };
+		}
+
+		const row = (data as VerificarDocumentoResult[])?.[0];
+		if (!row) {
+			return { success: true, data: { existe: false, client_id: null, nombre: null } };
+		}
+
+		return { success: true, data: row };
+	} catch (error) {
+		console.error("[verificarDocumentoExistente] Unexpected error:", error);
+		return { success: false, error: getErrorMessage(error), details: error };
+	}
+}
+
+/**
+ * Check if a juridic or unipersonal client with the given NIT already exists.
+ * Used for early duplicate detection during client creation.
+ */
+export async function verificarNitExistente(
+	nit: string,
+): Promise<ActionResult<VerificarNitResult>> {
+	try {
+		const { supabase } = await getAuthenticatedClient();
+
+		const { data, error } = await supabase.rpc("verificar_nit_existente", {
+			p_nit: nit,
+		});
+
+		if (error) {
+			console.error("[verificarNitExistente] RPC error:", error);
+			return { success: false, error: "Error al verificar NIT", details: error };
+		}
+
+		const row = (data as VerificarNitResult[])?.[0];
+		if (!row) {
+			return { success: true, data: { existe: false, client_id: null, nombre: null, tipo_cliente: null } };
+		}
+
+		return { success: true, data: row };
+	} catch (error) {
+		console.error("[verificarNitExistente] Unexpected error:", error);
+		return { success: false, error: getErrorMessage(error), details: error };
 	}
 }
 

@@ -19,7 +19,6 @@ export function BuscarAsegurado({ asegurado, onAseguradoSeleccionado, onSiguient
 	const [cargando, setCargando] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
-	// Buscar clientes
 	const buscarClientes = useCallback(async (query: string) => {
 		if (!query.trim()) {
 			setResultados([]);
@@ -31,81 +30,83 @@ export function BuscarAsegurado({ asegurado, onAseguradoSeleccionado, onSiguient
 
 		try {
 			const supabase = createClient();
-			const queryNormalizada = query.trim();
+			const q = query.trim();
 
-			// Buscar en paralelo: clientes naturales y jurídicos que coincidan con la búsqueda
-			const [naturalesResult, juridicosResult] = await Promise.all([
-				// Buscar clientes naturales por nombre, apellido o documento
+			const [naturalesResult, juridicosResult, unipersonalesResult] = await Promise.all([
 				supabase
 					.from("natural_clients")
 					.select("*, clients!inner(id, client_type, status, created_at)")
 					.eq("clients.status", "active")
 					.or(
-						`primer_nombre.ilike.%${queryNormalizada}%,` +
-							`segundo_nombre.ilike.%${queryNormalizada}%,` +
-							`primer_apellido.ilike.%${queryNormalizada}%,` +
-							`segundo_apellido.ilike.%${queryNormalizada}%,` +
-							`numero_documento.ilike.%${queryNormalizada}%`,
+						`primer_nombre.ilike.%${q}%,` +
+						`segundo_nombre.ilike.%${q}%,` +
+						`primer_apellido.ilike.%${q}%,` +
+						`segundo_apellido.ilike.%${q}%,` +
+						`numero_documento.ilike.%${q}%`,
 					)
 					.order("created_at", { referencedTable: "clients", ascending: false })
-					.limit(20),
-				// Buscar clientes jurídicos por razón social o NIT
+					.limit(15),
 				supabase
 					.from("juridic_clients")
 					.select("*, clients!inner(id, client_type, status, created_at)")
 					.eq("clients.status", "active")
-					.or(`razon_social.ilike.%${queryNormalizada}%,nit.ilike.%${queryNormalizada}%`)
+					.or(`razon_social.ilike.%${q}%,nit.ilike.%${q}%`)
 					.order("created_at", { referencedTable: "clients", ascending: false })
-					.limit(20),
+					.limit(10),
+				supabase
+					.from("unipersonal_clients")
+					.select("*, clients!inner(id, client_type, status, created_at)")
+					.eq("clients.status", "active")
+					.or(`razon_social.ilike.%${q}%,nit.ilike.%${q}%`)
+					.order("created_at", { referencedTable: "clients", ascending: false })
+					.limit(10),
 			]);
 
 			if (naturalesResult.error) throw naturalesResult.error;
 			if (juridicosResult.error) throw juridicosResult.error;
+			if (unipersonalesResult.error) throw unipersonalesResult.error;
 
-			// Construir lista de asegurados desde clientes naturales
-			const aseguradosNaturales: AseguradoSeleccionado[] = (naturalesResult.data || []).map((natural) => {
-				const cliente = natural.clients;
-				const nombre_completo = [
-					natural.primer_nombre,
-					natural.segundo_nombre,
-					natural.primer_apellido,
-					natural.segundo_apellido,
-				]
-					.filter((parte) => parte && parte.trim())
+			const naturales: AseguradoSeleccionado[] = (naturalesResult.data || []).map((nc) => {
+				const nombre_completo = [nc.primer_nombre, nc.segundo_nombre, nc.primer_apellido, nc.segundo_apellido]
+					.filter((p) => p?.trim())
 					.join(" ");
-				const documento = `${natural.numero_documento}${natural.extension_ci ? ` ${natural.extension_ci}` : ""}`;
-
+				const documento = `${nc.numero_documento}${nc.extension_ci ? ` ${nc.extension_ci}` : ""}`;
 				return {
-					id: cliente.id,
+					id: nc.clients.id,
 					client_type: "natural" as const,
-					status: cliente.status as "active" | "inactive" | "suspended",
-					created_at: cliente.created_at,
-					detalles: natural as ClienteNatural,
+					status: nc.clients.status as "active" | "inactive" | "suspended",
+					created_at: nc.clients.created_at,
+					detalles: nc as ClienteNatural,
 					nombre_completo,
 					documento,
 				};
 			});
 
-			// Construir lista de asegurados desde clientes jurídicos
-			const aseguradosJuridicos: AseguradoSeleccionado[] = (juridicosResult.data || []).map((juridico) => {
-				const cliente = juridico.clients;
-				return {
-					id: cliente.id,
-					client_type: "juridica" as const,
-					status: cliente.status as "active" | "inactive" | "suspended",
-					created_at: cliente.created_at,
-					detalles: juridico as ClienteJuridico,
-					nombre_completo: juridico.razon_social,
-					documento: juridico.nit,
-				};
-			});
+			const juridicos: AseguradoSeleccionado[] = (juridicosResult.data || []).map((jc) => ({
+				id: jc.clients.id,
+				client_type: "juridica" as const,
+				status: jc.clients.status as "active" | "inactive" | "suspended",
+				created_at: jc.clients.created_at,
+				detalles: jc as ClienteJuridico,
+				nombre_completo: jc.razon_social,
+				documento: jc.nit,
+			}));
 
-			// Combinar y ordenar por fecha de creación descendente
-			const asegurados = [...aseguradosNaturales, ...aseguradosJuridicos].sort(
+			const unipersonales: AseguradoSeleccionado[] = (unipersonalesResult.data || []).map((uc) => ({
+				id: uc.clients.id,
+				client_type: "juridica" as const,
+				status: uc.clients.status as "active" | "inactive" | "suspended",
+				created_at: uc.clients.created_at,
+				detalles: null,
+				nombre_completo: uc.razon_social,
+				documento: uc.nit,
+			}));
+
+			const todos = [...naturales, ...juridicos, ...unipersonales].sort(
 				(a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
 			);
 
-			setResultados(asegurados.slice(0, 20));
+			setResultados(todos.slice(0, 20));
 		} catch (err) {
 			console.error("Error buscando clientes:", err);
 			setError("Error al buscar clientes. Por favor intente nuevamente.");
@@ -114,7 +115,6 @@ export function BuscarAsegurado({ asegurado, onAseguradoSeleccionado, onSiguient
 		}
 	}, []);
 
-	// Debounce search
 	useEffect(() => {
 		const timer = setTimeout(() => {
 			if (busqueda.trim()) {
@@ -123,13 +123,8 @@ export function BuscarAsegurado({ asegurado, onAseguradoSeleccionado, onSiguient
 				setResultados([]);
 			}
 		}, 300);
-
 		return () => clearTimeout(timer);
 	}, [busqueda, buscarClientes]);
-
-	const handleSeleccionar = (cliente: AseguradoSeleccionado) => {
-		onAseguradoSeleccionado(cliente);
-	};
 
 	const puedeAvanzar = asegurado !== null;
 
@@ -140,7 +135,6 @@ export function BuscarAsegurado({ asegurado, onAseguradoSeleccionado, onSiguient
 					<h2 className="text-lg font-semibold text-foreground">Buscar Asegurado</h2>
 					<p className="text-sm text-muted-foreground mt-1">Busque y seleccione el cliente asegurado</p>
 				</div>
-
 				{asegurado && (
 					<div className="flex items-center gap-2 text-success">
 						<CheckCircle2 className="h-5 w-5" />
@@ -162,7 +156,6 @@ export function BuscarAsegurado({ asegurado, onAseguradoSeleccionado, onSiguient
 							className="pl-10"
 						/>
 					</div>
-
 					{error && <p className="text-sm text-destructive mt-2">{error}</p>}
 				</div>
 			)}
@@ -177,32 +170,28 @@ export function BuscarAsegurado({ asegurado, onAseguradoSeleccionado, onSiguient
 							) : (
 								<Building2 className="h-9 w-9 text-primary" />
 							)}
-
 							<div>
 								<p className="font-semibold text-base text-foreground">{asegurado.nombre_completo}</p>
 								<p className="text-sm text-muted-foreground">
 									{asegurado.client_type === "natural" ? "Persona Natural" : "Persona Jurídica"}
 									{" · "}
 									{asegurado.client_type === "natural"
-										? (asegurado.detalles as ClienteNatural).tipo_documento
+										? (asegurado.detalles as ClienteNatural)?.tipo_documento
 										: "NIT"}
 									: {asegurado.documento}
 								</p>
-
-								{asegurado.client_type === "natural" && (
+								{asegurado.detalles && "direccion" in asegurado.detalles && asegurado.detalles.direccion && (
 									<p className="text-sm text-muted-foreground mt-1">
-										{(asegurado.detalles as ClienteNatural).direccion}
+										{asegurado.detalles.direccion}
 									</p>
 								)}
-
-								{asegurado.client_type === "juridica" && (
+								{asegurado.detalles && "direccion_legal" in asegurado.detalles && asegurado.detalles.direccion_legal && (
 									<p className="text-sm text-muted-foreground mt-1">
-										{(asegurado.detalles as ClienteJuridico).direccion_legal}
+										{asegurado.detalles.direccion_legal}
 									</p>
 								)}
 							</div>
 						</div>
-
 						<Button variant="outline" size="sm" onClick={() => onAseguradoSeleccionado(null!)}>
 							Cambiar
 						</Button>
@@ -224,11 +213,10 @@ export function BuscarAsegurado({ asegurado, onAseguradoSeleccionado, onSiguient
 								{resultados.length}{" "}
 								{resultados.length === 1 ? "resultado encontrado" : "resultados encontrados"}
 							</p>
-
 							{resultados.map((cliente) => (
 								<button
 									key={cliente.id}
-									onClick={() => handleSeleccionar(cliente)}
+									onClick={() => onAseguradoSeleccionado(cliente)}
 									className="w-full text-left p-4 border border-border rounded-lg bg-card hover:border-primary/60 hover:bg-primary/5 transition-colors"
 								>
 									<div className="flex items-start gap-3">
@@ -237,18 +225,14 @@ export function BuscarAsegurado({ asegurado, onAseguradoSeleccionado, onSiguient
 										) : (
 											<Building2 className="h-8 w-8 text-muted-foreground" />
 										)}
-
 										<div className="flex-1">
 											<p className="font-medium">{cliente.nombre_completo}</p>
 											<p className="text-sm text-muted-foreground">
-												{cliente.client_type === "natural"
-													? "Persona Natural"
-													: "Persona Jurídica"}
+												{cliente.client_type === "natural" ? "Persona Natural" : "Persona Jurídica"}
 												{" · "}
 												{cliente.documento}
 											</p>
 										</div>
-
 										<ChevronRight className="h-5 w-5 text-muted-foreground" />
 									</div>
 								</button>

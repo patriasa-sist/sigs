@@ -14,7 +14,6 @@
 
 import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
-import { getDataScopeFilter } from "@/utils/auth/helpers";
 import type {
 	ClientEditPermissionViewModel,
 	GrantPermissionInput,
@@ -210,16 +209,8 @@ export async function checkEditPermission(
 			};
 		}
 
-		// Check if user is a team member (for traceability visibility)
-		let isTeamMember = false;
-		if (clientData?.commercial_owner_id) {
-			const scope = await getDataScopeFilter("clientes");
-			if (!scope.needsScoping) {
-				isTeamMember = true;
-			} else if (scope.teamMemberIds.includes(clientData.commercial_owner_id)) {
-				isTeamMember = true;
-			}
-		}
+		// All authenticated users can see all clients
+		const isTeamMember = clientData?.commercial_owner_id != null;
 
 		// Only comercial and agente roles can have explicit per-client permissions
 		if (profile.role !== "comercial" && profile.role !== "agente") {

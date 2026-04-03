@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -40,9 +40,15 @@ import { NaturalClientForm } from "@/components/clientes/NaturalClientForm";
 import { UnipersonalClientForm } from "@/components/clientes/UnipersonalClientForm";
 import { JuridicClientForm } from "@/components/clientes/JuridicClientForm";
 import { Button } from "@/components/ui/button";
-import { Save, X, ChevronLeft, Users, Check } from "lucide-react";
+import { Save, X, ChevronLeft, Users, Check, AlertTriangle } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import { saveExtraPhones } from "@/app/clientes/celulares/actions";
+import {
+	verificarDocumentoExistente,
+	verificarNitExistente,
+	type VerificarDocumentoResult,
+	type VerificarNitResult,
+} from "@/app/clientes/actions";
 
 // ---------------------------------------------------------------------------
 // Field label maps – used to display human-readable names in validation toasts
@@ -155,6 +161,79 @@ export default function NuevoClientePage() {
 			legal_representatives: [],
 		},
 	});
+
+	// Duplicate detection state
+	const [duplicadoDocumento, setDuplicadoDocumento] = useState<VerificarDocumentoResult | null>(null);
+	const [duplicadoNit, setDuplicadoNit] = useState<VerificarNitResult | null>(null);
+
+	// Watch documento fields for natural / unipersonal clients
+	const naturalTipoDoc = naturalForm.watch("tipo_documento");
+	const naturalNumDoc = naturalForm.watch("numero_documento");
+	const unipersonalNumDoc = unipersonalForm.watch("numero_documento");
+	const unipersonalTipoDoc = unipersonalForm.watch("tipo_documento");
+	const juridicNit = juridicForm.watch("nit");
+	const unipersonalNit = unipersonalForm.watch("nit");
+
+	// Debounced duplicate check for natural clients
+	const naturalDocTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+	useEffect(() => {
+		if (clientType !== "natural") return;
+		if (naturalDocTimerRef.current) clearTimeout(naturalDocTimerRef.current);
+		if (!naturalTipoDoc || !naturalNumDoc || naturalNumDoc.length < 6) {
+			setDuplicadoDocumento(null);
+			return;
+		}
+		naturalDocTimerRef.current = setTimeout(async () => {
+			const result = await verificarDocumentoExistente(naturalTipoDoc, naturalNumDoc);
+			if (result.success && result.data.existe) {
+				setDuplicadoDocumento(result.data);
+			} else {
+				setDuplicadoDocumento(null);
+			}
+		}, 600);
+		return () => { if (naturalDocTimerRef.current) clearTimeout(naturalDocTimerRef.current); };
+	}, [naturalTipoDoc, naturalNumDoc, clientType]);
+
+	// Debounced duplicate check for unipersonal clients (documento)
+	const unipersonalDocTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+	useEffect(() => {
+		if (clientType !== "unipersonal") return;
+		if (unipersonalDocTimerRef.current) clearTimeout(unipersonalDocTimerRef.current);
+		if (!unipersonalTipoDoc || !unipersonalNumDoc || unipersonalNumDoc.length < 6) {
+			setDuplicadoDocumento(null);
+			return;
+		}
+		unipersonalDocTimerRef.current = setTimeout(async () => {
+			const result = await verificarDocumentoExistente(unipersonalTipoDoc, unipersonalNumDoc);
+			if (result.success && result.data.existe) {
+				setDuplicadoDocumento(result.data);
+			} else {
+				setDuplicadoDocumento(null);
+			}
+		}, 600);
+		return () => { if (unipersonalDocTimerRef.current) clearTimeout(unipersonalDocTimerRef.current); };
+	}, [unipersonalTipoDoc, unipersonalNumDoc, clientType]);
+
+	// Debounced duplicate check for NIT (juridic + unipersonal)
+	const nitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+	const activeNit = clientType === "juridica" ? juridicNit : unipersonalNit;
+	useEffect(() => {
+		if (clientType !== "juridica" && clientType !== "unipersonal") return;
+		if (nitTimerRef.current) clearTimeout(nitTimerRef.current);
+		if (!activeNit || activeNit.length < 7) {
+			setDuplicadoNit(null);
+			return;
+		}
+		nitTimerRef.current = setTimeout(async () => {
+			const result = await verificarNitExistente(activeNit);
+			if (result.success && result.data.existe) {
+				setDuplicadoNit(result.data);
+			} else {
+				setDuplicadoNit(null);
+			}
+		}, 600);
+		return () => { if (nitTimerRef.current) clearTimeout(nitTimerRef.current); };
+	}, [activeNit, clientType]);
 
 	// Load user and check for draft on mount
 	useEffect(() => {
@@ -1040,22 +1119,79 @@ export default function NuevoClientePage() {
 
 					{/* Form Content */}
 					{clientType === "natural" && (
-						<NaturalClientForm form={naturalForm} partnerForm={partnerForm} onFieldBlur={handleAutoSave} exceptions={docExceptions} />
+						<>
+							{duplicadoDocumento && (
+								<DuplicadoBanner
+									duplicado={duplicadoDocumento}
+									tipo="documento"
+								/>
+							)}
+							<NaturalClientForm form={naturalForm} partnerForm={partnerForm} onFieldBlur={handleAutoSave} exceptions={docExceptions} />
+						</>
 					)}
 
 					{clientType === "unipersonal" && (
-						<UnipersonalClientForm
-							form={unipersonalForm}
-							partnerForm={partnerForm}
-							onFieldBlur={handleAutoSave}
-							exceptions={docExceptions}
-						/>
+						<>
+							{duplicadoDocumento && (
+								<DuplicadoBanner
+									duplicado={duplicadoDocumento}
+									tipo="documento"
+								/>
+							)}
+							{duplicadoNit && (
+								<DuplicadoBanner
+									duplicado={duplicadoNit}
+									tipo="nit"
+								/>
+							)}
+							<UnipersonalClientForm
+								form={unipersonalForm}
+								partnerForm={partnerForm}
+								onFieldBlur={handleAutoSave}
+								exceptions={docExceptions}
+							/>
+						</>
 					)}
 
 					{clientType === "juridica" && (
-						<JuridicClientForm form={juridicForm} onFieldBlur={handleAutoSave} exceptions={docExceptions} />
+						<>
+							{duplicadoNit && (
+								<DuplicadoBanner
+									duplicado={duplicadoNit}
+									tipo="nit"
+								/>
+							)}
+							<JuridicClientForm form={juridicForm} onFieldBlur={handleAutoSave} exceptions={docExceptions} />
+						</>
 					)}
 				</div>
+			</div>
+		</div>
+	);
+}
+
+// ---------------------------------------------------------------------------
+// DuplicadoBanner — alerta temprana cuando el documento/NIT ya existe
+// ---------------------------------------------------------------------------
+type DuplicadoBannerProps =
+	| { duplicado: VerificarDocumentoResult; tipo: "documento" }
+	| { duplicado: VerificarNitResult; tipo: "nit" };
+
+function DuplicadoBanner({ duplicado, tipo }: DuplicadoBannerProps) {
+	if (!duplicado.existe) return null;
+
+	return (
+		<div className="flex gap-3 p-4 rounded-lg border border-amber-200 bg-amber-50 text-amber-900">
+			<AlertTriangle className="h-5 w-5 shrink-0 mt-0.5 text-amber-600" />
+			<div className="text-sm space-y-1">
+				<p className="font-medium">
+					{tipo === "nit" ? "NIT ya registrado" : "Documento ya registrado"}
+				</p>
+				<p>
+					Ya existe <span className="font-semibold">{duplicado.nombre}</span> con este{" "}
+					{tipo === "nit" ? "NIT" : "documento"} en el sistema.
+					Para crear una póliza, búscalo desde el módulo de Pólizas.
+				</p>
 			</div>
 		</div>
 	);

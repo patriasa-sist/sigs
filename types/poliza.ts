@@ -128,7 +128,7 @@ export type ClienteBase = {
 
 // Tipo unificado para el paso 1
 export type AseguradoSeleccionado = ClienteBase & {
-	detalles: ClienteNatural | ClienteJuridico;
+	detalles: ClienteNatural | ClienteJuridico | null;
 	// Campos calculados para display
 	nombre_completo: string;
 	documento: string;

@@ -13,7 +13,7 @@
 "use server";
 
 import { createClient } from "@/utils/supabase/server";
-import { checkPermission, getDataScopeFilter } from "@/utils/auth/helpers";
+import { checkPermission } from "@/utils/auth/helpers";
 
 // ============================================
 // TYPES
@@ -134,13 +134,6 @@ export async function getClientAuditTrail(
 				return { success: false, error: "Cliente no encontrado" };
 			}
 
-			const scope = await getDataScopeFilter("clientes");
-			const isTeamMember = !scope.needsScoping ||
-				scope.teamMemberIds.includes(clientCheck.commercial_owner_id);
-
-			if (!isTeamMember) {
-				return { success: false, error: "Sin permisos para ver la trazabilidad de este cliente" };
-			}
 		}
 
 		// 1. Get base client data with creator info
