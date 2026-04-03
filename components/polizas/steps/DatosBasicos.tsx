@@ -545,24 +545,6 @@ export function DatosBasicos({ datos, onChange, onSiguiente, onAnterior }: Props
 					{errores.responsable_id && <p className="text-sm text-destructive">{errores.responsable_id}</p>}
 				</div>
 
-				{/* Fecha de Emisión */}
-				<div className="space-y-2">
-					<Label htmlFor="fecha_emision">
-						Fecha de Emisión (Compañía) <span className="text-destructive">*</span>
-					</Label>
-					<Input
-						id="fecha_emision"
-						type="date"
-						lang="es"
-						value={formData.fecha_emision_compania}
-						onChange={(e) => handleChange("fecha_emision_compania", e.target.value)}
-						className={errores.fecha_emision_compania ? "border-destructive" : ""}
-					/>
-					{errores.fecha_emision_compania && (
-						<p className="text-sm text-destructive">{errores.fecha_emision_compania}</p>
-					)}
-				</div>
-
 				{/* Inicio de Vigencia */}
 				<div className="space-y-2">
 					<Label htmlFor="inicio_vigencia">
@@ -593,6 +575,24 @@ export function DatosBasicos({ datos, onChange, onSiguiente, onAnterior }: Props
 						className={errores.fin_vigencia ? "border-destructive" : ""}
 					/>
 					{errores.fin_vigencia && <p className="text-sm text-destructive">{errores.fin_vigencia}</p>}
+				</div>
+
+				{/* Fecha de Emisión */}
+				<div className="space-y-2">
+					<Label htmlFor="fecha_emision">
+						Fecha de Emisión (Compañía) <span className="text-destructive">*</span>
+					</Label>
+					<Input
+						id="fecha_emision"
+						type="date"
+						lang="es"
+						value={formData.fecha_emision_compania}
+						onChange={(e) => handleChange("fecha_emision_compania", e.target.value)}
+						className={errores.fecha_emision_compania ? "border-destructive" : ""}
+					/>
+					{errores.fecha_emision_compania && (
+						<p className="text-sm text-destructive">{errores.fecha_emision_compania}</p>
+					)}
 				</div>
 
 				{/* Regional */}
