@@ -55,7 +55,7 @@ function GerenciaSkeleton() {
 	);
 }
 
-async function GerenciaData({ canExportar }: { canExportar: boolean }) {
+async function GerenciaData() {
 	const currentYear = new Date().getFullYear();
 	const defaultFiltros: GerenciaFiltros = { anio: currentYear };
 
@@ -140,7 +140,7 @@ export default async function GerenciaPage() {
 					)}
 				</div>
 				<Suspense fallback={<GerenciaSkeleton />}>
-					<GerenciaData canExportar={canExportar} />
+					<GerenciaData />
 				</Suspense>
 			</div>
 		</div>

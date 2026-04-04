@@ -515,7 +515,7 @@ export async function obtenerDetallePoliza(polizaId: string) {
 			return { success: false, error: "No autenticado" };
 		}
 
-		// Obtener póliza con joins
+		// Obtener póliza con joins (incluye datos del cliente para evitar queries secuenciales)
 		const { data: poliza, error: errorPoliza } = await supabase
 			.from("polizas")
 			.select(
@@ -526,7 +526,13 @@ export async function obtenerDetallePoliza(polizaId: string) {
 				profiles!polizas_responsable_id_fkey (full_name),
 				regionales!polizas_regional_id_fkey (nombre),
 				regional_asegurado:regionales!polizas_regional_asegurado_id_fkey (nombre),
-				categorias (nombre)
+				categorias (nombre),
+				client:clients!client_id (
+					id, client_type,
+					natural_clients (primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, numero_documento),
+					juridic_clients (razon_social, nit),
+					unipersonal_clients (razon_social, nit)
+				)
 			`
 			)
 			.eq("id", polizaId)
@@ -543,48 +549,37 @@ export async function obtenerDetallePoliza(polizaId: string) {
 			return { success: false, error: "No tiene acceso a esta póliza" };
 		}
 
-		// Obtener información del cliente
-		const { data: client } = await supabase.from("clients").select("client_type").eq("id", poliza.client_id).single();
+		// Obtener información del cliente (ya viene en el join inicial)
+		type EmbeddedClient = {
+			id: string;
+			client_type: "natural" | "juridica" | "unipersonal";
+			natural_clients: { primer_nombre?: string; segundo_nombre?: string; primer_apellido?: string; segundo_apellido?: string; numero_documento?: string } | null;
+			juridic_clients: { razon_social?: string; nit?: string } | null;
+			unipersonal_clients: { razon_social?: string; nit?: string } | null;
+		} | null;
+		const embeddedClient = poliza.client as unknown as EmbeddedClient;
 
 		let client_name = "Cliente Desconocido";
 		let client_ci = "-";
 
-		if (client?.client_type === "natural" || client?.client_type === "unipersonal") {
-			const { data: naturalClient } = await supabase
-				.from("natural_clients")
-				.select("primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, numero_documento")
-				.eq("client_id", poliza.client_id)
-				.single();
-
-			if (naturalClient) {
-				const nombres = [naturalClient.primer_nombre, naturalClient.segundo_nombre].filter(Boolean).join(" ");
-				const apellidos = [naturalClient.primer_apellido, naturalClient.segundo_apellido].filter(Boolean).join(" ");
+		if (embeddedClient?.client_type === "natural" || embeddedClient?.client_type === "unipersonal") {
+			const nc = embeddedClient.natural_clients;
+			if (nc) {
+				const nombres = [nc.primer_nombre, nc.segundo_nombre].filter(Boolean).join(" ");
+				const apellidos = [nc.primer_apellido, nc.segundo_apellido].filter(Boolean).join(" ");
 				client_name = `${nombres} ${apellidos}`.trim();
-				client_ci = naturalClient.numero_documento || "-";
+				client_ci = nc.numero_documento || "-";
 			}
-
-			if (client?.client_type === "unipersonal") {
-				const { data: unipersonalClient } = await supabase
-					.from("unipersonal_clients")
-					.select("razon_social, nit")
-					.eq("client_id", poliza.client_id)
-					.single();
-
-				if (unipersonalClient) {
-					client_name = `${client_name} (${unipersonalClient.razon_social})`;
-					client_ci = unipersonalClient.nit || client_ci;
-				}
+			if (embeddedClient.client_type === "unipersonal" && embeddedClient.unipersonal_clients) {
+				const uc = embeddedClient.unipersonal_clients;
+				client_name = `${client_name} (${uc.razon_social || ""})`.trim();
+				client_ci = uc.nit || client_ci;
 			}
-		} else if (client?.client_type === "juridica") {
-			const { data: juridicClient } = await supabase
-				.from("juridic_clients")
-				.select("razon_social, nit")
-				.eq("client_id", poliza.client_id)
-				.single();
-
-			if (juridicClient) {
-				client_name = juridicClient.razon_social;
-				client_ci = juridicClient.nit || "-";
+		} else if (embeddedClient?.client_type === "juridica") {
+			const jc = embeddedClient.juridic_clients;
+			if (jc) {
+				client_name = jc.razon_social || "Cliente Desconocido";
+				client_ci = jc.nit || "-";
 			}
 		}
 
@@ -1020,62 +1015,51 @@ export async function obtenerDetallePoliza(polizaId: string) {
 			}
 		}
 
-		// Obtener documentos (solo activos)
-		const { data: documentos } = await supabase
-			.from("polizas_documentos")
-			.select("id, tipo_documento, nombre_archivo, archivo_url, uploaded_at")
-			.eq("poliza_id", polizaId)
-			.eq("estado", "activo")
-			.order("uploaded_at", { ascending: false });
+		// Batch de queries independientes en paralelo
+		const profileIds = [poliza.created_by, poliza.validado_por, poliza.rechazado_por].filter(Boolean) as string[];
 
-		// Obtener nombre del creador
-		let creador_nombre: string | null = null;
-		if (poliza.created_by) {
-			const { data: creador } = await supabase
-				.from("profiles")
-				.select("full_name")
-				.eq("id", poliza.created_by)
-				.single();
-			creador_nombre = creador?.full_name || null;
-		}
+		const [
+			{ data: documentos },
+			{ data: historialData },
+			{ data: anexosActivos },
+			{ data: profilesData },
+		] = await Promise.all([
+			supabase
+				.from("polizas_documentos")
+				.select("id, tipo_documento, nombre_archivo, archivo_url, uploaded_at")
+				.eq("poliza_id", polizaId)
+				.eq("estado", "activo")
+				.order("uploaded_at", { ascending: false }),
+			supabase
+				.from("polizas_historial_ediciones")
+				.select(`
+					id, accion, usuario_id, campos_modificados, descripcion, timestamp,
+					profiles!polizas_historial_ediciones_usuario_id_fkey (full_name)
+				`)
+				.eq("poliza_id", polizaId)
+				.order("timestamp", { ascending: false })
+				.limit(20),
+			supabase
+				.from("polizas_anexos")
+				.select(`
+					id, numero_anexo, tipo_anexo, estado, created_at,
+					fecha_validacion, fecha_rechazo, motivo_rechazo,
+					creador:profiles!created_by (full_name),
+					validador:profiles!validado_por (full_name),
+					rechazador:profiles!rechazado_por (full_name)
+				`)
+				.eq("poliza_id", polizaId)
+				.order("created_at", { ascending: false }),
+			profileIds.length > 0
+				? supabase.from("profiles").select("id, full_name").in("id", profileIds)
+				: Promise.resolve({ data: [] as Array<{ id: string; full_name: string }> }),
+		]);
 
-		// Obtener nombre del validador
-		let validador_nombre: string | null = null;
-		if (poliza.validado_por) {
-			const { data: validador } = await supabase
-				.from("profiles")
-				.select("full_name")
-				.eq("id", poliza.validado_por)
-				.single();
-			validador_nombre = validador?.full_name || null;
-		}
-
-		// Obtener nombre del rechazador
-		let rechazador_nombre: string | null = null;
-		if (poliza.rechazado_por) {
-			const { data: rechazador } = await supabase
-				.from("profiles")
-				.select("full_name")
-				.eq("id", poliza.rechazado_por)
-				.single();
-			rechazador_nombre = rechazador?.full_name || null;
-		}
-
-		// Obtener historial de ediciones (últimos 20 registros)
-		const { data: historialData } = await supabase
-			.from("polizas_historial_ediciones")
-			.select(`
-				id,
-				accion,
-				usuario_id,
-				campos_modificados,
-				descripcion,
-				timestamp,
-				profiles!polizas_historial_ediciones_usuario_id_fkey (full_name)
-			`)
-			.eq("poliza_id", polizaId)
-			.order("timestamp", { ascending: false })
-			.limit(20);
+		// Resolver nombres de perfiles desde el batch
+		const profilesMap = new Map((profilesData || []).map((p) => [p.id, p.full_name]));
+		const creador_nombre = poliza.created_by ? (profilesMap.get(poliza.created_by) ?? null) : null;
+		const validador_nombre = poliza.validado_por ? (profilesMap.get(poliza.validado_por) ?? null) : null;
+		const rechazador_nombre = poliza.rechazado_por ? (profilesMap.get(poliza.rechazado_por) ?? null) : null;
 
 		const historial = historialData?.map((h) => ({
 			id: h.id,
@@ -1089,17 +1073,6 @@ export async function obtenerDetallePoliza(polizaId: string) {
 		// ============================================
 		// CONSOLIDACIÓN DE ANEXOS ACTIVOS
 		// ============================================
-		const { data: anexosActivos } = await supabase
-			.from("polizas_anexos")
-			.select(`
-				id, numero_anexo, tipo_anexo, estado, created_at,
-				fecha_validacion, fecha_rechazo, motivo_rechazo,
-				creador:profiles!created_by (full_name),
-				validador:profiles!validado_por (full_name),
-				rechazador:profiles!rechazado_por (full_name)
-			`)
-			.eq("poliza_id", polizaId)
-			.order("created_at", { ascending: false });
 
 		const anexosActivosFiltrados = (anexosActivos || []).filter((a) => a.estado === "activo");
 		const tiene_anexos_activos = anexosActivosFiltrados.length > 0;

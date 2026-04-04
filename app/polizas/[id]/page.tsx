@@ -61,15 +61,17 @@ export default function PolizaDetallePage() {
 		setIsLoading(true);
 		setError(null);
 
-		// Load policy details
-		const resultado = await obtenerDetallePoliza(polizaId);
+		// Load policy details and edit permissions in parallel
+		const [resultado, permResult] = await Promise.all([
+			obtenerDetallePoliza(polizaId),
+			checkPolicyEditPermission(polizaId),
+		]);
+
 		if (resultado.success && resultado.poliza) {
 			setPoliza(resultado.poliza);
 			setUserRole(resultado.userRole || null);
 			setIsAdmin(resultado.userRole === "admin");
 
-			// Check edit permission
-			const permResult = await checkPolicyEditPermission(polizaId);
 			if (permResult.success) {
 				setCanEdit(permResult.data.canEdit);
 				setIsAdmin(permResult.data.isAdmin);
@@ -172,10 +174,52 @@ export default function PolizaDetallePage() {
 
 	if (isLoading) {
 		return (
-			<div className="flex items-center justify-center min-h-[60vh]">
-				<div className="text-center space-y-3">
-					<div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent mx-auto" />
-					<p className="text-sm text-muted-foreground">Cargando detalles de la póliza…</p>
+			<div className="container mx-auto px-4 py-8 max-w-7xl">
+				{/* Back button skeleton */}
+				<div className="mb-6">
+					<div className="h-8 w-20 bg-muted rounded animate-pulse mb-4" />
+					<div className="flex items-start justify-between gap-4">
+						<div className="space-y-2">
+							<div className="h-5 w-16 bg-muted rounded-full animate-pulse" />
+							<div className="h-7 w-48 bg-muted rounded animate-pulse" />
+							<div className="h-4 w-40 bg-muted rounded animate-pulse" />
+						</div>
+						<div className="flex gap-2">
+							<div className="h-8 w-20 bg-muted rounded animate-pulse" />
+							<div className="h-8 w-20 bg-muted rounded animate-pulse" />
+						</div>
+					</div>
+				</div>
+				{/* Content grid skeleton */}
+				<div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+					<div className="lg:col-span-2 space-y-4">
+						{[1, 2, 3].map((i) => (
+							<div key={i} className="border border-border rounded-lg p-5 space-y-3">
+								<div className="h-4 w-32 bg-muted rounded animate-pulse" />
+								<div className="grid grid-cols-2 gap-3">
+									{[1, 2, 3, 4].map((j) => (
+										<div key={j} className="space-y-1.5">
+											<div className="h-3 w-20 bg-muted rounded animate-pulse" />
+											<div className="h-4 w-28 bg-muted rounded animate-pulse" />
+										</div>
+									))}
+								</div>
+							</div>
+						))}
+					</div>
+					<div className="space-y-4">
+						{[1, 2].map((i) => (
+							<div key={i} className="border border-border rounded-lg p-5 space-y-3">
+								<div className="h-4 w-24 bg-muted rounded animate-pulse" />
+								{[1, 2, 3].map((j) => (
+									<div key={j} className="flex justify-between">
+										<div className="h-4 w-24 bg-muted rounded animate-pulse" />
+										<div className="h-4 w-16 bg-muted rounded animate-pulse" />
+									</div>
+								))}
+							</div>
+						))}
+					</div>
 				</div>
 			</div>
 		);
