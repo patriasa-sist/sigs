@@ -34,6 +34,10 @@ import type {
 	AvisoMoraData,
 	CuotaVencidaConMora,
 	PrepararAvisoMoraResponse,
+	// Pagination
+	CobranzaFiltros,
+	FiltrosCobranzaOptions,
+	CobranzaSortField,
 } from "@/types/cobranza";
 
 // Helper types for Supabase query results
@@ -1478,5 +1482,378 @@ export async function obtenerComprobanteCuota(
 			success: false,
 			error: error instanceof Error ? error.message : "Error desconocido",
 		};
+	}
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SERVER-SIDE PAGINATION
+// Requiere la vista cobranzas_polizas_resumen (docs/migration_cobranzas_view.sql)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Mapeo de CobranzaSortField → columna en la vista */
+const SORT_COLUMN_MAP: Record<CobranzaSortField, string> = {
+	numero_poliza:    "numero_poliza",
+	cuotas_vencidas:  "cuotas_vencidas",
+	cuotas_pendientes:"cuotas_pendientes",
+	monto_pendiente:  "total_pendiente",
+	fecha_vencimiento:"proxima_fecha_vencimiento",
+	prima_total:      "prima_total",
+	inicio_vigencia:  "inicio_vigencia",
+};
+
+/**
+ * Lista paginada de pólizas de cobranzas usando la vista pre-computada.
+ * Round 1: filtra/ordena/pagina sobre la vista (computed cuota fields).
+ * Round 2: enriquece los ≤20 IDs con cliente/compañía/responsable/regional.
+ */
+export async function obtenerCobranzasPaginadas(params: CobranzaFiltros = {}): Promise<
+	CobranzaServerResponse<{ polizas: PolizaConPagos[]; total: number }>
+> {
+	const permiso = await verificarPermisoCobranza();
+	if (!permiso.authorized) return { success: false, error: permiso.error };
+
+	const supabase = await createClient();
+	const {
+		page = 1,
+		pageSize = 20,
+		search,
+		ramo,
+		compania_id,
+		responsable_id,
+		regional_id,
+		soloVencidas = false,
+		incluirPagadas = false,
+		sortField = "cuotas_vencidas",
+		sortDirection = "desc",
+	} = params;
+
+	try {
+		const scope = await getDataScopeFilter("polizas");
+
+		// ── Pre-paso: búsqueda de texto → client_ids coincidentes ─────────
+		let searchClientIds: string[] | null = null;
+		let searchPolizaMatch = "";
+		if (search?.trim()) {
+			const q = search.trim();
+			searchPolizaMatch = q;
+			const [natRes, jurRes, uniRes] = await Promise.all([
+				supabase.from("natural_clients")
+					.select("client_id")
+					.or(`primer_nombre.ilike.%${q}%,primer_apellido.ilike.%${q}%,segundo_apellido.ilike.%${q}%,numero_documento.ilike.%${q}%`),
+				supabase.from("juridic_clients")
+					.select("client_id")
+					.or(`razon_social.ilike.%${q}%,nit.ilike.%${q}%`),
+				supabase.from("unipersonal_clients")
+					.select("client_id")
+					.or(`razon_social.ilike.%${q}%,nit.ilike.%${q}%`),
+			]);
+			searchClientIds = [
+				...(natRes.data?.map((r) => r.client_id) ?? []),
+				...(jurRes.data?.map((r) => r.client_id) ?? []),
+				...(uniRes.data?.map((r) => r.client_id) ?? []),
+			];
+		}
+
+		// ── Round 1: vista con filtros, orden y paginación ─────────────────
+		const from = (page - 1) * pageSize;
+		const to   = from + pageSize - 1;
+		const sortCol = SORT_COLUMN_MAP[sortField];
+		const ascending = sortDirection === "asc";
+
+		let query = supabase
+			.from("cobranzas_polizas_resumen")
+			.select("id,numero_poliza,ramo,prima_total,moneda,estado,inicio_vigencia,fin_vigencia,modalidad_pago,client_id,compania_aseguradora_id,responsable_id,regional_id,cuotas_vencidas,cuotas_pendientes,total_pendiente,total_pagado,proxima_fecha_vencimiento", { count: "exact" });
+
+		// Data scoping
+		if (scope.needsScoping) {
+			query = query.in("responsable_id", scope.teamMemberIds);
+		}
+
+		// Filtros opcionales
+		if (ramo)         query = query.eq("ramo", ramo);
+		if (compania_id)  query = query.eq("compania_aseguradora_id", compania_id);
+		if (responsable_id) query = query.eq("responsable_id", responsable_id);
+		if (regional_id)  query = query.eq("regional_id", regional_id);
+		if (soloVencidas) query = query.gt("cuotas_vencidas", 0);
+
+		// Solo sin cuotas pendientes/vencidas → excluir las totalmente pagadas
+		if (!incluirPagadas) {
+			query = query.or("cuotas_pendientes.gt.0,cuotas_vencidas.gt.0");
+		}
+
+		// Texto: número de póliza O cliente
+		if (searchClientIds !== null) {
+			// combinar: poliza ilike O client_id IN (...)
+			const clientFilter = searchClientIds.length > 0
+				? `client_id.in.(${searchClientIds.join(",")})`
+				: "client_id.eq.00000000-0000-0000-0000-000000000000"; // sin resultados
+			query = query.or(`numero_poliza.ilike.%${searchPolizaMatch}%,${clientFilter}`);
+		}
+
+		// Orden + paginación
+		// proxima_fecha_vencimiento puede ser null (pólizas sin cuotas pendientes)
+		// NULLs al final en ascendente, al inicio en descendente
+		const nullsFirst = sortField === "fecha_vencimiento" && sortDirection === "desc";
+		query = query
+			.order(sortCol, { ascending, nullsFirst })
+			.range(from, to);
+
+		const { data: resumen, error: resumenError, count } = await query;
+
+		if (resumenError) {
+			console.error("Error en cobranzas_polizas_resumen:", resumenError);
+			return { success: false, error: "Error al obtener pólizas de cobranzas" };
+		}
+		if (!resumen || resumen.length === 0) {
+			return { success: true, data: { polizas: [], total: count ?? 0 } };
+		}
+
+		// ── Round 2: enriquecer los ≤20 IDs con datos de cliente/compañía ──
+		const polizaIds = resumen.map((r) => r.id);
+
+		const { data: detalle } = await supabase
+			.from("polizas")
+			.select(`
+				id,
+				client:clients!client_id (
+					id, client_type,
+					natural_clients (primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, numero_documento),
+					juridic_clients (razon_social, nit),
+					unipersonal_clients (razon_social, nit)
+				),
+				compania:companias_aseguradoras!compania_aseguradora_id (id, nombre),
+				responsable:profiles!responsable_id (id, full_name),
+				regional:regionales!regional_id (id, nombre)
+			`)
+			.in("id", polizaIds);
+
+		// Indexar por id para O(1) lookup
+		const detalleMap = new Map((detalle ?? []).map((d) => [d.id, d]));
+
+		// ── Construir PolizaConPagos desde vista + detalle ─────────────────
+		const polizas: PolizaConPagos[] = resumen.map((r) => {
+			const d = detalleMap.get(r.id);
+			const clientData = d?.client as unknown as ClientQueryResult;
+
+			let nombreCompleto = "N/A";
+			let documento = "N/A";
+
+			if (clientData) {
+				if (clientData.client_type === "natural" || clientData.client_type === "unipersonal") {
+					const natural = clientData.natural_clients;
+					if (natural) {
+						nombreCompleto = `${natural.primer_nombre || ""} ${natural.segundo_nombre || ""} ${natural.primer_apellido || ""} ${natural.segundo_apellido || ""}`.trim();
+						documento = natural.numero_documento || "N/A";
+					}
+					if (clientData.client_type === "unipersonal" && clientData.unipersonal_clients) {
+						const uc = clientData.unipersonal_clients;
+						nombreCompleto = `${nombreCompleto} (${uc.razon_social || ""})`.trim();
+						documento = uc.nit || documento;
+					}
+				} else if (clientData.client_type === "juridica" && clientData.juridic_clients) {
+					nombreCompleto = clientData.juridic_clients.razon_social || "N/A";
+					documento = clientData.juridic_clients.nit || "N/A";
+				}
+			}
+
+			return {
+				id: r.id,
+				numero_poliza: r.numero_poliza,
+				ramo: r.ramo,
+				prima_total: r.prima_total,
+				moneda: r.moneda as Moneda,
+				estado: r.estado as PolizaConPagos["estado"],
+				inicio_vigencia: r.inicio_vigencia,
+				fin_vigencia: r.fin_vigencia,
+				modalidad_pago: r.modalidad_pago as "contado" | "credito",
+				client: {
+					id: clientData?.id || "",
+					client_type: (clientData?.client_type ?? "natural") as "natural" | "juridica",
+					nombre_completo: nombreCompleto,
+					documento,
+				},
+				compania: {
+					id: (d?.compania as { id?: string; nombre?: string } | null)?.id || "",
+					nombre: (d?.compania as { id?: string; nombre?: string } | null)?.nombre || "N/A",
+				},
+				responsable: {
+					id: (d?.responsable as { id?: string; full_name?: string } | null)?.id || "",
+					full_name: (d?.responsable as { id?: string; full_name?: string } | null)?.full_name || "N/A",
+				},
+				regional: {
+					id: (d?.regional as { id?: string; nombre?: string } | null)?.id || "",
+					nombre: (d?.regional as { id?: string; nombre?: string } | null)?.nombre || "N/A",
+				},
+				cuotas: [],
+				total_pagado: r.total_pagado ?? 0,
+				total_pendiente: r.total_pendiente ?? 0,
+				cuotas_pendientes: r.cuotas_pendientes ?? 0,
+				cuotas_vencidas: r.cuotas_vencidas ?? 0,
+				proxima_fecha_vencimiento: r.proxima_fecha_vencimiento ?? null,
+			};
+		});
+
+		return { success: true, data: { polizas, total: count ?? 0 } };
+	} catch (error) {
+		console.error("Error en obtenerCobranzasPaginadas:", error);
+		return { success: false, error: error instanceof Error ? error.message : "Error desconocido" };
+	}
+}
+
+/**
+ * KPIs globales del dashboard de cobranzas.
+ * Usa la vista para agregar totales y una query separada para cobrados hoy/mes.
+ */
+export async function obtenerCobranzaStats(): Promise<CobranzaServerResponse<CobranzaStats>> {
+	const permiso = await verificarPermisoCobranza();
+	if (!permiso.authorized) return { success: false, error: permiso.error };
+
+	const supabase = await createClient();
+
+	try {
+		const scope = await getDataScopeFilter("polizas");
+		const today = new Date().toISOString().split("T")[0];
+		const firstDayOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1)
+			.toISOString().split("T")[0];
+		const tenDaysFromNow = new Date(Date.now() + 10 * 24 * 60 * 60 * 1000)
+			.toISOString().split("T")[0];
+
+		// ── Paralelo: vista (agregados) + cuotas próximas + cobrados del mes ──
+		let vistaQuery = supabase
+			.from("cobranzas_polizas_resumen")
+			.select("moneda,cuotas_vencidas,cuotas_pendientes,total_pendiente,proxima_fecha_vencimiento");
+		if (scope.needsScoping) vistaQuery = vistaQuery.in("responsable_id", scope.teamMemberIds);
+
+		const cobradosQuery = supabase
+			.from("polizas_pagos")
+			.select("monto,fecha_pago,poliza:polizas!poliza_id(moneda,responsable_id)")
+			.eq("estado", "pagado")
+			.gte("fecha_pago", firstDayOfMonth);
+		// scoping en cobrados via join filter no soportado directamente; filtrar post-fetch
+
+		const [{ data: vistaRows }, { data: cuotasCobradas }] = await Promise.all([
+			vistaQuery,
+			cobradosQuery,
+		]);
+
+		type VistaRow = {
+			moneda: string;
+			cuotas_vencidas: number;
+			cuotas_pendientes: number;
+			total_pendiente: number;
+			proxima_fecha_vencimiento: string | null;
+		};
+
+		const rows = (vistaRows ?? []) as VistaRow[];
+
+		// Filtrar solo pólizas con cuotas pendientes o vencidas para stats
+		const rowsActivas = rows.filter((r) => r.cuotas_vencidas > 0 || r.cuotas_pendientes > 0);
+
+		const pendientesPorMoneda = new Map<string, number>();
+		let totalCuotasPendientes = 0;
+		let totalCuotasVencidas = 0;
+		let cuotasPorVencer10dias = 0;
+
+		for (const r of rowsActivas) {
+			pendientesPorMoneda.set(r.moneda, (pendientesPorMoneda.get(r.moneda) || 0) + r.total_pendiente);
+			totalCuotasPendientes += r.cuotas_pendientes;
+			totalCuotasVencidas   += r.cuotas_vencidas;
+			if (r.proxima_fecha_vencimiento && r.proxima_fecha_vencimiento <= tenDaysFromNow) {
+				cuotasPorVencer10dias++;
+			}
+		}
+
+		// Cobrados hoy/mes (con scoping aplicado post-fetch)
+		const cobradosHoyPorMoneda  = new Map<string, number>();
+		const cobradosMesPorMoneda  = new Map<string, number>();
+
+		for (const cuota of cuotasCobradas ?? []) {
+			const polizaData = cuota.poliza as unknown as { moneda: string; responsable_id: string } | null;
+			if (!polizaData) continue;
+			if (scope.needsScoping && !scope.teamMemberIds.includes(polizaData.responsable_id)) continue;
+			const moneda = polizaData.moneda;
+			cobradosMesPorMoneda.set(moneda, (cobradosMesPorMoneda.get(moneda) || 0) + cuota.monto);
+			if (cuota.fecha_pago === today) {
+				cobradosHoyPorMoneda.set(moneda, (cobradosHoyPorMoneda.get(moneda) || 0) + cuota.monto);
+			}
+		}
+
+		const toMontoPorMoneda = (map: Map<string, number>): MontoPorMoneda[] =>
+			Array.from(map.entries())
+				.map(([moneda, monto]) => ({ moneda: moneda as Moneda, monto }))
+				.sort((a, b) => a.moneda.localeCompare(b.moneda));
+
+		const stats: CobranzaStats = {
+			total_polizas: rowsActivas.length,
+			total_cuotas_pendientes: totalCuotasPendientes,
+			total_cuotas_vencidas:   totalCuotasVencidas,
+			montos_pendientes:    toMontoPorMoneda(pendientesPorMoneda),
+			montos_cobrados_hoy:  toMontoPorMoneda(cobradosHoyPorMoneda),
+			montos_cobrados_mes:  toMontoPorMoneda(cobradosMesPorMoneda),
+			cuotas_por_vencer_10dias: cuotasPorVencer10dias,
+		};
+
+		return { success: true, data: stats };
+	} catch (error) {
+		console.error("Error en obtenerCobranzaStats:", error);
+		return { success: false, error: error instanceof Error ? error.message : "Error desconocido" };
+	}
+}
+
+/**
+ * Opciones de filtro para los dropdowns del dashboard.
+ * Retorna valores distintos de pólizas activas.
+ */
+export async function obtenerFiltrosCobranza(): Promise<CobranzaServerResponse<FiltrosCobranzaOptions>> {
+	const permiso = await verificarPermisoCobranza();
+	if (!permiso.authorized) return { success: false, error: permiso.error };
+
+	const supabase = await createClient();
+
+	try {
+		const scope = await getDataScopeFilter("polizas");
+
+		let polizasQuery = supabase
+			.from("polizas")
+			.select(`
+				ramo,
+				compania:companias_aseguradoras!compania_aseguradora_id (id, nombre),
+				responsable:profiles!responsable_id (id, full_name),
+				regional:regionales!regional_id (id, nombre)
+			`)
+			.eq("estado", "activa");
+
+		if (scope.needsScoping) {
+			polizasQuery = polizasQuery.in("responsable_id", scope.teamMemberIds);
+		}
+
+		const { data: rows } = await polizasQuery;
+
+		const ramos       = [...new Set((rows ?? []).map((r) => r.ramo).filter(Boolean))].sort();
+		const companiaMap = new Map<string, string>();
+		const responsableMap = new Map<string, string>();
+		const regionalMap = new Map<string, string>();
+
+		for (const r of rows ?? []) {
+			const comp = r.compania as { id?: string; nombre?: string } | null;
+			if (comp?.id && comp.nombre) companiaMap.set(comp.id, comp.nombre);
+			const resp = r.responsable as { id?: string; full_name?: string } | null;
+			if (resp?.id && resp.full_name) responsableMap.set(resp.id, resp.full_name);
+			const reg = r.regional as { id?: string; nombre?: string } | null;
+			if (reg?.id && reg.nombre) regionalMap.set(reg.id, reg.nombre);
+		}
+
+		return {
+			success: true,
+			data: {
+				ramos,
+				companias:    [...companiaMap.entries()].map(([id, nombre]) => ({ id, nombre })).sort((a, b) => a.nombre.localeCompare(b.nombre)),
+				responsables: [...responsableMap.entries()].map(([id, full_name]) => ({ id, full_name })).sort((a, b) => a.full_name.localeCompare(b.full_name)),
+				regionales:   [...regionalMap.entries()].map(([id, nombre]) => ({ id, nombre })).sort((a, b) => a.nombre.localeCompare(b.nombre)),
+			},
+		};
+	} catch (error) {
+		console.error("Error en obtenerFiltrosCobranza:", error);
+		return { success: false, error: error instanceof Error ? error.message : "Error desconocido" };
 	}
 }

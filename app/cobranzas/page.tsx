@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { requirePermission } from "@/utils/auth/helpers";
 import Dashboard from "@/components/cobranzas/Dashboard";
-import { obtenerPolizasConPendientes } from "./actions";
+import { obtenerCobranzasPaginadas, obtenerCobranzaStats, obtenerFiltrosCobranza } from "./actions";
 
 export const metadata = {
 	title: "Cobranzas — Gestión de Pagos",
@@ -31,7 +31,7 @@ function CobranzasSkeleton() {
 				<table className="w-full">
 					<thead>
 						<tr className="border-b border-border">
-							{["Póliza / Cliente", "Compañía", "Cuotas pendientes", "Monto pendiente", "Próximo venc.", ""].map((h) => (
+							{["Cliente", "Póliza", "Compañía", "Cuotas", "Pendiente", ""].map((h) => (
 								<th key={h} className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">
 									{h}
 								</th>
@@ -56,17 +56,30 @@ function CobranzasSkeleton() {
 }
 
 async function CobranzasData() {
-	const result = await obtenerPolizasConPendientes();
+	// Fetch en paralelo: primera página + stats + opciones de filtro
+	const [polizasResult, statsResult, filtrosResult] = await Promise.all([
+		obtenerCobranzasPaginadas({ page: 1, pageSize: 20, sortField: "cuotas_vencidas", sortDirection: "desc" }),
+		obtenerCobranzaStats(),
+		obtenerFiltrosCobranza(),
+	]);
 
-	if (result.success && result.data) {
-		return <Dashboard polizasIniciales={result.data.polizas} statsIniciales={result.data.stats} />;
+	if (!polizasResult.success || !statsResult.success || !filtrosResult.success) {
+		const error = polizasResult.error ?? statsResult.error ?? filtrosResult.error;
+		return (
+			<div className="border border-destructive/30 rounded-md p-4 text-destructive bg-destructive/5">
+				<p className="font-medium text-sm">Error al cargar datos de cobranzas</p>
+				<p className="text-xs text-muted-foreground mt-1">{error}</p>
+			</div>
+		);
 	}
 
 	return (
-		<div className="border border-destructive/30 rounded-md p-4 text-destructive bg-destructive/5">
-			<p className="font-medium text-sm">Error al cargar datos de cobranzas</p>
-			<p className="text-xs text-muted-foreground mt-1">{result.error}</p>
-		</div>
+		<Dashboard
+			polizasIniciales={polizasResult.data!.polizas}
+			totalInicial={polizasResult.data!.total}
+			statsIniciales={statsResult.data!}
+			filtrosOptions={filtrosResult.data!}
+		/>
 	);
 }
 

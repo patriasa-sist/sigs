@@ -498,6 +498,46 @@ export type SortOptionsEnhanced = {
 };
 
 // ============================================
+// SERVER-SIDE PAGINATION TYPES
+// ============================================
+
+/**
+ * Parámetros para obtenerCobranzasPaginadas()
+ * Campos de orden que se pueden resolver en la vista SQL.
+ * 'cliente' y 'compania' se ordenan client-side sobre la página actual.
+ */
+export type CobranzaSortField =
+	| "numero_poliza"
+	| "cuotas_vencidas"
+	| "cuotas_pendientes"
+	| "monto_pendiente"    // → total_pendiente en la vista
+	| "fecha_vencimiento"  // → proxima_fecha_vencimiento en la vista
+	| "prima_total"
+	| "inicio_vigencia";
+
+export type CobranzaFiltros = {
+	page?: number;
+	pageSize?: number;
+	search?: string;
+	ramo?: string;
+	compania_id?: string;
+	responsable_id?: string;
+	regional_id?: string;
+	soloVencidas?: boolean;
+	incluirPagadas?: boolean;
+	sortField?: CobranzaSortField;
+	sortDirection?: "asc" | "desc";
+};
+
+/** Opciones para los dropdowns de filtro del dashboard */
+export type FiltrosCobranzaOptions = {
+	ramos: string[];
+	companias: { id: string; nombre: string }[];
+	responsables: { id: string; full_name: string }[];
+	regionales: { id: string; nombre: string }[];
+};
+
+// ============================================
 // SERVER ACTION RESPONSE TYPES (EXTENDED)
 // ============================================
 

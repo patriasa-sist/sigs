@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback, useTransition } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -26,7 +26,7 @@ import {
 	ChevronDown,
 	AlertCircle,
 } from "lucide-react";
-import { obtenerPolizasConPendientes } from "@/app/cobranzas/actions";
+import { obtenerCobranzasPaginadas } from "@/app/cobranzas/actions";
 import StatsCards from "./StatsCards";
 import CuotasModal from "./CuotasModal";
 import RegistrarPagoModal from "./RegistrarPagoModal";
@@ -37,28 +37,43 @@ import type {
 	CobranzaStats,
 	CuotaPago,
 	ExcessPaymentDistribution,
-	SortFieldEnhanced,
+	CobranzaSortField,
+	FiltrosCobranzaOptions,
 } from "@/types/cobranza";
+
+// Sort fields that are resolved server-side in the view
+const SERVER_SORT_FIELDS = new Set<string>([
+	"numero_poliza",
+	"cuotas_vencidas",
+	"cuotas_pendientes",
+	"monto_pendiente",
+	"fecha_vencimiento",
+	"prima_total",
+	"inicio_vigencia",
+]);
+
+type AnySort = CobranzaSortField | "cliente" | "compania";
 
 interface DashboardProps {
 	polizasIniciales: PolizaConPagos[];
 	statsIniciales: CobranzaStats;
+	totalInicial: number;
+	filtrosOptions: FiltrosCobranzaOptions;
 }
 
 const ALL = "__all__";
 
-/** Inline sort icon component — avoids repeating the arrow logic per column */
+/** Inline sort icon component */
 function SortIcon({
 	field,
 	currentField,
 	direction,
 }: {
-	field: SortFieldEnhanced;
-	currentField: SortFieldEnhanced | null;
+	field: AnySort;
+	currentField: AnySort | null;
 	direction: "asc" | "desc";
 }) {
-	if (currentField !== field)
-		return <ArrowUpDown className="h-3.5 w-3.5 opacity-40" />;
+	if (currentField !== field) return <ArrowUpDown className="h-3.5 w-3.5 opacity-40" />;
 	return direction === "asc" ? (
 		<ArrowUp className="h-3.5 w-3.5 text-primary" />
 	) : (
@@ -66,35 +81,32 @@ function SortIcon({
 	);
 }
 
-export default function Dashboard({ polizasIniciales, statsIniciales }: DashboardProps) {
+export default function Dashboard({ polizasIniciales, statsIniciales, totalInicial, filtrosOptions }: DashboardProps) {
 	// ── Data ──────────────────────────────────────────────────────────
 	const [polizas, setPolizas] = useState<PolizaConPagos[]>(polizasIniciales);
-	const [stats] = useState<CobranzaStats>(statsIniciales);
-
-	// Lazy-load all policies (including fully paid) on first toggle
-	const [mostrarPagadas, setMostrarPagadas] = useState(false);
-	const [allPolizas, setAllPolizas] = useState<PolizaConPagos[] | null>(null);
-	const [isPending, startTransition] = useTransition();
+	const [total, setTotal] = useState(totalInicial);
+	const [isRefetching, setIsRefetching] = useState(false);
 
 	// ── UI state ──────────────────────────────────────────────────────
 	const [showExport, setShowExport] = useState(false);
 
 	// ── Filters ───────────────────────────────────────────────────────
 	const [searchTerm, setSearchTerm] = useState("");
+	const [debouncedSearch, setDebouncedSearch] = useState("");
 	const [filters, setFilters] = useState({
 		ramo: ALL,
-		compania: ALL,
-		ejecutivo: ALL,
-		regional: ALL,
+		compania_id: ALL,
+		responsable_id: ALL,
+		regional_id: ALL,
 	});
 	const [soloVencidas, setSoloVencidas] = useState(false);
+	const [incluirPagadas, setIncluirPagadas] = useState(false);
 	const [currentPage, setCurrentPage] = useState(1);
+	const pageSize = 20;
 
-	// ── Pagination ────────────────────────────────────────────────────
-	const [pageSize] = useState(20);
-
-	// ── Sorting — default: cuotas_vencidas DESC (most urgent first) ───
-	const [sortField, setSortField] = useState<SortFieldEnhanced | null>("cuotas_vencidas");
+	// ── Sort ─────────────────────────────────────────────────────────
+	// Default: cuotas_vencidas DESC (más urgentes primero)
+	const [sortField, setSortField] = useState<AnySort>("cuotas_vencidas");
 	const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
 
 	// ── Modal state ───────────────────────────────────────────────────
@@ -113,30 +125,58 @@ export default function Dashboard({ polizasIniciales, statsIniciales }: Dashboar
 			maximumFractionDigits: 2,
 		}).format(amount);
 
-	const handleTogglePagadas = useCallback(
-		(checked: boolean) => {
-			setMostrarPagadas(checked);
-			setCurrentPage(1);
-			if (checked) {
-				if (allPolizas === null) {
-					startTransition(async () => {
-						const result = await obtenerPolizasConPendientes(true);
-						if (result.success && result.data) {
-							setAllPolizas(result.data.polizas);
-							setPolizas(result.data.polizas);
-						}
-					});
-				} else {
-					setPolizas(allPolizas);
-				}
-			} else {
-				setPolizas(polizasIniciales);
-			}
-		},
-		[allPolizas, polizasIniciales]
-	);
+	// ── Debounce search ───────────────────────────────────────────────
+	useEffect(() => {
+		const timer = setTimeout(() => setDebouncedSearch(searchTerm), 350);
+		return () => clearTimeout(timer);
+	}, [searchTerm]);
 
-	const handleSort = (field: SortFieldEnhanced) => {
+	// ── Fetch server-side ─────────────────────────────────────────────
+	const fetchPolizas = useCallback(async (page: number, resetPage = false) => {
+		const targetPage = resetPage ? 1 : page;
+		if (resetPage) setCurrentPage(1);
+
+		const serverSort = SERVER_SORT_FIELDS.has(sortField)
+			? (sortField as CobranzaSortField)
+			: "cuotas_vencidas";
+		const serverDir = SERVER_SORT_FIELDS.has(sortField) ? sortDirection : "desc";
+
+		setIsRefetching(true);
+		const result = await obtenerCobranzasPaginadas({
+			page: targetPage,
+			pageSize,
+			search: debouncedSearch || undefined,
+			ramo: filters.ramo !== ALL ? filters.ramo : undefined,
+			compania_id: filters.compania_id !== ALL ? filters.compania_id : undefined,
+			responsable_id: filters.responsable_id !== ALL ? filters.responsable_id : undefined,
+			regional_id: filters.regional_id !== ALL ? filters.regional_id : undefined,
+			soloVencidas,
+			incluirPagadas,
+			sortField: serverSort,
+			sortDirection: serverDir,
+		});
+		setIsRefetching(false);
+
+		if (result.success && result.data) {
+			setPolizas(result.data.polizas);
+			setTotal(result.data.total);
+		}
+	}, [debouncedSearch, filters, soloVencidas, incluirPagadas, sortField, sortDirection, pageSize]);
+
+	// Re-fetch when filter/sort/page changes (debouncedSearch already debounced)
+	useEffect(() => {
+		fetchPolizas(currentPage);
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [debouncedSearch, filters, soloVencidas, incluirPagadas, sortField, sortDirection]);
+
+	// Page navigation
+	const goToPage = useCallback((page: number) => {
+		setCurrentPage(page);
+		fetchPolizas(page);
+	}, [fetchPolizas]);
+
+	// ── Sort handler ──────────────────────────────────────────────────
+	const handleSort = (field: AnySort) => {
 		if (sortField === field) {
 			setSortDirection((d) => (d === "asc" ? "desc" : "asc"));
 		} else {
@@ -146,146 +186,52 @@ export default function Dashboard({ polizasIniciales, statsIniciales }: Dashboar
 		setCurrentPage(1);
 	};
 
-	// ── Derived filter options from loaded data ───────────────────────
-	const filterOptions = useMemo(
-		() => ({
-			ramos: [...new Set(polizas.map((p) => p.ramo))].filter(Boolean).sort(),
-			companias: [...new Set(polizas.map((p) => p.compania.nombre))]
-				.filter((v) => v !== "N/A")
-				.sort(),
-			ejecutivos: [...new Set(polizas.map((p) => p.responsable.full_name))]
-				.filter((v) => v !== "N/A")
-				.sort(),
-			regionales: [...new Set(polizas.map((p) => p.regional.nombre))]
-				.filter((v) => v !== "N/A")
-				.sort(),
-		}),
-		[polizas]
-	);
+	// ── Client-side sort for cliente/compania (current page only) ─────
+	const displayPolizas = useMemo(() => {
+		if (sortField !== "cliente" && sortField !== "compania") return polizas;
+		return [...polizas].sort((a, b) => {
+			const valA = sortField === "cliente"
+				? a.client.nombre_completo.toLowerCase()
+				: a.compania.nombre.toLowerCase();
+			const valB = sortField === "cliente"
+				? b.client.nombre_completo.toLowerCase()
+				: b.compania.nombre.toLowerCase();
+			return sortDirection === "asc" ? valA.localeCompare(valB) : valB.localeCompare(valA);
+		});
+	}, [polizas, sortField, sortDirection]);
 
+	// ── Filter helpers ────────────────────────────────────────────────
 	const hasActiveFilters =
 		searchTerm.trim() !== "" ||
 		Object.values(filters).some((v) => v !== ALL) ||
 		soloVencidas;
 
+	// Active filter chips (for display — resolve names from options)
 	const activeFilterLabels: { key: string; label: string; value: string }[] = [];
 	if (filters.ramo !== ALL)
 		activeFilterLabels.push({ key: "ramo", label: "Ramo", value: filters.ramo });
-	if (filters.compania !== ALL)
-		activeFilterLabels.push({ key: "compania", label: "Compañía", value: filters.compania });
-	if (filters.ejecutivo !== ALL)
-		activeFilterLabels.push({ key: "ejecutivo", label: "Ejecutivo", value: filters.ejecutivo });
-	if (filters.regional !== ALL)
-		activeFilterLabels.push({ key: "regional", label: "Regional", value: filters.regional });
+	if (filters.compania_id !== ALL) {
+		const comp = filtrosOptions.companias.find((c) => c.id === filters.compania_id);
+		activeFilterLabels.push({ key: "compania_id", label: "Compañía", value: comp?.nombre ?? filters.compania_id });
+	}
+	if (filters.responsable_id !== ALL) {
+		const resp = filtrosOptions.responsables.find((r) => r.id === filters.responsable_id);
+		activeFilterLabels.push({ key: "responsable_id", label: "Ejecutivo", value: resp?.full_name ?? filters.responsable_id });
+	}
+	if (filters.regional_id !== ALL) {
+		const reg = filtrosOptions.regionales.find((r) => r.id === filters.regional_id);
+		activeFilterLabels.push({ key: "regional_id", label: "Regional", value: reg?.nombre ?? filters.regional_id });
+	}
 
 	const clearFilter = (key: string) => {
 		setFilters((prev) => ({ ...prev, [key]: ALL }));
+		setCurrentPage(1);
 	};
 
-	const clearAllFilters = () => {
+	const clearAllFilters = useCallback(() => {
 		setSearchTerm("");
-		setFilters({ ramo: ALL, compania: ALL, ejecutivo: ALL, regional: ALL });
+		setFilters({ ramo: ALL, compania_id: ALL, responsable_id: ALL, regional_id: ALL });
 		setSoloVencidas(false);
-		setCurrentPage(1);
-	};
-
-	// ── Filter + sort ─────────────────────────────────────────────────
-	const filteredData = useMemo(() => {
-		let filtered = polizas.filter((poliza) => {
-			// Quick filter: solo vencidas
-			if (soloVencidas && poliza.cuotas_vencidas === 0) return false;
-
-			// Search
-			const searchLower = searchTerm.toLowerCase();
-			const matchesSearch =
-				poliza.numero_poliza.toLowerCase().includes(searchLower) ||
-				poliza.client.nombre_completo.toLowerCase().includes(searchLower) ||
-				poliza.client.documento.toLowerCase().includes(searchLower) ||
-				poliza.compania.nombre.toLowerCase().includes(searchLower);
-			if (!matchesSearch) return false;
-
-			// Dropdown filters
-			if (filters.ramo !== ALL && poliza.ramo !== filters.ramo) return false;
-			if (filters.compania !== ALL && poliza.compania.nombre !== filters.compania) return false;
-			if (filters.ejecutivo !== ALL && poliza.responsable.full_name !== filters.ejecutivo)
-				return false;
-			if (filters.regional !== ALL && poliza.regional.nombre !== filters.regional) return false;
-
-			return true;
-		});
-
-		if (sortField) {
-			filtered = [...filtered].sort((a, b) => {
-				let valueA: string | number;
-				let valueB: string | number;
-
-				switch (sortField) {
-					case "numero_poliza":
-						valueA = a.numero_poliza.toLowerCase();
-						valueB = b.numero_poliza.toLowerCase();
-						break;
-					case "cliente":
-						valueA = a.client.nombre_completo.toLowerCase();
-						valueB = b.client.nombre_completo.toLowerCase();
-						break;
-					case "compania":
-						valueA = a.compania.nombre.toLowerCase();
-						valueB = b.compania.nombre.toLowerCase();
-						break;
-					case "fecha_vencimiento": {
-						valueA = a.proxima_fecha_vencimiento
-							? new Date(a.proxima_fecha_vencimiento).getTime()
-							: Infinity;
-						valueB = b.proxima_fecha_vencimiento
-							? new Date(b.proxima_fecha_vencimiento).getTime()
-							: Infinity;
-						break;
-					}
-					case "monto_pendiente":
-						valueA = a.total_pendiente;
-						valueB = b.total_pendiente;
-						break;
-					case "cuotas_vencidas":
-						valueA = a.cuotas_vencidas;
-						valueB = b.cuotas_vencidas;
-						break;
-					case "cuotas_pendientes":
-						valueA = a.cuotas_pendientes;
-						valueB = b.cuotas_pendientes;
-						break;
-					case "prima_total":
-						valueA = a.prima_total;
-						valueB = b.prima_total;
-						break;
-					case "inicio_vigencia":
-						valueA = new Date(a.inicio_vigencia).getTime();
-						valueB = new Date(b.inicio_vigencia).getTime();
-						break;
-					default:
-						return 0;
-				}
-
-				if (valueA < valueB) return sortDirection === "asc" ? -1 : 1;
-				if (valueA > valueB) return sortDirection === "asc" ? 1 : -1;
-				return 0;
-			});
-		}
-
-		return filtered;
-	}, [polizas, searchTerm, filters, sortField, sortDirection, soloVencidas]);
-
-	const paginatedData = useMemo(() => {
-		const start = (currentPage - 1) * pageSize;
-		return filteredData.slice(start, start + pageSize);
-	}, [filteredData, currentPage, pageSize]);
-
-	const handleSearchChange = useCallback((value: string) => {
-		setSearchTerm(value);
-		setCurrentPage(1);
-	}, []);
-
-	const handleFilterChange = useCallback((key: string, value: string) => {
-		setFilters((prev) => ({ ...prev, [key]: value }));
 		setCurrentPage(1);
 	}, []);
 
@@ -306,20 +252,24 @@ export default function Dashboard({ polizasIniciales, statsIniciales }: Dashboar
 			setExcessData(excessDataResult);
 			setRedistribucionModalOpen(true);
 		} else {
-			window.location.reload();
+			fetchPolizas(currentPage);
 		}
 	};
 
 	const handleRedistribucionSuccess = () => {
 		setRedistribucionModalOpen(false);
-		window.location.reload();
+		fetchPolizas(currentPage);
 	};
+
+	// ── Pagination ────────────────────────────────────────────────────
+	const totalPages = Math.ceil(total / pageSize);
+	const startIndex = (currentPage - 1) * pageSize;
 
 	// ── Render ────────────────────────────────────────────────────────
 	return (
 		<div className="space-y-6">
 			{/* KPI stats */}
-			<StatsCards stats={stats} />
+			<StatsCards stats={statsIniciales} />
 
 			{/* Export toggle */}
 			<div>
@@ -356,14 +306,20 @@ export default function Dashboard({ polizasIniciales, statsIniciales }: Dashboar
 						<div className="relative flex-1 min-w-[200px]">
 							<Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
 							<Input
-								placeholder="Buscar por póliza, cliente, CI/NIT o compañía…"
+								placeholder="Buscar por póliza, cliente, CI/NIT…"
 								value={searchTerm}
-								onChange={(e) => handleSearchChange(e.target.value)}
+								onChange={(e) => {
+									setSearchTerm(e.target.value);
+									setCurrentPage(1);
+								}}
 								className="pl-9 h-9"
 							/>
 							{searchTerm && (
 								<button
-									onClick={() => handleSearchChange("")}
+									onClick={() => {
+										setSearchTerm("");
+										setCurrentPage(1);
+									}}
 									className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
 								>
 									<X className="h-3.5 w-3.5" />
@@ -371,67 +327,74 @@ export default function Dashboard({ polizasIniciales, statsIniciales }: Dashboar
 							)}
 						</div>
 
-						<Select value={filters.ramo} onValueChange={(v) => handleFilterChange("ramo", v)}>
+						<Select
+							value={filters.ramo}
+							onValueChange={(v) => {
+								setFilters((prev) => ({ ...prev, ramo: v }));
+								setCurrentPage(1);
+							}}
+						>
 							<SelectTrigger size="sm" className="w-[130px]">
 								<SelectValue placeholder="Ramo" />
 							</SelectTrigger>
 							<SelectContent>
 								<SelectItem value={ALL}>Todos los ramos</SelectItem>
-								{filterOptions.ramos.map((r) => (
-									<SelectItem key={r} value={r}>
-										{r}
-									</SelectItem>
+								{filtrosOptions.ramos.map((r) => (
+									<SelectItem key={r} value={r}>{r}</SelectItem>
 								))}
 							</SelectContent>
 						</Select>
 
 						<Select
-							value={filters.compania}
-							onValueChange={(v) => handleFilterChange("compania", v)}
+							value={filters.compania_id}
+							onValueChange={(v) => {
+								setFilters((prev) => ({ ...prev, compania_id: v }));
+								setCurrentPage(1);
+							}}
 						>
 							<SelectTrigger size="sm" className="w-[155px]">
 								<SelectValue placeholder="Compañía" />
 							</SelectTrigger>
 							<SelectContent>
 								<SelectItem value={ALL}>Todas las compañías</SelectItem>
-								{filterOptions.companias.map((c) => (
-									<SelectItem key={c} value={c}>
-										{c}
-									</SelectItem>
+								{filtrosOptions.companias.map((c) => (
+									<SelectItem key={c.id} value={c.id}>{c.nombre}</SelectItem>
 								))}
 							</SelectContent>
 						</Select>
 
 						<Select
-							value={filters.ejecutivo}
-							onValueChange={(v) => handleFilterChange("ejecutivo", v)}
+							value={filters.responsable_id}
+							onValueChange={(v) => {
+								setFilters((prev) => ({ ...prev, responsable_id: v }));
+								setCurrentPage(1);
+							}}
 						>
 							<SelectTrigger size="sm" className="w-[155px]">
 								<SelectValue placeholder="Ejecutivo" />
 							</SelectTrigger>
 							<SelectContent>
 								<SelectItem value={ALL}>Todos los ejecutivos</SelectItem>
-								{filterOptions.ejecutivos.map((ej) => (
-									<SelectItem key={ej} value={ej}>
-										{ej}
-									</SelectItem>
+								{filtrosOptions.responsables.map((r) => (
+									<SelectItem key={r.id} value={r.id}>{r.full_name}</SelectItem>
 								))}
 							</SelectContent>
 						</Select>
 
 						<Select
-							value={filters.regional}
-							onValueChange={(v) => handleFilterChange("regional", v)}
+							value={filters.regional_id}
+							onValueChange={(v) => {
+								setFilters((prev) => ({ ...prev, regional_id: v }));
+								setCurrentPage(1);
+							}}
 						>
 							<SelectTrigger size="sm" className="w-[140px]">
 								<SelectValue placeholder="Regional" />
 							</SelectTrigger>
 							<SelectContent>
 								<SelectItem value={ALL}>Todas las regionales</SelectItem>
-								{filterOptions.regionales.map((r) => (
-									<SelectItem key={r} value={r}>
-										{r}
-									</SelectItem>
+								{filtrosOptions.regionales.map((r) => (
+									<SelectItem key={r.id} value={r.id}>{r.nombre}</SelectItem>
 								))}
 							</SelectContent>
 						</Select>
@@ -483,14 +446,17 @@ export default function Dashboard({ polizasIniciales, statsIniciales }: Dashboar
 							))}
 						</div>
 						<div className="flex items-center gap-2 ml-auto">
-							{isPending && (
+							{isRefetching && (
 								<Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
 							)}
 							<Switch
 								id="mostrar-pagadas"
-								checked={mostrarPagadas}
-								onCheckedChange={handleTogglePagadas}
-								disabled={isPending}
+								checked={incluirPagadas}
+								onCheckedChange={(v) => {
+									setIncluirPagadas(v);
+									setCurrentPage(1);
+								}}
+								disabled={isRefetching}
 							/>
 							<Label
 								htmlFor="mostrar-pagadas"
@@ -507,15 +473,15 @@ export default function Dashboard({ polizasIniciales, statsIniciales }: Dashboar
 			<Card>
 				<CardHeader className="pb-0">
 					<CardTitle className="text-base font-medium text-foreground">
-						{mostrarPagadas ? "Todas las Pólizas" : "Pólizas con Cuotas Pendientes"}
+						{incluirPagadas ? "Todas las Pólizas" : "Pólizas con Cuotas Pendientes"}
 						<span className="ml-2 text-sm font-normal text-muted-foreground">
-							({filteredData.length})
+							({total})
 						</span>
 					</CardTitle>
 				</CardHeader>
 
 				<CardContent className="p-0 mt-3">
-					{paginatedData.length > 0 ? (
+					{displayPolizas.length > 0 ? (
 						<>
 							<div className="overflow-x-auto border-t border-border">
 								<table className="w-full">
@@ -527,11 +493,7 @@ export default function Dashboard({ polizasIniciales, statsIniciales }: Dashboar
 													className="flex items-center gap-1.5 hover:text-primary transition-colors"
 												>
 													Cliente
-													<SortIcon
-														field="cliente"
-														currentField={sortField}
-														direction={sortDirection}
-													/>
+													<SortIcon field="cliente" currentField={sortField} direction={sortDirection} />
 												</button>
 											</th>
 											<th className="px-4 py-3 text-left text-sm font-medium">
@@ -540,11 +502,7 @@ export default function Dashboard({ polizasIniciales, statsIniciales }: Dashboar
 													className="flex items-center gap-1.5 hover:text-primary transition-colors"
 												>
 													Póliza
-													<SortIcon
-														field="numero_poliza"
-														currentField={sortField}
-														direction={sortDirection}
-													/>
+													<SortIcon field="numero_poliza" currentField={sortField} direction={sortDirection} />
 												</button>
 											</th>
 											<th className="px-4 py-3 text-left text-sm font-medium">
@@ -553,11 +511,7 @@ export default function Dashboard({ polizasIniciales, statsIniciales }: Dashboar
 													className="flex items-center gap-1.5 hover:text-primary transition-colors"
 												>
 													Compañía
-													<SortIcon
-														field="compania"
-														currentField={sortField}
-														direction={sortDirection}
-													/>
+													<SortIcon field="compania" currentField={sortField} direction={sortDirection} />
 												</button>
 											</th>
 											<th className="px-4 py-3 text-left text-sm font-medium">
@@ -566,11 +520,7 @@ export default function Dashboard({ polizasIniciales, statsIniciales }: Dashboar
 													className="flex items-center gap-1.5 hover:text-primary transition-colors"
 												>
 													Cuotas
-													<SortIcon
-														field="cuotas_vencidas"
-														currentField={sortField}
-														direction={sortDirection}
-													/>
+													<SortIcon field="cuotas_vencidas" currentField={sortField} direction={sortDirection} />
 												</button>
 											</th>
 											<th className="px-4 py-3 text-left text-sm font-medium">
@@ -579,11 +529,7 @@ export default function Dashboard({ polizasIniciales, statsIniciales }: Dashboar
 													className="flex items-center gap-1.5 hover:text-primary transition-colors"
 												>
 													Pendiente
-													<SortIcon
-														field="monto_pendiente"
-														currentField={sortField}
-														direction={sortDirection}
-													/>
+													<SortIcon field="monto_pendiente" currentField={sortField} direction={sortDirection} />
 												</button>
 											</th>
 											<th className="px-4 py-3 text-right text-sm font-medium">
@@ -592,7 +538,7 @@ export default function Dashboard({ polizasIniciales, statsIniciales }: Dashboar
 										</tr>
 									</thead>
 									<tbody>
-										{paginatedData.map((poliza) => (
+										{displayPolizas.map((poliza) => (
 											<tr
 												key={poliza.id}
 												className={`border-b border-border hover:bg-secondary/50 transition-colors duration-150 border-l-2 ${
@@ -642,10 +588,9 @@ export default function Dashboard({ polizasIniciales, statsIniciales }: Dashboar
 																{poliza.cuotas_pendientes} pend.
 															</span>
 														)}
-														{poliza.cuotas_vencidas === 0 &&
-															poliza.cuotas_pendientes === 0 && (
-																<span className="text-xs text-muted-foreground">Al día</span>
-															)}
+														{poliza.cuotas_vencidas === 0 && poliza.cuotas_pendientes === 0 && (
+															<span className="text-xs text-muted-foreground">Al día</span>
+														)}
 													</div>
 												</td>
 
@@ -671,74 +616,76 @@ export default function Dashboard({ polizasIniciales, statsIniciales }: Dashboar
 							</div>
 
 							{/* Pagination */}
-							{(() => {
-								const totalPages = Math.ceil(filteredData.length / pageSize);
-								if (totalPages <= 1) return null;
-								const startIndex = (currentPage - 1) * pageSize;
-								return (
-									<div className="flex items-center justify-between px-4 py-3 border-t border-border">
-										<p className="text-xs text-muted-foreground">
-											{startIndex + 1}–{Math.min(startIndex + pageSize, filteredData.length)} de {filteredData.length}
-										</p>
-										<div className="flex items-center gap-1">
-											<Button
-												variant="outline"
-												size="sm"
-												onClick={() => setCurrentPage((p) => p - 1)}
-												disabled={currentPage === 1}
-												className="h-7 px-2.5 text-xs"
-											>
-												Anterior
-											</Button>
-											{Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-												let pageNum: number;
-												if (totalPages <= 5) pageNum = i + 1;
-												else if (currentPage <= 3) pageNum = i + 1;
-												else if (currentPage >= totalPages - 2) pageNum = totalPages - 4 + i;
-												else pageNum = currentPage - 2 + i;
-												return (
-													<Button
-														key={pageNum}
-														variant={currentPage === pageNum ? "default" : "ghost"}
-														size="sm"
-														onClick={() => setCurrentPage(pageNum)}
-														className="h-7 w-7 p-0 text-xs"
-													>
-														{pageNum}
-													</Button>
-												);
-											})}
-											<Button
-												variant="outline"
-												size="sm"
-												onClick={() => setCurrentPage((p) => p + 1)}
-												disabled={currentPage === Math.ceil(filteredData.length / pageSize)}
-												className="h-7 px-2.5 text-xs"
-											>
-												Siguiente
-											</Button>
-										</div>
+							{totalPages > 1 && (
+								<div className="flex items-center justify-between px-4 py-3 border-t border-border">
+									<p className="text-xs text-muted-foreground">
+										{startIndex + 1}–{Math.min(startIndex + pageSize, total)} de {total}
+									</p>
+									<div className="flex items-center gap-1">
+										<Button
+											variant="outline"
+											size="sm"
+											onClick={() => goToPage(currentPage - 1)}
+											disabled={currentPage === 1 || isRefetching}
+											className="h-7 px-2.5 text-xs"
+										>
+											Anterior
+										</Button>
+										{Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+											let pageNum: number;
+											if (totalPages <= 5) pageNum = i + 1;
+											else if (currentPage <= 3) pageNum = i + 1;
+											else if (currentPage >= totalPages - 2) pageNum = totalPages - 4 + i;
+											else pageNum = currentPage - 2 + i;
+											return (
+												<Button
+													key={pageNum}
+													variant={currentPage === pageNum ? "default" : "ghost"}
+													size="sm"
+													onClick={() => goToPage(pageNum)}
+													disabled={isRefetching}
+													className="h-7 w-7 p-0 text-xs"
+												>
+													{pageNum}
+												</Button>
+											);
+										})}
+										<Button
+											variant="outline"
+											size="sm"
+											onClick={() => goToPage(currentPage + 1)}
+											disabled={currentPage === totalPages || isRefetching}
+											className="h-7 px-2.5 text-xs"
+										>
+											Siguiente
+										</Button>
 									</div>
-								);
-							})()}
+								</div>
+							)}
 						</>
 					) : (
 						<div className="text-center py-16 border-t border-border">
-							<p className="text-muted-foreground">
-								{hasActiveFilters
-									? "No hay pólizas que coincidan con los filtros aplicados"
-									: "No hay pólizas con cuotas pendientes"}
-							</p>
-							{hasActiveFilters && (
-								<Button
-									variant="ghost"
-									size="sm"
-									onClick={clearAllFilters}
-									className="mt-3 gap-1"
-								>
-									<FilterX className="h-4 w-4" />
-									Limpiar filtros
-								</Button>
+							{isRefetching ? (
+								<Loader2 className="h-6 w-6 animate-spin text-muted-foreground mx-auto" />
+							) : (
+								<>
+									<p className="text-muted-foreground">
+										{hasActiveFilters
+											? "No hay pólizas que coincidan con los filtros aplicados"
+											: "No hay pólizas con cuotas pendientes"}
+									</p>
+									{hasActiveFilters && (
+										<Button
+											variant="ghost"
+											size="sm"
+											onClick={clearAllFilters}
+											className="mt-3 gap-1"
+										>
+											<FilterX className="h-4 w-4" />
+											Limpiar filtros
+										</Button>
+									)}
+								</>
 							)}
 						</div>
 					)}
