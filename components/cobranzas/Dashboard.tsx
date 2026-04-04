@@ -233,16 +233,12 @@ export default function Dashboard({ polizasIniciales, statsIniciales }: Dashboar
 						valueB = b.compania.nombre.toLowerCase();
 						break;
 					case "fecha_vencimiento": {
-						const noPagadasA = a.cuotas.filter((c) => c.estado !== "pagado");
-						const noPagadasB = b.cuotas.filter((c) => c.estado !== "pagado");
-						valueA =
-							noPagadasA.length > 0
-								? Math.min(...noPagadasA.map((c) => new Date(c.fecha_vencimiento).getTime()))
-								: Infinity;
-						valueB =
-							noPagadasB.length > 0
-								? Math.min(...noPagadasB.map((c) => new Date(c.fecha_vencimiento).getTime()))
-								: Infinity;
+						valueA = a.proxima_fecha_vencimiento
+							? new Date(a.proxima_fecha_vencimiento).getTime()
+							: Infinity;
+						valueB = b.proxima_fecha_vencimiento
+							? new Date(b.proxima_fecha_vencimiento).getTime()
+							: Infinity;
 						break;
 					}
 					case "monto_pendiente":

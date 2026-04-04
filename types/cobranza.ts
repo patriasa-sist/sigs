@@ -88,7 +88,7 @@ export type PolizaConPagos = {
 	responsable: ResponsableInfo;
 	regional: RegionalInfo;
 
-	// Cuotas de pago
+	// Cuotas de pago — vacío en el listado principal, poblado por obtenerDetallePolizaParaCuotas
 	cuotas: CuotaPago[];
 
 	// Campos calculados
@@ -96,6 +96,7 @@ export type PolizaConPagos = {
 	total_pendiente: number;
 	cuotas_pendientes: number;
 	cuotas_vencidas: number;
+	proxima_fecha_vencimiento: string | null; // ISO date de la próxima cuota no pagada
 };
 
 // ============================================

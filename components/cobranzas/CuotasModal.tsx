@@ -211,7 +211,9 @@ export default function CuotasModal({
 	const puedeProrroga = (estado: string) =>
 		estado === "pendiente" || estado === "vencido" || estado === "parcial";
 
-	const cuotasVencidas = contarCuotasVencidas(poliza.cuotas || []);
+	// cuotas se obtienen del detalle extendido (cargado al abrir el modal)
+	const cuotasToRender = polizaExtendida?.cuotas ?? [];
+	const cuotasVencidas = contarCuotasVencidas(cuotasToRender);
 	const puedeGenerarAvisoMora = cuotasVencidas >= 3;
 
 	const telefono =
@@ -490,7 +492,12 @@ export default function CuotasModal({
 
 					{/* Quotas table */}
 					<div>
-						{poliza.cuotas.length > 0 ? (
+						{loading ? (
+							<div className="flex items-center justify-center gap-2 py-6 text-sm text-muted-foreground">
+								<Loader2 className="h-4 w-4 animate-spin" />
+								Cargando cuotas…
+							</div>
+						) : cuotasToRender.length > 0 ? (
 							<div className="rounded-md border border-border overflow-hidden">
 								<table className="w-full">
 									<thead className="bg-secondary text-secondary-foreground">
@@ -504,7 +511,7 @@ export default function CuotasModal({
 										</tr>
 									</thead>
 									<tbody>
-										{poliza.cuotas.map((cuota) => {
+										{cuotasToRender.map((cuota) => {
 											const estadoReal = obtenerEstadoReal(cuota);
 											const hasPhone = !!(
 												polizaExtendida?.contacto?.celular ||
