@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { requirePermission, checkPermission } from "@/utils/auth/helpers";
 import { BarChart3, FileSpreadsheet } from "lucide-react";
 import Link from "next/link";
@@ -16,10 +17,45 @@ export const metadata = {
 	description: "Dashboard gerencial con estadísticas de producción, cobranzas y siniestros",
 };
 
-export default async function GerenciaPage() {
-	await requirePermission("gerencia.ver");
-	const canExportar = await checkPermission("gerencia.exportar");
+function GerenciaSkeleton() {
+	return (
+		<div className="space-y-6">
+			{/* Filters bar */}
+			<div className="border border-border rounded-lg p-4 flex gap-3 flex-wrap">
+				{Array.from({ length: 5 }).map((_, i) => (
+					<div key={i} className="h-8 w-32 bg-muted rounded animate-pulse" />
+				))}
+			</div>
+			{/* Tabs */}
+			<div className="flex gap-2 border-b border-border pb-0">
+				{["Producción", "Cobranzas", "Siniestros"].map((t) => (
+					<div key={t} className="h-9 w-28 bg-muted rounded-t animate-pulse" />
+				))}
+			</div>
+			{/* KPI cards */}
+			<div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+				{Array.from({ length: 4 }).map((_, i) => (
+					<div key={i} className="border border-border rounded-lg p-4 space-y-3">
+						<div className="h-3 w-28 bg-muted rounded animate-pulse" />
+						<div className="h-7 w-36 bg-muted rounded animate-pulse" />
+						<div className="h-3 w-20 bg-muted rounded animate-pulse" />
+					</div>
+				))}
+			</div>
+			{/* Chart blocks */}
+			<div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+				{Array.from({ length: 4 }).map((_, i) => (
+					<div key={i} className="border border-border rounded-lg p-4">
+						<div className="h-4 w-40 bg-muted rounded animate-pulse mb-4" />
+						<div className="h-48 bg-muted/50 rounded animate-pulse" />
+					</div>
+				))}
+			</div>
+		</div>
+	);
+}
 
+async function GerenciaData({ canExportar }: { canExportar: boolean }) {
 	const currentYear = new Date().getFullYear();
 	const defaultFiltros: GerenciaFiltros = { anio: currentYear };
 
@@ -30,7 +66,6 @@ export default async function GerenciaPage() {
 		obtenerFiltrosGerencia(),
 	]);
 
-	// Defaults vacíos si algún fetch falla
 	const emptyProduccion = {
 		kpis: { prima_total_mes: 0, prima_acumulada_anio: 0, comisiones_mes: 0, cantidad_polizas_mes: 0 },
 		primaPorMes: [],
@@ -68,6 +103,21 @@ export default async function GerenciaPage() {
 	};
 
 	return (
+		<GerenciaDashboard
+			initialProduccion={produccionRes.success ? produccionRes.data : emptyProduccion}
+			initialCobranzas={cobranzasRes.success ? cobranzasRes.data : emptyCobranzas}
+			initialSiniestros={siniestrosRes.success ? siniestrosRes.data : emptySiniestros}
+			filtrosData={filtrosRes.success ? filtrosRes.data : { regionales: [], companias: [], equipos: [] }}
+			defaultFiltros={defaultFiltros}
+		/>
+	);
+}
+
+export default async function GerenciaPage() {
+	await requirePermission("gerencia.ver");
+	const { allowed: canExportar } = await checkPermission("gerencia.exportar");
+
+	return (
 		<div className="flex-1 w-full">
 			<div className="max-w-7xl mx-auto pt-6 pb-8 px-4 sm:px-6 lg:px-8">
 				<div className="flex items-center justify-between mb-6">
@@ -89,14 +139,9 @@ export default async function GerenciaPage() {
 						</Link>
 					)}
 				</div>
-
-				<GerenciaDashboard
-					initialProduccion={produccionRes.success ? produccionRes.data : emptyProduccion}
-					initialCobranzas={cobranzasRes.success ? cobranzasRes.data : emptyCobranzas}
-					initialSiniestros={siniestrosRes.success ? siniestrosRes.data : emptySiniestros}
-					filtrosData={filtrosRes.success ? filtrosRes.data : { regionales: [], companias: [], equipos: [] }}
-					defaultFiltros={defaultFiltros}
-				/>
+				<Suspense fallback={<GerenciaSkeleton />}>
+					<GerenciaData canExportar={canExportar} />
+				</Suspense>
 			</div>
 		</div>
 	);

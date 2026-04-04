@@ -110,17 +110,6 @@ export default function PolizasPage() {
 	const paginatedPolizas = filteredPolizas.slice(startIndex, endIndex);
 	const totalPages = Math.ceil(filteredPolizas.length / pageSize);
 
-	if (isLoading) {
-		return (
-			<div className="flex items-center justify-center min-h-[60vh]">
-				<div className="text-center space-y-3">
-					<div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent mx-auto" />
-					<p className="text-sm text-muted-foreground">Cargando pólizas…</p>
-				</div>
-			</div>
-		);
-	}
-
 	return (
 		<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-10 space-y-5">
 
@@ -129,7 +118,9 @@ export default function PolizasPage() {
 				<div>
 					<h1 className="text-2xl font-semibold text-foreground tracking-tight">Pólizas</h1>
 					<p className="text-sm text-muted-foreground mt-0.5">
-						{polizas.length > 0
+						{isLoading
+							? "Cargando…"
+							: polizas.length > 0
 							? `${polizas.length} pólizas registradas`
 							: "Gestión de pólizas de seguros"}
 					</p>
@@ -328,7 +319,32 @@ export default function PolizasPage() {
 
 			{/* ── Table ───────────────────────────────────────────────── */}
 			<Card>
-				{paginatedPolizas.length === 0 ? (
+				{isLoading ? (
+					<div className="overflow-x-auto">
+						<table className="w-full">
+							<thead>
+								<tr className="border-b border-border">
+									{["Nº Póliza", "Ramo", "Cliente", "Compañía", "Vigencia", "Prima", "Estado", ""].map((h) => (
+										<th key={h} className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">
+											{h}
+										</th>
+									))}
+								</tr>
+							</thead>
+							<tbody className="divide-y divide-border">
+								{Array.from({ length: 8 }).map((_, i) => (
+									<tr key={i}>
+										{[72, 48, 120, 96, 80, 64, 56, 16].map((w, j) => (
+											<td key={j} className="px-4 py-3">
+												<div className={`h-4 bg-muted rounded animate-pulse`} style={{ width: w }} />
+											</td>
+										))}
+									</tr>
+								))}
+							</tbody>
+						</table>
+					</div>
+				) : paginatedPolizas.length === 0 ? (
 					<CardContent className="flex flex-col items-center justify-center py-20">
 						<FileText className="h-10 w-10 text-muted-foreground/25 mb-3" />
 						<p className="text-sm font-medium text-foreground">
