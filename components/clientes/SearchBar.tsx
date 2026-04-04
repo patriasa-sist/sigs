@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Search, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 
@@ -11,12 +11,15 @@ interface SearchBarProps {
 
 export function SearchBar({ onSearch, placeholder }: SearchBarProps) {
 	const [searchQuery, setSearchQuery] = useState("");
+	const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-	const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-		if (e.key === "Enter") {
-			onSearch(searchQuery);
-		}
-	};
+	useEffect(() => {
+		if (timer.current) clearTimeout(timer.current);
+		timer.current = setTimeout(() => onSearch(searchQuery), 350);
+		return () => { if (timer.current) clearTimeout(timer.current); };
+	// onSearch no se incluye en deps para evitar re-renders si el padre no memoiza la función
+	// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [searchQuery]);
 
 	const handleClear = () => {
 		setSearchQuery("");
@@ -31,7 +34,6 @@ export function SearchBar({ onSearch, placeholder }: SearchBarProps) {
 				placeholder={placeholder || "Buscar por carnet, NIT, póliza, nombre o beneficiario…"}
 				value={searchQuery}
 				onChange={(e) => setSearchQuery(e.target.value)}
-				onKeyDown={handleKeyDown}
 				className="pl-9 pr-9"
 			/>
 			{searchQuery && (

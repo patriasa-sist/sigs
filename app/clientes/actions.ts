@@ -125,23 +125,8 @@ export async function getAllClients(options?: {
 
 		console.log(`[getAllClients] User ${user.email} fetching clients (page ${page}, size ${pageSize})`);
 
-		// Get total count first (lightweight query)
-		const { count: totalRecords, error: countError } = await supabase
-			.from("clients")
-			.select("*", { count: "exact", head: true });
-
-		if (countError) {
-			console.error("[getAllClients] Error counting clients:", countError);
-			return {
-				success: false,
-				error: "Error al contar clientes",
-				details: countError,
-			};
-		}
-
-		// Query base clients with type-specific data (paginated)
-		// Note: executive is fetched separately via profiles_public view for RLS compliance
-		const { data: clientsData, error: clientsError } = await supabase
+		// Query base clients con count exacto en una sola round-trip
+		const { data: clientsData, count: totalRecords, error: clientsError } = await supabase
 			.from("clients")
 			.select(
 				`
@@ -149,7 +134,8 @@ export async function getAllClients(options?: {
 				natural_clients (*),
 				juridic_clients (*),
 				unipersonal_clients (*)
-			`
+			`,
+				{ count: "exact" }
 			)
 			.order("created_at", { ascending: false })
 			.range(offset, offset + pageSize - 1);
@@ -496,71 +482,119 @@ export async function getClientById(clientId: string): Promise<ActionResult<Clie
  */
 export async function searchClients(query: string): Promise<ActionResult<ClientViewModel[]>> {
 	try {
-		const { user } = await getAuthenticatedClient();
+		const { supabase, user } = await getAuthenticatedClient();
 
 		const trimmedQuery = query.trim();
 		if (!trimmedQuery) {
-			// Return all clients if query is empty (first page)
 			const result = await getAllClients({ page: 1, pageSize: 20 });
-			if (!result.success) {
-				return result;
-			}
+			if (!result.success) return result;
 			return { success: true, data: result.data };
 		}
 
 		console.log(`[searchClients] User ${user.email} searching for: "${trimmedQuery}"`);
 
-		// Get all clients for search (increase page size for comprehensive search)
-		const allClientsResult = await getAllClients({ page: 1, pageSize: 1000 });
+		const q = trimmedQuery;
 
-		if (!allClientsResult.success) {
-			return { success: false, error: allClientsResult.error, details: allClientsResult.details };
+		// Buscar en todas las tablas relevantes en paralelo
+		const [natRes, jurRes, uniRes, clientsRes, polizasRes] = await Promise.all([
+			supabase.from("natural_clients").select("client_id")
+				.or(`primer_nombre.ilike.%${q}%,primer_apellido.ilike.%${q}%,segundo_apellido.ilike.%${q}%,numero_documento.ilike.%${q}%`),
+			supabase.from("juridic_clients").select("client_id")
+				.or(`razon_social.ilike.%${q}%,nit.ilike.%${q}%`),
+			supabase.from("unipersonal_clients").select("client_id")
+				.or(`razon_social.ilike.%${q}%,nit.ilike.%${q}%`),
+			supabase.from("clients").select("id")
+				.or(`email.ilike.%${q}%,phone.ilike.%${q}%`),
+			supabase.from("polizas").select("client_id")
+				.ilike("numero_poliza", `%${q}%`),
+		]);
+
+		const matchingIds = new Set([
+			...(natRes.data?.map((r) => r.client_id) ?? []),
+			...(jurRes.data?.map((r) => r.client_id) ?? []),
+			...(uniRes.data?.map((r) => r.client_id) ?? []),
+			...(clientsRes.data?.map((r) => r.id) ?? []),
+			...(polizasRes.data?.map((r) => r.client_id) ?? []),
+		]);
+
+		if (matchingIds.size === 0) {
+			console.log(`[searchClients] No matches for "${q}"`);
+			return { success: true, data: [] };
 		}
 
-		const allClients = allClientsResult.data;
-		const searchTerm = trimmedQuery.toLowerCase();
+		const ids = [...matchingIds];
 
-		// Filter clients by search term
-		const matchedClients = allClients.filter((client) => {
-			// Search in name
-			if (client.fullName.toLowerCase().includes(searchTerm)) {
-				return true;
+		// Obtener clientes coincidentes con sus datos relacionados
+		const { data: clientsData, error: clientsError } = await supabase
+			.from("clients")
+			.select(`*, natural_clients (*), juridic_clients (*), unipersonal_clients (*)`)
+			.in("id", ids)
+			.order("created_at", { ascending: false })
+			.limit(100);
+
+		if (clientsError) {
+			console.error("[searchClients] Error fetching matched clients:", clientsError);
+			return { success: false, error: "Error al obtener clientes", details: clientsError };
+		}
+
+		if (!clientsData?.length) return { success: true, data: [] };
+
+		// Obtener ejecutivos y pólizas para los resultados
+		const executiveIds = [...new Set(
+			clientsData.map((c) => c.commercial_owner_id).filter((id): id is string => id !== null)
+		)];
+		const clientIds = clientsData.map((c) => c.id);
+
+		const [executivesRes, policiesRes] = await Promise.all([
+			executiveIds.length > 0
+				? supabase.from("profiles_public").select("id, full_name, email").in("id", executiveIds)
+				: Promise.resolve({ data: [] }),
+			supabase.from("polizas")
+				.select(`*, companias_aseguradoras (id, nombre, activo, created_at)`)
+				.in("client_id", clientIds),
+		]);
+
+		const executivesMap = new Map(
+			(executivesRes.data ?? []).map((e) => [e.id, e])
+		);
+		const policiesByClient = new Map<string, typeof policiesRes.data>();
+		for (const policy of policiesRes.data ?? []) {
+			const existing = policiesByClient.get(policy.client_id) ?? [];
+			existing.push(policy);
+			policiesByClient.set(policy.client_id, existing);
+		}
+
+		const validatedClients: ClientViewModel[] = [];
+		for (const clientData of clientsData) {
+			try {
+				const queryResult: ClientQueryResult = {
+					clients: clientData,
+					natural_clients: Array.isArray(clientData.natural_clients)
+						? clientData.natural_clients[0] ?? null
+						: clientData.natural_clients ?? null,
+					juridic_clients: Array.isArray(clientData.juridic_clients)
+						? clientData.juridic_clients[0] ?? null
+						: clientData.juridic_clients ?? null,
+					unipersonal_clients: Array.isArray(clientData.unipersonal_clients)
+						? clientData.unipersonal_clients[0] ?? null
+						: clientData.unipersonal_clients ?? null,
+					executive: clientData.commercial_owner_id
+						? executivesMap.get(clientData.commercial_owner_id) ?? null
+						: null,
+					policies: policiesByClient.get(clientData.id) ?? [],
+				};
+				const validated = ClientQueryResultSchema.parse(queryResult);
+				validatedClients.push(transformClientToViewModel(validated));
+			} catch (validationError) {
+				console.error(`[searchClients] Validation error for client ${clientData.id}:`, validationError);
 			}
+		}
 
-			// Search in ID number
-			if (client.idNumber.toLowerCase().includes(searchTerm)) {
-				return true;
-			}
-
-			// Search in NIT
-			if (client.nit?.toLowerCase().includes(searchTerm)) {
-				return true;
-			}
-
-			// Search in email
-			if (client.email?.toLowerCase().includes(searchTerm)) {
-				return true;
-			}
-
-			// Search in phone
-			if (client.phone?.includes(searchTerm)) {
-				return true;
-			}
-
-			// Search in policies
-			return client.policies.some((policy) => policy.policyNumber.toLowerCase().includes(searchTerm));
-		});
-
-		console.log(`[searchClients] Found ${matchedClients.length} matches for "${trimmedQuery}"`);
-
-		return { success: true, data: matchedClients };
+		console.log(`[searchClients] Found ${validatedClients.length} matches for "${q}"`);
+		return { success: true, data: validatedClients };
 	} catch (error) {
 		console.error("[searchClients] Unexpected error:", error);
-		return {
-			success: false,
-			error: getErrorMessage(error),
-			details: error,
-		};
+		return { success: false, error: getErrorMessage(error), details: error };
 	}
 }
 

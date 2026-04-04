@@ -1,8 +1,13 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { obtenerPolizas, type PolizaListItem } from "./actions";
+import {
+	obtenerPolizas,
+	obtenerFiltrosPolizas,
+	type PolizaListItem,
+	type FiltrosPolizasData,
+} from "./actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -29,86 +34,151 @@ import {
 } from "lucide-react";
 import { formatCurrency, formatDate } from "@/utils/formatters";
 
+const ALL = "__all__";
+const PAGE_SIZE = 20;
+
+type Filters = {
+	ramo: string;
+	compania_id: string;
+	estado: string;
+	responsable_id: string;
+};
+
+const DEFAULT_FILTERS: Filters = {
+	ramo: ALL,
+	compania_id: ALL,
+	estado: ALL,
+	responsable_id: ALL,
+};
+
+function SkeletonTable() {
+	return (
+		<div className="overflow-x-auto">
+			<table className="w-full">
+				<thead>
+					<tr className="border-b border-border">
+						{["Nº Póliza", "Ramo", "Cliente", "Compañía", "Vigencia", "Prima", "Estado", ""].map((h) => (
+							<th key={h} className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">
+								{h}
+							</th>
+						))}
+					</tr>
+				</thead>
+				<tbody className="divide-y divide-border">
+					{Array.from({ length: 8 }).map((_, i) => (
+						<tr key={i}>
+							{[72, 48, 120, 96, 80, 64, 56, 16].map((w, j) => (
+								<td key={j} className="px-4 py-3">
+									<div className="h-4 bg-muted rounded animate-pulse" style={{ width: w }} />
+								</td>
+							))}
+						</tr>
+					))}
+				</tbody>
+			</table>
+		</div>
+	);
+}
+
 export default function PolizasPage() {
 	const router = useRouter();
 
 	const [polizas, setPolizas] = useState<PolizaListItem[]>([]);
+	const [filtrosData, setFiltrosData] = useState<FiltrosPolizasData>({
+		ramos: [],
+		ejecutivos: [],
+		companias: [],
+		estados: [],
+	});
 	const [selectedPoliza, setSelectedPoliza] = useState<PolizaListItem | null>(null);
 	const [currentPage, setCurrentPage] = useState(1);
-	const [pageSize] = useState(20);
+	const [totalRecords, setTotalRecords] = useState(0);
 	const [isLoading, setIsLoading] = useState(true);
 
 	const [searchQuery, setSearchQuery] = useState("");
-	const ALL = "__all__";
-	const [filters, setFilters] = useState({
-		ramo: ALL,
-		compania: ALL,
-		estado: ALL,
-		ejecutivo: ALL,
-	});
+	const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
+
+	// Debounce del campo de búsqueda
+	const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+	const [debouncedSearch, setDebouncedSearch] = useState("");
 
 	useEffect(() => {
-		cargarPolizas();
+		if (searchTimer.current) clearTimeout(searchTimer.current);
+		searchTimer.current = setTimeout(() => setDebouncedSearch(searchQuery), 350);
+		return () => { if (searchTimer.current) clearTimeout(searchTimer.current); };
+	}, [searchQuery]);
+
+	// Cargar opciones de filtros una sola vez
+	useEffect(() => {
+		obtenerFiltrosPolizas().then((result) => {
+			if (result.success && result.data) setFiltrosData(result.data);
+		});
 	}, []);
 
-	const cargarPolizas = async () => {
+	// Cargar pólizas cuando cambian filtros o búsqueda — resetea a página 1
+	useEffect(() => {
+		let cancelled = false;
+		setCurrentPage(1);
 		setIsLoading(true);
-		const resultado = await obtenerPolizas();
-		if (resultado.success && resultado.polizas) {
-			setPolizas(resultado.polizas);
+
+		obtenerPolizas({
+			page: 1,
+			pageSize: PAGE_SIZE,
+			search: debouncedSearch || undefined,
+			ramo: filters.ramo !== ALL ? filters.ramo : undefined,
+			compania_id: filters.compania_id !== ALL ? filters.compania_id : undefined,
+			estado: filters.estado !== ALL ? filters.estado : undefined,
+			responsable_id: filters.responsable_id !== ALL ? filters.responsable_id : undefined,
+		}).then((result) => {
+			if (cancelled) return;
+			if (result.success) {
+				setPolizas(result.polizas);
+				setTotalRecords(result.total);
+			}
+			setIsLoading(false);
+		});
+
+		return () => { cancelled = true; };
+	}, [debouncedSearch, filters.ramo, filters.compania_id, filters.estado, filters.responsable_id]);
+
+	const handlePageChange = async (page: number) => {
+		setCurrentPage(page);
+		setIsLoading(true);
+		window.scrollTo({ top: 0, behavior: "smooth" });
+
+		const result = await obtenerPolizas({
+			page,
+			pageSize: PAGE_SIZE,
+			search: debouncedSearch || undefined,
+			ramo: filters.ramo !== ALL ? filters.ramo : undefined,
+			compania_id: filters.compania_id !== ALL ? filters.compania_id : undefined,
+			estado: filters.estado !== ALL ? filters.estado : undefined,
+			responsable_id: filters.responsable_id !== ALL ? filters.responsable_id : undefined,
+		});
+
+		if (result.success) {
+			setPolizas(result.polizas);
+			setTotalRecords(result.total);
 		}
 		setIsLoading(false);
 	};
 
-	const filterOptions = useMemo(() => ({
-		ramos: [...new Set(polizas.map((p) => p.ramo))].filter(Boolean).sort(),
-		companias: [...new Set(polizas.map((p) => p.compania_nombre))].filter((v) => v !== "-").sort(),
-		estados: [...new Set(polizas.map((p) => p.estado))].filter(Boolean).sort(),
-		ejecutivos: [...new Set(polizas.map((p) => p.responsable_nombre))].filter((v) => v !== "-").sort(),
-	}), [polizas]);
-
-	const filteredPolizas = useMemo(() => {
-		let result = polizas;
-
-		if (searchQuery.trim()) {
-			const q = searchQuery.toLowerCase().trim();
-			result = result.filter(
-				(p) =>
-					p.numero_poliza.toLowerCase().includes(q) ||
-					p.client_name.toLowerCase().includes(q) ||
-					p.client_ci.toLowerCase().includes(q)
-			);
-		}
-
-		if (filters.ramo !== ALL) result = result.filter((p) => p.ramo === filters.ramo);
-		if (filters.compania !== ALL) result = result.filter((p) => p.compania_nombre === filters.compania);
-		if (filters.estado !== ALL) result = result.filter((p) => p.estado === filters.estado);
-		if (filters.ejecutivo !== ALL) result = result.filter((p) => p.responsable_nombre === filters.ejecutivo);
-
-		return result;
-	}, [polizas, searchQuery, filters]);
-
-	useEffect(() => {
-		setCurrentPage(1);
-	}, [searchQuery, filters]);
-
-	const hasActiveFilters = searchQuery.trim() !== "" || Object.values(filters).some((v) => v !== ALL);
-	const activeFilterCount = Object.values(filters).filter((v) => v !== ALL).length + (searchQuery.trim() ? 1 : 0);
-
 	const clearAllFilters = () => {
 		setSearchQuery("");
-		setFilters({ ramo: ALL, compania: ALL, estado: ALL, ejecutivo: ALL });
+		setFilters(DEFAULT_FILTERS);
 	};
 
-	const handlePageChange = (page: number) => {
-		setCurrentPage(page);
-		window.scrollTo({ top: 0, behavior: "smooth" });
-	};
+	const hasActiveFilters =
+		searchQuery.trim() !== "" || Object.values(filters).some((v) => v !== ALL);
+	const activeFilterCount =
+		Object.values(filters).filter((v) => v !== ALL).length + (searchQuery.trim() ? 1 : 0);
 
-	const startIndex = (currentPage - 1) * pageSize;
-	const endIndex = startIndex + pageSize;
-	const paginatedPolizas = filteredPolizas.slice(startIndex, endIndex);
-	const totalPages = Math.ceil(filteredPolizas.length / pageSize);
+	const totalPages = Math.ceil(totalRecords / PAGE_SIZE);
+	const startIndex = (currentPage - 1) * PAGE_SIZE;
+
+	// Labels para chips
+	const companiaLabel = filtrosData.companias.find((c) => c.id === filters.compania_id)?.nombre ?? "";
+	const ejecutivoLabel = filtrosData.ejecutivos.find((e) => e.id === filters.responsable_id)?.nombre ?? "";
 
 	return (
 		<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-10 space-y-5">
@@ -120,8 +190,8 @@ export default function PolizasPage() {
 					<p className="text-sm text-muted-foreground mt-0.5">
 						{isLoading
 							? "Cargando…"
-							: polizas.length > 0
-							? `${polizas.length} pólizas registradas`
+							: totalRecords > 0
+							? `${totalRecords} pólizas encontradas`
 							: "Gestión de pólizas de seguros"}
 					</p>
 				</div>
@@ -173,73 +243,78 @@ export default function PolizasPage() {
 					<div className="flex flex-wrap items-center gap-2">
 						<SlidersHorizontal className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
 
-						<Select value={filters.ramo} onValueChange={(v) => setFilters((prev) => ({ ...prev, ramo: v }))}>
+						<Select
+							value={filters.ramo}
+							onValueChange={(v) => setFilters((prev) => ({ ...prev, ramo: v }))}
+						>
 							<SelectTrigger size="sm" className="w-auto min-w-32">
 								<SelectValue placeholder="Ramo" />
 							</SelectTrigger>
 							<SelectContent>
 								<SelectItem value={ALL}>Todos los ramos</SelectItem>
-								{filterOptions.ramos.map((r) => (
+								{filtrosData.ramos.map((r) => (
 									<SelectItem key={r} value={r}>{r}</SelectItem>
 								))}
 							</SelectContent>
 						</Select>
 
-						<Select value={filters.compania} onValueChange={(v) => setFilters((prev) => ({ ...prev, compania: v }))}>
+						<Select
+							value={filters.compania_id}
+							onValueChange={(v) => setFilters((prev) => ({ ...prev, compania_id: v }))}
+						>
 							<SelectTrigger size="sm" className="w-auto min-w-36">
 								<SelectValue placeholder="Compañía" />
 							</SelectTrigger>
 							<SelectContent>
 								<SelectItem value={ALL}>Todas las compañías</SelectItem>
-								{filterOptions.companias.map((c) => (
-									<SelectItem key={c} value={c}>{c}</SelectItem>
+								{filtrosData.companias.map((c) => (
+									<SelectItem key={c.id} value={c.id}>{c.nombre}</SelectItem>
 								))}
 							</SelectContent>
 						</Select>
 
-						<Select value={filters.estado} onValueChange={(v) => setFilters((prev) => ({ ...prev, estado: v }))}>
+						<Select
+							value={filters.estado}
+							onValueChange={(v) => setFilters((prev) => ({ ...prev, estado: v }))}
+						>
 							<SelectTrigger size="sm" className="w-auto min-w-32">
 								<SelectValue placeholder="Estado" />
 							</SelectTrigger>
 							<SelectContent>
 								<SelectItem value={ALL}>Todos los estados</SelectItem>
-								{filterOptions.estados.map((e) => (
+								{filtrosData.estados.map((e) => (
 									<SelectItem key={e} value={e} className="capitalize">{e}</SelectItem>
 								))}
 							</SelectContent>
 						</Select>
 
-						<Select value={filters.ejecutivo} onValueChange={(v) => setFilters((prev) => ({ ...prev, ejecutivo: v }))}>
+						<Select
+							value={filters.responsable_id}
+							onValueChange={(v) => setFilters((prev) => ({ ...prev, responsable_id: v }))}
+						>
 							<SelectTrigger size="sm" className="w-auto min-w-36">
 								<SelectValue placeholder="Ejecutivo" />
 							</SelectTrigger>
 							<SelectContent>
 								<SelectItem value={ALL}>Todos los ejecutivos</SelectItem>
-								{filterOptions.ejecutivos.map((ej) => (
-									<SelectItem key={ej} value={ej}>{ej}</SelectItem>
+								{filtrosData.ejecutivos.map((e) => (
+									<SelectItem key={e.id} value={e.id}>{e.nombre}</SelectItem>
 								))}
 							</SelectContent>
 						</Select>
 
-						{/* Results summary pushed to the right */}
+						{/* Contador de resultados */}
 						<div className="ml-auto text-xs text-muted-foreground">
-							{hasActiveFilters ? (
+							{!isLoading && (
 								<>
-									<span className="font-medium text-foreground">{filteredPolizas.length}</span>
-									{" "}de{" "}
-									<span className="font-medium text-foreground">{polizas.length}</span>
-									{" "}pólizas
-								</>
-							) : (
-								<>
-									<span className="font-medium text-foreground">{polizas.length}</span>
+									<span className="font-medium text-foreground">{totalRecords}</span>
 									{" "}pólizas
 								</>
 							)}
 						</div>
 					</div>
 
-					{/* Active filter chips — visible only when filters are active */}
+					{/* Active filter chips */}
 					{hasActiveFilters && (
 						<div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-border/60">
 							{filters.ramo !== ALL && (
@@ -248,19 +323,17 @@ export default function PolizasPage() {
 									<button
 										onClick={() => setFilters((prev) => ({ ...prev, ramo: ALL }))}
 										className="ml-0.5 p-0.5 rounded hover:bg-primary/15 transition-colors"
-										aria-label="Quitar filtro de ramo"
 									>
 										<X className="h-3 w-3" />
 									</button>
 								</span>
 							)}
-							{filters.compania !== ALL && (
+							{filters.compania_id !== ALL && (
 								<span className="inline-flex items-center gap-1 pl-2.5 pr-1 py-0.5 rounded-md text-xs font-medium bg-primary/8 text-primary border border-primary/20">
-									{filters.compania.length > 24 ? filters.compania.slice(0, 24) + "…" : filters.compania}
+									{companiaLabel.length > 24 ? companiaLabel.slice(0, 24) + "…" : companiaLabel}
 									<button
-										onClick={() => setFilters((prev) => ({ ...prev, compania: ALL }))}
+										onClick={() => setFilters((prev) => ({ ...prev, compania_id: ALL }))}
 										className="ml-0.5 p-0.5 rounded hover:bg-primary/15 transition-colors"
-										aria-label="Quitar filtro de compañía"
 									>
 										<X className="h-3 w-3" />
 									</button>
@@ -272,19 +345,17 @@ export default function PolizasPage() {
 									<button
 										onClick={() => setFilters((prev) => ({ ...prev, estado: ALL }))}
 										className="ml-0.5 p-0.5 rounded hover:bg-primary/15 transition-colors"
-										aria-label="Quitar filtro de estado"
 									>
 										<X className="h-3 w-3" />
 									</button>
 								</span>
 							)}
-							{filters.ejecutivo !== ALL && (
+							{filters.responsable_id !== ALL && (
 								<span className="inline-flex items-center gap-1 pl-2.5 pr-1 py-0.5 rounded-md text-xs font-medium bg-primary/8 text-primary border border-primary/20">
-									{filters.ejecutivo.length > 22 ? filters.ejecutivo.slice(0, 22) + "…" : filters.ejecutivo}
+									{ejecutivoLabel.length > 22 ? ejecutivoLabel.slice(0, 22) + "…" : ejecutivoLabel}
 									<button
-										onClick={() => setFilters((prev) => ({ ...prev, ejecutivo: ALL }))}
+										onClick={() => setFilters((prev) => ({ ...prev, responsable_id: ALL }))}
 										className="ml-0.5 p-0.5 rounded hover:bg-primary/15 transition-colors"
-										aria-label="Quitar filtro de ejecutivo"
 									>
 										<X className="h-3 w-3" />
 									</button>
@@ -297,7 +368,6 @@ export default function PolizasPage() {
 									<button
 										onClick={() => setSearchQuery("")}
 										className="ml-0.5 p-0.5 rounded hover:bg-primary/15 transition-colors"
-										aria-label="Quitar búsqueda"
 									>
 										<X className="h-3 w-3" />
 									</button>
@@ -320,31 +390,8 @@ export default function PolizasPage() {
 			{/* ── Table ───────────────────────────────────────────────── */}
 			<Card>
 				{isLoading ? (
-					<div className="overflow-x-auto">
-						<table className="w-full">
-							<thead>
-								<tr className="border-b border-border">
-									{["Nº Póliza", "Ramo", "Cliente", "Compañía", "Vigencia", "Prima", "Estado", ""].map((h) => (
-										<th key={h} className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">
-											{h}
-										</th>
-									))}
-								</tr>
-							</thead>
-							<tbody className="divide-y divide-border">
-								{Array.from({ length: 8 }).map((_, i) => (
-									<tr key={i}>
-										{[72, 48, 120, 96, 80, 64, 56, 16].map((w, j) => (
-											<td key={j} className="px-4 py-3">
-												<div className={`h-4 bg-muted rounded animate-pulse`} style={{ width: w }} />
-											</td>
-										))}
-									</tr>
-								))}
-							</tbody>
-						</table>
-					</div>
-				) : paginatedPolizas.length === 0 ? (
+					<SkeletonTable />
+				) : polizas.length === 0 ? (
 					<CardContent className="flex flex-col items-center justify-center py-20">
 						<FileText className="h-10 w-10 text-muted-foreground/25 mb-3" />
 						<p className="text-sm font-medium text-foreground">
@@ -361,94 +408,55 @@ export default function PolizasPage() {
 						<table className="w-full">
 							<thead>
 								<tr className="border-b border-border">
-									<th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">
-										Nº Póliza
-									</th>
-									<th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">
-										Ramo
-									</th>
-									<th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">
-										Cliente
-									</th>
-									<th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">
-										Compañía
-									</th>
-									<th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">
-										Vigencia
-									</th>
-									<th className="px-4 py-2.5 text-right text-xs font-medium text-muted-foreground uppercase tracking-wide">
-										Prima
-									</th>
-									<th className="px-4 py-2.5 text-center text-xs font-medium text-muted-foreground uppercase tracking-wide">
-										Estado
-									</th>
+									<th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Nº Póliza</th>
+									<th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Ramo</th>
+									<th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Cliente</th>
+									<th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Compañía</th>
+									<th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Vigencia</th>
+									<th className="px-4 py-2.5 text-right text-xs font-medium text-muted-foreground uppercase tracking-wide">Prima</th>
+									<th className="px-4 py-2.5 text-center text-xs font-medium text-muted-foreground uppercase tracking-wide">Estado</th>
 									<th className="w-8" />
 								</tr>
 							</thead>
 							<tbody className="divide-y divide-border">
-								{paginatedPolizas.map((poliza) => (
+								{polizas.map((poliza) => (
 									<tr
 										key={poliza.id}
 										onClick={() => setSelectedPoliza(poliza)}
 										className="group hover:bg-muted/40 cursor-pointer transition-colors duration-100"
 									>
-										{/* Nº Póliza */}
 										<td className="px-4 py-3">
 											<span className="text-sm font-medium text-foreground font-mono">
 												{poliza.numero_poliza}
 											</span>
 										</td>
-
-										{/* Ramo */}
 										<td className="px-4 py-3">
 											<span className="text-sm text-muted-foreground">{poliza.ramo}</span>
 										</td>
-
-										{/* Cliente + CI merged */}
 										<td className="px-4 py-3">
-											<div className="text-sm font-medium text-foreground leading-tight">
-												{poliza.client_name}
-											</div>
-											<div className="text-xs text-muted-foreground mt-0.5">
-												{poliza.client_ci}
-											</div>
+											<div className="text-sm font-medium text-foreground leading-tight">{poliza.client_name}</div>
+											<div className="text-xs text-muted-foreground mt-0.5">{poliza.client_ci}</div>
 										</td>
-
-										{/* Compañía */}
 										<td className="px-4 py-3">
 											<span className="text-sm text-muted-foreground truncate max-w-36 block">
 												{poliza.compania_nombre}
 											</span>
 										</td>
-
-										{/* Vigencia */}
 										<td className="px-4 py-3">
-											<div className="text-sm text-foreground tabular-nums">
-												{formatDate(poliza.inicio_vigencia)}
-											</div>
-											<div className="text-xs text-muted-foreground mt-0.5 tabular-nums">
-												{formatDate(poliza.fin_vigencia)}
-											</div>
+											<div className="text-sm text-foreground tabular-nums">{formatDate(poliza.inicio_vigencia)}</div>
+											<div className="text-xs text-muted-foreground mt-0.5 tabular-nums">{formatDate(poliza.fin_vigencia)}</div>
 										</td>
-
-										{/* Prima + modalidad */}
 										<td className="px-4 py-3 text-right">
 											<div className="text-sm font-medium text-foreground tabular-nums">
 												{formatCurrency(poliza.prima_total, poliza.moneda)}
 											</div>
-											<div className="text-xs text-muted-foreground mt-0.5 capitalize">
-												{poliza.modalidad_pago}
-											</div>
+											<div className="text-xs text-muted-foreground mt-0.5 capitalize">{poliza.modalidad_pago}</div>
 										</td>
-
-										{/* Estado */}
 										<td className="px-4 py-3">
 											<div className="flex justify-center">
 												<StatusBadge status={poliza.estado} />
 											</div>
 										</td>
-
-										{/* Arrow */}
 										<td className="pr-3 py-3">
 											<ChevronRight className="h-4 w-4 text-muted-foreground/40 group-hover:text-muted-foreground transition-colors" />
 										</td>
@@ -459,11 +467,11 @@ export default function PolizasPage() {
 					</div>
 				)}
 
-				{/* Pagination inside the card */}
-				{totalPages > 1 && (
+				{/* Pagination */}
+				{!isLoading && totalPages > 1 && (
 					<div className="flex items-center justify-between px-4 py-3 border-t border-border">
 						<p className="text-xs text-muted-foreground">
-							{startIndex + 1}–{Math.min(endIndex, filteredPolizas.length)} de {filteredPolizas.length}
+							{startIndex + 1}–{Math.min(startIndex + PAGE_SIZE, totalRecords)} de {totalRecords}
 						</p>
 						<div className="flex items-center gap-1">
 							<Button
@@ -481,7 +489,6 @@ export default function PolizasPage() {
 								else if (currentPage <= 3) pageNum = i + 1;
 								else if (currentPage >= totalPages - 2) pageNum = totalPages - 4 + i;
 								else pageNum = currentPage - 2 + i;
-
 								return (
 									<Button
 										key={pageNum}
@@ -508,14 +515,13 @@ export default function PolizasPage() {
 				)}
 			</Card>
 
-			{/* ── Detail Panel (modal) ─────────────────────────────────── */}
+			{/* ── Detail Modal ─────────────────────────────────────────── */}
 			{selectedPoliza && (
 				<div
 					className="fixed inset-0 bg-black/40 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
 					onClick={(e) => e.target === e.currentTarget && setSelectedPoliza(null)}
 				>
 					<div className="bg-card w-full sm:max-w-2xl sm:rounded-lg max-h-[92vh] overflow-y-auto shadow-md">
-						{/* Header */}
 						<div className="sticky top-0 bg-card border-b border-border px-5 py-4 flex items-center justify-between">
 							<div>
 								<p className="text-xs text-muted-foreground uppercase tracking-wide mb-0.5">Póliza</p>
@@ -530,10 +536,7 @@ export default function PolizasPage() {
 								</Button>
 							</div>
 						</div>
-
-						{/* Body */}
 						<div className="p-5 space-y-5">
-							{/* Client + Company */}
 							<div className="grid grid-cols-2 gap-4">
 								<div className="space-y-0.5">
 									<p className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
@@ -549,11 +552,7 @@ export default function PolizasPage() {
 									<p className="text-sm text-foreground">{selectedPoliza.compania_nombre}</p>
 								</div>
 							</div>
-
-							{/* Divider */}
 							<div className="border-t border-border" />
-
-							{/* Ramo / Regional / Director / Ejecutivo */}
 							<div className="grid grid-cols-2 gap-4">
 								<div className="space-y-0.5">
 									<p className="text-xs font-medium text-muted-foreground">Ramo</p>
@@ -572,11 +571,7 @@ export default function PolizasPage() {
 									<p className="text-sm text-foreground">{selectedPoliza.responsable_nombre}</p>
 								</div>
 							</div>
-
-							{/* Divider */}
 							<div className="border-t border-border" />
-
-							{/* Vigencia + Prima */}
 							<div className="grid grid-cols-2 gap-4">
 								<div className="space-y-0.5">
 									<p className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
@@ -596,13 +591,9 @@ export default function PolizasPage() {
 									<p className="text-lg font-semibold text-foreground tabular-nums">
 										{formatCurrency(selectedPoliza.prima_total, selectedPoliza.moneda)}
 									</p>
-									<p className="text-xs text-muted-foreground capitalize">
-										{selectedPoliza.modalidad_pago}
-									</p>
+									<p className="text-xs text-muted-foreground capitalize">{selectedPoliza.modalidad_pago}</p>
 								</div>
 							</div>
-
-							{/* CTA */}
 							<div className="pt-1">
 								<Button
 									onClick={() => router.push(`/polizas/${selectedPoliza.id}`)}
@@ -615,7 +606,6 @@ export default function PolizasPage() {
 					</div>
 				</div>
 			)}
-
 		</div>
 	);
 }
