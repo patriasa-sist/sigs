@@ -21,10 +21,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import dynamic from "next/dynamic";
 import { ProcessedInsuranceRecord, SortOptions, DashboardStats, InsuranceStatus } from "@/types/insurance";
 import { formatDate, getUniqueValues } from "@/utils/excel";
-import LetterGenerator from "@/components/vencimientos/PDFGeneration/LetterGenerator";
 import { PDFGenerationResult } from "@/types/pdf";
+
+const LetterGenerator = dynamic(
+	() => import("@/components/vencimientos/PDFGeneration/LetterGenerator"),
+	{ ssr: false }
+);
 
 interface DashboardProps {
 	data: ProcessedInsuranceRecord[];
