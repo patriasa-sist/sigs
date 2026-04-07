@@ -157,10 +157,6 @@ export function RiesgosVariosForm({ datos, moneda, onChange, onSiguiente, onAnte
 			nuevosErrores.bienes = "Debe agregar al menos un bien asegurado";
 		}
 
-		if (asegurados.length === 0) {
-			nuevosErrores.asegurados = "Debe agregar al menos un asegurado";
-		}
-
 		if (Object.keys(nuevosErrores).length > 0) {
 			setErrores(nuevosErrores);
 			return;
@@ -175,7 +171,7 @@ export function RiesgosVariosForm({ datos, moneda, onChange, onSiguiente, onAnte
 		onSiguiente();
 	};
 
-	const tieneDatos = valorAseguradoTotal > 0 && bienes.length > 0 && asegurados.length > 0;
+	const tieneDatos = valorAseguradoTotal > 0 && bienes.length > 0;
 	const monedaLabel = moneda || "Bs";
 
 	return (
@@ -288,7 +284,7 @@ export function RiesgosVariosForm({ datos, moneda, onChange, onSiguiente, onAnte
 				<div className="space-y-3">
 					<div className="flex items-center justify-between">
 						<Label>
-							Asegurados <span className="text-red-500">*</span>
+							Asegurados <span className="text-gray-400 text-xs font-normal">(opcional)</span>
 						</Label>
 						<Button type="button" variant="outline" size="sm" onClick={() => setMostrarBuscador(true)}>
 							<Plus className="mr-2 h-4 w-4" />
@@ -302,7 +298,7 @@ export function RiesgosVariosForm({ datos, moneda, onChange, onSiguiente, onAnte
 						<div className="border-2 border-dashed rounded-lg p-8 text-center">
 							<Users className="h-12 w-12 text-gray-400 mx-auto mb-3" />
 							<p className="text-sm text-gray-600">No hay asegurados agregados</p>
-							<p className="text-xs text-gray-500 mt-1">Haga clic en &quot;Agregar Asegurado&quot; para comenzar</p>
+							<p className="text-xs text-gray-500 mt-1">Opcional: agregue asegurados si aplica para este riesgo</p>
 						</div>
 					) : (
 						<div className="border rounded-lg divide-y">
