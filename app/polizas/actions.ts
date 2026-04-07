@@ -134,6 +134,25 @@ export type PolizaDetalle = PolizaListItem & {
 	responsabilidad_civil?: {
 		tipo_poliza: string;
 		valor_asegurado: number;
+		vehiculos: Array<{
+			placa: string;
+			nro_chasis: string;
+			uso: string;
+			tipo_vehiculo_nombre?: string;
+			marca_vehiculo_nombre?: string;
+			modelo?: string;
+			ano?: number;
+			color?: string;
+			nro_motor?: string;
+			servicio?: string;
+			capacidad?: string;
+			region_uso?: string;
+			tipo_carroceria?: string;
+			propiedad?: string;
+			ejes?: number;
+			asientos?: number;
+			cilindrada?: number;
+		}>;
 	};
 	// Vida / Accidentes Personales / Sepelio (genéricos con niveles)
 	niveles_cobertura?: Array<{
@@ -816,16 +835,57 @@ export async function obtenerDetallePoliza(polizaId: string) {
 		// --- RESPONSABILIDAD CIVIL ---
 		let responsabilidad_civil: PolizaDetalle["responsabilidad_civil"];
 		if (ramoLower.includes("responsabilidad civil")) {
-			const { data: rcData } = await supabase
-				.from("polizas_responsabilidad_civil")
-				.select("tipo_poliza, valor_asegurado")
-				.eq("poliza_id", polizaId)
-				.single();
+			const [{ data: rcData }, { data: rcVehiculos }] = await Promise.all([
+				supabase
+					.from("polizas_responsabilidad_civil")
+					.select("tipo_poliza, valor_asegurado")
+					.eq("poliza_id", polizaId)
+					.single(),
+				supabase
+					.from("polizas_rc_vehiculos")
+					.select("placa, nro_chasis, uso, modelo, ano, color, nro_motor, servicio, capacidad, region_uso, tipo_carroceria, propiedad, ejes, asientos, cilindrada, tipo_vehiculo_id, marca_vehiculo_id")
+					.eq("poliza_id", polizaId),
+			]);
 
 			if (rcData) {
+				// Resolve catalog names
+				const tipoIds = (rcVehiculos ?? []).map((v) => v.tipo_vehiculo_id).filter(Boolean);
+				const marcaIds = (rcVehiculos ?? []).map((v) => v.marca_vehiculo_id).filter(Boolean);
+
+				const [{ data: tipos }, { data: marcas }] = await Promise.all([
+					tipoIds.length > 0
+						? supabase.from("tipos_vehiculo").select("id, nombre").in("id", tipoIds)
+						: Promise.resolve({ data: [] }),
+					marcaIds.length > 0
+						? supabase.from("marcas_vehiculo").select("id, nombre").in("id", marcaIds)
+						: Promise.resolve({ data: [] }),
+				]);
+
+				const tipoMap = new Map((tipos ?? []).map((t: { id: string; nombre: string }) => [t.id, t.nombre]));
+				const marcaMap = new Map((marcas ?? []).map((m: { id: string; nombre: string }) => [m.id, m.nombre]));
+
 				responsabilidad_civil = {
 					tipo_poliza: rcData.tipo_poliza,
 					valor_asegurado: Number(rcData.valor_asegurado),
+					vehiculos: (rcVehiculos ?? []).map((v) => ({
+						placa: v.placa,
+						nro_chasis: v.nro_chasis,
+						uso: v.uso,
+						tipo_vehiculo_nombre: v.tipo_vehiculo_id ? tipoMap.get(v.tipo_vehiculo_id) : undefined,
+						marca_vehiculo_nombre: v.marca_vehiculo_id ? marcaMap.get(v.marca_vehiculo_id) : undefined,
+						modelo: v.modelo ?? undefined,
+						ano: v.ano ?? undefined,
+						color: v.color ?? undefined,
+						nro_motor: v.nro_motor ?? undefined,
+						servicio: v.servicio ?? undefined,
+						capacidad: v.capacidad ?? undefined,
+						region_uso: v.region_uso ?? undefined,
+						tipo_carroceria: v.tipo_carroceria ?? undefined,
+						propiedad: v.propiedad ?? undefined,
+						ejes: v.ejes ?? undefined,
+						asientos: v.asientos ?? undefined,
+						cilindrada: v.cilindrada ?? undefined,
+					})),
 				};
 			}
 		}
