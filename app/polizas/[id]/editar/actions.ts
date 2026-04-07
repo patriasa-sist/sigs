@@ -705,6 +705,47 @@ export async function obtenerPolizaParaEdicion(
 		};
 	}
 
+	// Responsabilidad Civil
+	if (ramoLower.includes("responsabilidad") || ramoLower.includes("civil")) {
+		const { data: rcData } = await supabase
+			.from("polizas_responsabilidad_civil")
+			.select("tipo_poliza, valor_asegurado")
+			.eq("poliza_id", polizaId)
+			.single();
+
+		const { data: vehiculosRC } = await supabase
+			.from("polizas_rc_vehiculos")
+			.select("*")
+			.eq("poliza_id", polizaId);
+
+		datos_especificos = {
+			tipo_ramo: "Responsabilidad Civil",
+			datos: {
+				tipo_poliza: (rcData?.tipo_poliza as "individual" | "corporativo") ?? "individual",
+				valor_asegurado: rcData?.valor_asegurado ?? 0,
+				vehiculos: (vehiculosRC ?? []).map((v) => ({
+					placa: v.placa,
+					nro_chasis: v.nro_chasis,
+					uso: v.uso as "publico" | "particular" | "privado",
+					tipo_vehiculo_id: v.tipo_vehiculo_id ?? undefined,
+					marca_vehiculo_id: v.marca_vehiculo_id ?? undefined,
+					modelo: v.modelo ?? undefined,
+					ano: v.ano ?? undefined,
+					color: v.color ?? undefined,
+					nro_motor: v.nro_motor ?? undefined,
+					servicio: v.servicio ?? undefined,
+					capacidad: v.capacidad ?? undefined,
+					region_uso: v.region_uso ?? undefined,
+					tipo_carroceria: v.tipo_carroceria ?? undefined,
+					propiedad: v.propiedad as "privada" | "publica" | undefined ?? undefined,
+					ejes: v.ejes ?? undefined,
+					asientos: v.asientos ?? undefined,
+					cilindrada: v.cilindrada ?? undefined,
+				})),
+			},
+		};
+	}
+
 	// 6. Get documents (only active ones)
 		const { data: documentos } = await supabase
 			.from("polizas_documentos")
@@ -1319,6 +1360,60 @@ export async function actualizarPoliza(
 				})));
 			if (errAsegIncendio) {
 				return { success: false, error: `Error al guardar asegurados de incendio: ${errAsegIncendio.message}` };
+			}
+		}
+	}
+
+	// 3e. Update Responsabilidad Civil vehicles
+	if (formState.datos_especificos?.tipo_ramo === "Responsabilidad Civil") {
+		const datosRC = formState.datos_especificos.datos;
+
+		// Update main RC record
+		const { error: errRC } = await supabase
+			.from("polizas_responsabilidad_civil")
+			.update({
+				tipo_poliza: datosRC.tipo_poliza,
+				valor_asegurado: datosRC.valor_asegurado,
+			})
+			.eq("poliza_id", polizaId);
+		if (errRC) {
+			return { success: false, error: `Error al actualizar datos de responsabilidad civil: ${errRC.message}` };
+		}
+
+		// Replace vehicles: delete all and re-insert
+		const { error: delVehiculos } = await supabase
+			.from("polizas_rc_vehiculos")
+			.delete()
+			.eq("poliza_id", polizaId);
+		if (delVehiculos) {
+			return { success: false, error: `Error al limpiar vehículos RC: ${delVehiculos.message}` };
+		}
+
+		if (datosRC.vehiculos && datosRC.vehiculos.length > 0) {
+			const { error: insVehiculos } = await supabase
+				.from("polizas_rc_vehiculos")
+				.insert(datosRC.vehiculos.map((v) => ({
+					poliza_id: polizaId,
+					placa: v.placa,
+					nro_chasis: v.nro_chasis,
+					uso: v.uso,
+					tipo_vehiculo_id: v.tipo_vehiculo_id ?? null,
+					marca_vehiculo_id: v.marca_vehiculo_id ?? null,
+					modelo: v.modelo ?? null,
+					ano: v.ano ?? null,
+					color: v.color ?? null,
+					nro_motor: v.nro_motor ?? null,
+					servicio: v.servicio ?? null,
+					capacidad: v.capacidad ?? null,
+					region_uso: v.region_uso ?? null,
+					tipo_carroceria: v.tipo_carroceria ?? null,
+					propiedad: v.propiedad ?? null,
+					ejes: v.ejes ?? null,
+					asientos: v.asientos ?? null,
+					cilindrada: v.cilindrada ?? null,
+				})));
+			if (insVehiculos) {
+				return { success: false, error: `Error al guardar vehículos RC: ${insVehiculos.message}` };
 			}
 		}
 	}

@@ -276,9 +276,37 @@ export type AseguradoResponsabilidadCivil = {
 	client_ci: string;
 };
 
+export type VehiculoRC = {
+	// Campos obligatorios
+	placa: string;
+	nro_chasis: string;
+	uso: "publico" | "particular" | "privado";
+
+	// Catálogos (opcionales)
+	tipo_vehiculo_id?: string;
+	marca_vehiculo_id?: string;
+
+	// Campos opcionales de identificación
+	modelo?: string;
+	ano?: number;
+	color?: string;
+	nro_motor?: string;
+
+	// Campos operativos opcionales
+	servicio?: string;
+	capacidad?: string;
+	region_uso?: string;
+	tipo_carroceria?: string;
+	propiedad?: "privada" | "publica";
+	ejes?: number;
+	asientos?: number;
+	cilindrada?: number;
+};
+
 export type DatosResponsabilidadCivil = {
 	tipo_poliza: "individual" | "corporativo";
 	valor_asegurado: number;
+	vehiculos: VehiculoRC[];
 	// REMOVED: moneda (usa la moneda de toda la póliza definida en paso 2)
 	// REMOVED: asegurados (no es necesario para este ramo)
 };

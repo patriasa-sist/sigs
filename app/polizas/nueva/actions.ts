@@ -500,6 +500,36 @@ async function insertarDatosRamo(
 			});
 
 		throwIfError(errorRC, "Error al guardar datos de responsabilidad civil");
+
+		// Guardar vehículos RC
+		if (datosRC.vehiculos && datosRC.vehiculos.length > 0) {
+			const vehiculosParaInsertar = datosRC.vehiculos.map((v) => ({
+				poliza_id: polizaId,
+				placa: v.placa,
+				nro_chasis: v.nro_chasis,
+				uso: v.uso,
+				tipo_vehiculo_id: v.tipo_vehiculo_id ?? null,
+				marca_vehiculo_id: v.marca_vehiculo_id ?? null,
+				modelo: v.modelo ?? null,
+				ano: v.ano ?? null,
+				color: v.color ?? null,
+				nro_motor: v.nro_motor ?? null,
+				servicio: v.servicio ?? null,
+				capacidad: v.capacidad ?? null,
+				region_uso: v.region_uso ?? null,
+				tipo_carroceria: v.tipo_carroceria ?? null,
+				propiedad: v.propiedad ?? null,
+				ejes: v.ejes ?? null,
+				asientos: v.asientos ?? null,
+				cilindrada: v.cilindrada ?? null,
+			}));
+
+			const { error: errorVehiculos } = await supabase
+				.from("polizas_rc_vehiculos")
+				.insert(vehiculosParaInsertar);
+
+			throwIfError(errorVehiculos, "Error al guardar los vehículos de responsabilidad civil");
+		}
 	}
 
 	// Vida, Sepelio, Accidentes Personales (niveles compartidos)
