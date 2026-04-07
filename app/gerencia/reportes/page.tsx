@@ -1,6 +1,7 @@
 import { requirePermission } from "@/utils/auth/helpers";
 import ExportarProduccion from "@/components/gerencia/ExportarProduccion";
 import ExportarContable from "@/components/gerencia/ExportarContable";
+import ExportarAMLC from "@/components/gerencia/ExportarAMLC";
 
 export default async function ReportesPage() {
 	await requirePermission("gerencia.exportar");
@@ -17,6 +18,7 @@ export default async function ReportesPage() {
 			<div className="space-y-6">
 				<ExportarProduccion />
 				<ExportarContable />
+				<ExportarAMLC />
 			</div>
 		</div>
 	);
