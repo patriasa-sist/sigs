@@ -115,6 +115,7 @@ function getErrorMessage(error: unknown): string {
 export async function getAllClients(options?: {
 	page?: number;
 	pageSize?: number;
+	commercial_owner_id?: string;
 }): Promise<PaginatedResult<ClientViewModel>> {
 	try {
 		const { supabase, user } = await getAuthenticatedClient();
@@ -126,7 +127,7 @@ export async function getAllClients(options?: {
 		console.log(`[getAllClients] User ${user.email} fetching clients (page ${page}, size ${pageSize})`);
 
 		// Query base clients con count exacto en una sola round-trip
-		const { data: clientsData, count: totalRecords, error: clientsError } = await supabase
+		let clientsQuery = supabase
 			.from("clients")
 			.select(
 				`
@@ -139,6 +140,12 @@ export async function getAllClients(options?: {
 			)
 			.order("created_at", { ascending: false })
 			.range(offset, offset + pageSize - 1);
+
+		if (options?.commercial_owner_id) {
+			clientsQuery = clientsQuery.eq("commercial_owner_id", options.commercial_owner_id);
+		}
+
+		const { data: clientsData, count: totalRecords, error: clientsError } = await clientsQuery;
 
 		if (clientsError) {
 			console.error("[getAllClients] Error fetching clients:", clientsError);
@@ -480,13 +487,13 @@ export async function getClientById(clientId: string): Promise<ActionResult<Clie
  * }
  * ```
  */
-export async function searchClients(query: string): Promise<ActionResult<ClientViewModel[]>> {
+export async function searchClients(query: string, filters?: { commercial_owner_id?: string }): Promise<ActionResult<ClientViewModel[]>> {
 	try {
 		const { supabase, user } = await getAuthenticatedClient();
 
 		const trimmedQuery = query.trim();
 		if (!trimmedQuery) {
-			const result = await getAllClients({ page: 1, pageSize: 20 });
+			const result = await getAllClients({ page: 1, pageSize: 20, commercial_owner_id: filters?.commercial_owner_id });
 			if (!result.success) return result;
 			return { success: true, data: result.data };
 		}
@@ -525,12 +532,18 @@ export async function searchClients(query: string): Promise<ActionResult<ClientV
 		const ids = [...matchingIds];
 
 		// Obtener clientes coincidentes con sus datos relacionados
-		const { data: clientsData, error: clientsError } = await supabase
+		let clientsMatchQuery = supabase
 			.from("clients")
 			.select(`*, natural_clients (*), juridic_clients (*), unipersonal_clients (*)`)
 			.in("id", ids)
 			.order("created_at", { ascending: false })
 			.limit(100);
+
+		if (filters?.commercial_owner_id) {
+			clientsMatchQuery = clientsMatchQuery.eq("commercial_owner_id", filters.commercial_owner_id);
+		}
+
+		const { data: clientsData, error: clientsError } = await clientsMatchQuery;
 
 		if (clientsError) {
 			console.error("[searchClients] Error fetching matched clients:", clientsError);
@@ -727,6 +740,60 @@ export async function verificarNitExistente(
 		return { success: true, data: row };
 	} catch (error) {
 		console.error("[verificarNitExistente] Unexpected error:", error);
+		return { success: false, error: getErrorMessage(error), details: error };
+	}
+}
+
+// ============================================
+// FILTER OPTIONS
+// ============================================
+
+export type FiltrosClientesOptions = {
+	ejecutivos: { id: string; full_name: string }[];
+};
+
+/**
+ * Fetch distinct executives (commercial_owner) assigned to clients.
+ * Used to populate the ejecutivo filter dropdown.
+ */
+export async function obtenerFiltrosClientes(): Promise<ActionResult<FiltrosClientesOptions>> {
+	try {
+		const { supabase } = await getAuthenticatedClient();
+
+		// Get distinct commercial_owner_id values from clients
+		const { data: rows, error } = await supabase
+			.from("clients")
+			.select("commercial_owner_id")
+			.not("commercial_owner_id", "is", null);
+
+		if (error) {
+			console.error("[obtenerFiltrosClientes] Error fetching owner ids:", error);
+			return { success: false, error: "Error al obtener filtros", details: error };
+		}
+
+		const ownerIds = [...new Set((rows ?? []).map((r) => r.commercial_owner_id).filter(Boolean))] as string[];
+
+		if (ownerIds.length === 0) {
+			return { success: true, data: { ejecutivos: [] } };
+		}
+
+		const { data: profiles, error: profilesError } = await supabase
+			.from("profiles_public")
+			.select("id, full_name")
+			.in("id", ownerIds);
+
+		if (profilesError) {
+			console.error("[obtenerFiltrosClientes] Error fetching profiles:", profilesError);
+			return { success: false, error: "Error al obtener ejecutivos", details: profilesError };
+		}
+
+		const ejecutivos = (profiles ?? [])
+			.filter((p) => p.full_name)
+			.sort((a, b) => a.full_name.localeCompare(b.full_name));
+
+		return { success: true, data: { ejecutivos } };
+	} catch (error) {
+		console.error("[obtenerFiltrosClientes] Unexpected error:", error);
 		return { success: false, error: getErrorMessage(error), details: error };
 	}
 }

@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Client, ClientSearchResult } from "@/types/client";
-import { getAllClients, searchClients as searchClientsAction } from "./actions";
+import { getAllClients, searchClients as searchClientsAction, obtenerFiltrosClientes, FiltrosClientesOptions } from "./actions";
 import { SearchBar } from "@/components/clientes/SearchBar";
 import { ClientList } from "@/components/clientes/ClientList";
 import { ClientTable } from "@/components/clientes/ClientTable";
@@ -11,7 +11,10 @@ import { ClientDetailModal } from "@/components/clientes/ClientDetailModal";
 import { ViewToggle, ViewMode } from "@/components/clientes/ViewToggle";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { UserPlus, AlertCircle, Plus } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { UserPlus, AlertCircle, Plus, X } from "lucide-react";
+
+const ALL = "__all__";
 
 export default function ClientesPage() {
 	return (
@@ -43,6 +46,16 @@ function ClientesContent() {
 	const [viewMode, setViewMode] = useState<ViewMode>("table");
 	const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
 
+	// Filters
+	const [ejecutivoId, setEjecutivoId] = useState<string>(ALL);
+	const [filtrosOptions, setFiltrosOptions] = useState<FiltrosClientesOptions>({ ejecutivos: [] });
+
+	useEffect(() => {
+		obtenerFiltrosClientes().then((result) => {
+			if (result.success) setFiltrosOptions(result.data);
+		});
+	}, []);
+
 	useEffect(() => {
 		const detalleId = searchParams.get("detalle");
 		if (detalleId) {
@@ -55,13 +68,15 @@ function ClientesContent() {
 	const [pageSize] = useState(20);
 	const [totalRecords, setTotalRecords] = useState(0);
 
+	const activeEjecutivoId = ejecutivoId !== ALL ? ejecutivoId : undefined;
+
 	useEffect(() => {
 		async function loadClients() {
 			if (isSearchMode) return;
 			setIsLoading(true);
 			setError(null);
 			try {
-				const result = await getAllClients({ page: currentPage, pageSize });
+				const result = await getAllClients({ page: currentPage, pageSize, commercial_owner_id: activeEjecutivoId });
 				if (result.success) {
 					setDisplayedClients(result.data);
 					setTotalRecords(result.pagination.totalRecords);
@@ -78,9 +93,12 @@ function ClientesContent() {
 			}
 		}
 		loadClients();
-	}, [currentPage, pageSize, isSearchMode]);
+	}, [currentPage, pageSize, isSearchMode, activeEjecutivoId]);
+
+	const [activeSearchQuery, setActiveSearchQuery] = useState("");
 
 	const handleSearch = async (query: string) => {
+		setActiveSearchQuery(query);
 		if (!query.trim()) {
 			setIsSearchMode(false);
 			setCurrentPage(1);
@@ -88,7 +106,7 @@ function ClientesContent() {
 		}
 		setIsLoading(true);
 		try {
-			const result = await searchClientsAction(query);
+			const result = await searchClientsAction(query, { commercial_owner_id: activeEjecutivoId });
 			if (result.success) {
 				setDisplayedClients(result.data);
 				setIsSearchMode(true);
@@ -105,6 +123,16 @@ function ClientesContent() {
 			setCurrentPage(1);
 		}
 	};
+
+	// Re-run search when filter changes while in search mode
+	useEffect(() => {
+		if (isSearchMode && activeSearchQuery) {
+			handleSearch(activeSearchQuery);
+		} else if (!isSearchMode) {
+			setCurrentPage(1);
+		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [ejecutivoId]);
 
 	const handlePageChange = (page: number) => {
 		setCurrentPage(page);
@@ -145,14 +173,36 @@ function ClientesContent() {
 				</Button>
 			</div>
 
-			{/* ── Search + View Toggle ─────────────────────────────────── */}
+			{/* ── Search + Filters + View Toggle ───────────────────────── */}
 			<Card>
-				<CardContent className="p-4">
-					<div className="flex items-center gap-3">
-						<div className="flex-1">
+				<CardContent className="p-4 space-y-3">
+					<div className="flex flex-wrap items-center gap-3">
+						<div className="flex-1 min-w-[200px]">
 							<SearchBar onSearch={handleSearch} />
 						</div>
-						<div className="flex items-center gap-3 shrink-0">
+
+						{/* Ejecutivo filter */}
+						{filtrosOptions.ejecutivos.length > 0 && (
+							<Select
+								value={ejecutivoId}
+								onValueChange={(v) => {
+									setEjecutivoId(v);
+									setCurrentPage(1);
+								}}
+							>
+								<SelectTrigger size="sm" className="w-[180px]">
+									<SelectValue placeholder="Ejecutivo" />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value={ALL}>Todos los ejecutivos</SelectItem>
+									{filtrosOptions.ejecutivos.map((e) => (
+										<SelectItem key={e.id} value={e.id}>{e.full_name}</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+						)}
+
+						<div className="flex items-center gap-3 shrink-0 ml-auto">
 							{isSearchMode && (
 								<p className="text-xs text-muted-foreground">
 									<span className="font-medium text-foreground">{displayedClients.length}</span>{" "}
@@ -162,6 +212,22 @@ function ClientesContent() {
 							<ViewToggle currentView={viewMode} onViewChange={setViewMode} />
 						</div>
 					</div>
+
+					{/* Active filter chips */}
+					{ejecutivoId !== ALL && (
+						<div className="flex flex-wrap gap-2">
+							<span className="inline-flex items-center gap-1.5 bg-primary/10 text-primary text-xs px-2.5 py-1 rounded-full">
+								Ejecutivo: {filtrosOptions.ejecutivos.find((e) => e.id === ejecutivoId)?.full_name ?? ejecutivoId}
+								<button
+									onClick={() => setEjecutivoId(ALL)}
+									className="hover:text-primary/70"
+									aria-label="Quitar filtro ejecutivo"
+								>
+									<X className="h-3 w-3" />
+								</button>
+							</span>
+						</div>
+					)}
 				</CardContent>
 			</Card>
 
