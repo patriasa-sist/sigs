@@ -84,6 +84,7 @@ export function DirectoresCarteraTable({ data }: DirectoresCarteraTableProps) {
               <TableRow>
                 <TableHead>Nombre</TableHead>
                 <TableHead>Apellidos</TableHead>
+                <TableHead>% Comisión</TableHead>
                 <TableHead>Estado</TableHead>
                 <TableHead className="text-right">Acciones</TableHead>
               </TableRow>
@@ -100,6 +101,13 @@ export function DirectoresCarteraTable({ data }: DirectoresCarteraTableProps) {
                   <TableCell>
                     <span className="text-muted-foreground">
                       {director.apellidos || "-"}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <span className="font-mono text-sm">
+                      {director.porcentaje_comision != null
+                        ? `${Number(director.porcentaje_comision).toFixed(2)}%`
+                        : "0.00%"}
                     </span>
                   </TableCell>
                   <TableCell>

@@ -12,6 +12,7 @@ export type DirectorCarteraDB = {
   id: string;
   nombre: string;
   apellidos: string | null;
+  porcentaje_comision: number | null;
   activo: boolean;
   created_at: string;
   created_by: string | null;
@@ -20,6 +21,7 @@ export type DirectorCarteraDB = {
 export type DirectorCarteraForm = {
   nombre: string;
   apellidos?: string | null;
+  porcentaje_comision?: number | null;
 };
 
 export type DirectorActionResult<T = undefined> = {
@@ -47,6 +49,12 @@ const directorSchema = z.object({
   apellidos: z
     .string()
     .max(100, "Los apellidos no pueden exceder 100 caracteres")
+    .optional()
+    .nullable(),
+  porcentaje_comision: z
+    .number()
+    .min(0, "El porcentaje no puede ser negativo")
+    .max(100, "El porcentaje no puede superar 100")
     .optional()
     .nullable(),
 });
@@ -129,7 +137,12 @@ export async function crearDirectorCartera(
 
   const { data: newDirector, error } = await supabase
     .from("directores_cartera")
-    .insert({ nombre: nombreTrim, apellidos: apellidosTrim, activo: true })
+    .insert({
+      nombre: nombreTrim,
+      apellidos: apellidosTrim,
+      porcentaje_comision: data.porcentaje_comision ?? 0,
+      activo: true,
+    })
     .select()
     .single();
 
@@ -182,7 +195,11 @@ export async function actualizarDirectorCartera(
 
   const { data: updated, error } = await supabase
     .from("directores_cartera")
-    .update({ nombre: nombreTrim, apellidos: apellidosTrim })
+    .update({
+      nombre: nombreTrim,
+      apellidos: apellidosTrim,
+      porcentaje_comision: data.porcentaje_comision ?? 0,
+    })
     .eq("id", id)
     .select()
     .single();

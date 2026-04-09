@@ -9,6 +9,8 @@ import type {
 	ExportProduccionNuevoResponse,
 	TipoPolizaReporte,
 	ProduccionServerResponse,
+	ExportComisionesDirectorFilters,
+	ExportComisionesDirectorRow,
 } from "@/types/reporte";
 
 /**
@@ -958,6 +960,203 @@ export async function exportarProduccionNuevo(
 		};
 	} catch (error) {
 		console.error("Error exporting new production report:", error);
+		return {
+			success: false,
+			error: error instanceof Error ? error.message : "Error desconocido",
+		};
+	}
+}
+
+// ============================================
+// REPORTE COMISIONES DIRECTOR DE CARTERA
+// ============================================
+
+/**
+ * Obtiene directores activos para el filtro del reporte de comisiones.
+ */
+export async function obtenerDirectoresParaFiltro(): Promise<
+	ProduccionServerResponse<{ id: string; nombre: string; apellidos: string | null }[]>
+> {
+	const permiso = await verificarPermisoExportar();
+	if (!permiso.authorized) {
+		return { success: false, error: permiso.error };
+	}
+
+	const supabase = await createClient();
+
+	const { data, error } = await supabase
+		.from("directores_cartera")
+		.select("id, nombre, apellidos")
+		.eq("activo", true)
+		.order("nombre");
+
+	if (error) {
+		return { success: false, error: "Error al obtener directores" };
+	}
+
+	return { success: true, data: data || [] };
+}
+
+/**
+ * Exporta el reporte de comisiones por director de cartera.
+ * Solo incluye cuotas pagadas en el rango de fechas seleccionado.
+ * Ordenado por director, póliza, número de cuota.
+ */
+export async function exportarComisionesDirector(
+	filtros: ExportComisionesDirectorFilters
+): Promise<ProduccionServerResponse<ExportComisionesDirectorRow[]>> {
+	const permiso = await verificarPermisoExportar();
+	if (!permiso.authorized) {
+		return { success: false, error: permiso.error };
+	}
+
+	const supabase = await createClient();
+	const scope = await getDataScopeFilter("polizas");
+
+	try {
+		// Resolver miembros de equipo si se filtra por equipo
+		let memberIds: string[] | null = null;
+		if (filtros.equipo_id) {
+			const { data: teamMemberIds } = await supabase
+				.from("equipo_miembros")
+				.select("user_id")
+				.eq("equipo_id", filtros.equipo_id);
+
+			if (teamMemberIds && teamMemberIds.length > 0) {
+				memberIds = teamMemberIds.map((m) => m.user_id);
+			}
+		}
+
+		let query = supabase.from("polizas_pagos").select(`
+			numero_cuota,
+			monto,
+			fecha_pago,
+			poliza:polizas!poliza_id (
+				numero_poliza,
+				ramo,
+				moneda,
+				prima_total,
+				prima_neta,
+				comision_empresa,
+				responsable_id,
+				director_cartera:directores_cartera!director_cartera_id (
+					nombre,
+					apellidos,
+					porcentaje_comision
+				),
+				client:clients!client_id (
+					id,
+					client_type,
+					natural_clients (
+						primer_nombre,
+						segundo_nombre,
+						primer_apellido,
+						segundo_apellido,
+						numero_documento
+					),
+					juridic_clients (
+						razon_social,
+						nit
+					)
+				),
+				compania:companias_aseguradoras!compania_aseguradora_id (
+					nombre
+				),
+				responsable:profiles!responsable_id (
+					full_name
+				),
+				regional:regionales!regional_id (
+					nombre
+				)
+			)
+		`);
+
+		// Solo cuotas pagadas en el rango de fechas
+		query = query.eq("estado", "pagado");
+		query = query.gte("fecha_pago", filtros.fecha_desde);
+		query = query.lte("fecha_pago", filtros.fecha_hasta);
+
+		// Data scoping
+		if (scope.needsScoping) {
+			query = query.in("poliza.responsable_id", scope.teamMemberIds);
+		}
+
+		if (filtros.regional_id) {
+			query = query.eq("poliza.regional_id", filtros.regional_id);
+		}
+		if (filtros.compania_id) {
+			query = query.eq("poliza.compania_aseguradora_id", filtros.compania_id);
+		}
+		if (filtros.director_id) {
+			query = query.eq("poliza.director_cartera_id", filtros.director_id);
+		}
+		if (memberIds) {
+			query = query.in("poliza.responsable_id", memberIds);
+		}
+
+		const { data: pagos, error } = await query.order("numero_cuota", { ascending: true });
+
+		if (error) {
+			console.error("Error fetching comisiones director:", error);
+			return { success: false, error: "Error al obtener datos para el reporte" };
+		}
+
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		const rows: ExportComisionesDirectorRow[] = (pagos || []).filter((p: any) => p.poliza).map((pago: any) => {
+			const poliza = pago.poliza;
+			const dc = poliza.director_cartera;
+			const { cliente, ciNit } = extraerDatosCliente(poliza.client as ClientQueryResult | null);
+
+			const primaTotalNum = Number(poliza.prima_total) || 0;
+			const primaNeta = poliza.prima_neta != null ? Number(poliza.prima_neta) : null;
+			const comisionEmpresa = poliza.comision_empresa != null ? Number(poliza.comision_empresa) : null;
+			const montoCuotaPT = Number(pago.monto);
+
+			let montoCuotaPN: number | null = null;
+			let montoCuotaComision: number | null = null;
+			if (primaNeta != null && primaTotalNum > 0) {
+				const ratioPN = primaNeta / primaTotalNum;
+				montoCuotaPN = montoCuotaPT * ratioPN;
+				if (comisionEmpresa != null) {
+					montoCuotaComision = montoCuotaPT * (comisionEmpresa / primaTotalNum);
+				}
+			}
+
+			const pctDirector = dc?.porcentaje_comision != null ? Number(dc.porcentaje_comision) : null;
+			const montoComisionDirector = pctDirector != null ? montoCuotaPT * (pctDirector / 100) : null;
+
+			return {
+				director_cartera: dc ? `${dc.nombre} ${dc.apellidos || ""}`.trim() : "Sin director",
+				numero_poliza: poliza.numero_poliza || "N/A",
+				cliente,
+				ci_nit: ciNit,
+				compania: poliza.compania?.nombre || "N/A",
+				ramo: poliza.ramo || "N/A",
+				regional: poliza.regional?.nombre || "N/A",
+				responsable: poliza.responsable?.full_name || "N/A",
+				numero_cuota: pago.numero_cuota,
+				monto_cuota_pt: montoCuotaPT,
+				monto_cuota_pn: montoCuotaPN,
+				monto_cuota_comision: montoCuotaComision,
+				porcentaje_comision_director: pctDirector,
+				monto_comision_director: montoComisionDirector,
+				moneda: poliza.moneda || "Bs",
+				fecha_pago: pago.fecha_pago,
+			};
+		});
+
+		// Ordenar por director, póliza, cuota
+		rows.sort((a, b) => {
+			const dirCmp = a.director_cartera.localeCompare(b.director_cartera);
+			if (dirCmp !== 0) return dirCmp;
+			const polCmp = a.numero_poliza.localeCompare(b.numero_poliza);
+			if (polCmp !== 0) return polCmp;
+			return a.numero_cuota - b.numero_cuota;
+		});
+
+		return { success: true, data: rows };
+	} catch (error) {
+		console.error("Error exporting comisiones director:", error);
 		return {
 			success: false,
 			error: error instanceof Error ? error.message : "Error desconocido",

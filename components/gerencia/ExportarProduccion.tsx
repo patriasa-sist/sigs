@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,14 +8,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Download, AlertCircle, BarChart3 } from "lucide-react";
-import {
-	exportarProduccionNuevo,
-	obtenerRegionales,
-	obtenerCompanias,
-	obtenerEquiposParaFiltro,
-} from "@/app/gerencia/reportes/actions";
+import { exportarProduccionNuevo } from "@/app/gerencia/reportes/actions";
 import * as ExcelJS from "exceljs";
-import type { ExportProduccionFilters } from "@/types/reporte";
+import type { ExportProduccionFilters, FilterData } from "@/types/reporte";
 
 function getDefaultDateRange() {
 	const now = new Date();
@@ -27,7 +22,7 @@ function getDefaultDateRange() {
 	};
 }
 
-export default function ExportarProduccion() {
+export default function ExportarProduccion({ regionales, companias, equipos }: FilterData) {
 	const defaults = getDefaultDateRange();
 
 	const [fechaDesde, setFechaDesde] = useState<string>(defaults.desde);
@@ -38,25 +33,6 @@ export default function ExportarProduccion() {
 	const [equipoId, setEquipoId] = useState<string>("");
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
-
-	const [regionales, setRegionales] = useState<{ id: string; nombre: string }[]>([]);
-	const [companias, setCompanias] = useState<{ id: string; nombre: string }[]>([]);
-	const [equipos, setEquipos] = useState<{ id: string; nombre: string }[]>([]);
-
-	useEffect(() => {
-		async function loadFilters() {
-			const [regionalesRes, companiasRes, equiposRes] = await Promise.all([
-				obtenerRegionales(),
-				obtenerCompanias(),
-				obtenerEquiposParaFiltro(),
-			]);
-
-			if (regionalesRes.success) setRegionales(regionalesRes.data);
-			if (companiasRes.success) setCompanias(companiasRes.data);
-			if (equiposRes.success) setEquipos(equiposRes.data);
-		}
-		loadFilters();
-	}, []);
 
 	const handleExport = async () => {
 		if (!fechaDesde || !fechaHasta) {

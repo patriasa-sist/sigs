@@ -37,6 +37,13 @@ const formSchema = z.object({
     .min(2, "El nombre debe tener al menos 2 caracteres")
     .max(100, "El nombre no puede exceder 100 caracteres"),
   apellidos: z.string().max(100, "Los apellidos no pueden exceder 100 caracteres").optional(),
+  porcentaje_comision: z
+    .string()
+    .optional()
+    .refine(
+      (v) => !v || (!isNaN(Number(v)) && Number(v) >= 0 && Number(v) <= 100),
+      "Debe ser un número entre 0 y 100"
+    ),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -63,6 +70,7 @@ export function DirectoresCarteraFormDialog({
     defaultValues: {
       nombre: director?.nombre || "",
       apellidos: director?.apellidos || "",
+      porcentaje_comision: director?.porcentaje_comision?.toString() || "0",
     },
   });
 
@@ -71,6 +79,7 @@ export function DirectoresCarteraFormDialog({
       form.reset({
         nombre: director?.nombre || "",
         apellidos: director?.apellidos || "",
+        porcentaje_comision: director?.porcentaje_comision?.toString() || "0",
       });
     }
   }, [open, director, form]);
@@ -81,6 +90,7 @@ export function DirectoresCarteraFormDialog({
       const payload = {
         nombre: values.nombre,
         apellidos: values.apellidos?.trim() || null,
+        porcentaje_comision: values.porcentaje_comision ? Number(values.porcentaje_comision) : 0,
       };
 
       const result = isEditing
@@ -167,6 +177,31 @@ export function DirectoresCarteraFormDialog({
                       {...field}
                       disabled={isSubmitting}
                     />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="porcentaje_comision"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>% Comisión Director</FormLabel>
+                  <FormControl>
+                    <div className="relative">
+                      <Input
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.01"
+                        placeholder="0.00"
+                        {...field}
+                        disabled={isSubmitting}
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">%</span>
+                    </div>
                   </FormControl>
                   <FormMessage />
                 </FormItem>

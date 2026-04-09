@@ -98,6 +98,48 @@ export type ExportProduccionNuevoRow = {
 };
 
 // ============================================
+// REPORTE COMISIONES DIRECTOR DE CARTERA
+// ============================================
+
+export type ExportComisionesDirectorFilters = {
+  fecha_desde: string; // YYYY-MM-DD
+  fecha_hasta: string; // YYYY-MM-DD
+  director_id?: string;
+  regional_id?: string;
+  compania_id?: string;
+  equipo_id?: string;
+};
+
+export type ExportComisionesDirectorRow = {
+  director_cartera: string;
+  numero_poliza: string;
+  cliente: string;
+  ci_nit: string;
+  compania: string;
+  ramo: string;
+  regional: string;
+  responsable: string;
+  numero_cuota: number;
+  monto_cuota_pt: number;
+  monto_cuota_pn: number | null;
+  monto_cuota_comision: number | null;
+  porcentaje_comision_director: number | null;
+  monto_comision_director: number | null;
+  moneda: string;
+  fecha_pago: string;
+};
+
+// ============================================
+// DATOS DE FILTROS (compartidos)
+// ============================================
+
+export type FilterData = {
+  regionales: { id: string; nombre: string }[];
+  companias: { id: string; nombre: string }[];
+  equipos: { id: string; nombre: string }[];
+};
+
+// ============================================
 // RESPUESTA GENÉRICA
 // ============================================
 
