@@ -21,12 +21,23 @@ import type {
 	LegalRepresentativeData,
 } from "@/types/clientForm";
 import {
+	naturalClientFormSchema,
+	unipersonalClientFormSchema,
+	juridicClientCompanySchema,
+	juridicClientContactSchema,
+	clientPartnerSchema,
+	legalRepresentativeSchema,
+} from "@/types/clientForm";
+import {
 	normalizeNaturalClientData,
 	normalizeJuridicClientData,
 	normalizeUnipersonalClientData,
 	normalizePartnerData,
 	normalizeLegalRepresentativeData,
 } from "@/utils/formNormalization";
+import { z } from "zod";
+
+const uuidSchema = z.string().uuid();
 
 // ============================================
 // TYPES
@@ -144,6 +155,16 @@ export async function updateNaturalClient(
 	clientId: string,
 	data: Partial<NaturalClientFormData>
 ): Promise<ActionResult<void>> {
+	if (!uuidSchema.safeParse(clientId).success) {
+		return { success: false, error: "ID de cliente inválido" };
+	}
+
+	const validation = naturalClientFormSchema.partial().safeParse(data);
+	if (!validation.success) {
+		const firstError = validation.error.issues[0];
+		return { success: false, error: `Datos inválidos: ${firstError.path.join(".")} - ${firstError.message}` };
+	}
+
 	try {
 		const { supabase } = await authorizeClientEdit(clientId);
 
@@ -227,6 +248,17 @@ export async function updateJuridicClient(
 	clientId: string,
 	data: Partial<JuridicClientFormData>
 ): Promise<ActionResult<void>> {
+	if (!uuidSchema.safeParse(clientId).success) {
+		return { success: false, error: "ID de cliente inválido" };
+	}
+
+	const juridicSchema = juridicClientCompanySchema.merge(juridicClientContactSchema);
+	const validation = juridicSchema.partial().safeParse(data);
+	if (!validation.success) {
+		const firstError = validation.error.issues[0];
+		return { success: false, error: `Datos inválidos: ${firstError.path.join(".")} - ${firstError.message}` };
+	}
+
 	try {
 		const { supabase } = await authorizeClientEdit(clientId);
 
@@ -297,6 +329,16 @@ export async function updateUnipersonalClient(
 	clientId: string,
 	data: Partial<UnipersonalClientFormData>
 ): Promise<ActionResult<void>> {
+	if (!uuidSchema.safeParse(clientId).success) {
+		return { success: false, error: "ID de cliente inválido" };
+	}
+
+	const validation = unipersonalClientFormSchema.partial().safeParse(data);
+	if (!validation.success) {
+		const firstError = validation.error.issues[0];
+		return { success: false, error: `Datos inválidos: ${firstError.path.join(".")} - ${firstError.message}` };
+	}
+
 	try {
 		const { supabase } = await authorizeClientEdit(clientId);
 
@@ -405,6 +447,16 @@ export async function updatePartnerData(
 	clientId: string,
 	data: Partial<ClientPartnerData>
 ): Promise<ActionResult<void>> {
+	if (!uuidSchema.safeParse(clientId).success) {
+		return { success: false, error: "ID de cliente inválido" };
+	}
+
+	const validation = clientPartnerSchema.omit({ client_id: true }).partial().safeParse(data);
+	if (!validation.success) {
+		const firstError = validation.error.issues[0];
+		return { success: false, error: `Datos inválidos: ${firstError.path.join(".")} - ${firstError.message}` };
+	}
+
 	try {
 		const { supabase } = await authorizeClientEdit(clientId);
 
@@ -496,6 +548,17 @@ export async function updateLegalRepresentatives(
 	clientId: string,
 	representatives: LegalRepresentativeData[]
 ): Promise<ActionResult<void>> {
+	if (!uuidSchema.safeParse(clientId).success) {
+		return { success: false, error: "ID de cliente inválido" };
+	}
+
+	const repArraySchema = z.array(legalRepresentativeSchema.omit({ juridic_client_id: true }));
+	const validation = repArraySchema.safeParse(representatives);
+	if (!validation.success) {
+		const firstError = validation.error.issues[0];
+		return { success: false, error: `Datos de representante inválidos: ${firstError.path.join(".")} - ${firstError.message}` };
+	}
+
 	try {
 		const { supabase } = await authorizeClientEdit(clientId);
 

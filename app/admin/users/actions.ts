@@ -5,6 +5,9 @@ import { createAdminClient } from "@/utils/supabase/admin";
 import { checkPermission } from "@/utils/auth/helpers";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
+import { z } from "zod";
+
+const uuidSchema = z.string().uuid();
 
 export async function deleteUser(userId: string) {
 	try {
@@ -97,6 +100,12 @@ export async function deleteUser(userId: string) {
 }
 
 export async function sendPasswordResetEmail(userId: string) {
+	// Validate userId is a proper UUID before any DB query
+	const uuidResult = uuidSchema.safeParse(userId);
+	if (!uuidResult.success) {
+		return { success: false, error: "ID de usuario inválido" };
+	}
+
 	try {
 		const supabase = await createClient();
 
@@ -120,7 +129,7 @@ export async function sendPasswordResetEmail(userId: string) {
 		const { data: targetUser, error: getUserError } = await supabase
 			.from("profiles")
 			.select("email")
-			.eq("id", userId)
+			.eq("id", uuidResult.data)
 			.single();
 
 		if (getUserError || !targetUser) {

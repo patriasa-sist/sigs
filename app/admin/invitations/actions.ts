@@ -1,10 +1,34 @@
 "use server";
 
 import { createClient as createAdminClient } from "@supabase/supabase-js";
+import { createClient } from "@/utils/supabase/server";
+import { checkPermission } from "@/utils/auth/helpers";
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
+
+const emailSchema = z.string().email();
+const uuidSchema = z.string().uuid();
 
 export async function marcarInvitacionUsada(email: string) {
+	// Validate email format
+	const emailResult = emailSchema.safeParse(email);
+	if (!emailResult.success) {
+		return { success: false, error: "Email inválido" };
+	}
+
 	try {
+		// Verify the authenticated user's email matches (this is called right after signup)
+		const supabase = await createClient();
+		const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+		if (authError || !user) {
+			return { success: false, error: "No autenticado" };
+		}
+
+		if (user.email?.toLowerCase() !== emailResult.data.toLowerCase()) {
+			return { success: false, error: "No autorizado para marcar esta invitación" };
+		}
+
 		const supabaseAdmin = createAdminClient(
 			process.env.NEXT_PUBLIC_SUPABASE_URL!,
 			process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -13,7 +37,7 @@ export async function marcarInvitacionUsada(email: string) {
 		const { error } = await supabaseAdmin
 			.from("invitations")
 			.update({ used_at: new Date().toISOString() })
-			.eq("email", email)
+			.eq("email", emailResult.data)
 			.is("used_at", null);
 
 		if (error) {
@@ -29,6 +53,23 @@ export async function marcarInvitacionUsada(email: string) {
 }
 
 export async function deleteInvitationAndUser(invitationId: string, email: string) {
+	// Validate inputs
+	const uuidResult = uuidSchema.safeParse(invitationId);
+	if (!uuidResult.success) {
+		return { success: false, error: "ID de invitación inválido" };
+	}
+
+	const emailResult = emailSchema.safeParse(email);
+	if (!emailResult.success) {
+		return { success: false, error: "Email inválido" };
+	}
+
+	// Authorization check — must have admin.invitaciones permission
+	const { allowed } = await checkPermission("admin.invitaciones");
+	if (!allowed) {
+		return { success: false, error: "No tiene permisos para eliminar invitaciones" };
+	}
+
 	try {
 		// Use admin client to bypass RLS for deletion
 		const supabaseAdmin = createAdminClient(
@@ -40,7 +81,7 @@ export async function deleteInvitationAndUser(invitationId: string, email: strin
 		const { data: invitation } = await supabaseAdmin
 			.from("invitations")
 			.select("used_at")
-			.eq("id", invitationId)
+			.eq("id", uuidResult.data)
 			.single();
 
 		if (!invitation) {
@@ -62,7 +103,7 @@ export async function deleteInvitationAndUser(invitationId: string, email: strin
 		const { data: profile } = await supabaseAdmin
 			.from("profiles")
 			.select("id")
-			.eq("email", email)
+			.eq("email", emailResult.data)
 			.single();
 
 		// Only delete user if invitation is unused (extra safety check)
@@ -82,7 +123,7 @@ export async function deleteInvitationAndUser(invitationId: string, email: strin
 		const { error: invitationError } = await supabaseAdmin
 			.from("invitations")
 			.delete()
-			.eq("id", invitationId);
+			.eq("id", uuidResult.data);
 
 		if (invitationError) {
 			console.error("Error deleting invitation:", invitationError);

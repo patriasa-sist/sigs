@@ -160,6 +160,7 @@ function SignUpContent() {
 	const [isLoading, setIsLoading] = useState<boolean>(true);
 	const [isValidInvite, setIsValidInvite] = useState<boolean>(false);
 	const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+	const [isSuccess, setIsSuccess] = useState<boolean>(false);
 
 	const form = useForm<z.infer<typeof formSchema>>({
 		resolver: zodResolver(formSchema),
@@ -240,8 +241,10 @@ function SignUpContent() {
 				}
 			}
 
-			toast.success("Cuenta configurada exitosamente. Ahora puedes iniciar sesión.");
-			router.push("/auth/login");
+			// Sign out to clear the invite session before redirecting to login
+			await supabase.auth.signOut();
+
+			setIsSuccess(true);
 		} catch (err: unknown) {
 			console.error("Failed to set password", err);
 			const errorMessage = err instanceof Error ? err.message : "Error al establecer la contraseña. Inténtalo de nuevo.";
@@ -253,6 +256,39 @@ function SignUpContent() {
 
 	if (isLoading) return <LoadingState />;
 	if (!isValidInvite) return <InvalidInviteState onGoToLogin={() => router.push("/auth/login")} />;
+
+	if (isSuccess) return (
+		<PageShell>
+			<div className="w-full max-w-sm space-y-6">
+				<div className="lg:hidden flex justify-center">
+					<Image src="/patria-horizontal.png" alt="Patria S.A." width={180} height={46}
+						style={{ height: "2.75rem", width: "auto" }} />
+				</div>
+				<div className="space-y-1">
+					<h1 className="text-xl font-semibold text-foreground">¡Cuenta activada!</h1>
+					<p className="text-sm text-muted-foreground">
+						Tu contraseña fue configurada exitosamente.
+					</p>
+				</div>
+				<Card>
+					<CardContent className="p-6 space-y-4">
+						<div className="flex items-start gap-3 rounded-md border border-green-600/30 bg-green-50 dark:bg-green-950/30 px-4 py-3">
+							<CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5 shrink-0" />
+							<div className="space-y-1">
+								<p className="text-sm font-medium text-green-700 dark:text-green-400">Registro completo</p>
+								<p className="text-xs text-muted-foreground">
+									Ya puedes ingresar al sistema con tu correo y la contraseña que acabas de configurar.
+								</p>
+							</div>
+						</div>
+						<Button className="w-full" onClick={() => { window.location.href = "/auth/login"; }}>
+							Ir al inicio de sesión
+						</Button>
+					</CardContent>
+				</Card>
+			</div>
+		</PageShell>
+	);
 
 	return (
 		<PageShell>
