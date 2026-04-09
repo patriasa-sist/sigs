@@ -7,6 +7,8 @@ import type {
 	ExportProduccionRow,
 	ExportProduccionNuevoRow,
 	ExportProduccionNuevoResponse,
+	ExportProduccionContableResponse,
+	ExportComisionesDirectorResponse,
 	TipoPolizaReporte,
 	ProduccionServerResponse,
 	ExportComisionesDirectorFilters,
@@ -57,7 +59,7 @@ type ClientQueryResult = {
  */
 export async function exportarProduccion(
 	filtros: ExportProduccionFilters
-): Promise<ProduccionServerResponse<ExportProduccionRow[]>> {
+): Promise<ProduccionServerResponse<ExportProduccionContableResponse>> {
 	const permiso = await verificarPermisoExportar();
 	if (!permiso.authorized) {
 		return { success: false, error: permiso.error };
@@ -67,11 +69,18 @@ export async function exportarProduccion(
 	const scope = await getDataScopeFilter("polizas");
 
 	try {
-		// Calcular rango de fechas para el mes seleccionado
-		const primerDiaMes = new Date(filtros.anio, filtros.mes - 1, 1);
-		const ultimoDiaMes = new Date(filtros.anio, filtros.mes, 0);
-		const fechaDesde = primerDiaMes.toISOString().split("T")[0];
-		const fechaHasta = ultimoDiaMes.toISOString().split("T")[0];
+		// Usar rango de fechas directo si se proporciona, o calcular desde mes/anio
+		let fechaDesde: string;
+		let fechaHasta: string;
+		if (filtros.fecha_desde && filtros.fecha_hasta) {
+			fechaDesde = filtros.fecha_desde;
+			fechaHasta = filtros.fecha_hasta;
+		} else {
+			const anio = filtros.anio ?? new Date().getFullYear();
+			const mes = filtros.mes ?? new Date().getMonth() + 1;
+			fechaDesde = new Date(anio, mes - 1, 1).toISOString().split("T")[0];
+			fechaHasta = new Date(anio, mes, 0).toISOString().split("T")[0];
+		}
 
 		// Consulta principal con todos los JOINs necesarios
 		let query = supabase.from("polizas_pagos").select(`
@@ -289,7 +298,17 @@ export async function exportarProduccion(
 			return a.numero_cuota - b.numero_cuota;
 		});
 
-		return { success: true, data: exportRows };
+		return {
+			success: true,
+			data: {
+				data: exportRows,
+				meta: {
+					usuario_email: permiso.email,
+					fecha_desde: fechaDesde,
+					fecha_hasta: fechaHasta,
+				},
+			},
+		};
 	} catch (error) {
 		console.error("Error exporting production report:", error);
 		return {
@@ -522,10 +541,10 @@ export async function exportarProduccionNuevo(
 			fechaDesde = filtros.fecha_desde;
 			fechaHasta = filtros.fecha_hasta;
 		} else {
-			const primerDiaMes = new Date(filtros.anio, filtros.mes - 1, 1);
-			const ultimoDiaMes = new Date(filtros.anio, filtros.mes, 0);
-			fechaDesde = primerDiaMes.toISOString().split("T")[0];
-			fechaHasta = ultimoDiaMes.toISOString().split("T")[0];
+			const anio = filtros.anio ?? new Date().getFullYear();
+			const mes = filtros.mes ?? new Date().getMonth() + 1;
+			fechaDesde = new Date(anio, mes - 1, 1).toISOString().split("T")[0];
+			fechaHasta = new Date(anio, mes, 0).toISOString().split("T")[0];
 		}
 
 		// Resolver miembros de equipo si se filtra por equipo
@@ -1004,7 +1023,7 @@ export async function obtenerDirectoresParaFiltro(): Promise<
  */
 export async function exportarComisionesDirector(
 	filtros: ExportComisionesDirectorFilters
-): Promise<ProduccionServerResponse<ExportComisionesDirectorRow[]>> {
+): Promise<ProduccionServerResponse<ExportComisionesDirectorResponse>> {
 	const permiso = await verificarPermisoExportar();
 	if (!permiso.authorized) {
 		return { success: false, error: permiso.error };
@@ -1154,7 +1173,17 @@ export async function exportarComisionesDirector(
 			return a.numero_cuota - b.numero_cuota;
 		});
 
-		return { success: true, data: rows };
+		return {
+			success: true,
+			data: {
+				data: rows,
+				meta: {
+					usuario_email: permiso.email,
+					fecha_desde: filtros.fecha_desde,
+					fecha_hasta: filtros.fecha_hasta,
+				},
+			},
+		};
 	} catch (error) {
 		console.error("Error exporting comisiones director:", error);
 		return {

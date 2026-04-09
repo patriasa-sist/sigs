@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
@@ -11,29 +12,21 @@ import { exportarProduccion } from "@/app/gerencia/reportes/actions";
 import * as ExcelJS from "exceljs";
 import type { ExportProduccionFilters, FilterData } from "@/types/reporte";
 
-const MESES = [
-	{ value: 1, label: "Enero" },
-	{ value: 2, label: "Febrero" },
-	{ value: 3, label: "Marzo" },
-	{ value: 4, label: "Abril" },
-	{ value: 5, label: "Mayo" },
-	{ value: 6, label: "Junio" },
-	{ value: 7, label: "Julio" },
-	{ value: 8, label: "Agosto" },
-	{ value: 9, label: "Septiembre" },
-	{ value: 10, label: "Octubre" },
-	{ value: 11, label: "Noviembre" },
-	{ value: 12, label: "Diciembre" },
-];
-
-const currentYear = new Date().getFullYear();
-const ANIOS = Array.from({ length: 4 }, (_, i) => 2025 + i);
+function getDefaultDateRange() {
+	const now = new Date();
+	const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+	const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+	return {
+		desde: firstDay.toISOString().split("T")[0],
+		hasta: lastDay.toISOString().split("T")[0],
+	};
+}
 
 export default function ExportarContable({ regionales, companias, equipos }: FilterData) {
-	const currentMonth = new Date().getMonth() + 1;
+	const defaults = getDefaultDateRange();
 
-	const [mes, setMes] = useState<number>(currentMonth);
-	const [anio, setAnio] = useState<number>(currentYear);
+	const [fechaDesde, setFechaDesde] = useState<string>(defaults.desde);
+	const [fechaHasta, setFechaHasta] = useState<string>(defaults.hasta);
 	const [estadoPoliza, setEstadoPoliza] = useState<"activa" | "all">("all");
 	const [regionalId, setRegionalId] = useState<string>("");
 	const [companiaId, setCompaniaId] = useState<string>("");
@@ -42,13 +35,22 @@ export default function ExportarContable({ regionales, companias, equipos }: Fil
 	const [error, setError] = useState<string | null>(null);
 
 	const handleExport = async () => {
+		if (!fechaDesde || !fechaHasta) {
+			setError("Debe seleccionar ambas fechas del rango");
+			return;
+		}
+		if (fechaDesde > fechaHasta) {
+			setError("La fecha de inicio no puede ser posterior a la fecha fin");
+			return;
+		}
+
 		setLoading(true);
 		setError(null);
 
 		try {
 			const filtros: ExportProduccionFilters = {
-				mes,
-				anio,
+				fecha_desde: fechaDesde,
+				fecha_hasta: fechaHasta,
 				estado_poliza: estadoPoliza,
 				regional_id: regionalId || undefined,
 				compania_id: companiaId || undefined,
@@ -62,17 +64,65 @@ export default function ExportarContable({ regionales, companias, equipos }: Fil
 				return;
 			}
 
-			if (result.data.length === 0) {
+			const { data: rows, meta } = result.data;
+
+			if (rows.length === 0) {
 				setError("No se encontraron datos para el período seleccionado");
 				return;
 			}
 
-			// Generar archivo Excel con ExcelJS
+			// Construir lista de filtros aplicados
+			const filtrosAplicados: string[] = [];
+			if (estadoPoliza !== "all") filtrosAplicados.push(`Estado: ${estadoPoliza}`);
+			const regionalNombre = regionales.find((r) => r.id === regionalId)?.nombre;
+			if (regionalNombre) filtrosAplicados.push(`Regional: ${regionalNombre}`);
+			const companiaNombre = companias.find((c) => c.id === companiaId)?.nombre;
+			if (companiaNombre) filtrosAplicados.push(`Compañía: ${companiaNombre}`);
+			const equipoNombre = equipos.find((e) => e.id === equipoId)?.nombre;
+			if (equipoNombre) filtrosAplicados.push(`Equipo: ${equipoNombre}`);
+
 			const workbook = new ExcelJS.Workbook();
 			const worksheet = workbook.addWorksheet("Producción Mensual");
 
-			// Definir columnas
-			worksheet.columns = [
+			// ---- Encabezado con detalles de exportación ----
+			const headerStyle: Partial<ExcelJS.Style> = {
+				font: { bold: true, size: 11 },
+				alignment: { vertical: "middle" },
+			};
+			const valueStyle: Partial<ExcelJS.Style> = {
+				alignment: { vertical: "middle" },
+			};
+
+			const fechaReporte = new Date().toLocaleDateString("es-BO", {
+				day: "2-digit",
+				month: "2-digit",
+				year: "numeric",
+				hour: "2-digit",
+				minute: "2-digit",
+			});
+			const fechaDesdeFormatted = new Date(meta.fecha_desde + "T00:00:00").toLocaleDateString("es-BO");
+			const fechaHastaFormatted = new Date(meta.fecha_hasta + "T00:00:00").toLocaleDateString("es-BO");
+
+			const metaRows = [
+				["Fecha de reporte:", fechaReporte],
+				["Usuario:", meta.usuario_email],
+				["Rango de fechas:", `${fechaDesdeFormatted} - ${fechaHastaFormatted}`],
+				["Cantidad de cuotas:", rows.length.toString()],
+				["Filtros aplicados:", filtrosAplicados.length > 0 ? filtrosAplicados.join(", ") : "Ninguno"],
+			];
+
+			for (const [label, value] of metaRows) {
+				const row = worksheet.addRow([label, value]);
+				row.getCell(1).style = headerStyle;
+				row.getCell(2).style = valueStyle;
+			}
+
+			// Fila vacía separadora
+			worksheet.addRow([]);
+
+			// ---- Definir columnas de datos (fila 7 será el header) ----
+			const DATA_HEADER_ROW = 7;
+			const columns = [
 				{ header: "N° Póliza", key: "numero_poliza", width: 15 },
 				{ header: "Cliente", key: "cliente", width: 30 },
 				{ header: "CI/NIT", key: "ci_nit", width: 15 },
@@ -94,66 +144,57 @@ export default function ExportarContable({ regionales, companias, equipos }: Fil
 				{ header: "Moneda", key: "moneda", width: 10 },
 			];
 
-			// Estilo del header
-			const headerRow = worksheet.getRow(1);
-			headerRow.font = { bold: true, color: { argb: "FFFFFFFF" } };
-			headerRow.fill = {
+			// Aplicar anchos de columna
+			columns.forEach((col, i) => {
+				worksheet.getColumn(i + 1).width = col.width;
+			});
+
+			// Escribir fila de encabezado de datos
+			const dataHeaderRow = worksheet.getRow(DATA_HEADER_ROW);
+			columns.forEach((col, i) => {
+				dataHeaderRow.getCell(i + 1).value = col.header;
+			});
+			dataHeaderRow.font = { bold: true, color: { argb: "FFFFFFFF" } };
+			dataHeaderRow.fill = {
 				type: "pattern",
 				pattern: "solid",
 				fgColor: { argb: "FF4472C4" },
 			};
-			headerRow.alignment = { vertical: "middle", horizontal: "center" };
-			headerRow.height = 20;
+			dataHeaderRow.alignment = { vertical: "middle", horizontal: "center" };
+			dataHeaderRow.height = 20;
 
-			// Columnas que deben tener fondo verde (campos financieros calculados)
-			const greenColumns = [
-				"prima_neta",
-				"comision_empresa",
-				"factor_prima_neta",
-				"porcentaje_comision",
-				"monto_cuota_pn",
-				"monto_cuota_comision",
-			];
+			const greenColumnIndices = columns
+				.map((col, i) =>
+					["prima_neta", "comision_empresa", "factor_prima_neta", "porcentaje_comision", "monto_cuota_pn", "monto_cuota_comision"].includes(col.key)
+						? i + 1
+						: -1,
+				)
+				.filter((i) => i > 0);
 
-			// Agregar filas de datos
-			result.data.forEach((row) => {
-				const excelRow = worksheet.addRow({
-					numero_poliza: row.numero_poliza,
-					cliente: row.cliente,
-					ci_nit: row.ci_nit,
-					compania: row.compania,
-					ramo: row.ramo,
-					responsable: row.responsable,
-					regional: row.regional,
-					prima_total: row.prima_total,
-					prima_neta: row.prima_neta ?? "",
-					comision_empresa: row.comision_empresa ?? "",
-					factor_prima_neta: row.factor_prima_neta ?? "",
-					porcentaje_comision: row.porcentaje_comision ?? "",
-					inicio_vigencia: row.inicio_vigencia
-						? new Date(row.inicio_vigencia).toLocaleDateString("es-BO")
-						: "",
-					fin_vigencia: row.fin_vigencia ? new Date(row.fin_vigencia).toLocaleDateString("es-BO") : "",
-					numero_cuota: row.numero_cuota,
-					monto_cuota_pt: row.monto_cuota_pt,
-					monto_cuota_pn: row.monto_cuota_pn ?? "",
-					monto_cuota_comision: row.monto_cuota_comision ?? "",
-					moneda: row.moneda,
+			// Escribir filas de datos
+			rows.forEach((row) => {
+				const values = columns.map((col) => {
+					const val = row[col.key as keyof typeof row];
+					if (["inicio_vigencia", "fin_vigencia"].includes(col.key)) {
+						return val ? new Date((val as string) + "T00:00:00").toLocaleDateString("es-BO") : "";
+					}
+					return val ?? "";
 				});
 
-				// Aplicar fondo verde claro a las columnas financieras
-				greenColumns.forEach((colKey) => {
-					const cell = excelRow.getCell(colKey);
-					cell.fill = {
+				const excelRow = worksheet.addRow(values);
+
+				greenColumnIndices.forEach((colIdx) => {
+					excelRow.getCell(colIdx).fill = {
 						type: "pattern",
 						pattern: "solid",
-						fgColor: { argb: "FFE2EFDA" }, // Verde claro
+						fgColor: { argb: "FFE2EFDA" },
 					};
 				});
 			});
 
-			// Agregar bordes a todas las celdas
-			worksheet.eachRow((row) => {
+			// Bordes en filas de datos
+			for (let r = DATA_HEADER_ROW; r <= worksheet.rowCount; r++) {
+				const row = worksheet.getRow(r);
 				row.eachCell((cell) => {
 					cell.border = {
 						top: { style: "thin" },
@@ -162,38 +203,28 @@ export default function ExportarContable({ regionales, companias, equipos }: Fil
 						right: { style: "thin" },
 					};
 				});
+			}
+
+			// Formato numérico
+			const numericKeys = ["prima_total", "prima_neta", "comision_empresa", "monto_cuota_pt", "monto_cuota_pn", "monto_cuota_comision"];
+			numericKeys.forEach((key) => {
+				const colIdx = columns.findIndex((c) => c.key === key) + 1;
+				if (colIdx > 0) {
+					for (let r = DATA_HEADER_ROW + 1; r <= worksheet.rowCount; r++) {
+						worksheet.getRow(r).getCell(colIdx).numFmt = "#,##0.00";
+					}
+				}
 			});
 
-			// Formatear números con decimales
-			const numericColumns = [
-				"prima_total",
-				"prima_neta",
-				"comision_empresa",
-				"monto_cuota_pt",
-				"monto_cuota_pn",
-				"monto_cuota_comision",
-			];
-			numericColumns.forEach((colKey) => {
-				const col = worksheet.getColumn(colKey);
-				col.numFmt = "#,##0.00";
-			});
-
-			// Generar archivo
 			const buffer = await workbook.xlsx.writeBuffer();
 			const blob = new Blob([buffer], {
 				type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
 			});
 
-			// Crear enlace de descarga
 			const url = window.URL.createObjectURL(blob);
 			const link = document.createElement("a");
 			link.href = url;
-
-			// Nombre del archivo
-			const mesNombre = MESES.find((m) => m.value === mes)?.label || mes;
-			link.download = `contable_${mesNombre}_${anio}.xlsx`;
-
-			// Descargar
+			link.download = `contable_${fechaDesde}_${fechaHasta}.xlsx`;
 			document.body.appendChild(link);
 			link.click();
 			document.body.removeChild(link);
@@ -216,7 +247,7 @@ export default function ExportarContable({ regionales, companias, equipos }: Fil
 					<div>
 						<CardTitle className="text-lg">Reporte Contable</CardTitle>
 						<CardDescription>
-							Exporta el reporte contable mensual con cuotas, prima neta, comisiones y factores de cálculo
+							Exporta el reporte contable con cuotas, prima neta, comisiones y factores de cálculo
 						</CardDescription>
 					</div>
 				</div>
@@ -227,35 +258,13 @@ export default function ExportarContable({ regionales, companias, equipos }: Fil
 					<p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">Filtros</p>
 					<div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
 						<div className="space-y-1.5">
-							<Label className="text-sm">Mes</Label>
-							<Select value={mes.toString()} onValueChange={(value) => setMes(Number(value))}>
-								<SelectTrigger className="w-full truncate">
-									<SelectValue />
-								</SelectTrigger>
-								<SelectContent>
-									{MESES.map((m) => (
-										<SelectItem key={m.value} value={m.value.toString()}>
-											{m.label}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
+							<Label className="text-sm">Fecha Desde</Label>
+							<Input type="date" value={fechaDesde} onChange={(e) => setFechaDesde(e.target.value)} />
 						</div>
 
 						<div className="space-y-1.5">
-							<Label className="text-sm">Año</Label>
-							<Select value={anio.toString()} onValueChange={(value) => setAnio(Number(value))}>
-								<SelectTrigger className="w-full truncate">
-									<SelectValue />
-								</SelectTrigger>
-								<SelectContent>
-									{ANIOS.map((a) => (
-										<SelectItem key={a} value={a.toString()}>
-											{a}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
+							<Label className="text-sm">Fecha Hasta</Label>
+							<Input type="date" value={fechaHasta} onChange={(e) => setFechaHasta(e.target.value)} />
 						</div>
 
 						<div className="space-y-1.5">

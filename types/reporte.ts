@@ -7,8 +7,8 @@
 // ============================================
 
 export type ExportProduccionFilters = {
-	mes: number; // 1-12
-	anio: number;
+	mes?: number; // 1-12
+	anio?: number;
 	/** Rango de fechas personalizado (override mes/anio si ambos presentes) */
 	fecha_desde?: string; // YYYY-MM-DD
 	fecha_hasta?: string; // YYYY-MM-DD
@@ -154,4 +154,20 @@ export type ExportProduccionNuevoResponse = {
 		fecha_desde: string;
 		fecha_hasta: string;
 	};
+};
+
+export type ExportReporteMeta = {
+	usuario_email: string;
+	fecha_desde: string;
+	fecha_hasta: string;
+};
+
+export type ExportProduccionContableResponse = {
+	data: ExportProduccionRow[];
+	meta: ExportReporteMeta;
+};
+
+export type ExportComisionesDirectorResponse = {
+	data: ExportComisionesDirectorRow[];
+	meta: ExportReporteMeta;
 };

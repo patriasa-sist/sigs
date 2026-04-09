@@ -84,16 +84,67 @@ export default function ExportarComisionesDirector({
 				return;
 			}
 
-			if (result.data.length === 0) {
+			const { data: rows, meta } = result.data;
+
+			if (rows.length === 0) {
 				setError("No se encontraron cuotas pagadas para el período y filtros seleccionados");
 				return;
 			}
+
+			// Construir lista de filtros aplicados
+			const filtrosAplicados: string[] = [];
+			const director = directores.find((d) => d.id === directorId);
+			if (director) filtrosAplicados.push(`Director: ${director.nombre}${director.apellidos ? ` ${director.apellidos}` : ""}`);
+			const regionalNombre = regionales.find((r) => r.id === regionalId)?.nombre;
+			if (regionalNombre) filtrosAplicados.push(`Regional: ${regionalNombre}`);
+			const companiaNombre = companias.find((c) => c.id === companiaId)?.nombre;
+			if (companiaNombre) filtrosAplicados.push(`Compañía: ${companiaNombre}`);
+			const equipoNombre = equipos.find((e) => e.id === equipoId)?.nombre;
+			if (equipoNombre) filtrosAplicados.push(`Equipo: ${equipoNombre}`);
 
 			// Generar Excel
 			const workbook = new ExcelJS.Workbook();
 			const worksheet = workbook.addWorksheet("Comisiones Directores");
 
-			worksheet.columns = [
+			// ---- Encabezado con detalles de exportación ----
+			const metaHeaderStyle: Partial<ExcelJS.Style> = {
+				font: { bold: true, size: 11 },
+				alignment: { vertical: "middle" },
+			};
+			const metaValueStyle: Partial<ExcelJS.Style> = {
+				alignment: { vertical: "middle" },
+			};
+
+			const fechaReporte = new Date().toLocaleDateString("es-BO", {
+				day: "2-digit",
+				month: "2-digit",
+				year: "numeric",
+				hour: "2-digit",
+				minute: "2-digit",
+			});
+			const fechaDesdeFormatted = new Date(meta.fecha_desde + "T00:00:00").toLocaleDateString("es-BO");
+			const fechaHastaFormatted = new Date(meta.fecha_hasta + "T00:00:00").toLocaleDateString("es-BO");
+
+			const metaRows = [
+				["Fecha de reporte:", fechaReporte],
+				["Usuario:", meta.usuario_email],
+				["Rango de fechas:", `${fechaDesdeFormatted} - ${fechaHastaFormatted}`],
+				["Cantidad de cuotas:", rows.length.toString()],
+				["Filtros aplicados:", filtrosAplicados.length > 0 ? filtrosAplicados.join(", ") : "Ninguno"],
+			];
+
+			for (const [label, value] of metaRows) {
+				const metaRow = worksheet.addRow([label, value]);
+				metaRow.getCell(1).style = metaHeaderStyle;
+				metaRow.getCell(2).style = metaValueStyle;
+			}
+
+			// Fila vacía separadora
+			worksheet.addRow([]);
+
+			// ---- Definir columnas de datos (fila 7 será el header) ----
+			const DATA_HEADER_ROW = 7;
+			const columns = [
 				{ header: "Director de Cartera", key: "director_cartera", width: 28 },
 				{ header: "N° Póliza", key: "numero_poliza", width: 15 },
 				{ header: "Cliente", key: "cliente", width: 30 },
@@ -112,16 +163,24 @@ export default function ExportarComisionesDirector({
 				{ header: "Fecha Pago", key: "fecha_pago", width: 14 },
 			];
 
-			// Header style
-			const headerRow = worksheet.getRow(1);
-			headerRow.font = { bold: true, color: { argb: "FFFFFFFF" } };
-			headerRow.fill = {
+			// Aplicar anchos de columna
+			columns.forEach((col, i) => {
+				worksheet.getColumn(i + 1).width = col.width;
+			});
+
+			// Escribir fila de encabezado de datos
+			const dataHeaderRow = worksheet.getRow(DATA_HEADER_ROW);
+			columns.forEach((col, i) => {
+				dataHeaderRow.getCell(i + 1).value = col.header;
+			});
+			dataHeaderRow.font = { bold: true, color: { argb: "FFFFFFFF" } };
+			dataHeaderRow.fill = {
 				type: "pattern",
 				pattern: "solid",
-				fgColor: { argb: "FF2D6A4F" }, // verde oscuro
+				fgColor: { argb: "FF2D6A4F" },
 			};
-			headerRow.alignment = { vertical: "middle", horizontal: "center" };
-			headerRow.height = 20;
+			dataHeaderRow.alignment = { vertical: "middle", horizontal: "center" };
+			dataHeaderRow.height = 20;
 
 			// Track current director for alternating row color
 			let lastDirector = "";
@@ -132,35 +191,30 @@ export default function ExportarComisionesDirector({
 			// Yellow column (director commission %)
 			const yellowColumns = ["porcentaje_comision_director"];
 
-			result.data.forEach((row) => {
+			rows.forEach((row) => {
 				if (row.director_cartera !== lastDirector) {
 					lastDirector = row.director_cartera;
 					rowColorToggle = !rowColorToggle;
 				}
 
-				const excelRow = worksheet.addRow({
-					director_cartera: row.director_cartera,
-					numero_poliza: row.numero_poliza,
-					cliente: row.cliente,
-					ci_nit: row.ci_nit,
-					compania: row.compania,
-					ramo: row.ramo,
-					regional: row.regional,
-					responsable: row.responsable,
-					numero_cuota: row.numero_cuota,
-					monto_cuota_pt: row.monto_cuota_pt,
-					monto_cuota_pn: row.monto_cuota_pn ?? "",
-					monto_cuota_comision: row.monto_cuota_comision ?? "",
-					porcentaje_comision_director:
-						row.porcentaje_comision_director != null
-							? `${row.porcentaje_comision_director}%`
-							: "",
-					monto_comision_director: row.monto_comision_director ?? "",
-					moneda: row.moneda,
-					fecha_pago: row.fecha_pago
-						? new Date(row.fecha_pago).toLocaleDateString("es-BO")
-						: "",
-				});
+				const excelRow = worksheet.addRow([
+					row.director_cartera,
+					row.numero_poliza,
+					row.cliente,
+					row.ci_nit,
+					row.compania,
+					row.ramo,
+					row.regional,
+					row.responsable,
+					row.numero_cuota,
+					row.monto_cuota_pt,
+					row.monto_cuota_pn ?? "",
+					row.monto_cuota_comision ?? "",
+					row.porcentaje_comision_director != null ? `${row.porcentaje_comision_director}%` : "",
+					row.monto_comision_director ?? "",
+					row.moneda,
+					row.fecha_pago ? new Date(row.fecha_pago).toLocaleDateString("es-BO") : "",
+				]);
 
 				// Alternate row background per director
 				const baseFg = rowColorToggle ? "FFF0F7EE" : "FFFFFFFF";
@@ -170,8 +224,7 @@ export default function ExportarComisionesDirector({
 						pattern: "solid",
 						fgColor: { argb: baseFg },
 					};
-					// Override specific columns
-					const colKey = worksheet.columns[colNumber - 1]?.key;
+					const colKey = columns[colNumber - 1]?.key;
 					if (colKey && greenColumns.includes(colKey)) {
 						cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE2EFDA" } };
 					}
@@ -181,8 +234,9 @@ export default function ExportarComisionesDirector({
 				});
 			});
 
-			// Borders
-			worksheet.eachRow((row) => {
+			// Bordes en filas de datos
+			for (let r = DATA_HEADER_ROW; r <= worksheet.rowCount; r++) {
+				const row = worksheet.getRow(r);
 				row.eachCell((cell) => {
 					cell.border = {
 						top: { style: "thin" },
@@ -191,17 +245,17 @@ export default function ExportarComisionesDirector({
 						right: { style: "thin" },
 					};
 				});
-			});
+			}
 
 			// Numeric formats
-			const numericCols = [
-				"monto_cuota_pt",
-				"monto_cuota_pn",
-				"monto_cuota_comision",
-				"monto_comision_director",
-			];
+			const numericCols = ["monto_cuota_pt", "monto_cuota_pn", "monto_cuota_comision", "monto_comision_director"];
 			numericCols.forEach((key) => {
-				worksheet.getColumn(key).numFmt = "#,##0.00";
+				const colIdx = columns.findIndex((c) => c.key === key) + 1;
+				if (colIdx > 0) {
+					for (let r = DATA_HEADER_ROW + 1; r <= worksheet.rowCount; r++) {
+						worksheet.getRow(r).getCell(colIdx).numFmt = "#,##0.00";
+					}
+				}
 			});
 
 			const buffer = await workbook.xlsx.writeBuffer();
