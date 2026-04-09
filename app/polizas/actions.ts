@@ -373,7 +373,7 @@ export async function obtenerPolizas(params: ObtenerPolizasParams = {}) {
 		// Si hay búsqueda de texto, obtener client_ids coincidentes en paralelo
 		let searchClientIds: string[] = [];
 		if (search?.trim()) {
-			const q = search.trim();
+			const q = search.trim().substring(0, 100);
 			const [natRes, jurRes, uniRes] = await Promise.all([
 				supabase.from("natural_clients")
 					.select("client_id")
@@ -430,12 +430,13 @@ export async function obtenerPolizas(params: ObtenerPolizasParams = {}) {
 		if (responsable_id) query = query.eq("responsable_id", responsable_id);
 
 		if (search?.trim()) {
+			const sq = search.trim().substring(0, 100);
 			if (searchClientIds.length > 0) {
 				query = query.or(
-					`numero_poliza.ilike.%${search.trim()}%,client_id.in.(${searchClientIds.join(",")})`
+					`numero_poliza.ilike.%${sq}%,client_id.in.(${searchClientIds.join(",")})`
 				);
 			} else {
-				query = query.ilike("numero_poliza", `%${search.trim()}%`);
+				query = query.ilike("numero_poliza", `%${sq}%`);
 			}
 		}
 

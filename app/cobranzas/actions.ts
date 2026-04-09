@@ -1534,7 +1534,7 @@ export async function obtenerCobranzasPaginadas(params: CobranzaFiltros = {}): P
 		let searchClientIds: string[] | null = null;
 		let searchPolizaMatch = "";
 		if (search?.trim()) {
-			const q = search.trim();
+			const q = search.trim().substring(0, 100);
 			searchPolizaMatch = q;
 			const [natRes, jurRes, uniRes] = await Promise.all([
 				supabase.from("natural_clients")

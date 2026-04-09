@@ -24,6 +24,13 @@ const inviteSchema = z.object({
  */
 export async function POST(request: Request) {
 	try {
+		// 0. Validate request origin to prevent CSRF
+		const requestOrigin = request.headers.get("origin");
+		const serverOrigin = new URL(request.url).origin;
+		if (requestOrigin && requestOrigin !== serverOrigin) {
+			return NextResponse.json({ error: "Invalid origin" }, { status: 403 });
+		}
+
 		// 1. Get the user making the request
 		const supabase = await createClient();
 		const {

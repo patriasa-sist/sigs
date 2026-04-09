@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import type { Permission } from "@/utils/auth/helpers";
+import * as Sentry from "@sentry/nextjs";
 
 /**
  * Rutas protegidas por permiso.
@@ -47,8 +48,13 @@ function decodeJWTPayload(accessToken: string): { user_role: string | null; user
 			user_role: decoded.user_role || null,
 			user_permissions: decoded.user_permissions || [],
 		};
-	} catch {
-		console.error("[Middleware] Error decoding JWT");
+	} catch (error) {
+		console.error("[Middleware] Error decoding JWT", {
+			message: error instanceof Error ? error.message : String(error),
+		});
+		Sentry.captureException(error, {
+			extra: { context: "jwt_decode_failure" },
+		});
 		return { user_role: null, user_permissions: [] };
 	}
 }

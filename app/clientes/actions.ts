@@ -491,7 +491,7 @@ export async function searchClients(query: string, filters?: { commercial_owner_
 	try {
 		const { supabase, user } = await getAuthenticatedClient();
 
-		const trimmedQuery = query.trim();
+		const trimmedQuery = query.trim().substring(0, 100);
 		if (!trimmedQuery) {
 			const result = await getAllClients({ page: 1, pageSize: 20, commercial_owner_id: filters?.commercial_owner_id });
 			if (!result.success) return result;
