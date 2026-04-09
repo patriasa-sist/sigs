@@ -106,9 +106,6 @@ export function ResponsabilidadCivilForm({ datos, onChange, onSiguiente, onAnter
 		if (valorAsegurado <= 0) {
 			nuevosErrores.valor_asegurado = "El valor asegurado debe ser mayor a 0";
 		}
-		if (vehiculos.length === 0) {
-			nuevosErrores.vehiculos = "Debe agregar al menos un vehículo";
-		}
 
 		if (Object.keys(nuevosErrores).length > 0) {
 			setErrores(nuevosErrores);
@@ -138,13 +135,15 @@ export function ResponsabilidadCivilForm({ datos, onChange, onSiguiente, onAnter
 						Paso 3: Datos Específicos - Responsabilidad Civil
 					</h2>
 					<p className="text-sm text-gray-600 mt-1">
-						Configure el límite de cobertura y los vehículos asegurados
+						Configure el límite de cobertura y opcionalmente los vehículos asegurados
 					</p>
 				</div>
-				{vehiculos.length > 0 && valorAsegurado > 0 && (
+				{valorAsegurado > 0 && (
 					<div className="flex items-center gap-2 text-green-600">
 						<CheckCircle2 className="h-5 w-5" />
-						<span className="text-sm font-medium">{vehiculos.length} vehículo(s)</span>
+						<span className="text-sm font-medium">
+							{vehiculos.length > 0 ? `${vehiculos.length} vehículo(s)` : "Listo"}
+						</span>
 					</div>
 				)}
 			</div>
@@ -192,19 +191,13 @@ export function ResponsabilidadCivilForm({ datos, onChange, onSiguiente, onAnter
 			{/* Sección de vehículos */}
 			<div className="flex items-center justify-between mb-4">
 				<h3 className="text-base font-semibold text-gray-900">
-					Vehículos Asegurados <span className="text-red-500">*</span>
+					Vehículos Asegurados <span className="text-gray-400 text-sm font-normal">(opcional)</span>
 				</h3>
 				<Button onClick={() => { setVehiculoEditando(null); setIndexEditando(null); setModalAbierto(true); }}>
 					<Plus className="mr-2 h-4 w-4" />
 					Agregar Vehículo
 				</Button>
 			</div>
-
-			{errores.vehiculos && (
-				<div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-					<p className="text-sm text-red-700">{errores.vehiculos}</p>
-				</div>
-			)}
 
 			{vehiculos.length === 0 ? (
 				<div className="text-center py-12 border-2 border-dashed rounded-lg mb-6">
