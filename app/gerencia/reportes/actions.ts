@@ -47,9 +47,10 @@ type JuridicClientData = {
 
 type ClientQueryResult = {
 	id: string;
-	client_type: "natural" | "juridica";
+	client_type: "natural" | "juridica" | "unipersonal";
 	natural_clients: NaturalClientData | null;
 	juridic_clients: JuridicClientData | null;
+	unipersonal_clients: JuridicClientData | null;
 };
 
 /**
@@ -115,6 +116,10 @@ export async function exportarProduccion(
 						numero_documento
 					),
 					juridic_clients (
+						razon_social,
+						nit
+					),
+					unipersonal_clients (
 						razon_social,
 						nit
 					)
@@ -228,10 +233,12 @@ export async function exportarProduccion(
 								ciNit = natural.numero_documento || "N/A";
 							}
 						} else {
-							const juridic = clientData.juridic_clients;
-							if (juridic) {
-								cliente = juridic.razon_social || "N/A";
-								ciNit = juridic.nit || "N/A";
+							const empresa = clientData.client_type === "unipersonal"
+								? clientData.unipersonal_clients
+								: clientData.juridic_clients;
+							if (empresa) {
+								cliente = empresa.razon_social || "N/A";
+								ciNit = empresa.nit || "N/A";
 							}
 						}
 					}
@@ -510,7 +517,9 @@ function extraerDatosCliente(clientData: ClientQueryResult | null): {
 		};
 	}
 
-	const j = clientData.juridic_clients;
+	const j = clientData.client_type === "unipersonal"
+		? clientData.unipersonal_clients
+		: clientData.juridic_clients;
 	if (!j) return { cliente: "N/A", ciNit: "N/A" };
 	return {
 		cliente: j.razon_social || "N/A",
@@ -697,6 +706,10 @@ export async function exportarProduccionNuevo(
 						numero_documento
 					),
 					juridic_clients (
+						razon_social,
+						nit
+					),
+					unipersonal_clients (
 						razon_social,
 						nit
 					)
@@ -1074,6 +1087,10 @@ export async function exportarComisionesDirector(
 						numero_documento
 					),
 					juridic_clients (
+						razon_social,
+						nit
+					),
+					unipersonal_clients (
 						razon_social,
 						nit
 					)
