@@ -197,9 +197,9 @@ export type NivelSalud = {
 	monto: number; // Monto de cobertura del nivel
 };
 
-export type RolAseguradoSalud = "contratante" | "titular"; // Para clientes registrados con datos completos
+export type RolAseguradoSalud = "titular" | "conyugue" | "descendiente"; // Para clientes registrados con datos completos (salud)
 
-export type RolBeneficiarioSalud = "dependiente" | "conyugue"; // Para beneficiarios sin registro completo
+export type RolBeneficiarioSalud = "conyugue" | "descendiente"; // Para asegurados datos mínimos sin registro completo
 
 export type AseguradoSalud = {
 	client_id: string;
@@ -494,7 +494,7 @@ export type AseguradoConNivel = {
 	client_ci: string;
 	nivel_id: string; // Referencia al ID del nivel
 	cargo?: string; // Cargo/posición (Ej: "Gerente", "Operador") - solo para corporativo
-	rol?: "contratante" | "titular"; // Rol del asegurado (usado en Vida y Accidentes Personales)
+	rol?: "contratante" | "titular" | "conyugue" | "descendiente"; // Rol del asegurado (usado en Vida y Accidentes Personales)
 };
 
 export type DatosAccidentesPersonales = {

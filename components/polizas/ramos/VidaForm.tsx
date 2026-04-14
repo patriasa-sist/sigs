@@ -165,7 +165,7 @@ export function VidaForm({ datos, regionales, onChange, onSiguiente, onAnterior 
 			return;
 		}
 
-		// Agregar con el primer nivel y rol contratante por defecto
+		// Agregar con el primer nivel y rol titular por defecto
 		setAsegurados([
 			...asegurados,
 			{
@@ -173,7 +173,7 @@ export function VidaForm({ datos, regionales, onChange, onSiguiente, onAnterior 
 				client_name: cliente.nombre,
 				client_ci: cliente.ci,
 				nivel_id: niveles[0]?.id || "",
-				rol: "contratante",
+				rol: "titular",
 			},
 		]);
 		setMostrarBuscador(false);
@@ -183,7 +183,7 @@ export function VidaForm({ datos, regionales, onChange, onSiguiente, onAnterior 
 		setAsegurados(asegurados.map((a) => (a.client_id === clientId ? { ...a, nivel_id: nivelId } : a)));
 	};
 
-	const cambiarRol = (clientId: string, rol: "contratante" | "titular") => {
+	const cambiarRol = (clientId: string, rol: "contratante" | "titular" | "conyugue" | "descendiente") => {
 		setAsegurados(asegurados.map((a) => (a.client_id === clientId ? { ...a, rol } : a)));
 	};
 
@@ -229,31 +229,31 @@ export function VidaForm({ datos, regionales, onChange, onSiguiente, onAnterior 
 			nuevosErrores.regional = "Debe seleccionar una regional";
 		}
 
-		// Validar que haya al menos un cliente (asegurado)
+		// Validar que haya al menos un asegurado
 		if (asegurados.length === 0) {
-			nuevosErrores.asegurados = "Debe agregar al menos un cliente contratante";
+			nuevosErrores.asegurados = "Debe agregar al menos un asegurado";
 		}
 
 		// Validar que todos los asegurados tengan un nivel y rol asignado
 		const aseguradosSinNivel = asegurados.filter((a) => !a.nivel_id);
 		if (aseguradosSinNivel.length > 0) {
-			nuevosErrores.asegurados = "Todos los clientes deben tener un nivel asignado";
+			nuevosErrores.asegurados = "Todos los asegurados deben tener un nivel asignado";
 		}
 
 		const aseguradosSinRol = asegurados.filter((a) => !a.rol);
 		if (aseguradosSinRol.length > 0) {
-			nuevosErrores.asegurados = "Todos los clientes deben tener un rol asignado (Contratante o Titular)";
+			nuevosErrores.asegurados = "Todos los asegurados deben tener un rol asignado";
 		}
 
-		// Validar que todos los beneficiarios tengan un nivel y rol asignado
+		// Validar que todos los asegurados datos mínimos tengan un nivel y rol asignado
 		const beneficiariosSinNivel = beneficiarios.filter((b) => !b.nivel_id);
 		if (beneficiariosSinNivel.length > 0) {
-			nuevosErrores.beneficiarios = "Todos los beneficiarios deben tener un nivel asignado";
+			nuevosErrores.beneficiarios = "Todos los asegurados datos mínimos deben tener un nivel asignado";
 		}
 
 		const beneficiariosSinRol = beneficiarios.filter((b) => !b.rol);
 		if (beneficiariosSinRol.length > 0) {
-			nuevosErrores.beneficiarios = "Todos los beneficiarios deben tener un rol asignado (Dependiente o Cónyuge)";
+			nuevosErrores.beneficiarios = "Todos los asegurados datos mínimos deben tener un rol asignado (Cónyuge o Descendiente)";
 		}
 
 		if (Object.keys(nuevosErrores).length > 0) {
@@ -721,13 +721,13 @@ export function VidaForm({ datos, regionales, onChange, onSiguiente, onAnterior 
 				</div>
 			</div>
 
-			{/* Clientes (Contratantes/Titulares) */}
+			{/* Asegurados (clientes registrados) */}
 			<div className="space-y-4 mb-6">
 				<div className="flex items-center justify-between">
 					<div>
-						<Label className="text-base">Clientes Contratantes</Label>
+						<Label className="text-base">Asegurados</Label>
 						<p className="text-sm text-gray-600 mt-1">
-							Clientes registrados en el sistema que contratan la póliza
+							Clientes registrados en el sistema asegurados en esta póliza
 						</p>
 					</div>
 					<Button onClick={() => setMostrarBuscador(true)} disabled={mostrarBuscador}>
@@ -796,7 +796,7 @@ export function VidaForm({ datos, regionales, onChange, onSiguiente, onAnterior 
 													onValueChange={(value) =>
 														cambiarRol(
 															asegurado.client_id,
-															value as "contratante" | "titular",
+															value as "contratante" | "titular" | "conyugue" | "descendiente",
 														)
 													}
 												>
@@ -804,8 +804,10 @@ export function VidaForm({ datos, regionales, onChange, onSiguiente, onAnterior 
 														<SelectValue placeholder="Seleccione un rol" />
 													</SelectTrigger>
 													<SelectContent>
-														<SelectItem value="contratante">Contratante</SelectItem>
 														<SelectItem value="titular">Titular</SelectItem>
+														<SelectItem value="contratante">Contratante</SelectItem>
+														<SelectItem value="conyugue">Cónyuge</SelectItem>
+														<SelectItem value="descendiente">Descendiente</SelectItem>
 													</SelectContent>
 												</Select>
 											</div>
@@ -834,15 +836,15 @@ export function VidaForm({ datos, regionales, onChange, onSiguiente, onAnterior 
 				)}
 			</div>
 
-			{/* Beneficiarios (Personas Cubiertas) */}
+			{/* Asegurados Datos Mínimos (sin registro completo) */}
 			<div className="space-y-4 mb-6">
 				<div className="flex items-center justify-between">
 					<div>
 						<Label className="text-base">
-							Beneficiarios / Asegurados
+							Asegurados Datos Mínimos
 						</Label>
 						<p className="text-sm text-gray-600 mt-1">
-							Personas cubiertas por la póliza
+							Personas cubiertas sin registro completo en el sistema
 						</p>
 					</div>
 					<Button onClick={abrirModalBeneficiario} disabled={mostrarModalBeneficiario}>
@@ -874,8 +876,8 @@ export function VidaForm({ datos, regionales, onChange, onSiguiente, onAnterior 
 													</p>
 													{beneficiario.rol && (
 														<span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
-															{beneficiario.rol === "dependiente"
-																? "Dependiente"
+															{beneficiario.rol === "descendiente"
+																? "Descendiente"
 																: beneficiario.rol === "conyugue"
 																	? "Cónyuge"
 																	: beneficiario.rol}
@@ -945,9 +947,9 @@ export function VidaForm({ datos, regionales, onChange, onSiguiente, onAnterior 
 				) : (
 					<div className="text-center py-8 border-2 border-dashed rounded-lg">
 						<UserPlus className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-						<p className="text-gray-600">No hay beneficiarios agregados</p>
+						<p className="text-gray-600">No hay asegurados datos mínimos agregados</p>
 						<p className="text-sm text-gray-500">
-							Haga clic en &ldquo;Agregar Asegurado&rdquo; para agregar beneficiarios
+							Haga clic en &ldquo;Agregar Asegurado&rdquo; para agregar
 						</p>
 					</div>
 				)}
@@ -958,24 +960,30 @@ export function VidaForm({ datos, regionales, onChange, onSiguiente, onAnterior 
 				<p className="text-sm text-blue-900 font-medium mb-2">Información sobre roles:</p>
 				<div className="text-xs text-blue-800 space-y-2">
 					<div>
-						<p className="font-semibold mb-1">Clientes Registrados:</p>
+						<p className="font-semibold mb-1">Asegurados (clientes registrados):</p>
 						<ul className="space-y-1 ml-3">
 							<li>
-								• <strong>Contratante:</strong> Cliente que contrata el seguro (opcional)
+								• <strong>Titular:</strong> Asegurado principal de la póliza
 							</li>
 							<li>
-								• <strong>Titular:</strong> Cliente principal asegurado (opcional)
+								• <strong>Contratante:</strong> Cliente que contrata el seguro
+							</li>
+							<li>
+								• <strong>Cónyuge:</strong> Pareja o cónyuge del titular
+							</li>
+							<li>
+								• <strong>Descendiente:</strong> Hijo u otro descendiente del titular
 							</li>
 						</ul>
 					</div>
 					<div>
-						<p className="font-semibold mb-1">Beneficiarios (sin registro completo):</p>
+						<p className="font-semibold mb-1">Asegurados Datos Mínimos (sin registro completo):</p>
 						<ul className="space-y-1 ml-3">
 							<li>
-								• <strong>Dependiente:</strong> Hijo, familiar u otro dependiente
+								• <strong>Cónyuge:</strong> Pareja o cónyuge del asegurado
 							</li>
 							<li>
-								• <strong>Cónyuge:</strong> Pareja o cónyuge del asegurado
+								• <strong>Descendiente:</strong> Hijo u otro descendiente
 							</li>
 						</ul>
 					</div>

@@ -37,7 +37,7 @@ export function BeneficiarioModal({ beneficiario, moneda = "Bs", niveles, onGuar
 			fecha_nacimiento: "",
 			genero: "M",
 			nivel_id: niveles[0]?.id || "",
-			rol: "dependiente",
+			rol: "descendiente",
 		}
 	);
 
@@ -126,7 +126,7 @@ export function BeneficiarioModal({ beneficiario, moneda = "Bs", niveles, onGuar
 				{/* Header */}
 				<div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between">
 					<h2 className="text-xl font-semibold">
-						{beneficiario ? "Editar Beneficiario" : "Agregar Beneficiario"}
+						{beneficiario ? "Editar Asegurado Datos Mínimos" : "Agregar Asegurado Datos Mínimos"}
 					</h2>
 					<Button variant="ghost" size="icon" onClick={onCancelar} className="rounded-full">
 						<X className="h-5 w-5" />
@@ -141,11 +141,10 @@ export function BeneficiarioModal({ beneficiario, moneda = "Bs", niveles, onGuar
 							<div className="flex items-start gap-2">
 								<AlertTriangle className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
 								<div className="text-sm text-blue-900">
-									<p className="font-medium mb-1">Beneficiarios de la póliza</p>
+									<p className="font-medium mb-1">Asegurados Datos Mínimos</p>
 									<p>
-										Los beneficiarios son dependientes (hijos, familiares) o cónyuges cubiertos por
-										esta póliza. No necesitan estar registrados como clientes en el sistema. Los
-										contratantes y titulares deben ser clientes registrados.
+										Personas cubiertas por la póliza que no están registradas como clientes en el sistema.
+										Pueden ser descendientes (hijos, familiares) o cónyuges del asegurado principal.
 									</p>
 								</div>
 							</div>
@@ -264,12 +263,12 @@ export function BeneficiarioModal({ beneficiario, moneda = "Bs", niveles, onGuar
 										<SelectValue placeholder="Seleccione un rol" />
 									</SelectTrigger>
 									<SelectContent>
-										<SelectItem value="dependiente">Dependiente</SelectItem>
+										<SelectItem value="descendiente">Descendiente</SelectItem>
 										<SelectItem value="conyugue">Cónyuge</SelectItem>
 									</SelectContent>
 								</Select>
 								{errores.rol && <p className="text-sm text-red-600">{errores.rol}</p>}
-								<p className="text-xs text-gray-500">Dependiente (hijo/familiar) o cónyuge</p>
+								<p className="text-xs text-gray-500">Descendiente (hijo/familiar) o cónyuge</p>
 							</div>
 						</div>
 					</div>
@@ -280,7 +279,7 @@ export function BeneficiarioModal({ beneficiario, moneda = "Bs", niveles, onGuar
 					<Button variant="outline" onClick={onCancelar}>
 						Cancelar
 					</Button>
-					<Button onClick={handleGuardar}>Guardar Beneficiario</Button>
+					<Button onClick={handleGuardar}>Guardar Asegurado</Button>
 				</div>
 			</div>
 		</div>
