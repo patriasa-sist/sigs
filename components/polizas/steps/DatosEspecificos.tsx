@@ -214,6 +214,7 @@ export function DatosEspecificos({
 					datos={datos?.tipo_ramo === "Accidentes Personales" ? datos.datos : null}
 					moneda={moneda}
 					regionales={regionales}
+					aseguradoPrincipal={asegurado}
 					onChange={(datosAccidentesPersonales) => {
 						onChange({
 							tipo_ramo: "Accidentes Personales",
@@ -232,6 +233,7 @@ export function DatosEspecificos({
 				<VidaForm
 					datos={datos?.tipo_ramo === "Vida" ? datos.datos : null}
 					regionales={regionales}
+					aseguradoPrincipal={asegurado}
 					onChange={(datosVida) => {
 						onChange({
 							tipo_ramo: "Vida",

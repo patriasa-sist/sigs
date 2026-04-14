@@ -13,7 +13,7 @@ import {
 	UserPlus,
 	Edit,
 } from "lucide-react";
-import type { DatosVida, AseguradoConNivel, NivelCobertura, CoberturasVida, BeneficiarioSalud } from "@/types/poliza";
+import type { DatosVida, AseguradoConNivel, NivelCobertura, CoberturasVida, BeneficiarioSalud, AseguradoSeleccionado } from "@/types/poliza";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,6 +25,7 @@ import { BeneficiarioModal } from "./BeneficiarioModal";
 type Props = {
 	datos: DatosVida | null;
 	regionales: Array<{ id: string; nombre: string }>;
+	aseguradoPrincipal?: AseguradoSeleccionado | null;
 	onChange: (datos: DatosVida) => void;
 	onSiguiente: () => void;
 	onAnterior: () => void;
@@ -33,7 +34,7 @@ type Props = {
 // Sub-paso interno: 2.1 o 3
 type SubPaso = "niveles" | "principal";
 
-export function VidaForm({ datos, regionales, onChange, onSiguiente, onAnterior }: Props) {
+export function VidaForm({ datos, regionales, aseguradoPrincipal, onChange, onSiguiente, onAnterior }: Props) {
 	// Estado del sub-paso actual
 	const [subPaso, setSubPaso] = useState<SubPaso>(
 		datos?.niveles && datos.niveles.length > 0 ? "principal" : "niveles",
@@ -740,6 +741,33 @@ export function VidaForm({ datos, regionales, onChange, onSiguiente, onAnterior 
 					<div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded">
 						<AlertTriangle className="h-4 w-4 text-red-600" />
 						<p className="text-sm text-red-600">{errores.asegurados}</p>
+					</div>
+				)}
+
+				{/* Sugerencia: agregar asegurado principal de la póliza */}
+				{aseguradoPrincipal && !asegurados.some((a) => a.client_id === aseguradoPrincipal.id) && (
+					<div className="p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between">
+						<div className="flex items-center gap-2">
+							<Users className="h-4 w-4 text-blue-600" />
+							<span className="text-sm text-blue-900">
+								<strong>{aseguradoPrincipal.nombre_completo}</strong> ({aseguradoPrincipal.documento}) —
+								Asegurado de la póliza
+							</span>
+						</div>
+						<Button
+							size="sm"
+							variant="outline"
+							onClick={() =>
+								agregarAsegurado({
+									id: aseguradoPrincipal.id,
+									nombre: aseguradoPrincipal.nombre_completo,
+									ci: aseguradoPrincipal.documento,
+								})
+							}
+						>
+							<Plus className="mr-1 h-3 w-3" />
+							Agregar
+						</Button>
 					</div>
 				)}
 
