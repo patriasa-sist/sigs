@@ -12,7 +12,9 @@
       "Bash(npx next lint:*)",
       "mcp__supabase__get_advisors",
       "Bash(python:*)",
-      "Bash(python3:*)"
+      "Bash(python3:*)",
+      "Bash(cmd /c \"npx tsc --noEmit 2>&1\")",
+      "Bash(cmd /c \"npx tsc --noEmit 2>&1 | findstr /C:\\\\\"error\\\\\" | head\")"
     ]
   },
   "enableAllProjectMcpServers": true,

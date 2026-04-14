@@ -21,6 +21,7 @@ import type {
 	DatosIncendio,
 	DatosRiesgosVarios,
 	DatosResponsabilidadCivil,
+	DatosRamosTecnicos,
 } from "@/types/poliza";
 import { validarFechasPago } from "@/utils/polizaValidation";
 import { Button } from "@/components/ui/button";
@@ -581,6 +582,28 @@ export function Resumen({ formState, onAnterior, onEditarPaso, onGuardar, guarda
 											).valor_asegurado.toLocaleString("es-BO")}{" "}
 											{modalidad_pago?.moneda || "Bs"}
 										</div>
+									</div>
+								)}
+
+								{datos_especificos?.tipo_ramo === "Ramos técnicos" && (
+									<div className="text-sm text-muted-foreground space-y-2">
+										<div>
+											<span className="font-medium text-foreground">Valor Asegurado:</span>{" "}
+											{(datos_especificos.datos as DatosRamosTecnicos).valor_asegurado.toLocaleString("es-BO")}{" "}
+											{modalidad_pago?.moneda || "Bs"}
+										</div>
+										<div>
+											<span className="font-medium text-foreground">Tipo de Póliza:</span>{" "}
+											{(datos_especificos.datos as DatosRamosTecnicos).tipo_poliza === "individual"
+												? "Individual"
+												: "Corporativo"}
+										</div>
+										{((datos_especificos.datos as DatosRamosTecnicos).equipos?.length ?? 0) > 0 && (
+											<div>
+												<span className="font-medium text-foreground">Equipos:</span>{" "}
+												{(datos_especificos.datos as DatosRamosTecnicos).equipos!.length} equipo(s) registrado(s)
+											</div>
+										)}
 									</div>
 								)}
 							</div>

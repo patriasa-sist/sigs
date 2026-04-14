@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { ChevronRight, ChevronLeft, CheckCircle2, Plus, FileSpreadsheet, Cog, Edit, Trash2, Download } from "lucide-react";
 import type { DatosRamosTecnicos, EquipoIndustrial, TipoEquipo, MarcaEquipo } from "@/types/poliza";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { EquipoModal } from "./EquipoModal";
@@ -18,6 +19,7 @@ type Props = {
 };
 
 export function RamosTecnicosForm({ datos, onChange, onSiguiente, onAnterior }: Props) {
+	const [valorAsegurado, setValorAsegurado] = useState<string>(datos?.valor_asegurado ? String(datos.valor_asegurado) : "");
 	const [tipoPoliza, setTipoPoliza] = useState<"individual" | "corporativo">(datos?.tipo_poliza || "individual");
 	const [equipos, setEquipos] = useState<EquipoIndustrial[]>(datos?.equipos || []);
 	const [modalAbierto, setModalAbierto] = useState(false);
@@ -109,7 +111,7 @@ export function RamosTecnicosForm({ datos, onChange, onSiguiente, onAnterior }: 
 		}
 
 		setEquipos(nuevosEquipos);
-		onChange({ tipo_poliza: tipoPoliza, equipos: nuevosEquipos });
+		onChange({ valor_asegurado: parseFloat(valorAsegurado) || 0, tipo_poliza: tipoPoliza, equipos: nuevosEquipos });
 		setModalAbierto(false);
 		setEquipoEditando(null);
 		setIndexEditando(null);
@@ -135,7 +137,7 @@ export function RamosTecnicosForm({ datos, onChange, onSiguiente, onAnterior }: 
 		if (confirm("¿Está seguro de eliminar este equipo?")) {
 			const nuevosEquipos = equipos.filter((_, i) => i !== index);
 			setEquipos(nuevosEquipos);
-			onChange({ tipo_poliza: tipoPoliza, equipos: nuevosEquipos });
+			onChange({ valor_asegurado: parseFloat(valorAsegurado) || 0, tipo_poliza: tipoPoliza, equipos: nuevosEquipos });
 		}
 	};
 
@@ -163,7 +165,7 @@ export function RamosTecnicosForm({ datos, onChange, onSiguiente, onAnterior }: 
 				}
 
 				setEquipos(nuevosEquipos);
-				onChange({ tipo_poliza: tipoPoliza, equipos: nuevosEquipos });
+				onChange({ valor_asegurado: parseFloat(valorAsegurado) || 0, tipo_poliza: tipoPoliza, equipos: nuevosEquipos });
 
 				// Mostrar errores si los hay (filas con problemas)
 				if (resultado.errores.length > 0) {
@@ -205,19 +207,27 @@ export function RamosTecnicosForm({ datos, onChange, onSiguiente, onAnterior }: 
 	};
 
 	const handleContinuar = () => {
-		if (equipos.length === 0) {
-			setErrores(["Debe agregar al menos un equipo."]);
+		const valor = parseFloat(valorAsegurado);
+		if (!valorAsegurado || isNaN(valor) || valor <= 0) {
+			setErrores(["El valor asegurado es requerido y debe ser mayor a 0."]);
 			return;
 		}
 
-		onChange({ tipo_poliza: tipoPoliza, equipos });
+		onChange({ valor_asegurado: valor, tipo_poliza: tipoPoliza, equipos });
 		onSiguiente();
+	};
+
+	// Handler para cambio de valor asegurado
+	const handleValorAseguradoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+		setValorAsegurado(e.target.value);
+		const valor = parseFloat(e.target.value);
+		onChange({ valor_asegurado: isNaN(valor) ? 0 : valor, tipo_poliza: tipoPoliza, equipos });
 	};
 
 	// Handler para cambio de tipo de póliza
 	const handleTipoPolizaChange = (value: "individual" | "corporativo") => {
 		setTipoPoliza(value);
-		onChange({ tipo_poliza: value, equipos });
+		onChange({ valor_asegurado: parseFloat(valorAsegurado) || 0, tipo_poliza: value, equipos });
 	};
 
 	const tieneEquipos = equipos.length > 0;
@@ -227,10 +237,10 @@ export function RamosTecnicosForm({ datos, onChange, onSiguiente, onAnterior }: 
 			<div className="flex items-center justify-between mb-6">
 				<div>
 					<h2 className="text-xl font-semibold text-gray-900">
-						Paso 3: Equipos Asegurados
+						Paso 3: Datos del Ramo Técnico
 					</h2>
 					<p className="text-sm text-gray-600 mt-1">
-						Agregue los equipos industriales que serán asegurados en esta póliza
+						Complete los datos del ramo técnico. Los equipos son opcionales según el producto.
 					</p>
 				</div>
 
@@ -242,23 +252,46 @@ export function RamosTecnicosForm({ datos, onChange, onSiguiente, onAnterior }: 
 				)}
 			</div>
 
-			{/* Tipo de Póliza */}
-			<div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
-				<Label htmlFor="tipo-poliza" className="block text-sm font-medium text-gray-700 mb-2">
-					Tipo de Póliza
-				</Label>
-				<Select value={tipoPoliza} onValueChange={handleTipoPolizaChange}>
-					<SelectTrigger id="tipo-poliza" className="w-full max-w-xs bg-white">
-						<SelectValue />
-					</SelectTrigger>
-					<SelectContent>
-						<SelectItem value="individual">Individual</SelectItem>
-						<SelectItem value="corporativo">Corporativo</SelectItem>
-					</SelectContent>
-				</Select>
-				<p className="text-xs text-gray-500 mt-1">
-					Seleccione si la póliza es para un cliente individual o corporativo
-				</p>
+			{/* Valor Asegurado + Tipo de Póliza en la misma fila */}
+			<div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200 flex flex-wrap gap-6">
+				<div>
+					<Label htmlFor="valor-asegurado" className="block text-sm font-medium text-gray-700 mb-2">
+						Valor Asegurado <span className="text-red-500">*</span>
+					</Label>
+					<Input
+						id="valor-asegurado"
+						type="number"
+						min="0"
+						step="0.01"
+						placeholder="0.00"
+						value={valorAsegurado}
+						onChange={handleValorAseguradoChange}
+						className="w-48 bg-white"
+					/>
+					<p className="text-xs text-gray-500 mt-1">Valor total asegurado</p>
+				</div>
+
+				<div>
+					<Label htmlFor="tipo-poliza" className="block text-sm font-medium text-gray-700 mb-2">
+						Tipo de Póliza
+					</Label>
+					<Select value={tipoPoliza} onValueChange={handleTipoPolizaChange}>
+						<SelectTrigger id="tipo-poliza" className="w-48 bg-white">
+							<SelectValue />
+						</SelectTrigger>
+						<SelectContent>
+							<SelectItem value="individual">Individual</SelectItem>
+							<SelectItem value="corporativo">Corporativo</SelectItem>
+						</SelectContent>
+					</Select>
+					<p className="text-xs text-gray-500 mt-1">Individual o corporativo</p>
+				</div>
+			</div>
+
+			{/* Equipos (opcional) */}
+			<div className="mb-2">
+				<p className="text-sm font-medium text-gray-700">Equipos Asegurados <span className="text-gray-400 font-normal">(opcional)</span></p>
+				<p className="text-xs text-gray-500 mt-0.5">Solo aplica para productos con equipos identificables (p.ej. Equipo Pesado Móvil, Rotura de Maquinaria)</p>
 			</div>
 
 			{/* Botones de acciones */}
@@ -415,7 +448,7 @@ export function RamosTecnicosForm({ datos, onChange, onSiguiente, onAnterior }: 
 					Anterior
 				</Button>
 
-				<Button onClick={handleContinuar} disabled={equipos.length === 0}>
+				<Button onClick={handleContinuar}>
 					Continuar con Modalidad de Pago
 					<ChevronRight className="ml-2 h-5 w-5" />
 				</Button>

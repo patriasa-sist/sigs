@@ -371,8 +371,9 @@ export type EquipoIndustrial = {
 };
 
 export type DatosRamosTecnicos = {
+	valor_asegurado: number;
 	tipo_poliza: "individual" | "corporativo";
-	equipos: EquipoIndustrial[];
+	equipos?: EquipoIndustrial[];
 };
 
 // --- TRANSPORTE ---

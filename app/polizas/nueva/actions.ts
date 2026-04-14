@@ -731,6 +731,10 @@ export async function guardarPoliza(formState: PolizaFormState) {
 			&& datosEsp && "tiene_maternidad" in datosEsp
 			? (datosEsp as { tiene_maternidad: boolean }).tiene_maternidad
 			: false;
+		const valorAseguradoRamosTecnicos = formState.datos_especificos?.tipo_ramo === "Ramos técnicos"
+			&& datosEsp && "valor_asegurado" in datosEsp
+			? (datosEsp as { valor_asegurado: number }).valor_asegurado || null
+			: null;
 
 		const { data: poliza, error: errorPoliza } = await supabase
 			.from("polizas")
@@ -761,6 +765,7 @@ export async function guardarPoliza(formState: PolizaFormState) {
 				nro_poliza_anterior: formState.datos_basicos.es_renovacion ? (formState.datos_basicos.nro_poliza_anterior || null) : null,
 				regional_asegurado_id: regionalAseguradoId,
 				tiene_maternidad: tieneMaternidad,
+				valor_asegurado: valorAseguradoRamosTecnicos,
 			})
 			.select()
 			.single();
