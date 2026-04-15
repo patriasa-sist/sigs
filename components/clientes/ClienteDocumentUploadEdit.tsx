@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import { useDropzone } from "react-dropzone";
 import {
 	Upload,
@@ -52,9 +52,10 @@ import {
 	validateClientDocuments,
 	type ClienteDocumentoFormState,
 } from "@/types/clienteDocumento";
+import { createClient } from "@/utils/supabase/client";
 import {
-	uploadClientDocument,
-	replaceClientDocument,
+	registerClientDocument,
+	registerClientDocumentReplace,
 	getDocumentHistory,
 	getActiveDocuments,
 	discardClientDocument,
@@ -93,6 +94,7 @@ export function ClienteDocumentUploadEdit({ clientId, clientType, isAdmin = fals
 	const [discardDocId, setDiscardDocId] = useState<string | null>(null);
 	const [isDiscarding, setIsDiscarding] = useState(false);
 
+	const supabase = useMemo(() => createClient(), []);
 	const documentTypes = getDocumentTypesForClientType(clientType);
 
 	// Convert existing documents to form state format for validation
@@ -151,39 +153,46 @@ export function ClienteDocumentUploadEdit({ clientId, clientType, isAdmin = fals
 
 			setIsUploading(true);
 
-			// Convert file to base64
-			const reader = new FileReader();
-			reader.onload = async () => {
-				const base64 = (reader.result as string).split(",")[1];
+			// Upload directly to Supabase Storage from the browser (bypasses Vercel's 2MB server action limit)
+			const timestamp = Date.now();
+			const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+			const storagePath = `${clientId}/${timestamp}_${sanitizedFileName}`;
 
-				const result = await uploadClientDocument({
-					client_id: clientId,
-					tipo_documento: selectedDocType,
-					file_base64: base64,
-					file_name: file.name,
-					file_type: file.type,
-					file_size: file.size,
-					descripcion: descripcion.trim() || undefined,
-				});
+			const { error: storageError } = await supabase.storage
+				.from("clientes-documentos")
+				.upload(storagePath, file, { contentType: file.type, upsert: false });
 
-				if (result.success) {
-					setSelectedDocType("");
-					setDescripcion("");
-					await loadDocuments();
-					onDocumentChange?.();
-				} else {
-					setUploadError(result.error);
-				}
-
+			if (storageError) {
+				setUploadError("Error al subir archivo");
 				setIsUploading(false);
-			};
-			reader.onerror = () => {
-				setUploadError("Error al leer el archivo");
-				setIsUploading(false);
-			};
-			reader.readAsDataURL(file);
+				return;
+			}
+
+			// Register only metadata via server action
+			const result = await registerClientDocument({
+				client_id: clientId,
+				tipo_documento: selectedDocType,
+				storage_path: storagePath,
+				file_name: file.name,
+				file_type: file.type,
+				file_size: file.size,
+				descripcion: descripcion.trim() || undefined,
+			});
+
+			if (result.success) {
+				setSelectedDocType("");
+				setDescripcion("");
+				await loadDocuments();
+				onDocumentChange?.();
+			} else {
+				// Clean up the orphaned file if DB registration failed
+				await supabase.storage.from("clientes-documentos").remove([storagePath]);
+				setUploadError(result.error);
+			}
+
+			setIsUploading(false);
 		},
-		[clientId, selectedDocType, descripcion, loadDocuments, onDocumentChange]
+		[clientId, selectedDocType, descripcion, loadDocuments, onDocumentChange, supabase]
 	);
 
 	const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -206,35 +215,41 @@ export function ClienteDocumentUploadEdit({ clientId, clientType, isAdmin = fals
 
 		setIsReplacing(true);
 
-		// Convert file to base64
-		const reader = new FileReader();
-		reader.onload = async () => {
-			const base64 = (reader.result as string).split(",")[1];
+		// Upload directly to Supabase Storage from the browser
+		const timestamp = Date.now();
+		const sanitizedFileName = replaceFile.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+		const storagePath = `${clientId}/${timestamp}_${sanitizedFileName}`;
 
-			const result = await replaceClientDocument({
-				document_id: replaceDocId,
-				file_base64: base64,
-				file_name: replaceFile.name,
-				file_type: replaceFile.type,
-				file_size: replaceFile.size,
-			});
+		const { error: storageError } = await supabase.storage
+			.from("clientes-documentos")
+			.upload(storagePath, replaceFile, { contentType: replaceFile.type, upsert: false });
 
-			if (result.success) {
-				setReplaceDocId(null);
-				setReplaceFile(null);
-				await loadDocuments();
-				onDocumentChange?.();
-			} else {
-				setUploadError(result.error);
-			}
-
+		if (storageError) {
+			setUploadError("Error al subir archivo");
 			setIsReplacing(false);
-		};
-		reader.onerror = () => {
-			setUploadError("Error al leer el archivo");
-			setIsReplacing(false);
-		};
-		reader.readAsDataURL(replaceFile);
+			return;
+		}
+
+		// Register replacement via server action (metadata only)
+		const result = await registerClientDocumentReplace({
+			document_id: replaceDocId,
+			storage_path: storagePath,
+			file_name: replaceFile.name,
+			file_type: replaceFile.type,
+			file_size: replaceFile.size,
+		});
+
+		if (result.success) {
+			setReplaceDocId(null);
+			setReplaceFile(null);
+			await loadDocuments();
+			onDocumentChange?.();
+		} else {
+			await supabase.storage.from("clientes-documentos").remove([storagePath]);
+			setUploadError(result.error);
+		}
+
+		setIsReplacing(false);
 	};
 
 	// Handle view history
@@ -271,9 +286,6 @@ export function ClienteDocumentUploadEdit({ clientId, clientType, isAdmin = fals
 	// Handle download document
 	const handleDownload = async (storagePath: string) => {
 		try {
-			const { createClient } = await import("@/utils/supabase/client");
-			const supabase = createClient();
-
 			const { data } = await supabase.storage
 				.from("clientes-documentos")
 				.createSignedUrl(storagePath, 3600);

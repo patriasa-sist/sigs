@@ -54,6 +54,26 @@ export interface ReplaceDocumentInput {
 	descripcion?: string;
 }
 
+// Inputs for client-side upload pattern (no file data, only metadata)
+export interface RegisterDocumentInput {
+	client_id: string;
+	tipo_documento: TipoDocumentoCliente;
+	storage_path: string;
+	file_name: string;
+	file_type: string;
+	file_size: number;
+	descripcion?: string;
+}
+
+export interface RegisterReplaceInput {
+	document_id: string;
+	storage_path: string;
+	file_name: string;
+	file_type: string;
+	file_size: number;
+	descripcion?: string;
+}
+
 // ============================================
 // AUTHORIZATION
 // ============================================
@@ -551,6 +571,165 @@ export async function discardClientDocument(
 		return { success: true, data: undefined };
 	} catch (error) {
 		console.error("[discardClientDocument] Error:", error);
+		return {
+			success: false,
+			error: error instanceof Error ? error.message : "Error desconocido",
+		};
+	}
+}
+
+// ============================================
+// REGISTER DOCUMENT (client-side upload pattern)
+// ============================================
+
+/**
+ * Register a document that was already uploaded client-side to Supabase Storage.
+ * Only receives metadata — no file binary — to stay within the 2MB server action limit.
+ */
+export async function registerClientDocument(
+	input: RegisterDocumentInput
+): Promise<ActionResult<{ id: string }>> {
+	try {
+		const { supabase, user } = await authorizeClientDocumentEdit(input.client_id);
+
+		// Check if there's an existing active document of this type
+		const { data: existingDoc } = await supabase
+			.from("clientes_documentos")
+			.select("id, version")
+			.eq("client_id", input.client_id)
+			.eq("tipo_documento", input.tipo_documento)
+			.eq("estado", "activo")
+			.single();
+
+		let newVersion = 1;
+		if (existingDoc) {
+			await supabase
+				.from("clientes_documentos")
+				.update({
+					estado: "reemplazado",
+					replaced_at: new Date().toISOString(),
+					updated_at: new Date().toISOString(),
+				})
+				.eq("id", existingDoc.id);
+
+			newVersion = (existingDoc.version || 1) + 1;
+		}
+
+		const { data: docData, error: insertError } = await supabase
+			.from("clientes_documentos")
+			.insert({
+				client_id: input.client_id,
+				tipo_documento: input.tipo_documento,
+				nombre_archivo: input.file_name,
+				tipo_archivo: input.file_type,
+				tamano_bytes: input.file_size,
+				storage_path: input.storage_path,
+				storage_bucket: "clientes-documentos",
+				estado: "activo",
+				subido_por: user.id,
+				fecha_subida: new Date().toISOString(),
+				descripcion: input.descripcion || null,
+				version: newVersion,
+			})
+			.select("id")
+			.single();
+
+		if (insertError) {
+			console.error("[registerClientDocument] Insert error:", insertError);
+			return { success: false, error: "Error al registrar documento" };
+		}
+
+		if (existingDoc) {
+			await supabase
+				.from("clientes_documentos")
+				.update({ replaced_by: docData.id })
+				.eq("id", existingDoc.id);
+		}
+
+		revalidatePath("/clientes");
+		return { success: true, data: { id: docData.id } };
+	} catch (error) {
+		console.error("[registerClientDocument] Error:", error);
+		return {
+			success: false,
+			error: error instanceof Error ? error.message : "Error desconocido",
+		};
+	}
+}
+
+// ============================================
+// REGISTER REPLACE (client-side upload pattern)
+// ============================================
+
+/**
+ * Register a document replacement where the new file was already uploaded
+ * client-side to Supabase Storage.
+ */
+export async function registerClientDocumentReplace(
+	input: RegisterReplaceInput
+): Promise<ActionResult<{ id: string }>> {
+	try {
+		const supabase = await createClient();
+
+		const {
+			data: { user },
+		} = await supabase.auth.getUser();
+
+		if (!user) {
+			return { success: false, error: "No autenticado" };
+		}
+
+		const { data: existingDoc, error: fetchError } = await supabase
+			.from("clientes_documentos")
+			.select("*")
+			.eq("id", input.document_id)
+			.eq("estado", "activo")
+			.single();
+
+		if (fetchError || !existingDoc) {
+			return { success: false, error: "Documento no encontrado o no está activo" };
+		}
+
+		await authorizeClientDocumentEdit(existingDoc.client_id);
+
+		const { data: newDoc, error: insertError } = await supabase
+			.from("clientes_documentos")
+			.insert({
+				client_id: existingDoc.client_id,
+				tipo_documento: existingDoc.tipo_documento,
+				nombre_archivo: input.file_name,
+				tipo_archivo: input.file_type,
+				tamano_bytes: input.file_size,
+				storage_path: input.storage_path,
+				storage_bucket: "clientes-documentos",
+				estado: "activo",
+				subido_por: user.id,
+				fecha_subida: new Date().toISOString(),
+				descripcion: input.descripcion || existingDoc.descripcion,
+				version: (existingDoc.version || 1) + 1,
+			})
+			.select("id")
+			.single();
+
+		if (insertError) {
+			console.error("[registerClientDocumentReplace] Insert error:", insertError);
+			return { success: false, error: "Error al registrar documento" };
+		}
+
+		await supabase
+			.from("clientes_documentos")
+			.update({
+				estado: "reemplazado",
+				replaced_by: newDoc.id,
+				replaced_at: new Date().toISOString(),
+				updated_at: new Date().toISOString(),
+			})
+			.eq("id", input.document_id);
+
+		revalidatePath("/clientes");
+		return { success: true, data: { id: newDoc.id } };
+	} catch (error) {
+		console.error("[registerClientDocumentReplace] Error:", error);
 		return {
 			success: false,
 			error: error instanceof Error ? error.message : "Error desconocido",
