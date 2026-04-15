@@ -16,7 +16,7 @@
  */
 
 import type { UserRole, Permission } from "./helpers";
-import { Crown, UserCheck, Shield, Users, UserX, Ban, FileWarning, Eye } from "lucide-react";
+import { Crown, UserCheck, Shield, Users, UserX, Ban, FileWarning, Eye, Briefcase } from "lucide-react";
 
 /**
  * Array de todos los permisos del sistema.
@@ -51,6 +51,10 @@ export const ALL_PERMISSIONS: readonly Permission[] = [
 	"gerencia.exportar",
 	"auditoria.ver",
 	"auditoria.excepciones",
+	"rrhh.ver",
+	"rrhh.crear",
+	"rrhh.editar",
+	"rrhh.documentos",
 ] as const;
 
 /**
@@ -66,6 +70,7 @@ export const PERMISSION_MODULES: Record<string, string> = {
 	admin: "Administración",
 	gerencia: "Gerencia",
 	auditoria: "Auditoría",
+	rrhh: "Recursos Humanos",
 };
 
 /**
@@ -102,6 +107,7 @@ export const VALID_ROLES: readonly UserRole[] = [
 	"cobranza",
 	"siniestros",
 	"uif",
+	"rrhh",
 	"invitado",
 	"desactivado"
 ] as const;
@@ -118,6 +124,7 @@ export const ASSIGNABLE_ROLES: readonly UserRole[] = [
 	"cobranza",
 	"siniestros",
 	"uif",
+	"rrhh",
 	"invitado",
 	"desactivado"
 ] as const;
@@ -315,6 +322,26 @@ export const ROLE_CONFIG = {
 			gradient: "from-yellow-50 to-white"
 		},
 		defaultPermissions: [] as Permission[]
+	},
+	rrhh: {
+		label: "RRHH",
+		labelEs: "Recursos Humanos",
+		description: "Human resources officer - manages employee records and documents",
+		descriptionEs: "Recursos Humanos - gestiona el registro y documentación del personal",
+		color: "teal",
+		icon: Briefcase,
+		colorClasses: {
+			bg: "bg-teal-50",
+			text: "text-teal-600",
+			border: "border-teal-200",
+			gradient: "from-teal-50 to-white"
+		},
+		defaultPermissions: [
+			"rrhh.ver",
+			"rrhh.crear",
+			"rrhh.editar",
+			"rrhh.documentos",
+		] as Permission[]
 	},
 	desactivado: {
 		label: "Desactivado",

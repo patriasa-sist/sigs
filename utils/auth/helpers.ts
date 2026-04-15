@@ -3,7 +3,7 @@ import { createClient as createBrowserClient } from "@/utils/supabase/client";
 import { redirect } from "next/navigation";
 import { cache } from "react";
 
-export type UserRole = "admin" | "usuario" | "agente" | "comercial" | "cobranza" | "siniestros" | "uif" | "invitado" | "desactivado";
+export type UserRole = "admin" | "usuario" | "agente" | "comercial" | "cobranza" | "siniestros" | "uif" | "rrhh" | "invitado" | "desactivado";
 
 /**
  * Permisos granulares del sistema.
@@ -38,7 +38,11 @@ export type Permission =
 	| "gerencia.ver"
 	| "gerencia.exportar"
 	| "auditoria.ver"
-	| "auditoria.excepciones";
+	| "auditoria.excepciones"
+	| "rrhh.ver"
+	| "rrhh.crear"
+	| "rrhh.editar"
+	| "rrhh.documentos";
 
 export interface UserProfile {
 	id: string;

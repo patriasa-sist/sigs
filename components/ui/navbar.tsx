@@ -27,6 +27,7 @@ import {
 	ChevronDown,
 	FileSpreadsheet,
 	Eye,
+	Briefcase,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -226,6 +227,15 @@ export function Navbar() {
 							<Button variant="ghost" size="sm" className="gap-2">
 								<Eye className="h-4 w-4" />
 								<span>Auditoría</span>
+							</Button>
+						</Link>
+					)}
+
+					{can("rrhh.ver") && (
+						<Link href="/rrhh">
+							<Button variant="ghost" size="sm" className="gap-2">
+								<Briefcase className="h-4 w-4" />
+								<span>RRHH</span>
 							</Button>
 						</Link>
 					)}
