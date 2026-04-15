@@ -362,8 +362,20 @@ async function insertarDatosRamo(
 	// Ramos técnicos
 	if (formState.datos_especificos.tipo_ramo === "Ramos técnicos") {
 		const datosRT = formState.datos_especificos.datos;
-		const equipos = datosRT.equipos || [];
 
+		// 1. Datos generales del ramo (valor asegurado y tipo de póliza)
+		const { error: errorRT } = await supabase
+			.from("polizas_ramos_tecnicos")
+			.insert({
+				poliza_id: polizaId,
+				valor_asegurado: datosRT.valor_asegurado,
+				tipo_poliza: datosRT.tipo_poliza,
+			});
+
+		throwIfError(errorRT, "Error al guardar datos de ramos técnicos");
+
+		// 2. Equipos (opcional)
+		const equipos = datosRT.equipos || [];
 		if (equipos.length > 0) {
 			const equiposParaInsertar = equipos.map((equipo) => ({
 				poliza_id: polizaId,
@@ -731,11 +743,6 @@ export async function guardarPoliza(formState: PolizaFormState) {
 			&& datosEsp && "tiene_maternidad" in datosEsp
 			? (datosEsp as { tiene_maternidad: boolean }).tiene_maternidad
 			: false;
-		const valorAseguradoRamosTecnicos = formState.datos_especificos?.tipo_ramo === "Ramos técnicos"
-			&& datosEsp && "valor_asegurado" in datosEsp
-			? (datosEsp as { valor_asegurado: number }).valor_asegurado || null
-			: null;
-
 		const { data: poliza, error: errorPoliza } = await supabase
 			.from("polizas")
 			.insert({
@@ -765,7 +772,6 @@ export async function guardarPoliza(formState: PolizaFormState) {
 				nro_poliza_anterior: formState.datos_basicos.es_renovacion ? (formState.datos_basicos.nro_poliza_anterior || null) : null,
 				regional_asegurado_id: regionalAseguradoId,
 				tiene_maternidad: tieneMaternidad,
-				valor_asegurado: valorAseguradoRamosTecnicos,
 			})
 			.select()
 			.single();
