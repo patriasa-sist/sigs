@@ -33,6 +33,7 @@ export const JURIDIC_DOCUMENT_TYPES = {
 	testimonio_constitucion: "Testimonio de Constitución Social",
 	balance_estado_resultados: "Balance General y Estado de Resultados",
 	poder_representacion: "Poder de Representación",
+	documento_identidad_representante: "CI Representante Legal (completo)",
 	ci_representante_anverso: "CI Anverso Representante Legal",
 	ci_representante_reverso: "CI Reverso Representante Legal",
 	certificacion_pep: "Certificación PEP",
@@ -65,18 +66,14 @@ export type TipoDocumentoCliente = keyof typeof ALL_DOCUMENT_TYPES;
 export const REQUIRED_DOCUMENTS = {
 	natural: ["documento_identidad", "documento_identidad_reverso", "certificacion_pep", "carta_nombramiento", "formulario_kyc"] as const,
 	unipersonal: ["documento_identidad", "documento_identidad_reverso", "certificacion_pep", "carta_nombramiento", "formulario_kyc", "nit", "matricula_comercio"] as const,
-	juridica: ["nit", "matricula_comercio", "testimonio_constitucion", "balance_estado_resultados", "poder_representacion", "ci_representante_anverso", "ci_representante_reverso", "certificacion_pep", "carta_nombramiento", "formulario_kyc"] as const,
+	juridica: ["nit", "matricula_comercio", "testimonio_constitucion", "balance_estado_resultados", "poder_representacion", "documento_identidad_representante", "ci_representante_anverso", "ci_representante_reverso", "certificacion_pep", "carta_nombramiento", "formulario_kyc"] as const,
 } as const;
 
 /**
  * Documents that can NEVER be excepted, even by UIF.
  * These are always mandatory regardless of any exception.
  */
-export const NON_EXCEPTABLE_DOCUMENTS: readonly TipoDocumentoCliente[] = [
-	"formulario_kyc",
-	"certificacion_pep",
-	"documento_identidad",
-] as const;
+export const NON_EXCEPTABLE_DOCUMENTS: readonly TipoDocumentoCliente[] = [] as const;
 
 /**
  * Get document types for a specific client type
@@ -161,6 +158,7 @@ export const clienteDocumentoSchema = z.object({
 		"testimonio_constitucion",
 		"balance_estado_resultados",
 		"poder_representacion",
+		"documento_identidad_representante",
 		"ci_representante_anverso",
 		"ci_representante_reverso",
 		"carta_nombramiento",

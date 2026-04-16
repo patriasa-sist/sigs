@@ -14,7 +14,8 @@
       "Bash(python:*)",
       "Bash(python3:*)",
       "Bash(cmd /c \"npx tsc --noEmit 2>&1\")",
-      "Bash(cmd /c \"npx tsc --noEmit 2>&1 | findstr /C:\\\\\"error\\\\\" | head\")"
+      "Bash(cmd /c \"npx tsc --noEmit 2>&1 | findstr /C:\\\\\"error\\\\\" | head\")",
+      "Read(//c/Users/InNov/.claude/projects/c--Users-InNov-Documents-proyectos-varios-PATRIA-SA-sigs/memory/**)"
     ]
   },
   "enableAllProjectMcpServers": true,

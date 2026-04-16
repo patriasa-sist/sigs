@@ -205,7 +205,7 @@ export function OtorgarExcepcionForm({ usuarios, onSuccess, onCancel }: Props) {
 					})}
 				</div>
 				<p className="text-xs text-gray-500">
-					Los documentos KYC, PEP y CI (completo o anverso) no pueden ser exceptuados.
+					Todos los documentos pueden ser exceptuados por UIF.
 				</p>
 			</div>
 
