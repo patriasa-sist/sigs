@@ -18,6 +18,7 @@ import type {
 	AseguradoConNivel,
 	NivelCobertura,
 	CoberturasVida,
+	BeneficiarioVida,
 	BeneficiarioSalud,
 	AseguradoSeleccionado,
 } from "@/types/poliza";
@@ -62,10 +63,10 @@ export function VidaForm({ datos, regionales, aseguradoPrincipal, onChange, onSi
 	const [tipoPoliza, setTipoPoliza] = useState<"individual" | "corporativo">(datos?.tipo_poliza || "individual");
 	const [regionalId, setRegionalId] = useState<string>(datos?.regional_asegurado_id || "");
 	const [asegurados, setAsegurados] = useState<AseguradoConNivel[]>(datos?.asegurados || []);
-	const [beneficiarios, setBeneficiarios] = useState<BeneficiarioSalud[]>(datos?.beneficiarios || []);
+	const [beneficiarios, setBeneficiarios] = useState<BeneficiarioVida[]>(datos?.beneficiarios || []);
 	const [mostrarBuscador, setMostrarBuscador] = useState(false);
 	const [mostrarModalBeneficiario, setMostrarModalBeneficiario] = useState(false);
-	const [beneficiarioEditando, setBeneficiarioEditando] = useState<BeneficiarioSalud | null>(null);
+	const [beneficiarioEditando, setBeneficiarioEditando] = useState<BeneficiarioVida | null>(null);
 	const [errores, setErrores] = useState<Record<string, string>>({});
 
 	// ===== FUNCIONES PASO 2.1: NIVELES =====
@@ -205,16 +206,17 @@ export function VidaForm({ datos, regionales, aseguradoPrincipal, onChange, onSi
 		setMostrarModalBeneficiario(true);
 	};
 
-	const abrirModalEditarBeneficiario = (beneficiario: BeneficiarioSalud) => {
+	const abrirModalEditarBeneficiario = (beneficiario: BeneficiarioVida) => {
 		setBeneficiarioEditando(beneficiario);
 		setMostrarModalBeneficiario(true);
 	};
 
-	const guardarBeneficiario = (beneficiario: BeneficiarioSalud) => {
+	const guardarBeneficiario = (beneficiario: BeneficiarioSalud | BeneficiarioVida) => {
+		const b = beneficiario as BeneficiarioVida;
 		if (beneficiarioEditando) {
-			setBeneficiarios(beneficiarios.map((b) => (b.id === beneficiarioEditando.id ? beneficiario : b)));
+			setBeneficiarios(beneficiarios.map((existing) => (existing.id === beneficiarioEditando.id ? b : existing)));
 		} else {
-			setBeneficiarios([...beneficiarios, beneficiario]);
+			setBeneficiarios([...beneficiarios, b]);
 		}
 		setMostrarModalBeneficiario(false);
 		setBeneficiarioEditando(null);
@@ -914,8 +916,8 @@ export function VidaForm({ datos, regionales, aseguradoPrincipal, onChange, onSi
 													</p>
 													{beneficiario.rol && (
 														<span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
-															{beneficiario.rol === "dependiente"
-																? "Dependiente"
+															{beneficiario.rol === "descendiente"
+																? "Descendiente"
 																: beneficiario.rol === "conyugue"
 																	? "Cónyuge"
 																	: beneficiario.rol}

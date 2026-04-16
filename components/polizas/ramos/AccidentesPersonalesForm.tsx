@@ -19,6 +19,7 @@ import type {
 	NivelCobertura,
 	CoberturasAccidentesPersonales,
 	BeneficiarioSalud,
+	BeneficiarioVida,
 	AseguradoSeleccionado,
 } from "@/types/poliza";
 import { Button } from "@/components/ui/button";
@@ -219,11 +220,12 @@ export function AccidentesPersonalesForm({
 		setMostrarModalBeneficiario(true);
 	};
 
-	const guardarBeneficiario = (beneficiario: BeneficiarioSalud) => {
+	const guardarBeneficiario = (beneficiario: BeneficiarioSalud | BeneficiarioVida) => {
+		const b = beneficiario as BeneficiarioSalud;
 		if (beneficiarioEditando) {
-			setBeneficiarios(beneficiarios.map((b) => (b.id === beneficiarioEditando.id ? beneficiario : b)));
+			setBeneficiarios(beneficiarios.map((existing) => (existing.id === beneficiarioEditando.id ? b : existing)));
 		} else {
-			setBeneficiarios([...beneficiarios, beneficiario]);
+			setBeneficiarios([...beneficiarios, b]);
 		}
 		setMostrarModalBeneficiario(false);
 		setBeneficiarioEditando(null);

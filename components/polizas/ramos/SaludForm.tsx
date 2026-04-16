@@ -13,7 +13,7 @@ import {
 	UserPlus,
 	Edit,
 } from "lucide-react";
-import type { DatosSalud, AseguradoSalud, NivelSalud, BeneficiarioSalud, AseguradoSeleccionado } from "@/types/poliza";
+import type { DatosSalud, AseguradoSalud, NivelSalud, BeneficiarioSalud, BeneficiarioVida, AseguradoSeleccionado } from "@/types/poliza";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -188,13 +188,14 @@ export function SaludForm({
 		setMostrarModalBeneficiario(true);
 	};
 
-	const guardarBeneficiario = (beneficiario: BeneficiarioSalud) => {
+	const guardarBeneficiario = (beneficiario: BeneficiarioSalud | BeneficiarioVida) => {
+		const b = beneficiario as BeneficiarioSalud;
 		if (beneficiarioEditando) {
 			// Editar existente
-			setBeneficiarios(beneficiarios.map((b) => (b.id === beneficiarioEditando.id ? beneficiario : b)));
+			setBeneficiarios(beneficiarios.map((existing) => (existing.id === beneficiarioEditando.id ? b : existing)));
 		} else {
 			// Agregar nuevo
-			setBeneficiarios([...beneficiarios, beneficiario]);
+			setBeneficiarios([...beneficiarios, b]);
 		}
 		setMostrarModalBeneficiario(false);
 		setBeneficiarioEditando(null);

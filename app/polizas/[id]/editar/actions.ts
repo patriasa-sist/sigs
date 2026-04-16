@@ -27,8 +27,10 @@ import type {
 	NivelSalud,
 	AseguradoSalud,
 	BeneficiarioSalud,
+	BeneficiarioVida,
 	RolAseguradoSalud,
 	RolBeneficiarioSalud,
+	RolBeneficiarioVida,
 	NivelCobertura,
 	AseguradoConNivel,
 	BienAseguradoIncendio,
@@ -583,7 +585,7 @@ export async function obtenerPolizaParaEdicion(
 			}
 
 			// Cargar beneficiarios solo para Vida y Accidentes Personales
-			if (tipoRamo === "Vida" || tipoRamo === "Accidentes Personales") {
+			if (tipoRamo === "Vida") {
 				const { data: beneficiariosDB, error: errorBeneficiarios } = await supabase
 					.from("polizas_beneficiarios")
 					.select("id, nombre_completo, carnet, fecha_nacimiento, genero, nivel_id, rol")
@@ -593,7 +595,37 @@ export async function obtenerPolizaParaEdicion(
 					throw new Error(`Error al cargar beneficiarios: ${errorBeneficiarios.message}`);
 				}
 
-				const beneficiariosFormateadosNivel: BeneficiarioSalud[] = (beneficiariosDB || []).map(b => ({
+				const beneficiariosFormateadosVida: BeneficiarioVida[] = (beneficiariosDB || []).map(b => ({
+					id: b.id,
+					nombre_completo: b.nombre_completo,
+					carnet: b.carnet,
+					fecha_nacimiento: b.fecha_nacimiento,
+					genero: b.genero as "M" | "F" | "Otro",
+					nivel_id: b.nivel_id,
+					rol: b.rol as RolBeneficiarioVida,
+				}));
+
+				datos_especificos = {
+					tipo_ramo: "Vida",
+					datos: {
+						niveles: nivelesFormateados,
+						tipo_poliza: aseguradosFormateadosNivel.length > 1 ? "corporativo" : "individual",
+						regional_asegurado_id: poliza.regional_asegurado_id || "",
+						asegurados: aseguradosFormateadosNivel,
+						beneficiarios: beneficiariosFormateadosVida,
+					},
+				};
+			} else if (tipoRamo === "Accidentes Personales") {
+				const { data: beneficiariosDB, error: errorBeneficiarios } = await supabase
+					.from("polizas_beneficiarios")
+					.select("id, nombre_completo, carnet, fecha_nacimiento, genero, nivel_id, rol")
+					.eq("poliza_id", polizaId);
+
+				if (errorBeneficiarios) {
+					throw new Error(`Error al cargar beneficiarios: ${errorBeneficiarios.message}`);
+				}
+
+				const beneficiariosFormateadosAP: BeneficiarioSalud[] = (beneficiariosDB || []).map(b => ({
 					id: b.id,
 					nombre_completo: b.nombre_completo,
 					carnet: b.carnet,
@@ -604,13 +636,13 @@ export async function obtenerPolizaParaEdicion(
 				}));
 
 				datos_especificos = {
-					tipo_ramo: tipoRamo,
+					tipo_ramo: "Accidentes Personales",
 					datos: {
 						niveles: nivelesFormateados,
 						tipo_poliza: aseguradosFormateadosNivel.length > 1 ? "corporativo" : "individual",
 						regional_asegurado_id: poliza.regional_asegurado_id || "",
 						asegurados: aseguradosFormateadosNivel,
-						beneficiarios: beneficiariosFormateadosNivel,
+						beneficiarios: beneficiariosFormateadosAP,
 					},
 				};
 			} else {
