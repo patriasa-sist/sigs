@@ -19,6 +19,7 @@ export const VEHICULO_RULES = {
 
 	// Departamentos de Bolivia para plaza de circulación
 	DEPARTAMENTOS_BOLIVIA: [
+		"Nacional",
 		"La Paz",
 		"Cochabamba",
 		"Santa Cruz",
@@ -48,6 +49,7 @@ export const EQUIPO_RULES = {
 
 	// Departamentos de Bolivia para plaza de circulación
 	DEPARTAMENTOS_BOLIVIA: [
+		"Nacional",
 		"La Paz",
 		"Cochabamba",
 		"Santa Cruz",
