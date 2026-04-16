@@ -197,9 +197,22 @@ export type NivelSalud = {
 	monto: number; // Monto de cobertura del nivel
 };
 
-export type RolAseguradoSalud = "titular" | "conyugue" | "descendiente"; // Para clientes registrados con datos completos (salud)
+export type RolAseguradoSalud = "titular" | "conyugue" | "dependiente"; // Para clientes registrados con datos completos (salud)
 
-export type RolBeneficiarioSalud = "conyugue" | "descendiente"; // Para asegurados datos mínimos sin registro completo
+export type RolBeneficiarioSalud = "conyugue" | "dependiente"; // Para asegurados datos mínimos sin registro completo
+
+export type RolBeneficiarioVida = "descendiente" | "conyugue" | "otro"; // Para beneficiarios de póliza de Vida (herederos del monto)
+
+// Beneficiario de póliza de Vida: persona que recibe el monto al fallecimiento del asegurado
+export type BeneficiarioVida = {
+	id: string; // UUID generado en cliente (temporal hasta guardar en DB)
+	nombre_completo: string;
+	carnet: string;
+	fecha_nacimiento?: string; // ISO date string (opcional)
+	genero?: "M" | "F" | "Otro"; // opcional
+	nivel_id: string; // Referencia al NivelCobertura
+	rol: RolBeneficiarioVida; // OBLIGATORIO: descendiente, conyugue u otro
+};
 
 export type AseguradoSalud = {
 	client_id: string;
@@ -494,7 +507,7 @@ export type AseguradoConNivel = {
 	client_ci: string;
 	nivel_id: string; // Referencia al ID del nivel
 	cargo?: string; // Cargo/posición (Ej: "Gerente", "Operador") - solo para corporativo
-	rol?: "contratante" | "titular" | "conyugue" | "descendiente"; // Rol del asegurado (usado en Vida y Accidentes Personales)
+	rol?: "contratante" | "titular" | "conyugue" | "dependiente"; // Rol del asegurado (usado en Vida y Accidentes Personales)
 };
 
 export type DatosAccidentesPersonales = {
@@ -510,7 +523,7 @@ export type DatosVida = {
 	tipo_poliza: "individual" | "corporativo";
 	regional_asegurado_id: string;
 	asegurados: AseguradoConNivel[];
-	beneficiarios: BeneficiarioSalud[]; // Dependientes/cónyuges cubiertos
+	beneficiarios: BeneficiarioVida[]; // Descendientes/cónyuges/otros que reciben el monto al fallecimiento
 };
 
 export type DatosSepelio = {

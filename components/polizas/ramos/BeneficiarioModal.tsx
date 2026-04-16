@@ -2,7 +2,15 @@
 
 import { useState } from "react";
 import { X, AlertTriangle } from "lucide-react";
-import type { BeneficiarioSalud } from "@/types/poliza";
+import type { BeneficiarioSalud, BeneficiarioVida } from "@/types/poliza";
+
+type BeneficiarioBase = Omit<BeneficiarioSalud, "rol"> & { rol: string };
+type RolOption = { value: string; label: string };
+
+const ROLES_DEFAULT: RolOption[] = [
+	{ value: "dependiente", label: "Dependiente" },
+	{ value: "conyugue", label: "Cónyuge" },
+];
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,10 +20,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 type NivelGenerico = { id: string; nombre: string; monto?: number };
 
 type Props = {
-	beneficiario: BeneficiarioSalud | null;
+	beneficiario: BeneficiarioBase | null;
 	moneda?: string;
 	niveles: NivelGenerico[];
-	onGuardar: (beneficiario: BeneficiarioSalud) => void;
+	roles?: RolOption[];
+	descripcionRoles?: string;
+	onGuardar: (beneficiario: BeneficiarioSalud | BeneficiarioVida) => void;
 	onCancelar: () => void;
 };
 
@@ -28,8 +38,8 @@ type ErroresBeneficiario = {
 	rol?: string;
 };
 
-export function BeneficiarioModal({ beneficiario, moneda = "Bs", niveles, onGuardar, onCancelar }: Props) {
-	const [formData, setFormData] = useState<Partial<BeneficiarioSalud>>(
+export function BeneficiarioModal({ beneficiario, moneda = "Bs", niveles, roles = ROLES_DEFAULT, descripcionRoles, onGuardar, onCancelar }: Props) {
+	const [formData, setFormData] = useState<Partial<BeneficiarioBase>>(
 		beneficiario || {
 			id: crypto.randomUUID(),
 			nombre_completo: "",
@@ -37,7 +47,7 @@ export function BeneficiarioModal({ beneficiario, moneda = "Bs", niveles, onGuar
 			fecha_nacimiento: undefined,
 			genero: undefined,
 			nivel_id: niveles[0]?.id || "",
-			rol: "descendiente",
+			rol: roles[0]?.value || "dependiente",
 		},
 	);
 
@@ -107,7 +117,7 @@ export function BeneficiarioModal({ beneficiario, moneda = "Bs", niveles, onGuar
 			return;
 		}
 
-		onGuardar(formData as BeneficiarioSalud);
+		onGuardar(formData as BeneficiarioSalud | BeneficiarioVida);
 	};
 
 	return (
@@ -134,7 +144,7 @@ export function BeneficiarioModal({ beneficiario, moneda = "Bs", niveles, onGuar
 									<p className="font-medium mb-1">Asegurados Datos Mínimos</p>
 									<p>
 										Personas cubiertas por la póliza que no están registradas como clientes en el
-										sistema. Pueden ser descendientes (hijos, familiares) o cónyuges del asegurado
+										sistema. Pueden ser dependientes (hijos, familiares) o cónyuges del asegurado
 										principal.
 									</p>
 								</div>
@@ -257,12 +267,13 @@ export function BeneficiarioModal({ beneficiario, moneda = "Bs", niveles, onGuar
 										<SelectValue placeholder="Seleccione un rol" />
 									</SelectTrigger>
 									<SelectContent>
-										<SelectItem value="descendiente">Descendiente</SelectItem>
-										<SelectItem value="conyugue">Cónyuge</SelectItem>
+										{roles.map((r) => (
+											<SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
+										))}
 									</SelectContent>
 								</Select>
 								{errores.rol && <p className="text-sm text-red-600">{errores.rol}</p>}
-								<p className="text-xs text-gray-500">Descendiente (hijo/familiar) o cónyuge</p>
+								{descripcionRoles && <p className="text-xs text-gray-500">{descripcionRoles}</p>}
 							</div>
 						</div>
 					</div>

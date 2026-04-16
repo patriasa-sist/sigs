@@ -169,7 +169,7 @@ export function SaludForm({
 		setAsegurados(asegurados.map((a) => (a.client_id === clientId ? { ...a, nivel_id: nivelId } : a)));
 	};
 
-	const cambiarRol = (clientId: string, rol: "titular" | "conyugue" | "descendiente") => {
+	const cambiarRol = (clientId: string, rol: "titular" | "conyugue" | "dependiente") => {
 		setAsegurados(asegurados.map((a) => (a.client_id === clientId ? { ...a, rol } : a)));
 	};
 
@@ -242,7 +242,7 @@ export function SaludForm({
 		const beneficiariosSinRol = beneficiarios.filter((b) => !b.rol);
 		if (beneficiariosSinRol.length > 0) {
 			nuevosErrores.beneficiarios =
-				"Todos los asegurados datos mínimos deben tener un rol asignado (Cónyuge o Descendiente)";
+				"Todos los asegurados datos mínimos deben tener un rol asignado (Cónyuge o Dependiente)";
 		}
 
 		if (Object.keys(nuevosErrores).length > 0) {
@@ -615,7 +615,7 @@ export function SaludForm({
 													onValueChange={(value) =>
 														cambiarRol(
 															asegurado.client_id,
-															value as "titular" | "conyugue" | "descendiente",
+															value as "titular" | "conyugue" | "dependiente",
 														)
 													}
 												>
@@ -625,7 +625,7 @@ export function SaludForm({
 													<SelectContent>
 														<SelectItem value="titular">Titular</SelectItem>
 														<SelectItem value="conyugue">Cónyuge</SelectItem>
-														<SelectItem value="descendiente">Descendiente</SelectItem>
+														<SelectItem value="dependiente">Dependiente</SelectItem>
 													</SelectContent>
 												</Select>
 											</div>
@@ -692,8 +692,8 @@ export function SaludForm({
 													</p>
 													{beneficiario.rol && (
 														<span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
-															{beneficiario.rol === "descendiente"
-																? "Descendiente"
+															{beneficiario.rol === "dependiente"
+																? "Dependiente"
 																: beneficiario.rol === "conyugue"
 																	? "Cónyuge"
 																	: beneficiario.rol}
@@ -789,7 +789,7 @@ export function SaludForm({
 								• <strong>Cónyuge:</strong> Pareja o cónyuge del titular
 							</li>
 							<li>
-								• <strong>Descendiente:</strong> Hijo u otro descendiente del titular
+								• <strong>Dependiente:</strong> Hijo u otro dependiente del titular
 							</li>
 						</ul>
 					</div>
@@ -800,7 +800,7 @@ export function SaludForm({
 								• <strong>Cónyuge:</strong> Pareja o cónyuge del asegurado
 							</li>
 							<li>
-								• <strong>Descendiente:</strong> Hijo u otro descendiente
+								• <strong>Dependiente:</strong> Hijo u otro dependiente
 							</li>
 						</ul>
 					</div>

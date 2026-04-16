@@ -196,7 +196,7 @@ export function AccidentesPersonalesForm({
 		setAsegurados(asegurados.map((a) => (a.client_id === clientId ? { ...a, nivel_id: nivelId } : a)));
 	};
 
-	const cambiarRol = (clientId: string, rol: "contratante" | "titular" | "conyugue" | "descendiente") => {
+	const cambiarRol = (clientId: string, rol: "contratante" | "titular" | "conyugue" | "dependiente") => {
 		setAsegurados(asegurados.map((a) => (a.client_id === clientId ? { ...a, rol } : a)));
 	};
 
@@ -271,7 +271,7 @@ export function AccidentesPersonalesForm({
 		const beneficiariosSinRol = beneficiarios.filter((b) => !b.rol);
 		if (beneficiariosSinRol.length > 0) {
 			nuevosErrores.beneficiarios =
-				"Todos los asegurados datos mínimos deben tener un rol asignado (Cónyuge o Descendiente)";
+				"Todos los asegurados datos mínimos deben tener un rol asignado (Cónyuge o Dependiente)";
 		}
 
 		if (Object.keys(nuevosErrores).length > 0) {
@@ -834,7 +834,7 @@ export function AccidentesPersonalesForm({
 																| "contratante"
 																| "titular"
 																| "conyugue"
-																| "descendiente",
+																| "dependiente",
 														)
 													}
 												>
@@ -845,7 +845,7 @@ export function AccidentesPersonalesForm({
 														<SelectItem value="titular">Titular</SelectItem>
 														<SelectItem value="contratante">Contratante</SelectItem>
 														<SelectItem value="conyugue">Cónyuge</SelectItem>
-														<SelectItem value="descendiente">Descendiente</SelectItem>
+														<SelectItem value="dependiente">Dependiente</SelectItem>
 													</SelectContent>
 												</Select>
 											</div>
@@ -924,8 +924,8 @@ export function AccidentesPersonalesForm({
 													</p>
 													{beneficiario.rol && (
 														<span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
-															{beneficiario.rol === "descendiente"
-																? "Descendiente"
+															{beneficiario.rol === "dependiente"
+																? "Dependiente"
 																: beneficiario.rol === "conyugue"
 																	? "Cónyuge"
 																	: beneficiario.rol}
@@ -1024,7 +1024,7 @@ export function AccidentesPersonalesForm({
 								• <strong>Cónyuge:</strong> Pareja o cónyuge del titular
 							</li>
 							<li>
-								• <strong>Descendiente:</strong> Hijo u otro descendiente del titular
+								• <strong>Dependiente:</strong> Hijo u otro dependiente del titular
 							</li>
 						</ul>
 					</div>
@@ -1035,7 +1035,7 @@ export function AccidentesPersonalesForm({
 								• <strong>Cónyuge:</strong> Pareja o cónyuge del asegurado
 							</li>
 							<li>
-								• <strong>Descendiente:</strong> Hijo u otro descendiente
+								• <strong>Dependiente:</strong> Hijo u otro dependiente
 							</li>
 						</ul>
 					</div>
