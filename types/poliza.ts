@@ -339,7 +339,12 @@ export type ItemRiesgosVarios = {
 		| "Vidrios y cristales"
 		| "Letreros"
 		| "Perdida de beneficios"
-		| "Valor asegurado (SALUD)";
+		| "Valor asegurado (SALUD)"
+		| "Deshonestidad de empleados"
+		| "Pérdida dentro del local"
+		| "Pérdida fuera del local"
+		| "Falsificacion de giros postales"
+		| "Falsificación de doc. bancario";
 	monto: number;
 };
 

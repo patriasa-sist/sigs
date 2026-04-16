@@ -17,7 +17,7 @@ type Props = {
 	onAnterior: () => void;
 };
 
-const ITEMS_DISPONIBLES: ItemRiesgosVarios["nombre"][] = [
+const ITEMS_GENERALES: ItemRiesgosVarios["nombre"][] = [
 	"Edificaciones, instalaciones en general",
 	"Activos fijos en general (muebles y enseres)",
 	"Equipos electronicos",
@@ -29,6 +29,14 @@ const ITEMS_DISPONIBLES: ItemRiesgosVarios["nombre"][] = [
 	"Letreros",
 	"Perdida de beneficios",
 	"Valor asegurado (SALUD)",
+];
+
+const ITEMS_FIDELIDAD: ItemRiesgosVarios["nombre"][] = [
+	"Deshonestidad de empleados",
+	"Pérdida dentro del local",
+	"Pérdida fuera del local",
+	"Falsificacion de giros postales",
+	"Falsificación de doc. bancario",
 ];
 
 export function RiesgosVariosForm({ datos, moneda, onChange, onSiguiente, onAnterior }: Props) {
@@ -350,19 +358,44 @@ export function RiesgosVariosForm({ datos, moneda, onChange, onSiguiente, onAnte
 								<Label className="text-base">Items Asegurables</Label>
 
 								{/* Selector de items */}
-								<div className="flex gap-2 flex-wrap">
-									{ITEMS_DISPONIBLES.filter(nombre => !itemsBien.some(item => item.nombre === nombre)).map((nombreItem) => (
-										<Button
-											key={nombreItem}
-											type="button"
-											variant="outline"
-											size="sm"
-											onClick={() => agregarItem(nombreItem)}
-										>
-											<Plus className="mr-1 h-3 w-3" />
-											{nombreItem}
-										</Button>
-									))}
+								<div className="space-y-2">
+									<div className="flex gap-2 flex-wrap">
+										{ITEMS_GENERALES.filter(nombre => !itemsBien.some(item => item.nombre === nombre)).map((nombreItem) => (
+											<Button
+												key={nombreItem}
+												type="button"
+												variant="outline"
+												size="sm"
+												onClick={() => agregarItem(nombreItem)}
+											>
+												<Plus className="mr-1 h-3 w-3" />
+												{nombreItem}
+											</Button>
+										))}
+									</div>
+									{ITEMS_FIDELIDAD.some(nombre => !itemsBien.some(item => item.nombre === nombre)) && (
+										<>
+											<div className="flex items-center gap-2 pt-1">
+												<div className="h-px flex-1 bg-gray-200" />
+												<span className="text-xs text-gray-400 font-medium">3D</span>
+												<div className="h-px flex-1 bg-gray-200" />
+											</div>
+											<div className="flex gap-2 flex-wrap">
+												{ITEMS_FIDELIDAD.filter(nombre => !itemsBien.some(item => item.nombre === nombre)).map((nombreItem) => (
+													<Button
+														key={nombreItem}
+														type="button"
+														variant="outline"
+														size="sm"
+														onClick={() => agregarItem(nombreItem)}
+													>
+														<Plus className="mr-1 h-3 w-3" />
+														{nombreItem}
+													</Button>
+												))}
+											</div>
+										</>
+									)}
 								</div>
 
 								{/* Items agregados */}
