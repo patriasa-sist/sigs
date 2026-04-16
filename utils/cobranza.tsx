@@ -79,6 +79,76 @@ export function enviarRecordatorioWhatsApp(
 }
 
 /**
+ * Genera un mensaje consolidado para 2+ cuotas vencidas/pendientes
+ */
+export function generarMensajeConsolidado(cuotas: CuotaPago[], poliza: PolizaConPagos, clienteNombre: string): string {
+	const formatCurrency = (amount: number) =>
+		`${poliza.moneda} ${new Intl.NumberFormat("es-BO", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amount)}`;
+
+	const formatDate = (dateString: string) => {
+		const [y, m, d] = dateString.split("T")[0].split("-").map(Number);
+		return new Date(y, m - 1, d).toLocaleDateString("es-BO", { day: "2-digit", month: "long", year: "numeric" });
+	};
+
+	const total = cuotas.reduce((sum, c) => sum + c.monto, 0);
+	const lineas = cuotas
+		.map((c) => `  • Cuota N° ${c.numero_cuota} — ${formatCurrency(c.monto)} — Vence: ${formatDate(c.fecha_vencimiento)}`)
+		.join("\n");
+
+	return `Estimado/a ${clienteNombre},
+
+Le informamos que tiene ${cuotas.length} cuotas pendientes de pago para su póliza ${poliza.numero_poliza}:
+
+${lineas}
+
+Monto total adeudado: ${formatCurrency(total)}
+
+Por favor, regularice su situación a la brevedad para mantener su cobertura activa.
+
+Para cualquier consulta, no dude en contactarnos.
+
+Atentamente,
+Patria S.A.`;
+}
+
+/**
+ * Envía recordatorio consolidado de múltiples cuotas por WhatsApp
+ */
+export function enviarRecordatorioConsolidadoWhatsApp(
+	cuotas: CuotaPago[],
+	poliza: PolizaConPagos,
+	contacto: ContactoCliente,
+	clienteNombre: string
+): void {
+	const numeroTelefono = contacto.celular || contacto.telefono;
+	if (!numeroTelefono) {
+		alert("No se encontró número de teléfono para este cliente");
+		return;
+	}
+	const mensaje = generarMensajeConsolidado(cuotas, poliza, clienteNombre);
+	const url = `https://wa.me/${cleanPhoneNumber(numeroTelefono)}?text=${encodeURIComponent(mensaje)}`;
+	window.open(url, "_blank");
+}
+
+/**
+ * Envía recordatorio consolidado de múltiples cuotas por email
+ */
+export function enviarRecordatorioConsolidadoEmail(
+	cuotas: CuotaPago[],
+	poliza: PolizaConPagos,
+	contacto: ContactoCliente,
+	clienteNombre: string
+): void {
+	if (!contacto.correo) {
+		alert("No se encontró correo electrónico para este cliente");
+		return;
+	}
+	const mensaje = generarMensajeConsolidado(cuotas, poliza, clienteNombre);
+	const asunto = encodeURIComponent(`Aviso de cuotas pendientes — Póliza ${poliza.numero_poliza}`);
+	window.location.href = `mailto:${contacto.correo}?subject=${asunto}&body=${encodeURIComponent(mensaje)}`;
+}
+
+/**
  * Genera enlace mailto para recordatorio por correo
  * Abre el cliente de correo con el mensaje pre-cargado
  */

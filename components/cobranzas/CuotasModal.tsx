@@ -22,6 +22,7 @@ import {
 	Paperclip,
 	Loader2,
 	AlertCircle,
+	BellRing,
 } from "lucide-react";
 import type { PolizaConPagos, CuotaPago, PolizaConPagosExtendida } from "@/types/cobranza";
 import {
@@ -32,6 +33,8 @@ import {
 import {
 	enviarRecordatorioWhatsApp,
 	enviarRecordatorioEmail,
+	enviarRecordatorioConsolidadoWhatsApp,
+	enviarRecordatorioConsolidadoEmail,
 	formatearFecha,
 	formatearMonto,
 } from "@/utils/cobranza";
@@ -164,6 +167,32 @@ export default function CuotasModal({
 		);
 	};
 
+	const handleConsolidadoWhatsApp = () => {
+		if (!polizaExtendida) return;
+		const cuotasVencidasLista = cuotasToRender.filter(
+			(c) => obtenerEstadoReal(c) === "vencido" || obtenerEstadoReal(c) === "parcial"
+		);
+		enviarRecordatorioConsolidadoWhatsApp(
+			cuotasVencidasLista,
+			polizaExtendida,
+			polizaExtendida.contacto,
+			polizaExtendida.client.nombre_completo
+		);
+	};
+
+	const handleConsolidadoEmail = () => {
+		if (!polizaExtendida) return;
+		const cuotasVencidasLista = cuotasToRender.filter(
+			(c) => obtenerEstadoReal(c) === "vencido" || obtenerEstadoReal(c) === "parcial"
+		);
+		enviarRecordatorioConsolidadoEmail(
+			cuotasVencidasLista,
+			polizaExtendida,
+			polizaExtendida.contacto,
+			polizaExtendida.client.nombre_completo
+		);
+	};
+
 	const handleOpenProrroga = (cuota: CuotaPago) => {
 		setSelectedCuotaProrroga(cuota);
 		setProrrogaModalOpen(true);
@@ -215,6 +244,10 @@ export default function CuotasModal({
 	const cuotasToRender = polizaExtendida?.cuotas ?? [];
 	const cuotasVencidas = contarCuotasVencidas(cuotasToRender);
 	const puedeGenerarAvisoMora = cuotasVencidas >= 3;
+	const cuotasPendientesNotif = cuotasToRender.filter(
+		(c) => obtenerEstadoReal(c) === "vencido" || obtenerEstadoReal(c) === "parcial"
+	);
+	const puedeNotificarConsolidado = cuotasPendientesNotif.length >= 2;
 
 	const telefono =
 		polizaExtendida?.contacto?.celular || polizaExtendida?.contacto?.telefono;
@@ -450,6 +483,49 @@ export default function CuotasModal({
 											{polizaExtendida.datos_ramo.descripcion}
 										</p>
 									)}
+								</div>
+							)}
+
+							{/* Notificación consolidada para 2+ cuotas vencidas */}
+							{puedeNotificarConsolidado && (
+								<div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3">
+									<div className="flex items-start justify-between gap-4">
+										<div className="flex items-start gap-3">
+											<BellRing className="h-5 w-5 text-amber-600 mt-0.5 shrink-0" />
+											<div>
+												<p className="text-sm font-semibold text-amber-800">
+													{cuotasPendientesNotif.length} cuotas vencidas o parciales
+												</p>
+												<p className="text-xs text-muted-foreground mt-0.5">
+													Notificar al cliente con un solo mensaje consolidado
+												</p>
+											</div>
+										</div>
+										<div className="flex gap-2 shrink-0">
+											{telefono && (
+												<Button
+													variant="outline"
+													size="sm"
+													className="border-amber-300 text-amber-800 hover:bg-amber-100"
+													onClick={handleConsolidadoWhatsApp}
+												>
+													<MessageCircle className="h-4 w-4 mr-1.5" />
+													WhatsApp
+												</Button>
+											)}
+											{correo && (
+												<Button
+													variant="outline"
+													size="sm"
+													className="border-amber-300 text-amber-800 hover:bg-amber-100"
+													onClick={handleConsolidadoEmail}
+												>
+													<Send className="h-4 w-4 mr-1.5" />
+													Email
+												</Button>
+											)}
+										</div>
+									</div>
 								</div>
 							)}
 

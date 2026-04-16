@@ -402,13 +402,18 @@ export async function registrarPago(registro: RegistroPago): Promise<RegistrarPa
 		}
 
 		// Update quota
+		const updatePayload: Record<string, unknown> = {
+			estado: nuevoEstado,
+			fecha_pago: tipoPago !== "parcial" ? registro.fecha_pago : null,
+			observaciones: observaciones.trim(),
+		};
+		// Reduce monto to remaining balance on partial payment, consistent with redistribuirExceso
+		if (tipoPago === "parcial") {
+			updatePayload.monto = montoCuota - montoPagado;
+		}
 		const { error: updateError } = await supabase
 			.from("polizas_pagos")
-			.update({
-				estado: nuevoEstado,
-				fecha_pago: tipoPago !== "parcial" ? registro.fecha_pago : null,
-				observaciones: observaciones.trim(),
-			})
+			.update(updatePayload)
 			.eq("id", registro.cuota_id);
 
 		if (updateError) {
@@ -448,11 +453,18 @@ export async function redistribuirExceso(distribucion: ExcessPaymentDistribution
 	const supabase = await createClient();
 
 	try {
-		// Validate that total distributed equals excess amount
-		if (Math.abs(distribucion.total_distribuido - distribucion.monto_exceso) > 0.01) {
+		// Validate that total distributed does not exceed the excess amount
+		// (distributing less than the excess is allowed when pending quotas are insufficient)
+		if (distribucion.total_distribuido > distribucion.monto_exceso + 0.01) {
 			return {
 				success: false,
-				error: `El monto distribuido (${distribucion.total_distribuido}) no coincide con el exceso (${distribucion.monto_exceso})`,
+				error: `El monto distribuido (${distribucion.total_distribuido}) supera el exceso disponible (${distribucion.monto_exceso})`,
+			};
+		}
+		if (distribucion.total_distribuido <= 0) {
+			return {
+				success: false,
+				error: "Debes distribuir al menos un monto a alguna cuota",
 			};
 		}
 

@@ -51,8 +51,8 @@ export default function RedistribucionModal({ excessData, open, onClose, onSucce
 
 	const isValidDistribution = () => {
 		const totalDist = getTotalDistribuido();
-		const diff = Math.abs(totalDist - excessData.monto_exceso);
-		return diff < 0.01; // Tolerance for floating point
+		// Allow distributing less than the full excess (remaining is a credit)
+		return totalDist > 0.009 && totalDist <= excessData.monto_exceso + 0.01;
 	};
 
 	const handleToggleSeleccion = (cuotaId: string) => {
@@ -63,6 +63,14 @@ export default function RedistribucionModal({ excessData, open, onClose, onSucce
 			newSeleccionadas.add(cuotaId);
 		}
 		setSeleccionadas(newSeleccionadas);
+	};
+
+	const handleSeleccionarTodo = () => {
+		if (seleccionadas.size === distribuciones.length) {
+			setSeleccionadas(new Set());
+		} else {
+			setSeleccionadas(new Set(distribuciones.map(d => d.cuota_id)));
+		}
 	};
 
 	const handleMontoChange = (cuotaId: string, value: string) => {
@@ -88,22 +96,23 @@ export default function RedistribucionModal({ excessData, open, onClose, onSucce
 			return;
 		}
 
-		const cuotasSeleccionadas = distribuciones.filter(d => seleccionadas.has(d.cuota_id));
-		const totalSeleccionadas = cuotasSeleccionadas.length;
-		const montoPorCuota = excessData.monto_exceso / totalSeleccionadas;
-
+		// Greedy: fill quotas completely one by one until excess runs out
+		let remaining = excessData.monto_exceso;
 		setDistribuciones(prev =>
 			prev.map(d => {
-				if (seleccionadas.has(d.cuota_id)) {
-					// Distribuir equitativamente, pero no exceder monto original
-					const montoAplicar = Math.min(montoPorCuota, d.monto_original);
-					return {
-						...d,
-						monto_a_aplicar: montoAplicar,
-						nuevo_saldo: d.monto_original - montoAplicar,
-					};
+				if (!seleccionadas.has(d.cuota_id)) {
+					return { ...d, monto_a_aplicar: 0, nuevo_saldo: d.monto_original };
 				}
-				return d;
+				if (remaining <= 0.009) {
+					return { ...d, monto_a_aplicar: 0, nuevo_saldo: d.monto_original };
+				}
+				const montoAplicar = parseFloat(Math.min(remaining, d.monto_original).toFixed(2));
+				remaining = parseFloat((remaining - montoAplicar).toFixed(2));
+				return {
+					...d,
+					monto_a_aplicar: montoAplicar,
+					nuevo_saldo: parseFloat((d.monto_original - montoAplicar).toFixed(2)),
+				};
 			})
 		);
 
@@ -167,18 +176,28 @@ export default function RedistribucionModal({ excessData, open, onClose, onSucce
 
 				<form onSubmit={handleSubmit} className="space-y-4">
 					{/* Auto-distribuir button */}
-					<div className="flex justify-between items-center">
+					<div className="flex justify-between items-center gap-3">
 						<p className="text-sm text-muted-foreground">
-							Selecciona las cuotas y usa &quot;Auto-distribuir&quot; o ingresa manualmente los montos
+							Selecciona las cuotas y usa &quot;Auto-distribuir&quot; (llena cuotas completas hasta agotar el exceso) o ingresa los montos manualmente
 						</p>
-						<Button
-							type="button"
-							variant="outline"
-							onClick={handleAutoDistribuir}
-							disabled={seleccionadas.size === 0}
-						>
-							Auto-distribuir
-						</Button>
+						<div className="flex gap-2 shrink-0">
+							<Button
+								type="button"
+								variant="outline"
+								size="sm"
+								onClick={handleSeleccionarTodo}
+							>
+								{seleccionadas.size === distribuciones.length ? "Deseleccionar todo" : "Seleccionar todo"}
+							</Button>
+							<Button
+								type="button"
+								variant="outline"
+								onClick={handleAutoDistribuir}
+								disabled={seleccionadas.size === 0}
+							>
+								Auto-distribuir
+							</Button>
+						</div>
 					</div>
 
 					{/* Tabla de distribución */}
@@ -263,7 +282,7 @@ export default function RedistribucionModal({ excessData, open, onClose, onSucce
 						<Alert variant="destructive">
 							<AlertCircle className="h-4 w-4" />
 							<AlertDescription>
-								El total distribuido (Bs {formatCurrency(totalDistribuido)}) debe ser igual al exceso (Bs {formatCurrency(excessData.monto_exceso)})
+								El monto distribuido (Bs {formatCurrency(totalDistribuido)}) supera el exceso disponible (Bs {formatCurrency(excessData.monto_exceso)})
 							</AlertDescription>
 						</Alert>
 					)}
@@ -272,7 +291,8 @@ export default function RedistribucionModal({ excessData, open, onClose, onSucce
 						<Alert>
 							<CheckCircle className="h-4 w-4" />
 							<AlertDescription>
-								La distribución es correcta. Puedes confirmar la redistribución.
+								Distribución válida.
+								{saldoRestante > 0.01 && ` El saldo restante de Bs ${formatCurrency(saldoRestante)} queda como crédito.`}
 							</AlertDescription>
 						</Alert>
 					)}
