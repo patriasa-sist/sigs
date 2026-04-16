@@ -241,7 +241,8 @@ export function SaludForm({
 
 		const beneficiariosSinRol = beneficiarios.filter((b) => !b.rol);
 		if (beneficiariosSinRol.length > 0) {
-			nuevosErrores.beneficiarios = "Todos los asegurados datos mínimos deben tener un rol asignado (Cónyuge o Descendiente)";
+			nuevosErrores.beneficiarios =
+				"Todos los asegurados datos mínimos deben tener un rol asignado (Cónyuge o Descendiente)";
 		}
 
 		if (Object.keys(nuevosErrores).length > 0) {
@@ -657,9 +658,7 @@ export function SaludForm({
 			<div className="space-y-4 mb-6">
 				<div className="flex items-center justify-between">
 					<div>
-						<Label className="text-base">
-							Asegurados Datos Mínimos
-						</Label>
+						<Label className="text-base">Asegurados Datos Mínimos</Label>
 						<p className="text-sm text-gray-600 mt-1">
 							Personas cubiertas sin registro completo en el sistema
 						</p>
@@ -703,20 +702,24 @@ export function SaludForm({
 												</div>
 												<div className="text-sm text-gray-600 space-y-0.5 mt-1">
 													<p>CI: {beneficiario.carnet}</p>
-													<p>
-														Fecha Nac:{" "}
-														{new Date(beneficiario.fecha_nacimiento).toLocaleDateString(
-															"es-BO",
-														)}
-													</p>
-													<p>
-														Género:{" "}
-														{beneficiario.genero === "M"
-															? "Masculino"
-															: beneficiario.genero === "F"
-																? "Femenino"
-																: "Otro"}
-													</p>
+													{beneficiario.fecha_nacimiento && (
+														<p>
+															Fecha Nac:{" "}
+															{new Date(beneficiario.fecha_nacimiento).toLocaleDateString(
+																"es-BO",
+															)}
+														</p>
+													)}
+													{beneficiario.genero && (
+														<p>
+															Género:{" "}
+															{beneficiario.genero === "M"
+																? "Masculino"
+																: beneficiario.genero === "F"
+																	? "Femenino"
+																	: "Otro"}
+														</p>
+													)}
 												</div>
 											</div>
 											<div className="flex gap-2">

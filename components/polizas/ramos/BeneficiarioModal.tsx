@@ -34,11 +34,11 @@ export function BeneficiarioModal({ beneficiario, moneda = "Bs", niveles, onGuar
 			id: crypto.randomUUID(),
 			nombre_completo: "",
 			carnet: "",
-			fecha_nacimiento: "",
-			genero: "M",
+			fecha_nacimiento: undefined,
+			genero: undefined,
 			nivel_id: niveles[0]?.id || "",
 			rol: "descendiente",
-		}
+		},
 	);
 
 	const [errores, setErrores] = useState<ErroresBeneficiario>({});
@@ -70,27 +70,17 @@ export function BeneficiarioModal({ beneficiario, moneda = "Bs", niveles, onGuar
 			nuevosErrores.carnet = "El carnet es obligatorio";
 		}
 
-		// Validar fecha de nacimiento
-		if (!formData.fecha_nacimiento || formData.fecha_nacimiento.trim() === "") {
-			nuevosErrores.fecha_nacimiento = "La fecha de nacimiento es obligatoria";
-		} else {
-			// Validar que la fecha no sea futura
+		// Validar fecha de nacimiento (opcional, pero si se ingresa debe ser válida)
+		if (formData.fecha_nacimiento && formData.fecha_nacimiento.trim() !== "") {
 			const fechaNac = new Date(formData.fecha_nacimiento);
 			const hoy = new Date();
 			if (fechaNac > hoy) {
 				nuevosErrores.fecha_nacimiento = "La fecha de nacimiento no puede ser futura";
 			}
-
-			// Validar que sea mayor de edad (opcional, ajustar según necesidad)
 			const edad = hoy.getFullYear() - fechaNac.getFullYear();
 			if (edad > 150) {
 				nuevosErrores.fecha_nacimiento = "La fecha de nacimiento no es válida";
 			}
-		}
-
-		// Validar género
-		if (!formData.genero) {
-			nuevosErrores.genero = "El género es obligatorio";
 		}
 
 		// Validar nivel
@@ -143,8 +133,9 @@ export function BeneficiarioModal({ beneficiario, moneda = "Bs", niveles, onGuar
 								<div className="text-sm text-blue-900">
 									<p className="font-medium mb-1">Asegurados Datos Mínimos</p>
 									<p>
-										Personas cubiertas por la póliza que no están registradas como clientes en el sistema.
-										Pueden ser descendientes (hijos, familiares) o cónyuges del asegurado principal.
+										Personas cubiertas por la póliza que no están registradas como clientes en el
+										sistema. Pueden ser descendientes (hijos, familiares) o cónyuges del asegurado
+										principal.
 									</p>
 								</div>
 							</div>
@@ -190,13 +181,13 @@ export function BeneficiarioModal({ beneficiario, moneda = "Bs", niveles, onGuar
 							{/* Fecha de Nacimiento */}
 							<div className="space-y-2">
 								<Label htmlFor="fecha_nacimiento">
-									Fecha de Nacimiento <span className="text-red-500">*</span>
+									Fecha de Nacimiento <span className="text-gray-400 text-xs">(opcional)</span>
 								</Label>
 								<Input
 									id="fecha_nacimiento"
 									type="date"
 									lang="es"
-									value={formData.fecha_nacimiento}
+									value={formData.fecha_nacimiento || ""}
 									onChange={(e) => handleChange("fecha_nacimiento", e.target.value)}
 									className={errores.fecha_nacimiento ? "border-red-500" : ""}
 								/>
@@ -208,14 +199,14 @@ export function BeneficiarioModal({ beneficiario, moneda = "Bs", niveles, onGuar
 							{/* Género */}
 							<div className="space-y-2">
 								<Label htmlFor="genero">
-									Género <span className="text-red-500">*</span>
+									Género <span className="text-gray-400 text-xs">(opcional)</span>
 								</Label>
 								<Select
-									value={formData.genero}
+									value={formData.genero || ""}
 									onValueChange={(value: "M" | "F" | "Otro") => handleChange("genero", value)}
 								>
 									<SelectTrigger className={errores.genero ? "border-red-500" : ""}>
-										<SelectValue />
+										<SelectValue placeholder="Seleccione género" />
 									</SelectTrigger>
 									<SelectContent>
 										<SelectItem value="M">Masculino</SelectItem>
@@ -244,7 +235,10 @@ export function BeneficiarioModal({ beneficiario, moneda = "Bs", niveles, onGuar
 									<SelectContent>
 										{niveles.map((nivel) => (
 											<SelectItem key={nivel.id} value={nivel.id}>
-												{nivel.nombre}{nivel.monto != null ? ` - ${moneda} ${nivel.monto.toLocaleString()}` : ""}
+												{nivel.nombre}
+												{nivel.monto != null
+													? ` - ${moneda} ${nivel.monto.toLocaleString()}`
+													: ""}
 											</SelectItem>
 										))}
 									</SelectContent>

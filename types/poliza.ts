@@ -217,8 +217,8 @@ export type BeneficiarioSalud = {
 	id: string; // UUID generado en cliente (temporal hasta guardar en DB)
 	nombre_completo: string;
 	carnet: string;
-	fecha_nacimiento: string; // ISO date string
-	genero: "M" | "F" | "Otro";
+	fecha_nacimiento?: string; // ISO date string (opcional)
+	genero?: "M" | "F" | "Otro"; // opcional
 	nivel_id: string; // Referencia al NivelSalud
 	rol: RolBeneficiarioSalud; // OBLIGATORIO: dependiente o conyugue
 };
