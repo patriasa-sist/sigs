@@ -64,9 +64,9 @@ export type TipoDocumentoCliente = keyof typeof ALL_DOCUMENT_TYPES;
  * UIF can grant single-use exceptions for specific documents (except NON_EXCEPTABLE_DOCUMENTS).
  */
 export const REQUIRED_DOCUMENTS = {
-	natural: ["documento_identidad", "documento_identidad_reverso", "certificacion_pep", "carta_nombramiento", "formulario_kyc"] as const,
-	unipersonal: ["documento_identidad", "documento_identidad_reverso", "certificacion_pep", "carta_nombramiento", "formulario_kyc", "nit", "matricula_comercio"] as const,
-	juridica: ["nit", "matricula_comercio", "testimonio_constitucion", "balance_estado_resultados", "poder_representacion", "documento_identidad_representante", "ci_representante_anverso", "ci_representante_reverso", "certificacion_pep", "carta_nombramiento", "formulario_kyc"] as const,
+	natural: ["documento_identidad", "certificacion_pep", "carta_nombramiento", "formulario_kyc"] as const,
+	unipersonal: ["documento_identidad", "certificacion_pep", "carta_nombramiento", "formulario_kyc", "nit", "matricula_comercio"] as const,
+	juridica: ["nit", "matricula_comercio", "testimonio_constitucion", "balance_estado_resultados", "poder_representacion", "documento_identidad_representante", "ci_representante_anverso", "certificacion_pep", "carta_nombramiento", "formulario_kyc"] as const,
 } as const;
 
 /**
