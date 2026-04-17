@@ -39,6 +39,7 @@ export const COMPANY_TYPES = [
   'SCS',
   'SA',
   'SCA',
+  'LTDA',
   'AAP',
   'SEM',
   'LIM',
