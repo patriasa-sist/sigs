@@ -25,14 +25,16 @@ import type {
 	DocumentoPoliza,
 	VehiculoAutomotor,
 	NivelSalud,
-	AseguradoSalud,
-	BeneficiarioSalud,
-	BeneficiarioVida,
-	RolAseguradoSalud,
-	RolBeneficiarioSalud,
-	RolBeneficiarioVida,
+	ContratanteAPVida,
+	AseguradoAPVida,
+	ContratanteSalud,
+	TitularSalud,
+	FamiliarSalud,
+	RolContratanteSalud,
 	NivelCobertura,
 	AseguradoConNivel,
+	DatosSepelio,
+	DatosVida,
 	BienAseguradoIncendio,
 	AseguradoIncendio,
 	ItemIncendio,
@@ -457,36 +459,11 @@ export async function obtenerPolizaParaEdicion(
 
 			const { data: beneficiariosDB, error: errorBeneficiarios } = await supabase
 				.from("polizas_salud_beneficiarios")
-				.select("id, nombre_completo, carnet, fecha_nacimiento, genero, nivel_id, rol")
+				.select("id, nombre_completo, carnet, fecha_nacimiento, genero, nivel_id, rol, titular_id")
 				.eq("poliza_id", polizaId);
 
 			if (errorBeneficiarios) {
 				throw new Error(`Error al cargar beneficiarios de salud: ${errorBeneficiarios.message}`);
-			}
-
-			// Cargar nombres de clientes asegurados
-			const aseguradosFormateados: AseguradoSalud[] = [];
-			for (const a of aseguradosDB || []) {
-				const { data: naturalClient } = await supabase
-					.from("natural_clients")
-					.select("primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, numero_documento")
-					.eq("client_id", a.client_id)
-					.single();
-
-				const nombre = naturalClient
-					? [naturalClient.primer_nombre, naturalClient.segundo_nombre, naturalClient.primer_apellido, naturalClient.segundo_apellido]
-						.filter(Boolean)
-						.join(" ")
-					: "Cliente";
-				const ci = naturalClient?.numero_documento || "-";
-
-				aseguradosFormateados.push({
-					client_id: a.client_id,
-					client_name: nombre,
-					client_ci: ci,
-					nivel_id: a.nivel_id,
-					rol: a.rol as RolAseguradoSalud,
-				});
 			}
 
 			const nivelesFormateados: NivelSalud[] = (niveles || []).map(n => ({
@@ -495,25 +472,76 @@ export async function obtenerPolizaParaEdicion(
 				monto: n.monto,
 			}));
 
-			const beneficiariosFormateados: BeneficiarioSalud[] = (beneficiariosDB || []).map(b => ({
-				id: b.id,
-				nombre_completo: b.nombre_completo,
-				carnet: b.carnet,
-				fecha_nacimiento: b.fecha_nacimiento,
-				genero: b.genero as "M" | "F" | "Otro",
-				nivel_id: b.nivel_id,
-				rol: b.rol as RolBeneficiarioSalud,
-			}));
+			// Build contratante (single DB-linked client)
+			let contratanteSalud: ContratanteSalud | null = null;
+			const contratanteRecord = (aseguradosDB || [])[0];
+			if (contratanteRecord) {
+				const { data: clientData } = await supabase
+					.from("natural_clients")
+					.select("primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, numero_documento")
+					.eq("client_id", contratanteRecord.client_id)
+					.single();
+				const nombre = clientData
+					? [clientData.primer_nombre, clientData.segundo_nombre, clientData.primer_apellido, clientData.segundo_apellido]
+						.filter(Boolean).join(" ")
+					: "Cliente";
+				const familiaresDelContratante: FamiliarSalud[] = (beneficiariosDB || [])
+					.filter(b => b.titular_id === null && b.rol !== "titular")
+					.map(b => ({
+						id: b.id,
+						nombre_completo: b.nombre_completo,
+						carnet: b.carnet,
+						fecha_nacimiento: b.fecha_nacimiento || undefined,
+						genero: b.genero as "M" | "F" | "Otro" | undefined,
+						nivel_id: b.nivel_id,
+						rol: b.rol as "conyugue" | "descendiente",
+					}));
+				contratanteSalud = {
+					client_id: contratanteRecord.client_id,
+					client_name: nombre,
+					client_ci: clientData?.numero_documento || "-",
+					nivel_id: contratanteRecord.nivel_id,
+					rol: contratanteRecord.rol as RolContratanteSalud,
+					conyugue: familiaresDelContratante.find(f => f.rol === "conyugue"),
+					descendientes: familiaresDelContratante.filter(f => f.rol === "descendiente"),
+				};
+			}
+
+			// Build titulares with their familiares
+			const titularesDB = (beneficiariosDB || []).filter(b => b.rol === "titular");
+			const titulares: TitularSalud[] = titularesDB.map(t => {
+				const familiares: FamiliarSalud[] = (beneficiariosDB || [])
+					.filter(b => b.titular_id === t.id)
+					.map(b => ({
+						id: b.id,
+						nombre_completo: b.nombre_completo,
+						carnet: b.carnet,
+						fecha_nacimiento: b.fecha_nacimiento || undefined,
+						genero: b.genero as "M" | "F" | "Otro" | undefined,
+						nivel_id: b.nivel_id,
+						rol: b.rol as "conyugue" | "descendiente",
+					}));
+				return {
+					id: t.id,
+					nombre_completo: t.nombre_completo,
+					carnet: t.carnet,
+					fecha_nacimiento: t.fecha_nacimiento || undefined,
+					genero: t.genero as "M" | "F" | "Otro" | undefined,
+					nivel_id: t.nivel_id,
+					conyugue: familiares.find(f => f.rol === "conyugue"),
+					descendientes: familiares.filter(f => f.rol === "descendiente"),
+				};
+			});
 
 			datos_especificos = {
 				tipo_ramo: "Salud",
 				datos: {
 					niveles: nivelesFormateados,
-					tipo_poliza: aseguradosFormateados.length > 1 ? "corporativo" : "individual",
+					tipo_poliza: titulares.length > 0 || contratanteSalud?.rol === "contratante" ? "corporativo" : "individual",
 					regional_asegurado_id: poliza.regional_asegurado_id || "",
 					tiene_maternidad: poliza.tiene_maternidad ?? false,
-					asegurados: aseguradosFormateados,
-					beneficiarios: beneficiariosFormateados,
+					contratante: contratanteSalud,
+					titulares,
 				},
 			};
 		}
@@ -584,69 +612,51 @@ export async function obtenerPolizaParaEdicion(
 				tipoRamo = "Sepelio";
 			}
 
-			// Cargar beneficiarios solo para Vida y Accidentes Personales
-			if (tipoRamo === "Vida") {
-				const { data: beneficiariosDB, error: errorBeneficiarios } = await supabase
-					.from("polizas_beneficiarios")
-					.select("id, nombre_completo, carnet, fecha_nacimiento, genero, nivel_id, rol")
-					.eq("poliza_id", polizaId);
-
-				if (errorBeneficiarios) {
-					throw new Error(`Error al cargar beneficiarios: ${errorBeneficiarios.message}`);
+			if (tipoRamo === "Vida" || tipoRamo === "Accidentes Personales") {
+				// contratante: 1 DB client from polizas_asegurados_nivel
+				const contratanteRec = aseguradosFormateadosNivel[0];
+				let contratanteAPVida: ContratanteAPVida | null = null;
+				if (contratanteRec) {
+					contratanteAPVida = {
+						client_id: contratanteRec.client_id,
+						client_name: contratanteRec.client_name,
+						client_ci: contratanteRec.client_ci,
+						nivel_id: contratanteRec.nivel_id,
+						rol: (contratanteRec.rol ?? "contratante-asegurado") as "contratante" | "contratante-asegurado",
+					};
 				}
 
-				const beneficiariosFormateadosVida: BeneficiarioVida[] = (beneficiariosDB || []).map(b => ({
-					id: b.id,
-					nombre_completo: b.nombre_completo,
-					carnet: b.carnet,
-					fecha_nacimiento: b.fecha_nacimiento,
-					genero: b.genero as "M" | "F" | "Otro",
-					nivel_id: b.nivel_id,
-					rol: b.rol as RolBeneficiarioVida,
+				const { data: aseguradosMinDB, error: errorAsegMin } = await supabase
+					.from("polizas_beneficiarios")
+					.select("id, nombre_completo, carnet, fecha_nacimiento, genero, nivel_id")
+					.eq("poliza_id", polizaId)
+					.eq("rol", "asegurado");
+
+				if (errorAsegMin) {
+					throw new Error(`Error al cargar asegurados: ${errorAsegMin.message}`);
+				}
+
+				const aseguradosMin: AseguradoAPVida[] = (aseguradosMinDB || []).map(a => ({
+					id: a.id,
+					nombre_completo: a.nombre_completo,
+					carnet: a.carnet,
+					fecha_nacimiento: a.fecha_nacimiento || undefined,
+					genero: a.genero as "M" | "F" | "Otro" | undefined,
+					nivel_id: a.nivel_id,
 				}));
 
 				datos_especificos = {
-					tipo_ramo: "Vida",
+					tipo_ramo: tipoRamo,
 					datos: {
 						niveles: nivelesFormateados,
-						tipo_poliza: aseguradosFormateadosNivel.length > 1 ? "corporativo" : "individual",
+						tipo_poliza: aseguradosMin.length > 0 ? "corporativo" : "individual",
 						regional_asegurado_id: poliza.regional_asegurado_id || "",
-						asegurados: aseguradosFormateadosNivel,
-						beneficiarios: beneficiariosFormateadosVida,
-					},
-				};
-			} else if (tipoRamo === "Accidentes Personales") {
-				const { data: beneficiariosDB, error: errorBeneficiarios } = await supabase
-					.from("polizas_beneficiarios")
-					.select("id, nombre_completo, carnet, fecha_nacimiento, genero, nivel_id, rol")
-					.eq("poliza_id", polizaId);
-
-				if (errorBeneficiarios) {
-					throw new Error(`Error al cargar beneficiarios: ${errorBeneficiarios.message}`);
-				}
-
-				const beneficiariosFormateadosAP: BeneficiarioSalud[] = (beneficiariosDB || []).map(b => ({
-					id: b.id,
-					nombre_completo: b.nombre_completo,
-					carnet: b.carnet,
-					fecha_nacimiento: b.fecha_nacimiento,
-					genero: b.genero as "M" | "F" | "Otro",
-					nivel_id: b.nivel_id,
-					rol: b.rol as RolBeneficiarioSalud,
-				}));
-
-				datos_especificos = {
-					tipo_ramo: "Accidentes Personales",
-					datos: {
-						niveles: nivelesFormateados,
-						tipo_poliza: aseguradosFormateadosNivel.length > 1 ? "corporativo" : "individual",
-						regional_asegurado_id: poliza.regional_asegurado_id || "",
-						asegurados: aseguradosFormateadosNivel,
-						beneficiarios: beneficiariosFormateadosAP,
+						contratante: contratanteAPVida,
+						asegurados: aseguradosMin,
 					},
 				};
 			} else {
-				// Sepelio: sin beneficiarios
+				// Sepelio: DB clients from polizas_asegurados_nivel
 				datos_especificos = {
 					tipo_ramo: "Sepelio",
 					datos: {
@@ -1184,36 +1194,85 @@ export async function actualizarPoliza(
 				}
 			}
 
-			// Insert new asegurados
-			if (datosSalud.asegurados.length > 0) {
-				const { error: errAsegurados } = await supabase
+			// Insert contratante
+			if (datosSalud.contratante) {
+				const { error: errAseg } = await supabase
 					.from("polizas_salud_asegurados")
-					.insert(datosSalud.asegurados.map(a => ({
+					.insert({
 						poliza_id: polizaId,
-						client_id: a.client_id,
-						nivel_id: a.nivel_id,
-						rol: a.rol,
-					})));
-				if (errAsegurados) {
-					return { success: false, error: `Error al guardar asegurados de salud: ${errAsegurados.message}` };
+						client_id: datosSalud.contratante.client_id,
+						nivel_id: datosSalud.contratante.nivel_id,
+						rol: datosSalud.contratante.rol,
+					});
+				if (errAseg) {
+					return { success: false, error: `Error al guardar contratante de salud: ${errAseg.message}` };
 				}
 			}
 
-			// Insert new beneficiarios
-			if (datosSalud.beneficiarios.length > 0) {
-				const { error: errBenef } = await supabase
+			// Insert titulares and their familiares
+			for (const titular of datosSalud.titulares) {
+				const { data: titularDB, error: errTit } = await supabase
 					.from("polizas_salud_beneficiarios")
-					.insert(datosSalud.beneficiarios.map(b => ({
+					.insert({
 						poliza_id: polizaId,
-						nombre_completo: b.nombre_completo,
-						carnet: b.carnet,
-						fecha_nacimiento: b.fecha_nacimiento,
-						genero: b.genero,
-						nivel_id: b.nivel_id,
-						rol: b.rol,
-					})));
-				if (errBenef) {
-					return { success: false, error: `Error al guardar beneficiarios de salud: ${errBenef.message}` };
+						nombre_completo: titular.nombre_completo,
+						carnet: titular.carnet,
+						fecha_nacimiento: titular.fecha_nacimiento || null,
+						genero: titular.genero || null,
+						nivel_id: titular.nivel_id,
+						rol: "titular",
+						titular_id: null,
+					})
+					.select("id")
+					.single();
+				if (errTit) {
+					return { success: false, error: `Error al guardar titular de salud: ${errTit.message}` };
+				}
+				const familiaresTitular: FamiliarSalud[] = [
+					...(titular.conyugue ? [titular.conyugue] : []),
+					...(titular.descendientes || []),
+				];
+				for (const familiar of familiaresTitular) {
+					const { error: errFam } = await supabase
+						.from("polizas_salud_beneficiarios")
+						.insert({
+							poliza_id: polizaId,
+							nombre_completo: familiar.nombre_completo,
+							carnet: familiar.carnet,
+							fecha_nacimiento: familiar.fecha_nacimiento || null,
+							genero: familiar.genero || null,
+							nivel_id: familiar.nivel_id,
+							rol: familiar.rol,
+							titular_id: titularDB?.id || null,
+						});
+					if (errFam) {
+						return { success: false, error: `Error al guardar familiar del titular: ${errFam.message}` };
+					}
+				}
+			}
+
+			// Insert contratante-titular's familiares (titular_id = null)
+			if (datosSalud.contratante?.rol === "contratante-titular") {
+				const familiaresContratante: FamiliarSalud[] = [
+					...(datosSalud.contratante.conyugue ? [datosSalud.contratante.conyugue] : []),
+					...(datosSalud.contratante.descendientes || []),
+				];
+				for (const familiar of familiaresContratante) {
+					const { error: errFam } = await supabase
+						.from("polizas_salud_beneficiarios")
+						.insert({
+							poliza_id: polizaId,
+							nombre_completo: familiar.nombre_completo,
+							carnet: familiar.carnet,
+							fecha_nacimiento: familiar.fecha_nacimiento || null,
+							genero: familiar.genero || null,
+							nivel_id: familiar.nivel_id,
+							rol: familiar.rol,
+							titular_id: null,
+						});
+					if (errFam) {
+						return { success: false, error: `Error al guardar familiar del contratante: ${errFam.message}` };
+					}
 				}
 			}
 		}
@@ -1277,51 +1336,65 @@ export async function actualizarPoliza(
 				}
 			}
 
-			// Insert new asegurados
-			const asegurados = datosNivel.asegurados || [];
-			if (asegurados.length > 0) {
-				const aseguradosParaInsertar = asegurados
-					.filter(a => nivelIdMap.has(a.nivel_id))
-					.map(a => ({
-						poliza_id: polizaId,
-						client_id: a.client_id,
-						nivel_id: nivelIdMap.get(a.nivel_id)!,
-						cargo: a.cargo || null,
-						rol: a.rol || null,
-					}));
-
-				if (aseguradosParaInsertar.length > 0) {
-					const { error: errAseg } = await supabase
-						.from("polizas_asegurados_nivel")
-						.insert(aseguradosParaInsertar);
-					if (errAseg) {
-						return { success: false, error: `Error al guardar asegurados: ${errAseg.message}` };
+			if (tipoRamo === "Sepelio") {
+				// Sepelio: DB clients stored in polizas_asegurados_nivel
+				const sepData = datosNivel as DatosSepelio;
+				const aseguradosSep = sepData.asegurados || [];
+				if (aseguradosSep.length > 0) {
+					const insertData = aseguradosSep
+						.filter(a => nivelIdMap.has(a.nivel_id))
+						.map(a => ({
+							poliza_id: polizaId,
+							client_id: a.client_id,
+							nivel_id: nivelIdMap.get(a.nivel_id)!,
+							cargo: a.cargo || null,
+							rol: a.rol || null,
+						}));
+					if (insertData.length > 0) {
+						const { error: errAseg } = await supabase
+							.from("polizas_asegurados_nivel")
+							.insert(insertData);
+						if (errAseg) {
+							return { success: false, error: `Error al guardar asegurados: ${errAseg.message}` };
+						}
 					}
 				}
-			}
-
-			// Insert new beneficiarios (Vida y Accidentes Personales)
-			if (tipoRamo === "Vida" || tipoRamo === "Accidentes Personales") {
-				const beneficiarios = "beneficiarios" in datosNivel ? datosNivel.beneficiarios || [] : [];
-				if (beneficiarios.length > 0) {
-					const beneficiariosParaInsertar = beneficiarios
-						.filter(b => nivelIdMap.has(b.nivel_id))
-						.map(b => ({
+			} else {
+				// Vida / Accidentes Personales: contratante in polizas_asegurados_nivel, asegurados (minimal) in polizas_beneficiarios
+				const apVidaData = datosNivel as DatosVida;
+				if (apVidaData.contratante && nivelIdMap.has(apVidaData.contratante.nivel_id)) {
+					const { error: errAseg } = await supabase
+						.from("polizas_asegurados_nivel")
+						.insert({
 							poliza_id: polizaId,
-							nombre_completo: b.nombre_completo,
-							carnet: b.carnet,
-							fecha_nacimiento: b.fecha_nacimiento,
-							genero: b.genero,
-							nivel_id: nivelIdMap.get(b.nivel_id)!,
-							rol: b.rol,
+							client_id: apVidaData.contratante.client_id,
+							nivel_id: nivelIdMap.get(apVidaData.contratante.nivel_id)!,
+							rol: apVidaData.contratante.rol,
+							cargo: null,
+						});
+					if (errAseg) {
+						return { success: false, error: `Error al guardar contratante: ${errAseg.message}` };
+					}
+				}
+				const aseguradosMin = apVidaData.asegurados || [];
+				if (aseguradosMin.length > 0) {
+					const insertData = aseguradosMin
+						.filter(a => nivelIdMap.has(a.nivel_id))
+						.map(a => ({
+							poliza_id: polizaId,
+							nombre_completo: a.nombre_completo,
+							carnet: a.carnet,
+							fecha_nacimiento: a.fecha_nacimiento || null,
+							genero: a.genero || null,
+							nivel_id: nivelIdMap.get(a.nivel_id)!,
+							rol: "asegurado",
 						}));
-
-					if (beneficiariosParaInsertar.length > 0) {
+					if (insertData.length > 0) {
 						const { error: errBenef } = await supabase
 							.from("polizas_beneficiarios")
-							.insert(beneficiariosParaInsertar);
+							.insert(insertData);
 						if (errBenef) {
-							return { success: false, error: `Error al guardar beneficiarios: ${errBenef.message}` };
+							return { success: false, error: `Error al guardar asegurados: ${errBenef.message}` };
 						}
 					}
 				}

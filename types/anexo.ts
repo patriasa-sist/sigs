@@ -2,8 +2,8 @@
 
 import type {
 	VehiculoAutomotor,
-	AseguradoSalud,
-	BeneficiarioSalud,
+	ContratanteSalud,
+	TitularSalud,
 	EquipoIndustrial,
 	NaveEmbarcacion,
 	BienAseguradoIncendio,
@@ -68,8 +68,8 @@ export type AnexoItemsCambio =
 	| { tipo_ramo: "Automotores"; items: AnexoItemChange<VehiculoAutomotor>[] }
 	| {
 			tipo_ramo: "Salud";
-			items_asegurados: AnexoItemChange<AseguradoSalud>[];
-			items_beneficiarios: AnexoItemChange<BeneficiarioSalud>[];
+			items_asegurados: AnexoItemChange<ContratanteSalud>[];
+			items_beneficiarios: AnexoItemChange<TitularSalud>[];
 	  }
 	| { tipo_ramo: "Ramos técnicos"; items: AnexoItemChange<EquipoIndustrial>[] }
 	| {
@@ -162,8 +162,8 @@ export type ItemsActualesRamo =
 	| { tipo_ramo: "Automotores"; vehiculos: (VehiculoAutomotor & { id: string })[] }
 	| {
 			tipo_ramo: "Salud";
-			asegurados: (AseguradoSalud & { id: string })[];
-			beneficiarios: (BeneficiarioSalud & { id: string })[];
+			asegurados: (ContratanteSalud & { id: string })[];
+			beneficiarios: (TitularSalud & { id: string })[];
 	  }
 	| { tipo_ramo: "Ramos técnicos"; equipos: (EquipoIndustrial & { id: string })[] }
 	| {

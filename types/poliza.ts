@@ -197,53 +197,68 @@ export type NivelSalud = {
 	monto: number; // Monto de cobertura del nivel
 };
 
-export type RolAseguradoSalud = "titular" | "conyugue" | "dependiente"; // Para clientes registrados con datos completos (salud)
+// ===== AP Y VIDA =====
+export type RolContratanteAPVida = "contratante-asegurado" | "contratante";
 
-export type RolBeneficiarioSalud = "conyugue" | "dependiente"; // Para asegurados datos mínimos sin registro completo
-
-export type RolBeneficiarioVida = "descendiente" | "conyugue" | "otro"; // Para beneficiarios de póliza de Vida (herederos del monto)
-
-// Beneficiario de póliza de Vida: persona que recibe el monto al fallecimiento del asegurado
-export type BeneficiarioVida = {
-	id: string; // UUID generado en cliente (temporal hasta guardar en DB)
-	nombre_completo: string;
-	carnet: string;
-	fecha_nacimiento?: string; // ISO date string (opcional)
-	genero?: "M" | "F" | "Otro"; // opcional
-	nivel_id: string; // Referencia al NivelCobertura
-	rol: RolBeneficiarioVida; // OBLIGATORIO: descendiente, conyugue u otro
-};
-
-export type AseguradoSalud = {
+export type ContratanteAPVida = {
 	client_id: string;
 	client_name: string;
 	client_ci: string;
-	nivel_id: string; // NUEVO: Referencia al NivelSalud
-	rol: RolAseguradoSalud; // OBLIGATORIO: contratante o titular
+	nivel_id: string;
+	rol: RolContratanteAPVida;
 };
 
-// NUEVO: Beneficiario específico de póliza de salud (persona cubierta por el seguro)
-// Diferencia con AseguradoSalud:
-//   - AseguradoSalud: Clientes registrados (contratante/titular) con todos sus datos
-//   - BeneficiarioSalud: Dependientes o cónyuges con datos mínimos
-export type BeneficiarioSalud = {
-	id: string; // UUID generado en cliente (temporal hasta guardar en DB)
+// Persona asegurada con datos mínimos (sin registro completo en sistema)
+export type AseguradoAPVida = {
+	id: string;
 	nombre_completo: string;
 	carnet: string;
-	fecha_nacimiento?: string; // ISO date string (opcional)
-	genero?: "M" | "F" | "Otro"; // opcional
-	nivel_id: string; // Referencia al NivelSalud
-	rol: RolBeneficiarioSalud; // OBLIGATORIO: dependiente o conyugue
+	fecha_nacimiento?: string;
+	genero?: "M" | "F" | "Otro";
+	nivel_id: string;
+};
+
+// ===== SALUD =====
+export type RolContratanteSalud = "contratante-titular" | "contratante";
+
+export type FamiliarSalud = {
+	id: string;
+	nombre_completo: string;
+	carnet: string;
+	fecha_nacimiento?: string;
+	genero?: "M" | "F" | "Otro";
+	nivel_id: string;
+	rol: "conyugue" | "descendiente";
+};
+
+export type TitularSalud = {
+	id: string;
+	nombre_completo: string;
+	carnet: string;
+	fecha_nacimiento?: string;
+	genero?: "M" | "F" | "Otro";
+	nivel_id: string;
+	conyugue?: FamiliarSalud;
+	descendientes: FamiliarSalud[];
+};
+
+export type ContratanteSalud = {
+	client_id: string;
+	client_name: string;
+	client_ci: string;
+	nivel_id: string;
+	rol: RolContratanteSalud;
+	conyugue?: FamiliarSalud; // solo si rol = "contratante-titular"
+	descendientes?: FamiliarSalud[]; // solo si rol = "contratante-titular"
 };
 
 export type DatosSalud = {
-	niveles: NivelSalud[]; // NUEVO: Niveles de cobertura configurados
+	niveles: NivelSalud[];
 	tipo_poliza: "individual" | "corporativo";
 	regional_asegurado_id: string;
-	tiene_maternidad: boolean; // NUEVO: Indica si la póliza incluye cobertura de maternidad
-	asegurados: AseguradoSalud[]; // MODIFICADO: Clientes registrados que contratan la póliza
-	beneficiarios: BeneficiarioSalud[]; // NUEVO: Personas cubiertas específicas de esta póliza
-	// REMOVED: suma_asegurada (ahora está en niveles)
+	tiene_maternidad: boolean;
+	contratante: ContratanteSalud | null;
+	titulares: TitularSalud[];
 };
 
 // --- INCENDIO Y ALIADOS ---
@@ -516,19 +531,19 @@ export type AseguradoConNivel = {
 };
 
 export type DatosAccidentesPersonales = {
-	niveles: NivelCobertura[]; // Configurados en paso 2.1
+	niveles: NivelCobertura[];
 	tipo_poliza: "individual" | "corporativo";
 	regional_asegurado_id: string;
-	asegurados: AseguradoConNivel[];
-	beneficiarios: BeneficiarioSalud[]; // Dependientes/cónyuges cubiertos
+	contratante: ContratanteAPVida | null;
+	asegurados: AseguradoAPVida[];
 };
 
 export type DatosVida = {
-	niveles: NivelCobertura[]; // Configurados en paso 2.1
+	niveles: NivelCobertura[];
 	tipo_poliza: "individual" | "corporativo";
 	regional_asegurado_id: string;
-	asegurados: AseguradoConNivel[];
-	beneficiarios: BeneficiarioVida[]; // Descendientes/cónyuges/otros que reciben el monto al fallecimiento
+	contratante: ContratanteAPVida | null;
+	asegurados: AseguradoAPVida[];
 };
 
 export type DatosSepelio = {

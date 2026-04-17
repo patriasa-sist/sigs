@@ -12,15 +12,25 @@ import {
 	Settings,
 	UserPlus,
 	Edit,
+	UserCheck,
+	ChevronDown,
+	ChevronUp,
 } from "lucide-react";
-import type { DatosSalud, AseguradoSalud, NivelSalud, BeneficiarioSalud, BeneficiarioVida, AseguradoSeleccionado } from "@/types/poliza";
+import type {
+	DatosSalud,
+	ContratanteSalud,
+	TitularSalud,
+	FamiliarSalud,
+	NivelSalud,
+	AseguradoSeleccionado,
+} from "@/types/poliza";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { BuscadorClientes } from "../BuscadorClientes";
-import { BeneficiarioModal } from "./BeneficiarioModal";
+import { BeneficiarioModal, type DatosPersonaMinima } from "./BeneficiarioModal";
 
 type Props = {
 	datos: DatosSalud | null;
@@ -32,8 +42,12 @@ type Props = {
 	onAnterior: () => void;
 };
 
-// Sub-paso interno: 2.1 o 3
 type SubPaso = "niveles" | "principal";
+
+// Para el modal de familiares, indica a qué grupo pertenece (contratante o un titular)
+type ContextoFamiliar =
+	| { tipo: "contratante" }
+	| { tipo: "titular"; titularId: string };
 
 export function SaludForm({
 	datos,
@@ -44,248 +58,310 @@ export function SaludForm({
 	onSiguiente,
 	onAnterior,
 }: Props) {
-	// Estado del sub-paso actual
 	const [subPaso, setSubPaso] = useState<SubPaso>(
 		datos?.niveles && datos.niveles.length > 0 ? "principal" : "niveles",
 	);
 
-	// ===== PASO 2.1: NIVELES DE COBERTURA =====
+	// ===== PASO 2.1: NIVELES =====
 	const [niveles, setNiveles] = useState<NivelSalud[]>(datos?.niveles || []);
 	const [nivelEditando, setNivelEditando] = useState<NivelSalud | null>(null);
 	const [nombreNivel, setNombreNivel] = useState("");
 	const [montoNivel, setMontoNivel] = useState<number>(0);
 
-	// ===== PASO 3: FORMULARIO PRINCIPAL =====
+	// ===== PASO 3: PRINCIPAL =====
 	const [tipoPoliza, setTipoPoliza] = useState<"individual" | "corporativo">(datos?.tipo_poliza || "individual");
 	const [regionalId, setRegionalId] = useState<string>(datos?.regional_asegurado_id || "");
 	const [tieneMaternidad, setTieneMaternidad] = useState<boolean>(datos?.tiene_maternidad || false);
-	const [asegurados, setAsegurados] = useState<AseguradoSalud[]>(datos?.asegurados || []);
-	const [beneficiarios, setBeneficiarios] = useState<BeneficiarioSalud[]>(datos?.beneficiarios || []);
-	const [mostrarBuscador, setMostrarBuscador] = useState(false);
-	const [mostrarModalBeneficiario, setMostrarModalBeneficiario] = useState(false);
-	const [beneficiarioEditando, setBeneficiarioEditando] = useState<BeneficiarioSalud | null>(null);
+	const [contratante, setContratante] = useState<ContratanteSalud | null>(datos?.contratante ?? null);
+	const [titulares, setTitulares] = useState<TitularSalud[]>(datos?.titulares || []);
+
+	// UI state
+	const [mostrarBuscadorContratante, setMostrarBuscadorContratante] = useState(false);
+	const [mostrarModalTitular, setMostrarModalTitular] = useState(false);
+	const [titularEditando, setTitularEditando] = useState<TitularSalud | null>(null);
+	const [mostrarModalFamiliar, setMostrarModalFamiliar] = useState(false);
+	const [familiarEditando, setFamiliarEditando] = useState<FamiliarSalud | null>(null);
+	const [contextoFamiliar, setContextoFamiliar] = useState<ContextoFamiliar | null>(null);
+	const [titularesExpandidos, setTitularesExpandidos] = useState<Set<string>>(new Set());
 	const [errores, setErrores] = useState<Record<string, string>>({});
 
-	// ===== FUNCIONES PASO 2.1: NIVELES =====
+	// ===== FUNCIONES NIVELES =====
 	const crearNuevoNivel = () => {
-		const numeroNivel = niveles.length + 1;
-		setNivelEditando({
-			id: crypto.randomUUID(),
-			nombre: `Nivel ${numeroNivel}`,
-			monto: 0,
-		});
-		setNombreNivel(`Nivel ${numeroNivel}`);
+		const n = niveles.length + 1;
+		setNivelEditando({ id: crypto.randomUUID(), nombre: `Nivel ${n}`, monto: 0 });
+		setNombreNivel(`Nivel ${n}`);
 		setMontoNivel(0);
 	};
 
 	const guardarNivel = () => {
 		if (!nivelEditando) return;
+		const errs: Record<string, string> = {};
+		if (!nombreNivel.trim()) errs.nombre_nivel = "El nombre es obligatorio";
+		if (montoNivel <= 0) errs.monto_nivel = "El monto debe ser mayor a 0";
+		if (Object.keys(errs).length > 0) { setErrores(errs); return; }
 
-		const nuevosErrores: Record<string, string> = {};
-
-		if (!nombreNivel || nombreNivel.trim() === "") {
-			nuevosErrores.nombre_nivel = "El nombre del nivel es obligatorio";
-		}
-
-		if (montoNivel <= 0) {
-			nuevosErrores.monto_nivel = "El monto debe ser mayor a 0";
-		}
-
-		if (Object.keys(nuevosErrores).length > 0) {
-			setErrores(nuevosErrores);
-			return;
-		}
-
-		// Actualizar nivel
-		const nivelActualizado: NivelSalud = {
-			...nivelEditando,
-			nombre: nombreNivel,
-			monto: montoNivel,
-		};
-
-		// Agregar o actualizar nivel
-		const index = niveles.findIndex((n) => n.id === nivelEditando.id);
-		if (index >= 0) {
-			// Actualizar existente
-			const nuevosNiveles = [...niveles];
-			nuevosNiveles[index] = nivelActualizado;
-			setNiveles(nuevosNiveles);
+		const actualizado: NivelSalud = { ...nivelEditando, nombre: nombreNivel, monto: montoNivel };
+		const idx = niveles.findIndex((n) => n.id === nivelEditando.id);
+		if (idx >= 0) {
+			const arr = [...niveles]; arr[idx] = actualizado; setNiveles(arr);
 		} else {
-			// Agregar nuevo
-			setNiveles([...niveles, nivelActualizado]);
+			setNiveles([...niveles, actualizado]);
 		}
-
-		setNivelEditando(null);
-		setNombreNivel("");
-		setMontoNivel(0);
-		setErrores({});
+		setNivelEditando(null); setNombreNivel(""); setMontoNivel(0); setErrores({});
 	};
 
 	const editarNivel = (nivel: NivelSalud) => {
-		setNivelEditando(nivel);
-		setNombreNivel(nivel.nombre);
-		setMontoNivel(nivel.monto);
+		setNivelEditando(nivel); setNombreNivel(nivel.nombre); setMontoNivel(nivel.monto);
 	};
 
 	const eliminarNivel = (id: string) => {
-		if (confirm("¿Está seguro de eliminar este nivel?")) {
-			setNiveles(niveles.filter((n) => n.id !== id));
-		}
+		if (confirm("¿Eliminar este nivel?")) setNiveles(niveles.filter((n) => n.id !== id));
 	};
 
 	const continuarAPrincipal = () => {
-		if (niveles.length === 0) {
-			setErrores({ general: "Debe crear al menos un nivel de cobertura" });
-			return;
-		}
-
-		setErrores({});
-		setSubPaso("principal");
+		if (niveles.length === 0) { setErrores({ general: "Debe crear al menos un nivel de cobertura" }); return; }
+		setErrores({}); setSubPaso("principal");
 	};
 
-	// ===== FUNCIONES PASO 3: PRINCIPAL =====
-	const agregarAsegurado = (cliente: { id: string; nombre: string; ci: string }) => {
-		// Verificar que no esté duplicado
-		if (asegurados.some((a) => a.client_id === cliente.id)) {
-			alert("Este cliente ya fue agregado");
-			return;
-		}
-
-		// Agregar con el primer nivel y rol titular por defecto
-		setAsegurados([
-			...asegurados,
-			{
-				client_id: cliente.id,
-				client_name: cliente.nombre,
-				client_ci: cliente.ci,
-				nivel_id: niveles[0]?.id || "",
-				rol: "titular",
-			},
-		]);
-		setMostrarBuscador(false);
+	// ===== FUNCIONES CONTRATANTE =====
+	const seleccionarContratante = (cliente: { id: string; nombre: string; ci: string }) => {
+		setContratante({
+			client_id: cliente.id,
+			client_name: cliente.nombre,
+			client_ci: cliente.ci,
+			nivel_id: niveles[0]?.id || "",
+			rol: "contratante-titular",
+			conyugue: undefined,
+			descendientes: [],
+		});
+		setMostrarBuscadorContratante(false);
 	};
 
-	const cambiarNivel = (clientId: string, nivelId: string) => {
-		setAsegurados(asegurados.map((a) => (a.client_id === clientId ? { ...a, nivel_id: nivelId } : a)));
-	};
+	const eliminarContratante = () => setContratante(null);
 
-	const cambiarRol = (clientId: string, rol: "titular" | "conyugue" | "dependiente") => {
-		setAsegurados(asegurados.map((a) => (a.client_id === clientId ? { ...a, rol } : a)));
-	};
+	// ===== FUNCIONES TITULARES =====
+	const abrirModalTitular = () => { setTitularEditando(null); setMostrarModalTitular(true); };
+	const editarTitular = (t: TitularSalud) => { setTitularEditando(t); setMostrarModalTitular(true); };
 
-	const eliminarAsegurado = (clientId: string) => {
-		setAsegurados(asegurados.filter((a) => a.client_id !== clientId));
-	};
-
-	// ===== FUNCIONES BENEFICIARIOS =====
-	const abrirModalBeneficiario = () => {
-		setBeneficiarioEditando(null);
-		setMostrarModalBeneficiario(true);
-	};
-
-	const abrirModalEditarBeneficiario = (beneficiario: BeneficiarioSalud) => {
-		setBeneficiarioEditando(beneficiario);
-		setMostrarModalBeneficiario(true);
-	};
-
-	const guardarBeneficiario = (beneficiario: BeneficiarioSalud | BeneficiarioVida) => {
-		const b = beneficiario as BeneficiarioSalud;
-		if (beneficiarioEditando) {
-			// Editar existente
-			setBeneficiarios(beneficiarios.map((existing) => (existing.id === beneficiarioEditando.id ? b : existing)));
+	const guardarTitular = (datos: DatosPersonaMinima) => {
+		if (titularEditando) {
+			setTitulares(titulares.map((t) =>
+				t.id === titularEditando.id
+					? { ...t, nombre_completo: datos.nombre_completo, carnet: datos.carnet, fecha_nacimiento: datos.fecha_nacimiento, genero: datos.genero, nivel_id: datos.nivel_id }
+					: t,
+			));
 		} else {
-			// Agregar nuevo
-			setBeneficiarios([...beneficiarios, b]);
+			const nuevo: TitularSalud = {
+				id: datos.id,
+				nombre_completo: datos.nombre_completo,
+				carnet: datos.carnet,
+				fecha_nacimiento: datos.fecha_nacimiento,
+				genero: datos.genero,
+				nivel_id: datos.nivel_id,
+				conyugue: undefined,
+				descendientes: [],
+			};
+			setTitulares([...titulares, nuevo]);
+			setTitularesExpandidos((prev) => new Set([...prev, nuevo.id]));
 		}
-		setMostrarModalBeneficiario(false);
-		setBeneficiarioEditando(null);
+		setMostrarModalTitular(false); setTitularEditando(null);
 	};
 
-	const eliminarBeneficiario = (id: string) => {
-		if (confirm("¿Está seguro de eliminar este beneficiario?")) {
-			setBeneficiarios(beneficiarios.filter((b) => b.id !== id));
+	const eliminarTitular = (id: string) => {
+		if (confirm("¿Eliminar este titular y todos sus familiares?")) {
+			setTitulares(titulares.filter((t) => t.id !== id));
 		}
 	};
 
-	const cambiarNivelBeneficiario = (beneficiarioId: string, nivelId: string) => {
-		setBeneficiarios(beneficiarios.map((b) => (b.id === beneficiarioId ? { ...b, nivel_id: nivelId } : b)));
+	const toggleExpandirTitular = (id: string) => {
+		setTitularesExpandidos((prev) => {
+			const next = new Set(prev);
+			if (next.has(id)) next.delete(id); else next.add(id);
+			return next;
+		});
+	};
+
+	// ===== FUNCIONES FAMILIARES =====
+	const abrirModalFamiliarContratante = (familiar?: FamiliarSalud) => {
+		setFamiliarEditando(familiar ?? null);
+		setContextoFamiliar({ tipo: "contratante" });
+		setMostrarModalFamiliar(true);
+	};
+
+	const abrirModalFamiliarTitular = (titularId: string, familiar?: FamiliarSalud) => {
+		setFamiliarEditando(familiar ?? null);
+		setContextoFamiliar({ tipo: "titular", titularId });
+		setMostrarModalFamiliar(true);
+	};
+
+	const guardarFamiliar = (datos: DatosPersonaMinima) => {
+		const familiar: FamiliarSalud = {
+			id: datos.id,
+			nombre_completo: datos.nombre_completo,
+			carnet: datos.carnet,
+			fecha_nacimiento: datos.fecha_nacimiento,
+			genero: datos.genero,
+			nivel_id: datos.nivel_id,
+			rol: (datos.rol ?? "descendiente") as "conyugue" | "descendiente",
+		};
+
+		if (!contextoFamiliar) return;
+
+		if (contextoFamiliar.tipo === "contratante" && contratante) {
+			if (familiarEditando) {
+				if (familiarEditando.rol === "conyugue") {
+					setContratante({ ...contratante, conyugue: familiar.rol === "conyugue" ? familiar : undefined });
+				} else {
+					setContratante({
+						...contratante,
+						descendientes: (contratante.descendientes || []).map((d) => d.id === familiarEditando.id ? familiar : d),
+					});
+				}
+			} else if (familiar.rol === "conyugue") {
+				setContratante({ ...contratante, conyugue: familiar });
+			} else {
+				setContratante({ ...contratante, descendientes: [...(contratante.descendientes || []), familiar] });
+			}
+		} else if (contextoFamiliar.tipo === "titular") {
+			const titularId = contextoFamiliar.titularId;
+			setTitulares(titulares.map((t) => {
+				if (t.id !== titularId) return t;
+				if (familiarEditando) {
+					if (familiarEditando.rol === "conyugue") {
+						return { ...t, conyugue: familiar.rol === "conyugue" ? familiar : undefined };
+					} else {
+						return { ...t, descendientes: t.descendientes.map((d) => d.id === familiarEditando.id ? familiar : d) };
+					}
+				} else if (familiar.rol === "conyugue") {
+					return { ...t, conyugue: familiar };
+				} else {
+					return { ...t, descendientes: [...t.descendientes, familiar] };
+				}
+			}));
+		}
+
+		setMostrarModalFamiliar(false); setFamiliarEditando(null); setContextoFamiliar(null);
+	};
+
+	const eliminarFamiliarContratante = (familiar: FamiliarSalud) => {
+		if (!contratante) return;
+		if (familiar.rol === "conyugue") {
+			setContratante({ ...contratante, conyugue: undefined });
+		} else {
+			setContratante({ ...contratante, descendientes: (contratante.descendientes || []).filter((d) => d.id !== familiar.id) });
+		}
+	};
+
+	const eliminarFamiliarTitular = (titularId: string, familiar: FamiliarSalud) => {
+		setTitulares(titulares.map((t) => {
+			if (t.id !== titularId) return t;
+			if (familiar.rol === "conyugue") return { ...t, conyugue: undefined };
+			return { ...t, descendientes: t.descendientes.filter((d) => d.id !== familiar.id) };
+		}));
 	};
 
 	const handleContinuar = () => {
-		const nuevosErrores: Record<string, string> = {};
-
-		if (!regionalId) {
-			nuevosErrores.regional = "Debe seleccionar una regional";
+		const errs: Record<string, string> = {};
+		if (!regionalId) errs.regional = "Debe seleccionar una regional";
+		if (!contratante) {
+			errs.contratante = "Debe seleccionar un contratante";
+		} else {
+			if (!contratante.nivel_id) errs.contratante = "El contratante debe tener un nivel asignado";
+			if (contratante.rol === "contratante" && titulares.length === 0)
+				errs.titulares = "Si el contratante no es titular, debe agregar al menos un titular";
 		}
+		const sinNivel = titulares.filter((t) => !t.nivel_id);
+		if (sinNivel.length > 0) errs.titulares = "Todos los titulares deben tener un nivel asignado";
+		if (Object.keys(errs).length > 0) { setErrores(errs); return; }
 
-		// Validar que haya al menos un asegurado
-		if (asegurados.length === 0) {
-			nuevosErrores.asegurados = "Debe agregar al menos un asegurado";
-		}
-
-		// Validar que todos los asegurados tengan un nivel y rol asignado
-		const aseguradosSinNivel = asegurados.filter((a) => !a.nivel_id);
-		if (aseguradosSinNivel.length > 0) {
-			nuevosErrores.asegurados = "Todos los asegurados deben tener un nivel asignado";
-		}
-
-		const aseguradosSinRol = asegurados.filter((a) => !a.rol);
-		if (aseguradosSinRol.length > 0) {
-			nuevosErrores.asegurados = "Todos los asegurados deben tener un rol asignado";
-		}
-
-		// Validar que todos los asegurados datos mínimos tengan un nivel y rol asignado
-		const beneficiariosSinNivel = beneficiarios.filter((b) => !b.nivel_id);
-		if (beneficiariosSinNivel.length > 0) {
-			nuevosErrores.beneficiarios = "Todos los asegurados datos mínimos deben tener un nivel asignado";
-		}
-
-		const beneficiariosSinRol = beneficiarios.filter((b) => !b.rol);
-		if (beneficiariosSinRol.length > 0) {
-			nuevosErrores.beneficiarios =
-				"Todos los asegurados datos mínimos deben tener un rol asignado (Cónyuge o Dependiente)";
-		}
-
-		if (Object.keys(nuevosErrores).length > 0) {
-			setErrores(nuevosErrores);
-			return;
-		}
-
-		// Guardar datos
-		const datosSalud: DatosSalud = {
-			niveles,
-			tipo_poliza: tipoPoliza,
-			regional_asegurado_id: regionalId,
-			tiene_maternidad: tieneMaternidad,
-			asegurados,
-			beneficiarios,
-		};
-
-		onChange(datosSalud);
+		onChange({ niveles, tipo_poliza: tipoPoliza, regional_asegurado_id: regionalId, tiene_maternidad: tieneMaternidad, contratante: contratante!, titulares });
 		onSiguiente();
 	};
 
-	const volverANiveles = () => {
-		setSubPaso("niveles");
-	};
-
-	// ===== RENDERIZADO =====
+	const volverANiveles = () => setSubPaso("niveles");
 	const esCompleto = datos !== null;
 
-	// SUB-PASO 2.1: CONFIGURACIÓN DE NIVELES
+	// Helper: renderizar la lista de familiares de un grupo (contratante o titular)
+	const renderFamiliares = (
+		conyugue: FamiliarSalud | undefined,
+		descendientes: FamiliarSalud[],
+		onAgregarConyugue: () => void,
+		onAgregarDescendiente: () => void,
+		onEditarFamiliar: (f: FamiliarSalud) => void,
+		onEliminarFamiliar: (f: FamiliarSalud) => void,
+	) => (
+		<div className="mt-3 pl-4 border-l-2 border-gray-200 space-y-2">
+			{/* Cónyuge */}
+			<div className="flex items-center justify-between">
+				<p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Cónyuge</p>
+				{!conyugue && (
+					<Button variant="ghost" size="sm" onClick={onAgregarConyugue} className="h-7 text-xs">
+						<Plus className="mr-1 h-3 w-3" />Agregar Cónyuge
+					</Button>
+				)}
+			</div>
+			{conyugue ? (
+				<div className="flex items-center justify-between p-2 bg-pink-50 border border-pink-200 rounded">
+					<div>
+						<p className="text-sm font-medium text-gray-800">{conyugue.nombre_completo}</p>
+						<p className="text-xs text-gray-500">CI: {conyugue.carnet} · Nivel: {niveles.find((n) => n.id === conyugue.nivel_id)?.nombre ?? "—"}</p>
+					</div>
+					<div className="flex gap-1">
+						<Button variant="ghost" size="sm" onClick={() => onEditarFamiliar(conyugue)} className="h-7 w-7 p-0">
+							<Edit className="h-3.5 w-3.5" />
+						</Button>
+						<Button variant="ghost" size="sm" onClick={() => onEliminarFamiliar(conyugue)} className="h-7 w-7 p-0">
+							<Trash2 className="h-3.5 w-3.5 text-red-500" />
+						</Button>
+					</div>
+				</div>
+			) : (
+				<p className="text-xs text-gray-400 italic">Sin cónyuge</p>
+			)}
+
+			{/* Descendientes */}
+			<div className="flex items-center justify-between mt-1">
+				<p className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+					Descendientes ({descendientes.length})
+				</p>
+				<Button variant="ghost" size="sm" onClick={onAgregarDescendiente} className="h-7 text-xs">
+					<Plus className="mr-1 h-3 w-3" />Agregar Descendiente
+				</Button>
+			</div>
+			{descendientes.length > 0 ? (
+				<div className="space-y-1">
+					{descendientes.map((d) => (
+						<div key={d.id} className="flex items-center justify-between p-2 bg-green-50 border border-green-200 rounded">
+							<div>
+								<p className="text-sm font-medium text-gray-800">{d.nombre_completo}</p>
+								<p className="text-xs text-gray-500">CI: {d.carnet} · Nivel: {niveles.find((n) => n.id === d.nivel_id)?.nombre ?? "—"}</p>
+							</div>
+							<div className="flex gap-1">
+								<Button variant="ghost" size="sm" onClick={() => onEditarFamiliar(d)} className="h-7 w-7 p-0">
+									<Edit className="h-3.5 w-3.5" />
+								</Button>
+								<Button variant="ghost" size="sm" onClick={() => onEliminarFamiliar(d)} className="h-7 w-7 p-0">
+									<Trash2 className="h-3.5 w-3.5 text-red-500" />
+								</Button>
+							</div>
+						</div>
+					))}
+				</div>
+			) : (
+				<p className="text-xs text-gray-400 italic">Sin descendientes</p>
+			)}
+		</div>
+	);
+
+	// ===================== SUB-PASO 2.1: NIVELES =====================
 	if (subPaso === "niveles") {
 		return (
 			<div className="bg-white rounded-lg shadow-sm border p-6">
 				<div className="flex items-center justify-between mb-6">
 					<div>
-						<h2 className="text-xl font-semibold text-gray-900">
-							Paso 2.1: Configurar Niveles de Cobertura (Salud)
-						</h2>
-						<p className="text-sm text-gray-600 mt-1">
-							Defina los niveles de cobertura para las pólizas de salud
-						</p>
+						<h2 className="text-xl font-semibold text-gray-900">Paso 2.1: Configurar Niveles de Cobertura (Salud)</h2>
+						<p className="text-sm text-gray-600 mt-1">Defina los niveles de cobertura para las pólizas de salud</p>
 					</div>
-
 					{niveles.length > 0 && (
 						<div className="flex items-center gap-2 text-green-600">
 							<CheckCircle2 className="h-5 w-5" />
@@ -294,7 +370,6 @@ export function SaludForm({
 					)}
 				</div>
 
-				{/* Lista de niveles creados */}
 				{niveles.length > 0 && (
 					<div className="mb-6">
 						<h3 className="text-sm font-medium text-gray-700 mb-3">Niveles creados:</h3>
@@ -308,9 +383,7 @@ export function SaludForm({
 										</p>
 									</div>
 									<div className="flex gap-2">
-										<Button variant="outline" size="sm" onClick={() => editarNivel(nivel)}>
-											Editar
-										</Button>
+										<Button variant="outline" size="sm" onClick={() => editarNivel(nivel)}>Editar</Button>
 										<Button variant="ghost" size="sm" onClick={() => eliminarNivel(nivel.id)}>
 											<Trash2 className="h-4 w-4" />
 										</Button>
@@ -321,33 +394,23 @@ export function SaludForm({
 					</div>
 				)}
 
-				{/* Formulario de nivel (crear/editar) */}
 				{nivelEditando && (
 					<div className="mb-6 p-6 border-2 border-primary rounded-lg bg-blue-50">
 						<h3 className="text-lg font-semibold text-gray-900 mb-4">
 							{niveles.some((n) => n.id === nivelEditando.id) ? "Editar" : "Crear"} Nivel
 						</h3>
-
 						<div className="space-y-4">
 							<div className="space-y-2">
 								<Label htmlFor="nombre_nivel">Nombre del nivel</Label>
 								<Input
 									id="nombre_nivel"
 									value={nombreNivel}
-									onChange={(e) => {
-										setNombreNivel(e.target.value);
-										if (errores.nombre_nivel) {
-											// eslint-disable-next-line @typescript-eslint/no-unused-vars
-											const { nombre_nivel: _removed, ...rest } = errores;
-											setErrores(rest);
-										}
-									}}
+									onChange={(e) => { setNombreNivel(e.target.value); if (errores.nombre_nivel) { const { nombre_nivel: _n, ...rest } = errores; setErrores(rest); } }}
 									placeholder="Ej: Nivel 1, Nivel Básico, Nivel Premium, etc."
 									className={errores.nombre_nivel ? "border-red-500" : ""}
 								/>
 								{errores.nombre_nivel && <p className="text-sm text-red-600">{errores.nombre_nivel}</p>}
 							</div>
-
 							<div className="space-y-2">
 								<Label htmlFor="monto_nivel">Monto de Cobertura</Label>
 								<Input
@@ -356,39 +419,27 @@ export function SaludForm({
 									min="0"
 									step="0.01"
 									value={montoNivel || ""}
-									onChange={(e) => {
-										setMontoNivel(parseFloat(e.target.value) || 0);
-										if (errores.monto_nivel) {
-											// eslint-disable-next-line @typescript-eslint/no-unused-vars
-											const { monto_nivel: _removed, ...rest } = errores;
-											setErrores(rest);
-										}
-									}}
+									onChange={(e) => { setMontoNivel(parseFloat(e.target.value) || 0); if (errores.monto_nivel) { const { monto_nivel: _m, ...rest } = errores; setErrores(rest); } }}
 									placeholder="0.00"
 									className={errores.monto_nivel ? "border-red-500" : ""}
 								/>
 								{errores.monto_nivel && <p className="text-sm text-red-600">{errores.monto_nivel}</p>}
 								<p className="text-xs text-gray-500">Monto máximo de cobertura para este nivel</p>
 							</div>
-
 							{errores.general && (
 								<div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded">
 									<AlertTriangle className="h-4 w-4 text-red-600" />
 									<p className="text-sm text-red-600">{errores.general}</p>
 								</div>
 							)}
-
 							<div className="flex justify-end gap-2">
-								<Button variant="outline" onClick={() => setNivelEditando(null)}>
-									Cancelar
-								</Button>
+								<Button variant="outline" onClick={() => setNivelEditando(null)}>Cancelar</Button>
 								<Button onClick={guardarNivel}>Guardar Nivel</Button>
 							</div>
 						</div>
 					</div>
 				)}
 
-				{/* Botón crear nuevo nivel */}
 				{!nivelEditando && (
 					<Button onClick={crearNuevoNivel} variant="outline" className="w-full mb-6">
 						<Plus className="mr-2 h-4 w-4" />
@@ -403,13 +454,11 @@ export function SaludForm({
 					</div>
 				)}
 
-				{/* Botones de navegación */}
 				<div className="flex justify-between pt-6 border-t">
 					<Button variant="outline" onClick={onAnterior}>
 						<ChevronLeft className="mr-2 h-5 w-5" />
 						Anterior
 					</Button>
-
 					<Button onClick={continuarAPrincipal} disabled={niveles.length === 0}>
 						Continuar al Formulario Principal
 						<ChevronRight className="ml-2 h-5 w-5" />
@@ -419,17 +468,16 @@ export function SaludForm({
 		);
 	}
 
-	// SUB-PASO 3: FORMULARIO PRINCIPAL
+	// ===================== SUB-PASO 3: FORMULARIO PRINCIPAL =====================
 	return (
 		<div className="bg-white rounded-lg shadow-sm border p-6">
 			<div className="flex items-center justify-between mb-6">
 				<div>
-					<h2 className="text-xl font-semibold text-gray-900">Paso 3: Datos Específicos - Salud</h2>
+					<h2 className="text-xl font-semibold text-gray-900">Paso 3: Datos Específicos — Salud</h2>
 					<p className="text-sm text-gray-600 mt-1">
-						Complete la información de los asegurados y sus niveles de cobertura
+						Complete la información de contratante y titulares
 					</p>
 				</div>
-
 				{esCompleto && (
 					<div className="flex items-center gap-2 text-green-600">
 						<CheckCircle2 className="h-5 w-5" />
@@ -438,65 +486,45 @@ export function SaludForm({
 				)}
 			</div>
 
-			{/* Botón para volver a editar niveles */}
+			{/* Niveles configurados */}
 			<div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
 				<div className="flex items-center justify-between">
 					<div className="flex items-center gap-2">
 						<Settings className="h-5 w-5 text-blue-600" />
 						<div>
-							<p className="text-sm font-medium text-gray-900">
-								{niveles.length} nivel(es) de cobertura configurado(s)
-							</p>
-							<p className="text-xs text-gray-600">{niveles.map((n) => n.nombre).join(", ")}</p>
+							<p className="text-sm font-medium text-gray-900">{niveles.length} nivel(es) configurado(s)</p>
+							<p className="text-xs text-gray-600">{niveles.map((n) => `${n.nombre} (${moneda} ${n.monto.toLocaleString()})`).join(", ")}</p>
 						</div>
 					</div>
-					<Button variant="outline" size="sm" onClick={volverANiveles}>
-						Editar Niveles
-					</Button>
+					<Button variant="outline" size="sm" onClick={volverANiveles}>Editar Niveles</Button>
 				</div>
 			</div>
 
 			<div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-				{/* Tipo de Póliza */}
 				<div className="space-y-2">
-					<Label htmlFor="tipo_poliza">
-						Tipo de Póliza <span className="text-red-500">*</span>
-					</Label>
-					<Select
-						value={tipoPoliza}
-						onValueChange={(value: "individual" | "corporativo") => setTipoPoliza(value)}
-					>
-						<SelectTrigger>
-							<SelectValue />
-						</SelectTrigger>
+					<Label htmlFor="tipo_poliza">Tipo de Póliza <span className="text-red-500">*</span></Label>
+					<Select value={tipoPoliza} onValueChange={(v: "individual" | "corporativo") => setTipoPoliza(v)}>
+						<SelectTrigger><SelectValue /></SelectTrigger>
 						<SelectContent>
 							<SelectItem value="individual">Individual</SelectItem>
 							<SelectItem value="corporativo">Corporativo</SelectItem>
 						</SelectContent>
 					</Select>
 				</div>
-
-				{/* Regional */}
 				<div className="space-y-2">
-					<Label htmlFor="regional">
-						Regional Asegurado <span className="text-red-500">*</span>
-					</Label>
+					<Label htmlFor="regional">Regional Asegurado <span className="text-red-500">*</span></Label>
 					<Select value={regionalId} onValueChange={setRegionalId}>
 						<SelectTrigger className={errores.regional ? "border-red-500" : ""}>
 							<SelectValue placeholder="Seleccione una regional" />
 						</SelectTrigger>
 						<SelectContent>
-							{regionales.map((regional) => (
-								<SelectItem key={regional.id} value={regional.id}>
-									{regional.nombre}
-								</SelectItem>
+							{regionales.map((r) => (
+								<SelectItem key={r.id} value={r.id}>{r.nombre}</SelectItem>
 							))}
 						</SelectContent>
 					</Select>
 					{errores.regional && <p className="text-sm text-red-600">{errores.regional}</p>}
 				</div>
-
-				{/* Tiene Maternidad */}
 				<div className="space-y-2 md:col-span-2">
 					<div className="flex items-center space-x-2">
 						<Checkbox
@@ -508,330 +536,291 @@ export function SaludForm({
 							¿Incluye cobertura de maternidad?
 						</Label>
 					</div>
-					<p className="text-xs text-gray-500 ml-6">
-						Marque esta casilla si la póliza incluye cobertura para maternidad
-					</p>
 				</div>
 			</div>
 
-			{/* Asegurados (clientes registrados) */}
+			{/* ── CONTRATANTE ── */}
 			<div className="space-y-4 mb-6">
 				<div className="flex items-center justify-between">
 					<div>
-						<Label className="text-base">Asegurados</Label>
+						<Label className="text-base">Contratante <span className="text-red-500">*</span></Label>
 						<p className="text-sm text-gray-600 mt-1">
-							Clientes registrados en el sistema asegurados en esta póliza
+							Cliente registrado que contrata la póliza (requiere datos completos)
 						</p>
 					</div>
-					<Button onClick={() => setMostrarBuscador(true)} disabled={mostrarBuscador}>
-						<Plus className="mr-2 h-4 w-4" />
-						Agregar Cliente
-					</Button>
+					{!contratante && (
+						<Button onClick={() => setMostrarBuscadorContratante(true)} disabled={mostrarBuscadorContratante}>
+							<Plus className="mr-2 h-4 w-4" />
+							Seleccionar Contratante
+						</Button>
+					)}
 				</div>
 
-				{/* Sugerencia: agregar asegurado principal de la póliza */}
-				{aseguradoPrincipal && !asegurados.some((a) => a.client_id === aseguradoPrincipal.id) && (
+				{errores.contratante && (
+					<div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded">
+						<AlertTriangle className="h-4 w-4 text-red-600" />
+						<p className="text-sm text-red-600">{errores.contratante}</p>
+					</div>
+				)}
+
+				{aseguradoPrincipal && !contratante && (
 					<div className="p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between">
 						<div className="flex items-center gap-2">
-							<Users className="h-4 w-4 text-blue-600" />
+							<UserCheck className="h-4 w-4 text-blue-600" />
 							<span className="text-sm text-blue-900">
-								<strong>{aseguradoPrincipal.nombre_completo}</strong> ({aseguradoPrincipal.documento}) —
-								Asegurado de la póliza
+								<strong>{aseguradoPrincipal.nombre_completo}</strong> ({aseguradoPrincipal.documento}) — Asegurado de la póliza
 							</span>
 						</div>
-						<Button
-							size="sm"
-							variant="outline"
-							onClick={() =>
-								agregarAsegurado({
-									id: aseguradoPrincipal.id,
-									nombre: aseguradoPrincipal.nombre_completo,
-									ci: aseguradoPrincipal.documento,
-								})
-							}
+						<Button size="sm" variant="outline"
+							onClick={() => seleccionarContratante({ id: aseguradoPrincipal.id, nombre: aseguradoPrincipal.nombre_completo, ci: aseguradoPrincipal.documento })}
 						>
 							<Plus className="mr-1 h-3 w-3" />
-							Agregar
+							Usar como Contratante
 						</Button>
 					</div>
 				)}
 
-				{errores.asegurados && (
-					<div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded">
-						<AlertTriangle className="h-4 w-4 text-red-600" />
-						<p className="text-sm text-red-600">{errores.asegurados}</p>
-					</div>
-				)}
-
-				{/* Buscador de clientes */}
-				{mostrarBuscador && (
+				{mostrarBuscadorContratante && (
 					<div className="p-4 border-2 border-primary rounded-lg bg-blue-50">
-						<div className="flex items-center justify-between mb-4">
-							<h3 className="font-semibold text-gray-900">Buscar Cliente</h3>
-						</div>
+						<h3 className="font-semibold text-gray-900 mb-4">Buscar Contratante</h3>
 						<BuscadorClientes
-							onSeleccionar={agregarAsegurado}
-							onCancelar={() => setMostrarBuscador(false)}
+							onSeleccionar={seleccionarContratante}
+							onCancelar={() => setMostrarBuscadorContratante(false)}
 						/>
 					</div>
 				)}
 
-				{/* Lista de asegurados */}
-				{asegurados.length > 0 ? (
+				{contratante && (
+					<div className="p-4 border-2 border-primary/30 rounded-lg bg-primary/5">
+						<div className="flex items-start gap-4">
+							<UserCheck className="h-5 w-5 text-primary flex-shrink-0 mt-1" />
+							<div className="flex-1 space-y-3">
+								<div>
+									<p className="font-medium text-gray-900">{contratante.client_name}</p>
+									<p className="text-sm text-gray-600">CI: {contratante.client_ci}</p>
+								</div>
+								<div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+									<div className="space-y-1">
+										<Label className="text-xs text-gray-600">Nivel de Cobertura</Label>
+										<Select value={contratante.nivel_id} onValueChange={(v) => setContratante({ ...contratante, nivel_id: v })}>
+											<SelectTrigger className="w-full"><SelectValue placeholder="Nivel" /></SelectTrigger>
+											<SelectContent>
+												{niveles.map((n) => (
+													<SelectItem key={n.id} value={n.id}>{n.nombre} — {moneda} {n.monto.toLocaleString()}</SelectItem>
+												))}
+											</SelectContent>
+										</Select>
+									</div>
+									<div className="space-y-1">
+										<Label className="text-xs text-gray-600">Rol <span className="text-red-500">*</span></Label>
+										<Select value={contratante.rol} onValueChange={(v) => setContratante({ ...contratante, rol: v as ContratanteSalud["rol"] })}>
+											<SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+											<SelectContent>
+												<SelectItem value="contratante-titular">Contratante-Titular</SelectItem>
+												<SelectItem value="contratante">Contratante</SelectItem>
+											</SelectContent>
+										</Select>
+										<p className="text-xs text-gray-500">
+											{contratante.rol === "contratante-titular"
+												? "Es contratante y también es titular (puede tener cónyuge y descendientes)"
+												: "Solo contrata — debe haber al menos 1 titular"}
+										</p>
+									</div>
+								</div>
+
+								{/* Familiares del contratante-titular */}
+								{contratante.rol === "contratante-titular" && renderFamiliares(
+									contratante.conyugue,
+									contratante.descendientes || [],
+									() => abrirModalFamiliarContratante(),
+									() => {
+										setFamiliarEditando(null);
+										setContextoFamiliar({ tipo: "contratante" });
+										setMostrarModalFamiliar(true);
+									},
+									(f) => abrirModalFamiliarContratante(f),
+									(f) => eliminarFamiliarContratante(f),
+								)}
+							</div>
+							<div className="flex gap-2">
+								<Button variant="ghost" size="sm" onClick={() => setMostrarBuscadorContratante(true)} title="Cambiar contratante">
+									<Edit className="h-4 w-4" />
+								</Button>
+								<Button variant="ghost" size="sm" onClick={eliminarContratante}>
+									<Trash2 className="h-4 w-4 text-red-600" />
+								</Button>
+							</div>
+						</div>
+					</div>
+				)}
+
+				{!contratante && !mostrarBuscadorContratante && (
+					<div className="text-center py-8 border-2 border-dashed rounded-lg">
+						<Users className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+						<p className="text-gray-600">No hay contratante seleccionado</p>
+						<p className="text-sm text-gray-500">Haga clic en &ldquo;Seleccionar Contratante&rdquo; para comenzar</p>
+					</div>
+				)}
+			</div>
+
+			{/* ── TITULARES ── */}
+			<div className="space-y-4 mb-6">
+				<div className="flex items-center justify-between">
+					<div>
+						<Label className="text-base">
+							Titulares
+							{contratante?.rol === "contratante" && <span className="text-red-500 ml-1">*</span>}
+						</Label>
+						<p className="text-sm text-gray-600 mt-1">
+							Personas titulares aseguradas con datos mínimos
+							{contratante?.rol === "contratante-titular" && (
+								<span className="text-gray-400"> — el contratante ya es titular</span>
+							)}
+						</p>
+					</div>
+					<Button onClick={abrirModalTitular} disabled={mostrarModalTitular}>
+						<UserPlus className="mr-2 h-4 w-4" />
+						Agregar Titular
+					</Button>
+				</div>
+
+				{errores.titulares && (
+					<div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded">
+						<AlertTriangle className="h-4 w-4 text-red-600" />
+						<p className="text-sm text-red-600">{errores.titulares}</p>
+					</div>
+				)}
+
+				{titulares.length > 0 ? (
 					<div className="space-y-3">
-						{asegurados.map((asegurado) => (
-							<div key={asegurado.client_id} className="p-4 border rounded-lg">
-								<div className="flex items-start gap-4">
-									<Users className="h-5 w-5 text-gray-400 flex-shrink-0 mt-1" />
-									<div className="flex-1 space-y-3">
-										<div>
-											<p className="font-medium text-gray-900">{asegurado.client_name}</p>
-											<p className="text-sm text-gray-600">CI: {asegurado.client_ci}</p>
+						{titulares.map((titular) => {
+							const expandido = titularesExpandidos.has(titular.id);
+							return (
+								<div key={titular.id} className="border rounded-lg overflow-hidden">
+									{/* Cabecera del titular */}
+									<div className="p-4 bg-gray-50 flex items-center gap-3">
+										<UserPlus className="h-5 w-5 text-primary flex-shrink-0" />
+										<div className="flex-1">
+											<div className="flex items-center gap-2">
+												<p className="font-medium text-gray-900">{titular.nombre_completo}</p>
+												<span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-teal-100 text-teal-800">Titular</span>
+											</div>
+											<p className="text-sm text-gray-600">CI: {titular.carnet}</p>
+											<p className="text-xs text-gray-500">
+												Nivel: {niveles.find((n) => n.id === titular.nivel_id)?.nombre ?? "—"} ·
+												Familia: {(titular.conyugue ? 1 : 0) + titular.descendientes.length} miembro(s)
+											</p>
 										</div>
-										<div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-											<div className="space-y-1">
-												<Label className="text-xs text-gray-600">Nivel de Cobertura</Label>
+										<div className="flex items-center gap-1">
+											<div className="space-y-1 mr-2">
+												<Label className="text-xs text-gray-500">Nivel</Label>
 												<Select
-													value={asegurado.nivel_id}
-													onValueChange={(value) => cambiarNivel(asegurado.client_id, value)}
+													value={titular.nivel_id}
+													onValueChange={(v) =>
+														setTitulares(titulares.map((t) => t.id === titular.id ? { ...t, nivel_id: v } : t))
+													}
 												>
-													<SelectTrigger className="w-full">
-														<SelectValue placeholder="Nivel" />
+													<SelectTrigger className="w-36 h-8 text-xs">
+														<SelectValue />
 													</SelectTrigger>
 													<SelectContent>
-														{niveles.map((nivel) => (
-															<SelectItem key={nivel.id} value={nivel.id}>
-																{nivel.nombre}
-															</SelectItem>
+														{niveles.map((n) => (
+															<SelectItem key={n.id} value={n.id} className="text-xs">{n.nombre}</SelectItem>
 														))}
 													</SelectContent>
 												</Select>
 											</div>
-											<div className="space-y-1">
-												<Label className="text-xs text-gray-600">
-													Rol <span className="text-red-500">*</span>
-												</Label>
-												<Select
-													value={asegurado.rol}
-													onValueChange={(value) =>
-														cambiarRol(
-															asegurado.client_id,
-															value as "titular" | "conyugue" | "dependiente",
-														)
-													}
-												>
-													<SelectTrigger className="w-full">
-														<SelectValue placeholder="Seleccione un rol" />
-													</SelectTrigger>
-													<SelectContent>
-														<SelectItem value="titular">Titular</SelectItem>
-														<SelectItem value="conyugue">Cónyuge</SelectItem>
-														<SelectItem value="dependiente">Dependiente</SelectItem>
-													</SelectContent>
-												</Select>
-											</div>
+											<Button variant="ghost" size="sm" onClick={() => editarTitular(titular)} className="h-8 w-8 p-0">
+												<Edit className="h-4 w-4" />
+											</Button>
+											<Button variant="ghost" size="sm" onClick={() => eliminarTitular(titular.id)} className="h-8 w-8 p-0">
+												<Trash2 className="h-4 w-4 text-red-600" />
+											</Button>
+											<Button variant="ghost" size="sm" onClick={() => toggleExpandirTitular(titular.id)} className="h-8 w-8 p-0">
+												{expandido ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+											</Button>
 										</div>
 									</div>
-									<Button
-										variant="ghost"
-										size="sm"
-										onClick={() => eliminarAsegurado(asegurado.client_id)}
-										className="mt-1"
-									>
-										<Trash2 className="h-4 w-4 text-red-600" />
-									</Button>
+
+									{/* Familiares del titular (expandible) */}
+									{expandido && (
+										<div className="p-4 bg-white border-t">
+											{renderFamiliares(
+												titular.conyugue,
+												titular.descendientes,
+												() => abrirModalFamiliarTitular(titular.id),
+												() => abrirModalFamiliarTitular(titular.id),
+												(f) => abrirModalFamiliarTitular(titular.id, f),
+												(f) => eliminarFamiliarTitular(titular.id, f),
+											)}
+										</div>
+									)}
 								</div>
-							</div>
-						))}
+							);
+						})}
 					</div>
 				) : (
-					<div className="text-center py-8 border-2 border-dashed rounded-lg">
-						<Users className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-						<p className="text-gray-600">No hay clientes agregados</p>
-						<p className="text-sm text-gray-500">
-							Haga clic en &ldquo;Agregar Cliente&rdquo; para comenzar
+					<div className="text-center py-6 border-2 border-dashed rounded-lg">
+						<UserPlus className="h-10 w-10 text-gray-400 mx-auto mb-2" />
+						<p className="text-gray-500 text-sm">
+							{contratante?.rol === "contratante-titular"
+								? "Opcional: el contratante ya es titular"
+								: "Agregue al menos un titular"}
 						</p>
 					</div>
 				)}
 			</div>
 
-			{/* Asegurados Datos Mínimos (sin registro completo) */}
-			<div className="space-y-4 mb-6">
-				<div className="flex items-center justify-between">
-					<div>
-						<Label className="text-base">Asegurados Datos Mínimos</Label>
-						<p className="text-sm text-gray-600 mt-1">
-							Personas cubiertas sin registro completo en el sistema
-						</p>
-					</div>
-					<Button onClick={abrirModalBeneficiario} disabled={mostrarModalBeneficiario}>
-						<UserPlus className="mr-2 h-4 w-4" />
-						Agregar Asegurado
-					</Button>
-				</div>
-
-				{errores.beneficiarios && (
-					<div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded">
-						<AlertTriangle className="h-4 w-4 text-red-600" />
-						<p className="text-sm text-red-600">{errores.beneficiarios}</p>
-					</div>
-				)}
-
-				{/* Lista de beneficiarios */}
-				{beneficiarios.length > 0 ? (
-					<div className="space-y-3">
-						{beneficiarios.map((beneficiario) => (
-							<div key={beneficiario.id} className="p-4 border rounded-lg bg-gray-50">
-								<div className="flex items-start gap-4">
-									<UserPlus className="h-5 w-5 text-primary flex-shrink-0 mt-1" />
-									<div className="flex-1 space-y-3">
-										<div className="flex items-start justify-between">
-											<div>
-												<div className="flex items-center gap-2">
-													<p className="font-medium text-gray-900">
-														{beneficiario.nombre_completo}
-													</p>
-													{beneficiario.rol && (
-														<span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
-															{beneficiario.rol === "dependiente"
-																? "Dependiente"
-																: beneficiario.rol === "conyugue"
-																	? "Cónyuge"
-																	: beneficiario.rol}
-														</span>
-													)}
-												</div>
-												<div className="text-sm text-gray-600 space-y-0.5 mt-1">
-													<p>CI: {beneficiario.carnet}</p>
-													{beneficiario.fecha_nacimiento && (
-														<p>
-															Fecha Nac:{" "}
-															{new Date(beneficiario.fecha_nacimiento).toLocaleDateString(
-																"es-BO",
-															)}
-														</p>
-													)}
-													{beneficiario.genero && (
-														<p>
-															Género:{" "}
-															{beneficiario.genero === "M"
-																? "Masculino"
-																: beneficiario.genero === "F"
-																	? "Femenino"
-																	: "Otro"}
-														</p>
-													)}
-												</div>
-											</div>
-											<div className="flex gap-2">
-												<Button
-													variant="ghost"
-													size="sm"
-													onClick={() => abrirModalEditarBeneficiario(beneficiario)}
-												>
-													<Edit className="h-4 w-4" />
-												</Button>
-												<Button
-													variant="ghost"
-													size="sm"
-													onClick={() => eliminarBeneficiario(beneficiario.id)}
-												>
-													<Trash2 className="h-4 w-4 text-red-600" />
-												</Button>
-											</div>
-										</div>
-										<div className="space-y-1">
-											<Label className="text-xs text-gray-600">Nivel de Cobertura</Label>
-											<Select
-												value={beneficiario.nivel_id}
-												onValueChange={(value) =>
-													cambiarNivelBeneficiario(beneficiario.id, value)
-												}
-											>
-												<SelectTrigger className="w-full">
-													<SelectValue placeholder="Nivel" />
-												</SelectTrigger>
-												<SelectContent>
-													{niveles.map((nivel) => (
-														<SelectItem key={nivel.id} value={nivel.id}>
-															{nivel.nombre} - {moneda} {nivel.monto.toLocaleString()}
-														</SelectItem>
-													))}
-												</SelectContent>
-											</Select>
-										</div>
-									</div>
-								</div>
-							</div>
-						))}
-					</div>
-				) : (
-					<div className="text-center py-8 border-2 border-dashed rounded-lg">
-						<UserPlus className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-						<p className="text-gray-600">No hay asegurados datos mínimos agregados</p>
-						<p className="text-sm text-gray-500">
-							Haga clic en &ldquo;Agregar Asegurado&rdquo; para agregar
-						</p>
-					</div>
-				)}
-			</div>
-
-			{/* Información sobre roles */}
+			{/* Info de roles */}
 			<div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-				<p className="text-sm text-blue-900 font-medium mb-2">Información sobre roles:</p>
-				<div className="text-xs text-blue-800 space-y-2">
-					<div>
-						<p className="font-semibold mb-1">Asegurados (clientes registrados):</p>
-						<ul className="space-y-1 ml-3">
-							<li>
-								• <strong>Titular:</strong> Asegurado principal de la póliza
-							</li>
-							<li>
-								• <strong>Cónyuge:</strong> Pareja o cónyuge del titular
-							</li>
-							<li>
-								• <strong>Dependiente:</strong> Hijo u otro dependiente del titular
-							</li>
-						</ul>
-					</div>
-					<div>
-						<p className="font-semibold mb-1">Asegurados Datos Mínimos (sin registro completo):</p>
-						<ul className="space-y-1 ml-3">
-							<li>
-								• <strong>Cónyuge:</strong> Pareja o cónyuge del asegurado
-							</li>
-							<li>
-								• <strong>Dependiente:</strong> Hijo u otro dependiente
-							</li>
-						</ul>
-					</div>
-				</div>
+				<p className="text-sm text-blue-900 font-medium mb-2">Roles en pólizas de Salud:</p>
+				<ul className="text-xs text-blue-800 space-y-1 ml-2">
+					<li>• <strong>Contratante-Titular:</strong> Contrata y es titular principal (puede tener cónyuge y descendientes)</li>
+					<li>• <strong>Contratante:</strong> Solo contrata — debe haber al menos 1 titular</li>
+					<li>• <strong>Titular:</strong> Cabeza de grupo familiar asegurado</li>
+					<li>• <strong>Cónyuge:</strong> Pareja del titular (máx. 1 por titular)</li>
+					<li>• <strong>Descendiente:</strong> Hijo u otro dependiente del titular</li>
+				</ul>
 			</div>
 
-			{/* Botones de navegación */}
 			<div className="flex justify-between pt-6 border-t">
 				<Button variant="outline" onClick={volverANiveles}>
 					<ChevronLeft className="mr-2 h-5 w-5" />
 					Volver a Niveles
 				</Button>
-
 				<Button onClick={handleContinuar}>
 					Continuar
 					<ChevronRight className="ml-2 h-5 w-5" />
 				</Button>
 			</div>
 
-			{/* Modal de Beneficiario */}
-			{mostrarModalBeneficiario && (
+			{/* Modal titular */}
+			{mostrarModalTitular && (
 				<BeneficiarioModal
-					beneficiario={beneficiarioEditando}
+					beneficiario={titularEditando}
 					moneda={moneda}
 					niveles={niveles}
-					onGuardar={guardarBeneficiario}
-					onCancelar={() => {
-						setMostrarModalBeneficiario(false);
-						setBeneficiarioEditando(null);
-					}}
+					hideRol={true}
+					titulo={titularEditando ? "Editar Titular" : "Agregar Titular"}
+					onGuardar={guardarTitular}
+					onCancelar={() => { setMostrarModalTitular(false); setTitularEditando(null); }}
+				/>
+			)}
+
+			{/* Modal familiar (cónyuge / descendiente) */}
+			{mostrarModalFamiliar && (
+				<BeneficiarioModal
+					beneficiario={familiarEditando}
+					moneda={moneda}
+					niveles={niveles}
+					hideRol={false}
+					roles={[
+						{ value: "conyugue", label: "Cónyuge" },
+						{ value: "descendiente", label: "Descendiente" },
+					]}
+					titulo={familiarEditando ? "Editar Familiar" : "Agregar Familiar"}
+					onGuardar={guardarFamiliar}
+					onCancelar={() => { setMostrarModalFamiliar(false); setFamiliarEditando(null); setContextoFamiliar(null); }}
 				/>
 			)}
 		</div>

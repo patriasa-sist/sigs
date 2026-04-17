@@ -2,30 +2,40 @@
 
 import { useState } from "react";
 import { X, AlertTriangle } from "lucide-react";
-import type { BeneficiarioSalud, BeneficiarioVida } from "@/types/poliza";
-
-type BeneficiarioBase = Omit<BeneficiarioSalud, "rol"> & { rol: string };
-type RolOption = { value: string; label: string };
-
-const ROLES_DEFAULT: RolOption[] = [
-	{ value: "dependiente", label: "Dependiente" },
-	{ value: "conyugue", label: "Cónyuge" },
-];
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
+type RolOption = { value: string; label: string };
+
+const ROLES_DEFAULT: RolOption[] = [
+	{ value: "conyugue", label: "Cónyuge" },
+	{ value: "descendiente", label: "Descendiente" },
+];
+
 // Tipo genérico para niveles: acepta NivelSalud (con monto) o NivelCobertura (sin monto)
 type NivelGenerico = { id: string; nombre: string; monto?: number };
 
+export type DatosPersonaMinima = {
+	id: string;
+	nombre_completo: string;
+	carnet: string;
+	fecha_nacimiento?: string;
+	genero?: "M" | "F" | "Otro";
+	nivel_id: string;
+	rol?: string;
+};
+
 type Props = {
-	beneficiario: BeneficiarioBase | null;
+	beneficiario: DatosPersonaMinima | null;
 	moneda?: string;
 	niveles: NivelGenerico[];
 	roles?: RolOption[];
+	hideRol?: boolean;
+	titulo?: string;
 	descripcionRoles?: string;
-	onGuardar: (beneficiario: BeneficiarioSalud | BeneficiarioVida) => void;
+	onGuardar: (datos: DatosPersonaMinima) => void;
 	onCancelar: () => void;
 };
 
@@ -38,8 +48,8 @@ type ErroresBeneficiario = {
 	rol?: string;
 };
 
-export function BeneficiarioModal({ beneficiario, moneda = "Bs", niveles, roles = ROLES_DEFAULT, descripcionRoles, onGuardar, onCancelar }: Props) {
-	const [formData, setFormData] = useState<Partial<BeneficiarioBase>>(
+export function BeneficiarioModal({ beneficiario, moneda = "Bs", niveles, roles = ROLES_DEFAULT, hideRol = false, titulo, descripcionRoles, onGuardar, onCancelar }: Props) {
+	const [formData, setFormData] = useState<Partial<DatosPersonaMinima>>(
 		beneficiario || {
 			id: crypto.randomUUID(),
 			nombre_completo: "",
@@ -47,7 +57,7 @@ export function BeneficiarioModal({ beneficiario, moneda = "Bs", niveles, roles 
 			fecha_nacimiento: undefined,
 			genero: undefined,
 			nivel_id: niveles[0]?.id || "",
-			rol: roles[0]?.value || "dependiente",
+			rol: hideRol ? undefined : (roles[0]?.value || "conyugue"),
 		},
 	);
 
@@ -98,8 +108,8 @@ export function BeneficiarioModal({ beneficiario, moneda = "Bs", niveles, roles 
 			nuevosErrores.nivel_id = "Debe seleccionar un nivel de cobertura";
 		}
 
-		// Validar rol
-		if (!formData.rol) {
+		// Validar rol solo si no está oculto
+		if (!hideRol && !formData.rol) {
 			nuevosErrores.rol = "El rol es obligatorio";
 		}
 
@@ -117,7 +127,7 @@ export function BeneficiarioModal({ beneficiario, moneda = "Bs", niveles, roles 
 			return;
 		}
 
-		onGuardar(formData as BeneficiarioSalud | BeneficiarioVida);
+		onGuardar(formData as DatosPersonaMinima);
 	};
 
 	return (
@@ -126,7 +136,7 @@ export function BeneficiarioModal({ beneficiario, moneda = "Bs", niveles, roles 
 				{/* Header */}
 				<div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between">
 					<h2 className="text-xl font-semibold">
-						{beneficiario ? "Editar Asegurado Datos Mínimos" : "Agregar Asegurado Datos Mínimos"}
+						{titulo ?? (beneficiario ? "Editar" : "Agregar") + " — Datos Mínimos"}
 					</h2>
 					<Button variant="ghost" size="icon" onClick={onCancelar} className="rounded-full">
 						<X className="h-5 w-5" />
@@ -228,8 +238,8 @@ export function BeneficiarioModal({ beneficiario, moneda = "Bs", niveles, roles 
 							</div>
 						</div>
 
-						{/* Grid de 2 columnas para Nivel de Cobertura y Rol */}
-						<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+						{/* Nivel de Cobertura y Rol */}
+						<div className={`grid grid-cols-1 gap-6 ${!hideRol ? "md:grid-cols-2" : ""}`}>
 							{/* Nivel de Cobertura */}
 							<div className="space-y-2">
 								<Label htmlFor="nivel_id">
@@ -254,27 +264,28 @@ export function BeneficiarioModal({ beneficiario, moneda = "Bs", niveles, roles 
 									</SelectContent>
 								</Select>
 								{errores.nivel_id && <p className="text-sm text-red-600">{errores.nivel_id}</p>}
-								<p className="text-xs text-gray-500">Nivel de cobertura del beneficiario</p>
 							</div>
 
-							{/* Rol */}
-							<div className="space-y-2">
-								<Label htmlFor="rol">
-									Rol <span className="text-red-500">*</span>
-								</Label>
-								<Select value={formData.rol} onValueChange={(value) => handleChange("rol", value)}>
-									<SelectTrigger className={errores.rol ? "border-red-500" : ""}>
-										<SelectValue placeholder="Seleccione un rol" />
-									</SelectTrigger>
-									<SelectContent>
-										{roles.map((r) => (
-											<SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
-										))}
-									</SelectContent>
-								</Select>
-								{errores.rol && <p className="text-sm text-red-600">{errores.rol}</p>}
-								{descripcionRoles && <p className="text-xs text-gray-500">{descripcionRoles}</p>}
-							</div>
+							{/* Rol (oculto si hideRol=true) */}
+							{!hideRol && (
+								<div className="space-y-2">
+									<Label htmlFor="rol">
+										Rol <span className="text-red-500">*</span>
+									</Label>
+									<Select value={formData.rol ?? ""} onValueChange={(value) => handleChange("rol", value)}>
+										<SelectTrigger className={errores.rol ? "border-red-500" : ""}>
+											<SelectValue placeholder="Seleccione un rol" />
+										</SelectTrigger>
+										<SelectContent>
+											{roles.map((r) => (
+												<SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
+											))}
+										</SelectContent>
+									</Select>
+									{errores.rol && <p className="text-sm text-red-600">{errores.rol}</p>}
+									{descripcionRoles && <p className="text-xs text-gray-500">{descripcionRoles}</p>}
+								</div>
+							)}
 						</div>
 					</div>
 				</div>

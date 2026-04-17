@@ -402,10 +402,18 @@ export function Resumen({ formState, onAnterior, onEditarPaso, onGuardar, guarda
 												))}
 											</ul>
 										</div>
+										{datos_especificos.datos.contratante && (
+											<div>
+												<span className="font-medium text-foreground">Contratante:</span>{" "}
+												{datos_especificos.datos.contratante.client_name} —{" "}
+												{datos_especificos.datos.contratante.rol === "contratante-asegurado"
+													? "Contratante-Asegurado"
+													: "Contratante"}
+											</div>
+										)}
 										<div>
-											<p className="font-medium text-foreground">
-												Asegurados: {datos_especificos.datos.asegurados.length}
-											</p>
+											<span className="font-medium text-foreground">Asegurados:</span>{" "}
+											{datos_especificos.datos.asegurados.length}
 										</div>
 									</div>
 								)}
@@ -414,8 +422,21 @@ export function Resumen({ formState, onAnterior, onEditarPaso, onGuardar, guarda
 								{datos_especificos?.tipo_ramo === "Vida" && (
 									<div className="text-sm text-muted-foreground space-y-2">
 										<div>
-											<span className="font-medium text-foreground">Suma Asegurada:</span>{" "}
-											{datos_especificos.datos.niveles.length} nivel(es)
+											<span className="font-medium text-foreground">Niveles:</span>{" "}
+											{datos_especificos.datos.niveles.length}
+										</div>
+										{datos_especificos.datos.contratante && (
+											<div>
+												<span className="font-medium text-foreground">Contratante:</span>{" "}
+												{datos_especificos.datos.contratante.client_name} —{" "}
+												{datos_especificos.datos.contratante.rol === "contratante-asegurado"
+													? "Contratante-Asegurado"
+													: "Contratante"}
+											</div>
+										)}
+										<div>
+											<span className="font-medium text-foreground">Asegurados:</span>{" "}
+											{datos_especificos.datos.asegurados.length}
 										</div>
 										<div className="text-primary italic text-xs mt-2">
 											ℹ️ Pólizas de Vida solo permiten pago en contado
@@ -448,10 +469,18 @@ export function Resumen({ formState, onAnterior, onEditarPaso, onGuardar, guarda
 												))}
 											</ul>
 										</div>
+										{datos_especificos.datos.contratante && (
+											<div>
+												<span className="font-medium text-foreground">Contratante:</span>{" "}
+												{datos_especificos.datos.contratante.client_name} —{" "}
+												{datos_especificos.datos.contratante.rol === "contratante-titular"
+													? "Contratante-Titular"
+													: "Contratante"}
+											</div>
+										)}
 										<div>
-											<p className="font-medium text-foreground">
-												Asegurados: {datos_especificos.datos.asegurados.length}
-											</p>
+											<span className="font-medium text-foreground">Titulares:</span>{" "}
+											{datos_especificos.datos.titulares.length}
 										</div>
 									</div>
 								)}

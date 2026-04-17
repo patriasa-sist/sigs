@@ -9,8 +9,8 @@ import type {
 	VehiculoAutomotor,
 	EquipoIndustrial,
 	NaveEmbarcacion,
-	AseguradoSalud,
-	BeneficiarioSalud,
+	ContratanteSalud,
+	TitularSalud,
 	AseguradoConNivel,
 } from "@/types/poliza";
 
@@ -693,8 +693,8 @@ function AnexoSalud({
 }: {
 	tipoAnexo: TipoAnexo;
 	ramo: string;
-	itemsActuales: { tipo_ramo: "Salud"; asegurados: (AseguradoSalud & { id: string })[]; beneficiarios: (BeneficiarioSalud & { id: string })[] } | null;
-	itemsCambio: { tipo_ramo: "Salud"; items_asegurados: AnexoItemChange<AseguradoSalud>[]; items_beneficiarios: AnexoItemChange<BeneficiarioSalud>[] } | null;
+	itemsActuales: { tipo_ramo: "Salud"; asegurados: (ContratanteSalud & { id: string })[]; beneficiarios: (TitularSalud & { id: string })[] } | null;
+	itemsCambio: { tipo_ramo: "Salud"; items_asegurados: AnexoItemChange<ContratanteSalud>[]; items_beneficiarios: AnexoItemChange<TitularSalud>[] } | null;
 	onChange: (cambio: AnexoItemsCambio | null) => void;
 }) {
 	const asegurados = itemsActuales?.asegurados || [];
@@ -707,12 +707,12 @@ function AnexoSalud({
 	);
 
 	const emitChange = (asegIds: Set<string>, benefIds: Set<string>) => {
-		const asegItems: AnexoItemChange<AseguradoSalud>[] = Array.from(asegIds).map((id) => ({
+		const asegItems: AnexoItemChange<ContratanteSalud>[] = Array.from(asegIds).map((id) => ({
 			accion: "exclusion",
 			original_item_id: id,
 			data: asegurados.find((a) => a.id === id)!,
 		}));
-		const benefItems: AnexoItemChange<BeneficiarioSalud>[] = Array.from(benefIds).map((id) => ({
+		const benefItems: AnexoItemChange<TitularSalud>[] = Array.from(benefIds).map((id) => ({
 			accion: "exclusion",
 			original_item_id: id,
 			data: beneficiarios.find((b) => b.id === id)!,
@@ -777,7 +777,7 @@ function AnexoSalud({
 								<>
 									<span className="font-medium col-span-2">{b.nombre_completo}</span>
 									<span>{b.carnet}</span>
-									<span>{b.rol}</span>
+									<span>titular</span>
 								</>
 							)}
 						/>
@@ -806,7 +806,7 @@ function AnexoSalud({
 						))}
 						{beneficiarios.map((b) => (
 							<div key={b.id} className="text-sm text-gray-600 flex justify-between">
-								<span>{b.nombre_completo} ({b.rol})</span>
+								<span>{b.nombre_completo} (titular)</span>
 								<Badge variant="outline" className="text-xs">Beneficiario</Badge>
 							</div>
 						))}
