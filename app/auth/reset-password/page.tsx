@@ -70,41 +70,34 @@ function ResetPasswordForm() {
 			setMessage(decodeURIComponent(messageParam));
 		}
 
-		// Handle password recovery tokens from URL parameters
-		const handleRecoveryToken = async () => {
+		const checkAccess = async () => {
+			const supabase = createClient();
+
 			if (tokenHash && type === "recovery") {
-				const supabase = createClient();
-
-				try {
-					console.log("Procesando llave de recuperación...");
-
-					// Verify the recovery token and establish session
-					const { error } = await supabase.auth.verifyOtp({
-						token_hash: tokenHash,
-						type: "recovery",
-					});
-
-					if (error) {
-						console.error("Token verification error:", error.message);
-						setSessionValid(false);
-						setError("Invalid or expired reset link. Please request a new password reset.");
-					} else {
-						console.log("Recovery token verified successfully");
-						setSessionValid(true);
-					}
-				} catch (err) {
-					console.error("Token processing error:", err);
+				// Token directo en URL (fallback) — verificarlo
+				const { error } = await supabase.auth.verifyOtp({
+					token_hash: tokenHash,
+					type: "recovery",
+				});
+				if (error) {
 					setSessionValid(false);
-					setError("Error processing reset link. Please try again.");
+					setError("Enlace inválido o expirado. Por favor solicita un nuevo restablecimiento de contraseña.");
+				} else {
+					setSessionValid(true);
 				}
-			} else if (!tokenHash || type !== "recovery") {
-				// No valid recovery token in URL
-				setSessionValid(false);
-				setError("Invalid reset link. Please use the link from your password reset email.");
+			} else {
+				// Redirigido desde /auth/confirm — ya existe sesión en cookies
+				const { data: { session } } = await supabase.auth.getSession();
+				if (session) {
+					setSessionValid(true);
+				} else {
+					setSessionValid(false);
+					setError("Enlace inválido. Por favor usa el enlace del correo de restablecimiento.");
+				}
 			}
 		};
 
-		handleRecoveryToken();
+		checkAccess();
 	}, [searchParams]);
 
 	async function onSubmit(values: z.infer<typeof formSchema>) {
