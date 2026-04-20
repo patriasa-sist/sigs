@@ -221,28 +221,39 @@ function SignUpContent() {
 				password: values.password,
 			});
 
-			if (error) throw error;
+			if (error) {
+				// If password was already set on a prior attempt, treat as success
+				if (error.message?.toLowerCase().includes("same password") || error.message?.toLowerCase().includes("different from")) {
+					setIsSuccess(true);
+					return;
+				}
+				throw error;
+			}
 
+			// Non-critical cleanup — each step isolated so it can't block success
 			if (data?.user) {
-				const { error: profileError } = await supabase
-					.from("profiles")
-					.update({ full_name: values.fullName })
-					.eq("id", data.user.id);
-
-				if (profileError) {
-					console.error("Failed to update profile with full name:", profileError);
+				try {
+					await supabase.from("profiles")
+						.update({ full_name: values.fullName })
+						.eq("id", data.user.id);
+				} catch (e) {
+					console.error("Profile update failed:", e);
 				}
 			}
 
 			if (emailParam) {
-				const result = await marcarInvitacionUsada(emailParam);
-				if (!result.success) {
-					console.error("Failed to mark invitation as used:", result.error);
+				try {
+					await marcarInvitacionUsada(emailParam);
+				} catch (e) {
+					console.error("Failed to mark invitation as used:", e);
 				}
 			}
 
-			// Sign out to clear the invite session before redirecting to login
-			await supabase.auth.signOut();
+			try {
+				await supabase.auth.signOut();
+			} catch (e) {
+				console.error("Sign out failed:", e);
+			}
 
 			setIsSuccess(true);
 		} catch (err: unknown) {
