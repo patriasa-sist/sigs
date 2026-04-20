@@ -779,85 +779,161 @@ export async function buscarPolizasActivas(query: string): Promise<BusquedaPoliz
 	const supabase = await createClient();
 
 	try {
-		const clientIdsEncontrados: string[] = [];
+		// Fase 1: búsquedas paralelas — clientes por texto + tablas específicas por ramo
+		const [
+			{ data: clientesNaturales },
+			{ data: clientesJuridicos },
+			{ data: clientesUnipersonales },
+			{ data: automotorVehiculos },
+			{ data: rcVehiculos },
+			{ data: ramosTecnicosEquipos },
+			{ data: saludBeneficiarios },
+			{ data: incendioBienes },
+			{ data: riesgosVariosBienes },
+			{ data: transporteData },
+			{ data: aeronavNaves },
+			{ data: vidaBeneficiarios },
+		] = await Promise.all([
+			supabase
+				.from("natural_clients")
+				.select("client_id")
+				.or(
+					`numero_documento.ilike.%${query}%,primer_nombre.ilike.%${query}%,segundo_nombre.ilike.%${query}%,primer_apellido.ilike.%${query}%,segundo_apellido.ilike.%${query}%`
+				)
+				.limit(30),
+			supabase
+				.from("juridic_clients")
+				.select("client_id")
+				.or(`nit.ilike.%${query}%,razon_social.ilike.%${query}%`)
+				.limit(30),
+			supabase
+				.from("unipersonal_clients")
+				.select("client_id")
+				.or(`nit.ilike.%${query}%,razon_social.ilike.%${query}%`)
+				.limit(30),
+			// Automotor: placa, chasis, motor
+			supabase
+				.from("polizas_automotor_vehiculos")
+				.select("poliza_id")
+				.or(`placa.ilike.%${query}%,nro_chasis.ilike.%${query}%,nro_motor.ilike.%${query}%`)
+				.limit(30),
+			// Responsabilidad Civil: placa, chasis
+			supabase
+				.from("polizas_rc_vehiculos")
+				.select("poliza_id")
+				.or(`placa.ilike.%${query}%,nro_chasis.ilike.%${query}%`)
+				.limit(30),
+			// Ramos Técnicos: número de serie, placa
+			supabase
+				.from("polizas_ramos_tecnicos_equipos")
+				.select("poliza_id")
+				.or(`nro_serie.ilike.%${query}%,placa.ilike.%${query}%`)
+				.limit(30),
+			// Salud: nombre o carnet de beneficiarios
+			supabase
+				.from("polizas_salud_beneficiarios")
+				.select("poliza_id")
+				.or(`nombre_completo.ilike.%${query}%,carnet.ilike.%${query}%`)
+				.limit(30),
+			// Incendio: dirección del bien
+			supabase
+				.from("polizas_incendio_bienes")
+				.select("poliza_id")
+				.ilike("direccion", `%${query}%`)
+				.limit(30),
+			// Riesgos Varios: dirección del bien
+			supabase
+				.from("polizas_riesgos_varios_bienes")
+				.select("poliza_id")
+				.ilike("direccion", `%${query}%`)
+				.limit(30),
+			// Transporte: número de factura o materia asegurada
+			supabase
+				.from("polizas_transporte")
+				.select("poliza_id")
+				.or(`factura.ilike.%${query}%,materia_asegurada.ilike.%${query}%`)
+				.limit(30),
+			// Aeronavegación: matrícula o número de serie
+			supabase
+				.from("polizas_aeronavegacion_naves")
+				.select("poliza_id")
+				.or(`matricula.ilike.%${query}%,serie.ilike.%${query}%`)
+				.limit(30),
+			// Vida/AP/Sepelio: nombre o carnet de asegurados mínimos
+			supabase
+				.from("polizas_beneficiarios")
+				.select("poliza_id")
+				.or(`nombre_completo.ilike.%${query}%,carnet.ilike.%${query}%`)
+				.limit(30),
+		]);
 
-		// 1. Buscar en clientes naturales por CI, nombre o apellido
-		const { data: clientesNaturales, error: errNat } = await supabase
-			.from("natural_clients")
-			.select("client_id, numero_documento, primer_nombre, primer_apellido")
-			.or(
-				`numero_documento.ilike.%${query}%,primer_nombre.ilike.%${query}%,segundo_nombre.ilike.%${query}%,primer_apellido.ilike.%${query}%,segundo_apellido.ilike.%${query}%`
-			)
-			.limit(30);
+		// Reunir client_ids encontrados por nombre/documento
+		const clientIdsEncontrados: string[] = [
+			...(clientesNaturales?.map((c) => c.client_id) || []),
+			...(clientesJuridicos?.map((c) => c.client_id) || []),
+			...(clientesUnipersonales?.map((c) => c.client_id) || []),
+		];
 
-		console.log("[buscarPolizas] query:", query);
-		console.log("[buscarPolizas] natural_clients:", clientesNaturales?.length, "error:", errNat?.message);
+		// Reunir poliza_ids encontrados en tablas específicas por texto
+		const polizaIdsEspecificos: string[] = [
+			...(automotorVehiculos?.map((v) => v.poliza_id) || []),
+			...(rcVehiculos?.map((v) => v.poliza_id) || []),
+			...(ramosTecnicosEquipos?.map((e) => e.poliza_id) || []),
+			...(saludBeneficiarios?.map((b) => b.poliza_id) || []),
+			...(incendioBienes?.map((b) => b.poliza_id) || []),
+			...(riesgosVariosBienes?.map((b) => b.poliza_id) || []),
+			...(transporteData?.map((t) => t.poliza_id) || []),
+			...(aeronavNaves?.map((n) => n.poliza_id) || []),
+			...(vidaBeneficiarios?.map((b) => b.poliza_id) || []),
+		];
 
-		if (clientesNaturales) {
-			clientIdsEncontrados.push(...clientesNaturales.map((c) => c.client_id));
+		// Fase 2: buscar asegurados registrados como clientes (no solo el contratante)
+		if (clientIdsEncontrados.length > 0) {
+			const [
+				{ data: saludAsegurados },
+				{ data: incendioAsegurados },
+				{ data: aeronavAsegurados },
+				{ data: aseguradosNivel },
+				{ data: riesgosVariosAsegurados },
+			] = await Promise.all([
+				supabase.from("polizas_salud_asegurados").select("poliza_id").in("client_id", clientIdsEncontrados).limit(30),
+				supabase.from("polizas_incendio_asegurados").select("poliza_id").in("client_id", clientIdsEncontrados).limit(30),
+				supabase.from("polizas_aeronavegacion_asegurados").select("poliza_id").in("client_id", clientIdsEncontrados).limit(30),
+				supabase.from("polizas_asegurados_nivel").select("poliza_id").in("client_id", clientIdsEncontrados).limit(30),
+				supabase.from("polizas_riesgos_varios_asegurados").select("poliza_id").in("client_id", clientIdsEncontrados).limit(30),
+			]);
+
+			polizaIdsEspecificos.push(
+				...(saludAsegurados?.map((a) => a.poliza_id) || []),
+				...(incendioAsegurados?.map((a) => a.poliza_id) || []),
+				...(aeronavAsegurados?.map((a) => a.poliza_id) || []),
+				...(aseguradosNivel?.map((a) => a.poliza_id) || []),
+				...(riesgosVariosAsegurados?.map((a) => a.poliza_id) || [])
+			);
 		}
 
-		// 2. Buscar en clientes jurídicos por NIT o razón social
-		const { data: clientesJuridicos, error: errJur } = await supabase
-			.from("juridic_clients")
-			.select("client_id, nit, razon_social")
-			.or(`nit.ilike.%${query}%,razon_social.ilike.%${query}%`)
-			.limit(30);
+		const uniquePolizaIds = [...new Set(polizaIdsEspecificos)];
 
-		console.log("[buscarPolizas] juridic_clients:", clientesJuridicos?.length, "error:", errJur?.message);
-
-		if (clientesJuridicos) {
-			clientIdsEncontrados.push(...clientesJuridicos.map((c) => c.client_id));
-		}
-
-		// 2b. Buscar en clientes unipersonales por NIT o razón social
-		const { data: clientesUnipersonales, error: errUni } = await supabase
-			.from("unipersonal_clients")
-			.select("client_id, nit, razon_social")
-			.or(`nit.ilike.%${query}%,razon_social.ilike.%${query}%`)
-			.limit(30);
-
-		console.log("[buscarPolizas] unipersonal_clients:", clientesUnipersonales?.length, "error:", errUni?.message);
-
-		if (clientesUnipersonales) {
-			clientIdsEncontrados.push(...clientesUnipersonales.map((c) => c.client_id));
-		}
-
-		console.log("[buscarPolizas] clientIdsEncontrados:", clientIdsEncontrados);
-
-		// 3. Buscar pólizas activas que coincidan con el query (número de póliza) O con los client_ids encontrados
+		// Fase 3: buscar pólizas activas combinando todas las condiciones
 		let polizasQuery = supabase
 			.from("polizas")
 			.select(
-				`
-        id,
-        numero_poliza,
-        ramo,
-        inicio_vigencia,
-        fin_vigencia,
-        prima_total,
-        moneda,
-        client_id,
-        responsable_id,
-        compania_aseguradora_id
-      `
+				`id, numero_poliza, ramo, inicio_vigencia, fin_vigencia, prima_total, moneda, client_id, responsable_id, compania_aseguradora_id`
 			)
 			.eq("estado", "activa");
 
-		// Construir condición OR para búsqueda por número de póliza o client_id
+		const orConditions: string[] = [`numero_poliza.ilike.%${query}%`];
 		if (clientIdsEncontrados.length > 0) {
-			// Buscar por número de póliza O por client_id en la lista de clientes encontrados
-			polizasQuery = polizasQuery.or(
-				`numero_poliza.ilike.%${query}%,client_id.in.(${clientIdsEncontrados.join(",")})`
-			);
-		} else {
-			// Solo buscar por número de póliza
-			polizasQuery = polizasQuery.ilike("numero_poliza", `%${query}%`);
+			orConditions.push(`client_id.in.(${clientIdsEncontrados.join(",")})`);
 		}
+		if (uniquePolizaIds.length > 0) {
+			orConditions.push(`id.in.(${uniquePolizaIds.join(",")})`);
+		}
+		polizasQuery = polizasQuery.or(orConditions.join(","));
 
 		const { data: polizasRaw, error: polizasError } = await polizasQuery.limit(20);
 
-		console.log("[buscarPolizas] polizasRaw:", polizasRaw?.length, "error:", polizasError?.message);
+		console.log("[buscarPolizas] query:", query, "| clientes:", clientIdsEncontrados.length, "| especificos:", uniquePolizaIds.length, "| resultados:", polizasRaw?.length);
 
 		if (polizasError) throw polizasError;
 
