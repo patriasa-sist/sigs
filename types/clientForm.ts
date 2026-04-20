@@ -141,15 +141,20 @@ export const naturalClientOtherSchema = z.object({
   lugar_trabajo: z.string().optional(),
   pais_residencia: z.string().min(1, 'País de residencia es requerido'),
   genero: z.enum(GENDER_OPTIONS).optional(),
-  nivel_ingresos: z.number().positive().optional(),
+  nivel_ingresos: z.preprocess(
+    (val) => (val === null || (typeof val === 'number' && isNaN(val)) ? undefined : val),
+    z.number().positive().optional()
+  ),
   cargo: z.string().optional(),
-  anio_ingreso: z
-    .number()
-    .int('Debe ser un año válido')
-    .min(1900, 'Año debe ser mayor a 1900')
-    .max(new Date().getFullYear(), 'Año no puede ser mayor al actual')
-    .optional()
-    .or(z.nan().transform(() => undefined)),
+  anio_ingreso: z.preprocess(
+    (val) => (val === null || (typeof val === 'number' && isNaN(val)) ? undefined : val),
+    z
+      .number()
+      .int('Debe ser un año válido')
+      .min(1900, 'Año debe ser mayor a 1900')
+      .max(new Date().getFullYear(), 'Año no puede ser mayor al actual')
+      .optional()
+  ),
   nit: z
     .string()
     .refine((val) => !val || val.length >= 7, { message: 'NIT debe tener al menos 7 dígitos' })
