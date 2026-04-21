@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { useForm, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import {
@@ -137,7 +137,7 @@ export default function NuevoClientePage() {
 
 	// Natural client form
 	const naturalForm = useForm<NaturalClientFormData>({
-		resolver: zodResolver(naturalClientFormSchema),
+		resolver: zodResolver(naturalClientFormSchema) as Resolver<NaturalClientFormData>,
 		mode: "onBlur",
 	});
 
@@ -149,7 +149,7 @@ export default function NuevoClientePage() {
 
 	// Unipersonal client form
 	const unipersonalForm = useForm<UnipersonalClientFormData>({
-		resolver: zodResolver(unipersonalClientFormSchema),
+		resolver: zodResolver(unipersonalClientFormSchema) as Resolver<UnipersonalClientFormData>,
 		mode: "onBlur",
 	});
 
