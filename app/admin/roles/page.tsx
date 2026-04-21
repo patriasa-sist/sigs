@@ -13,7 +13,7 @@ export default async function AdminRolesPage() {
 
 	const { data: users, error } = await supabase
 		.from("profiles")
-		.select("id, email, role, created_at, updated_at")
+		.select("id, email, role, created_at, updated_at, full_name")
 		.order("created_at", { ascending: false });
 
 	if (error) {
@@ -109,9 +109,15 @@ export default async function AdminRolesPage() {
 										<div className="flex items-center gap-3 min-w-0">
 											<div className="flex flex-col min-w-0">
 												<div className="flex items-center gap-2 flex-wrap">
-													<span className="text-sm font-medium text-foreground truncate">
-														{user.email}
-													</span>
+													{user.full_name ? (
+														<span className="text-sm font-medium text-foreground truncate">
+															{user.full_name}
+														</span>
+													) : (
+														<span className="text-sm font-medium text-muted-foreground italic truncate">
+															Sin nombre
+														</span>
+													)}
 													{user.id === adminProfile.id && (
 														<Badge variant="outline" className="text-xs shrink-0">
 															Tú
@@ -119,7 +125,8 @@ export default async function AdminRolesPage() {
 													)}
 												</div>
 												<div className="flex items-center gap-3 mt-0.5 text-xs text-muted-foreground">
-													<span className="flex items-center gap-1">
+													<span className="truncate">{user.email}</span>
+													<span className="shrink-0 flex items-center gap-1">
 														<Calendar className="h-3 w-3" />
 														{new Date(user.created_at).toLocaleDateString("es-BO")}
 													</span>

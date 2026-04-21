@@ -619,13 +619,16 @@ export function DatosBasicos({ datos, onChange, onSiguiente, onAnterior }: Props
 				<div className="space-y-2">
 					<Label htmlFor="categoria">Grupo de negocios</Label>
 					<Select
-						value={formData.categoria_id || ""}
-						onValueChange={(value) => handleChange("categoria_id", value || undefined)}
+						value={formData.categoria_id || "none"}
+						onValueChange={(value) => handleChange("categoria_id", value === "none" ? undefined : value)}
 					>
 						<SelectTrigger className={errores.categoria_id ? "border-destructive" : ""}>
 							<SelectValue placeholder="Seleccione un grupo (opcional)" />
 						</SelectTrigger>
 						<SelectContent>
+							<SelectItem value="none">
+								<span className="text-muted-foreground">Sin grupo (opcional)</span>
+							</SelectItem>
 							{categorias.map((categoria) => (
 								<SelectItem key={categoria.id} value={categoria.id}>
 									{categoria.nombre}
