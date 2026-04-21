@@ -39,6 +39,13 @@ import { z } from "zod";
 
 const uuidSchema = z.string().uuid();
 
+// Converts null values to undefined so Zod's .optional() fields accept DB-loaded data
+function nullsToUndefined<T extends Record<string, unknown>>(obj: T): T {
+	return Object.fromEntries(
+		Object.entries(obj).map(([k, v]) => [k, v === null ? undefined : v])
+	) as T;
+}
+
 // ============================================
 // TYPES
 // ============================================
@@ -159,7 +166,8 @@ export async function updateNaturalClient(
 		return { success: false, error: "ID de cliente inválido" };
 	}
 
-	const validation = naturalClientFormSchema.partial().safeParse(data);
+	const sanitized = nullsToUndefined(data as Record<string, unknown>);
+	const validation = naturalClientFormSchema.partial().safeParse(sanitized);
 	if (!validation.success) {
 		const firstError = validation.error.issues[0];
 		return { success: false, error: `Datos inválidos: ${firstError.path.join(".")} - ${firstError.message}` };
@@ -253,7 +261,8 @@ export async function updateJuridicClient(
 	}
 
 	const juridicSchema = juridicClientCompanySchema.merge(juridicClientContactSchema);
-	const validation = juridicSchema.partial().safeParse(data);
+	const sanitized = nullsToUndefined(data as Record<string, unknown>);
+	const validation = juridicSchema.partial().safeParse(sanitized);
 	if (!validation.success) {
 		const firstError = validation.error.issues[0];
 		return { success: false, error: `Datos inválidos: ${firstError.path.join(".")} - ${firstError.message}` };
@@ -333,7 +342,8 @@ export async function updateUnipersonalClient(
 		return { success: false, error: "ID de cliente inválido" };
 	}
 
-	const validation = unipersonalClientFormSchema.partial().safeParse(data);
+	const sanitized = nullsToUndefined(data as Record<string, unknown>);
+	const validation = unipersonalClientFormSchema.partial().safeParse(sanitized);
 	if (!validation.success) {
 		const firstError = validation.error.issues[0];
 		return { success: false, error: `Datos inválidos: ${firstError.path.join(".")} - ${firstError.message}` };
