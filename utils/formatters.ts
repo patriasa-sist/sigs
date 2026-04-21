@@ -14,7 +14,8 @@ export function formatCurrency(amount: number, currency: string = "Bs"): string 
  * Formatea una fecha
  * Maneja correctamente fechas en formato YYYY-MM-DD para evitar problemas de timezone
  */
-export function formatDate(date: string | Date): string {
+export function formatDate(date: string | Date | null | undefined): string {
+	if (date == null) return "-";
 	if (typeof date === "string") {
 		// Si es formato YYYY-MM-DD, parsear manualmente para evitar problemas de timezone
 		const match = date.match(/^(\d{4})-(\d{2})-(\d{2})/);
@@ -33,7 +34,8 @@ export function formatDate(date: string | Date): string {
  * Formatea una fecha con hora
  * Maneja correctamente fechas en formato YYYY-MM-DD para evitar problemas de timezone
  */
-export function formatDateTime(date: string | Date): string {
+export function formatDateTime(date: string | Date | null | undefined): string {
+	if (date == null) return "-";
 	if (typeof date === "string") {
 		// Si es solo fecha (YYYY-MM-DD), parsear manualmente
 		const matchDate = date.match(/^(\d{4})-(\d{2})-(\d{2})$/);
