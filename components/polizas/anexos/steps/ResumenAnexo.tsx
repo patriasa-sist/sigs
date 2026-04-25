@@ -39,10 +39,16 @@ export function ResumenAnexo({ formState, onGuardar, isSaving, onEditarPaso, onA
 		advertencias.push({ tipo: "warning", mensaje: "El monto de vigencia corrida es 0. ¿Es correcto?" });
 	}
 
-	if (config.tipo_anexo !== "anulacion") {
+	if (config.tipo_anexo === "inclusion") {
+		if (!formState.plan_pago_inclusion || formState.plan_pago_inclusion.prima_total <= 0) {
+			advertencias.push({ tipo: "warning", mensaje: "No se definió un plan de pago para la inclusión." });
+		}
+	}
+
+	if (config.tipo_anexo === "exclusion") {
 		const tieneDeltas = formState.cuotas_ajuste.some((c) => c.monto_delta !== 0);
 		if (!tieneDeltas && !formState.items_cambio) {
-			advertencias.push({ tipo: "warning", mensaje: "No se registraron cambios en items ni ajustes de pago." });
+			advertencias.push({ tipo: "warning", mensaje: "No se registraron cambios en items ni descuentos de pago." });
 		}
 	}
 
@@ -169,14 +175,76 @@ export function ResumenAnexo({ formState, onGuardar, isSaving, onEditarPaso, onA
 			<div className="border rounded-lg p-4 mb-4">
 				<div className="flex items-center justify-between mb-2">
 					<h3 className="font-medium text-sm text-gray-500">
-						{config.tipo_anexo === "anulacion" ? "Vigencia Corrida" : "Ajuste de Pagos"}
+						{config.tipo_anexo === "inclusion"
+							? "Plan de Pago del Anexo"
+							: config.tipo_anexo === "exclusion"
+							? "Descuento por Exclusión"
+							: "Vigencia Corrida"}
 					</h3>
 					<button onClick={() => onEditarPaso(4)} className="text-blue-500 hover:text-blue-700">
 						<Edit className="h-4 w-4" />
 					</button>
 				</div>
 
-				{config.tipo_anexo === "anulacion" ? (
+				{config.tipo_anexo === "inclusion" ? (
+					<div className="text-sm">
+						{formState.plan_pago_inclusion && formState.plan_pago_inclusion.prima_total > 0 ? (
+							<>
+								<p>
+									Modalidad:{" "}
+									<span className="font-medium capitalize">
+										{formState.plan_pago_inclusion.modalidad}
+									</span>
+								</p>
+								<p>
+									Prima Total:{" "}
+									<span className="font-medium">
+										{formatCurrency(formState.plan_pago_inclusion.prima_total, moneda)}
+									</span>
+								</p>
+								<p>
+									Cuotas:{" "}
+									<span className="font-medium">
+										{formState.plan_pago_inclusion.cuotas.length}
+									</span>
+								</p>
+								<div className="mt-2 space-y-1">
+									{formState.plan_pago_inclusion.cuotas.map((c) => (
+										<div key={c.numero_cuota} className="flex justify-between text-xs text-gray-600">
+											<span>Cuota {c.numero_cuota} — {formatDate(c.fecha_vencimiento)}</span>
+											<span>{formatCurrency(c.monto, moneda)}</span>
+										</div>
+									))}
+								</div>
+							</>
+						) : (
+							<p className="text-gray-400">Sin plan de pago definido</p>
+						)}
+					</div>
+				) : config.tipo_anexo === "exclusion" ? (
+					<div className="text-sm">
+						{formState.cuotas_ajuste.some((c) => c.monto_delta !== 0) ? (
+							<>
+								<p>
+									Cuotas con descuento:{" "}
+									{formState.cuotas_ajuste.filter((c) => c.monto_delta !== 0).length} de{" "}
+									{formState.cuotas_ajuste.length}
+								</p>
+								<p className="font-medium">
+									Descuento total:{" "}
+									<span className="text-red-600">
+										{formatCurrency(
+											formState.cuotas_ajuste.reduce((s, c) => s + c.monto_delta, 0),
+											moneda
+										)}
+									</span>
+								</p>
+							</>
+						) : (
+							<p className="text-gray-400">Sin descuentos de pago</p>
+						)}
+					</div>
+				) : (
 					<div className="text-sm">
 						{formState.vigencia_corrida && formState.vigencia_corrida.monto > 0 ? (
 							<>
@@ -193,36 +261,6 @@ export function ResumenAnexo({ formState, onGuardar, isSaving, onEditarPaso, onA
 							</>
 						) : (
 							<p className="text-gray-400">Sin cobro de vigencia corrida</p>
-						)}
-					</div>
-				) : (
-					<div className="text-sm">
-						{formState.cuotas_ajuste.some((c) => c.monto_delta !== 0) ? (
-							<>
-								<p>
-									Cuotas modificadas:{" "}
-									{formState.cuotas_ajuste.filter((c) => c.monto_delta !== 0).length} de{" "}
-									{formState.cuotas_ajuste.length}
-								</p>
-								<p className="font-medium">
-									Diferencia total:{" "}
-									<span
-										className={
-											formState.cuotas_ajuste.reduce((s, c) => s + c.monto_delta, 0) >= 0
-												? "text-green-600"
-												: "text-red-600"
-										}
-									>
-										{formState.cuotas_ajuste.reduce((s, c) => s + c.monto_delta, 0) >= 0 ? "+" : ""}
-										{formatCurrency(
-											formState.cuotas_ajuste.reduce((s, c) => s + c.monto_delta, 0),
-											moneda
-										)}
-									</span>
-								</p>
-							</>
-						) : (
-							<p className="text-gray-400">Sin ajustes de pago</p>
 						)}
 					</div>
 				)}

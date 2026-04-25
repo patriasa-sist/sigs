@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FileText } from "lucide-react";
 import { toast } from "sonner";
-import type { AnexoFormState, DatosPolizaParaAnexo } from "@/types/anexo";
+import type { AnexoFormState, DatosPolizaParaAnexo, PlanPagoInclusion } from "@/types/anexo";
 import { guardarAnexo, obtenerDatosParaAnexo } from "@/app/polizas/anexos/actions";
 import { createClient } from "@/utils/supabase/client";
 
@@ -21,6 +21,7 @@ const INITIAL_STATE: AnexoFormState = {
 	poliza_resumen: null,
 	config: null,
 	items_cambio: null,
+	plan_pago_inclusion: null,
 	cuotas_ajuste: [],
 	vigencia_corrida: null,
 	documentos: [],
@@ -98,6 +99,10 @@ export function NuevoAnexoForm() {
 	};
 
 	// Callbacks estables para PagosYDocumentos (evitar re-renders infinitos en useEffect)
+	const handleChangePlanPagoInclusion = useCallback(
+		(plan: PlanPagoInclusion | null) => setFormState((prev) => ({ ...prev, plan_pago_inclusion: plan })),
+		[]
+	);
 	const handleChangeCuotas = useCallback(
 		(cuotas: AnexoFormState["cuotas_ajuste"]) => setFormState((prev) => ({ ...prev, cuotas_ajuste: cuotas })),
 		[]
@@ -186,11 +191,13 @@ export function NuevoAnexoForm() {
 				<PagosYDocumentos
 					tipoAnexo={formState.config!.tipo_anexo}
 					cuotasOriginales={datosPoliza.cuotas}
+					planPagoInclusion={formState.plan_pago_inclusion}
 					cuotasAjuste={formState.cuotas_ajuste}
 					vigenciaCorrida={formState.vigencia_corrida}
 					documentos={formState.documentos}
 					moneda={formState.poliza_resumen!.moneda}
 					userId={userId}
+					onChangePlanPagoInclusion={handleChangePlanPagoInclusion}
 					onChangeCuotas={handleChangeCuotas}
 					onChangeVigenciaCorrida={handleChangeVigenciaCorrida}
 					onChangeDocumentos={(docs) =>

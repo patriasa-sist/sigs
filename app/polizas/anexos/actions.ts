@@ -5,7 +5,7 @@ import { createAdminClient } from "@/utils/supabase/admin";
 import { revalidatePath } from "next/cache";
 import { getDataScopeFilter } from "@/utils/auth/helpers";
 import { generateFinalStoragePath } from "@/utils/fileUpload";
-import type { AnexoFormState, PolizaResumenAnexo, DatosPolizaParaAnexo, CuotaConsolidada, CuotaVigenciaCorrida, AnexoResumen } from "@/types/anexo";
+import type { AnexoFormState, PolizaResumenAnexo, DatosPolizaParaAnexo, CuotaConsolidada, CuotaVigenciaCorrida, AnexoResumen, PlanPagoInclusion } from "@/types/anexo";
 
 // ============================================
 // HELPERS
@@ -676,22 +676,11 @@ export async function guardarAnexo(formState: AnexoFormState): Promise<{
 			}
 		}
 
-		// Para inclusión/exclusión: validar que las cuotas target no estén pagadas
-		if (formState.config.tipo_anexo !== "anulacion" && formState.cuotas_ajuste.length > 0) {
-			const cuotaIds = formState.cuotas_ajuste
-				.filter((c) => c.monto_delta !== 0)
-				.map((c) => c.cuota_original_id);
-
-			if (cuotaIds.length > 0) {
-				const { data: cuotasPagadas } = await supabase
-					.from("polizas_pagos")
-					.select("id, estado")
-					.in("id", cuotaIds)
-					.eq("estado", "pagado");
-
-				if (cuotasPagadas && cuotasPagadas.length > 0) {
-					return { success: false, error: "No se puede modificar cuotas ya pagadas" };
-				}
+		// Validar plan de inclusión si corresponde
+		if (formState.config.tipo_anexo === "inclusion") {
+			const plan = formState.plan_pago_inclusion;
+			if (!plan || plan.prima_total <= 0 || plan.cuotas.length === 0) {
+				return { success: false, error: "El plan de pago de la inclusión es requerido" };
 			}
 		}
 
@@ -743,7 +732,11 @@ export async function guardarAnexo(formState: AnexoFormState): Promise<{
 
 					throwIfAnexoError(pagoError, "Error al guardar vigencia corrida");
 				}
+			} else if (formState.config.tipo_anexo === "inclusion") {
+				// Inclusión: cuotas propias del anexo, independientes de la póliza madre
+				await guardarCuotasInclusion(supabase, anexo.id, formState.plan_pago_inclusion!);
 			} else {
+				// Exclusión: descuentos negativos sobre cuotas originales (incluso pagadas)
 				const cuotasConDelta = formState.cuotas_ajuste.filter((c) => c.monto_delta !== 0);
 				if (cuotasConDelta.length > 0) {
 					const pagosInsert = cuotasConDelta.map((c) => ({
@@ -754,16 +747,14 @@ export async function guardarAnexo(formState: AnexoFormState): Promise<{
 						monto: c.monto_delta,
 						fecha_vencimiento: c.fecha_vencimiento,
 						estado: "pendiente" as const,
-						observaciones: formState.config!.tipo_anexo === "inclusion"
-							? "Ajuste por inclusión"
-							: "Ajuste por exclusión",
+						observaciones: "Descuento por exclusión",
 					}));
 
 					const { error: pagosError } = await supabase
 						.from("polizas_anexos_pagos")
 						.insert(pagosInsert);
 
-					throwIfAnexoError(pagosError, "Error al guardar pagos del anexo");
+					throwIfAnexoError(pagosError, "Error al guardar descuentos de exclusión");
 				}
 			}
 
@@ -815,6 +806,32 @@ export async function guardarAnexo(formState: AnexoFormState): Promise<{
 		console.error("Error guardando anexo:", error);
 		return { success: false, error: error instanceof Error ? error.message : "Error desconocido" };
 	}
+}
+
+/**
+ * Guarda las cuotas propias de un anexo de inclusión.
+ * Estas cuotas son independientes de las cuotas de la póliza madre.
+ */
+async function guardarCuotasInclusion(
+	supabase: Awaited<ReturnType<typeof createClient>>,
+	anexoId: string,
+	plan: PlanPagoInclusion
+) {
+	if (plan.cuotas.length === 0) return;
+
+	const rows = plan.cuotas.map((c) => ({
+		anexo_id: anexoId,
+		cuota_original_id: null,
+		tipo: "cuota_propia" as const,
+		numero_cuota: c.numero_cuota,
+		monto: c.monto,
+		fecha_vencimiento: c.fecha_vencimiento,
+		estado: "pendiente" as const,
+		observaciones: plan.modalidad === "contado" ? "Pago contado por inclusión" : `Cuota ${c.numero_cuota} de ${plan.cuotas.length} por inclusión`,
+	}));
+
+	const { error } = await supabase.from("polizas_anexos_pagos").insert(rows);
+	throwIfAnexoError(error, "Error al guardar cuotas de inclusión");
 }
 
 /**

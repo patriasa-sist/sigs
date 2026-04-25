@@ -93,14 +93,29 @@ export type AnexoItemsCambio =
 // PASO 4: AJUSTE DE PAGOS
 // ============================================
 
+// Para exclusiones: descuento aplicado a cuota original (puede estar pagada)
 export type CuotaAjuste = {
 	cuota_original_id: string;
 	numero_cuota: number;
 	monto_original: number;
-	monto_delta: number; // +/- diferencia
+	monto_delta: number; // siempre negativo para exclusiones
 	fecha_vencimiento: string;
 	estado_original: string; // pendiente, pagado, vencido, parcial
-	es_modificable: boolean; // false si está pagada
+};
+
+// Para inclusiones: cuota propia del anexo (independiente de la póliza madre)
+export type CuotaPropia = {
+	numero_cuota: number;
+	monto: number;
+	fecha_vencimiento: string; // YYYY-MM-DD
+};
+
+export type PlanPagoInclusion = {
+	modalidad: "contado" | "credito";
+	prima_total: number;
+	cuota_inicial: number;   // crédito: monto de la primera cuota (0 = todas iguales)
+	cantidad_cuotas: number; // crédito: número total de cuotas
+	cuotas: CuotaPropia[];  // lista final de cuotas calculadas/editadas
 };
 
 export type VigenciaCorrida = {
@@ -127,8 +142,9 @@ export type AnexoFormState = {
 	items_cambio: AnexoItemsCambio | null;
 
 	// Paso 4: Pagos y documentos
-	cuotas_ajuste: CuotaAjuste[]; // para inclusión/exclusión
-	vigencia_corrida: VigenciaCorrida | null; // para anulación
+	plan_pago_inclusion: PlanPagoInclusion | null; // para inclusión: plan propio
+	cuotas_ajuste: CuotaAjuste[];                  // para exclusión: descuentos a cuotas originales
+	vigencia_corrida: VigenciaCorrida | null;       // para anulación
 	documentos: DocumentoPoliza[];
 
 	// Paso 5: Advertencias
@@ -211,7 +227,7 @@ export type AnexoPagoDB = {
 	id: string;
 	anexo_id: string;
 	cuota_original_id?: string;
-	tipo: "ajuste" | "vigencia_corrida";
+	tipo: "ajuste" | "vigencia_corrida" | "cuota_propia";
 	numero_cuota?: number;
 	monto: number;
 	fecha_vencimiento?: string;
