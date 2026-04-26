@@ -39,6 +39,7 @@ import type {
 	FiltrosCobranzaOptions,
 	CobranzaSortField,
 } from "@/types/cobranza";
+import type { CuotaAnexoPropia } from "@/types/anexo";
 
 // Helper types for Supabase query results
 // Note: natural_clients and juridic_clients are 1:1 relationships, not arrays
@@ -1110,6 +1111,37 @@ export async function obtenerDetallePolizaParaCuotas(polizaId: string): Promise<
 			.filter((c: CuotaPago) => obtenerEstadoReal(c) !== "pagado" && c.fecha_vencimiento >= todayStr)
 			.sort((a, b) => a.fecha_vencimiento.localeCompare(b.fecha_vencimiento))[0]?.fecha_vencimiento ?? null;
 
+		// Cuotas propias de anexos de inclusión activos
+		let cuotas_inclusion: CuotaAnexoPropia[] | undefined;
+		const { data: anexosPagosInclusion } = await supabase
+			.from("polizas_anexos_pagos")
+			.select(`
+				id, anexo_id, numero_cuota, monto, fecha_vencimiento, estado, observaciones,
+				polizas_anexos!inner (id, numero_anexo, estado)
+			`)
+			.eq("polizas_anexos.poliza_id", polizaId)
+			.eq("polizas_anexos.estado", "activo")
+			.eq("tipo", "cuota_propia");
+
+		if (anexosPagosInclusion && anexosPagosInclusion.length > 0) {
+			cuotas_inclusion = anexosPagosInclusion.map((p) => {
+				const info = p.polizas_anexos as unknown as { id: string; numero_anexo: string };
+				return {
+					id: p.id,
+					anexo_id: info.id,
+					numero_anexo: info.numero_anexo,
+					numero_cuota: p.numero_cuota ?? 0,
+					monto: Number(p.monto),
+					fecha_vencimiento: p.fecha_vencimiento || "",
+					estado: p.estado || "pendiente",
+					observaciones: p.observaciones || undefined,
+				};
+			}).sort((a, b) => {
+				if (a.numero_anexo !== b.numero_anexo) return a.numero_anexo.localeCompare(b.numero_anexo);
+				return a.numero_cuota - b.numero_cuota;
+			});
+		}
+
 		// Build extended policy object
 		const polizaExtendida: PolizaConPagosExtendida = {
 			id: poliza.id,
@@ -1169,6 +1201,7 @@ export async function obtenerDetallePolizaParaCuotas(polizaId: string): Promise<
 			proxima_fecha_vencimiento,
 			contacto,
 			datos_ramo,
+			cuotas_inclusion,
 		};
 
 		return { success: true, data: polizaExtendida };

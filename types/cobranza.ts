@@ -1,4 +1,5 @@
 // types/cobranza.ts - Type definitions for the Cobranzas (Collections) module
+import type { CuotaAnexoPropia } from "@/types/anexo";
 
 // ============================================
 // CORE TYPES
@@ -444,6 +445,8 @@ export type DatosEspecificosRamo =
 export type PolizaConPagosExtendida = PolizaConPagos & {
 	contacto: ContactoCliente;
 	datos_ramo: DatosEspecificosRamo;
+	// Cuotas propias de anexos de inclusión (independientes de las cuotas de la póliza madre)
+	cuotas_inclusion?: CuotaAnexoPropia[];
 };
 
 // ============================================

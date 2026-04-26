@@ -727,6 +727,48 @@ export default function CuotasModal({
 						)}
 					</div>
 
+					{/* Cuotas de anexos de inclusión */}
+					{polizaExtendida?.cuotas_inclusion && polizaExtendida.cuotas_inclusion.length > 0 && (
+						<div className="mt-4">
+							<h3 className="text-sm font-semibold mb-2 text-green-700 flex items-center gap-1.5">
+								<span className="inline-block w-2 h-2 rounded-full bg-green-500" />
+								Cuotas de Inclusiones
+							</h3>
+							<div className="border border-green-200 rounded-lg overflow-hidden">
+								<table className="w-full text-sm">
+									<thead className="bg-green-50">
+										<tr>
+											<th className="px-4 py-2 text-left text-xs font-medium text-green-700">Anexo</th>
+											<th className="px-4 py-2 text-left text-xs font-medium text-green-700">N° Cuota</th>
+											<th className="px-4 py-2 text-left text-xs font-medium text-green-700">Monto</th>
+											<th className="px-4 py-2 text-left text-xs font-medium text-green-700">Vencimiento</th>
+											<th className="px-4 py-2 text-left text-xs font-medium text-green-700">Estado</th>
+										</tr>
+									</thead>
+									<tbody className="divide-y divide-green-100">
+										{polizaExtendida.cuotas_inclusion.map((ci) => (
+											<tr key={ci.id} className="hover:bg-green-50/50">
+												<td className="px-4 py-2 text-xs font-medium text-green-800">
+													{ci.numero_anexo}
+												</td>
+												<td className="px-4 py-2 text-xs">{ci.numero_cuota}</td>
+												<td className="px-4 py-2 text-xs font-medium tabular-nums">
+													{poliza.moneda} {formatCurrency(ci.monto)}
+												</td>
+												<td className="px-4 py-2 text-xs">
+													{ci.fecha_vencimiento ? formatearFecha(ci.fecha_vencimiento, "corto") : "—"}
+												</td>
+												<td className="px-4 py-2">
+													<EstadoBadge estado={ci.estado as "pendiente" | "pagado" | "vencido" | "parcial"} />
+												</td>
+											</tr>
+										))}
+									</tbody>
+								</table>
+							</div>
+						</div>
+					)}
+
 					{/* Footer */}
 					<div className="flex justify-end pt-1">
 						<Button variant="outline" onClick={onClose}>

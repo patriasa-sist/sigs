@@ -1866,6 +1866,42 @@ export default function PolizaDetallePage() {
 													</tr>
 												);
 											})}
+											{/* Cuotas propias de inclusiones */}
+											{poliza.cuotas_inclusion?.map((ci) => (
+												<tr
+													key={`inc-${ci.id}`}
+													className="bg-green-50/50 hover:bg-green-50"
+												>
+													<td className="px-4 py-3 text-sm font-medium text-green-800">
+														<span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-700 border border-green-200 mr-2">
+															Inclusión {ci.numero_anexo}
+														</span>
+														Cuota {ci.numero_cuota}
+													</td>
+													<td className="px-4 py-3 text-sm text-gray-900">
+														{ci.fecha_vencimiento ? formatDate(ci.fecha_vencimiento) : "-"}
+													</td>
+													<td className="px-4 py-3 text-sm text-gray-500 text-right">-</td>
+													{poliza.cuotas_consolidadas && (
+														<>
+															<td className="px-4 py-3" />
+															<td className="px-4 py-3 text-sm font-semibold text-green-900 text-right bg-green-50/50">
+																{formatCurrency(ci.monto, poliza.moneda)}
+															</td>
+														</>
+													)}
+													<td className="px-4 py-3 text-sm text-gray-600">-</td>
+													<td className="px-4 py-3">
+														<div className="flex justify-center">
+															<span
+																className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getEstadoPagoStyle(ci.estado)}`}
+															>
+																{getEstadoPagoLabel(ci.estado)}
+															</span>
+														</div>
+													</td>
+												</tr>
+											))}
 											{/* Vigencia Corrida rows */}
 											{poliza.vigencia_corrida?.map((vc) => (
 												<tr

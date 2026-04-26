@@ -267,6 +267,18 @@ export type CuotaVigenciaCorrida = {
 	observaciones?: string;
 };
 
+// Cuota propia de un anexo de inclusión (independiente de las cuotas de la póliza madre)
+export type CuotaAnexoPropia = {
+	id: string;
+	anexo_id: string;
+	numero_anexo: string;
+	numero_cuota: number;
+	monto: number;
+	fecha_vencimiento: string;
+	estado: string;
+	observaciones?: string;
+};
+
 // ============================================
 // TIPOS PARA RESÚMENES Y LISTADOS
 // ============================================

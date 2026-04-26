@@ -5,7 +5,7 @@ import { createAdminClient } from "@/utils/supabase/admin";
 import { revalidatePath } from "next/cache";
 import { getDataScopeFilter } from "@/utils/auth/helpers";
 import { generateFinalStoragePath } from "@/utils/fileUpload";
-import type { AnexoFormState, PolizaResumenAnexo, DatosPolizaParaAnexo, CuotaConsolidada, CuotaVigenciaCorrida, AnexoResumen, PlanPagoInclusion } from "@/types/anexo";
+import type { AnexoFormState, PolizaResumenAnexo, DatosPolizaParaAnexo, CuotaConsolidada, CuotaVigenciaCorrida, CuotaAnexoPropia, AnexoResumen, PlanPagoInclusion } from "@/types/anexo";
 
 // ============================================
 // HELPERS
@@ -1102,6 +1102,7 @@ export async function obtenerAnexosPoliza(polizaId: string): Promise<{
 export async function obtenerCuotasConsolidadas(polizaId: string): Promise<{
 	success: boolean;
 	cuotas?: CuotaConsolidada[];
+	cuotas_inclusion?: CuotaAnexoPropia[];
 	vigencia_corrida?: CuotaVigenciaCorrida[];
 	error?: string;
 }> {
@@ -1111,7 +1112,6 @@ export async function obtenerCuotasConsolidadas(polizaId: string): Promise<{
 		const { data: { user } } = await supabase.auth.getUser();
 		if (!user) return { success: false, error: "No autenticado" };
 
-		// Cargar cuotas originales y pagos de anexos activos en paralelo
 		const [cuotasResult, anexosPagosResult] = await Promise.all([
 			supabase
 				.from("polizas_pagos")
@@ -1123,9 +1123,7 @@ export async function obtenerCuotasConsolidadas(polizaId: string): Promise<{
 				.select(`
 					id, anexo_id, cuota_original_id, tipo, numero_cuota,
 					monto, fecha_vencimiento, estado, observaciones,
-					polizas_anexos!inner (
-						id, numero_anexo, tipo_anexo, estado
-					)
+					polizas_anexos!inner (id, numero_anexo, tipo_anexo, estado)
 				`)
 				.eq("polizas_anexos.poliza_id", polizaId)
 				.eq("polizas_anexos.estado", "activo"),
@@ -1134,11 +1132,12 @@ export async function obtenerCuotasConsolidadas(polizaId: string): Promise<{
 		const cuotasOriginales = cuotasResult.data || [];
 		const pagosAnexos = anexosPagosResult.data || [];
 
-		// Separar ajustes y vigencia corrida
+		// Separar por tipo
 		const ajustes = pagosAnexos.filter((p) => p.tipo === "ajuste");
+		const cuotasPropias = pagosAnexos.filter((p) => p.tipo === "cuota_propia");
 		const vigenciaCorrida = pagosAnexos.filter((p) => p.tipo === "vigencia_corrida");
 
-		// Agrupar ajustes por cuota_original_id
+		// Agrupar ajustes de exclusión por cuota_original_id
 		const ajustesPorCuota = new Map<string, typeof ajustes>();
 		for (const ajuste of ajustes) {
 			if (!ajuste.cuota_original_id) continue;
@@ -1147,11 +1146,10 @@ export async function obtenerCuotasConsolidadas(polizaId: string): Promise<{
 			ajustesPorCuota.set(ajuste.cuota_original_id, existing);
 		}
 
-		// Construir cuotas consolidadas
+		// Cuotas de la póliza madre con descuentos de exclusión aplicados
 		const cuotasConsolidadas: CuotaConsolidada[] = cuotasOriginales.map((cuota) => {
 			const ajustesCuota = ajustesPorCuota.get(cuota.id) || [];
 			const montoAjustes = ajustesCuota.reduce((sum, a) => sum + Number(a.monto), 0);
-
 			return {
 				cuota_original_id: cuota.id,
 				numero_cuota: cuota.numero_cuota,
@@ -1162,23 +1160,41 @@ export async function obtenerCuotasConsolidadas(polizaId: string): Promise<{
 				estado: cuota.estado || "pendiente",
 				fecha_pago: cuota.fecha_pago || undefined,
 				ajustes: ajustesCuota.map((a) => {
-					const anexoInfo = a.polizas_anexos as unknown as { id: string; numero_anexo: string; tipo_anexo: string };
+					const info = a.polizas_anexos as unknown as { id: string; numero_anexo: string; tipo_anexo: string };
 					return {
-						anexo_id: anexoInfo.id,
-						numero_anexo: anexoInfo.numero_anexo,
-						tipo_anexo: anexoInfo.tipo_anexo as "inclusion" | "exclusion" | "anulacion",
+						anexo_id: info.id,
+						numero_anexo: info.numero_anexo,
+						tipo_anexo: info.tipo_anexo as "inclusion" | "exclusion" | "anulacion",
 						monto_delta: Number(a.monto),
 					};
 				}),
 			};
 		});
 
-		// Vigencia corrida
-		const vc: CuotaVigenciaCorrida[] = vigenciaCorrida.map((p) => {
-			const anexoInfo = p.polizas_anexos as unknown as { id: string; numero_anexo: string };
+		// Cuotas propias de anexos de inclusión (independientes de la póliza madre)
+		const inclusion: CuotaAnexoPropia[] = cuotasPropias.map((p) => {
+			const info = p.polizas_anexos as unknown as { id: string; numero_anexo: string };
 			return {
-				anexo_id: anexoInfo.id,
-				numero_anexo: anexoInfo.numero_anexo,
+				id: p.id,
+				anexo_id: info.id,
+				numero_anexo: info.numero_anexo,
+				numero_cuota: p.numero_cuota ?? 0,
+				monto: Number(p.monto),
+				fecha_vencimiento: p.fecha_vencimiento || "",
+				estado: p.estado || "pendiente",
+				observaciones: p.observaciones || undefined,
+			};
+		}).sort((a, b) => {
+			if (a.numero_anexo !== b.numero_anexo) return a.numero_anexo.localeCompare(b.numero_anexo);
+			return a.numero_cuota - b.numero_cuota;
+		});
+
+		// Vigencia corrida de anulaciones
+		const vc: CuotaVigenciaCorrida[] = vigenciaCorrida.map((p) => {
+			const info = p.polizas_anexos as unknown as { id: string; numero_anexo: string };
+			return {
+				anexo_id: info.id,
+				numero_anexo: info.numero_anexo,
 				monto: Number(p.monto),
 				fecha_vencimiento: p.fecha_vencimiento || "",
 				estado: p.estado || "pendiente",
@@ -1186,7 +1202,7 @@ export async function obtenerCuotasConsolidadas(polizaId: string): Promise<{
 			};
 		});
 
-		return { success: true, cuotas: cuotasConsolidadas, vigencia_corrida: vc };
+		return { success: true, cuotas: cuotasConsolidadas, cuotas_inclusion: inclusion, vigencia_corrida: vc };
 	} catch (error) {
 		console.error("Error obteniendo cuotas consolidadas:", error);
 		return { success: false, error: error instanceof Error ? error.message : "Error desconocido" };

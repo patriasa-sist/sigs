@@ -2,7 +2,7 @@
 
 import { createClient } from "@/utils/supabase/server";
 import { getDataScopeFilter } from "@/utils/auth/helpers";
-import type { CuotaConsolidada, CuotaVigenciaCorrida } from "@/types/anexo";
+import type { CuotaConsolidada, CuotaVigenciaCorrida, CuotaAnexoPropia } from "@/types/anexo";
 
 export type PolizaListItem = {
 	id: string;
@@ -258,6 +258,7 @@ export type PolizaDetalle = PolizaListItem & {
 	// Consolidación de anexos activos
 	tiene_anexos_activos: boolean;
 	cuotas_consolidadas?: CuotaConsolidada[];
+	cuotas_inclusion?: CuotaAnexoPropia[];
 	vigencia_corrida?: CuotaVigenciaCorrida[];
 	monto_ajustes_total?: number;
 };
@@ -1138,6 +1139,7 @@ export async function obtenerDetallePoliza(polizaId: string) {
 		const anexosActivosFiltrados = (anexosActivos || []).filter((a) => a.estado === "activo");
 		const tiene_anexos_activos = anexosActivosFiltrados.length > 0;
 		let cuotas_consolidadas: CuotaConsolidada[] | undefined;
+		let cuotas_inclusion: CuotaAnexoPropia[] | undefined;
 		let vigencia_corrida: CuotaVigenciaCorrida[] | undefined;
 		let monto_ajustes_total: number | undefined;
 
@@ -1351,7 +1353,7 @@ export async function obtenerDetallePoliza(polizaId: string) {
 				}
 			}
 
-			// Cuotas consolidadas
+			// Cuotas consolidadas (pagos de todos los tipos de anexos activos)
 			const { data: cuotasConsolResult } = await supabase
 				.from("polizas_anexos_pagos")
 				.select(`
@@ -1363,9 +1365,10 @@ export async function obtenerDetallePoliza(polizaId: string) {
 
 			if (cuotasConsolResult && cuotasConsolResult.length > 0) {
 				const ajustes = cuotasConsolResult.filter((p) => p.tipo === "ajuste");
+				const cuotasPropias = cuotasConsolResult.filter((p) => p.tipo === "cuota_propia");
 				const vc = cuotasConsolResult.filter((p) => p.tipo === "vigencia_corrida");
 
-				// Build consolidated cuotas
+				// Descuentos de exclusión agrupados por cuota original
 				const ajustesPorCuota = new Map<string, typeof ajustes>();
 				for (const a of ajustes) {
 					if (!a.cuota_original_id) continue;
@@ -1374,6 +1377,7 @@ export async function obtenerDetallePoliza(polizaId: string) {
 					ajustesPorCuota.set(a.cuota_original_id, arr);
 				}
 
+				// Cuotas de la póliza madre con descuentos de exclusión
 				cuotas_consolidadas = (pagos || []).map((cuota) => {
 					const cuotaAjustes = ajustesPorCuota.get(cuota.id) || [];
 					const montoAjustes = cuotaAjustes.reduce((sum, a) => sum + Number(a.monto), 0);
@@ -1387,22 +1391,44 @@ export async function obtenerDetallePoliza(polizaId: string) {
 						estado: cuota.estado || "pendiente",
 						fecha_pago: cuota.fecha_pago || undefined,
 						ajustes: cuotaAjustes.map((a) => {
-							const anexoInfo = a.polizas_anexos as unknown as { id: string; numero_anexo: string; tipo_anexo: string };
+							const info = a.polizas_anexos as unknown as { id: string; numero_anexo: string; tipo_anexo: string };
 							return {
-								anexo_id: anexoInfo.id,
-								numero_anexo: anexoInfo.numero_anexo,
-								tipo_anexo: anexoInfo.tipo_anexo as "inclusion" | "exclusion" | "anulacion",
+								anexo_id: info.id,
+								numero_anexo: info.numero_anexo,
+								tipo_anexo: info.tipo_anexo as "inclusion" | "exclusion" | "anulacion",
 								monto_delta: Number(a.monto),
 							};
 						}),
 					};
 				});
 
-				vigencia_corrida = vc.map((p) => {
-					const anexoInfo = p.polizas_anexos as unknown as { id: string; numero_anexo: string };
+				// Cuotas propias de inclusiones (independientes)
+				const cuotasInclusionBuilt: CuotaAnexoPropia[] = cuotasPropias.map((p) => {
+					const info = p.polizas_anexos as unknown as { id: string; numero_anexo: string };
 					return {
-						anexo_id: anexoInfo.id,
-						numero_anexo: anexoInfo.numero_anexo,
+						id: p.id,
+						anexo_id: info.id,
+						numero_anexo: info.numero_anexo,
+						numero_cuota: p.numero_cuota ?? 0,
+						monto: Number(p.monto),
+						fecha_vencimiento: p.fecha_vencimiento || "",
+						estado: p.estado || "pendiente",
+						observaciones: p.observaciones || undefined,
+					};
+				}).sort((a, b) => {
+					if (a.numero_anexo !== b.numero_anexo) return a.numero_anexo.localeCompare(b.numero_anexo);
+					return a.numero_cuota - b.numero_cuota;
+				});
+
+				if (cuotasInclusionBuilt.length > 0) {
+					cuotas_inclusion = cuotasInclusionBuilt;
+				}
+
+				vigencia_corrida = vc.map((p) => {
+					const info = p.polizas_anexos as unknown as { id: string; numero_anexo: string };
+					return {
+						anexo_id: info.id,
+						numero_anexo: info.numero_anexo,
 						monto: Number(p.monto),
 						fecha_vencimiento: p.fecha_vencimiento || "",
 						estado: p.estado || "pendiente",
@@ -1524,6 +1550,7 @@ export async function obtenerDetallePoliza(polizaId: string) {
 			historial: historialCompleto,
 			tiene_anexos_activos,
 			cuotas_consolidadas,
+			cuotas_inclusion,
 			vigencia_corrida,
 			monto_ajustes_total,
 		};
