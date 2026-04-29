@@ -154,41 +154,41 @@ export default function AnexosPendientesTable({ anexos: initialAnexos }: Props) 
 									</TableCell>
 									<TableCell className="py-1.5">{formatDate(anexo.fecha_anexo)}</TableCell>
 									<TableCell className="py-1.5">
-										<div className="flex justify-center gap-1">
+										<div className="flex justify-center gap-1.5">
 											<Button
 												variant="ghost"
 												size="icon"
-												className="h-7 w-7"
+												className="h-8 w-8 text-slate-600 bg-slate-100 hover:text-slate-900 hover:bg-slate-200"
 												onClick={() =>
 													router.push(`/polizas/${anexo.poliza_id}#anexo-${anexo.id}`)
 												}
 												title="Ver en póliza"
 											>
-												<Eye className="h-4 w-4" />
+												<Eye className="h-[18px] w-[18px]" />
 											</Button>
 											<Button
 												variant="ghost"
 												size="icon"
-												className="h-7 w-7 text-accent hover:text-accent hover:bg-accent-bg"
+												className="h-8 w-8 text-teal-700 bg-teal-50 hover:text-teal-800 hover:bg-teal-100"
 												disabled={isLoading}
 												onClick={() => openDialog(anexo, "validar")}
 												title="Validar"
 											>
 												{isLoading ? (
-													<Loader2 className="h-4 w-4 animate-spin" />
+													<Loader2 className="h-[18px] w-[18px] animate-spin" />
 												) : (
-													<CheckCircle className="h-4 w-4" />
+													<CheckCircle className="h-[18px] w-[18px]" />
 												)}
 											</Button>
 											<Button
 												variant="ghost"
 												size="icon"
-												className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/5"
+												className="h-8 w-8 text-rose-600 bg-rose-50 hover:text-rose-700 hover:bg-rose-100"
 												disabled={isLoading}
 												onClick={() => openDialog(anexo, "rechazar")}
 												title="Rechazar"
 											>
-												<XCircle className="h-4 w-4" />
+												<XCircle className="h-[18px] w-[18px]" />
 											</Button>
 										</div>
 									</TableCell>

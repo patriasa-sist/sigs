@@ -158,32 +158,32 @@ export default function PolizasPendientesTable({ polizas: initialPolizas }: Prop
 									</span>
 								</TableCell>
 								<TableCell className="py-3 pr-4">
-									<div className="flex items-center justify-end gap-1">
+									<div className="flex items-center justify-end gap-1.5">
 										<Button
 											variant="ghost"
 											size="icon"
-											className="h-7 w-7 text-accent hover:text-accent hover:bg-accent-bg"
+											className="h-8 w-8 text-teal-700 bg-teal-50 hover:text-teal-800 hover:bg-teal-100"
 											title="Validar directamente"
 											onClick={(e) => {
 												e.stopPropagation();
 												openDrawer(poliza);
 											}}
 										>
-											<CheckCircle className="h-4 w-4" />
+											<CheckCircle className="h-[18px] w-[18px]" />
 										</Button>
 										<Button
 											variant="ghost"
 											size="icon"
-											className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/5"
+											className="h-8 w-8 text-rose-600 bg-rose-50 hover:text-rose-700 hover:bg-rose-100"
 											title="Rechazar"
 											onClick={(e) => {
 												e.stopPropagation();
 												openDrawer(poliza);
 											}}
 										>
-											<XCircle className="h-4 w-4" />
+											<XCircle className="h-[18px] w-[18px]" />
 										</Button>
-										<ChevronRight className="h-4 w-4 text-muted-foreground ml-1" />
+										<ChevronRight className="h-[18px] w-[18px] text-muted-foreground ml-1" />
 									</div>
 								</TableCell>
 							</TableRow>
