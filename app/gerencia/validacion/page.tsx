@@ -1,4 +1,6 @@
-import { requirePermission } from "@/utils/auth/helpers";
+import { checkPermission } from "@/utils/auth/helpers";
+import { createClient } from "@/utils/supabase/server";
+import { redirect } from "next/navigation";
 import { ValidacionTabs } from "@/components/gerencia/ValidacionTabs";
 import { obtenerPolizasPendientes } from "./actions";
 import { obtenerAnexosPendientes } from "@/app/gerencia/validacion-anexos/actions";
@@ -11,7 +13,19 @@ export const metadata = {
 };
 
 export default async function ValidacionPage() {
-	await requirePermission("polizas.validar");
+	const { allowed, profile } = await checkPermission("polizas.validar");
+
+	if (!allowed) {
+		// Permitir líderes de equipo aunque no tengan el permiso JWT
+		const supabase = await createClient();
+		const { count } = await supabase
+			.from("equipo_miembros")
+			.select("*", { count: "exact", head: true })
+			.eq("user_id", profile?.id ?? "")
+			.eq("rol_equipo", "lider");
+
+		if ((count ?? 0) === 0) redirect("/unauthorized");
+	}
 
 	const [polizasResult, anexosResult] = await Promise.all([obtenerPolizasPendientes(), obtenerAnexosPendientes()]);
 

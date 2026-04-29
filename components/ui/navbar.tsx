@@ -49,6 +49,7 @@ interface Profile {
 function usePermissions() {
 	const [permissions, setPermissions] = useState<string[]>([]);
 	const [role, setRole] = useState<string | null>(null);
+	const [isTeamLeader, setIsTeamLeader] = useState(false);
 
 	useEffect(() => {
 		async function loadPermissions() {
@@ -61,8 +62,22 @@ function usePermissions() {
 			try {
 				const payload = session.access_token.split(".")[1];
 				const decoded = JSON.parse(atob(payload.replace(/-/g, "+").replace(/_/g, "/")));
-				setPermissions(decoded.user_permissions || []);
+				const perms: string[] = decoded.user_permissions || [];
+				setPermissions(perms);
 				setRole(decoded.user_role || null);
+
+				// Si no tiene polizas.validar, verificar si es líder de equipo
+				if (!perms.includes("polizas.validar") && decoded.user_role !== "admin") {
+					const { data: { user } } = await supabase.auth.getUser();
+					if (user) {
+						const { count } = await supabase
+							.from("equipo_miembros")
+							.select("*", { count: "exact", head: true })
+							.eq("user_id", user.id)
+							.eq("rol_equipo", "lider");
+						setIsTeamLeader((count ?? 0) > 0);
+					}
+				}
 			} catch {
 				// JWT decode failed
 			}
@@ -75,7 +90,7 @@ function usePermissions() {
 		return permissions.includes(permission);
 	};
 
-	return { can, role, permissions };
+	return { can, role, permissions, isTeamLeader };
 }
 
 export function Navbar() {
@@ -83,7 +98,7 @@ export function Navbar() {
 	const [profile, setProfile] = useState<Profile | null>(null);
 	const [loading, setLoading] = useState(true);
 	const supabase = createClient();
-	const { can, role } = usePermissions();
+	const { can, role, isTeamLeader } = usePermissions();
 
 	useEffect(() => {
 		async function getUser() {
@@ -213,7 +228,7 @@ export function Navbar() {
 						</Link>
 					)}
 
-					{can("polizas.validar") && (
+					{(can("polizas.validar") || isTeamLeader) && (
 						<Link href="/gerencia/validacion">
 							<Button variant="ghost" size="sm" className="gap-2">
 								<CheckSquare className="h-4 w-4" />
