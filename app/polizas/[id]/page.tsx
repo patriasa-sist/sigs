@@ -2240,15 +2240,16 @@ export default function PolizaDetallePage() {
 					</Card>
 				</div>
 
-				{/* ── Anexos (full width) ──────────────────────────── */}
-				<div className="lg:col-span-3">
-					<AnexoDetalleSection
-						polizaId={polizaId}
-						moneda={poliza.moneda}
-						puedeValidar={userRole === "admin" || userRole === "usuario" || isTeamLeader}
-						onAnexoValidado={cargarDetalle}
-					/>
-				</div>
+			</div>
+
+			{/* ── Anexos (full width, outside sticky grid) ──────── */}
+			<div className="mt-5">
+				<AnexoDetalleSection
+					polizaId={polizaId}
+					moneda={poliza.moneda}
+					puedeValidar={userRole === "admin" || userRole === "usuario" || isTeamLeader}
+					onAnexoValidado={cargarDetalle}
+				/>
 			</div>
 
 			{/* Validation Confirmation Modal */}
