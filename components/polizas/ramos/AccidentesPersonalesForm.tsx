@@ -13,6 +13,8 @@ import {
 	UserPlus,
 	Edit,
 	UserCheck,
+	Download,
+	FileSpreadsheet,
 } from "lucide-react";
 import type {
 	DatosAccidentesPersonales,
@@ -29,6 +31,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { BuscadorClientes } from "../BuscadorClientes";
 import { BeneficiarioModal, type DatosPersonaMinima } from "./BeneficiarioModal";
+import { importarAseguradosDesdeExcel, generarTemplateAseguradosExcel } from "@/utils/aseguradoExcelImport";
 
 type Props = {
 	datos: DatosAccidentesPersonales | null;
@@ -74,6 +77,8 @@ export function AccidentesPersonalesForm({
 	const [mostrarModalAsegurado, setMostrarModalAsegurado] = useState(false);
 	const [aseguradoEditando, setAseguradoEditando] = useState<AseguradoAPVida | null>(null);
 	const [errores, setErrores] = useState<Record<string, string>>({});
+	const [importandoAsegurados, setImportandoAsegurados] = useState(false);
+	const [erroresImport, setErroresImport] = useState<string[]>([]);
 
 	// ===== FUNCIONES NIVELES =====
 	const crearNuevoNivel = () => {
@@ -171,6 +176,47 @@ export function AccidentesPersonalesForm({
 
 	const eliminarAsegurado = (id: string) => {
 		if (confirm("¿Eliminar este asegurado?")) setAsegurados(asegurados.filter((a) => a.id !== id));
+	};
+
+	const handleDescargarTemplate = async () => {
+		await generarTemplateAseguradosExcel(niveles);
+	};
+
+	const handleImportarExcel = async (event: React.ChangeEvent<HTMLInputElement>) => {
+		const archivo = event.target.files?.[0];
+		if (!archivo) return;
+
+		setImportandoAsegurados(true);
+		setErroresImport([]);
+
+		try {
+			const resultado = await importarAseguradosDesdeExcel(archivo, niveles);
+
+			if (resultado.exito && resultado.asegurados_validos.length > 0) {
+				setAsegurados((prev) => [...prev, ...resultado.asegurados_validos]);
+
+				if (resultado.errores.length > 0) {
+					const msgs = resultado.errores.map((e) => `Fila ${e.fila}: ${e.errores.join(", ")}`);
+					setErroresImport([
+						`Se importaron ${resultado.asegurados_validos.length} asegurado(s) correctamente.`,
+						...msgs,
+					]);
+				} else {
+					setErroresImport([`Se importaron ${resultado.asegurados_validos.length} asegurado(s) exitosamente.`]);
+				}
+			} else {
+				setErroresImport(
+					resultado.errores.length > 0
+						? resultado.errores.map((e) => `Fila ${e.fila}: ${e.errores.join(", ")}`)
+						: ["No se pudieron importar asegurados del archivo."],
+				);
+			}
+		} catch {
+			setErroresImport(["Error al procesar el archivo Excel."]);
+		} finally {
+			setImportandoAsegurados(false);
+			event.target.value = "";
+		}
 	};
 
 	const handleContinuar = () => {
@@ -623,16 +669,57 @@ export function AccidentesPersonalesForm({
 							)}
 						</p>
 					</div>
-					<Button onClick={abrirModalAsegurado} disabled={mostrarModalAsegurado}>
-						<UserPlus className="mr-2 h-4 w-4" />
-						Agregar Asegurado
-					</Button>
+					<div className="flex items-center gap-2">
+						<Button variant="outline" size="sm" onClick={handleDescargarTemplate}>
+							<Download className="mr-2 h-4 w-4" />
+							Template Excel
+						</Button>
+						<label htmlFor="asegurado-excel-upload">
+							<Button variant="outline" size="sm" asChild disabled={importandoAsegurados}>
+								<span>
+									<FileSpreadsheet className="mr-2 h-4 w-4" />
+									{importandoAsegurados ? "Importando..." : "Importar Excel"}
+								</span>
+							</Button>
+							<input
+								id="asegurado-excel-upload"
+								type="file"
+								accept=".xlsx,.xls"
+								onChange={handleImportarExcel}
+								className="hidden"
+								disabled={importandoAsegurados}
+							/>
+						</label>
+						<Button onClick={abrirModalAsegurado} disabled={mostrarModalAsegurado}>
+							<UserPlus className="mr-2 h-4 w-4" />
+							Agregar Asegurado
+						</Button>
+					</div>
 				</div>
 
 				{errores.asegurados && (
 					<div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded">
 						<AlertTriangle className="h-4 w-4 text-red-600" />
 						<p className="text-sm text-red-600">{errores.asegurados}</p>
+					</div>
+				)}
+
+				{erroresImport.length > 0 && (
+					<div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+						<div className="flex items-start justify-between gap-2">
+							<ul className="text-sm text-amber-800 space-y-1 flex-1">
+								{erroresImport.map((msg, i) => (
+									<li key={i}>• {msg}</li>
+								))}
+							</ul>
+							<button
+								type="button"
+								onClick={() => setErroresImport([])}
+								className="text-amber-600 hover:text-amber-800 text-xs flex-shrink-0"
+							>
+								✕
+							</button>
+						</div>
 					</div>
 				)}
 
