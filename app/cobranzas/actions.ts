@@ -1530,6 +1530,110 @@ export async function obtenerComprobanteCuota(
 	}
 }
 
+/**
+ * Sustituye el comprobante de pago de una cuota. Solo administradores.
+ * Elimina el archivo anterior del Storage y registra el nuevo.
+ */
+export async function sustituirComprobantePago(pagoId: string, fileData: FormData): Promise<SubirComprobanteResponse> {
+	try {
+		const { allowed, profile } = await checkPermission("cobranzas.ver");
+		if (!allowed || !profile || profile.role !== "admin") {
+			return { success: false, error: "Solo los administradores pueden sustituir comprobantes" };
+		}
+
+		const file = fileData.get("file") as File;
+		const tipoArchivo = fileData.get("tipo_archivo") as TipoComprobante;
+
+		if (!file) return { success: false, error: "No se proporcionó archivo" };
+
+		const MAX_SIZE = 10 * 1024 * 1024;
+		if (file.size > MAX_SIZE) return { success: false, error: "El archivo excede el tamaño máximo de 10MB" };
+
+		const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp", "application/pdf"];
+		if (!allowedTypes.includes(file.type)) {
+			return { success: false, error: "Tipo de archivo no permitido. Use JPG, PNG, WebP o PDF" };
+		}
+
+		const supabase = await createClient();
+
+		// Fetch existing comprobante
+		const { data: comprobanteActual, error: fetchError } = await supabase
+			.from("polizas_pagos_comprobantes")
+			.select("id, archivo_url")
+			.eq("pago_id", pagoId)
+			.eq("estado", "activo")
+			.maybeSingle();
+
+		if (fetchError) {
+			return { success: false, error: "Error al buscar el comprobante actual" };
+		}
+
+		// Upload new file
+		const fileExt = file.name.split(".").pop();
+		const fileName = `${profile.id}/${pagoId}_${Date.now()}.${fileExt}`;
+		const { data: uploadData, error: uploadError } = await supabase.storage
+			.from("pagos-comprobantes")
+			.upload(fileName, file, { contentType: file.type, upsert: false });
+
+		if (uploadError) {
+			return { success: false, error: `Error al subir archivo: ${uploadError.message}` };
+		}
+
+		if (comprobanteActual) {
+			// Update existing record
+			const { data: updated, error: updateError } = await supabase
+				.from("polizas_pagos_comprobantes")
+				.update({
+					nombre_archivo: file.name,
+					archivo_url: uploadData.path,
+					tamano_bytes: file.size,
+					tipo_archivo: tipoArchivo,
+					uploaded_by: profile.id,
+					uploaded_at: new Date().toISOString(),
+				})
+				.eq("id", comprobanteActual.id)
+				.select("id")
+				.single();
+
+			if (updateError) {
+				await supabase.storage.from("pagos-comprobantes").remove([uploadData.path]);
+				return { success: false, error: `Error al actualizar registro: ${updateError.message}` };
+			}
+
+			// Delete old file (best effort — don't fail if this errors)
+			await supabase.storage.from("pagos-comprobantes").remove([comprobanteActual.archivo_url]);
+
+			revalidatePath("/cobranzas");
+			return { success: true, data: { comprobante_id: updated.id, archivo_url: uploadData.path } };
+		} else {
+			// No existing comprobante — create new one
+			const { data: comprobante, error: dbError } = await supabase
+				.from("polizas_pagos_comprobantes")
+				.insert({
+					pago_id: pagoId,
+					nombre_archivo: file.name,
+					archivo_url: uploadData.path,
+					tamano_bytes: file.size,
+					tipo_archivo: tipoArchivo,
+					uploaded_by: profile.id,
+				})
+				.select("id")
+				.single();
+
+			if (dbError) {
+				await supabase.storage.from("pagos-comprobantes").remove([uploadData.path]);
+				return { success: false, error: `Error al registrar comprobante: ${dbError.message}` };
+			}
+
+			revalidatePath("/cobranzas");
+			return { success: true, data: { comprobante_id: comprobante.id, archivo_url: uploadData.path } };
+		}
+	} catch (error) {
+		console.error("Error in sustituirComprobantePago:", error);
+		return { success: false, error: error instanceof Error ? error.message : "Error desconocido" };
+	}
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // SERVER-SIDE PAGINATION
 // Requiere la vista cobranzas_polizas_resumen (docs/migration_cobranzas_view.sql)

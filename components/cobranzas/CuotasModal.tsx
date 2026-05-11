@@ -23,6 +23,7 @@ import {
 	Loader2,
 	AlertCircle,
 	BellRing,
+	RefreshCw,
 } from "lucide-react";
 import type { PolizaConPagos, CuotaPago, PolizaConPagosExtendida } from "@/types/cobranza";
 import {
@@ -41,6 +42,7 @@ import {
 import { generarURLWhatsApp } from "@/utils/whatsapp";
 import { contarCuotasVencidas, obtenerEstadoReal } from "@/utils/estadoCuota";
 import RegistrarProrrogaModal from "./RegistrarProrrogaModal";
+import SustituirComprobanteModal from "./SustituirComprobanteModal";
 import { toast } from "sonner";
 
 interface CuotasModalProps {
@@ -48,6 +50,7 @@ interface CuotasModalProps {
 	open: boolean;
 	onClose: () => void;
 	onSelectQuota: (cuota: CuotaPago) => void;
+	isAdmin?: boolean;
 }
 
 /** Status badge using design system palette and rounded-md */
@@ -74,6 +77,7 @@ export default function CuotasModal({
 	open,
 	onClose,
 	onSelectQuota,
+	isAdmin = false,
 }: CuotasModalProps) {
 	const [polizaExtendida, setPolizaExtendida] = useState<PolizaConPagosExtendida | null>(null);
 	const [loading, setLoading] = useState(false);
@@ -83,6 +87,8 @@ export default function CuotasModal({
 	const [prorrogaModalOpen, setProrrogaModalOpen] = useState(false);
 	const [generatingPDF, setGeneratingPDF] = useState(false);
 	const [loadingComprobante, setLoadingComprobante] = useState<string | null>(null);
+	const [selectedCuotaSustituir, setSelectedCuotaSustituir] = useState<CuotaPago | null>(null);
+	const [sustituirModalOpen, setSustituirModalOpen] = useState(false);
 
 	useEffect(() => {
 		if (open && poliza) loadExtendedData();
@@ -223,6 +229,11 @@ export default function CuotasModal({
 		} finally {
 			setLoadingComprobante(null);
 		}
+	};
+
+	const handleSustituirComprobante = (cuota: CuotaPago) => {
+		setSelectedCuotaSustituir(cuota);
+		setSustituirModalOpen(true);
 	};
 
 	if (!poliza) return null;
@@ -712,6 +723,19 @@ export default function CuotasModal({
 																	Comprobante
 																</Button>
 															)}
+
+															{/* Sustituir comprobante — solo admin */}
+															{estadoReal === "pagado" && isAdmin && (
+																<Button
+																	size="icon"
+																	variant="ghost"
+																	className="h-8 w-8"
+																	onClick={() => handleSustituirComprobante(cuota)}
+																	title="Sustituir comprobante de pago"
+																>
+																	<RefreshCw className="h-4 w-4 text-muted-foreground" />
+																</Button>
+															)}
 														</div>
 													</td>
 												</tr>
@@ -784,6 +808,19 @@ export default function CuotasModal({
 				open={prorrogaModalOpen}
 				onClose={() => setProrrogaModalOpen(false)}
 				onSuccess={handleProrrogaSuccess}
+			/>
+
+			<SustituirComprobanteModal
+				pagoId={selectedCuotaSustituir?.id ?? null}
+				cuotaNumero={selectedCuotaSustituir?.numero_cuota}
+				open={sustituirModalOpen}
+				onClose={() => {
+					setSustituirModalOpen(false);
+					setSelectedCuotaSustituir(null);
+				}}
+				onSuccess={() => {
+					toast.success("Comprobante actualizado correctamente");
+				}}
 			/>
 		</>
 	);

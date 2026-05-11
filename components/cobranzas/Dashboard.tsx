@@ -59,6 +59,7 @@ interface DashboardProps {
 	statsIniciales: CobranzaStats;
 	totalInicial: number;
 	filtrosOptions: FiltrosCobranzaOptions;
+	isAdmin?: boolean;
 }
 
 const ALL = "__all__";
@@ -81,7 +82,7 @@ function SortIcon({
 	);
 }
 
-export default function Dashboard({ polizasIniciales, statsIniciales, totalInicial, filtrosOptions }: DashboardProps) {
+export default function Dashboard({ polizasIniciales, statsIniciales, totalInicial, filtrosOptions, isAdmin = false }: DashboardProps) {
 	// ── Data ──────────────────────────────────────────────────────────
 	const [polizas, setPolizas] = useState<PolizaConPagos[]>(polizasIniciales);
 	const [total, setTotal] = useState(totalInicial);
@@ -698,6 +699,7 @@ export default function Dashboard({ polizasIniciales, statsIniciales, totalInici
 				open={cuotasModalOpen}
 				onClose={() => setCuotasModalOpen(false)}
 				onSelectQuota={handleSelectCuota}
+				isAdmin={isAdmin}
 			/>
 			<RegistrarPagoModal
 				cuota={selectedCuota}

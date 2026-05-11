@@ -55,8 +55,7 @@ function CobranzasSkeleton() {
 	);
 }
 
-async function CobranzasData() {
-	// Fetch en paralelo: primera página + stats + opciones de filtro
+async function CobranzasData({ isAdmin }: { isAdmin: boolean }) {
 	const [polizasResult, statsResult, filtrosResult] = await Promise.all([
 		obtenerCobranzasPaginadas({ page: 1, pageSize: 20, sortField: "cuotas_vencidas", sortDirection: "desc" }),
 		obtenerCobranzaStats(),
@@ -79,12 +78,14 @@ async function CobranzasData() {
 			totalInicial={polizasResult.data!.total}
 			statsIniciales={statsResult.data!}
 			filtrosOptions={filtrosResult.data!}
+			isAdmin={isAdmin}
 		/>
 	);
 }
 
 export default async function CobranzasPage() {
-	await requirePermission("cobranzas.ver");
+	const profile = await requirePermission("cobranzas.ver");
+	const isAdmin = profile.role === "admin";
 
 	return (
 		<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-8">
@@ -95,7 +96,7 @@ export default async function CobranzasPage() {
 				</p>
 			</div>
 			<Suspense fallback={<CobranzasSkeleton />}>
-				<CobranzasData />
+				<CobranzasData isAdmin={isAdmin} />
 			</Suspense>
 		</div>
 	);
