@@ -42,12 +42,25 @@ export const JURIDIC_DOCUMENT_TYPES = {
 } as const;
 
 /**
+ * Document types for ONG clients
+ */
+export const ONG_DOCUMENT_TYPES = {
+	acreditacion_resolucion: "Acreditación/Resolución en Bolivia",
+	poder_representante_mae: "Poder Representante Legal / Designación MAE",
+	ci_representante_mae: "CI Representante Legal o MAE",
+	formulario_registro_ong: "Formulario de Registro de Clientes",
+	nit_ong: "NIT o Equivalente",
+	registro_vipfe: "Número de Registro VIPFE",
+} as const;
+
+/**
  * All possible document types
  */
 export const ALL_DOCUMENT_TYPES = {
 	...NATURAL_DOCUMENT_TYPES,
 	...UNIPERSONAL_DOCUMENT_TYPES,
 	...JURIDIC_DOCUMENT_TYPES,
+	...ONG_DOCUMENT_TYPES,
 } as const;
 
 /**
@@ -67,6 +80,7 @@ export const REQUIRED_DOCUMENTS = {
 	natural: ["documento_identidad", "certificacion_pep", "carta_nombramiento", "formulario_kyc"] as const,
 	unipersonal: ["documento_identidad", "certificacion_pep", "carta_nombramiento", "formulario_kyc", "nit", "matricula_comercio"] as const,
 	juridica: ["nit", "matricula_comercio", "testimonio_constitucion", "balance_estado_resultados", "poder_representacion", "documento_identidad_representante", "ci_representante_anverso", "certificacion_pep", "carta_nombramiento", "formulario_kyc"] as const,
+	ong: ["acreditacion_resolucion", "poder_representante_mae", "ci_representante_mae", "formulario_registro_ong"] as const,
 } as const;
 
 /**
@@ -78,7 +92,7 @@ export const NON_EXCEPTABLE_DOCUMENTS: readonly TipoDocumentoCliente[] = [] as c
 /**
  * Get document types for a specific client type
  */
-export function getDocumentTypesForClientType(clientType: "natural" | "unipersonal" | "juridica") {
+export function getDocumentTypesForClientType(clientType: "natural" | "unipersonal" | "juridica" | "ong") {
 	switch (clientType) {
 		case "natural":
 			return NATURAL_DOCUMENT_TYPES;
@@ -86,6 +100,8 @@ export function getDocumentTypesForClientType(clientType: "natural" | "uniperson
 			return UNIPERSONAL_DOCUMENT_TYPES;
 		case "juridica":
 			return JURIDIC_DOCUMENT_TYPES;
+		case "ong":
+			return ONG_DOCUMENT_TYPES;
 		default:
 			return NATURAL_DOCUMENT_TYPES;
 	}
@@ -96,10 +112,10 @@ export function getDocumentTypesForClientType(clientType: "natural" | "uniperson
  */
 export function isDocumentRequired(
 	documentType: TipoDocumentoCliente,
-	clientType: "natural" | "unipersonal" | "juridica"
+	clientType: "natural" | "unipersonal" | "juridica" | "ong"
 ): boolean {
-	const required = REQUIRED_DOCUMENTS[clientType];
-	return required.includes(documentType as any);
+	const required = REQUIRED_DOCUMENTS[clientType] as readonly string[];
+	return required.includes(documentType);
 }
 
 // ================================================
@@ -162,6 +178,12 @@ export const clienteDocumentoSchema = z.object({
 		"ci_representante_anverso",
 		"ci_representante_reverso",
 		"carta_nombramiento",
+		"acreditacion_resolucion",
+		"poder_representante_mae",
+		"ci_representante_mae",
+		"formulario_registro_ong",
+		"nit_ong",
+		"registro_vipfe",
 	]),
 	nombre_archivo: z.string(),
 	tipo_archivo: z.string(),
@@ -327,7 +349,7 @@ export type DocumentValidationResult = {
  */
 export function validateClientDocuments(
 	uploadedDocuments: ClienteDocumentoFormState[],
-	clientType: "natural" | "unipersonal" | "juridica",
+	clientType: "natural" | "unipersonal" | "juridica" | "ong",
 	exceptions: TipoDocumentoCliente[] = []
 ): DocumentValidationResult {
 	const allRequired = REQUIRED_DOCUMENTS[clientType];
@@ -359,7 +381,7 @@ export function isDocumentExceptable(documentType: TipoDocumentoCliente): boolea
 /**
  * Get exceptable document types for a client type (excludes NON_EXCEPTABLE)
  */
-export function getExceptableDocuments(clientType: "natural" | "unipersonal" | "juridica"): TipoDocumentoCliente[] {
+export function getExceptableDocuments(clientType: "natural" | "unipersonal" | "juridica" | "ong"): TipoDocumentoCliente[] {
 	const allDocs = Object.keys(getDocumentTypesForClientType(clientType)) as TipoDocumentoCliente[];
 	return allDocs.filter((doc) => isDocumentExceptable(doc));
 }

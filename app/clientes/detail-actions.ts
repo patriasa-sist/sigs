@@ -2,7 +2,7 @@
 
 import { createClient } from "@/utils/supabase/server";
 import type { ClienteDocumento } from "@/types/clienteDocumento";
-import type { NaturalClient, JuridicClient, UnipersonalClient } from "@/types/database/client";
+import type { NaturalClient, JuridicClient, UnipersonalClient, OngClient } from "@/types/database/client";
 import type { ExtraPhone } from "@/types/clientForm";
 
 // Database types for partner and legal representatives
@@ -64,7 +64,7 @@ type PolicyData = {
 export type ClienteDetalleCompleto = {
 	// Base client info
 	id: string;
-	client_type: "natural" | "juridica" | "unipersonal";
+	client_type: "natural" | "juridica" | "unipersonal" | "ong";
 	status: string;
 	commercial_owner_id?: string;
 	commercial_owner_name?: string;
@@ -75,6 +75,7 @@ export type ClienteDetalleCompleto = {
 	natural_data?: NaturalClient | null;
 	juridic_data?: JuridicClient | null;
 	unipersonal_data?: UnipersonalClient | null;
+	ong_data?: OngClient | null;
 
 	// Partner data (for married natural/unipersonal clients)
 	partner?: PartnerData | null;
@@ -130,6 +131,7 @@ export async function getClientDetailsComplete(
         natural_clients (*),
         juridic_clients (*),
         unipersonal_clients (*),
+        ong_clients (*),
         commercial_owner:profiles!commercial_owner_id (
           id,
           full_name,
@@ -162,12 +164,17 @@ export async function getClientDetailsComplete(
 			? clientData.unipersonal_clients[0] ?? null
 			: clientData.unipersonal_clients ?? null;
 
+		const ongData = Array.isArray(clientData.ong_clients)
+			? clientData.ong_clients[0] ?? null
+			: clientData.ong_clients ?? null;
+
 		console.log("[getClientDetailsComplete] Client data loaded:", {
 			id: clientData.id,
 			type: clientData.client_type,
 			has_natural: !!naturalData,
 			has_juridic: !!juridicData,
 			has_unipersonal: !!unipersonalData,
+			has_ong: !!ongData,
 		});
 
 		// 2. Get partner data if natural or unipersonal client
@@ -267,6 +274,7 @@ export async function getClientDetailsComplete(
 			natural_data: naturalData,
 			juridic_data: juridicData,
 			unipersonal_data: unipersonalData,
+			ong_data: ongData,
 			partner: partnerData,
 			legal_representatives: legalReps,
 			documents: documents || [],

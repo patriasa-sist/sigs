@@ -134,7 +134,8 @@ export async function getAllClients(options?: {
 				*,
 				natural_clients (*),
 				juridic_clients (*),
-				unipersonal_clients (*)
+				unipersonal_clients (*),
+				ong_clients (*)
 			`,
 				{ count: "exact" }
 			)
@@ -252,6 +253,9 @@ export async function getAllClients(options?: {
 					unipersonal_clients: Array.isArray(clientData.unipersonal_clients)
 						? clientData.unipersonal_clients[0] ?? null
 						: clientData.unipersonal_clients ?? null,
+					ong_clients: Array.isArray(clientData.ong_clients)
+						? clientData.ong_clients[0] ?? null
+						: clientData.ong_clients ?? null,
 					executive: executiveData,
 					policies: policiesByClient.get(clientData.id) ?? [],
 				};
@@ -358,7 +362,8 @@ export async function getClientById(clientId: string): Promise<ActionResult<Clie
 				*,
 				natural_clients (*),
 				juridic_clients (*),
-				unipersonal_clients (*)
+				unipersonal_clients (*),
+				ong_clients (*)
 			`
 			)
 			.eq("id", clientId)
@@ -431,6 +436,9 @@ export async function getClientById(clientId: string): Promise<ActionResult<Clie
 			unipersonal_clients: Array.isArray(clientData.unipersonal_clients)
 				? clientData.unipersonal_clients[0] ?? null
 				: clientData.unipersonal_clients ?? null,
+			ong_clients: Array.isArray(clientData.ong_clients)
+				? clientData.ong_clients[0] ?? null
+				: clientData.ong_clients ?? null,
 			executive: executiveData,
 			policies: policiesData ?? [],
 		};
@@ -551,7 +559,7 @@ export async function searchClients(query: string, filters?: { commercial_owner_
 		// Obtener clientes coincidentes con sus datos relacionados
 		let clientsMatchQuery = supabase
 			.from("clients")
-			.select(`*, natural_clients (*), juridic_clients (*), unipersonal_clients (*)`)
+			.select(`*, natural_clients (*), juridic_clients (*), unipersonal_clients (*), ong_clients (*)`)
 			.in("id", ids)
 			.order("created_at", { ascending: false })
 			.limit(100);
@@ -608,6 +616,9 @@ export async function searchClients(query: string, filters?: { commercial_owner_
 					unipersonal_clients: Array.isArray(clientData.unipersonal_clients)
 						? clientData.unipersonal_clients[0] ?? null
 						: clientData.unipersonal_clients ?? null,
+					ong_clients: Array.isArray(clientData.ong_clients)
+						? clientData.ong_clients[0] ?? null
+						: clientData.ong_clients ?? null,
 					executive: clientData.commercial_owner_id
 						? executivesMap.get(clientData.commercial_owner_id) ?? null
 						: null,

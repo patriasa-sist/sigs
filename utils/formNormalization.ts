@@ -312,6 +312,29 @@ export function normalizeLegalRepresentativeData<T extends Record<string, any>>(
 }
 
 /**
+ * Normalizes ONG client form data
+ */
+export function normalizeOngClientData<T extends Record<string, any>>(data: T): T {
+  const textFields = [
+    'nombre_ong',
+    'sigla',
+    'pais_origen',
+    'actividad_principal',
+    'numero_registro_vipfe',
+    'direccion',
+    'nombre_representante',
+    'apellido_representante',
+    'cargo_representante',
+    'extension_ci_representante',
+  ];
+
+  const emailFields = ['correo_electronico'];
+  const phoneFields = ['telefono', 'ci_representante'];
+
+  return normalizeFormData(data, textFields, emailFields, phoneFields);
+}
+
+/**
  * Normalizes partner/spouse data
  * Applies all normalization rules for partner fields
  * @param data - Partner form data

@@ -11,7 +11,7 @@ import type { ClienteDocumentoFormState } from './clienteDocumento';
 // ENUMS & CONSTANTS
 // ============================================================================
 
-export const CLIENT_TYPES = ['natural', 'juridica', 'unipersonal'] as const;
+export const CLIENT_TYPES = ['natural', 'juridica', 'unipersonal', 'ong'] as const;
 export type ClientType = (typeof CLIENT_TYPES)[number];
 
 export const DOCUMENT_TYPES = ['ci', 'pasaporte', 'cex'] as const;
@@ -392,6 +392,79 @@ export const juridicClientFormSchema = juridicClientCompanySchema
   });
 
 // ============================================================================
+// ONG CLIENT
+// ============================================================================
+
+// Section 1: Datos de la ONG
+export interface OngClientOrgData {
+  nombre_ong: string;
+  sigla?: string;
+  nit?: string;
+  numero_registro_vipfe?: string;
+  pais_origen: string;
+  actividad_principal?: string;
+}
+
+export const ongClientOrgSchema = z.object({
+  nombre_ong: z.string().min(1, 'Nombre de la ONG es requerido'),
+  sigla: z.string().optional(),
+  nit: z.string().optional().or(z.literal('')),
+  numero_registro_vipfe: z.string().optional(),
+  pais_origen: z.string().min(1, 'País de origen es requerido'),
+  actividad_principal: z.string().optional(),
+});
+
+// Section 2: Información de Contacto
+export interface OngClientContactData {
+  direccion: string;
+  correo_electronico?: string;
+  telefono?: string;
+}
+
+export const ongClientContactSchema = z.object({
+  direccion: z.string().min(1, 'Dirección es requerida'),
+  correo_electronico: z.string().email('Email inválido').optional().or(z.literal('')),
+  telefono: z
+    .string()
+    .min(5, 'Debe tener al menos 5 dígitos')
+    .regex(/^[0-9]+$/, 'Solo números permitidos')
+    .optional()
+    .or(z.literal('')),
+});
+
+// Section 3: Representante Legal / MAE
+export interface OngRepresentativeData {
+  nombre_representante: string;
+  apellido_representante: string;
+  cargo_representante: string;
+  ci_representante: string;
+  extension_ci_representante?: string;
+}
+
+export const ongRepresentativeSchema = z.object({
+  nombre_representante: z.string().min(1, 'Nombre del representante es requerido'),
+  apellido_representante: z.string().min(1, 'Apellido del representante es requerido'),
+  cargo_representante: z.string().min(1, 'Cargo es requerido'),
+  ci_representante: z.string().min(6, 'CI debe tener al menos 6 caracteres'),
+  extension_ci_representante: z
+    .string()
+    .max(4, 'Máximo 4 caracteres')
+    .regex(/^[A-Za-z]*$/, 'Solo letras permitidas')
+    .optional()
+    .or(z.literal('')),
+});
+
+// Combined ONG Client Form Data
+export interface OngClientFormData extends OngClientOrgData, OngClientContactData, OngRepresentativeData {
+  documentos?: ClienteDocumentoFormState[];
+  celulares_extra?: ExtraPhone[];
+}
+
+export const ongClientFormSchema = ongClientOrgSchema
+  .merge(ongClientContactSchema)
+  .merge(ongRepresentativeSchema);
+
+// ============================================================================
 // FORM STATE
 // ============================================================================
 
@@ -400,6 +473,7 @@ export interface ClientFormState {
   naturalData?: Partial<NaturalClientFormData>;
   unipersonalData?: Partial<UnipersonalClientFormData>;
   juridicData?: Partial<JuridicClientFormData>;
+  ongData?: Partial<OngClientFormData>;
   partnerData?: Partial<ClientPartnerData>; // When estado_civil = 'casado'
   currentStep: number;
   completedSections: {
@@ -412,6 +486,7 @@ export interface ClientFormState {
     representativeData?: boolean;
     companyData?: boolean;
     legalReps?: boolean;
+    orgData?: boolean;
     documents?: boolean;
   };
 }
@@ -485,6 +560,24 @@ export interface ClientBasePayload {
   status: 'active' | 'inactive' | 'suspended';
   notes?: string;
   created_by?: string;
+}
+
+export interface OngClientPayload {
+  client_id: string;
+  nombre_ong: string;
+  sigla?: string;
+  nit?: string;
+  numero_registro_vipfe?: string;
+  pais_origen: string;
+  actividad_principal?: string;
+  direccion: string;
+  correo_electronico?: string;
+  telefono?: string;
+  nombre_representante: string;
+  apellido_representante: string;
+  cargo_representante: string;
+  ci_representante: string;
+  extension_ci_representante?: string;
 }
 
 export interface NaturalClientPayload extends NaturalClientFormData {

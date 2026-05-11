@@ -10,10 +10,12 @@ import {
 	NaturalClientFormData,
 	UnipersonalClientFormData,
 	JuridicClientFormData,
+	OngClientFormData,
 	ClientPartnerData,
 	naturalClientFormSchema,
 	unipersonalClientFormSchema,
 	juridicClientFormSchema,
+	ongClientFormSchema,
 	clientPartnerSchema,
 	ClientFormState,
 } from "@/types/clientForm";
@@ -24,6 +26,7 @@ import {
 	normalizeNaturalClientData,
 	normalizeUnipersonalClientData,
 	normalizeJuridicClientData,
+	normalizeOngClientData,
 	normalizePartnerData,
 	normalizeLegalRepresentativeData,
 } from "@/utils/formNormalization";
@@ -39,6 +42,7 @@ import { ClientTypeSelector } from "@/components/clientes/ClientTypeSelector";
 import { NaturalClientForm } from "@/components/clientes/NaturalClientForm";
 import { UnipersonalClientForm } from "@/components/clientes/UnipersonalClientForm";
 import { JuridicClientForm } from "@/components/clientes/JuridicClientForm";
+import { OngClientForm } from "@/components/clientes/OngClientForm";
 import { Button } from "@/components/ui/button";
 import { Save, X, ChevronLeft, Users, Check, AlertTriangle } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
@@ -162,6 +166,15 @@ export default function NuevoClientePage() {
 		},
 	});
 
+	// ONG client form
+	const ongForm = useForm<OngClientFormData>({
+		resolver: zodResolver(ongClientFormSchema) as Resolver<OngClientFormData>,
+		mode: "onBlur",
+		defaultValues: {
+			pais_origen: "BOLIVIA",
+		},
+	});
+
 	// Duplicate detection state
 	const [duplicadoDocumento, setDuplicadoDocumento] = useState<VerificarDocumentoResult | null>(null);
 	const [duplicadoNit, setDuplicadoNit] = useState<VerificarNitResult | null>(null);
@@ -282,6 +295,10 @@ export default function NuevoClientePage() {
 								Object.entries(draft.juridicData).forEach(([key, value]) => {
 									juridicForm.setValue(key as keyof JuridicClientFormData, value as never);
 								});
+							} else if (draft.clientType === "ong" && draft.ongData) {
+								Object.entries(draft.ongData).forEach(([key, value]) => {
+									ongForm.setValue(key as keyof OngClientFormData, value as never);
+								});
 							}
 
 							toast.success("Borrador restaurado");
@@ -318,6 +335,8 @@ export default function NuevoClientePage() {
 			formState.unipersonalData = unipersonalForm.getValues();
 		} else if (clientType === "juridica") {
 			formState.juridicData = juridicForm.getValues();
+		} else if (clientType === "ong") {
+			formState.ongData = ongForm.getValues();
 		}
 
 		saveDraft(formState);
@@ -741,24 +760,85 @@ export default function NuevoClientePage() {
 		return client.id;
 	};
 
+	// ONG client submission
+	const submitOngClient = async () => {
+		const formData = ongForm.getValues();
+		const normalized = normalizeOngClientData(formData);
+
+		// 1. Insert into clients table
+		const { data: client, error: clientError } = await supabase
+			.from("clients")
+			.insert({
+				client_type: "ong",
+				commercial_owner_id: currentUserId,
+				status: "active",
+				created_by: currentUserId,
+			})
+			.select()
+			.single();
+
+		if (clientError) throw clientError;
+
+		// 2. Insert into ong_clients table
+		const { error: ongError } = await supabase.from("ong_clients").insert({
+			client_id: client.id,
+			nombre_ong: normalized.nombre_ong,
+			sigla: normalized.sigla || null,
+			nit: normalized.nit || null,
+			numero_registro_vipfe: normalized.numero_registro_vipfe || null,
+			pais_origen: normalized.pais_origen,
+			actividad_principal: normalized.actividad_principal || null,
+			direccion: normalized.direccion,
+			correo_electronico: normalized.correo_electronico || null,
+			telefono: normalized.telefono || null,
+			nombre_representante: normalized.nombre_representante,
+			apellido_representante: normalized.apellido_representante,
+			cargo_representante: normalized.cargo_representante,
+			ci_representante: normalized.ci_representante,
+			extension_ci_representante: normalized.extension_ci_representante || null,
+		});
+
+		if (ongError) { await rollbackClient(client.id); throw ongError; }
+
+		// 3. Upload client documents
+		await uploadClientDocuments(client.id, formData.documentos);
+
+		// 4. Save extra phones
+		if (formData.celulares_extra && formData.celulares_extra.length > 0) {
+			await saveExtraPhones(client.id, formData.celulares_extra);
+		}
+
+		return client.id;
+	};
+
 	// Validate required documents before saving
 	const validateDocumentsBeforeSave = (
 		documentos: ClienteDocumentoFormState[] | undefined,
-		type: "natural" | "unipersonal" | "juridica"
+		type: "natural" | "unipersonal" | "juridica" | "ong"
 	): boolean => {
 		const docs = documentos || [];
 		const validation = validateClientDocuments(docs, type, docExceptions);
 
 		if (!validation.hasAllRequired) {
-			// Build readable names for missing docs
-			const missingNames = validation.missingDocuments.map((docType) => {
-				const entry = Object.entries(
-					type === "juridica"
-						? { nit: "NIT", matricula_comercio: "Matrícula de Comercio", testimonio_constitucion: "Testimonio de Constitución Social", balance_estado_resultados: "Balance General", poder_representacion: "Poder de Representación", ci_representante_anverso: "CI Representante Legal", ci_representante_reverso: "CI Reverso Representante Legal", certificacion_pep: "Certificación PEP", carta_nombramiento: "Carta de Nombramiento", formulario_kyc: "KYC" }
-						: { documento_identidad: "CI (completo o anverso)", documento_identidad_reverso: "CI Reverso", certificacion_pep: "Certificación PEP", carta_nombramiento: "Carta de Nombramiento", formulario_kyc: "KYC", nit: "NIT", matricula_comercio: "Matrícula de Comercio" }
-				).find(([key]) => key === docType);
-				return entry ? entry[1] : docType;
-			});
+			const nameMap: Record<string, string> = {
+				documento_identidad: "CI (completo o anverso)",
+				documento_identidad_reverso: "CI Reverso",
+				certificacion_pep: "Certificación PEP",
+				carta_nombramiento: "Carta de Nombramiento",
+				formulario_kyc: "KYC",
+				nit: "NIT",
+				matricula_comercio: "Matrícula de Comercio",
+				testimonio_constitucion: "Testimonio de Constitución Social",
+				balance_estado_resultados: "Balance General",
+				poder_representacion: "Poder de Representación",
+				ci_representante_anverso: "CI Representante Legal",
+				ci_representante_reverso: "CI Reverso Representante Legal",
+				acreditacion_resolucion: "Acreditación/Resolución en Bolivia",
+				poder_representante_mae: "Poder Representante Legal / MAE",
+				ci_representante_mae: "CI Representante Legal o MAE",
+				formulario_registro_ong: "Formulario de Registro de Clientes",
+			};
+			const missingNames = validation.missingDocuments.map((docType) => nameMap[docType] ?? docType);
 
 			toast.error("Documentos obligatorios faltantes", {
 				description: `Faltan: ${missingNames.join(", ")}`,
@@ -771,7 +851,7 @@ export default function NuevoClientePage() {
 	// Determine which documents were skipped using exceptions (for consumption)
 	const getSkippedDocTypes = (
 		documentos: ClienteDocumentoFormState[] | undefined,
-		type: "natural" | "unipersonal" | "juridica"
+		type: "natural" | "unipersonal" | "juridica" | "ong"
 	): TipoDocumentoCliente[] => {
 		const docs = documentos || [];
 		const uploadedTypes = docs.map((d) => d.tipo_documento);
@@ -810,6 +890,14 @@ export default function NuevoClientePage() {
 		["razon_social", "tipo_sociedad", "tipo_documento", "nit", "matricula_comercio", "pais_constitucion", "actividad_economica"],
 		["direccion_legal", "correo_electronico", "telefono"],
 		["legal_representatives"],
+		[], // 4: Documentos
+	];
+
+	const ONG_SECTION_FIELDS: string[][] = [
+		[], // 0: Tipo de Cliente
+		["nombre_ong", "sigla", "nit", "numero_registro_vipfe", "pais_origen", "actividad_principal"],
+		["direccion", "correo_electronico", "telefono"],
+		["nombre_representante", "apellido_representante", "cargo_representante", "ci_representante"],
 		[], // 4: Documentos
 	];
 
@@ -909,6 +997,28 @@ export default function NuevoClientePage() {
 
 				createdClientId = await submitJuridicClient();
 				toast.success("Cliente jurídico creado exitosamente");
+			} else if (clientType === "ong") {
+				const isValid = await ongForm.trigger();
+				const sectionResults = computeSectionValidity(ongForm.formState.errors, ONG_SECTION_FIELDS);
+				setValidatedSections(sectionResults);
+				if (!isValid) {
+					const fields = getErrorFieldLabels(ongForm.formState.errors);
+					toast.error("Campos incompletos o inválidos", {
+						description: fields.length > 0 ? `Revisar: ${fields.join(", ")}` : "Por favor complete todos los campos requeridos",
+					});
+					setIsSaving(false);
+					return;
+				}
+
+				// Validate required documents
+				if (!validateDocumentsBeforeSave(ongForm.getValues().documentos, "ong")) {
+					setValidatedSections(prev => { const copy = [...prev]; copy[copy.length - 1] = false; return copy; });
+					setIsSaving(false);
+					return;
+				}
+
+				createdClientId = await submitOngClient();
+				toast.success("ONG registrada exitosamente");
 			}
 
 			// Consume used exceptions (if any documents were skipped)
@@ -917,7 +1027,9 @@ export default function NuevoClientePage() {
 					? naturalForm.getValues()
 					: clientType === "unipersonal"
 						? unipersonalForm.getValues()
-						: juridicForm.getValues();
+						: clientType === "ong"
+							? ongForm.getValues()
+							: juridicForm.getValues();
 				const skipped = getSkippedDocTypes(formData.documentos, clientType);
 				if (skipped.length > 0) {
 					await consumirExcepciones(skipped, createdClientId);
@@ -1012,6 +1124,14 @@ export default function NuevoClientePage() {
 			{ label: "Representantes Legales" },
 			{ label: "Documentos" },
 		]
+		: clientType === "ong"
+		? [
+			{ label: "Tipo de Cliente", detail: "ONG" },
+			{ label: "Datos de la ONG" },
+			{ label: "Información de Contacto" },
+			{ label: "Representante / MAE" },
+			{ label: "Documentos" },
+		]
 		: [{ label: "Tipo de Cliente" }];
 
 	return (
@@ -1039,6 +1159,8 @@ export default function NuevoClientePage() {
 										? "Persona Natural"
 										: clientType === "unipersonal"
 										? "Unipersonal"
+										: clientType === "ong"
+										? "ONG"
 										: "Persona Jurídica"
 									: "Seleccione el tipo de cliente"}
 							</p>
@@ -1163,6 +1285,10 @@ export default function NuevoClientePage() {
 							)}
 							<JuridicClientForm form={juridicForm} onFieldBlur={handleAutoSave} exceptions={docExceptions} />
 						</>
+					)}
+
+					{clientType === "ong" && (
+						<OngClientForm form={ongForm} onFieldBlur={handleAutoSave} exceptions={docExceptions} />
 					)}
 				</div>
 			</div>
