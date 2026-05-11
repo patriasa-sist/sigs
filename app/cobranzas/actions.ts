@@ -1685,10 +1685,17 @@ export async function obtenerCobranzasPaginadas(params: CobranzaFiltros = {}): P
 		if (search?.trim()) {
 			const q = search.trim().substring(0, 100);
 			searchPolizaMatch = q;
+			const palabras = q.split(/\s+/).filter(Boolean);
+
+			let natQuery = supabase.from("natural_clients").select("client_id");
+			for (const p of palabras) {
+				natQuery = natQuery.or(
+					`primer_nombre.ilike.%${p}%,segundo_nombre.ilike.%${p}%,primer_apellido.ilike.%${p}%,segundo_apellido.ilike.%${p}%,numero_documento.ilike.%${p}%`
+				);
+			}
+
 			const [natRes, jurRes, uniRes] = await Promise.all([
-				supabase.from("natural_clients")
-					.select("client_id")
-					.or(`primer_nombre.ilike.%${q}%,primer_apellido.ilike.%${q}%,segundo_apellido.ilike.%${q}%,numero_documento.ilike.%${q}%`),
+				natQuery,
 				supabase.from("juridic_clients")
 					.select("client_id")
 					.or(`razon_social.ilike.%${q}%,nit.ilike.%${q}%`),

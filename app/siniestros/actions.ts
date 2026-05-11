@@ -779,7 +779,16 @@ export async function buscarPolizasActivas(query: string): Promise<BusquedaPoliz
 	const supabase = await createClient();
 
 	try {
+		const palabras = query.split(/\s+/).filter(Boolean);
+
 		// Fase 1: búsquedas paralelas — clientes por texto + tablas específicas por ramo
+		let natClientesQuery = supabase.from("natural_clients").select("client_id");
+		for (const p of palabras) {
+			natClientesQuery = natClientesQuery.or(
+				`numero_documento.ilike.%${p}%,primer_nombre.ilike.%${p}%,segundo_nombre.ilike.%${p}%,primer_apellido.ilike.%${p}%,segundo_apellido.ilike.%${p}%`
+			);
+		}
+
 		const [
 			{ data: clientesNaturales },
 			{ data: clientesJuridicos },
@@ -794,13 +803,7 @@ export async function buscarPolizasActivas(query: string): Promise<BusquedaPoliz
 			{ data: aeronavNaves },
 			{ data: vidaBeneficiarios },
 		] = await Promise.all([
-			supabase
-				.from("natural_clients")
-				.select("client_id")
-				.or(
-					`numero_documento.ilike.%${query}%,primer_nombre.ilike.%${query}%,segundo_nombre.ilike.%${query}%,primer_apellido.ilike.%${query}%,segundo_apellido.ilike.%${query}%`
-				)
-				.limit(30),
+			natClientesQuery.limit(30),
 			supabase
 				.from("juridic_clients")
 				.select("client_id")
