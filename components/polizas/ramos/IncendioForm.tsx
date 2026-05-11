@@ -24,9 +24,13 @@ const ITEMS_DISPONIBLES: ItemIncendio["nombre"][] = [
 	"Activos fijos en general",
 	"Equipos electronicos",
 	"Maquinaria fija o equipos",
+	"Bienes de terceros",
 	"Existencias (mercaderia)",
 	"Dinero y valores dentro del predio",
 	"Vidrios y cristales",
+	"Letreros",
+	"Perdida de beneficios",
+	"Obras de arte",
 ];
 
 export function IncendioForm({ datos, regionales, onChange, onSiguiente, onAnterior }: Props) {

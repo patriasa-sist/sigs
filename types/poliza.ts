@@ -269,10 +269,14 @@ export type ItemIncendio = {
 		| "Activos fijos en general"
 		| "Equipos electronicos"
 		| "Maquinaria fija o equipos"
+		| "Bienes de terceros"
 		| "Existencias (mercaderia)"
 		| "Dinero y valores dentro del predio"
-		| "Vidrios y cristales";
-	monto: number; // Monto asegurado para este item
+		| "Vidrios y cristales"
+		| "Letreros"
+		| "Perdida de beneficios"
+		| "Obras de arte";
+	monto: number;
 };
 
 export type BienAseguradoIncendio = {
