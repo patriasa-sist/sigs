@@ -501,11 +501,19 @@ export async function searchClients(query: string, filters?: { commercial_owner_
 		console.log(`[searchClients] User ${user.email} searching for: "${trimmedQuery}"`);
 
 		const q = trimmedQuery;
+		const palabras = q.split(/\s+/).filter(Boolean);
+
+		// Búsqueda multi-palabra: cada palabra debe coincidir en al menos un campo (AND entre palabras)
+		let natQuery = supabase.from("natural_clients").select("client_id");
+		for (const p of palabras) {
+			natQuery = natQuery.or(
+				`primer_nombre.ilike.%${p}%,segundo_nombre.ilike.%${p}%,primer_apellido.ilike.%${p}%,segundo_apellido.ilike.%${p}%,numero_documento.ilike.%${p}%`
+			);
+		}
 
 		// Buscar en todas las tablas relevantes en paralelo
-		const [natRes, jurRes, uniRes, clientsRes, polizasRes] = await Promise.all([
-			supabase.from("natural_clients").select("client_id")
-				.or(`primer_nombre.ilike.%${q}%,primer_apellido.ilike.%${q}%,segundo_apellido.ilike.%${q}%,numero_documento.ilike.%${q}%`),
+		const [natRes, jurRes, uniRes, clientsRes, polizasRes, vehiculosRes] = await Promise.all([
+			natQuery,
 			supabase.from("juridic_clients").select("client_id")
 				.or(`razon_social.ilike.%${q}%,nit.ilike.%${q}%`),
 			supabase.from("unipersonal_clients").select("client_id")
@@ -514,7 +522,15 @@ export async function searchClients(query: string, filters?: { commercial_owner_
 				.or(`email.ilike.%${q}%,phone.ilike.%${q}%`),
 			supabase.from("polizas").select("client_id")
 				.ilike("numero_poliza", `%${q}%`),
+			supabase.from("polizas_automotor_vehiculos").select("poliza_id, polizas(client_id)")
+				.ilike("placa", `%${q}%`)
+				.limit(20),
 		]);
+
+		const vehiculoClientIds = (vehiculosRes.data ?? [])
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			.map((v) => (v.polizas as any)?.client_id as string | undefined)
+			.filter((id): id is string => !!id);
 
 		const matchingIds = new Set([
 			...(natRes.data?.map((r) => r.client_id) ?? []),
@@ -522,6 +538,7 @@ export async function searchClients(query: string, filters?: { commercial_owner_
 			...(uniRes.data?.map((r) => r.client_id) ?? []),
 			...(clientsRes.data?.map((r) => r.id) ?? []),
 			...(polizasRes.data?.map((r) => r.client_id) ?? []),
+			...vehiculoClientIds,
 		]);
 
 		if (matchingIds.size === 0) {
