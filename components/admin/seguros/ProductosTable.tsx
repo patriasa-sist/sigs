@@ -140,7 +140,7 @@ export function ProductosTable({
                 <SelectItem value="all">Todas las aseguradoras</SelectItem>
                 {aseguradoras.map((a) => (
                   <SelectItem key={a.id} value={a.id}>
-                    {a.nombre}
+                    {a.codigo != null ? `${a.codigo} - ${a.nombre}` : a.nombre}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -159,7 +159,7 @@ export function ProductosTable({
                   .filter((r) => !r.es_ramo_padre)
                   .map((r) => (
                     <SelectItem key={r.id} value={r.id.toString()}>
-                      {r.nombre}
+                      {r.codigo ? `${r.codigo} - ${r.nombre}` : r.nombre}
                     </SelectItem>
                   ))}
               </SelectContent>
