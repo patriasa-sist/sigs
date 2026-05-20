@@ -41,8 +41,7 @@ yarn-error.log*
 next-env.d.ts
 
 # mcp configs
-.mcp.*
 /.claude/
 # Sentry Config File
 .env.sentry-build-plugin
-.claude/*
+
