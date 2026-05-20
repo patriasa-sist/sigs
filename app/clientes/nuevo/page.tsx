@@ -11,11 +11,13 @@ import {
 	UnipersonalClientFormData,
 	JuridicClientFormData,
 	OngClientFormData,
+	ClubClientFormData,
 	ClientPartnerData,
 	naturalClientFormSchema,
 	unipersonalClientFormSchema,
 	juridicClientFormSchema,
 	ongClientFormSchema,
+	clubClientFormSchema,
 	clientPartnerSchema,
 	ClientFormState,
 } from "@/types/clientForm";
@@ -27,6 +29,7 @@ import {
 	normalizeUnipersonalClientData,
 	normalizeJuridicClientData,
 	normalizeOngClientData,
+	normalizeClubClientData,
 	normalizePartnerData,
 	normalizeLegalRepresentativeData,
 } from "@/utils/formNormalization";
@@ -43,6 +46,7 @@ import { NaturalClientForm } from "@/components/clientes/NaturalClientForm";
 import { UnipersonalClientForm } from "@/components/clientes/UnipersonalClientForm";
 import { JuridicClientForm } from "@/components/clientes/JuridicClientForm";
 import { OngClientForm } from "@/components/clientes/OngClientForm";
+import { ClubClientForm } from "@/components/clientes/ClubClientForm";
 import { Button } from "@/components/ui/button";
 import { Save, X, ChevronLeft, Users, Check, AlertTriangle } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
@@ -50,8 +54,10 @@ import { saveExtraPhones } from "@/app/clientes/celulares/actions";
 import {
 	verificarDocumentoExistente,
 	verificarNitExistente,
+	verificarRegistroClubExistente,
 	type VerificarDocumentoResult,
 	type VerificarNitResult,
+	type VerificarRegistroClubResult,
 } from "@/app/clientes/actions";
 
 // ---------------------------------------------------------------------------
@@ -175,9 +181,16 @@ export default function NuevoClientePage() {
 		},
 	});
 
+	// Club deportivo client form
+	const clubForm = useForm<ClubClientFormData>({
+		resolver: zodResolver(clubClientFormSchema) as Resolver<ClubClientFormData>,
+		mode: "onBlur",
+	});
+
 	// Duplicate detection state
 	const [duplicadoDocumento, setDuplicadoDocumento] = useState<VerificarDocumentoResult | null>(null);
 	const [duplicadoNit, setDuplicadoNit] = useState<VerificarNitResult | null>(null);
+	const [duplicadoRegistroClub, setDuplicadoRegistroClub] = useState<VerificarRegistroClubResult | null>(null);
 
 	// Watch documento fields for natural / unipersonal clients
 	const naturalTipoDoc = naturalForm.watch("tipo_documento");
@@ -186,6 +199,10 @@ export default function NuevoClientePage() {
 	const unipersonalTipoDoc = unipersonalForm.watch("tipo_documento");
 	const juridicNit = juridicForm.watch("nit");
 	const unipersonalNit = unipersonalForm.watch("nit");
+	const clubNit = clubForm.watch("nit");
+	const clubTipoRegistro = clubForm.watch("tipo_registro");
+	const clubEntidadRegistro = clubForm.watch("entidad_registro");
+	const clubNumeroRegistro = clubForm.watch("numero_registro");
 
 	// Debounced duplicate check for natural clients
 	const naturalDocTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -227,11 +244,15 @@ export default function NuevoClientePage() {
 		return () => { if (unipersonalDocTimerRef.current) clearTimeout(unipersonalDocTimerRef.current); };
 	}, [unipersonalTipoDoc, unipersonalNumDoc, clientType]);
 
-	// Debounced duplicate check for NIT (juridic + unipersonal)
+	// Debounced duplicate check for NIT (juridic + unipersonal + club)
 	const nitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-	const activeNit = clientType === "juridica" ? juridicNit : unipersonalNit;
+	const activeNit =
+		clientType === "juridica" ? juridicNit
+		: clientType === "unipersonal" ? unipersonalNit
+		: clientType === "club" ? clubNit
+		: undefined;
 	useEffect(() => {
-		if (clientType !== "juridica" && clientType !== "unipersonal") return;
+		if (clientType !== "juridica" && clientType !== "unipersonal" && clientType !== "club") return;
 		if (nitTimerRef.current) clearTimeout(nitTimerRef.current);
 		if (!activeNit || activeNit.length < 7) {
 			setDuplicadoNit(null);
@@ -247,6 +268,26 @@ export default function NuevoClientePage() {
 		}, 600);
 		return () => { if (nitTimerRef.current) clearTimeout(nitTimerRef.current); };
 	}, [activeNit, clientType]);
+
+	// Debounced duplicate check for club registro (tipo + entidad + numero)
+	const registroClubTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+	useEffect(() => {
+		if (clientType !== "club") return;
+		if (registroClubTimerRef.current) clearTimeout(registroClubTimerRef.current);
+		if (!clubTipoRegistro || !clubEntidadRegistro || !clubNumeroRegistro || clubEntidadRegistro.length < 2 || clubNumeroRegistro.length < 2) {
+			setDuplicadoRegistroClub(null);
+			return;
+		}
+		registroClubTimerRef.current = setTimeout(async () => {
+			const result = await verificarRegistroClubExistente(clubTipoRegistro, clubEntidadRegistro, clubNumeroRegistro);
+			if (result.success && result.data.existe) {
+				setDuplicadoRegistroClub(result.data);
+			} else {
+				setDuplicadoRegistroClub(null);
+			}
+		}, 600);
+		return () => { if (registroClubTimerRef.current) clearTimeout(registroClubTimerRef.current); };
+	}, [clubTipoRegistro, clubEntidadRegistro, clubNumeroRegistro, clientType]);
 
 	// Load user and check for draft on mount
 	useEffect(() => {
@@ -299,6 +340,10 @@ export default function NuevoClientePage() {
 								Object.entries(draft.ongData).forEach(([key, value]) => {
 									ongForm.setValue(key as keyof OngClientFormData, value as never);
 								});
+							} else if (draft.clientType === "club" && draft.clubData) {
+								Object.entries(draft.clubData).forEach(([key, value]) => {
+									clubForm.setValue(key as keyof ClubClientFormData, value as never);
+								});
 							}
 
 							toast.success("Borrador restaurado");
@@ -337,6 +382,8 @@ export default function NuevoClientePage() {
 			formState.juridicData = juridicForm.getValues();
 		} else if (clientType === "ong") {
 			formState.ongData = ongForm.getValues();
+		} else if (clientType === "club") {
+			formState.clubData = clubForm.getValues();
 		}
 
 		saveDraft(formState);
@@ -811,10 +858,95 @@ export default function NuevoClientePage() {
 		return client.id;
 	};
 
+	// Club deportivo client submission
+	const submitClubClient = async () => {
+		const formData = clubForm.getValues();
+		const normalized = normalizeClubClientData(formData);
+
+		// Check for duplicate registro (tipo_registro + entidad_registro + numero_registro)
+		const { data: existingRegistro } = await supabase
+			.from("club_clients")
+			.select("nombre_club, sigla")
+			.eq("tipo_registro", normalized.tipo_registro)
+			.eq("entidad_registro", normalized.entidad_registro)
+			.eq("numero_registro", normalized.numero_registro)
+			.maybeSingle();
+
+		if (existingRegistro) {
+			const nombre = existingRegistro.sigla
+				? `${existingRegistro.nombre_club} (${existingRegistro.sigla})`
+				: existingRegistro.nombre_club;
+			throw new Error(`Ya existe el club "${nombre}" con ese número de registro en la misma entidad emisora`);
+		}
+
+		// Check for duplicate NIT (when provided) — partial unique index in DB
+		if (normalized.nit) {
+			const { data: existingNit } = await supabase
+				.from("club_clients")
+				.select("nombre_club, sigla")
+				.eq("nit", normalized.nit)
+				.maybeSingle();
+
+			if (existingNit) {
+				const nombre = existingNit.sigla
+					? `${existingNit.nombre_club} (${existingNit.sigla})`
+					: existingNit.nombre_club;
+				throw new Error(`Ya existe el club "${nombre}" con el NIT ${normalized.nit}`);
+			}
+		}
+
+		// 1. Insert into clients table
+		const { data: client, error: clientError } = await supabase
+			.from("clients")
+			.insert({
+				client_type: "club",
+				commercial_owner_id: currentUserId,
+				status: "active",
+				created_by: currentUserId,
+			})
+			.select()
+			.single();
+
+		if (clientError) throw clientError;
+
+		// 2. Insert into club_clients table
+		const { error: clubError } = await supabase.from("club_clients").insert({
+			client_id: client.id,
+			nombre_club: normalized.nombre_club,
+			sigla: normalized.sigla || null,
+			disciplina_principal: normalized.disciplina_principal,
+			nit: normalized.nit || null,
+			numero_registro_vipfe: normalized.numero_registro_vipfe || null,
+			tipo_registro: normalized.tipo_registro,
+			entidad_registro: normalized.entidad_registro,
+			numero_registro: normalized.numero_registro,
+			direccion: normalized.direccion,
+			correo_electronico: normalized.correo_electronico || null,
+			telefono: normalized.telefono || null,
+			nombre_representante: normalized.nombre_representante,
+			apellido_representante: normalized.apellido_representante,
+			cargo_representante: normalized.cargo_representante,
+			ci_representante: normalized.ci_representante,
+			extension_ci_representante: normalized.extension_ci_representante || null,
+		});
+
+		if (clubError) { await rollbackClient(client.id); throw clubError; }
+
+		// 3. Upload client documents
+		await uploadClientDocuments(client.id, formData.documentos);
+
+		// 4. Save extra phones
+		if (formData.celulares_extra && formData.celulares_extra.length > 0) {
+			await saveExtraPhones(client.id, formData.celulares_extra);
+		}
+
+		return client.id;
+	};
+
 	// Validate required documents before saving
 	const validateDocumentsBeforeSave = (
 		documentos: ClienteDocumentoFormState[] | undefined,
-		type: "natural" | "unipersonal" | "juridica" | "ong"
+		type: "natural" | "unipersonal" | "juridica" | "ong" | "club"
 	): boolean => {
 		const docs = documentos || [];
 		const validation = validateClientDocuments(docs, type, docExceptions);
@@ -837,6 +969,11 @@ export default function NuevoClientePage() {
 				poder_representante_mae: "Poder Representante Legal / MAE",
 				ci_representante_mae: "CI Representante Legal o MAE",
 				formulario_registro_ong: "Formulario de Registro de Clientes",
+				registro_existencia_legal: "Registro de Existencia Legal",
+				estatutos_o_reglamento: "Estatutos o Reglamento Interno",
+				ci_representante_club: "CI Representante Legal",
+				poder_representante_club: "Poder del Representante Legal",
+				formulario_d_club: "Formulario D — Persona Jurídica",
 			};
 			const missingNames = validation.missingDocuments.map((docType) => nameMap[docType] ?? docType);
 
@@ -851,7 +988,7 @@ export default function NuevoClientePage() {
 	// Determine which documents were skipped using exceptions (for consumption)
 	const getSkippedDocTypes = (
 		documentos: ClienteDocumentoFormState[] | undefined,
-		type: "natural" | "unipersonal" | "juridica" | "ong"
+		type: "natural" | "unipersonal" | "juridica" | "ong" | "club"
 	): TipoDocumentoCliente[] => {
 		const docs = documentos || [];
 		const uploadedTypes = docs.map((d) => d.tipo_documento);
@@ -896,6 +1033,14 @@ export default function NuevoClientePage() {
 	const ONG_SECTION_FIELDS: string[][] = [
 		[], // 0: Tipo de Cliente
 		["nombre_ong", "sigla", "nit", "numero_registro_vipfe", "pais_origen", "actividad_principal"],
+		["direccion", "correo_electronico", "telefono"],
+		["nombre_representante", "apellido_representante", "cargo_representante", "ci_representante"],
+		[], // 4: Documentos
+	];
+
+	const CLUB_SECTION_FIELDS: string[][] = [
+		[], // 0: Tipo de Cliente
+		["nombre_club", "sigla", "disciplina_principal", "nit", "numero_registro_vipfe", "tipo_registro", "entidad_registro", "numero_registro"],
 		["direccion", "correo_electronico", "telefono"],
 		["nombre_representante", "apellido_representante", "cargo_representante", "ci_representante"],
 		[], // 4: Documentos
@@ -1019,6 +1164,28 @@ export default function NuevoClientePage() {
 
 				createdClientId = await submitOngClient();
 				toast.success("ONG registrada exitosamente");
+			} else if (clientType === "club") {
+				const isValid = await clubForm.trigger();
+				const sectionResults = computeSectionValidity(clubForm.formState.errors, CLUB_SECTION_FIELDS);
+				setValidatedSections(sectionResults);
+				if (!isValid) {
+					const fields = getErrorFieldLabels(clubForm.formState.errors);
+					toast.error("Campos incompletos o inválidos", {
+						description: fields.length > 0 ? `Revisar: ${fields.join(", ")}` : "Por favor complete todos los campos requeridos",
+					});
+					setIsSaving(false);
+					return;
+				}
+
+				// Validate required documents
+				if (!validateDocumentsBeforeSave(clubForm.getValues().documentos, "club")) {
+					setValidatedSections(prev => { const copy = [...prev]; copy[copy.length - 1] = false; return copy; });
+					setIsSaving(false);
+					return;
+				}
+
+				createdClientId = await submitClubClient();
+				toast.success("Club deportivo registrado exitosamente");
 			}
 
 			// Consume used exceptions (if any documents were skipped)
@@ -1029,7 +1196,9 @@ export default function NuevoClientePage() {
 						? unipersonalForm.getValues()
 						: clientType === "ong"
 							? ongForm.getValues()
-							: juridicForm.getValues();
+							: clientType === "club"
+								? clubForm.getValues()
+								: juridicForm.getValues();
 				const skipped = getSkippedDocTypes(formData.documentos, clientType);
 				if (skipped.length > 0) {
 					await consumirExcepciones(skipped, createdClientId);
@@ -1132,6 +1301,14 @@ export default function NuevoClientePage() {
 			{ label: "Representante / MAE" },
 			{ label: "Documentos" },
 		]
+		: clientType === "club"
+		? [
+			{ label: "Tipo de Cliente", detail: "Club Deportivo" },
+			{ label: "Datos del Club" },
+			{ label: "Información de Contacto" },
+			{ label: "Representante Legal" },
+			{ label: "Documentos" },
+		]
 		: [{ label: "Tipo de Cliente" }];
 
 	return (
@@ -1161,6 +1338,8 @@ export default function NuevoClientePage() {
 										? "Unipersonal"
 										: clientType === "ong"
 										? "ONG"
+										: clientType === "club"
+										? "Club Deportivo"
 										: "Persona Jurídica"
 									: "Seleccione el tipo de cliente"}
 							</p>
@@ -1290,6 +1469,24 @@ export default function NuevoClientePage() {
 					{clientType === "ong" && (
 						<OngClientForm form={ongForm} onFieldBlur={handleAutoSave} exceptions={docExceptions} />
 					)}
+
+					{clientType === "club" && (
+						<>
+							{duplicadoRegistroClub && (
+								<DuplicadoBanner
+									duplicado={duplicadoRegistroClub}
+									tipo="registroClub"
+								/>
+							)}
+							{duplicadoNit && (
+								<DuplicadoBanner
+									duplicado={duplicadoNit}
+									tipo="nit"
+								/>
+							)}
+							<ClubClientForm form={clubForm} onFieldBlur={handleAutoSave} exceptions={docExceptions} />
+						</>
+					)}
 				</div>
 			</div>
 		</div>
@@ -1297,25 +1494,34 @@ export default function NuevoClientePage() {
 }
 
 // ---------------------------------------------------------------------------
-// DuplicadoBanner — alerta temprana cuando el documento/NIT ya existe
+// DuplicadoBanner — alerta temprana cuando el documento/NIT/registro ya existe
 // ---------------------------------------------------------------------------
 type DuplicadoBannerProps =
 	| { duplicado: VerificarDocumentoResult; tipo: "documento" }
-	| { duplicado: VerificarNitResult; tipo: "nit" };
+	| { duplicado: VerificarNitResult; tipo: "nit" }
+	| { duplicado: VerificarRegistroClubResult; tipo: "registroClub" };
 
 function DuplicadoBanner({ duplicado, tipo }: DuplicadoBannerProps) {
 	if (!duplicado.existe) return null;
+
+	const titulo =
+		tipo === "nit" ? "NIT ya registrado"
+		: tipo === "registroClub" ? "Club ya registrado"
+		: "Documento ya registrado";
+
+	const detalle =
+		tipo === "nit" ? "NIT"
+		: tipo === "registroClub" ? "número de registro en la misma entidad emisora"
+		: "documento";
 
 	return (
 		<div className="flex gap-3 p-4 rounded-lg border border-amber-200 bg-amber-50 text-amber-900">
 			<AlertTriangle className="h-5 w-5 shrink-0 mt-0.5 text-amber-600" />
 			<div className="text-sm space-y-1">
-				<p className="font-medium">
-					{tipo === "nit" ? "NIT ya registrado" : "Documento ya registrado"}
-				</p>
+				<p className="font-medium">{titulo}</p>
 				<p>
 					Ya existe <span className="font-semibold">{duplicado.nombre}</span> con este{" "}
-					{tipo === "nit" ? "NIT" : "documento"} en el sistema.
+					{detalle} en el sistema.
 					Para crear una póliza, búscalo desde el módulo de Pólizas.
 				</p>
 			</div>

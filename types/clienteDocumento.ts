@@ -54,6 +54,20 @@ export const ONG_DOCUMENT_TYPES = {
 } as const;
 
 /**
+ * Document types for Club deportivo clients
+ */
+export const CLUB_DOCUMENT_TYPES = {
+	nit_club: "NIT (si corresponde)",
+	registro_existencia_legal: "Registro de Existencia Legal (Municipio/Gobernación/VMI)",
+	estatutos_o_reglamento: "Estatutos o Reglamento Interno",
+	ci_representante_club: "CI del Representante Legal",
+	poder_representante_club: "Poder del Representante Legal",
+	registro_vipfe_club: "Número de Registro VIPFE (si corresponde)",
+	estados_financieros_club: "Estados Financieros (prima > $US 10.000)",
+	formulario_d_club: "Formulario D — Solicitud de Datos Persona Jurídica",
+} as const;
+
+/**
  * All possible document types
  */
 export const ALL_DOCUMENT_TYPES = {
@@ -61,6 +75,7 @@ export const ALL_DOCUMENT_TYPES = {
 	...UNIPERSONAL_DOCUMENT_TYPES,
 	...JURIDIC_DOCUMENT_TYPES,
 	...ONG_DOCUMENT_TYPES,
+	...CLUB_DOCUMENT_TYPES,
 } as const;
 
 /**
@@ -81,6 +96,7 @@ export const REQUIRED_DOCUMENTS = {
 	unipersonal: ["documento_identidad", "certificacion_pep", "carta_nombramiento", "formulario_kyc", "nit", "matricula_comercio"] as const,
 	juridica: ["nit", "matricula_comercio", "testimonio_constitucion", "balance_estado_resultados", "poder_representacion", "documento_identidad_representante", "ci_representante_anverso", "certificacion_pep", "carta_nombramiento", "formulario_kyc"] as const,
 	ong: ["acreditacion_resolucion", "poder_representante_mae", "ci_representante_mae", "formulario_registro_ong"] as const,
+	club: ["registro_existencia_legal", "estatutos_o_reglamento", "ci_representante_club", "poder_representante_club", "formulario_d_club"] as const,
 } as const;
 
 /**
@@ -92,7 +108,7 @@ export const NON_EXCEPTABLE_DOCUMENTS: readonly TipoDocumentoCliente[] = [] as c
 /**
  * Get document types for a specific client type
  */
-export function getDocumentTypesForClientType(clientType: "natural" | "unipersonal" | "juridica" | "ong") {
+export function getDocumentTypesForClientType(clientType: "natural" | "unipersonal" | "juridica" | "ong" | "club") {
 	switch (clientType) {
 		case "natural":
 			return NATURAL_DOCUMENT_TYPES;
@@ -102,6 +118,8 @@ export function getDocumentTypesForClientType(clientType: "natural" | "uniperson
 			return JURIDIC_DOCUMENT_TYPES;
 		case "ong":
 			return ONG_DOCUMENT_TYPES;
+		case "club":
+			return CLUB_DOCUMENT_TYPES;
 		default:
 			return NATURAL_DOCUMENT_TYPES;
 	}
@@ -112,7 +130,7 @@ export function getDocumentTypesForClientType(clientType: "natural" | "uniperson
  */
 export function isDocumentRequired(
 	documentType: TipoDocumentoCliente,
-	clientType: "natural" | "unipersonal" | "juridica" | "ong"
+	clientType: "natural" | "unipersonal" | "juridica" | "ong" | "club"
 ): boolean {
 	const required = REQUIRED_DOCUMENTS[clientType] as readonly string[];
 	return required.includes(documentType);
@@ -184,6 +202,14 @@ export const clienteDocumentoSchema = z.object({
 		"formulario_registro_ong",
 		"nit_ong",
 		"registro_vipfe",
+		"nit_club",
+		"registro_existencia_legal",
+		"estatutos_o_reglamento",
+		"ci_representante_club",
+		"poder_representante_club",
+		"registro_vipfe_club",
+		"estados_financieros_club",
+		"formulario_d_club",
 	]),
 	nombre_archivo: z.string(),
 	tipo_archivo: z.string(),
@@ -349,7 +375,7 @@ export type DocumentValidationResult = {
  */
 export function validateClientDocuments(
 	uploadedDocuments: ClienteDocumentoFormState[],
-	clientType: "natural" | "unipersonal" | "juridica" | "ong",
+	clientType: "natural" | "unipersonal" | "juridica" | "ong" | "club",
 	exceptions: TipoDocumentoCliente[] = []
 ): DocumentValidationResult {
 	const allRequired = REQUIRED_DOCUMENTS[clientType];
@@ -381,7 +407,7 @@ export function isDocumentExceptable(documentType: TipoDocumentoCliente): boolea
 /**
  * Get exceptable document types for a client type (excludes NON_EXCEPTABLE)
  */
-export function getExceptableDocuments(clientType: "natural" | "unipersonal" | "juridica" | "ong"): TipoDocumentoCliente[] {
+export function getExceptableDocuments(clientType: "natural" | "unipersonal" | "juridica" | "ong" | "club"): TipoDocumentoCliente[] {
 	const allDocs = Object.keys(getDocumentTypesForClientType(clientType)) as TipoDocumentoCliente[];
 	return allDocs.filter((doc) => isDocumentExceptable(doc));
 }

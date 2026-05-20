@@ -2,7 +2,7 @@
 
 import { createClient } from "@/utils/supabase/server";
 import type { ClienteDocumento } from "@/types/clienteDocumento";
-import type { NaturalClient, JuridicClient, UnipersonalClient, OngClient } from "@/types/database/client";
+import type { NaturalClient, JuridicClient, UnipersonalClient, OngClient, ClubClient } from "@/types/database/client";
 import type { ExtraPhone } from "@/types/clientForm";
 
 // Database types for partner and legal representatives
@@ -64,7 +64,7 @@ type PolicyData = {
 export type ClienteDetalleCompleto = {
 	// Base client info
 	id: string;
-	client_type: "natural" | "juridica" | "unipersonal" | "ong";
+	client_type: "natural" | "juridica" | "unipersonal" | "ong" | "club";
 	status: string;
 	commercial_owner_id?: string;
 	commercial_owner_name?: string;
@@ -76,6 +76,7 @@ export type ClienteDetalleCompleto = {
 	juridic_data?: JuridicClient | null;
 	unipersonal_data?: UnipersonalClient | null;
 	ong_data?: OngClient | null;
+	club_data?: ClubClient | null;
 
 	// Partner data (for married natural/unipersonal clients)
 	partner?: PartnerData | null;
@@ -132,6 +133,7 @@ export async function getClientDetailsComplete(
         juridic_clients (*),
         unipersonal_clients (*),
         ong_clients (*),
+        club_clients (*),
         commercial_owner:profiles!commercial_owner_id (
           id,
           full_name,
@@ -168,6 +170,10 @@ export async function getClientDetailsComplete(
 			? clientData.ong_clients[0] ?? null
 			: clientData.ong_clients ?? null;
 
+		const clubData = Array.isArray(clientData.club_clients)
+			? clientData.club_clients[0] ?? null
+			: clientData.club_clients ?? null;
+
 		console.log("[getClientDetailsComplete] Client data loaded:", {
 			id: clientData.id,
 			type: clientData.client_type,
@@ -175,6 +181,7 @@ export async function getClientDetailsComplete(
 			has_juridic: !!juridicData,
 			has_unipersonal: !!unipersonalData,
 			has_ong: !!ongData,
+			has_club: !!clubData,
 		});
 
 		// 2. Get partner data if natural or unipersonal client
@@ -275,6 +282,7 @@ export async function getClientDetailsComplete(
 			juridic_data: juridicData,
 			unipersonal_data: unipersonalData,
 			ong_data: ongData,
+			club_data: clubData,
 			partner: partnerData,
 			legal_representatives: legalReps,
 			documents: documents || [],

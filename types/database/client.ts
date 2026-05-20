@@ -19,7 +19,7 @@ import { z } from "zod";
 /**
  * Client type enumeration
  */
-export const ClientTypeEnum = z.enum(["natural", "juridica", "unipersonal", "ong"]);
+export const ClientTypeEnum = z.enum(["natural", "juridica", "unipersonal", "ong", "club"]);
 export type ClientType = z.infer<typeof ClientTypeEnum>;
 
 /**
@@ -186,6 +186,34 @@ export const OngClientSchema = z.object({
 export type OngClient = z.infer<typeof OngClientSchema>;
 
 // ============================================
+// CLUB CLIENT SCHEMA (club_clients table)
+// ============================================
+
+export const ClubClientSchema = z.object({
+	client_id: z.string().uuid(),
+	nombre_club: z.string().min(1, "Nombre del club requerido"),
+	sigla: z.string().nullable(),
+	disciplina_principal: z.string().min(1, "Disciplina requerida"),
+	nit: z.string().nullable(),
+	numero_registro_vipfe: z.string().nullable(),
+	tipo_registro: z.string().min(1, "Tipo de registro requerido"),
+	entidad_registro: z.string().min(1, "Entidad emisora requerida"),
+	numero_registro: z.string().min(1, "Número de registro requerido"),
+	direccion: z.string().min(1, "Dirección requerida"),
+	correo_electronico: z.string().email("Email inválido").nullable(),
+	telefono: z.string().nullable(),
+	nombre_representante: z.string().min(1, "Nombre del representante requerido"),
+	apellido_representante: z.string().min(1, "Apellido del representante requerido"),
+	cargo_representante: z.string().min(1, "Cargo requerido"),
+	ci_representante: z.string().min(6, "CI debe tener al menos 6 caracteres"),
+	extension_ci_representante: z.string().nullable(),
+	created_at: z.coerce.string().optional(),
+	updated_at: z.coerce.string().optional(),
+});
+
+export type ClubClient = z.infer<typeof ClubClientSchema>;
+
+// ============================================
 // POLICY SCHEMA (polizas table)
 // ============================================
 
@@ -321,6 +349,7 @@ export const ClientQueryResultSchema = z.object({
 	juridic_clients: JuridicClientSchema.nullable(),
 	unipersonal_clients: UnipersonalClientSchema.nullable(),
 	ong_clients: OngClientSchema.nullable(),
+	club_clients: ClubClientSchema.nullable(),
 
 	// Executive information (from profiles table)
 	executive: z.object({
@@ -350,7 +379,7 @@ export type ClientQueryResult = z.infer<typeof ClientQueryResultSchema>;
  * @throws ZodError if validation fails
  */
 export function transformClientToViewModel(queryResult: ClientQueryResult): ClientViewModel {
-	const { clients, natural_clients, juridic_clients, unipersonal_clients, ong_clients, executive, policies } = queryResult;
+	const { clients, natural_clients, juridic_clients, unipersonal_clients, ong_clients, club_clients, executive, policies } = queryResult;
 
 	// Build full name and identification based on client type
 	let fullName = "";
@@ -418,6 +447,20 @@ export function transformClientToViewModel(queryResult: ClientQueryResult): Clie
 			email = ong_clients.correo_electronico ?? undefined;
 			phone = ong_clients.telefono ?? undefined;
 			address = ong_clients.direccion;
+			break;
+
+		case "club":
+			if (!club_clients) {
+				throw new Error(`Club client data missing for client ${clients.id}`);
+			}
+			fullName = club_clients.sigla
+				? `${club_clients.nombre_club} (${club_clients.sigla})`
+				: club_clients.nombre_club;
+			idNumber = club_clients.nit ?? club_clients.numero_registro ?? "CLUB";
+			nit = club_clients.nit ?? undefined;
+			email = club_clients.correo_electronico ?? undefined;
+			phone = club_clients.telefono ?? undefined;
+			address = club_clients.direccion;
 			break;
 	}
 

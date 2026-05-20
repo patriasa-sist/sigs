@@ -25,7 +25,7 @@ import {
 } from "@/types/clienteDocumento";
 
 type Props = {
-	clientType: "natural" | "unipersonal" | "juridica" | "ong";
+	clientType: "natural" | "unipersonal" | "juridica" | "ong" | "club";
 	documentos: ClienteDocumentoFormState[];
 	onDocumentosChange: (documentos: ClienteDocumentoFormState[]) => void;
 	exceptions?: TipoDocumentoCliente[];

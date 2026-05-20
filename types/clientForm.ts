@@ -11,8 +11,30 @@ import type { ClienteDocumentoFormState } from './clienteDocumento';
 // ENUMS & CONSTANTS
 // ============================================================================
 
-export const CLIENT_TYPES = ['natural', 'juridica', 'unipersonal', 'ong'] as const;
+export const CLIENT_TYPES = ['natural', 'juridica', 'unipersonal', 'ong', 'club'] as const;
 export type ClientType = (typeof CLIENT_TYPES)[number];
+
+// Disciplinas deportivas para clientes tipo club
+export const SPORTS_DISCIPLINES = [
+  'futbol',
+  'basquetbol',
+  'voleibol',
+  'tenis',
+  'natacion',
+  'ciclismo',
+  'multiple',
+  'otra',
+] as const;
+export type SportsDiscipline = (typeof SPORTS_DISCIPLINES)[number];
+
+// Entidades emisoras del registro de existencia legal del club
+export const CLUB_REGISTRY_TYPES = [
+  'municipal',
+  'gobernacion',
+  'viceministerio_de_deportes',
+  'otra',
+] as const;
+export type ClubRegistryType = (typeof CLUB_REGISTRY_TYPES)[number];
 
 export const DOCUMENT_TYPES = ['ci', 'pasaporte', 'cex'] as const;
 export type DocumentType = (typeof DOCUMENT_TYPES)[number];
@@ -465,6 +487,54 @@ export const ongClientFormSchema = ongClientOrgSchema
   .merge(ongRepresentativeSchema);
 
 // ============================================================================
+// CLUB CLIENT (Club deportivo)
+// ============================================================================
+
+// Section 1: Datos del Club
+export interface ClubClientOrgData {
+  nombre_club: string;
+  sigla?: string;
+  disciplina_principal: SportsDiscipline;
+  nit?: string;
+  numero_registro_vipfe?: string;
+  tipo_registro: ClubRegistryType;
+  entidad_registro: string;
+  numero_registro: string;
+}
+
+export const clubClientOrgSchema = z.object({
+  nombre_club: z.string().min(1, 'Nombre del club es requerido'),
+  sigla: z.string().optional(),
+  disciplina_principal: z.enum(SPORTS_DISCIPLINES, { message: 'Disciplina es requerida' }),
+  nit: z.string().optional().or(z.literal('')),
+  numero_registro_vipfe: z.string().optional(),
+  tipo_registro: z.enum(CLUB_REGISTRY_TYPES, { message: 'Tipo de registro es requerido' }),
+  entidad_registro: z.string().min(1, 'Entidad emisora es requerida'),
+  numero_registro: z.string().min(1, 'Número de registro es requerido'),
+});
+
+// Section 2: Información de Contacto (mismo shape que ONG)
+export type ClubClientContactData = OngClientContactData;
+export const clubClientContactSchema = ongClientContactSchema;
+
+// Section 3: Representante Legal (mismo shape que ONG)
+export type ClubRepresentativeData = OngRepresentativeData;
+export const clubRepresentativeSchema = ongRepresentativeSchema;
+
+// Combined Club Client Form Data
+export interface ClubClientFormData
+  extends ClubClientOrgData,
+    ClubClientContactData,
+    ClubRepresentativeData {
+  documentos?: ClienteDocumentoFormState[];
+  celulares_extra?: ExtraPhone[];
+}
+
+export const clubClientFormSchema = clubClientOrgSchema
+  .merge(clubClientContactSchema)
+  .merge(clubRepresentativeSchema);
+
+// ============================================================================
 // FORM STATE
 // ============================================================================
 
@@ -474,6 +544,7 @@ export interface ClientFormState {
   unipersonalData?: Partial<UnipersonalClientFormData>;
   juridicData?: Partial<JuridicClientFormData>;
   ongData?: Partial<OngClientFormData>;
+  clubData?: Partial<ClubClientFormData>;
   partnerData?: Partial<ClientPartnerData>; // When estado_civil = 'casado'
   currentStep: number;
   completedSections: {
@@ -487,6 +558,7 @@ export interface ClientFormState {
     companyData?: boolean;
     legalReps?: boolean;
     orgData?: boolean;
+    clubData?: boolean;
     documents?: boolean;
   };
 }
@@ -570,6 +642,26 @@ export interface OngClientPayload {
   numero_registro_vipfe?: string;
   pais_origen: string;
   actividad_principal?: string;
+  direccion: string;
+  correo_electronico?: string;
+  telefono?: string;
+  nombre_representante: string;
+  apellido_representante: string;
+  cargo_representante: string;
+  ci_representante: string;
+  extension_ci_representante?: string;
+}
+
+export interface ClubClientPayload {
+  client_id: string;
+  nombre_club: string;
+  sigla?: string;
+  disciplina_principal: SportsDiscipline;
+  nit?: string;
+  numero_registro_vipfe?: string;
+  tipo_registro: ClubRegistryType;
+  entidad_registro: string;
+  numero_registro: string;
   direccion: string;
   correo_electronico?: string;
   telefono?: string;

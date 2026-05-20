@@ -335,6 +335,34 @@ export function normalizeOngClientData<T extends Record<string, any>>(data: T): 
 }
 
 /**
+ * Normalizes Club deportivo client form data
+ *
+ * NOTE: disciplina_principal and tipo_registro are NOT normalized to uppercase
+ * because they must match database CHECK constraints in lowercase.
+ */
+export function normalizeClubClientData<T extends Record<string, any>>(data: T): T {
+  const textFields = [
+    'nombre_club',
+    'sigla',
+    // 'disciplina_principal', // EXCLUDED: lowercase enum
+    'numero_registro_vipfe',
+    // 'tipo_registro', // EXCLUDED: lowercase enum
+    'entidad_registro',
+    'numero_registro',
+    'direccion',
+    'nombre_representante',
+    'apellido_representante',
+    'cargo_representante',
+    'extension_ci_representante',
+  ];
+
+  const emailFields = ['correo_electronico'];
+  const phoneFields = ['telefono', 'ci_representante', 'nit'];
+
+  return normalizeFormData(data, textFields, emailFields, phoneFields);
+}
+
+/**
  * Normalizes partner/spouse data
  * Applies all normalization rules for partner fields
  * @param data - Partner form data
