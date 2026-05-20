@@ -6,9 +6,10 @@ import * as Sentry from "@sentry/nextjs";
 /**
  * Rutas protegidas por permiso.
  * Cada ruta requiere que el usuario tenga el permiso especificado en su JWT.
+ * Si el valor es un array, basta con tener UNO de los permisos (OR).
  * Admin bypasea todas las verificaciones (hardcoded en getUserPermissionsFromSession).
  */
-const PROTECTED_ROUTES: Record<string, Permission> = {
+const PROTECTED_ROUTES: Record<string, Permission | Permission[]> = {
 	"/admin": "admin.usuarios",
 	"/polizas": "polizas.ver",
 	"/clientes": "clientes.ver",
@@ -16,7 +17,7 @@ const PROTECTED_ROUTES: Record<string, Permission> = {
 	"/siniestros": "siniestros.ver",
 	"/vencimientos": "vencimientos.ver",
 	"/gerencia/validacion": "polizas.validar",
-	"/gerencia/reportes": "gerencia.exportar",
+	"/gerencia/reportes": ["gerencia.exportar", "gerencia.amlc"],
 	"/gerencia": "gerencia.ver",
 	"/auditoria": "auditoria.ver",
 	"/rrhh": "rrhh.ver",
@@ -125,7 +126,8 @@ export async function updateSession(request: NextRequest) {
 		if (requiredPermission) {
 			// Admin bypass: admin siempre tiene acceso
 			const isAdmin = effectiveRole === "admin";
-			const hasPermission = isAdmin || userPermissions.includes(requiredPermission);
+			const requiredList = Array.isArray(requiredPermission) ? requiredPermission : [requiredPermission];
+			const hasPermission = isAdmin || requiredList.some((p) => userPermissions.includes(p));
 
 			if (!hasPermission) {
 				url.pathname = "/unauthorized";

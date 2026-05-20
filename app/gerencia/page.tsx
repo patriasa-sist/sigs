@@ -115,7 +115,11 @@ async function GerenciaData() {
 
 export default async function GerenciaPage() {
 	await requirePermission("gerencia.ver");
-	const { allowed: canExportar } = await checkPermission("gerencia.exportar");
+	const [exportarRes, amlcRes] = await Promise.all([
+		checkPermission("gerencia.exportar"),
+		checkPermission("gerencia.amlc"),
+	]);
+	const canExportar = exportarRes.allowed || amlcRes.allowed;
 
 	return (
 		<div className="flex-1 w-full">

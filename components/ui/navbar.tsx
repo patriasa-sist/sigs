@@ -255,7 +255,7 @@ export function Navbar() {
 						</Link>
 					)}
 
-					{(can("gerencia.ver") || can("gerencia.exportar")) && (
+					{(can("gerencia.ver") || can("gerencia.exportar") || can("gerencia.amlc")) && (
 						<DropdownMenu>
 							<DropdownMenuTrigger asChild>
 								<Button variant="ghost" size="sm" className="gap-2">
@@ -273,7 +273,7 @@ export function Navbar() {
 										</DropdownMenuItem>
 									</Link>
 								)}
-								{can("gerencia.exportar") && (
+								{(can("gerencia.exportar") || can("gerencia.amlc")) && (
 									<Link href="/gerencia/reportes">
 										<DropdownMenuItem className="cursor-pointer">
 											<FileSpreadsheet className="mr-2 h-4 w-4" />

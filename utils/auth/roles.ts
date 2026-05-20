@@ -49,6 +49,7 @@ export const ALL_PERMISSIONS: readonly Permission[] = [
 	"admin.equipos",
 	"gerencia.ver",
 	"gerencia.exportar",
+	"gerencia.amlc",
 	"auditoria.ver",
 	"auditoria.excepciones",
 	"rrhh.ver",
@@ -93,6 +94,7 @@ export const PERMISSION_ACTION_LABELS: Record<string, string> = {
 	permisos: "Permisos",
 	equipos: "Equipos",
 	excepciones: "Excepciones",
+	amlc: "AMLC",
 };
 
 /**
@@ -187,7 +189,6 @@ export const ROLE_CONFIG = {
 			"cobranzas.ver",
 			"siniestros.ver",
 			"vencimientos.ver",
-			"gerencia.ver",
 		] as Permission[]
 	},
 	agente: {
@@ -214,7 +215,6 @@ export const ROLE_CONFIG = {
 			"vencimientos.generar",
 			"cobranzas.ver",
 			"documentos.descartar",
-			"gerencia.ver",
 		] as Permission[]
 	},
 	comercial: {
@@ -244,7 +244,6 @@ export const ROLE_CONFIG = {
 			"siniestros.crear",
 			"siniestros.editar",
 			"documentos.descartar",
-			"gerencia.ver",
 		] as Permission[]
 	},
 	cobranza: {
@@ -306,6 +305,8 @@ export const ROLE_CONFIG = {
 			"auditoria.ver",
 			"auditoria.excepciones",
 			"clientes.ver",
+			"gerencia.ver",
+			"gerencia.amlc",
 		] as Permission[]
 	},
 	invitado: {

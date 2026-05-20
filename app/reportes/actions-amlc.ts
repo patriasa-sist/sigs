@@ -388,9 +388,9 @@ export type AMLCResponse =
 // ============================================================================
 
 export async function exportarAMLC(filtros: AMLCFilters): Promise<AMLCResponse> {
-	const { allowed } = await checkPermission("gerencia.exportar");
+	const { allowed } = await checkPermission("gerencia.amlc");
 	if (!allowed) {
-		return { success: false, error: "No tiene permisos para exportar reportes" };
+		return { success: false, error: "No tiene permisos para generar el reporte AMLC" };
 	}
 
 	const supabase = await createClient();
