@@ -24,7 +24,6 @@ import {
 	Shield,
 	Users,
 	BarChart3,
-	ChevronDown,
 	FileSpreadsheet,
 	Eye,
 	Briefcase,
@@ -255,34 +254,22 @@ export function Navbar() {
 						</Link>
 					)}
 
-					{(can("gerencia.ver") || can("gerencia.exportar") || can("gerencia.amlc")) && (
-						<DropdownMenu>
-							<DropdownMenuTrigger asChild>
-								<Button variant="ghost" size="sm" className="gap-2">
-									<BarChart3 className="h-4 w-4" />
-									<span>Gerencia</span>
-									<ChevronDown className="h-3 w-3" />
-								</Button>
-							</DropdownMenuTrigger>
-							<DropdownMenuContent align="start">
-								{can("gerencia.ver") && (
-									<Link href="/gerencia">
-										<DropdownMenuItem className="cursor-pointer">
-											<BarChart3 className="mr-2 h-4 w-4" />
-											<span>Dashboard</span>
-										</DropdownMenuItem>
-									</Link>
-								)}
-								{(can("gerencia.exportar") || can("gerencia.amlc")) && (
-									<Link href="/gerencia/reportes">
-										<DropdownMenuItem className="cursor-pointer">
-											<FileSpreadsheet className="mr-2 h-4 w-4" />
-											<span>Reportes</span>
-										</DropdownMenuItem>
-									</Link>
-								)}
-							</DropdownMenuContent>
-						</DropdownMenu>
+					{can("gerencia.ver") && (
+						<Link href="/gerencia">
+							<Button variant="ghost" size="sm" className="gap-2">
+								<BarChart3 className="h-4 w-4" />
+								<span>Gerencia</span>
+							</Button>
+						</Link>
+					)}
+
+					{(can("gerencia.exportar") || can("gerencia.amlc")) && (
+						<Link href="/reportes">
+							<Button variant="ghost" size="sm" className="gap-2">
+								<FileSpreadsheet className="h-4 w-4" />
+								<span>Reportes</span>
+							</Button>
+						</Link>
 					)}
 				</div>
 

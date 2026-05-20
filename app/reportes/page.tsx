@@ -1,15 +1,15 @@
 import { redirect } from "next/navigation";
 import { checkPermission } from "@/utils/auth/helpers";
-import ExportarProduccion from "@/components/gerencia/ExportarProduccion";
-import ExportarContable from "@/components/gerencia/ExportarContable";
-import ExportarAMLC from "@/components/gerencia/ExportarAMLC";
-import ExportarComisionesDirector from "@/components/gerencia/ExportarComisionesDirector";
+import ExportarProduccion from "@/components/reportes/ExportarProduccion";
+import ExportarContable from "@/components/reportes/ExportarContable";
+import ExportarAMLC from "@/components/reportes/ExportarAMLC";
+import ExportarComisionesDirector from "@/components/reportes/ExportarComisionesDirector";
 import {
 	obtenerRegionales,
 	obtenerCompanias,
 	obtenerEquiposParaFiltro,
 	obtenerDirectoresParaFiltro,
-} from "@/app/gerencia/reportes/actions";
+} from "@/app/reportes/actions";
 
 export default async function ReportesPage() {
 	const [exportar, amlc] = await Promise.all([

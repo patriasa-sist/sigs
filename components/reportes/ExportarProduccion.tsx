@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Download, AlertCircle, BarChart3 } from "lucide-react";
-import { exportarProduccionNuevo } from "@/app/gerencia/reportes/actions";
+import { exportarProduccionNuevo } from "@/app/reportes/actions";
 import * as ExcelJS from "exceljs";
 import type { ExportProduccionFilters, FilterData } from "@/types/reporte";
 

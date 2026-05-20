@@ -19,6 +19,8 @@ import {
 	ClipboardList,
 	DollarSign,
 	Eye,
+	FileSpreadsheet,
+	Percent,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -62,7 +64,19 @@ const Dashboard = () => {
 			link: "/gerencia",
 			sections: [
 				{ name: "Dashboard Estadístico", icon: BarChart3 },
-				{ name: "Reportes", icon: FileText },
+			],
+		},
+		{
+			id: "reportes",
+			title: "Módulo Reportes",
+			description: "Exportación de reportes consolidados de producción, contabilidad y regulatorios",
+			icon: FileSpreadsheet,
+			link: "/reportes",
+			sections: [
+				{ name: "Reporte de Producción", icon: BarChart3 },
+				{ name: "Reporte Contable", icon: DollarSign },
+				{ name: "Comisiones por Director", icon: Percent },
+				{ name: "Reporte AMLC", icon: Shield },
 			],
 		},
 		{

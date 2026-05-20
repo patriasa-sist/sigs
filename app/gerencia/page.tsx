@@ -1,8 +1,6 @@
 import { Suspense } from "react";
-import { requirePermission, checkPermission } from "@/utils/auth/helpers";
-import { BarChart3, FileSpreadsheet } from "lucide-react";
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
+import { requirePermission } from "@/utils/auth/helpers";
+import { BarChart3 } from "lucide-react";
 import GerenciaDashboard from "@/components/gerencia/GerenciaDashboard";
 import {
 	obtenerEstadisticasProduccion,
@@ -115,33 +113,18 @@ async function GerenciaData() {
 
 export default async function GerenciaPage() {
 	await requirePermission("gerencia.ver");
-	const [exportarRes, amlcRes] = await Promise.all([
-		checkPermission("gerencia.exportar"),
-		checkPermission("gerencia.amlc"),
-	]);
-	const canExportar = exportarRes.allowed || amlcRes.allowed;
 
 	return (
 		<div className="flex-1 w-full">
 			<div className="max-w-7xl mx-auto pt-6 pb-8 px-4 sm:px-6 lg:px-8">
-				<div className="flex items-center justify-between mb-6">
-					<div className="flex items-center gap-3">
-						<div className="p-2 bg-primary/10 rounded-md">
-							<BarChart3 className="h-5 w-5 text-primary" />
-						</div>
-						<div>
-							<h1 className="text-2xl font-semibold text-foreground">Dashboard Gerencial</h1>
-							<p className="text-sm text-muted-foreground">Producción, cobranzas y siniestros</p>
-						</div>
+				<div className="flex items-center gap-3 mb-6">
+					<div className="p-2 bg-primary/10 rounded-md">
+						<BarChart3 className="h-5 w-5 text-primary" />
 					</div>
-					{canExportar && (
-						<Link href="/gerencia/reportes">
-							<Button size="sm" className="gap-2">
-								<FileSpreadsheet className="h-4 w-4" />
-								Reportes
-							</Button>
-						</Link>
-					)}
+					<div>
+						<h1 className="text-2xl font-semibold text-foreground">Dashboard Gerencial</h1>
+						<p className="text-sm text-muted-foreground">Producción, cobranzas y siniestros</p>
+					</div>
 				</div>
 				<Suspense fallback={<GerenciaSkeleton />}>
 					<GerenciaData />

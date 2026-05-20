@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Download, AlertCircle, Percent } from "lucide-react";
-import { exportarComisionesDirector } from "@/app/gerencia/reportes/actions";
+import { exportarComisionesDirector } from "@/app/reportes/actions";
 import * as ExcelJS from "exceljs";
 import type { FilterData } from "@/types/reporte";
 

@@ -8,8 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Download, AlertCircle, ShieldCheck } from "lucide-react";
-import { exportarAMLC } from "@/app/gerencia/reportes/actions-amlc";
-import type { AMLCCliente, AMLCDetalle, AMLCCuenta } from "@/app/gerencia/reportes/actions-amlc";
+import { exportarAMLC } from "@/app/reportes/actions-amlc";
+import type { AMLCCliente, AMLCDetalle, AMLCCuenta } from "@/app/reportes/actions-amlc";
 import * as ExcelJS from "exceljs";
 import JSZip from "jszip";
 

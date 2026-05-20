@@ -490,14 +490,15 @@ Documents implement a **soft delete** system where:
 - Consider adding policy edit functionality
 - Consider adding policy duplication/renewal functionality
 
-## Gerencia Module (Management Dashboard, Reports & Validation)
+## Gerencia Module (Management Dashboard & Validation)
 
 ### Module Overview
 
-The gerencia module (`/app/gerencia/`) provides managerial dashboard with statistics, report exports, and policy validation. Routes:
+The gerencia module (`/app/gerencia/`) provides managerial dashboard and policy validation. Reports were split into their own top-level module (`/app/reportes/`) to reduce traffic to gerencia (whose dashboard scans large portions of the DB on each load).
+
+Routes:
 
 - `/gerencia/` — Dashboard estadístico (requires `gerencia.ver`)
-- `/gerencia/reportes/` — Report exports (requires `gerencia.exportar` OR `gerencia.amlc`; cada componente del page se renderiza según el permiso que tenga el usuario)
 - `/gerencia/validacion/` — Policy/annex validation (requires `polizas.validar`)
 
 ### Dashboard (Charts & Statistics)
@@ -510,21 +511,32 @@ The gerencia module (`/app/gerencia/`) provides managerial dashboard with statis
 - **Types**: `types/gerencia.ts`
 - **Components**: `components/gerencia/GerenciaDashboard.tsx` (orchestrator), `KPICard.tsx`, `DashboardFilters.tsx`, `charts/ProduccionCharts.tsx`, `charts/CobranzasCharts.tsx`, `charts/SiniestrosCharts.tsx`
 
-### Reports (migrated from /admin/reportes)
-
-- **Server actions**: `app/gerencia/reportes/actions.ts` (exportarProduccion, exportarProduccionNuevo, exportarComisionesDirector, helpers) y `actions-amlc.ts` (exportarAMLC)
-- **Components**: `components/gerencia/ExportarProduccion.tsx`, `ExportarContable.tsx`, `ExportarComisionesDirector.tsx`, `ExportarAMLC.tsx`
-- **Permisos**:
-  - `gerencia.exportar` → Producción, Contable, Comisiones por Director (con data scoping por equipo)
-  - `gerencia.amlc` → AMLC (sin data scoping; ve todas las pólizas — requerido por la naturaleza del reporte regulatorio)
-- **Data scoping**: aplicado a los 3 reportes de `gerencia.exportar`. AMLC intencionalmente sin scoping.
-
 ### Permissions
 
-- `gerencia.ver` — View dashboard and statistics
-- `gerencia.exportar` — Export production/accounting/director-commission reports (scoped por equipo)
-- `gerencia.amlc` — Generate AMLC regulatory report (sin scoping, ve todas las pólizas)
-- Default assignments por rol (role_permissions): admin (bypass total), uif (`gerencia.ver` + `gerencia.amlc`). Ningún otro rol recibe permisos de gerencia por defecto — todos requieren asignación individual en user_permissions.
+- `gerencia.ver` — View dashboard and statistics (gated en middleware y en `/gerencia/page.tsx`)
+- Default assignments por rol (role_permissions): admin (bypass total), uif. Ningún otro rol recibe `gerencia.ver` por defecto — requiere asignación individual en user_permissions.
+
+## Reportes Module (Independent)
+
+### Module Overview
+
+The reportes module (`/app/reportes/`) is a **top-level independent module** that hosts all consolidated report exports. It was split from gerencia in 2026-05-20 to keep the heavyweight gerencia dashboard isolated from users who only need to generate reports.
+
+Route: `/reportes/` — requires `gerencia.exportar` OR `gerencia.amlc` (middleware uses OR matching). Each report component within the page renders only if the user has its specific permission.
+
+### Components & Server Actions
+
+- **Page**: `app/reportes/page.tsx` — orchestrator with per-component permission gating
+- **Server actions**:
+  - `app/reportes/actions.ts` — `exportarProduccion`, `exportarProduccionNuevo`, `exportarComisionesDirector`, helpers (`obtenerRegionales`, `obtenerCompanias`, `obtenerEquiposParaFiltro`, `obtenerDirectoresParaFiltro`)
+  - `app/reportes/actions-amlc.ts` — `exportarAMLC`
+- **Components**: `components/reportes/ExportarProduccion.tsx`, `ExportarContable.tsx`, `ExportarComisionesDirector.tsx`, `ExportarAMLC.tsx`
+
+### Permisos
+
+- `gerencia.exportar` → Producción, Contable, Comisiones por Director (con data scoping por equipo vía `getDataScopeFilter("polizas")`)
+- `gerencia.amlc` → AMLC (sin data scoping; ve todas las pólizas — requerido por naturaleza del reporte regulatorio)
+- Default assignments por rol: admin (bypass), uif (`gerencia.amlc`). `gerencia.exportar` siempre se asigna individualmente.
 - SQL migrations: `docs/migration_gerencia_permissions.sql` (inicial) y `docs/migration_gerencia_amlc_y_limpieza_defaults.sql` (agrega `gerencia.amlc`, quita defaults de `gerencia.ver`).
 
 ### Validation (unchanged)
