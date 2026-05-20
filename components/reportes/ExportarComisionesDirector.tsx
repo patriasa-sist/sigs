@@ -143,11 +143,26 @@ export default function ExportarComisionesDirector({
 				metaRow.getCell(2).style = metaValueStyle;
 			}
 
+			// Disclaimer destacado: exclusiones del reporte
+			const disclaimerRow = worksheet.addRow([
+				"IMPORTANTE: Este reporte NO incluye cuotas con pago parcial ni cuotas con fecha de vencimiento prorrogada.",
+			]);
+			worksheet.mergeCells(`A${disclaimerRow.number}:Q${disclaimerRow.number}`);
+			const disclaimerCell = disclaimerRow.getCell(1);
+			disclaimerCell.font = { bold: true, color: { argb: "FFB7472A" }, size: 11 };
+			disclaimerCell.fill = {
+				type: "pattern",
+				pattern: "solid",
+				fgColor: { argb: "FFFCE4D6" },
+			};
+			disclaimerCell.alignment = { vertical: "middle", horizontal: "left", wrapText: true };
+			disclaimerRow.height = 22;
+
 			// Fila vacía separadora
 			worksheet.addRow([]);
 
-			// ---- Definir columnas de datos (fila 8 será el header, tras 6 metarows + 1 vacía) ----
-			const DATA_HEADER_ROW = 8;
+			// ---- Definir columnas de datos (fila 9 será el header, tras 6 metarows + disclaimer + 1 vacía) ----
+			const DATA_HEADER_ROW = 9;
 			const columns = [
 				{ header: "Director de Cartera", key: "director_cartera", width: 28 },
 				{ header: "N° Póliza", key: "numero_poliza", width: 15 },

@@ -1102,11 +1102,12 @@ export async function exportarComisionesDirector(
 			)
 		`;
 
-		// Query 1: cuotas pagadas con fecha_pago en el rango
+		// Query 1: cuotas pagadas (completas, no prorrogadas) con fecha_pago en el rango
 		let pagadasQuery = supabase
 			.from("polizas_pagos")
 			.select(`numero_cuota, monto, fecha_pago, fecha_vencimiento, estado, poliza:polizas!poliza_id (${polizaSelect})`)
 			.eq("estado", "pagado")
+			.is("fecha_vencimiento_original", null) // excluye cuotas prorrogadas
 			.gte("fecha_pago", filtros.fecha_desde)
 			.lte("fecha_pago", filtros.fecha_hasta);
 
@@ -1118,11 +1119,12 @@ export async function exportarComisionesDirector(
 		if (filtros.director_id) pagadasQuery = pagadasQuery.eq("poliza.director_cartera_id", filtros.director_id);
 		if (memberIds) pagadasQuery = pagadasQuery.in("poliza.responsable_id", memberIds);
 
-		// Query 2: cuotas por cobrar con fecha_vencimiento en el rango
+		// Query 2: cuotas por cobrar (sin parciales ni prorrogadas) con fecha_vencimiento en el rango
 		let porCobrarQuery = supabase
 			.from("polizas_pagos")
 			.select(`numero_cuota, monto, fecha_pago, fecha_vencimiento, estado, poliza:polizas!poliza_id (${polizaSelect})`)
-			.in("estado", ["pendiente", "vencido", "parcial"])
+			.in("estado", ["pendiente", "vencido"]) // excluye 'parcial'
+			.is("fecha_vencimiento_original", null) // excluye cuotas prorrogadas
 			.gte("fecha_vencimiento", filtros.fecha_desde)
 			.lte("fecha_vencimiento", filtros.fecha_hasta);
 
