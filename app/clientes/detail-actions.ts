@@ -2,7 +2,7 @@
 
 import { createClient } from "@/utils/supabase/server";
 import type { ClienteDocumento } from "@/types/clienteDocumento";
-import type { NaturalClient, JuridicClient, UnipersonalClient, OngClient, ClubClient } from "@/types/database/client";
+import type { NaturalClient, JuridicClient, UnipersonalClient, OngClient, ClubClient, AsociacionCivilClient } from "@/types/database/client";
 import type { ExtraPhone } from "@/types/clientForm";
 
 // Database types for partner and legal representatives
@@ -64,7 +64,7 @@ type PolicyData = {
 export type ClienteDetalleCompleto = {
 	// Base client info
 	id: string;
-	client_type: "natural" | "juridica" | "unipersonal" | "ong" | "club";
+	client_type: "natural" | "juridica" | "unipersonal" | "ong" | "club" | "asociacion_civil";
 	status: string;
 	commercial_owner_id?: string;
 	commercial_owner_name?: string;
@@ -77,6 +77,7 @@ export type ClienteDetalleCompleto = {
 	unipersonal_data?: UnipersonalClient | null;
 	ong_data?: OngClient | null;
 	club_data?: ClubClient | null;
+	asociacion_civil_data?: AsociacionCivilClient | null;
 
 	// Partner data (for married natural/unipersonal clients)
 	partner?: PartnerData | null;
@@ -134,6 +135,7 @@ export async function getClientDetailsComplete(
         unipersonal_clients (*),
         ong_clients (*),
         club_clients (*),
+        asociacion_civil_clients (*),
         commercial_owner:profiles!commercial_owner_id (
           id,
           full_name,
@@ -174,6 +176,10 @@ export async function getClientDetailsComplete(
 			? clientData.club_clients[0] ?? null
 			: clientData.club_clients ?? null;
 
+		const asociacionCivilData = Array.isArray(clientData.asociacion_civil_clients)
+			? clientData.asociacion_civil_clients[0] ?? null
+			: clientData.asociacion_civil_clients ?? null;
+
 		console.log("[getClientDetailsComplete] Client data loaded:", {
 			id: clientData.id,
 			type: clientData.client_type,
@@ -182,6 +188,7 @@ export async function getClientDetailsComplete(
 			has_unipersonal: !!unipersonalData,
 			has_ong: !!ongData,
 			has_club: !!clubData,
+			has_asociacion_civil: !!asociacionCivilData,
 		});
 
 		// 2. Get partner data if natural or unipersonal client
@@ -283,6 +290,7 @@ export async function getClientDetailsComplete(
 			unipersonal_data: unipersonalData,
 			ong_data: ongData,
 			club_data: clubData,
+			asociacion_civil_data: asociacionCivilData,
 			partner: partnerData,
 			legal_representatives: legalReps,
 			documents: documents || [],

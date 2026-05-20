@@ -335,6 +335,33 @@ export function normalizeOngClientData<T extends Record<string, any>>(data: T): 
 }
 
 /**
+ * Normalizes Asociación Civil client form data
+ *
+ * NOTE: tipo_asociacion is NOT normalized to uppercase
+ * because it must match database CHECK constraint in lowercase.
+ */
+export function normalizeAsociacionCivilClientData<T extends Record<string, any>>(data: T): T {
+  const textFields = [
+    'nombre_asociacion',
+    'sigla',
+    // 'tipo_asociacion', // EXCLUDED: lowercase enum
+    'rubro_actividad',
+    'numero_personeria_juridica',
+    'entidad_otorgante_personeria',
+    'direccion',
+    'nombre_representante',
+    'apellido_representante',
+    'cargo_representante',
+    'extension_ci_representante',
+  ];
+
+  const emailFields = ['correo_electronico'];
+  const phoneFields = ['telefono', 'ci_representante', 'nit'];
+
+  return normalizeFormData(data, textFields, emailFields, phoneFields);
+}
+
+/**
  * Normalizes Club deportivo client form data
  *
  * NOTE: disciplina_principal and tipo_registro are NOT normalized to uppercase

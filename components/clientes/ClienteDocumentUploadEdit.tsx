@@ -64,7 +64,7 @@ import {
 
 type Props = {
 	clientId: string;
-	clientType: "natural" | "unipersonal" | "juridica" | "ong" | "club";
+	clientType: "natural" | "unipersonal" | "juridica" | "ong" | "club" | "asociacion_civil";
 	isAdmin?: boolean;
 	onDocumentChange?: () => void;
 };

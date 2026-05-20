@@ -136,7 +136,8 @@ export async function getAllClients(options?: {
 				juridic_clients (*),
 				unipersonal_clients (*),
 				ong_clients (*),
-				club_clients (*)
+				club_clients (*),
+				asociacion_civil_clients (*)
 			`,
 				{ count: "exact" }
 			)
@@ -260,6 +261,9 @@ export async function getAllClients(options?: {
 					club_clients: Array.isArray(clientData.club_clients)
 						? clientData.club_clients[0] ?? null
 						: clientData.club_clients ?? null,
+					asociacion_civil_clients: Array.isArray(clientData.asociacion_civil_clients)
+						? clientData.asociacion_civil_clients[0] ?? null
+						: clientData.asociacion_civil_clients ?? null,
 					executive: executiveData,
 					policies: policiesByClient.get(clientData.id) ?? [],
 				};
@@ -368,7 +372,8 @@ export async function getClientById(clientId: string): Promise<ActionResult<Clie
 				juridic_clients (*),
 				unipersonal_clients (*),
 				ong_clients (*),
-				club_clients (*)
+				club_clients (*),
+				asociacion_civil_clients (*)
 			`
 			)
 			.eq("id", clientId)
@@ -447,6 +452,9 @@ export async function getClientById(clientId: string): Promise<ActionResult<Clie
 			club_clients: Array.isArray(clientData.club_clients)
 				? clientData.club_clients[0] ?? null
 				: clientData.club_clients ?? null,
+			asociacion_civil_clients: Array.isArray(clientData.asociacion_civil_clients)
+				? clientData.asociacion_civil_clients[0] ?? null
+				: clientData.asociacion_civil_clients ?? null,
 			executive: executiveData,
 			policies: policiesData ?? [],
 		};
@@ -528,7 +536,7 @@ export async function searchClients(query: string, filters?: { commercial_owner_
 		}
 
 		// Buscar en todas las tablas relevantes en paralelo
-		const [natRes, jurRes, uniRes, ongRes, clubRes, clientsRes, polizasRes, vehiculosRes] = await Promise.all([
+		const [natRes, jurRes, uniRes, ongRes, clubRes, asocRes, clientsRes, polizasRes, vehiculosRes] = await Promise.all([
 			natQuery,
 			supabase.from("juridic_clients").select("client_id")
 				.or(`razon_social.ilike.%${q}%,nit.ilike.%${q}%`),
@@ -538,6 +546,8 @@ export async function searchClients(query: string, filters?: { commercial_owner_
 				.or(`nombre_ong.ilike.%${q}%,sigla.ilike.%${q}%,nit.ilike.%${q}%`),
 			supabase.from("club_clients").select("client_id")
 				.or(`nombre_club.ilike.%${q}%,sigla.ilike.%${q}%,nit.ilike.%${q}%,numero_registro.ilike.%${q}%`),
+			supabase.from("asociacion_civil_clients").select("client_id")
+				.or(`nombre_asociacion.ilike.%${q}%,sigla.ilike.%${q}%,nit.ilike.%${q}%,numero_personeria_juridica.ilike.%${q}%,rubro_actividad.ilike.%${q}%`),
 			supabase.from("clients").select("id")
 				.or(`email.ilike.%${q}%,phone.ilike.%${q}%`),
 			supabase.from("polizas").select("client_id")
@@ -558,6 +568,7 @@ export async function searchClients(query: string, filters?: { commercial_owner_
 			...(uniRes.data?.map((r) => r.client_id) ?? []),
 			...(ongRes.data?.map((r) => r.client_id) ?? []),
 			...(clubRes.data?.map((r) => r.client_id) ?? []),
+			...(asocRes.data?.map((r) => r.client_id) ?? []),
 			...(clientsRes.data?.map((r) => r.id) ?? []),
 			...(polizasRes.data?.map((r) => r.client_id) ?? []),
 			...vehiculoClientIds,
@@ -573,7 +584,7 @@ export async function searchClients(query: string, filters?: { commercial_owner_
 		// Obtener clientes coincidentes con sus datos relacionados
 		let clientsMatchQuery = supabase
 			.from("clients")
-			.select(`*, natural_clients (*), juridic_clients (*), unipersonal_clients (*), ong_clients (*), club_clients (*)`)
+			.select(`*, natural_clients (*), juridic_clients (*), unipersonal_clients (*), ong_clients (*), club_clients (*), asociacion_civil_clients (*)`)
 			.in("id", ids)
 			.order("created_at", { ascending: false })
 			.limit(100);
@@ -636,6 +647,9 @@ export async function searchClients(query: string, filters?: { commercial_owner_
 					club_clients: Array.isArray(clientData.club_clients)
 						? clientData.club_clients[0] ?? null
 						: clientData.club_clients ?? null,
+					asociacion_civil_clients: Array.isArray(clientData.asociacion_civil_clients)
+						? clientData.asociacion_civil_clients[0] ?? null
+						: clientData.asociacion_civil_clients ?? null,
 					executive: clientData.commercial_owner_id
 						? executivesMap.get(clientData.commercial_owner_id) ?? null
 						: null,
@@ -764,6 +778,12 @@ export type VerificarRegistroClubResult = {
 	nombre: string | null;
 };
 
+export type VerificarPersoneriaAsociacionResult = {
+	existe: boolean;
+	client_id: string | null;
+	nombre: string | null;
+};
+
 /**
  * Check if a sports club with the given registration (tipo_registro + entidad_registro + numero_registro)
  * already exists. Used for early duplicate detection during club creation.
@@ -804,6 +824,48 @@ export async function verificarRegistroClubExistente(
 		return { success: true, data: { existe: true, client_id: data.client_id, nombre } };
 	} catch (error) {
 		console.error("[verificarRegistroClubExistente] Unexpected error:", error);
+		return { success: false, error: getErrorMessage(error), details: error };
+	}
+}
+
+/**
+ * Check if a civil association with the given personería jurídica
+ * (entidad_otorgante + numero_personeria) already exists.
+ */
+export async function verificarPersoneriaAsociacionExistente(
+	entidad_otorgante_personeria: string,
+	numero_personeria_juridica: string,
+): Promise<ActionResult<VerificarPersoneriaAsociacionResult>> {
+	try {
+		const { supabase } = await getAuthenticatedClient();
+
+		const entidadNorm = entidad_otorgante_personeria.trim().toUpperCase();
+		const numeroNorm = numero_personeria_juridica.trim().toUpperCase();
+
+		if (!entidadNorm || !numeroNorm) {
+			return { success: true, data: { existe: false, client_id: null, nombre: null } };
+		}
+
+		const { data, error } = await supabase
+			.from("asociacion_civil_clients")
+			.select("client_id, nombre_asociacion, sigla")
+			.eq("entidad_otorgante_personeria", entidadNorm)
+			.eq("numero_personeria_juridica", numeroNorm)
+			.maybeSingle();
+
+		if (error) {
+			console.error("[verificarPersoneriaAsociacionExistente] Error:", error);
+			return { success: false, error: "Error al verificar personería jurídica", details: error };
+		}
+
+		if (!data) {
+			return { success: true, data: { existe: false, client_id: null, nombre: null } };
+		}
+
+		const nombre = data.sigla ? `${data.nombre_asociacion} (${data.sigla})` : data.nombre_asociacion;
+		return { success: true, data: { existe: true, client_id: data.client_id, nombre } };
+	} catch (error) {
+		console.error("[verificarPersoneriaAsociacionExistente] Unexpected error:", error);
 		return { success: false, error: getErrorMessage(error), details: error };
 	}
 }

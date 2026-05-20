@@ -68,6 +68,19 @@ export const CLUB_DOCUMENT_TYPES = {
 } as const;
 
 /**
+ * Document types for Asociación Civil clients (sin fines de lucro)
+ */
+export const ASOCIACION_CIVIL_DOCUMENT_TYPES = {
+	testimonio_constitucion_asociacion: "Escritura o Testimonio de Constitución",
+	resolucion_personeria_juridica: "Resolución Administrativa de Reconocimiento de Personería Jurídica",
+	nit_asociacion: "NIT (cuando corresponda)",
+	estatutos_asociacion: "Estatutos (opcional)",
+	poder_representante_asociacion: "Poder o Documento que Acredita la Administración",
+	ci_representante_asociacion: "CI del Representante Legal (vigente)",
+	estados_financieros_asociacion: "Balance General y Estados de Resultado (prima ≥ $US 10.000)",
+} as const;
+
+/**
  * All possible document types
  */
 export const ALL_DOCUMENT_TYPES = {
@@ -76,6 +89,7 @@ export const ALL_DOCUMENT_TYPES = {
 	...JURIDIC_DOCUMENT_TYPES,
 	...ONG_DOCUMENT_TYPES,
 	...CLUB_DOCUMENT_TYPES,
+	...ASOCIACION_CIVIL_DOCUMENT_TYPES,
 } as const;
 
 /**
@@ -97,6 +111,7 @@ export const REQUIRED_DOCUMENTS = {
 	juridica: ["nit", "matricula_comercio", "testimonio_constitucion", "balance_estado_resultados", "poder_representacion", "documento_identidad_representante", "ci_representante_anverso", "certificacion_pep", "carta_nombramiento", "formulario_kyc"] as const,
 	ong: ["acreditacion_resolucion", "poder_representante_mae", "ci_representante_mae", "formulario_registro_ong"] as const,
 	club: ["registro_existencia_legal", "estatutos_o_reglamento", "ci_representante_club", "poder_representante_club", "formulario_d_club"] as const,
+	asociacion_civil: ["testimonio_constitucion_asociacion", "resolucion_personeria_juridica", "poder_representante_asociacion", "ci_representante_asociacion"] as const,
 } as const;
 
 /**
@@ -108,7 +123,7 @@ export const NON_EXCEPTABLE_DOCUMENTS: readonly TipoDocumentoCliente[] = [] as c
 /**
  * Get document types for a specific client type
  */
-export function getDocumentTypesForClientType(clientType: "natural" | "unipersonal" | "juridica" | "ong" | "club") {
+export function getDocumentTypesForClientType(clientType: "natural" | "unipersonal" | "juridica" | "ong" | "club" | "asociacion_civil") {
 	switch (clientType) {
 		case "natural":
 			return NATURAL_DOCUMENT_TYPES;
@@ -120,6 +135,8 @@ export function getDocumentTypesForClientType(clientType: "natural" | "uniperson
 			return ONG_DOCUMENT_TYPES;
 		case "club":
 			return CLUB_DOCUMENT_TYPES;
+		case "asociacion_civil":
+			return ASOCIACION_CIVIL_DOCUMENT_TYPES;
 		default:
 			return NATURAL_DOCUMENT_TYPES;
 	}
@@ -130,7 +147,7 @@ export function getDocumentTypesForClientType(clientType: "natural" | "uniperson
  */
 export function isDocumentRequired(
 	documentType: TipoDocumentoCliente,
-	clientType: "natural" | "unipersonal" | "juridica" | "ong" | "club"
+	clientType: "natural" | "unipersonal" | "juridica" | "ong" | "club" | "asociacion_civil"
 ): boolean {
 	const required = REQUIRED_DOCUMENTS[clientType] as readonly string[];
 	return required.includes(documentType);
@@ -210,6 +227,13 @@ export const clienteDocumentoSchema = z.object({
 		"registro_vipfe_club",
 		"estados_financieros_club",
 		"formulario_d_club",
+		"testimonio_constitucion_asociacion",
+		"resolucion_personeria_juridica",
+		"nit_asociacion",
+		"estatutos_asociacion",
+		"poder_representante_asociacion",
+		"ci_representante_asociacion",
+		"estados_financieros_asociacion",
 	]),
 	nombre_archivo: z.string(),
 	tipo_archivo: z.string(),
@@ -375,7 +399,7 @@ export type DocumentValidationResult = {
  */
 export function validateClientDocuments(
 	uploadedDocuments: ClienteDocumentoFormState[],
-	clientType: "natural" | "unipersonal" | "juridica" | "ong" | "club",
+	clientType: "natural" | "unipersonal" | "juridica" | "ong" | "club" | "asociacion_civil",
 	exceptions: TipoDocumentoCliente[] = []
 ): DocumentValidationResult {
 	const allRequired = REQUIRED_DOCUMENTS[clientType];
@@ -407,7 +431,7 @@ export function isDocumentExceptable(documentType: TipoDocumentoCliente): boolea
 /**
  * Get exceptable document types for a client type (excludes NON_EXCEPTABLE)
  */
-export function getExceptableDocuments(clientType: "natural" | "unipersonal" | "juridica" | "ong" | "club"): TipoDocumentoCliente[] {
+export function getExceptableDocuments(clientType: "natural" | "unipersonal" | "juridica" | "ong" | "club" | "asociacion_civil"): TipoDocumentoCliente[] {
 	const allDocs = Object.keys(getDocumentTypesForClientType(clientType)) as TipoDocumentoCliente[];
 	return allDocs.filter((doc) => isDocumentExceptable(doc));
 }

@@ -11,7 +11,7 @@ import type { ClienteDocumentoFormState } from './clienteDocumento';
 // ENUMS & CONSTANTS
 // ============================================================================
 
-export const CLIENT_TYPES = ['natural', 'juridica', 'unipersonal', 'ong', 'club'] as const;
+export const CLIENT_TYPES = ['natural', 'juridica', 'unipersonal', 'ong', 'club', 'asociacion_civil'] as const;
 export type ClientType = (typeof CLIENT_TYPES)[number];
 
 // Disciplinas deportivas para clientes tipo club
@@ -35,6 +35,15 @@ export const CLUB_REGISTRY_TYPES = [
   'otra',
 ] as const;
 export type ClubRegistryType = (typeof CLUB_REGISTRY_TYPES)[number];
+
+// Tipos de asociación civil (sin fines de lucro)
+export const ASOCIACION_CIVIL_TYPES = [
+  'sociedad_profesional',
+  'asociacion_gremial',
+  'fundacion',
+  'otra',
+] as const;
+export type AsociacionCivilType = (typeof ASOCIACION_CIVIL_TYPES)[number];
 
 export const DOCUMENT_TYPES = ['ci', 'pasaporte', 'cex'] as const;
 export type DocumentType = (typeof DOCUMENT_TYPES)[number];
@@ -535,6 +544,52 @@ export const clubClientFormSchema = clubClientOrgSchema
   .merge(clubRepresentativeSchema);
 
 // ============================================================================
+// ASOCIACION CIVIL CLIENT (Sociedad / Asociación sin fines de lucro)
+// ============================================================================
+
+// Section 1: Datos de la Asociación
+export interface AsociacionCivilOrgData {
+  nombre_asociacion: string;
+  sigla?: string;
+  tipo_asociacion: AsociacionCivilType;
+  rubro_actividad: string;
+  nit?: string;
+  numero_personeria_juridica: string;
+  entidad_otorgante_personeria: string;
+}
+
+export const asociacionCivilOrgSchema = z.object({
+  nombre_asociacion: z.string().min(1, 'Nombre de la asociación es requerido'),
+  sigla: z.string().optional(),
+  tipo_asociacion: z.enum(ASOCIACION_CIVIL_TYPES, { message: 'Tipo de asociación es requerido' }),
+  rubro_actividad: z.string().min(1, 'Rubro o actividad es requerido'),
+  nit: z.string().optional().or(z.literal('')),
+  numero_personeria_juridica: z.string().min(1, 'Número de personería jurídica es requerido'),
+  entidad_otorgante_personeria: z.string().min(1, 'Entidad otorgante es requerida'),
+});
+
+// Section 2: Información de Contacto (mismo shape que ONG/Club)
+export type AsociacionCivilContactData = OngClientContactData;
+export const asociacionCivilContactSchema = ongClientContactSchema;
+
+// Section 3: Representante Legal (mismo shape que ONG/Club)
+export type AsociacionCivilRepresentativeData = OngRepresentativeData;
+export const asociacionCivilRepresentativeSchema = ongRepresentativeSchema;
+
+// Combined Asociación Civil Client Form Data
+export interface AsociacionCivilClientFormData
+  extends AsociacionCivilOrgData,
+    AsociacionCivilContactData,
+    AsociacionCivilRepresentativeData {
+  documentos?: ClienteDocumentoFormState[];
+  celulares_extra?: ExtraPhone[];
+}
+
+export const asociacionCivilClientFormSchema = asociacionCivilOrgSchema
+  .merge(asociacionCivilContactSchema)
+  .merge(asociacionCivilRepresentativeSchema);
+
+// ============================================================================
 // FORM STATE
 // ============================================================================
 
@@ -545,6 +600,7 @@ export interface ClientFormState {
   juridicData?: Partial<JuridicClientFormData>;
   ongData?: Partial<OngClientFormData>;
   clubData?: Partial<ClubClientFormData>;
+  asociacionCivilData?: Partial<AsociacionCivilClientFormData>;
   partnerData?: Partial<ClientPartnerData>; // When estado_civil = 'casado'
   currentStep: number;
   completedSections: {
@@ -559,6 +615,7 @@ export interface ClientFormState {
     legalReps?: boolean;
     orgData?: boolean;
     clubData?: boolean;
+    asociacionCivilData?: boolean;
     documents?: boolean;
   };
 }
@@ -662,6 +719,25 @@ export interface ClubClientPayload {
   tipo_registro: ClubRegistryType;
   entidad_registro: string;
   numero_registro: string;
+  direccion: string;
+  correo_electronico?: string;
+  telefono?: string;
+  nombre_representante: string;
+  apellido_representante: string;
+  cargo_representante: string;
+  ci_representante: string;
+  extension_ci_representante?: string;
+}
+
+export interface AsociacionCivilClientPayload {
+  client_id: string;
+  nombre_asociacion: string;
+  sigla?: string;
+  tipo_asociacion: AsociacionCivilType;
+  rubro_actividad: string;
+  nit?: string;
+  numero_personeria_juridica: string;
+  entidad_otorgante_personeria: string;
   direccion: string;
   correo_electronico?: string;
   telefono?: string;

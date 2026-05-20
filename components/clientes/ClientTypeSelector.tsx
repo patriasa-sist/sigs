@@ -1,7 +1,7 @@
 "use client";
 
 import { ClientType } from "@/types/clientForm";
-import { User, Building2, Briefcase, Check, Globe2, Trophy } from "lucide-react";
+import { User, Building2, Briefcase, Check, Globe2, Trophy, Users2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface ClientTypeSelectorProps {
@@ -51,6 +51,13 @@ const CLIENT_OPTIONS: {
 		icon: Trophy,
 		detail: "Disciplina · Registro · Representante",
 	},
+	{
+		type: "asociacion_civil",
+		label: "Asociación Civil",
+		description: "Sin fines de lucro · profesional · gremial",
+		icon: Users2,
+		detail: "Personería Jurídica · Rubro",
+	},
 ];
 
 export function ClientTypeSelector({ selectedType, onSelect }: ClientTypeSelectorProps) {
@@ -64,7 +71,7 @@ export function ClientTypeSelector({ selectedType, onSelect }: ClientTypeSelecto
 			</div>
 
 			{/* Options grid */}
-			<div className="p-5 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+			<div className="p-5 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
 				{CLIENT_OPTIONS.map(({ type, label, description, icon: Icon, detail }) => {
 					const isSelected = selectedType === type;
 					return (
