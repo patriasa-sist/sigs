@@ -87,9 +87,12 @@ export default function ExportarComisionesDirector({
 			const { data: rows, meta } = result.data;
 
 			if (rows.length === 0) {
-				setError("No se encontraron cuotas pagadas para el período y filtros seleccionados");
+				setError("No se encontraron cuotas pagadas ni por cobrar para el período y filtros seleccionados");
 				return;
 			}
+
+			const cuotasPagadas = rows.filter((r) => r.estado_cuota === "pagada").length;
+			const cuotasPorCobrar = rows.length - cuotasPagadas;
 
 			// Construir lista de filtros aplicados
 			const filtrosAplicados: string[] = [];
@@ -129,7 +132,8 @@ export default function ExportarComisionesDirector({
 				["Fecha de reporte:", fechaReporte],
 				["Usuario:", meta.usuario_email],
 				["Rango de fechas:", `${fechaDesdeFormatted} - ${fechaHastaFormatted}`],
-				["Cantidad de cuotas:", rows.length.toString()],
+				["Cuotas pagadas:", cuotasPagadas.toString()],
+				["Cuotas por cobrar:", cuotasPorCobrar.toString()],
 				["Filtros aplicados:", filtrosAplicados.length > 0 ? filtrosAplicados.join(", ") : "Ninguno"],
 			];
 
@@ -142,8 +146,8 @@ export default function ExportarComisionesDirector({
 			// Fila vacía separadora
 			worksheet.addRow([]);
 
-			// ---- Definir columnas de datos (fila 7 será el header) ----
-			const DATA_HEADER_ROW = 7;
+			// ---- Definir columnas de datos (fila 8 será el header, tras 6 metarows + 1 vacía) ----
+			const DATA_HEADER_ROW = 8;
 			const columns = [
 				{ header: "Director de Cartera", key: "director_cartera", width: 28 },
 				{ header: "N° Póliza", key: "numero_poliza", width: 15 },
@@ -153,6 +157,7 @@ export default function ExportarComisionesDirector({
 				{ header: "Ramo", key: "ramo", width: 20 },
 				{ header: "Regional", key: "regional", width: 15 },
 				{ header: "Responsable", key: "responsable", width: 25 },
+				{ header: "Estado", key: "estado_cuota", width: 12 },
 				{ header: "N° Cuota", key: "numero_cuota", width: 10 },
 				{ header: "Monto Cuota PT", key: "monto_cuota_pt", width: 16 },
 				{ header: "Monto Cuota PN", key: "monto_cuota_pn", width: 16 },
@@ -160,7 +165,7 @@ export default function ExportarComisionesDirector({
 				{ header: "% Com. Director", key: "porcentaje_comision_director", width: 15 },
 				{ header: "Monto Com. Director", key: "monto_comision_director", width: 18 },
 				{ header: "Moneda", key: "moneda", width: 10 },
-				{ header: "Fecha Pago", key: "fecha_pago", width: 14 },
+				{ header: "Fecha", key: "fecha", width: 14 },
 			];
 
 			// Aplicar anchos de columna
@@ -197,6 +202,8 @@ export default function ExportarComisionesDirector({
 					rowColorToggle = !rowColorToggle;
 				}
 
+				const esPorCobrar = row.estado_cuota === "por_cobrar";
+
 				const excelRow = worksheet.addRow([
 					row.director_cartera,
 					row.numero_poliza,
@@ -206,6 +213,7 @@ export default function ExportarComisionesDirector({
 					row.ramo,
 					row.regional,
 					row.responsable,
+					esPorCobrar ? "Por cobrar" : "Pagada",
 					row.numero_cuota,
 					row.monto_cuota_pt,
 					row.monto_cuota_pn ?? "",
@@ -213,11 +221,16 @@ export default function ExportarComisionesDirector({
 					row.porcentaje_comision_director != null ? `${row.porcentaje_comision_director}%` : "",
 					row.monto_comision_director ?? "",
 					row.moneda,
-					row.fecha_pago ? new Date(row.fecha_pago).toLocaleDateString("es-BO") : "",
+					row.fecha ? new Date(row.fecha).toLocaleDateString("es-BO") : "",
 				]);
 
-				// Alternate row background per director
-				const baseFg = rowColorToggle ? "FFF0F7EE" : "FFFFFFFF";
+				// Fondo base: naranja para "por cobrar", verde/blanco alternado para "pagada"
+				const baseFg = esPorCobrar
+					? "FFFCE4D6"
+					: rowColorToggle
+					? "FFF0F7EE"
+					: "FFFFFFFF";
+
 				excelRow.eachCell((cell, colNumber) => {
 					cell.fill = {
 						type: "pattern",
@@ -225,11 +238,22 @@ export default function ExportarComisionesDirector({
 						fgColor: { argb: baseFg },
 					};
 					const colKey = columns[colNumber - 1]?.key;
-					if (colKey && greenColumns.includes(colKey)) {
-						cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE2EFDA" } };
+
+					// Resaltar la celda "Estado" en negrita
+					if (colKey === "estado_cuota") {
+						cell.font = { bold: true, color: { argb: esPorCobrar ? "FFB7472A" : "FF2D6A4F" } };
+						cell.alignment = { horizontal: "center" };
 					}
-					if (colKey && yellowColumns.includes(colKey)) {
-						cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFF2CC" } };
+
+					// Para filas pagadas, mantener el énfasis verde/amarillo en columnas clave.
+					// Para filas "por cobrar" no sobrescribir el naranja: queremos que se vea el estado.
+					if (!esPorCobrar) {
+						if (colKey && greenColumns.includes(colKey)) {
+							cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE2EFDA" } };
+						}
+						if (colKey && yellowColumns.includes(colKey)) {
+							cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFF2CC" } };
+						}
 					}
 				});
 			});

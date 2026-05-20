@@ -120,13 +120,14 @@ export type ExportComisionesDirectorRow = {
   regional: string;
   responsable: string;
   numero_cuota: number;
+  estado_cuota: "pagada" | "por_cobrar";
   monto_cuota_pt: number;
   monto_cuota_pn: number | null;
   monto_cuota_comision: number | null;
   porcentaje_comision_director: number | null;
   monto_comision_director: number | null;
   moneda: string;
-  fecha_pago: string;
+  fecha: string; // fecha_pago si pagada, fecha_vencimiento si por cobrar
 };
 
 // ============================================

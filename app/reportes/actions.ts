@@ -1059,86 +1059,94 @@ export async function exportarComisionesDirector(
 			}
 		}
 
-		let query = supabase.from("polizas_pagos").select(`
-			numero_cuota,
-			monto,
-			fecha_pago,
-			poliza:polizas!poliza_id (
-				numero_poliza,
-				ramo,
-				moneda,
-				prima_total,
-				prima_neta,
-				comision_empresa,
-				responsable_id,
-				director_cartera:directores_cartera!director_cartera_id (
-					nombre,
-					apellidos,
-					porcentaje_comision
+		const polizaSelect = `
+			numero_poliza,
+			ramo,
+			moneda,
+			prima_total,
+			prima_neta,
+			comision_empresa,
+			responsable_id,
+			director_cartera:directores_cartera!director_cartera_id (
+				nombre,
+				apellidos,
+				porcentaje_comision
+			),
+			client:clients!client_id (
+				id,
+				client_type,
+				natural_clients (
+					primer_nombre,
+					segundo_nombre,
+					primer_apellido,
+					segundo_apellido,
+					numero_documento
 				),
-				client:clients!client_id (
-					id,
-					client_type,
-					natural_clients (
-						primer_nombre,
-						segundo_nombre,
-						primer_apellido,
-						segundo_apellido,
-						numero_documento
-					),
-					juridic_clients (
-						razon_social,
-						nit
-					),
-					unipersonal_clients (
-						razon_social,
-						nit
-					)
+				juridic_clients (
+					razon_social,
+					nit
 				),
-				compania:companias_aseguradoras!compania_aseguradora_id (
-					nombre
-				),
-				responsable:profiles!responsable_id (
-					full_name
-				),
-				regional:regionales!regional_id (
-					nombre
+				unipersonal_clients (
+					razon_social,
+					nit
 				)
+			),
+			compania:companias_aseguradoras!compania_aseguradora_id (
+				nombre
+			),
+			responsable:profiles!responsable_id (
+				full_name
+			),
+			regional:regionales!regional_id (
+				nombre
 			)
-		`);
+		`;
 
-		// Solo cuotas pagadas en el rango de fechas
-		query = query.eq("estado", "pagado");
-		query = query.gte("fecha_pago", filtros.fecha_desde);
-		query = query.lte("fecha_pago", filtros.fecha_hasta);
+		// Query 1: cuotas pagadas con fecha_pago en el rango
+		let pagadasQuery = supabase
+			.from("polizas_pagos")
+			.select(`numero_cuota, monto, fecha_pago, fecha_vencimiento, estado, poliza:polizas!poliza_id (${polizaSelect})`)
+			.eq("estado", "pagado")
+			.gte("fecha_pago", filtros.fecha_desde)
+			.lte("fecha_pago", filtros.fecha_hasta);
 
-		// Data scoping
 		if (scope.needsScoping) {
-			query = query.in("poliza.responsable_id", scope.teamMemberIds);
+			pagadasQuery = pagadasQuery.in("poliza.responsable_id", scope.teamMemberIds);
 		}
+		if (filtros.regional_id) pagadasQuery = pagadasQuery.eq("poliza.regional_id", filtros.regional_id);
+		if (filtros.compania_id) pagadasQuery = pagadasQuery.eq("poliza.compania_aseguradora_id", filtros.compania_id);
+		if (filtros.director_id) pagadasQuery = pagadasQuery.eq("poliza.director_cartera_id", filtros.director_id);
+		if (memberIds) pagadasQuery = pagadasQuery.in("poliza.responsable_id", memberIds);
 
-		if (filtros.regional_id) {
-			query = query.eq("poliza.regional_id", filtros.regional_id);
-		}
-		if (filtros.compania_id) {
-			query = query.eq("poliza.compania_aseguradora_id", filtros.compania_id);
-		}
-		if (filtros.director_id) {
-			query = query.eq("poliza.director_cartera_id", filtros.director_id);
-		}
-		if (memberIds) {
-			query = query.in("poliza.responsable_id", memberIds);
-		}
+		// Query 2: cuotas por cobrar con fecha_vencimiento en el rango
+		let porCobrarQuery = supabase
+			.from("polizas_pagos")
+			.select(`numero_cuota, monto, fecha_pago, fecha_vencimiento, estado, poliza:polizas!poliza_id (${polizaSelect})`)
+			.in("estado", ["pendiente", "vencido", "parcial"])
+			.gte("fecha_vencimiento", filtros.fecha_desde)
+			.lte("fecha_vencimiento", filtros.fecha_hasta);
 
-		const { data: pagos, error } = await query.order("numero_cuota", { ascending: true });
+		if (scope.needsScoping) {
+			porCobrarQuery = porCobrarQuery.in("poliza.responsable_id", scope.teamMemberIds);
+		}
+		if (filtros.regional_id) porCobrarQuery = porCobrarQuery.eq("poliza.regional_id", filtros.regional_id);
+		if (filtros.compania_id) porCobrarQuery = porCobrarQuery.eq("poliza.compania_aseguradora_id", filtros.compania_id);
+		if (filtros.director_id) porCobrarQuery = porCobrarQuery.eq("poliza.director_cartera_id", filtros.director_id);
+		if (memberIds) porCobrarQuery = porCobrarQuery.in("poliza.responsable_id", memberIds);
 
-		if (error) {
-			console.error("Error fetching comisiones director:", error);
-			return { success: false, error: "Error al obtener datos para el reporte" };
+		const [pagadasRes, porCobrarRes] = await Promise.all([pagadasQuery, porCobrarQuery]);
+
+		if (pagadasRes.error) {
+			console.error("Error fetching comisiones director (pagadas):", pagadasRes.error);
+			return { success: false, error: "Error al obtener cuotas pagadas para el reporte" };
+		}
+		if (porCobrarRes.error) {
+			console.error("Error fetching comisiones director (por cobrar):", porCobrarRes.error);
+			return { success: false, error: "Error al obtener cuotas por cobrar para el reporte" };
 		}
 
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		const rows: ExportComisionesDirectorRow[] = (pagos || []).filter((p: any) => p.poliza).map((pago: any) => {
+		const mapRow = (pago: any, estadoCuota: "pagada" | "por_cobrar"): ExportComisionesDirectorRow => {
 			const poliza = pago.poliza;
 			const dc = poliza.director_cartera;
 			const { cliente, ciNit } = extraerDatosCliente(poliza.client as ClientQueryResult | null);
@@ -1159,7 +1167,10 @@ export async function exportarComisionesDirector(
 			}
 
 			const pctDirector = dc?.porcentaje_comision != null ? Number(dc.porcentaje_comision) : null;
-			const montoComisionDirector = pctDirector != null ? montoCuotaPT * (pctDirector / 100) : null;
+			const montoComisionDirector =
+				pctDirector != null && montoCuotaComision != null
+					? montoCuotaComision * (pctDirector / 100)
+					: null;
 
 			return {
 				director_cartera: dc ? `${dc.nombre} ${dc.apellidos || ""}`.trim() : "Sin director",
@@ -1171,20 +1182,31 @@ export async function exportarComisionesDirector(
 				regional: poliza.regional?.nombre || "N/A",
 				responsable: poliza.responsable?.full_name || "N/A",
 				numero_cuota: pago.numero_cuota,
+				estado_cuota: estadoCuota,
 				monto_cuota_pt: montoCuotaPT,
 				monto_cuota_pn: montoCuotaPN,
 				monto_cuota_comision: montoCuotaComision,
 				porcentaje_comision_director: pctDirector,
 				monto_comision_director: montoComisionDirector,
 				moneda: poliza.moneda || "Bs",
-				fecha_pago: pago.fecha_pago,
+				fecha: estadoCuota === "pagada" ? pago.fecha_pago : pago.fecha_vencimiento,
 			};
-		});
+		};
 
-		// Ordenar por director, póliza, cuota
+		const rows: ExportComisionesDirectorRow[] = [
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			...(pagadasRes.data || []).filter((p: any) => p.poliza).map((p: any) => mapRow(p, "pagada")),
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			...(porCobrarRes.data || []).filter((p: any) => p.poliza).map((p: any) => mapRow(p, "por_cobrar")),
+		];
+
+		// Ordenar: director > estado (pagadas primero) > póliza > cuota
 		rows.sort((a, b) => {
 			const dirCmp = a.director_cartera.localeCompare(b.director_cartera);
 			if (dirCmp !== 0) return dirCmp;
+			if (a.estado_cuota !== b.estado_cuota) {
+				return a.estado_cuota === "pagada" ? -1 : 1;
+			}
 			const polCmp = a.numero_poliza.localeCompare(b.numero_poliza);
 			if (polCmp !== 0) return polCmp;
 			return a.numero_cuota - b.numero_cuota;
