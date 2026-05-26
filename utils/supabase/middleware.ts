@@ -10,6 +10,7 @@ import * as Sentry from "@sentry/nextjs";
  * Admin bypasea todas las verificaciones (hardcoded en getUserPermissionsFromSession).
  */
 const PROTECTED_ROUTES: Record<string, Permission | Permission[]> = {
+	"/admin/anexos": "anexos.eliminar",
 	"/admin": "admin.usuarios",
 	"/polizas": "polizas.ver",
 	"/clientes": "clientes.ver",

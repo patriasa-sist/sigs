@@ -16,6 +16,7 @@ export type Permission =
 	| "polizas.editar"
 	| "polizas.validar"
 	| "polizas.exportar"
+	| "anexos.eliminar"
 	| "clientes.ver"
 	| "clientes.crear"
 	| "clientes.editar"

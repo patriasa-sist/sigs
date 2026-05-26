@@ -14,6 +14,7 @@ import {
 	Package,
 	UserCircle,
 	Settings,
+	Trash2,
 } from "lucide-react";
 
 const adminSections = [
@@ -106,6 +107,17 @@ const adminSections = [
 				icon: UserCircle,
 				label: "Directores de Cartera",
 				description: "Gestionar directores asignables a clientes",
+			},
+		],
+	},
+	{
+		title: "Operaciones Críticas",
+		items: [
+			{
+				href: "/admin/anexos",
+				icon: Trash2,
+				label: "Eliminar Anexos",
+				description: "Revertir anexos creados por error (reactiva la póliza si era una anulación)",
 			},
 		],
 	},
