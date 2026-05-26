@@ -11,6 +11,14 @@ const compat = new FlatCompat({
 
 const eslintConfig = [
   ...compat.extends("next/core-web-vitals", "next/typescript"),
+  {
+    // El <Image> de @react-pdf/renderer no acepta prop `alt` (renderiza a PDF,
+    // no a HTML). jsx-a11y/alt-text genera falsos positivos en estos archivos.
+    files: ["components/**/pdf/**/*.tsx"],
+    rules: {
+      "jsx-a11y/alt-text": "off",
+    },
+  },
 ];
 
 export default eslintConfig;

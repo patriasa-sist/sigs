@@ -405,7 +405,7 @@ export function SaludForm({
 								<Input
 									id="nombre_nivel"
 									value={nombreNivel}
-									onChange={(e) => { setNombreNivel(e.target.value); if (errores.nombre_nivel) { const { nombre_nivel: _n, ...rest } = errores; setErrores(rest); } }}
+									onChange={(e) => { setNombreNivel(e.target.value); if (errores.nombre_nivel) { const rest = { ...errores }; delete rest.nombre_nivel; setErrores(rest); } }}
 									placeholder="Ej: Nivel 1, Nivel Básico, Nivel Premium, etc."
 									className={errores.nombre_nivel ? "border-red-500" : ""}
 								/>
@@ -419,7 +419,7 @@ export function SaludForm({
 									min="0"
 									step="0.01"
 									value={montoNivel || ""}
-									onChange={(e) => { setMontoNivel(parseFloat(e.target.value) || 0); if (errores.monto_nivel) { const { monto_nivel: _m, ...rest } = errores; setErrores(rest); } }}
+									onChange={(e) => { setMontoNivel(parseFloat(e.target.value) || 0); if (errores.monto_nivel) { const rest = { ...errores }; delete rest.monto_nivel; setErrores(rest); } }}
 									placeholder="0.00"
 									className={errores.monto_nivel ? "border-red-500" : ""}
 								/>

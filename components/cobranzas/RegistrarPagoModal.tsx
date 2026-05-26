@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import Image from "next/image";
 import {
 	Dialog,
 	DialogContent,
@@ -398,9 +399,12 @@ export default function RegistrarPagoModal({
 							<div className="rounded-md border border-border bg-secondary overflow-hidden">
 								{previewUrl && (
 									<a href={previewUrl} target="_blank" rel="noopener noreferrer" className="block">
-										<img
+										<Image
 											src={previewUrl}
-											alt="Vista previa"
+											alt="Vista previa del comprobante"
+											width={800}
+											height={192}
+											unoptimized
 											className="w-full max-h-48 object-contain bg-black/5"
 										/>
 									</a>

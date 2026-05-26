@@ -7,14 +7,6 @@ import { checkPermission } from "@/utils/auth/helpers";
 // AMLC LOOKUP TABLES (based on PARAMETROS_FINAL_v53)
 // ============================================================================
 
-const SUCURSALES = [
-	{ reg_id: "SC", codigo_sucursal: "0001" },
-	{ reg_id: "LP", codigo_sucursal: "0002" },
-	{ reg_id: "CBBA", codigo_sucursal: "0003" },
-	{ reg_id: "SUCRE", codigo_sucursal: "0004" },
-	{ reg_id: "SD", codigo_sucursal: "SD" },
-];
-
 const RANGOS_TIEMPO = [
 	{ codigo: 1, min: 0, max: 17, tipo: 1 },
 	{ codigo: 2, min: 18, max: 25, tipo: 1 },

@@ -95,7 +95,8 @@ export function ResponsabilidadCivilForm({ datos, onChange, onSiguiente, onAnter
 	const handleValorChange = (value: number) => {
 		setValorAsegurado(value);
 		if (errores.valor_asegurado) {
-			const { valor_asegurado: _removed, ...rest } = errores;
+			const rest = { ...errores };
+			delete rest.valor_asegurado;
 			setErrores(rest);
 		}
 	};
