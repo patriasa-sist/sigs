@@ -47,6 +47,7 @@ export interface LetterData {
 	policies: PolicyForLetter[];
 	executive: string;
 	originalExecutive?: string; // Original executive from Excel data
+	cofirmante?: string; // Optional second signer from Excel COFIRMANTE column
 	needsReview: boolean;
 	missingData: string[];
 	additionalConditions?: string;
@@ -186,15 +187,6 @@ export const excecutives = [
 		telf: "78006016",
 		mail: "maria.vargas@patria-sa.com",
 		signature: "/images/firma_ercilia.png",
-	},
-	{
-		user: "Flavio",
-		name: "Flavio Colombo Vargas",
-		glyph: "FCV",
-		charge: "Gerente Comercial",
-		telf: "62243775",
-		mail: "flavio.colombo@patria-sa.com",
-		signature: "/images/firma_flavio.png",
 	},
 	{
 		user: "Marco",

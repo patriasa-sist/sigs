@@ -200,6 +200,7 @@ export function mapExcelRowToRecord(row: any): InsuranceRecord {
 		valorAsegurado: parseNumber(row[" VALOR ASEGURADO "] || row["VALOR ASEGURADO"]),
 		prima: parseNumber(row[" PRIMA "] || row["PRIMA"]),
 		ejecutivo: cleanString(row["EJECUTIVO"]) || "Sin asignar",
+		cofirmante: cleanString(row["COFIRMANTE"]) || undefined,
 		responsable: cleanString(row["RESPONSABLE"]),
 		cartaAvisoVto: cleanString(row["CARTA AVISO VTO."]),
 		seguimiento: cleanString(row["SEGUIMIENTO"]),

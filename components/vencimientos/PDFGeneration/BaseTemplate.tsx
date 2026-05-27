@@ -292,8 +292,10 @@ export const BaseTemplate: React.FC<BaseTemplateProps> = ({ letterData, children
 
 					{/* Executive Footer with personalized signature */}
 					<View style={styles.executiveFooter}>
-						{letterData.executive != "Flavio" && <ExecutiveFooter executiveName={letterData.executive} />}
-						<ExecutiveFooter executiveName={"Flavio"} />
+						<ExecutiveFooter executiveName={letterData.executive} />
+						{letterData.cofirmante && letterData.cofirmante !== letterData.executive && (
+							<ExecutiveFooter executiveName={letterData.cofirmante} />
+						)}
 					</View>
 				</View>
 			</Page>

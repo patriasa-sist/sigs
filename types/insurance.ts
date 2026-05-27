@@ -18,6 +18,7 @@ export interface InsuranceRecord {
 	valorAsegurado: number;
 	prima?: number;
 	ejecutivo: string;
+	cofirmante?: string;
 	responsable?: string;
 	cartaAvisoVto?: string;
 	seguimiento?: string;

@@ -279,6 +279,7 @@ export function groupRecordsForLetters(records: ProcessedInsuranceRecord[]): Let
 			policies,
 			executive: firstRecord.ejecutivo,
 			originalExecutive: firstRecord.ejecutivo, // Store original executive from Excel data
+			cofirmante: firstRecord.cofirmante,
 			additionalConditions: (() => {
 				switch (templateType) {
 					case "salud":
@@ -496,6 +497,7 @@ export async function groupRecordsForLettersWithReferences(records: ProcessedIns
 			policies,
 			executive: firstRecord.ejecutivo,
 			originalExecutive: firstRecord.ejecutivo, // Store original executive from Excel data
+			cofirmante: firstRecord.cofirmante,
 			additionalConditions: (() => {
 				switch (templateType) {
 					case "salud":

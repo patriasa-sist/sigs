@@ -14,7 +14,6 @@ export const PDF_ASSETS = {
 	SIGNATURE_ELIANA: "/images/firma_eliana.png",
 	SIGNATURE_ERCILIA: "/images/firma_ercilia.png",
 	SIGNATURE_MARCO: "/images/firma_marco.png",
-	SIGNATURE_FLAVIO: "/images/firma_flavio.png",
 	SIGNATURE_PATRICIA: "/images/firma_patricia.png",
 	SIGNATURE_TAMARA: "/images/firma_tamara.png",
 };
