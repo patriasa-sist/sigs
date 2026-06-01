@@ -585,7 +585,7 @@ export default function CuotasModal({
 								Cargando cuotas…
 							</div>
 						) : cuotasToRender.length > 0 ? (
-							<div className="rounded-md border border-border overflow-hidden">
+							<div className="rounded-md border border-border overflow-x-auto">
 								<table className="w-full">
 									<thead className="bg-secondary text-secondary-foreground">
 										<tr>
@@ -758,7 +758,7 @@ export default function CuotasModal({
 								<span className="inline-block w-2 h-2 rounded-full bg-green-500" />
 								Cuotas de Inclusiones
 							</h3>
-							<div className="border border-green-200 rounded-lg overflow-hidden">
+							<div className="border border-green-200 rounded-lg overflow-x-auto">
 								<table className="w-full text-sm">
 									<thead className="bg-green-50">
 										<tr>

@@ -254,7 +254,7 @@ export default function TransferenciasDatos({ usuarios }: Props) {
 									</Button>
 								</div>
 
-								<div className="border rounded-md overflow-hidden">
+								<div className="border rounded-md overflow-x-auto">
 									<table className="w-full text-sm">
 										<thead className="bg-gray-50">
 											<tr>
@@ -325,7 +325,7 @@ export default function TransferenciasDatos({ usuarios }: Props) {
 									</Button>
 								</div>
 
-								<div className="border rounded-md overflow-hidden">
+								<div className="border rounded-md overflow-x-auto">
 									<table className="w-full text-sm">
 										<thead className="bg-gray-50">
 											<tr>

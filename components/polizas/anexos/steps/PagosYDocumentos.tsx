@@ -215,7 +215,7 @@ function SeccionPlanInclusion({
 					<p className="text-xs text-gray-500 mb-2">
 						Edite montos y fechas individualmente si es necesario.
 					</p>
-					<div className="border rounded-lg overflow-hidden">
+					<div className="border rounded-lg overflow-x-auto">
 						<table className="w-full text-sm">
 							<thead className="bg-gray-50">
 								<tr>
@@ -303,7 +303,7 @@ function SeccionAjusteExclusion({
 				para mantener los reportes de producción correctos.
 			</div>
 
-			<div className="border rounded-lg overflow-hidden">
+			<div className="border rounded-lg overflow-x-auto">
 				<table className="w-full text-sm">
 					<thead className="bg-gray-50">
 						<tr>

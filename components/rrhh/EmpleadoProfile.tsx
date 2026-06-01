@@ -336,7 +336,7 @@ export default function EmpleadoProfile({ empleado }: Props) {
                 const items = (patrimony.employee_patrimony_items ?? []).filter((i) => i.categoria === cat);
                 if (items.length === 0) return null;
                 return (
-                  <div key={cat} className="rounded-lg border overflow-hidden">
+                  <div key={cat} className="rounded-lg border overflow-x-auto">
                     <div className="px-4 py-2 bg-muted/40 border-b text-sm font-medium">{title}</div>
                     <table className="w-full text-sm">
                       <tbody className="divide-y">

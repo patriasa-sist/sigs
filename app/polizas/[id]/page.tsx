@@ -196,7 +196,7 @@ export default function PolizaDetallePage() {
 						{[1, 2, 3].map((i) => (
 							<div key={i} className="border border-border rounded-lg p-5 space-y-3">
 								<div className="h-4 w-32 bg-muted rounded animate-pulse" />
-								<div className="grid grid-cols-2 gap-3">
+								<div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
 									{[1, 2, 3, 4].map((j) => (
 										<div key={j} className="space-y-1.5">
 											<div className="h-3 w-20 bg-muted rounded animate-pulse" />
@@ -364,7 +364,7 @@ export default function PolizaDetallePage() {
 						<h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-4">
 							Información General
 						</h2>
-						<div className="grid grid-cols-2 gap-6">
+						<div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
 							<div>
 								<label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5 mb-1">
 									<User className="h-4 w-4" />
@@ -417,7 +417,7 @@ export default function PolizaDetallePage() {
 						<h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-4">
 							Vigencia
 						</h2>
-						<div className="grid grid-cols-3 gap-6">
+						<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
 							<div>
 								<label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5 mb-1">
 									<Calendar className="h-4 w-4" />
@@ -478,7 +478,7 @@ export default function PolizaDetallePage() {
 												)}
 											</div>
 										)}
-										<div className="grid grid-cols-3 gap-4">
+										<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
 											<div>
 												<label className="text-xs font-medium text-muted-foreground">
 													Placa
@@ -857,7 +857,7 @@ export default function PolizaDetallePage() {
 												</div>
 											</div>
 											{bien.items.length > 0 && (
-												<div className="border-t pt-2">
+												<div className="border-t pt-2 overflow-x-auto">
 													<table className="w-full text-sm">
 														<tbody>
 															{bien.items.map((item, idx) => (
@@ -966,7 +966,7 @@ export default function PolizaDetallePage() {
 												</div>
 											</div>
 											{bien.items.length > 0 && (
-												<div className="border-t pt-2">
+												<div className="border-t pt-2 overflow-x-auto">
 													<table className="w-full text-sm">
 														<tbody>
 															{bien.items.map((item, idx) => (
@@ -999,7 +999,7 @@ export default function PolizaDetallePage() {
 							</h2>
 
 							{/* Datos generales */}
-							<div className="grid grid-cols-2 gap-6 mb-6">
+							<div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-6">
 								<div>
 									<label className="text-xs font-medium text-muted-foreground">Tipo de Póliza</label>
 									<p className="text-sm text-foreground mt-1 capitalize">
@@ -1382,7 +1382,7 @@ export default function PolizaDetallePage() {
 								<Truck className="h-5 w-5" />
 								Datos de Transporte
 							</h2>
-							<div className="grid grid-cols-2 gap-6">
+							<div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
 								<div className="col-span-2">
 									<label className="text-xs font-medium text-muted-foreground">
 										Materia Asegurada
@@ -1484,7 +1484,7 @@ export default function PolizaDetallePage() {
 										{poliza.niveles_ap_naves.map((nivel) => (
 											<div key={nivel.id} className="bg-white border rounded p-3 text-sm">
 												<p className="font-medium text-gray-900 mb-1">{nivel.nombre}</p>
-												<div className="grid grid-cols-3 gap-2 text-xs text-gray-600">
+												<div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs text-gray-600">
 													<div>
 														<span className="block">Muerte Acc.</span>
 														<span className="font-medium text-gray-900">
@@ -1539,7 +1539,7 @@ export default function PolizaDetallePage() {
 												)}
 											</div>
 										)}
-										<div className="grid grid-cols-3 gap-4">
+										<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
 											<div>
 												<label className="text-xs font-medium text-muted-foreground">
 													Matrícula
@@ -1644,7 +1644,7 @@ export default function PolizaDetallePage() {
 												)}
 											</div>
 										)}
-										<div className="grid grid-cols-3 gap-4">
+										<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
 											<div>
 												<label className="text-xs font-medium text-muted-foreground">
 													Nro. Serie
@@ -1761,7 +1761,7 @@ export default function PolizaDetallePage() {
 						</h2>
 
 						{/* Resumen de Pagos */}
-						<div className="grid grid-cols-3 gap-4 mb-5 p-4 bg-muted/50 rounded-lg">
+						<div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5 p-4 bg-muted/50 rounded-lg">
 							<div>
 								<label className="text-xs font-medium text-muted-foreground">Total Pagos</label>
 								<p className="text-lg font-semibold text-gray-900">{totalPagos}</p>
@@ -2063,7 +2063,7 @@ export default function PolizaDetallePage() {
 							)}
 
 							{/* Prima Neta + Comisión */}
-							<div className="py-4 grid grid-cols-2 gap-3">
+							<div className="py-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
 								<div>
 									<p className="text-xs text-muted-foreground mb-0.5">Prima Neta</p>
 									<p className="text-sm font-semibold text-foreground">
@@ -2094,7 +2094,7 @@ export default function PolizaDetallePage() {
 										style={{ width: `${totalPagos > 0 ? (pagosPagados / totalPagos) * 100 : 0}%` }}
 									/>
 								</div>
-								<div className="grid grid-cols-2 gap-2">
+								<div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
 									<div>
 										<p className="text-xs text-muted-foreground">Pagado</p>
 										<p className="text-sm font-semibold text-emerald-600">

@@ -106,7 +106,7 @@ export function NaturalClientForm({ form, partnerForm, onFieldBlur, exceptions =
 				</div>
 
 				{/* Documento — grid 4 columnas */}
-				<div className="grid grid-cols-4 gap-4 mt-4">
+				<div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mt-4">
 					<div className="col-span-1">
 						<Label htmlFor="tipo_documento">
 							Tipo Doc. <span className="text-destructive">*</span>
@@ -163,7 +163,7 @@ export function NaturalClientForm({ form, partnerForm, onFieldBlur, exceptions =
 				</div>
 
 				{/* Fecha, Nacionalidad, Género, Estado Civil — grid 4 columnas */}
-				<div className="grid grid-cols-4 gap-4 mt-4">
+				<div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mt-4">
 					<div className="col-span-1">
 						<Label htmlFor="fecha_nacimiento">
 							Fecha de Nacimiento <span className="text-destructive">*</span>
@@ -336,7 +336,7 @@ export function NaturalClientForm({ form, partnerForm, onFieldBlur, exceptions =
 				</div>
 
 				{/* Grupo 2: contexto — campos cortos */}
-				<div className="grid grid-cols-4 gap-4 mt-4">
+				<div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mt-4">
 					<div className="col-span-1">
 						<Label htmlFor="anio_ingreso">Año de Ingreso</Label>
 						<Input
