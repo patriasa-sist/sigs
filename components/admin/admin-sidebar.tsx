@@ -1,13 +1,22 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
 	Users, Mail, Shield, Lock, UsersRound, ArrowRightLeft,
 	BarChart3, Building2, Layers, Package, Tag, LayoutDashboard,
-	ChevronLeft, Settings, UserCircle,
+	ChevronLeft, Settings, UserCircle, Menu,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import {
+	Sheet,
+	SheetContent,
+	SheetHeader,
+	SheetTitle,
+	SheetTrigger,
+} from "@/components/ui/sheet";
 
 const navigationGroups = [
 	{
@@ -45,11 +54,12 @@ const navigationGroups = [
 	},
 ];
 
-export function AdminSidebar() {
+/** Contenido de navegación compartido entre el sidebar de escritorio y el drawer móvil */
+function AdminNavContent({ onNavigate }: { onNavigate?: () => void }) {
 	const pathname = usePathname();
 
 	return (
-		<aside className="w-60 shrink-0 flex flex-col bg-card border-r border-border overflow-y-auto">
+		<>
 			{/* Header */}
 			<div className="px-4 py-4 border-b border-border">
 				<div className="flex items-center gap-2 mb-3">
@@ -58,6 +68,7 @@ export function AdminSidebar() {
 				</div>
 				<Link
 					href="/"
+					onClick={onNavigate}
 					className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
 				>
 					<ChevronLeft className="h-3 w-3" />
@@ -66,7 +77,7 @@ export function AdminSidebar() {
 			</div>
 
 			{/* Navigation */}
-			<nav className="flex-1 px-3 py-4 space-y-5">
+			<nav className="flex-1 px-3 py-4 space-y-5 overflow-y-auto">
 				{navigationGroups.map((group) => (
 					<div key={group.label}>
 						<p className="px-2 mb-1.5 text-xs font-medium text-muted-foreground uppercase tracking-wider">
@@ -81,6 +92,7 @@ export function AdminSidebar() {
 										key={item.href}
 										href={item.href}
 										prefetch={true}
+										onClick={onNavigate}
 										className={cn(
 											"flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm transition-colors",
 											isActive
@@ -97,6 +109,42 @@ export function AdminSidebar() {
 					</div>
 				))}
 			</nav>
+		</>
+	);
+}
+
+/** Sidebar fijo — visible solo en lg+ */
+export function AdminSidebar() {
+	return (
+		<aside className="hidden lg:flex w-60 shrink-0 flex-col bg-card border-r border-border overflow-y-auto">
+			<AdminNavContent />
 		</aside>
+	);
+}
+
+/** Barra superior con menú hamburguesa — visible solo por debajo de lg */
+export function AdminMobileNav() {
+	const [open, setOpen] = useState(false);
+
+	return (
+		<div className="lg:hidden sticky top-0 z-10 flex items-center gap-2 border-b border-border bg-card px-4 py-2.5">
+			<Sheet open={open} onOpenChange={setOpen}>
+				<SheetTrigger asChild>
+					<Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" aria-label="Abrir menú de administración">
+						<Menu className="h-5 w-5" />
+					</Button>
+				</SheetTrigger>
+				<SheetContent side="left" className="w-72 p-0 gap-0 flex flex-col">
+					<SheetHeader className="sr-only">
+						<SheetTitle>Menú de administración</SheetTitle>
+					</SheetHeader>
+					<AdminNavContent onNavigate={() => setOpen(false)} />
+				</SheetContent>
+			</Sheet>
+			<div className="flex items-center gap-2">
+				<Settings className="h-4 w-4 text-primary" />
+				<span className="text-sm font-semibold text-foreground">Administración</span>
+			</div>
+		</div>
 	);
 }

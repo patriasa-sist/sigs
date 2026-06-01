@@ -133,7 +133,7 @@ export function ProductosTable({
               value={filterAseguradora}
               onValueChange={setFilterAseguradora}
             >
-              <SelectTrigger className="w-[200px]">
+              <SelectTrigger className="w-full sm:w-[200px]">
                 <SelectValue placeholder="Todas las aseguradoras" />
               </SelectTrigger>
               <SelectContent>
@@ -150,7 +150,7 @@ export function ProductosTable({
           <div className="flex items-center gap-2">
             <Layers className="h-4 w-4 text-muted-foreground" />
             <Select value={filterRamo} onValueChange={setFilterRamo}>
-              <SelectTrigger className="w-[200px]">
+              <SelectTrigger className="w-full sm:w-[200px]">
                 <SelectValue placeholder="Todos los ramos" />
               </SelectTrigger>
               <SelectContent>

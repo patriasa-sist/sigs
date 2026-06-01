@@ -95,8 +95,8 @@ export default function PermisosUsuario({ users, permissions }: Props) {
 			</p>
 
 			{/* User selector */}
-			<div className="flex items-end gap-4">
-				<div className="flex-1 max-w-xs">
+			<div className="flex flex-col sm:flex-row sm:items-end gap-4">
+				<div className="w-full sm:flex-1 sm:max-w-xs">
 					<label className="text-sm font-medium text-gray-700 mb-1 block">Seleccionar usuario</label>
 					<Select value={selectedUserId || ""} onValueChange={setSelectedUserId}>
 						<SelectTrigger>
@@ -115,7 +115,7 @@ export default function PermisosUsuario({ users, permissions }: Props) {
 
 				{selectedUserId && (
 					<>
-						<div className="flex-1 max-w-xs">
+						<div className="w-full sm:flex-1 sm:max-w-xs">
 							<label className="text-sm font-medium text-gray-700 mb-1 block">Permiso a asignar</label>
 							<Select value={selectedPermission} onValueChange={setSelectedPermission}>
 								<SelectTrigger>
@@ -193,8 +193,8 @@ export default function PermisosUsuario({ users, permissions }: Props) {
 						{eligibleUsers
 							.filter(u => (userPerms[u.id] || []).length > 0)
 							.map(user => (
-								<div key={user.id} className="flex items-center gap-3 py-2 border-b border-gray-100">
-									<span className="text-sm font-medium min-w-[200px]">
+								<div key={user.id} className="flex flex-wrap items-center gap-3 py-2 border-b border-gray-100">
+									<span className="text-sm font-medium sm:min-w-[200px]">
 										{user.full_name || user.email}
 									</span>
 									<Badge variant="outline" className="text-xs">
