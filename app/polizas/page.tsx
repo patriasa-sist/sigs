@@ -404,7 +404,9 @@ export default function PolizasPage() {
 						</p>
 					</CardContent>
 				) : (
-					<div className="overflow-x-auto">
+					<>
+					{/* Tabla desktop (md+) */}
+					<div className="overflow-x-auto hidden md:block">
 						<table className="w-full">
 							<thead>
 								<tr className="border-b border-border">
@@ -465,6 +467,45 @@ export default function PolizasPage() {
 							</tbody>
 						</table>
 					</div>
+
+					{/* Tarjetas movil (< md) */}
+					<div className="md:hidden divide-y divide-border">
+						{polizas.map((poliza) => (
+							<button
+								key={poliza.id}
+								onClick={() => setSelectedPoliza(poliza)}
+								className="w-full text-left px-4 py-3 hover:bg-muted/40 active:bg-muted/40 transition-colors"
+							>
+								<div className="flex items-start justify-between gap-3">
+									<div className="min-w-0">
+										<div className="text-sm font-medium text-foreground font-mono">
+											{poliza.numero_poliza}
+										</div>
+										<div className="text-xs text-muted-foreground mt-0.5">{poliza.ramo}</div>
+									</div>
+									<StatusBadge status={poliza.estado} />
+								</div>
+								<div className="mt-2 space-y-0.5">
+									<div className="text-sm text-foreground leading-tight">
+										{poliza.client_name}
+									</div>
+									<div className="text-xs text-muted-foreground">{poliza.client_ci}</div>
+								</div>
+								<div className="mt-2 flex items-center justify-between gap-3">
+									<span className="text-xs text-muted-foreground truncate">
+										{poliza.compania_nombre}
+									</span>
+									<span className="text-sm font-medium text-foreground tabular-nums shrink-0">
+										{formatCurrency(poliza.prima_total, poliza.moneda)}
+									</span>
+								</div>
+								<div className="mt-1 text-xs text-muted-foreground tabular-nums">
+									{formatDate(poliza.inicio_vigencia)} → {formatDate(poliza.fin_vigencia)}
+								</div>
+							</button>
+						))}
+					</div>
+				</>
 				)}
 
 				{/* Pagination */}

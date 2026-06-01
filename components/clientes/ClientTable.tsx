@@ -19,7 +19,8 @@ export function ClientTable({ clients, searchMode = false, onClientClick }: Clie
 	if (clients.length === 0) return null;
 
 	return (
-		<div className="overflow-x-auto">
+		<>
+		<div className="overflow-x-auto hidden md:block">
 			<table className="w-full">
 				<thead>
 					<tr className="border-b border-border">
@@ -117,5 +118,41 @@ export function ClientTable({ clients, searchMode = false, onClientClick }: Clie
 				</tbody>
 			</table>
 		</div>
+
+		{/* Tarjetas movil (< md) */}
+		<div className="md:hidden divide-y divide-border">
+			{clients.map((client) => {
+				const activePolicyCount = getActivePolicyCount(client);
+				return (
+					<button
+						key={client.id}
+						onClick={() => onClientClick?.(client)}
+						className="w-full text-left px-4 py-3 hover:bg-muted/40 active:bg-muted/40 transition-colors"
+					>
+						<div className="flex items-start justify-between gap-3">
+							<span className="text-sm font-medium text-foreground">{client.fullName}</span>
+							<Badge
+								variant="outline"
+								className={
+									activePolicyCount > 0
+										? "bg-teal-50 text-teal-800 border-teal-200 shrink-0"
+										: "bg-slate-100 text-slate-500 border-slate-200 shrink-0"
+								}
+							>
+								{activePolicyCount} pol.
+							</Badge>
+						</div>
+						<div className="mt-1.5 text-sm text-foreground tabular-nums">{client.idNumber}</div>
+						{client.nit ? (
+							<div className="text-xs text-muted-foreground tabular-nums">NIT: {client.nit}</div>
+						) : null}
+						<div className="mt-1 text-xs text-muted-foreground">
+							Ejecutivo: {client.executiveInCharge || "—"}
+						</div>
+					</button>
+				);
+			})}
+		</div>
+		</>
 	);
 }

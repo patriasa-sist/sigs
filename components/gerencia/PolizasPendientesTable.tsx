@@ -87,7 +87,7 @@ export default function PolizasPendientesTable({ polizas: initialPolizas }: Prop
 
 	return (
 		<>
-			<div className="rounded-lg border border-border overflow-hidden">
+			<div className="rounded-lg border border-border overflow-hidden hidden md:block">
 				<Table>
 					<TableHeader>
 						<TableRow className="bg-secondary hover:bg-secondary">
@@ -190,6 +190,42 @@ export default function PolizasPendientesTable({ polizas: initialPolizas }: Prop
 						))}
 					</TableBody>
 				</Table>
+			</div>
+
+			{/* Tarjetas movil (< md) */}
+			<div className="md:hidden space-y-3">
+				{polizas.map((poliza) => {
+					const dias = Math.floor((Date.now() - new Date(poliza.created_at).getTime()) / (1000 * 60 * 60 * 24));
+					return (
+						<button
+							key={poliza.id}
+							onClick={() => openDrawer(poliza)}
+							className={`w-full text-left rounded-lg border border-border bg-card p-3 hover:bg-secondary/50 active:bg-secondary/50 transition-colors ${urgencyClasses(poliza.created_at)}`}
+						>
+							<div className="flex items-start justify-between gap-3">
+								<div className="min-w-0">
+									<div className="font-mono text-sm font-medium text-foreground">{poliza.numero_poliza}</div>
+									<div className="mt-1">
+										<Badge variant="secondary" className="text-xs rounded-md">{poliza.ramo}</Badge>
+									</div>
+								</div>
+								<span className={`text-xs font-medium shrink-0 ${dias >= 3 ? "text-amber-700" : "text-muted-foreground"}`}>
+									{tiempoTranscurrido(poliza.created_at)}
+								</span>
+							</div>
+							<div className="mt-2 text-sm text-foreground truncate">{poliza.compania?.nombre ?? "—"}</div>
+							<div className="mt-2 flex items-end justify-between gap-3">
+								<div className="min-w-0">
+									<div className="text-sm text-foreground truncate">{poliza.responsable?.full_name ?? "—"}</div>
+									<div className="text-xs text-muted-foreground truncate">Creo: {poliza.created_by_user?.full_name ?? "—"}</div>
+								</div>
+								<div className="text-sm font-medium text-foreground tabular-nums shrink-0">
+									{formatCurrency(poliza.prima_total, poliza.moneda)}
+								</div>
+							</div>
+						</button>
+					);
+				})}
 			</div>
 
 			<PolizaValidacionDrawer

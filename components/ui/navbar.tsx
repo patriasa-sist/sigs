@@ -27,7 +27,17 @@ import {
 	FileSpreadsheet,
 	Eye,
 	Briefcase,
+	Menu,
+	type LucideIcon,
 } from "lucide-react";
+import {
+	Sheet,
+	SheetContent,
+	SheetHeader,
+	SheetTitle,
+	SheetClose,
+	SheetTrigger,
+} from "@/components/ui/sheet";
 import Image from "next/image";
 import Link from "next/link";
 import { signOut } from "@/app/auth/login/actions";
@@ -96,6 +106,7 @@ export function Navbar() {
 	const [user, setUser] = useState<User | null>(null);
 	const [profile, setProfile] = useState<Profile | null>(null);
 	const [loading, setLoading] = useState(true);
+	const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 	const supabase = createClient();
 	const { can, role, isTeamLeader } = usePermissions();
 
@@ -165,9 +176,69 @@ export function Navbar() {
 		return null;
 	}
 
+	// Config única de enlaces — reutilizada en desktop y en el menú móvil
+	const navItems: { href: string; label: string; icon: LucideIcon; show: boolean }[] = [
+		{ href: "/", label: "Inicio", icon: Home, show: true },
+		{ href: "/clientes", label: "Clientes", icon: Users, show: can("clientes.ver") },
+		{ href: "/polizas", label: "Pólizas", icon: FileText, show: can("polizas.ver") },
+		{ href: "/cobranzas", label: "Cobranza", icon: DollarSign, show: can("cobranzas.ver") },
+		{ href: "/siniestros", label: "Siniestros", icon: FileWarning, show: can("siniestros.ver") },
+		{
+			href: "/gerencia/validacion",
+			label: "Validación",
+			icon: CheckSquare,
+			show: can("polizas.validar") || isTeamLeader,
+		},
+		{ href: "/auditoria", label: "Auditoría", icon: Eye, show: can("auditoria.ver") },
+		{ href: "/rrhh", label: "RRHH", icon: Briefcase, show: can("rrhh.ver") },
+		{ href: "/gerencia", label: "Gerencia", icon: BarChart3, show: can("gerencia.ver") },
+		{
+			href: "/reportes",
+			label: "Reportes",
+			icon: FileSpreadsheet,
+			show: can("gerencia.exportar") || can("gerencia.amlc"),
+		},
+	];
+	const visibleNavItems = navItems.filter((item) => item.show);
+
 	return (
 		<nav className="bg-card border-b border-border px-4 sm:px-6 lg:px-8">
-			<div className="flex items-center h-14 gap-6">
+			<div className="flex items-center h-14 gap-3 sm:gap-4 lg:gap-6">
+				{/* Menú móvil (hamburguesa) — visible por debajo de lg */}
+				<Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+					<SheetTrigger asChild>
+						<Button
+							variant="ghost"
+							size="icon"
+							className="lg:hidden h-9 w-9 shrink-0"
+							aria-label="Abrir menú de navegación"
+						>
+							<Menu className="h-5 w-5" />
+						</Button>
+					</SheetTrigger>
+					<SheetContent side="left" className="w-72 p-0 gap-0">
+						<SheetHeader className="border-b border-border">
+							<SheetTitle className="text-left">Menú</SheetTitle>
+						</SheetHeader>
+						<nav className="flex flex-col gap-0.5 p-2 overflow-y-auto">
+							{visibleNavItems.map((item) => {
+								const Icon = item.icon;
+								return (
+									<SheetClose asChild key={item.href}>
+										<Link
+											href={item.href}
+											className="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium text-foreground hover:bg-secondary transition-colors"
+										>
+											<Icon className="h-4 w-4 text-muted-foreground shrink-0" />
+											<span>{item.label}</span>
+										</Link>
+									</SheetClose>
+								);
+							})}
+						</nav>
+					</SheetContent>
+				</Sheet>
+
 				{/* Logo */}
 				<Link href="/" className="flex items-center gap-2.5 hover:opacity-80 transition-opacity shrink-0">
 					<Image
@@ -182,96 +253,23 @@ export function Navbar() {
 					<span className="text-[10px] text-muted-foreground font-mono leading-none">v{version}</span>
 				</Link>
 
-				{/* Nav links */}
-				<div className="flex items-center gap-1 flex-1">
-					<Link href="/">
-						<Button variant="ghost" size="sm" className="gap-2">
-							<Home className="h-4 w-4" />
-							<span>Inicio</span>
-						</Button>
-					</Link>
-
-					{can("clientes.ver") && (
-						<Link href="/clientes">
-							<Button variant="ghost" size="sm" className="gap-2">
-								<Users className="h-4 w-4" />
-								<span>Clientes</span>
-							</Button>
-						</Link>
-					)}
-
-					{can("polizas.ver") && (
-						<Link href="/polizas">
-							<Button variant="ghost" size="sm" className="gap-2">
-								<FileText className="h-4 w-4" />
-								<span>Pólizas</span>
-							</Button>
-						</Link>
-					)}
-
-					{can("cobranzas.ver") && (
-						<Link href="/cobranzas">
-							<Button variant="ghost" size="sm" className="gap-2">
-								<DollarSign className="h-4 w-4" />
-								<span>Cobranza</span>
-							</Button>
-						</Link>
-					)}
-
-					{can("siniestros.ver") && (
-						<Link href="/siniestros">
-							<Button variant="ghost" size="sm" className="gap-2">
-								<FileWarning className="h-4 w-4" />
-								<span>Siniestros</span>
-							</Button>
-						</Link>
-					)}
-
-					{(can("polizas.validar") || isTeamLeader) && (
-						<Link href="/gerencia/validacion">
-							<Button variant="ghost" size="sm" className="gap-2">
-								<CheckSquare className="h-4 w-4" />
-								<span>Validación</span>
-							</Button>
-						</Link>
-					)}
-
-					{can("auditoria.ver") && (
-						<Link href="/auditoria">
-							<Button variant="ghost" size="sm" className="gap-2">
-								<Eye className="h-4 w-4" />
-								<span>Auditoría</span>
-							</Button>
-						</Link>
-					)}
-
-					{can("rrhh.ver") && (
-						<Link href="/rrhh">
-							<Button variant="ghost" size="sm" className="gap-2">
-								<Briefcase className="h-4 w-4" />
-								<span>RRHH</span>
-							</Button>
-						</Link>
-					)}
-
-					{can("gerencia.ver") && (
-						<Link href="/gerencia">
-							<Button variant="ghost" size="sm" className="gap-2">
-								<BarChart3 className="h-4 w-4" />
-								<span>Gerencia</span>
-							</Button>
-						</Link>
-					)}
-
-					{(can("gerencia.exportar") || can("gerencia.amlc")) && (
-						<Link href="/reportes">
-							<Button variant="ghost" size="sm" className="gap-2">
-								<FileSpreadsheet className="h-4 w-4" />
-								<span>Reportes</span>
-							</Button>
-						</Link>
-					)}
+				{/* Nav links — desktop (lg+) */}
+				<div className="hidden lg:flex items-center gap-1 flex-1">
+					{visibleNavItems.map((item) => {
+						const Icon = item.icon;
+						return (
+							<Link key={item.href} href={item.href}>
+								<Button variant="ghost" size="sm" className="gap-2">
+									<Icon className="h-4 w-4" />
+									<span>{item.label}</span>
+								</Button>
+							</Link>
+						);
+					})}
 				</div>
+
+				{/* Spacer para empujar el avatar a la derecha en móvil */}
+				<div className="flex-1 lg:hidden" />
 
 				{/* User menu */}
 				<DropdownMenu>

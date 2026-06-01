@@ -82,10 +82,12 @@ function SiniestrosTable({ siniestros, sortField, sortDirection, onSort }: Sinie
 	}
 
 	return (
-		<Card className="shadow-sm">
-			<CardContent className="p-0">
-				<div className="overflow-x-auto">
-					<table className="w-full">
+		<>
+			{/* Vista desktop — tabla (md+) */}
+			<Card className="shadow-sm hidden md:block">
+				<CardContent className="p-0">
+					<div className="overflow-x-auto">
+						<table className="w-full">
 						<thead>
 							<tr className="bg-secondary border-b border-border">
 								<th className="text-left px-4 py-3 text-sm font-medium text-secondary-foreground">
@@ -248,6 +250,104 @@ function SiniestrosTable({ siniestros, sortField, sortDirection, onSort }: Sinie
 				</div>
 			</CardContent>
 		</Card>
+
+			{/* Vista móvil — tarjetas apiladas (< md) */}
+			<div className="md:hidden space-y-3">
+				{siniestros.map((siniestro) => {
+					const requiereAtencion = siniestro.requiere_atencion === true;
+					const diasSinActualizar = requiereAtencion
+						? Math.floor(
+								(Date.now() - new Date(siniestro.updated_at).getTime()) / 86400000
+						  )
+						: 0;
+
+					return (
+						<Link
+							key={siniestro.id}
+							href={`/siniestros/editar/${siniestro.id}`}
+							className="block"
+						>
+							<Card
+								className={`shadow-sm transition-colors active:bg-secondary/40 ${
+									requiereAtencion ? "border-amber-200" : ""
+								}`}
+								style={
+									requiereAtencion
+										? { borderLeftWidth: "3px", borderLeftColor: "#F59E0B" }
+										: undefined
+								}
+							>
+								<CardContent className="p-4">
+									{/* Encabezado: código + estado */}
+									<div className="flex items-start justify-between gap-3">
+										<div className="min-w-0">
+											<div className="font-mono text-sm font-medium text-primary">
+												{siniestro.codigo_siniestro || "—"}
+											</div>
+											<div className="text-xs text-muted-foreground mt-0.5">
+												{new Date(siniestro.fecha_siniestro).toLocaleDateString("es-BO")}
+											</div>
+										</div>
+										<div className="flex flex-col items-end gap-1 shrink-0">
+											<StatusBadge status={siniestro.estado} />
+											{siniestro.estado_actual_nombre && (
+												<span className="text-xs text-muted-foreground text-right">
+													{siniestro.estado_actual_nombre}
+												</span>
+											)}
+										</div>
+									</div>
+
+									{/* Cliente / póliza */}
+									<div className="mt-3 space-y-0.5">
+										<div className="text-sm font-medium text-foreground">
+											{siniestro.cliente_nombre}
+										</div>
+										<div className="text-xs text-muted-foreground">
+											{siniestro.cliente_documento}
+										</div>
+										<div className="flex items-center gap-2 text-xs text-muted-foreground pt-0.5">
+											<span>Póliza {siniestro.numero_poliza}</span>
+											<span className="text-border">·</span>
+											<span>{siniestro.ramo}</span>
+										</div>
+									</div>
+
+									{/* Reserva / responsable */}
+									<div className="mt-3 pt-3 border-t border-border flex items-end justify-between gap-3">
+										<div className="min-w-0">
+											<p className="text-xs text-muted-foreground">Reserva</p>
+											<p className="text-sm font-medium text-foreground tabular-nums">
+												{siniestro.moneda}{" "}
+												{siniestro.monto_reserva.toLocaleString("es-BO", {
+													minimumFractionDigits: 2,
+													maximumFractionDigits: 2,
+												})}
+											</p>
+										</div>
+										<div className="text-right min-w-0">
+											<p className="text-xs text-muted-foreground">Responsable</p>
+											<p className="text-sm text-foreground truncate">
+												{siniestro.responsable_nombre || (
+													<span className="text-muted-foreground italic">Sin asignar</span>
+												)}
+											</p>
+										</div>
+									</div>
+
+									{requiereAtencion && (
+										<div className="mt-2 inline-flex items-center gap-1 text-xs text-amber-700">
+											<AlertTriangle className="h-3 w-3" />
+											{diasSinActualizar}d sin actualizar
+										</div>
+									)}
+								</CardContent>
+							</Card>
+						</Link>
+					);
+				})}
+			</div>
+		</>
 	);
 }
 

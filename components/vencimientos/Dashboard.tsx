@@ -530,7 +530,7 @@ export default function Dashboard({ data, onBack, onUpdateData }: DashboardProps
 					</div>
 				</CardHeader>
 				<CardContent>
-					<div className="overflow-x-auto">
+					<div className="overflow-x-auto hidden md:block">
 						<table className="w-full">
 							<thead>
 								<tr className="border-b border-gray-200">
@@ -687,6 +687,61 @@ export default function Dashboard({ data, onBack, onUpdateData }: DashboardProps
 								))}
 							</tbody>
 						</table>
+					</div>
+
+					{/* Tarjetas movil (< md) */}
+					<div className="md:hidden space-y-3">
+						{currentPageData.map((record) => (
+							<div
+								key={record.id}
+								className={`rounded-lg border p-3 ${
+									record.status === "sent" ? "border-green-200 bg-green-50" : "border-gray-200 bg-white"
+								}`}
+							>
+								<div className="flex items-start gap-3">
+									<Checkbox
+										checked={selectedRecords.has(record.id!)}
+										onCheckedChange={() => handleSelectRecord(record.id!)}
+										disabled={record.status === "sent"}
+										className="w-5 h-5 mt-0.5 shrink-0"
+									/>
+									<div className="min-w-0 flex-1">
+										<div className="flex items-start justify-between gap-2">
+											<div className="font-medium text-gray-900 truncate">{record.asegurado}</div>
+											{getStatusBadge(record.status)}
+										</div>
+										{record.correoODireccion && (
+											<div className="text-xs text-gray-500 truncate">{record.correoODireccion}</div>
+										)}
+										<div className="mt-1.5 flex items-center gap-2 text-xs text-gray-600">
+											<span className="truncate">{record.compania}</span>
+											<span className="text-gray-300">·</span>
+											<span className="truncate">{record.ramo}</span>
+										</div>
+										<div className="mt-1">
+											<code className="text-xs bg-gray-100 px-1.5 py-0.5 rounded">{record.noPoliza}</code>
+										</div>
+										<div className="mt-2 flex items-center justify-between gap-2 text-sm">
+											<span className="text-gray-700">{formatDate(new Date(record.finDeVigencia))}</span>
+											<span
+												className={`font-medium ${
+													record.daysUntilExpiry <= 5
+														? "text-red-600"
+													: record.daysUntilExpiry <= 30
+														? "text-yellow-600"
+														: "text-gray-600"
+												}`}
+											>
+												{record.daysUntilExpiry >= 0 ? `${record.daysUntilExpiry} dias` : "Vencido"}
+											</span>
+										</div>
+										{record.ejecutivo && (
+											<div className="mt-1 text-xs text-gray-500">Ejecutivo: {record.ejecutivo}</div>
+										)}
+									</div>
+								</div>
+							</div>
+						))}
 					</div>
 
 					{totalPages > 1 && (

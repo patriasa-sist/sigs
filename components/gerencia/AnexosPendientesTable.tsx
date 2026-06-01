@@ -101,7 +101,7 @@ export default function AnexosPendientesTable({ anexos: initialAnexos }: Props) 
 
 	return (
 		<>
-			<div className="rounded-lg border">
+			<div className="rounded-lg border hidden md:block">
 				<Table>
 					<TableHeader>
 						<TableRow>
@@ -197,6 +197,69 @@ export default function AnexosPendientesTable({ anexos: initialAnexos }: Props) 
 						})}
 					</TableBody>
 				</Table>
+			</div>
+
+			{/* Tarjetas movil (< md) */}
+			<div className="md:hidden space-y-3">
+				{anexos.map((anexo) => {
+					const tipoBadge = TIPO_BADGE[anexo.tipo_anexo];
+					const isLoading = loading === anexo.id;
+					return (
+						<div key={anexo.id} className="rounded-lg border bg-card p-3">
+							<div className="flex items-start justify-between gap-3">
+								<div className="min-w-0">
+									<div className="font-medium text-sm text-foreground">{anexo.numero_anexo}</div>
+									<div className="text-xs text-muted-foreground mt-0.5">Poliza {anexo.numero_poliza} · {anexo.ramo}</div>
+								</div>
+								<Badge variant="outline" className={`${tipoBadge.className} shrink-0`}>{tipoBadge.label}</Badge>
+							</div>
+							<div className="mt-2 flex items-center justify-between gap-3">
+								<div className="text-xs text-muted-foreground">
+									<div>{anexo.creado_por_nombre || "-"}</div>
+									<div>{formatDate(anexo.fecha_anexo)}</div>
+								</div>
+								<div className="text-sm font-medium tabular-nums">
+									{anexo.monto_ajuste_total !== 0 ? (
+										<span className={anexo.monto_ajuste_total >= 0 ? "text-accent" : "text-destructive"}>
+											{anexo.monto_ajuste_total >= 0 ? "+" : ""}
+											{anexo.monto_ajuste_total.toLocaleString("es-BO", { minimumFractionDigits: 2 })}
+										</span>
+									) : (
+										<span className="text-muted-foreground">-</span>
+									)}
+								</div>
+							</div>
+							<div className="mt-3 grid grid-cols-3 gap-2">
+								<Button
+									variant="outline"
+									size="sm"
+									className="text-slate-700"
+									onClick={() => router.push(`/polizas/${anexo.poliza_id}#anexo-${anexo.id}`)}
+								>
+									<Eye className="h-4 w-4 mr-1" /> Ver
+								</Button>
+								<Button
+									variant="outline"
+									size="sm"
+									className="text-teal-700 border-teal-200"
+									disabled={isLoading}
+									onClick={() => openDialog(anexo, "validar")}
+								>
+									{isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <><CheckCircle className="h-4 w-4 mr-1" /> Validar</>}
+								</Button>
+								<Button
+									variant="outline"
+									size="sm"
+									className="text-rose-600 border-rose-200"
+									disabled={isLoading}
+									onClick={() => openDialog(anexo, "rechazar")}
+								>
+									<XCircle className="h-4 w-4 mr-1" /> Rechazar
+								</Button>
+							</div>
+						</div>
+					);
+				})}
 			</div>
 
 			{/* Dialog de confirmación */}

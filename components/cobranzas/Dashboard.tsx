@@ -484,7 +484,7 @@ export default function Dashboard({ polizasIniciales, statsIniciales, totalInici
 				<CardContent className="p-0 mt-3">
 					{displayPolizas.length > 0 ? (
 						<>
-							<div className="overflow-x-auto border-t border-border">
+							<div className="overflow-x-auto border-t border-border hidden md:block">
 								<table className="w-full">
 									<thead className="bg-secondary text-secondary-foreground">
 										<tr>
@@ -614,6 +614,61 @@ export default function Dashboard({ polizasIniciales, statsIniciales, totalInici
 										))}
 									</tbody>
 								</table>
+							</div>
+
+							{/* Tarjetas movil (< md) */}
+							<div className="md:hidden divide-y divide-border border-t border-border">
+								{displayPolizas.map((poliza) => (
+									<div
+										key={poliza.id}
+										className={`px-4 py-3 border-l-2 ${
+											poliza.cuotas_vencidas > 0 ? "border-l-destructive" : "border-l-transparent"
+										}`}
+									>
+										<div className="flex items-start justify-between gap-3">
+											<div className="min-w-0">
+												<div className="font-medium text-sm text-foreground truncate">
+													{poliza.client.nombre_completo}
+												</div>
+												<div className="text-xs text-muted-foreground mt-0.5">{poliza.client.documento}</div>
+											</div>
+											<span className="inline-block text-xs bg-secondary text-secondary-foreground px-1.5 py-0.5 rounded-md shrink-0">
+												{poliza.ramo}
+											</span>
+										</div>
+										<div className="mt-1.5 flex items-center gap-2 text-xs text-muted-foreground">
+											<span className="font-mono text-foreground">{poliza.numero_poliza}</span>
+											<span className="text-border">·</span>
+											<span className="truncate">{poliza.compania.nombre}</span>
+										</div>
+										<div className="mt-2 flex items-end justify-between gap-3">
+											<div className="flex items-center gap-1.5 flex-wrap">
+												{poliza.cuotas_vencidas > 0 && (
+													<span className="inline-flex items-center gap-1 text-xs font-semibold bg-rose-50 text-rose-800 border border-rose-200 px-2 py-0.5 rounded-md">
+														<AlertCircle className="h-3 w-3" />
+														{poliza.cuotas_vencidas} venc.
+													</span>
+												)}
+												{poliza.cuotas_pendientes > 0 && (
+													<span className="inline-flex items-center text-xs font-medium bg-amber-50 text-amber-800 border border-amber-200 px-2 py-0.5 rounded-md">
+														{poliza.cuotas_pendientes} pend.
+													</span>
+												)}
+												{poliza.cuotas_vencidas === 0 && poliza.cuotas_pendientes === 0 && (
+													<span className="text-xs text-muted-foreground">Al dia</span>
+												)}
+											</div>
+											<div className="text-sm font-medium text-foreground tabular-nums whitespace-nowrap shrink-0">
+												{poliza.moneda} {formatCurrency(poliza.total_pendiente)}
+											</div>
+										</div>
+										<div className="mt-2.5">
+											<Button size="sm" variant="default" className="w-full" onClick={() => handleVerCuotas(poliza)}>
+												Ver Cuotas
+											</Button>
+										</div>
+									</div>
+								))}
 							</div>
 
 							{/* Pagination */}

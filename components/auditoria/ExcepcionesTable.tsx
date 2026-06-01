@@ -72,7 +72,7 @@ export function ExcepcionesTable({ excepciones, isRefreshing, onRevoke }: Props)
 
 	return (
 		<div className={`border border-gray-200 rounded-lg overflow-hidden ${isRefreshing ? "opacity-60" : ""}`}>
-			<div className="overflow-x-auto">
+			<div className="overflow-x-auto hidden md:block">
 				<table className="w-full text-sm">
 					<thead>
 						<tr className="bg-gray-50 border-b border-gray-200">
@@ -166,6 +166,64 @@ export function ExcepcionesTable({ excepciones, isRefreshing, onRevoke }: Props)
 						})}
 					</tbody>
 				</table>
+			</div>
+
+			{/* Tarjetas movil (< md) */}
+			<div className="md:hidden divide-y divide-gray-200">
+				{excepciones.map((exc) => {
+					const badge = estadoBadge[exc.estado];
+					return (
+						<div key={exc.id} className="p-3">
+							<div className="flex items-start justify-between gap-3">
+								<div className="min-w-0">
+									<p className="font-medium text-gray-900 truncate">{exc.user_email}</p>
+									<p className="text-xs text-gray-500">{exc.user_role}</p>
+								</div>
+								<span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium shrink-0 ${badge.bg} ${badge.text}`}>
+									{badge.label}
+								</span>
+							</div>
+							<div className="mt-2 text-sm text-gray-900">{getDocLabel(exc.tipo_documento)}</div>
+							<div className="mt-1 text-sm text-gray-600">{exc.motivo}</div>
+							<div className="mt-2 text-xs text-gray-500 space-y-0.5">
+								<div>Otorgado por: {exc.otorgado_por_email}</div>
+								<div>{formatDate(exc.fecha_otorgamiento)}</div>
+								{exc.estado === "usada" && exc.fecha_uso && (
+									<div className="text-green-600">Usado: {formatDate(exc.fecha_uso)}</div>
+								)}
+								{exc.estado === "revocada" && exc.fecha_revocacion && (
+									<div>Revocado: {formatDate(exc.fecha_revocacion)}</div>
+								)}
+							</div>
+							{exc.estado === "activa" && (
+								<div className="mt-3">
+									{confirmId === exc.id ? (
+										<div className="flex items-center gap-2">
+											<Button
+												variant="destructive"
+												size="sm"
+												onClick={() => handleRevoke(exc.id)}
+												disabled={revokingId === exc.id}
+											>
+												{revokingId === exc.id ? "..." : "Confirmar"}
+											</Button>
+											<Button variant="ghost" size="sm" onClick={() => setConfirmId(null)}>
+												<X className="h-3 w-3" />
+											</Button>
+										</div>
+									) : (
+										<Button variant="outline" size="sm" onClick={() => setConfirmId(exc.id)}>
+											Revocar
+										</Button>
+									)}
+								</div>
+							)}
+							{exc.estado === "usada" && exc.usado_en_client_id && (
+								<div className="mt-2 text-xs text-green-600">Cliente registrado</div>
+							)}
+						</div>
+					);
+				})}
 			</div>
 		</div>
 	);
