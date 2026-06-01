@@ -1,7 +1,7 @@
 // components/PDFGeneration/ExecutiveFooter.tsx
 import React from "react";
 import { View, Text, StyleSheet, Image } from "@react-pdf/renderer";
-import { findExecutiveByName, getDefaultExecutive } from "@/utils/executiveHelper";
+import type { Firmante } from "@/utils/executiveHelper";
 
 const footerStyles = StyleSheet.create({
 	signatureBlock: {
@@ -49,25 +49,24 @@ const footerStyles = StyleSheet.create({
 });
 
 interface ExecutiveFooterProps {
-	executiveName: string;
+	firmante: Firmante | null;
 }
 
-export const ExecutiveFooter: React.FC<ExecutiveFooterProps> = ({ executiveName }) => {
-	// Find the executive info based on the name from the letter
-	const executive = findExecutiveByName(executiveName) || getDefaultExecutive();
+export const ExecutiveFooter: React.FC<ExecutiveFooterProps> = ({ firmante }) => {
+	// Sin firmante resuelto, no renderizamos nada (evita estampar una firma equivocada)
+	if (!firmante) return null;
 
 	return (
 		<View style={footerStyles.signatureBlock}>
-			{/* Signature image positioned above the line */}
-			{/* eslint-disable-next-line jsx-a11y/alt-text */}
-			<Image style={footerStyles.signatureImage} src={executive.signature} />
-
-			{/* Signature line positioned directly under the signature */}
-			{/* <View style={footerStyles.dividerLine} /> */}
+			{/* Signature image positioned above the line (solo si hay imagen de firma) */}
+			{firmante.firma_url && (
+				/* eslint-disable-next-line jsx-a11y/alt-text */
+				<Image style={footerStyles.signatureImage} src={firmante.firma_url} />
+			)}
 
 			{/* Executive information */}
-			<Text style={footerStyles.executiveName}>{executive.name}</Text>
-			<Text style={footerStyles.executiveCharge}>{executive.charge}</Text>
+			<Text style={footerStyles.executiveName}>{firmante.full_name}</Text>
+			{firmante.cargo && <Text style={footerStyles.executiveCharge}>{firmante.cargo}</Text>}
 
 			{/* Company information */}
 			<Text style={footerStyles.companyName}>PATRIA S.A.</Text>
@@ -75,4 +74,3 @@ export const ExecutiveFooter: React.FC<ExecutiveFooterProps> = ({ executiveName 
 		</View>
 	);
 };
-// NOTE: No esta la 2da firma de ercilia

@@ -3,6 +3,7 @@ import React from "react";
 import { View, Text, StyleSheet } from "@react-pdf/renderer";
 import { BaseTemplate } from "./BaseTemplate";
 import { LetterData } from "@/types/pdf";
+import type { Firmante } from "@/utils/executiveHelper";
 import { formatRamoProductoForPDF } from "@/utils/pdfutils";
 
 const healthStyles = StyleSheet.create({
@@ -66,9 +67,10 @@ const healthStyles = StyleSheet.create({
 
 interface HealthTemplateProps {
 	letterData: LetterData;
+	firmantes: Firmante[];
 }
 
-export const HealthTemplate: React.FC<HealthTemplateProps> = ({ letterData }) => {
+export const HealthTemplate: React.FC<HealthTemplateProps> = ({ letterData, firmantes }) => {
 	// Helper function to format currency based on value and type
 	const formatMonetaryValue = (value: number | undefined, currency: "Bs." | "$us." | undefined) => {
 		if (value === undefined || value === null || isNaN(value)) {
@@ -99,7 +101,7 @@ export const HealthTemplate: React.FC<HealthTemplateProps> = ({ letterData }) =>
 	};
 
 	return (
-		<BaseTemplate letterData={letterData}>
+		<BaseTemplate letterData={letterData} firmantes={firmantes}>
 			{letterData.policies.map((policy, policyIndex) => {
 				// Prioritize insuredMembersWithType over legacy insuredMembers
 				const membersWithType = policy.manualFields?.insuredMembersWithType || [];

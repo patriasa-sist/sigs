@@ -5,6 +5,7 @@ import { pdf } from "@react-pdf/renderer";
 import type { CuotaPago, PolizaConPagos, ContactoCliente, Moneda, AvisoMoraData } from "@/types/cobranza";
 import { cleanPhoneNumber } from "./whatsapp";
 import { obtenerEstadoReal } from "./estadoCuota";
+import { obtenerFirmantes } from "./executiveHelper";
 
 /**
  * MEJORA #7: Genera mensaje cordial de recordatorio de pago para WhatsApp o Email
@@ -350,8 +351,11 @@ export async function generarYDescargarAvisoMoraPDF(avisoData: AvisoMoraData): P
 	// Dynamic import to avoid bundling in server components
 	const { AvisoMoraTemplate } = await import("@/components/cobranzas/PDFGeneration/AvisoMoraTemplate");
 
+	// Cargar firmantes (perfiles con firma) para resolver la firma del aviso
+	const firmantes = await obtenerFirmantes();
+
 	// Generate PDF blob
-	const pdfBlob = await pdf(<AvisoMoraTemplate avisoData={avisoData} />).toBlob();
+	const pdfBlob = await pdf(<AvisoMoraTemplate avisoData={avisoData} firmantes={firmantes} />).toBlob();
 
 	// Generate filename
 	const fileName = `Aviso_Mora_${avisoData.poliza.numero_poliza}_${avisoData.numero_referencia}.pdf`;

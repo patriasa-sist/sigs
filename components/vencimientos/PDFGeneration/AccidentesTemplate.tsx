@@ -3,6 +3,7 @@ import React from "react";
 import { View, Text, StyleSheet } from "@react-pdf/renderer";
 import { BaseTemplate } from "./BaseTemplate";
 import { LetterData } from "@/types/pdf";
+import type { Firmante } from "@/utils/executiveHelper";
 import { formatRamoProductoForPDF } from "@/utils/pdfutils";
 
 const accidentesStyles = StyleSheet.create({
@@ -66,9 +67,10 @@ const accidentesStyles = StyleSheet.create({
 
 interface AccidentesTemplateProps {
 	letterData: LetterData;
+	firmantes: Firmante[];
 }
 
-export const AccidentesTemplate: React.FC<AccidentesTemplateProps> = ({ letterData }) => {
+export const AccidentesTemplate: React.FC<AccidentesTemplateProps> = ({ letterData, firmantes }) => {
 	// Helper function to format currency based on value and type
 	const formatMonetaryValue = (value: number | undefined, currency: "Bs." | "$us." | undefined) => {
 		if (value === undefined || value === null || isNaN(value)) {
@@ -86,7 +88,7 @@ export const AccidentesTemplate: React.FC<AccidentesTemplateProps> = ({ letterDa
 
 
 	return (
-		<BaseTemplate letterData={letterData}>
+		<BaseTemplate letterData={letterData} firmantes={firmantes}>
 			{letterData.policies.map((policy, policyIndex) => {
 				// Prioritize insuredMembersWithType over legacy insuredMembers
 				const membersWithType = policy.manualFields?.insuredMembersWithType || [];

@@ -2,7 +2,6 @@
 
 import { createClient } from "@/utils/supabase/client";
 import { getCurrentUser } from "@/utils/auth/getCurrentUser";
-import { findExecutiveByName, getDefaultExecutive } from "@/utils/executiveHelper";
 import { excecutives } from "@/types/pdf";
 
 export interface LetterReference {
@@ -30,26 +29,22 @@ export async function generateLetterReference(): Promise<string> {
 			throw new Error("User not authenticated");
 		}
 
-		// Find executive by user email or use default (Tamara)
-		// For now, we'll determine the executive based on email domain or use default
-		let executive = getDefaultExecutive(); // Default to admin account
+		// El glyph (acrónimo) del número de referencia proviene del PERFIL del usuario logueado.
+		let glyph = "ADM"; // Fallback por defecto
 
-		// Try to match executive by full email first, then by email prefix
-		if (user.email) {
+		const { data: profile } = await supabase
+			.from("profiles")
+			.select("acronimo")
+			.eq("id", user.id)
+			.single();
+
+		if (profile?.acronimo) {
+			glyph = profile.acronimo;
+		} else if (user.email) {
+			// Fallback legacy: match por email contra el array hardcodeado
 			const emailLower = user.email.toLowerCase();
 			const foundByEmail = excecutives.find((exec) => exec.mail.toLowerCase() === emailLower);
-			if (foundByEmail) {
-				executive = foundByEmail;
-			} else {
-				// Fallback to email prefix matching
-				const emailPrefix = user.email.split("@")[0]?.toLowerCase();
-				if (emailPrefix) {
-					const foundExecutive = findExecutiveByName(emailPrefix);
-					if (foundExecutive) {
-						executive = foundExecutive;
-					}
-				}
-			}
+			if (foundByEmail) glyph = foundByEmail.glyph;
 		}
 
 		const now = new Date();
@@ -60,7 +55,7 @@ export async function generateLetterReference(): Promise<string> {
 		const { data: existingRef, error: selectError } = await supabase
 			.from("letter_references")
 			.select("*")
-			.eq("executive_glyph", executive.glyph)
+			.eq("executive_glyph", glyph)
 			.eq("year", year)
 			.eq("month", month)
 			.single();
@@ -78,7 +73,7 @@ export async function generateLetterReference(): Promise<string> {
 
 			if (sequentialNumber > 99999) {
 				throw new Error(
-					`Maximum letter count (99999) reached for ${executive.glyph} in ${year}-${month
+					`Maximum letter count (99999) reached for ${glyph} in ${year}-${month
 						.toString()
 						.padStart(2, "0")}`
 				);
@@ -97,7 +92,7 @@ export async function generateLetterReference(): Promise<string> {
 			sequentialNumber = 1;
 
 			const { error: insertError } = await supabase.from("letter_references").insert({
-				executive_glyph: executive.glyph,
+				executive_glyph: glyph,
 				year,
 				month,
 				current_number: sequentialNumber,
@@ -111,7 +106,7 @@ export async function generateLetterReference(): Promise<string> {
 		// Format the reference number: SCPSA-[glyph]-[#####]/[year]-[month]
 		const paddedNumber = sequentialNumber.toString().padStart(5, "0");
 		const paddedMonth = month.toString().padStart(2, "0");
-		const referenceNumber = `SCPSA-${executive.glyph}-${paddedNumber}/${year}-${paddedMonth}`;
+		const referenceNumber = `SCPSA-${glyph}-${paddedNumber}/${year}-${paddedMonth}`;
 
 		return referenceNumber;
 	} catch (error) {

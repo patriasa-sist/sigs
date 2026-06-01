@@ -1,7 +1,7 @@
 // utils/whatsapp.ts - Utilidades para la integración con WhatsApp
 
 import { LetterData } from "@/types/pdf";
-import { findExecutiveByName, getDefaultExecutive } from "@/utils/executiveHelper";
+import { resolverFirmante, type Firmante } from "@/utils/executiveHelper";
 
 /**
  * Limpia y formatea un número de teléfono para usarlo con la API de WhatsApp.
@@ -31,12 +31,12 @@ export function cleanPhoneNumber(phone: string): string {
  * @param letterData - Los datos de la carta para personalizar el mensaje.
  * @returns El mensaje de saludo codificado para URL.
  */
-export function createWhatsAppMessage(letterData: LetterData): string {
+export function createWhatsAppMessage(letterData: LetterData, firmantes: Firmante[]): string {
 	const clientName = letterData.client.name;
 
-	// Use fallback mechanism similar to ExecutiveFooter component
-	const executive = findExecutiveByName(letterData.executive) || getDefaultExecutive();
-	const executiveName = executive.name;
+	// Resolver el ejecutivo desde la BD (fallback legacy); si no hay match, usar el texto crudo
+	const executive = resolverFirmante(letterData.executive, firmantes);
+	const executiveName = executive?.full_name || letterData.executive;
 
 	const message = `Estimado(a) ${clientName},
 Le saluda ${executiveName} de Patria S.A. Corredores de Seguros.

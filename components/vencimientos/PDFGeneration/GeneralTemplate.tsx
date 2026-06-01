@@ -3,6 +3,7 @@ import React from "react";
 import { View, Text, StyleSheet } from "@react-pdf/renderer";
 import { BaseTemplate } from "./BaseTemplate";
 import { LetterData } from "@/types/pdf";
+import type { Firmante } from "@/utils/executiveHelper";
 import { formatRamoProductoForPDF } from "@/utils/pdfutils";
 
 const generalStyles = StyleSheet.create({
@@ -68,9 +69,10 @@ const generalStyles = StyleSheet.create({
 
 interface GeneralTemplateProps {
 	letterData: LetterData;
+	firmantes: Firmante[];
 }
 
-export const GeneralTemplate: React.FC<GeneralTemplateProps> = ({ letterData }) => {
+export const GeneralTemplate: React.FC<GeneralTemplateProps> = ({ letterData, firmantes }) => {
 	const formatMonetaryValue = (value: number | undefined, currency: "Bs." | "$us." | undefined) => {
 		if (value === undefined || value === null || isNaN(value)) {
 			return "No especificado";
@@ -86,7 +88,7 @@ export const GeneralTemplate: React.FC<GeneralTemplateProps> = ({ letterData }) 
 	};
 
 	return (
-		<BaseTemplate letterData={letterData}>
+		<BaseTemplate letterData={letterData} firmantes={firmantes}>
 			{letterData.policies.map((policy, policyIndex) => (
 				<View key={policyIndex} style={{ marginBottom: 15 }}>
 					{/* Tabla de Póliza */}

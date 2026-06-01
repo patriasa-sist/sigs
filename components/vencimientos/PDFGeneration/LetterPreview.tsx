@@ -4,6 +4,7 @@ import { pdf } from "@react-pdf/renderer";
 import { LetterData } from "@/types/pdf";
 import { HealthTemplate } from "./HealthTemplate";
 import { GeneralTemplate } from "./GeneralTemplate";
+import { obtenerFirmantes } from "@/utils/executiveHelper";
 import { Loader2 } from "lucide-react";
 
 interface LetterPreviewProps {
@@ -25,8 +26,11 @@ const LetterPreview: React.FC<LetterPreviewProps> = ({ letterData, width = "100%
 				// Determine which template to use based on letterData
 				const Template = letterData.templateType === "salud" ? HealthTemplate : GeneralTemplate;
 
+				// Cargar firmantes (perfiles con firma) para resolver la firma
+				const firmantes = await obtenerFirmantes();
+
 				// Generate PDF blob
-				const pdfBlob = await pdf(<Template letterData={letterData} />).toBlob();
+				const pdfBlob = await pdf(<Template letterData={letterData} firmantes={firmantes} />).toBlob();
 
 				// Create object URL from blob
 				const url = URL.createObjectURL(pdfBlob);

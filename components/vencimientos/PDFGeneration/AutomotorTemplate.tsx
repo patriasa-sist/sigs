@@ -3,6 +3,7 @@ import React from "react";
 import { View, Text, StyleSheet } from "@react-pdf/renderer";
 import { BaseTemplate } from "./BaseTemplate";
 import { LetterData } from "@/types/pdf";
+import type { Firmante } from "@/utils/executiveHelper";
 import { formatRamoProductoForPDF } from "@/utils/pdfutils";
 
 const automotorStyles = StyleSheet.create({
@@ -100,9 +101,10 @@ const automotorStyles = StyleSheet.create({
 
 interface AutomotorTemplateProps {
 	letterData: LetterData;
+	firmantes: Firmante[];
 }
 
-export const AutomotorTemplate: React.FC<AutomotorTemplateProps> = ({ letterData }) => {
+export const AutomotorTemplate: React.FC<AutomotorTemplateProps> = ({ letterData, firmantes }) => {
 	const formatMonetaryValue = (value: number | undefined, currency: "Bs." | "$us." | undefined) => {
 		if (value === undefined || value === null || isNaN(value)) {
 			return "No especificado";
@@ -118,7 +120,7 @@ export const AutomotorTemplate: React.FC<AutomotorTemplateProps> = ({ letterData
 	};
 
 	return (
-		<BaseTemplate letterData={letterData}>
+		<BaseTemplate letterData={letterData} firmantes={firmantes}>
 			{/* Tabla principal de pólizas */}
 			<View style={automotorStyles.policyTable}>
 				<View style={automotorStyles.tableRow}>

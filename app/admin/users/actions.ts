@@ -164,3 +164,165 @@ export async function sendPasswordResetEmail(userId: string) {
 		return { success: false, error: "Ocurrió un error inesperado" };
 	}
 }
+
+// ── Gestión de datos de firmante ──────────────────────────────────────────────
+
+const FIRMA_MAX_BYTES = 2 * 1024 * 1024; // 2 MB
+const FIRMA_MIME: Record<string, string> = {
+	"image/png": "png",
+	"image/jpeg": "jpg",
+	"image/webp": "webp",
+};
+
+const datosFirmanteSchema = z.object({
+	full_name: z.string().trim().max(120),
+	cargo: z.string().trim().max(120),
+	telefono: z.string().trim().max(30),
+	acronimo: z.string().trim().max(5),
+	porcentaje_comision: z.number().min(0).max(100).nullable(),
+});
+
+export type DatosFirmanteInput = z.infer<typeof datosFirmanteSchema>;
+
+/** Verifica que el usuario actual sea admin con permiso admin.usuarios */
+async function verificarAdmin(): Promise<{ ok: true } | { ok: false; error: string }> {
+	const supabase = await createClient();
+	const {
+		data: { user },
+		error: authError,
+	} = await supabase.auth.getUser();
+	if (authError || !user) return { ok: false, error: "Acceso no autorizado" };
+
+	const { allowed } = await checkPermission("admin.usuarios");
+	if (!allowed) return { ok: false, error: "Se requieren privilegios de administrador" };
+	return { ok: true };
+}
+
+/** Actualiza los datos de firmante (nombre, cargo, teléfono, acrónimo, comisión) de un usuario */
+export async function actualizarDatosFirmante(userId: string, data: DatosFirmanteInput) {
+	const uuid = uuidSchema.safeParse(userId);
+	if (!uuid.success) return { success: false, error: "ID de usuario inválido" };
+
+	const parsed = datosFirmanteSchema.safeParse(data);
+	if (!parsed.success) return { success: false, error: "Datos inválidos" };
+
+	const auth = await verificarAdmin();
+	if (!auth.ok) return { success: false, error: auth.error };
+
+	try {
+		const adminClient = createAdminClient();
+		const { error } = await adminClient
+			.from("profiles")
+			.update({
+				full_name: parsed.data.full_name || null,
+				cargo: parsed.data.cargo || null,
+				telefono: parsed.data.telefono || null,
+				acronimo: parsed.data.acronimo.toUpperCase().slice(0, 5) || null,
+				porcentaje_comision: parsed.data.porcentaje_comision,
+			})
+			.eq("id", uuid.data);
+
+		if (error) {
+			console.error("Error actualizando datos de firmante:", error);
+			return { success: false, error: "No se pudieron guardar los datos" };
+		}
+
+		revalidatePath("/admin/users");
+		return { success: true, message: "Datos actualizados" };
+	} catch (error) {
+		console.error("Error inesperado actualizando firmante:", error);
+		return { success: false, error: "Ocurrió un error inesperado" };
+	}
+}
+
+/** Sube (o reemplaza) la firma de un usuario al bucket perfiles-firmas y guarda la URL */
+export async function subirFirma(userId: string, formData: FormData) {
+	const uuid = uuidSchema.safeParse(userId);
+	if (!uuid.success) return { success: false, error: "ID de usuario inválido" };
+
+	const auth = await verificarAdmin();
+	if (!auth.ok) return { success: false, error: auth.error };
+
+	const file = formData.get("firma");
+	if (!(file instanceof File) || file.size === 0) {
+		return { success: false, error: "No se recibió ningún archivo" };
+	}
+	if (file.size > FIRMA_MAX_BYTES) {
+		return { success: false, error: "La firma supera el límite de 2 MB" };
+	}
+	const ext = FIRMA_MIME[file.type];
+	if (!ext) {
+		return { success: false, error: "Formato no permitido (use PNG, JPG o WEBP)" };
+	}
+
+	try {
+		const adminClient = createAdminClient();
+		const storagePath = `firma_${uuid.data}.${ext}`;
+		const buffer = Buffer.from(await file.arrayBuffer());
+
+		const { error: uploadError } = await adminClient.storage
+			.from("perfiles-firmas")
+			.upload(storagePath, buffer, { contentType: file.type, upsert: true });
+
+		if (uploadError) {
+			console.error("Error subiendo firma:", uploadError);
+			return { success: false, error: "No se pudo subir la firma" };
+		}
+
+		const {
+			data: { publicUrl },
+		} = adminClient.storage.from("perfiles-firmas").getPublicUrl(storagePath);
+
+		// Cache-busting: la URL pública es estable al usar upsert, así que versionamos
+		const firmaUrl = `${publicUrl}?v=${Date.now()}`;
+
+		const { error: updateError } = await adminClient
+			.from("profiles")
+			.update({ firma_url: firmaUrl })
+			.eq("id", uuid.data);
+
+		if (updateError) {
+			console.error("Error guardando firma_url:", updateError);
+			return { success: false, error: "Se subió la firma pero no se pudo guardar la URL" };
+		}
+
+		revalidatePath("/admin/users");
+		return { success: true, message: "Firma actualizada", firmaUrl };
+	} catch (error) {
+		console.error("Error inesperado subiendo firma:", error);
+		return { success: false, error: "Ocurrió un error inesperado" };
+	}
+}
+
+/** Quita la firma de un usuario: borra el archivo del bucket y limpia firma_url */
+export async function quitarFirma(userId: string) {
+	const uuid = uuidSchema.safeParse(userId);
+	if (!uuid.success) return { success: false, error: "ID de usuario inválido" };
+
+	const auth = await verificarAdmin();
+	if (!auth.ok) return { success: false, error: auth.error };
+
+	try {
+		const adminClient = createAdminClient();
+
+		// Borrado best-effort de las variantes posibles del archivo
+		const paths = Object.values(FIRMA_MIME).map((ext) => `firma_${uuid.data}.${ext}`);
+		await adminClient.storage.from("perfiles-firmas").remove(paths);
+
+		const { error: updateError } = await adminClient
+			.from("profiles")
+			.update({ firma_url: null })
+			.eq("id", uuid.data);
+
+		if (updateError) {
+			console.error("Error limpiando firma_url:", updateError);
+			return { success: false, error: "No se pudo quitar la firma" };
+		}
+
+		revalidatePath("/admin/users");
+		return { success: true, message: "Firma eliminada" };
+	} catch (error) {
+		console.error("Error inesperado quitando firma:", error);
+		return { success: false, error: "Ocurrió un error inesperado" };
+	}
+}

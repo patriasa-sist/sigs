@@ -4,7 +4,7 @@ import { Document, Page, Text, View, StyleSheet, Image, Font, Link } from "@reac
 import { LetterData } from "@/types/pdf";
 import { PDF_ASSETS } from "@/utils/pdfAssets";
 import { ExecutiveFooter } from "./ExecutiveFooter";
-import { findExecutiveByName, getDefaultExecutive } from "@/utils/executiveHelper";
+import { resolverFirmante, type Firmante } from "@/utils/executiveHelper";
 import { cleanPhoneNumber } from "@/utils/whatsapp";
 
 // Registrar fuentes - Cambria
@@ -148,12 +148,14 @@ const FormattedText: React.FC<{ text: string; isItalic?: boolean }> = ({ text, i
 
 interface BaseTemplateProps {
 	letterData: LetterData;
+	firmantes: Firmante[];
 	children: React.ReactNode;
 }
 
-export const BaseTemplate: React.FC<BaseTemplateProps> = ({ letterData, children }) => {
-	// Find executive data using the same logic as ExecutiveFooter
-	const executiveData = findExecutiveByName(letterData.executive) || getDefaultExecutive();
+export const BaseTemplate: React.FC<BaseTemplateProps> = ({ letterData, firmantes, children }) => {
+	// Resolver firmantes desde la BD (fallback legacy) — misma lógica que el footer
+	const executiveData = resolverFirmante(letterData.executive, firmantes);
+	const cofirmanteData = resolverFirmante(letterData.cofirmante, firmantes);
 
 	return (
 		<Document>
@@ -264,20 +266,32 @@ export const BaseTemplate: React.FC<BaseTemplateProps> = ({ letterData, children
 						</Text>
 					</View>
 
-					<View wrap={false}>
-						{/* contact info section */}
-						<Text style={styles.comuParagraph}>
-							Comuníquese con nosotros para recibir una atención personalizada:
-						</Text>
-						<Text style={styles.paragraph}>
-							<FormattedText text={`*${executiveData.name}* - Tel: `} />
-							<Link src={`https://wa.me/${cleanPhoneNumber(executiveData.telf)}`}>
-								<Text style={{ fontWeight: "bold", color: "#255fd3" }}>{executiveData.telf}</Text>
-							</Link>
-							<Text> - Email: </Text>
-							<Text style={{ fontWeight: "bold", color: "#255fd3" }}>{executiveData.mail}</Text>
-						</Text>
-					</View>
+					{executiveData && (
+						<View wrap={false}>
+							{/* contact info section */}
+							<Text style={styles.comuParagraph}>
+								Comuníquese con nosotros para recibir una atención personalizada:
+							</Text>
+							<Text style={styles.paragraph}>
+								<FormattedText text={`*${executiveData.full_name}* - Tel: `} />
+								{executiveData.telefono && (
+									<Link src={`https://wa.me/${cleanPhoneNumber(executiveData.telefono)}`}>
+										<Text style={{ fontWeight: "bold", color: "#255fd3" }}>
+											{executiveData.telefono}
+										</Text>
+									</Link>
+								)}
+								{executiveData.email && (
+									<>
+										<Text> - Email: </Text>
+										<Text style={{ fontWeight: "bold", color: "#255fd3" }}>
+											{executiveData.email}
+										</Text>
+									</>
+								)}
+							</Text>
+						</View>
+					)}
 
 					{/* greetings section */}
 					<Text style={styles.paragraph}>
@@ -292,9 +306,9 @@ export const BaseTemplate: React.FC<BaseTemplateProps> = ({ letterData, children
 
 					{/* Executive Footer with personalized signature */}
 					<View style={styles.executiveFooter}>
-						<ExecutiveFooter executiveName={letterData.executive} />
+						<ExecutiveFooter firmante={executiveData} />
 						{letterData.cofirmante && letterData.cofirmante !== letterData.executive && (
-							<ExecutiveFooter executiveName={letterData.cofirmante} />
+							<ExecutiveFooter firmante={cofirmanteData} />
 						)}
 					</View>
 				</View>

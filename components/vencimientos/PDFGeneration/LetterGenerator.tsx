@@ -44,7 +44,7 @@ import {
 } from "@/utils/pdfutils";
 import { generateLetterReference } from "@/utils/letterReferences";
 import { cleanPhoneNumber, createWhatsAppMessage } from "@/utils/whatsapp";
-import { getAllExecutives, findExecutiveByName } from "@/utils/executiveHelper";
+import { obtenerFirmantes, resolverFirmante, type Firmante } from "@/utils/executiveHelper";
 import { createClient } from "@/utils/supabase/client";
 import { pdf } from "@react-pdf/renderer";
 import { HealthTemplate } from "./HealthTemplate";
@@ -780,6 +780,7 @@ interface ExecutiveDropdownProps {
 	className?: string;
 	originalExecutive?: string; // Original executive from Excel data
 	currentUserEmail?: string | null; // Current user's email to highlight their executive
+	firmantes: Firmante[]; // Firmantes registrados (perfiles con firma)
 }
 
 function ExecutiveDropdown({
@@ -790,45 +791,30 @@ function ExecutiveDropdown({
 	className,
 	originalExecutive,
 	currentUserEmail,
+	firmantes,
 }: ExecutiveDropdownProps) {
-	const executives = getAllExecutives();
-
-	// Determine current user's executive from passed email
-	const currentUserExecutive = useMemo(() => {
+	// Firmante del usuario actual (por email) para resaltarlo y ordenarlo primero
+	const currentUserFirmanteName = useMemo(() => {
 		if (!currentUserEmail) return null;
-
 		const emailLower = currentUserEmail.toLowerCase();
-
-		// Try to match executive by full email first
-		const foundByEmail = executives.find((exec) => exec.mail.toLowerCase() === emailLower);
-		if (foundByEmail) return foundByEmail.user;
-
-		// Try to match by email prefix
-		const emailPrefix = currentUserEmail.split("@")[0]?.toLowerCase();
-		if (emailPrefix) {
-			const foundExecutive = findExecutiveByName(emailPrefix);
-			if (foundExecutive) return foundExecutive.user;
-		}
-
-		return null;
-	}, [currentUserEmail, executives]);
+		const byEmail = firmantes.find((f) => (f.email || "").toLowerCase() === emailLower);
+		return byEmail ? byEmail.full_name : null;
+	}, [currentUserEmail, firmantes]);
 
 	// Check if executive was changed from original
 	const executiveChanged = originalExecutive && value !== originalExecutive;
 
-	// Find the current executive's full name for display
-	const currentExecutive = findExecutiveByName(value);
-	const currentExecutiveName = currentExecutive?.name || value;
+	// Nombre a mostrar (resuelto) para el valor actual
+	const currentFirmante = resolverFirmante(value, firmantes);
+	const currentExecutiveName = currentFirmante?.full_name || value;
 
-	// Sort executives to put current user first
-	const sortedExecutives = useMemo(() => {
-		if (!currentUserExecutive) return executives;
-
-		const currentUser = executives.find((exec) => exec.user === currentUserExecutive);
-		const otherExecutives = executives.filter((exec) => exec.user !== currentUserExecutive);
-
-		return currentUser ? [currentUser, ...otherExecutives] : executives;
-	}, [executives, currentUserExecutive]);
+	// Ordenar firmantes: el usuario actual primero
+	const sortedFirmantes = useMemo(() => {
+		if (!currentUserFirmanteName) return firmantes;
+		const me = firmantes.find((f) => f.full_name === currentUserFirmanteName);
+		const others = firmantes.filter((f) => f.full_name !== currentUserFirmanteName);
+		return me ? [me, ...others] : firmantes;
+	}, [firmantes, currentUserFirmanteName]);
 
 	return (
 		<div>
@@ -838,10 +824,11 @@ function ExecutiveDropdown({
 					<SelectValue placeholder={placeholder}>{currentExecutiveName}</SelectValue>
 				</SelectTrigger>
 				<SelectContent>
-					{sortedExecutives.map((executive, index) => (
-						<SelectItem key={executive.user} value={executive.user}>
-							{executive.name} ({executive.charge})
-							{index === 0 && currentUserExecutive === executive.user && (
+					{sortedFirmantes.map((firmante, index) => (
+						<SelectItem key={firmante.id} value={firmante.full_name}>
+							{firmante.full_name}
+							{firmante.cargo ? ` (${firmante.cargo})` : ""}
+							{index === 0 && currentUserFirmanteName === firmante.full_name && (
 								<span className="ml-2 text-xs text-blue-600 font-medium">(Tú)</span>
 							)}
 						</SelectItem>
@@ -865,6 +852,7 @@ export default function LetterGenerator({ selectedRecords, onClose, onGenerated 
 	const [previewLetter, setPreviewLetter] = useState<string | null>(null);
 	const [generationResult, setGenerationResult] = useState<PDFGenerationResult | null>(null);
 	const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
+	const [firmantes, setFirmantes] = useState<Firmante[]>([]);
 
 	// Specific loading states to prevent race conditions
 	const [loadingOperations, setLoadingOperations] = useState<Set<string>>(new Set());
@@ -907,6 +895,12 @@ export default function LetterGenerator({ selectedRecords, onClose, onGenerated 
 				// Only update state if component is still mounted
 				if (!cancelled) {
 					setCurrentUserEmail(user?.email || null);
+				}
+
+				// Cargar firmantes (perfiles con firma) para resolver firmas en los PDFs
+				const lista = await obtenerFirmantes();
+				if (!cancelled) {
+					setFirmantes(lista);
 				}
 			} catch (error) {
 				// Only log error if component is still mounted
@@ -1061,7 +1055,7 @@ export default function LetterGenerator({ selectedRecords, onClose, onGenerated 
 			default:
 				TemplateComponent = GeneralTemplate;
 		}
-		const pdfBlob = await pdf(<TemplateComponent letterData={finalLetterData} />).toBlob();
+		const pdfBlob = await pdf(<TemplateComponent letterData={finalLetterData} firmantes={firmantes} />).toBlob();
 		return { pdfBlob, finalLetterData };
 	};
 
@@ -1085,7 +1079,7 @@ export default function LetterGenerator({ selectedRecords, onClose, onGenerated 
 			default:
 				TemplateComponent = GeneralTemplate;
 		}
-		const pdfBlob = await pdf(<TemplateComponent letterData={letterData} />).toBlob();
+		const pdfBlob = await pdf(<TemplateComponent letterData={letterData} firmantes={firmantes} />).toBlob();
 		return pdfBlob;
 	};
 
@@ -1288,7 +1282,7 @@ export default function LetterGenerator({ selectedRecords, onClose, onGenerated 
 			downloadBlob(pdfBlob, fileName);
 
 			const cleanedPhone = cleanPhoneNumber(letter.client.phone);
-			const message = createWhatsAppMessage(letter);
+			const message = createWhatsAppMessage(letter, firmantes);
 			const whatsappUrl = `https://web.whatsapp.com/send?phone=${cleanedPhone}&text=${message}`;
 
 			window.open(whatsappUrl, "_blank", "noopener,noreferrer");
@@ -1439,6 +1433,7 @@ export default function LetterGenerator({ selectedRecords, onClose, onGenerated 
 						onWhatsApp={() => handleSendWhatsApp(letter.id)}
 						onUpdateLetterData={updateLetterData}
 						currentUserEmail={currentUserEmail}
+						firmantes={firmantes}
 						isOperationLoading={isOperationLoading}
 					/>
 				))}
@@ -1496,6 +1491,7 @@ interface LetterCardProps {
 	onWhatsApp: () => void;
 	onUpdateLetterData: (letterId: string, updates: Partial<LetterData>) => void;
 	currentUserEmail?: string | null;
+	firmantes: Firmante[];
 	isOperationLoading: (operationId: string) => boolean;
 }
 
@@ -1512,6 +1508,7 @@ function LetterCard({
 	onWhatsApp,
 	onUpdateLetterData,
 	currentUserEmail,
+	firmantes,
 	isOperationLoading,
 }: LetterCardProps) {
 	const [editedLetter, setEditedLetter] = useState<LetterData>(letter);
@@ -1836,6 +1833,7 @@ function LetterCard({
 								onValueChange={(v) => handleFieldChange("executive", v)}
 								originalExecutive={letter.originalExecutive}
 								currentUserEmail={currentUserEmail}
+								firmantes={firmantes}
 								className="text-sm h-8"
 								placeholder="Seleccionar ejecutivo..."
 							/>
@@ -2388,8 +2386,8 @@ function LetterCard({
 				<div className="mt-4 pt-3 border-t border-gray-200 text-sm text-gray-600">
 					<span className="font-medium">Ejecutivo:</span>{" "}
 					{(() => {
-						const currentExecutive = findExecutiveByName(letter.executive);
-						return currentExecutive ? currentExecutive.name : letter.executive;
+						const currentExecutive = resolverFirmante(letter.executive, firmantes);
+						return currentExecutive ? currentExecutive.full_name : letter.executive;
 					})()}
 				</div>
 			</CardContent>

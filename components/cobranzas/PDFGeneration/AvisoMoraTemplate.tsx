@@ -4,6 +4,7 @@ import { Document, Page, Text, View, StyleSheet, Image, Font, Link } from "@reac
 import type { AvisoMoraData } from "@/types/cobranza";
 import { PDF_ASSETS } from "@/utils/pdfAssets";
 import { ExecutiveFooter } from "@/components/vencimientos/PDFGeneration/ExecutiveFooter";
+import { resolverFirmante, type Firmante } from "@/utils/executiveHelper";
 import { cleanPhoneNumber } from "@/utils/whatsapp";
 
 // Registrar fuentes - Cambria (igual que BaseTemplate)
@@ -232,11 +233,15 @@ const styles = StyleSheet.create({
 
 interface AvisoMoraTemplateProps {
 	avisoData: AvisoMoraData;
+	firmantes: Firmante[];
 }
 
-export const AvisoMoraTemplate: React.FC<AvisoMoraTemplateProps> = ({ avisoData }) => {
+export const AvisoMoraTemplate: React.FC<AvisoMoraTemplateProps> = ({ avisoData, firmantes }) => {
 	const { poliza, cliente, cuotas_vencidas, total_adeudado, fecha_generacion, numero_referencia, generado_por } =
 		avisoData;
+
+	// Resolver el firmante del aviso (fallback legacy) desde la BD
+	const firmanteData = resolverFirmante(generado_por, firmantes);
 
 	// Format currency
 	const formatCurrency = (amount: number) => {
@@ -502,7 +507,7 @@ export const AvisoMoraTemplate: React.FC<AvisoMoraTemplateProps> = ({ avisoData 
 
 					{/* Executive Footer */}
 					<View style={styles.executiveFooter}>
-						<ExecutiveFooter executiveName={generado_por} />
+						<ExecutiveFooter firmante={firmanteData} />
 					</View>
 				</View>
 			</Page>
