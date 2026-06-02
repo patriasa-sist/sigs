@@ -9,9 +9,17 @@ import { REQUIRED_DOCUMENTS } from "@/types/clienteDocumento";
 // TYPES
 // ================================================
 
+export type ClienteTypeSampling =
+	| "natural"
+	| "juridica"
+	| "unipersonal"
+	| "ong"
+	| "club"
+	| "asociacion_civil";
+
 export type ClienteSampling = {
 	id: string;
-	client_type: "natural" | "juridica" | "unipersonal";
+	client_type: ClienteTypeSampling;
 	status: string;
 	nombre_display: string;
 	created_at: string;
@@ -86,7 +94,7 @@ export async function obtenerMuestraAleatoria(): Promise<ClienteSampling[]> {
 
 		return {
 			id: c.id,
-			client_type: c.client_type as "natural" | "juridica" | "unipersonal",
+			client_type: c.client_type as ClienteTypeSampling,
 			status: c.status,
 			nombre_display,
 			created_at: c.created_at,
@@ -151,7 +159,7 @@ export async function obtenerDetalleSampling(
 		: client.unipersonal_clients;
 
 	let nombre_display = "Sin nombre";
-	const clientType = client.client_type as "natural" | "juridica" | "unipersonal";
+	const clientType = client.client_type as ClienteTypeSampling;
 	if (clientType === "natural" && natural) {
 		nombre_display = `${natural.primer_nombre} ${natural.primer_apellido}`;
 	} else if (clientType === "juridica" && juridic) {
@@ -161,7 +169,9 @@ export async function obtenerDetalleSampling(
 	}
 
 	const docs = (documentos || []) as ClienteDocumento[];
-	const documentos_requeridos = [...REQUIRED_DOCUMENTS[clientType]] as TipoDocumentoCliente[];
+	// Defensivo: tipos sin lista definida (o no soportados aún) -> sin requeridos en vez de crashear
+	const requeridos = REQUIRED_DOCUMENTS[clientType as keyof typeof REQUIRED_DOCUMENTS] ?? [];
+	const documentos_requeridos = [...requeridos] as TipoDocumentoCliente[];
 	const documentos_subidos = docs.map((d) => d.tipo_documento);
 	const documentos_faltantes = documentos_requeridos.filter(
 		(req) => !documentos_subidos.includes(req)

@@ -1,13 +1,16 @@
 import { requirePermission } from "@/utils/auth/helpers";
 import { obtenerExcepcionesCompletas, obtenerUsuariosOperativos } from "./excepciones/actions";
+import { obtenerAuditoresUif } from "./revisiones/actions";
 import { AuditoriaContent } from "@/components/auditoria/AuditoriaContent";
 
 export default async function AuditoriaPage() {
-	await requirePermission("auditoria.ver");
+	const profile = await requirePermission("auditoria.ver");
+	const isAdmin = profile.role === "admin";
 
-	const [excepciones, usuarios] = await Promise.all([
+	const [excepciones, usuarios, auditores] = await Promise.all([
 		obtenerExcepcionesCompletas(),
 		obtenerUsuariosOperativos(),
+		obtenerAuditoresUif(),
 	]);
 
 	return (
@@ -22,6 +25,8 @@ export default async function AuditoriaPage() {
 			<AuditoriaContent
 				excepcionesIniciales={excepciones}
 				usuarios={usuarios}
+				isAdmin={isAdmin}
+				auditores={auditores}
 			/>
 		</div>
 	);
