@@ -2,6 +2,7 @@
 
 import { createClient } from "@/utils/supabase/server";
 import { getDataScopeFilter } from "@/utils/auth/helpers";
+import { obtenerEjecutivosFiltro } from "@/utils/ejecutivos";
 import type { CuotaConsolidada, CuotaVigenciaCorrida, CuotaAnexoPropia } from "@/types/anexo";
 
 export type PolizaListItem = {
@@ -491,24 +492,24 @@ export async function obtenerFiltrosPolizas() {
 
 		const scope = await getDataScopeFilter();
 
-		// Obtener ramos, responsable_ids y compania_ids usados en pólizas (scoped, solo 3 columnas)
-		let metaQuery = supabase.from("polizas").select("ramo, responsable_id, compania_aseguradora_id");
+		// Ramos y compañías: derivados de las pólizas visibles (scoped, solo 2 columnas).
+		let metaQuery = supabase.from("polizas").select("ramo, compania_aseguradora_id");
 		if (scope.needsScoping) metaQuery = metaQuery.in("responsable_id", scope.teamMemberIds);
 		const { data: meta } = await metaQuery;
 
 		const ramos = [...new Set(meta?.map((p) => p.ramo).filter(Boolean) ?? [])].sort() as string[];
-		const responsableIds = [...new Set(meta?.map((p) => p.responsable_id).filter(Boolean) ?? [])] as string[];
 		const companiaIds = [...new Set(meta?.map((p) => p.compania_aseguradora_id).filter(Boolean) ?? [])] as string[];
 
-		// Obtener nombres en paralelo
-		const [profilesRes, companiasRes] = await Promise.all([
-			supabase.from("profiles").select("id, full_name").in("id", responsableIds).order("full_name"),
+		// Ejecutivos: roster completo de ejecutivos activos (no solo los que ya tienen
+		// pólizas), respetando scoping de equipo. Ver utils/ejecutivos.ts.
+		const [ejecutivos, companiasRes] = await Promise.all([
+			obtenerEjecutivosFiltro(scope),
 			supabase.from("companias_aseguradoras").select("id, nombre").in("id", companiaIds).order("nombre"),
 		]);
 
 		const data: FiltrosPolizasData = {
 			ramos,
-			ejecutivos: profilesRes.data?.map((p) => ({ id: p.id, nombre: p.full_name || "" })) ?? [],
+			ejecutivos: ejecutivos.map((e) => ({ id: e.id, nombre: e.full_name })),
 			companias: companiasRes.data?.map((c) => ({ id: c.id, nombre: c.nombre })) ?? [],
 			estados: ["pendiente", "activa", "vencida", "cancelada", "renovada", "anulada"],
 		};

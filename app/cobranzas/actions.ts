@@ -3,6 +3,7 @@
 import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
 import { checkPermission, getDataScopeFilter } from "@/utils/auth/helpers";
+import { obtenerEjecutivosFiltro } from "@/utils/ejecutivos";
 import { obtenerEstadoReal } from "@/utils/estadoCuota";
 import type {
 	CuotaPago,
@@ -873,34 +874,29 @@ export async function obtenerOpcionesFiltroExport(): Promise<CobranzaServerRespo
 			supabase.from("regionales").select("id, nombre").order("nombre"),
 		]);
 
-		// Obtener ramos y responsables únicos de pólizas activas (respetando scope)
+		// Ramos: derivados de las pólizas activas visibles (respetando scope).
 		let polizasQuery = supabase
 			.from("polizas")
-			.select("ramo, responsable_id, responsable:profiles!responsable_id(id, full_name)")
+			.select("ramo")
 			.eq("estado", "activa");
 
 		if (scope.needsScoping) {
 			polizasQuery = polizasQuery.in("responsable_id", scope.teamMemberIds);
 		}
 
-		const { data: polizasData } = await polizasQuery;
+		// Responsables: roster completo de ejecutivos activos (no solo los que ya tienen
+		// pólizas activas), respetando scoping de equipo. Ver utils/ejecutivos.ts.
+		const [{ data: polizasData }, responsables] = await Promise.all([
+			polizasQuery,
+			obtenerEjecutivosFiltro(scope),
+		]);
 
 		// Extraer ramos únicos
 		const ramosSet = new Set<string>();
-		const responsablesMap = new Map<string, string>();
-
 		for (const p of polizasData || []) {
 			if (p.ramo) ramosSet.add(p.ramo);
-			const resp = p.responsable as { id?: string; full_name?: string } | null;
-			if (resp?.id && resp?.full_name) {
-				responsablesMap.set(resp.id, resp.full_name);
-			}
 		}
-
 		const ramos = Array.from(ramosSet).sort();
-		const responsables = Array.from(responsablesMap.entries())
-			.map(([id, full_name]) => ({ id, full_name }))
-			.sort((a, b) => a.full_name.localeCompare(b.full_name));
 
 		return {
 			success: true,
@@ -1969,12 +1965,12 @@ export async function obtenerFiltrosCobranza(): Promise<CobranzaServerResponse<F
 	try {
 		const scope = await getDataScopeFilter("polizas");
 
+		// Ramos, compañías y regionales: derivados de las pólizas activas visibles.
 		let polizasQuery = supabase
 			.from("polizas")
 			.select(`
 				ramo,
 				compania:companias_aseguradoras!compania_aseguradora_id (id, nombre),
-				responsable:profiles!responsable_id (id, full_name),
 				regional:regionales!regional_id (id, nombre)
 			`)
 			.eq("estado", "activa");
@@ -1983,18 +1979,20 @@ export async function obtenerFiltrosCobranza(): Promise<CobranzaServerResponse<F
 			polizasQuery = polizasQuery.in("responsable_id", scope.teamMemberIds);
 		}
 
-		const { data: rows } = await polizasQuery;
+		// Responsables: roster completo de ejecutivos activos (no solo los que ya tienen
+		// pólizas activas), respetando scoping de equipo. Ver utils/ejecutivos.ts.
+		const [{ data: rows }, ejecutivos] = await Promise.all([
+			polizasQuery,
+			obtenerEjecutivosFiltro(scope),
+		]);
 
 		const ramos       = [...new Set((rows ?? []).map((r) => r.ramo).filter(Boolean))].sort();
 		const companiaMap = new Map<string, string>();
-		const responsableMap = new Map<string, string>();
 		const regionalMap = new Map<string, string>();
 
 		for (const r of rows ?? []) {
 			const comp = r.compania as { id?: string; nombre?: string } | null;
 			if (comp?.id && comp.nombre) companiaMap.set(comp.id, comp.nombre);
-			const resp = r.responsable as { id?: string; full_name?: string } | null;
-			if (resp?.id && resp.full_name) responsableMap.set(resp.id, resp.full_name);
 			const reg = r.regional as { id?: string; nombre?: string } | null;
 			if (reg?.id && reg.nombre) regionalMap.set(reg.id, reg.nombre);
 		}
@@ -2004,7 +2002,7 @@ export async function obtenerFiltrosCobranza(): Promise<CobranzaServerResponse<F
 			data: {
 				ramos,
 				companias:    [...companiaMap.entries()].map(([id, nombre]) => ({ id, nombre })).sort((a, b) => a.nombre.localeCompare(b.nombre)),
-				responsables: [...responsableMap.entries()].map(([id, full_name]) => ({ id, full_name })).sort((a, b) => a.full_name.localeCompare(b.full_name)),
+				responsables: ejecutivos,
 				regionales:   [...regionalMap.entries()].map(([id, nombre]) => ({ id, nombre })).sort((a, b) => a.nombre.localeCompare(b.nombre)),
 			},
 		};
