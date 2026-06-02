@@ -13,6 +13,7 @@ export type DirectorCarteraDB = {
   nombre: string;
   apellidos: string | null;
   porcentaje_comision: number | null;
+  factura: boolean;
   activo: boolean;
   created_at: string;
   created_by: string | null;
@@ -22,6 +23,7 @@ export type DirectorCarteraForm = {
   nombre: string;
   apellidos?: string | null;
   porcentaje_comision?: number | null;
+  factura?: boolean;
 };
 
 export type DirectorActionResult<T = undefined> = {
@@ -57,6 +59,7 @@ const directorSchema = z.object({
     .max(100, "El porcentaje no puede superar 100")
     .optional()
     .nullable(),
+  factura: z.boolean().optional(),
 });
 
 // ============================================
@@ -141,6 +144,7 @@ export async function crearDirectorCartera(
       nombre: nombreTrim,
       apellidos: apellidosTrim,
       porcentaje_comision: data.porcentaje_comision ?? 0,
+      factura: data.factura ?? false,
       activo: true,
     })
     .select()
@@ -199,6 +203,7 @@ export async function actualizarDirectorCartera(
       nombre: nombreTrim,
       apellidos: apellidosTrim,
       porcentaje_comision: data.porcentaje_comision ?? 0,
+      factura: data.factura ?? false,
     })
     .eq("id", id)
     .select()

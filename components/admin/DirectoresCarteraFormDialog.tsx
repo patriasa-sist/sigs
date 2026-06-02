@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import {
   Form,
   FormControl,
@@ -44,6 +45,7 @@ const formSchema = z.object({
       (v) => !v || (!isNaN(Number(v)) && Number(v) >= 0 && Number(v) <= 100),
       "Debe ser un número entre 0 y 100"
     ),
+  factura: z.boolean(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -71,6 +73,7 @@ export function DirectoresCarteraFormDialog({
       nombre: director?.nombre || "",
       apellidos: director?.apellidos || "",
       porcentaje_comision: director?.porcentaje_comision?.toString() || "0",
+      factura: director?.factura ?? false,
     },
   });
 
@@ -80,6 +83,7 @@ export function DirectoresCarteraFormDialog({
         nombre: director?.nombre || "",
         apellidos: director?.apellidos || "",
         porcentaje_comision: director?.porcentaje_comision?.toString() || "0",
+        factura: director?.factura ?? false,
       });
     }
   }, [open, director, form]);
@@ -91,6 +95,7 @@ export function DirectoresCarteraFormDialog({
         nombre: values.nombre,
         apellidos: values.apellidos?.trim() || null,
         porcentaje_comision: values.porcentaje_comision ? Number(values.porcentaje_comision) : 0,
+        factura: values.factura,
       };
 
       const result = isEditing
@@ -204,6 +209,28 @@ export function DirectoresCarteraFormDialog({
                     </div>
                   </FormControl>
                   <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="factura"
+              render={({ field }) => (
+                <FormItem className="flex items-center justify-between rounded-lg border p-3">
+                  <div className="space-y-0.5">
+                    <FormLabel>Factura</FormLabel>
+                    <p className="text-xs text-muted-foreground">
+                      Indica si este director emite factura
+                    </p>
+                  </div>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                      disabled={isSubmitting}
+                    />
+                  </FormControl>
                 </FormItem>
               )}
             />
