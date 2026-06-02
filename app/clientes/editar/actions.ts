@@ -36,6 +36,8 @@ import {
 	normalizeLegalRepresentativeData,
 } from "@/utils/formNormalization";
 import { z } from "zod";
+import { formatearErrorZod } from "@/utils/zodErrors";
+import { captureError } from "@/utils/sentry";
 
 const uuidSchema = z.string().uuid();
 
@@ -169,8 +171,7 @@ export async function updateNaturalClient(
 	const sanitized = nullsToUndefined(data as Record<string, unknown>);
 	const validation = naturalClientFormSchema.partial().safeParse(sanitized);
 	if (!validation.success) {
-		const firstError = validation.error.issues[0];
-		return { success: false, error: `Datos inválidos: ${firstError.path.join(".")} - ${firstError.message}` };
+		return { success: false, error: formatearErrorZod(validation.error) };
 	}
 
 	try {
@@ -230,6 +231,7 @@ export async function updateNaturalClient(
 
 		if (updateNaturalError) {
 			console.error("[updateNaturalClient] Natural client update error:", updateNaturalError);
+			await captureError(updateNaturalError, "updateNaturalClient:db", { clientId }, { feature: "guardar-cliente" });
 			return { success: false, error: "Error al actualizar datos personales" };
 		}
 
@@ -238,6 +240,7 @@ export async function updateNaturalClient(
 		return { success: true, data: undefined };
 	} catch (error) {
 		console.error("[updateNaturalClient] Error:", error);
+		await captureError(error, "updateNaturalClient", { clientId }, { feature: "guardar-cliente" });
 		return {
 			success: false,
 			error: error instanceof Error ? error.message : "Error desconocido",
@@ -264,8 +267,7 @@ export async function updateJuridicClient(
 	const sanitized = nullsToUndefined(data as Record<string, unknown>);
 	const validation = juridicSchema.partial().safeParse(sanitized);
 	if (!validation.success) {
-		const firstError = validation.error.issues[0];
-		return { success: false, error: `Datos inválidos: ${firstError.path.join(".")} - ${firstError.message}` };
+		return { success: false, error: formatearErrorZod(validation.error) };
 	}
 
 	try {
@@ -312,6 +314,7 @@ export async function updateJuridicClient(
 
 		if (updateJuridicError) {
 			console.error("[updateJuridicClient] Juridic client update error:", updateJuridicError);
+			await captureError(updateJuridicError, "updateJuridicClient:db", { clientId }, { feature: "guardar-cliente" });
 			return { success: false, error: "Error al actualizar datos de la empresa" };
 		}
 
@@ -320,6 +323,7 @@ export async function updateJuridicClient(
 		return { success: true, data: undefined };
 	} catch (error) {
 		console.error("[updateJuridicClient] Error:", error);
+		await captureError(error, "updateJuridicClient", { clientId }, { feature: "guardar-cliente" });
 		return {
 			success: false,
 			error: error instanceof Error ? error.message : "Error desconocido",
@@ -345,8 +349,7 @@ export async function updateUnipersonalClient(
 	const sanitized = nullsToUndefined(data as Record<string, unknown>);
 	const validation = unipersonalClientFormSchema.partial().safeParse(sanitized);
 	if (!validation.success) {
-		const firstError = validation.error.issues[0];
-		return { success: false, error: `Datos inválidos: ${firstError.path.join(".")} - ${firstError.message}` };
+		return { success: false, error: formatearErrorZod(validation.error) };
 	}
 
 	try {
@@ -403,6 +406,7 @@ export async function updateUnipersonalClient(
 
 		if (updateNaturalError) {
 			console.error("[updateUnipersonalClient] Natural client update error:", updateNaturalError);
+			await captureError(updateNaturalError, "updateUnipersonalClient:db-natural", { clientId }, { feature: "guardar-cliente" });
 			return { success: false, error: "Error al actualizar datos personales" };
 		}
 
@@ -431,6 +435,7 @@ export async function updateUnipersonalClient(
 
 		if (updateUnipersonalError) {
 			console.error("[updateUnipersonalClient] Unipersonal client update error:", updateUnipersonalError);
+			await captureError(updateUnipersonalError, "updateUnipersonalClient:db-comercial", { clientId }, { feature: "guardar-cliente" });
 			return { success: false, error: "Error al actualizar datos comerciales" };
 		}
 
@@ -439,6 +444,7 @@ export async function updateUnipersonalClient(
 		return { success: true, data: undefined };
 	} catch (error) {
 		console.error("[updateUnipersonalClient] Error:", error);
+		await captureError(error, "updateUnipersonalClient", { clientId }, { feature: "guardar-cliente" });
 		return {
 			success: false,
 			error: error instanceof Error ? error.message : "Error desconocido",
@@ -463,8 +469,7 @@ export async function updatePartnerData(
 
 	const validation = clientPartnerSchema.omit({ client_id: true }).partial().safeParse(data);
 	if (!validation.success) {
-		const firstError = validation.error.issues[0];
-		return { success: false, error: `Datos inválidos: ${firstError.path.join(".")} - ${firstError.message}` };
+		return { success: false, error: formatearErrorZod(validation.error) };
 	}
 
 	try {
@@ -484,6 +489,7 @@ export async function updatePartnerData(
 		if (findError && findError.code !== "PGRST116") {
 			// PGRST116 = no rows found
 			console.error("[updatePartnerData] Find error:", findError);
+			await captureError(findError, "updatePartnerData:db-find", { clientId }, { feature: "guardar-cliente" });
 			return { success: false, error: "Error al buscar datos del cónyuge" };
 		}
 
@@ -508,6 +514,7 @@ export async function updatePartnerData(
 
 			if (updateError) {
 				console.error("[updatePartnerData] Update error:", updateError);
+				await captureError(updateError, "updatePartnerData:db-update", { clientId }, { feature: "guardar-cliente" });
 				return { success: false, error: "Error al actualizar datos del cónyuge" };
 			}
 		} else {
@@ -530,6 +537,7 @@ export async function updatePartnerData(
 
 			if (insertError) {
 				console.error("[updatePartnerData] Insert error:", insertError);
+				await captureError(insertError, "updatePartnerData:db-insert", { clientId }, { feature: "guardar-cliente" });
 				return { success: false, error: "Error al crear datos del cónyuge" };
 			}
 		}
@@ -539,6 +547,7 @@ export async function updatePartnerData(
 		return { success: true, data: undefined };
 	} catch (error) {
 		console.error("[updatePartnerData] Error:", error);
+		await captureError(error, "updatePartnerData", { clientId }, { feature: "guardar-cliente" });
 		return {
 			success: false,
 			error: error instanceof Error ? error.message : "Error desconocido",
@@ -565,8 +574,7 @@ export async function updateLegalRepresentatives(
 	const repArraySchema = z.array(legalRepresentativeSchema.omit({ juridic_client_id: true }));
 	const validation = repArraySchema.safeParse(representatives);
 	if (!validation.success) {
-		const firstError = validation.error.issues[0];
-		return { success: false, error: `Datos de representante inválidos: ${firstError.path.join(".")} - ${firstError.message}` };
+		return { success: false, error: formatearErrorZod(validation.error, "Datos de representante inválidos") };
 	}
 
 	try {
@@ -591,6 +599,7 @@ export async function updateLegalRepresentatives(
 
 		if (deleteError) {
 			console.error("[updateLegalRepresentatives] Delete error:", deleteError);
+			await captureError(deleteError, "updateLegalRepresentatives:db-delete", { clientId }, { feature: "guardar-cliente" });
 			return { success: false, error: "Error al eliminar representantes existentes" };
 		}
 
@@ -620,6 +629,7 @@ export async function updateLegalRepresentatives(
 
 			if (insertError) {
 				console.error("[updateLegalRepresentatives] Insert error:", insertError);
+				await captureError(insertError, "updateLegalRepresentatives:db-insert", { clientId }, { feature: "guardar-cliente" });
 				return { success: false, error: "Error al insertar representantes" };
 			}
 		}
@@ -629,6 +639,7 @@ export async function updateLegalRepresentatives(
 		return { success: true, data: undefined };
 	} catch (error) {
 		console.error("[updateLegalRepresentatives] Error:", error);
+		await captureError(error, "updateLegalRepresentatives", { clientId }, { feature: "guardar-cliente" });
 		return {
 			success: false,
 			error: error instanceof Error ? error.message : "Error desconocido",

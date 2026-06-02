@@ -15,6 +15,7 @@
 import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
 import type { TipoDocumentoCliente, ClienteDocumento } from "@/types/clienteDocumento";
+import { captureError } from "@/utils/sentry";
 
 // ============================================
 // TYPES
@@ -202,6 +203,7 @@ export async function uploadClientDocument(
 
 		if (uploadError) {
 			console.error("[uploadClientDocument] Storage error:", uploadError);
+			await captureError(uploadError, "uploadClientDocument:storage", { clientId: input.client_id, tipo: input.tipo_documento }, { feature: "documentos-cliente" });
 			return { success: false, error: "Error al subir archivo" };
 		}
 
@@ -251,6 +253,7 @@ export async function uploadClientDocument(
 
 		if (insertError) {
 			console.error("[uploadClientDocument] Insert error:", insertError);
+			await captureError(insertError, "uploadClientDocument:insert", { clientId: input.client_id, tipo: input.tipo_documento }, { feature: "documentos-cliente" });
 			// Try to clean up uploaded file
 			await supabase.storage.from("clientes-documentos").remove([storagePath]);
 			return { success: false, error: "Error al registrar documento" };
@@ -268,6 +271,7 @@ export async function uploadClientDocument(
 		return { success: true, data: { id: docData.id } };
 	} catch (error) {
 		console.error("[uploadClientDocument] Error:", error);
+		await captureError(error, "uploadClientDocument", { clientId: input.client_id }, { feature: "documentos-cliente" });
 		return {
 			success: false,
 			error: error instanceof Error ? error.message : "Error desconocido",
@@ -329,6 +333,7 @@ export async function replaceClientDocument(
 
 		if (uploadError) {
 			console.error("[replaceClientDocument] Storage error:", uploadError);
+			await captureError(uploadError, "replaceClientDocument:storage", { documentId: input.document_id, clientId: existingDoc.client_id }, { feature: "documentos-cliente" });
 			return { success: false, error: "Error al subir archivo" };
 		}
 
@@ -354,6 +359,7 @@ export async function replaceClientDocument(
 
 		if (insertError) {
 			console.error("[replaceClientDocument] Insert error:", insertError);
+			await captureError(insertError, "replaceClientDocument:insert", { documentId: input.document_id, clientId: existingDoc.client_id }, { feature: "documentos-cliente" });
 			// Clean up uploaded file
 			await supabase.storage.from("clientes-documentos").remove([storagePath]);
 			return { success: false, error: "Error al registrar documento" };
@@ -373,12 +379,14 @@ export async function replaceClientDocument(
 		if (updateError) {
 			console.error("[replaceClientDocument] Update error:", updateError);
 			// The new document is created but old one isn't marked - log for manual fix
+			await captureError(updateError, "replaceClientDocument:update-old", { documentId: input.document_id, newDocId: newDoc.id, clientId: existingDoc.client_id }, { feature: "documentos-cliente" });
 		}
 
 		revalidatePath("/clientes");
 		return { success: true, data: { id: newDoc.id } };
 	} catch (error) {
 		console.error("[replaceClientDocument] Error:", error);
+		await captureError(error, "replaceClientDocument", { documentId: input.document_id }, { feature: "documentos-cliente" });
 		return {
 			success: false,
 			error: error instanceof Error ? error.message : "Error desconocido",
@@ -564,6 +572,7 @@ export async function discardClientDocument(
 
 		if (updateError) {
 			console.error("[discardClientDocument] Update error:", updateError);
+			await captureError(updateError, "discardClientDocument:update", { documentId, clientId: doc.client_id }, { feature: "documentos-cliente" });
 			return { success: false, error: "Error al descartar documento" };
 		}
 
@@ -571,6 +580,7 @@ export async function discardClientDocument(
 		return { success: true, data: undefined };
 	} catch (error) {
 		console.error("[discardClientDocument] Error:", error);
+		await captureError(error, "discardClientDocument", { documentId }, { feature: "documentos-cliente" });
 		return {
 			success: false,
 			error: error instanceof Error ? error.message : "Error desconocido",
@@ -636,6 +646,7 @@ export async function registerClientDocument(
 
 		if (insertError) {
 			console.error("[registerClientDocument] Insert error:", insertError);
+			await captureError(insertError, "registerClientDocument:insert", { clientId: input.client_id, tipo: input.tipo_documento }, { feature: "documentos-cliente" });
 			return { success: false, error: "Error al registrar documento" };
 		}
 
@@ -650,6 +661,7 @@ export async function registerClientDocument(
 		return { success: true, data: { id: docData.id } };
 	} catch (error) {
 		console.error("[registerClientDocument] Error:", error);
+		await captureError(error, "registerClientDocument", { clientId: input.client_id }, { feature: "documentos-cliente" });
 		return {
 			success: false,
 			error: error instanceof Error ? error.message : "Error desconocido",
@@ -713,6 +725,7 @@ export async function registerClientDocumentReplace(
 
 		if (insertError) {
 			console.error("[registerClientDocumentReplace] Insert error:", insertError);
+			await captureError(insertError, "registerClientDocumentReplace:insert", { documentId: input.document_id, clientId: existingDoc.client_id }, { feature: "documentos-cliente" });
 			return { success: false, error: "Error al registrar documento" };
 		}
 
@@ -730,6 +743,7 @@ export async function registerClientDocumentReplace(
 		return { success: true, data: { id: newDoc.id } };
 	} catch (error) {
 		console.error("[registerClientDocumentReplace] Error:", error);
+		await captureError(error, "registerClientDocumentReplace", { documentId: input.document_id }, { feature: "documentos-cliente" });
 		return {
 			success: false,
 			error: error instanceof Error ? error.message : "Error desconocido",

@@ -173,7 +173,12 @@ export const naturalClientOtherSchema = z.object({
   pais_residencia: z.string().min(1, 'País de residencia es requerido'),
   genero: z.enum(GENDER_OPTIONS).optional(),
   nivel_ingresos: z.preprocess(
-    (val) => (val === null || (typeof val === 'number' && isNaN(val)) ? undefined : val),
+    (val) => {
+      // Columna varchar en BD: puede llegar como string desde la carga del cliente.
+      if (val === null || val === undefined || val === '') return undefined;
+      const num = typeof val === 'string' ? Number(val) : val;
+      return typeof num === 'number' && !isNaN(num) ? num : undefined;
+    },
     z.number().positive().optional()
   ),
   cargo: z.string().optional(),
@@ -267,7 +272,8 @@ export const unipersonalCommercialSchema = z.object({
   domicilio_comercial: z.string().min(1, 'Domicilio comercial es requerido'),
   telefono_comercial: phoneValidation,
   actividad_economica_comercial: z.string().min(1, 'Actividad económica es requerida'),
-  nivel_ingresos: z.number().positive('Nivel de ingresos es requerido'),
+  // Columna numeric en BD: Supabase la devuelve como string, hay que coercionar.
+  nivel_ingresos: z.coerce.number().positive('Nivel de ingresos es requerido'),
   correo_electronico_comercial: emailValidation,
 });
 

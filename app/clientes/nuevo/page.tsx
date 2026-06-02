@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useForm, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
+import * as Sentry from "@sentry/nextjs";
 import {
 	ClientType,
 	NaturalClientFormData,
@@ -1371,6 +1372,8 @@ export default function NuevoClientePage() {
 			router.push("/clientes");
 		} catch (error: unknown) {
 			console.error("Error saving client:", error);
+			// Capturar en Sentry cualquier error al guardar un cliente nuevo.
+			Sentry.captureException(error, { tags: { feature: "guardar-cliente", action: "crear" } });
 			let errorMessage = "Error al guardar el cliente";
 			let errorDetail: string | undefined;
 			if (error instanceof Error) {

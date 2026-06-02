@@ -10,15 +10,18 @@ import { getCurrentUser } from "@/utils/auth/helpers";
  * @example
  * ```ts
  * } catch (error) {
- *   captureError(error, "guardarPoliza");
+ *   captureError(error, "guardarPoliza", { polizaId }, { feature: "guardar-poliza" });
  *   return { error: "Error al guardar" };
  * }
  * ```
+ *
+ * @param tags Etiquetas de Sentry para poder filtrar/agrupar el error (ej. { feature: "guardar-cliente" }).
  */
 export async function captureError(
 	error: unknown,
 	context?: string,
-	extra?: Record<string, unknown>
+	extra?: Record<string, unknown>,
+	tags?: Record<string, string>
 ) {
 	// Identificar usuario en el scope del error
 	try {
@@ -40,6 +43,7 @@ export async function captureError(
 					},
 				}
 			: {}),
+		...(tags ? { tags } : {}),
 	});
 
 	// Asegurar que el evento se envíe antes de que la función serverless termine
