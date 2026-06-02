@@ -42,6 +42,7 @@ type Filters = {
 	compania_id: string;
 	estado: string;
 	responsable_id: string;
+	categoria_id: string;
 };
 
 const DEFAULT_FILTERS: Filters = {
@@ -49,6 +50,7 @@ const DEFAULT_FILTERS: Filters = {
 	compania_id: ALL,
 	estado: ALL,
 	responsable_id: ALL,
+	categoria_id: ALL,
 };
 
 function SkeletonTable() {
@@ -89,6 +91,7 @@ export default function PolizasPage() {
 		ejecutivos: [],
 		companias: [],
 		estados: [],
+		categorias: [],
 	});
 	const [selectedPoliza, setSelectedPoliza] = useState<PolizaListItem | null>(null);
 	const [currentPage, setCurrentPage] = useState(1);
@@ -129,6 +132,7 @@ export default function PolizasPage() {
 			compania_id: filters.compania_id !== ALL ? filters.compania_id : undefined,
 			estado: filters.estado !== ALL ? filters.estado : undefined,
 			responsable_id: filters.responsable_id !== ALL ? filters.responsable_id : undefined,
+			categoria_id: filters.categoria_id !== ALL ? filters.categoria_id : undefined,
 		}).then((result) => {
 			if (cancelled) return;
 			if (result.success) {
@@ -139,7 +143,7 @@ export default function PolizasPage() {
 		});
 
 		return () => { cancelled = true; };
-	}, [debouncedSearch, filters.ramo, filters.compania_id, filters.estado, filters.responsable_id]);
+	}, [debouncedSearch, filters.ramo, filters.compania_id, filters.estado, filters.responsable_id, filters.categoria_id]);
 
 	const handlePageChange = async (page: number) => {
 		setCurrentPage(page);
@@ -154,6 +158,7 @@ export default function PolizasPage() {
 			compania_id: filters.compania_id !== ALL ? filters.compania_id : undefined,
 			estado: filters.estado !== ALL ? filters.estado : undefined,
 			responsable_id: filters.responsable_id !== ALL ? filters.responsable_id : undefined,
+			categoria_id: filters.categoria_id !== ALL ? filters.categoria_id : undefined,
 		});
 
 		if (result.success) {
@@ -179,6 +184,7 @@ export default function PolizasPage() {
 	// Labels para chips
 	const companiaLabel = filtrosData.companias.find((c) => c.id === filters.compania_id)?.nombre ?? "";
 	const ejecutivoLabel = filtrosData.ejecutivos.find((e) => e.id === filters.responsable_id)?.nombre ?? "";
+	const categoriaLabel = filtrosData.categorias.find((c) => c.id === filters.categoria_id)?.nombre ?? "";
 
 	return (
 		<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-10 space-y-5">
@@ -303,6 +309,21 @@ export default function PolizasPage() {
 							</SelectContent>
 						</Select>
 
+						<Select
+							value={filters.categoria_id}
+							onValueChange={(v) => setFilters((prev) => ({ ...prev, categoria_id: v }))}
+						>
+							<SelectTrigger size="sm" className="w-auto min-w-36">
+								<SelectValue placeholder="Categoría" />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value={ALL}>Todas las categorías</SelectItem>
+								{filtrosData.categorias.map((c) => (
+									<SelectItem key={c.id} value={c.id}>{c.nombre}</SelectItem>
+								))}
+							</SelectContent>
+						</Select>
+
 						{/* Contador de resultados */}
 						<div className="ml-auto text-xs text-muted-foreground">
 							{!isLoading && (
@@ -355,6 +376,17 @@ export default function PolizasPage() {
 									{ejecutivoLabel.length > 22 ? ejecutivoLabel.slice(0, 22) + "…" : ejecutivoLabel}
 									<button
 										onClick={() => setFilters((prev) => ({ ...prev, responsable_id: ALL }))}
+										className="ml-0.5 p-0.5 rounded hover:bg-primary/15 transition-colors"
+									>
+										<X className="h-3 w-3" />
+									</button>
+								</span>
+							)}
+							{filters.categoria_id !== ALL && (
+								<span className="inline-flex items-center gap-1 pl-2.5 pr-1 py-0.5 rounded-md text-xs font-medium bg-primary/8 text-primary border border-primary/20">
+									{categoriaLabel.length > 24 ? categoriaLabel.slice(0, 24) + "…" : categoriaLabel}
+									<button
+										onClick={() => setFilters((prev) => ({ ...prev, categoria_id: ALL }))}
 										className="ml-0.5 p-0.5 rounded hover:bg-primary/15 transition-colors"
 									>
 										<X className="h-3 w-3" />

@@ -275,6 +275,7 @@ export type ObtenerPolizasParams = {
 	compania_id?: string;
 	estado?: string;
 	responsable_id?: string;
+	categoria_id?: string;
 };
 
 export type FiltrosPolizasData = {
@@ -282,6 +283,7 @@ export type FiltrosPolizasData = {
 	ejecutivos: { id: string; nombre: string }[];
 	companias: { id: string; nombre: string }[];
 	estados: string[];
+	categorias: { id: string; nombre: string }[];
 };
 
 /** Mapea una fila de póliza + mapas de clientes a PolizaListItem */
@@ -363,7 +365,7 @@ function mapPolizaToListItem(
 }
 
 export async function obtenerPolizas(params: ObtenerPolizasParams = {}) {
-	const { page = 1, pageSize = 20, search, ramo, compania_id, estado, responsable_id } = params;
+	const { page = 1, pageSize = 20, search, ramo, compania_id, estado, responsable_id, categoria_id } = params;
 	const supabase = await createClient();
 
 	try {
@@ -430,6 +432,7 @@ export async function obtenerPolizas(params: ObtenerPolizasParams = {}) {
 		if (compania_id) query = query.eq("compania_aseguradora_id", compania_id);
 		if (estado) query = query.eq("estado", estado);
 		if (responsable_id) query = query.eq("responsable_id", responsable_id);
+		if (categoria_id) query = query.eq("categoria_id", categoria_id);
 
 		if (search?.trim()) {
 			const sq = search.trim().substring(0, 100);
@@ -492,19 +495,23 @@ export async function obtenerFiltrosPolizas() {
 
 		const scope = await getDataScopeFilter();
 
-		// Ramos y compañías: derivados de las pólizas visibles (scoped, solo 2 columnas).
-		let metaQuery = supabase.from("polizas").select("ramo, compania_aseguradora_id");
+		// Ramos, compañías y categorías: derivados de las pólizas visibles (scoped, solo columnas necesarias).
+		let metaQuery = supabase.from("polizas").select("ramo, compania_aseguradora_id, categoria_id");
 		if (scope.needsScoping) metaQuery = metaQuery.in("responsable_id", scope.teamMemberIds);
 		const { data: meta } = await metaQuery;
 
 		const ramos = [...new Set(meta?.map((p) => p.ramo).filter(Boolean) ?? [])].sort() as string[];
 		const companiaIds = [...new Set(meta?.map((p) => p.compania_aseguradora_id).filter(Boolean) ?? [])] as string[];
+		const categoriaIds = [...new Set(meta?.map((p) => p.categoria_id).filter(Boolean) ?? [])] as string[];
 
 		// Ejecutivos: roster completo de ejecutivos activos (no solo los que ya tienen
 		// pólizas), respetando scoping de equipo. Ver utils/ejecutivos.ts.
-		const [ejecutivos, companiasRes] = await Promise.all([
+		const [ejecutivos, companiasRes, categoriasRes] = await Promise.all([
 			obtenerEjecutivosFiltro(scope),
 			supabase.from("companias_aseguradoras").select("id, nombre").in("id", companiaIds).order("nombre"),
+			categoriaIds.length > 0
+				? supabase.from("categorias").select("id, nombre").in("id", categoriaIds).order("nombre")
+				: Promise.resolve({ data: [] as { id: string; nombre: string }[] }),
 		]);
 
 		const data: FiltrosPolizasData = {
@@ -512,6 +519,7 @@ export async function obtenerFiltrosPolizas() {
 			ejecutivos: ejecutivos.map((e) => ({ id: e.id, nombre: e.full_name })),
 			companias: companiasRes.data?.map((c) => ({ id: c.id, nombre: c.nombre })) ?? [],
 			estados: ["pendiente", "activa", "vencida", "cancelada", "renovada", "anulada"],
+			categorias: categoriasRes.data?.map((c) => ({ id: c.id, nombre: c.nombre })) ?? [],
 		};
 
 		return { success: true, data };
