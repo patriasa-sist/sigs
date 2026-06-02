@@ -6,13 +6,7 @@ import { Search, Package, Building2, Layers } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
 import {
   Table,
   TableBody,
@@ -91,6 +85,31 @@ export function ProductosTable({
     });
   }, [data, search, showInactive, filterAseguradora, filterRamo]);
 
+  // Filter options with an "all" sentinel as the first entry, formatted "código - nombre"
+  const aseguradoraFilterOptions = useMemo<ComboboxOption[]>(
+    () => [
+      { value: "all", label: "Todas las aseguradoras" },
+      ...aseguradoras.map((a) => ({
+        value: a.id,
+        label: a.codigo != null ? `${a.codigo} - ${a.nombre}` : a.nombre,
+      })),
+    ],
+    [aseguradoras]
+  );
+
+  const ramoFilterOptions = useMemo<ComboboxOption[]>(
+    () => [
+      { value: "all", label: "Todos los ramos" },
+      ...ramos
+        .filter((r) => !r.es_ramo_padre)
+        .map((r) => ({
+          value: r.id.toString(),
+          label: r.codigo ? `${r.codigo} - ${r.nombre}` : r.nombre,
+        })),
+    ],
+    [ramos]
+  );
+
   const handleRefresh = () => {
     router.refresh();
   };
@@ -127,43 +146,30 @@ export function ProductosTable({
         </div>
 
         <div className="flex flex-col sm:flex-row gap-4">
-          <div className="flex items-center gap-2">
-            <Building2 className="h-4 w-4 text-muted-foreground" />
-            <Select
+          <div className="flex items-center gap-2 sm:flex-1">
+            <Building2 className="h-4 w-4 shrink-0 text-muted-foreground" />
+            <Combobox
+              options={aseguradoraFilterOptions}
               value={filterAseguradora}
-              onValueChange={setFilterAseguradora}
-            >
-              <SelectTrigger className="w-full sm:w-[200px]">
-                <SelectValue placeholder="Todas las aseguradoras" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas las aseguradoras</SelectItem>
-                {aseguradoras.map((a) => (
-                  <SelectItem key={a.id} value={a.id}>
-                    {a.codigo != null ? `${a.codigo} - ${a.nombre}` : a.nombre}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              onChange={setFilterAseguradora}
+              placeholder="Todas las aseguradoras"
+              searchPlaceholder="Buscar aseguradora..."
+              emptyText="No se encontró la aseguradora."
+              className="flex-1"
+            />
           </div>
 
-          <div className="flex items-center gap-2">
-            <Layers className="h-4 w-4 text-muted-foreground" />
-            <Select value={filterRamo} onValueChange={setFilterRamo}>
-              <SelectTrigger className="w-full sm:w-[200px]">
-                <SelectValue placeholder="Todos los ramos" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos los ramos</SelectItem>
-                {ramos
-                  .filter((r) => !r.es_ramo_padre)
-                  .map((r) => (
-                    <SelectItem key={r.id} value={r.id.toString()}>
-                      {r.codigo ? `${r.codigo} - ${r.nombre}` : r.nombre}
-                    </SelectItem>
-                  ))}
-              </SelectContent>
-            </Select>
+          <div className="flex items-center gap-2 sm:flex-1">
+            <Layers className="h-4 w-4 shrink-0 text-muted-foreground" />
+            <Combobox
+              options={ramoFilterOptions}
+              value={filterRamo}
+              onChange={setFilterRamo}
+              placeholder="Todos los ramos"
+              searchPlaceholder="Buscar ramo..."
+              emptyText="No se encontró el ramo."
+              className="flex-1"
+            />
           </div>
         </div>
       </div>
@@ -174,36 +180,40 @@ export function ProductosTable({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Código</TableHead>
-                <TableHead>Nombre</TableHead>
-                <TableHead className="hidden lg:table-cell">
+                <TableHead className="w-[72px]">Código</TableHead>
+                <TableHead className="w-[240px] whitespace-normal">
+                  Nombre
+                </TableHead>
+                <TableHead className="hidden lg:table-cell w-[280px] whitespace-normal">
                   Aseguradora
                 </TableHead>
-                <TableHead className="hidden md:table-cell">Ramo</TableHead>
-                <TableHead className="hidden xl:table-cell text-right">
+                <TableHead className="hidden md:table-cell w-[220px] whitespace-normal">
+                  Ramo
+                </TableHead>
+                <TableHead className="hidden xl:table-cell w-[72px] text-right">
                   Factor Contado
                 </TableHead>
-                <TableHead className="hidden xl:table-cell text-right">
+                <TableHead className="hidden xl:table-cell w-[72px] text-right">
                   Factor Crédito
                 </TableHead>
-                <TableHead className="text-right">Comisión</TableHead>
-                <TableHead>Estado</TableHead>
-                <TableHead className="text-right">Acciones</TableHead>
+                <TableHead className="w-[84px] text-right">Comisión</TableHead>
+                <TableHead className="w-[96px]">Estado</TableHead>
+                <TableHead className="w-[88px] text-right">Acciones</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredData.map((producto) => (
-                <TableRow key={producto.id}>
+                <TableRow key={producto.id} className="align-top">
                   <TableCell>
                     <code className="text-xs bg-muted px-2 py-1 rounded">
                       {producto.codigo_producto}
                     </code>
                   </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Package className="h-4 w-4 text-muted-foreground hidden sm:block" />
+                  <TableCell className="whitespace-normal">
+                    <div className="flex items-start gap-2">
+                      <Package className="h-4 w-4 mt-0.5 shrink-0 text-muted-foreground hidden sm:block" />
                       <div>
-                        <span className="font-medium block">
+                        <span className="font-medium block leading-snug">
                           {producto.nombre_producto}
                         </span>
                         <span className="text-xs text-muted-foreground lg:hidden">
@@ -212,13 +222,13 @@ export function ProductosTable({
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell className="hidden lg:table-cell">
-                    <span className="text-sm">
+                  <TableCell className="hidden lg:table-cell whitespace-normal">
+                    <span className="text-sm leading-snug">
                       {producto.companias_aseguradoras?.nombre || "-"}
                     </span>
                   </TableCell>
-                  <TableCell className="hidden md:table-cell">
-                    <span className="text-sm text-muted-foreground">
+                  <TableCell className="hidden md:table-cell whitespace-normal">
+                    <span className="text-sm text-muted-foreground leading-snug">
                       {producto.tipos_seguros?.nombre || "-"}
                     </span>
                   </TableCell>

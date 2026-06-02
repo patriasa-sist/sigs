@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -18,7 +18,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
 import { crearProducto, actualizarProducto } from "@/app/admin/seguros/productos/actions";
 import { obtenerAseguradoras } from "@/app/admin/seguros/aseguradoras/actions";
 import { obtenerRamos } from "@/app/admin/seguros/ramos/actions";
@@ -76,6 +76,25 @@ export function ProductoFormDialog({
 			regional: producto?.regional || "",
 		},
 	});
+
+	// Build combobox options with "código - nombre" so users can search/select by code
+	const aseguradoraOptions = useMemo<ComboboxOption[]>(
+		() =>
+			aseguradoras.map((a) => ({
+				value: a.id,
+				label: a.codigo != null ? `${a.codigo} - ${a.nombre}` : a.nombre,
+			})),
+		[aseguradoras]
+	);
+
+	const ramoOptions = useMemo<ComboboxOption[]>(
+		() =>
+			ramos.map((r) => ({
+				value: r.id.toString(),
+				label: r.codigo ? `${r.codigo} - ${r.nombre}` : r.nombre,
+			})),
+		[ramos]
+	);
 
 	// Load aseguradoras and ramos when dialog opens
 	useEffect(() => {
@@ -176,7 +195,7 @@ export function ProductoFormDialog({
 					</Button>
 				)}
 			</DialogTrigger>
-			<DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+			<DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
 				<DialogHeader>
 					<DialogTitle>{isEditing ? "Editar Producto" : "Nuevo Producto"}</DialogTitle>
 					<DialogDescription>
@@ -195,26 +214,17 @@ export function ProductoFormDialog({
 								render={({ field }) => (
 									<FormItem>
 										<FormLabel>Aseguradora *</FormLabel>
-										<Select
-											onValueChange={field.onChange}
-											value={field.value}
-											disabled={isSubmitting || loadingData}
-										>
-											<FormControl>
-												<SelectTrigger>
-													<SelectValue
-														placeholder={loadingData ? "Cargando..." : "Seleccionar"}
-													/>
-												</SelectTrigger>
-											</FormControl>
-											<SelectContent>
-												{aseguradoras.map((a) => (
-													<SelectItem key={a.id} value={a.id}>
-														{a.nombre}
-													</SelectItem>
-												))}
-											</SelectContent>
-										</Select>
+										<FormControl>
+											<Combobox
+												options={aseguradoraOptions}
+												value={field.value}
+												onChange={field.onChange}
+												disabled={isSubmitting || loadingData}
+												placeholder={loadingData ? "Cargando..." : "Seleccionar"}
+												searchPlaceholder="Buscar aseguradora..."
+												emptyText="No se encontró la aseguradora."
+											/>
+										</FormControl>
 										<FormMessage />
 									</FormItem>
 								)}
@@ -226,26 +236,17 @@ export function ProductoFormDialog({
 								render={({ field }) => (
 									<FormItem>
 										<FormLabel>Ramo *</FormLabel>
-										<Select
-											onValueChange={field.onChange}
-											value={field.value}
-											disabled={isSubmitting || loadingData}
-										>
-											<FormControl>
-												<SelectTrigger>
-													<SelectValue
-														placeholder={loadingData ? "Cargando..." : "Seleccionar"}
-													/>
-												</SelectTrigger>
-											</FormControl>
-											<SelectContent>
-												{ramos.map((r) => (
-													<SelectItem key={r.id} value={r.id.toString()}>
-														{r.nombre} ({r.codigo})
-													</SelectItem>
-												))}
-											</SelectContent>
-										</Select>
+										<FormControl>
+											<Combobox
+												options={ramoOptions}
+												value={field.value}
+												onChange={field.onChange}
+												disabled={isSubmitting || loadingData}
+												placeholder={loadingData ? "Cargando..." : "Seleccionar"}
+												searchPlaceholder="Buscar ramo..."
+												emptyText="No se encontró el ramo."
+											/>
+										</FormControl>
 										<FormMessage />
 									</FormItem>
 								)}
@@ -312,6 +313,7 @@ export function ProductoFormDialog({
 												type="number"
 												step="0.01"
 												placeholder="35"
+												className="min-w-0"
 												{...field}
 												disabled={isSubmitting}
 											/>
@@ -333,6 +335,7 @@ export function ProductoFormDialog({
 												type="number"
 												step="0.01"
 												placeholder="40"
+												className="min-w-0"
 												{...field}
 												disabled={isSubmitting}
 											/>
@@ -354,6 +357,7 @@ export function ProductoFormDialog({
 												type="number"
 												step="0.1"
 												placeholder="15"
+												className="min-w-0"
 												{...field}
 												disabled={isSubmitting}
 											/>
