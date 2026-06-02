@@ -12,12 +12,14 @@ interface DocumentosInicialesProps {
 	documentos: DocumentoSiniestro[];
 	onAgregarDocumento: (documento: DocumentoSiniestro) => void;
 	onEliminarDocumento: (index: number) => void;
+	onUploadingChange?: (uploading: boolean) => void;
 }
 
 export default function DocumentosInicialesStep({
 	documentos,
 	onAgregarDocumento,
 	onEliminarDocumento,
+	onUploadingChange,
 }: DocumentosInicialesProps) {
 	const [tipoSeleccionado, setTipoSeleccionado] = useState<TipoDocumentoSiniestro>(TIPOS_DOCUMENTO_SINIESTRO[0]);
 
@@ -151,6 +153,7 @@ export default function DocumentosInicialesStep({
 								mostrarSelectorTipo={false}
 								maxFiles={50}
 								maxSizeMB={20}
+								onUploadingChange={onUploadingChange}
 							/>
 
 							{/* Mostrar documentos ya agregados de este tipo */}

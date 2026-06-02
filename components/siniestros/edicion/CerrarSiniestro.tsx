@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,6 +19,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Lock, Upload, X, AlertTriangle, Loader2, FileText } from "lucide-react";
 import { cerrarSiniestro, generarWhatsAppCierreSiniestro } from "@/app/siniestros/actions";
+import { createClient } from "@/utils/supabase/client";
+import { generateTempStoragePath } from "@/utils/fileUpload";
 import { toast } from "sonner";
 import {
 	validarCierreRechazo,
@@ -54,6 +56,27 @@ export default function CerrarSiniestro({ siniestroId, numeroPoliza }: CerrarSin
 	const [errores, setErrores] = useState<string[]>([]);
 	const [advertencias, setAdvertencias] = useState<string[]>([]);
 
+	// Subida client-side a Storage (evita exceder el límite de 2MB del server action)
+	const supabase = useMemo(() => createClient(), []);
+	const sessionIdRef = useRef<string>(crypto.randomUUID());
+	const [userId, setUserId] = useState<string | null>(null);
+	const [subiendoTipo, setSubiendoTipo] = useState<string | null>(null);
+
+	useEffect(() => {
+		let activo = true;
+		supabase.auth
+			.getUser()
+			.then(({ data }) => {
+				if (activo) setUserId(data.user?.id ?? null);
+			})
+			.catch(() => {
+				if (activo) setUserId(null);
+			});
+		return () => {
+			activo = false;
+		};
+	}, [supabase]);
+
 	// Estados para Rechazo
 	const [motivoRechazo, setMotivoRechazo] = useState<MotivoRechazo | "">("");
 	const [cartaRechazo, setCartaRechazo] = useState<DocumentoSiniestro | null>(null);
@@ -73,9 +96,9 @@ export default function CerrarSiniestro({ siniestroId, numeroPoliza }: CerrarSin
 	const [monedaPagado, setMonedaPagado] = useState<Moneda>("Bs");
 	// const [esPagoComercial, setEsPagoComercial] = useState(false); // REMOVIDO: Ya no se usa
 
-	// Handler de archivo
+	// Handler de archivo: sube client-side a Storage (temp/) y guarda solo la metadata
 	const handleFileUpload = useCallback(
-		(e: React.ChangeEvent<HTMLInputElement>, tipo: "carta_rechazo" | "carta_respaldo" | "archivo_uif" | "archivo_pep") => {
+		async (e: React.ChangeEvent<HTMLInputElement>, tipo: "carta_rechazo" | "carta_respaldo" | "archivo_uif" | "archivo_pep") => {
 			const file = e.target.files?.[0];
 			if (!file) return;
 
@@ -98,11 +121,33 @@ export default function CerrarSiniestro({ siniestroId, numeroPoliza }: CerrarSin
 				return;
 			}
 
+			if (!userId) {
+				setErrores(["Error de autenticación. Recargue la página e intente nuevamente."]);
+				return;
+			}
+
+			setErrores([]);
+			setSubiendoTipo(tipo);
+
+			const storagePath = generateTempStoragePath(userId, sessionIdRef.current, file.name);
+			const { error: uploadError } = await supabase.storage
+				.from("siniestros-documentos")
+				.upload(storagePath, file, { cacheControl: "3600", upsert: false });
+
+			setSubiendoTipo(null);
+
+			if (uploadError) {
+				setErrores([`Error al subir el archivo: ${uploadError.message}`]);
+				return;
+			}
+
 			const documento: DocumentoSiniestro = {
 				tipo_documento: tipo,
 				nombre_archivo: file.name,
-				file,
 				tamano_bytes: file.size,
+				archivo_url: storagePath,
+				storage_path: storagePath,
+				upload_status: "uploaded",
 			};
 
 			// Asignar según tipo
@@ -120,10 +165,8 @@ export default function CerrarSiniestro({ siniestroId, numeroPoliza }: CerrarSin
 					setArchivoPEP(documento);
 					break;
 			}
-
-			setErrores([]);
 		},
-		[]
+		[userId, supabase]
 	);
 
 	// Limpiar archivo
@@ -650,9 +693,9 @@ export default function CerrarSiniestro({ siniestroId, numeroPoliza }: CerrarSin
 					<Button variant="outline" onClick={() => setOpen(false)} disabled={loading}>
 						Cancelar
 					</Button>
-					<Button onClick={handleCerrar} disabled={loading} variant="destructive">
-						{loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-						Confirmar Cierre
+					<Button onClick={handleCerrar} disabled={loading || subiendoTipo !== null} variant="destructive">
+						{(loading || subiendoTipo !== null) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+						{subiendoTipo !== null ? "Subiendo archivo..." : "Confirmar Cierre"}
 					</Button>
 				</DialogFooter>
 			</DialogContent>

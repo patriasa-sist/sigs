@@ -73,6 +73,7 @@ export default function RegistrarSiniestroForm() {
 	});
 
 	const [guardando, setGuardando] = useState(false);
+	const [subiendoDocumentos, setSubiendoDocumentos] = useState(false);
 	const guardandoRef = useRef(false);
 	const [registroExitoso, setRegistroExitoso] = useState(false);
 	const [nuevoSiniestroId, setNuevoSiniestroId] = useState<string | null>(null);
@@ -138,6 +139,10 @@ export default function RegistrarSiniestroForm() {
 
 	const handleGuardar = async () => {
 		if (guardandoRef.current) return;
+		if (subiendoDocumentos) {
+			setGuardadoError("Espere a que terminen de subirse los documentos antes de guardar.");
+			return;
+		}
 		guardandoRef.current = true;
 		setGuardadoError(null);
 
@@ -418,6 +423,7 @@ export default function RegistrarSiniestroForm() {
 									documentos_iniciales: prev.documentos_iniciales.filter((_, i) => i !== index),
 								}))
 							}
+							onUploadingChange={setSubiendoDocumentos}
 						/>
 					)}
 
@@ -438,11 +444,16 @@ export default function RegistrarSiniestroForm() {
 								<ChevronRight className="h-4 w-4 ml-2" />
 							</Button>
 						) : (
-							<Button onClick={handleGuardar} disabled={guardando}>
+							<Button onClick={handleGuardar} disabled={guardando || subiendoDocumentos}>
 								{guardando ? (
 									<>
 										<Loader2 className="h-4 w-4 mr-2 animate-spin" />
 										Guardando...
+									</>
+								) : subiendoDocumentos ? (
+									<>
+										<Loader2 className="h-4 w-4 mr-2 animate-spin" />
+										Subiendo documentos...
 									</>
 								) : (
 									<>

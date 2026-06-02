@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,8 +12,10 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { Upload, File, X, FileText, Image, AlertCircle } from "lucide-react";
+import { Upload, File, X, FileText, Image, AlertCircle, Loader2 } from "lucide-react";
 import { TIPOS_DOCUMENTO_SINIESTRO, type DocumentoSiniestro, type TipoDocumentoSiniestro } from "@/types/siniestro";
+import { createClient } from "@/utils/supabase/client";
+import { generateTempStoragePath } from "@/utils/fileUpload";
 
 interface DocumentUploaderProps {
 	documentos: DocumentoSiniestro[];
@@ -23,7 +25,11 @@ interface DocumentUploaderProps {
 	maxSizeMB?: number;
 	tipoPreseleccionado?: TipoDocumentoSiniestro;
 	mostrarSelectorTipo?: boolean;
+	/** Notifica al padre si hay subidas en curso, para deshabilitar el guardado mientras tanto */
+	onUploadingChange?: (uploading: boolean) => void;
 }
+
+const BUCKET = "siniestros-documentos";
 
 const ACCEPTED_FILE_TYPES = {
 	"image/jpeg": [".jpg", ".jpeg"],
@@ -33,6 +39,13 @@ const ACCEPTED_FILE_TYPES = {
 	"application/vnd.openxmlformats-officedocument.wordprocessingml.document": [".docx"],
 };
 
+// Item en proceso de subida (solo para feedback visual local)
+interface SubiendoItem {
+	id: string;
+	nombre_archivo: string;
+	tamano_bytes: number;
+}
+
 export default function DocumentUploader({
 	documentos,
 	onAgregarDocumento,
@@ -41,48 +54,111 @@ export default function DocumentUploader({
 	maxSizeMB = 20,
 	tipoPreseleccionado,
 	mostrarSelectorTipo = true,
+	onUploadingChange,
 }: DocumentUploaderProps) {
 	const [selectedTipo, setSelectedTipo] = useState<TipoDocumentoSiniestro>("fotografía VA");
 	const [error, setError] = useState<string | null>(null);
+	const [subiendo, setSubiendo] = useState<SubiendoItem[]>([]);
+	const [userId, setUserId] = useState<string | null>(null);
+
+	const supabase = useMemo(() => createClient(), []);
+	const sessionIdRef = useRef<string>(crypto.randomUUID());
 
 	// Usar tipo preseleccionado si se proporciona, sino usar el estado interno
 	const tipoActual = tipoPreseleccionado || selectedTipo;
 
+	// Obtener el usuario una vez (necesario para construir la ruta temporal en Storage)
+	useEffect(() => {
+		let activo = true;
+		supabase.auth
+			.getUser()
+			.then(({ data }) => {
+				if (activo) setUserId(data.user?.id ?? null);
+			})
+			.catch(() => {
+				if (activo) setUserId(null);
+			});
+		return () => {
+			activo = false;
+		};
+	}, [supabase]);
+
+	// Notificar al padre cuando cambia el estado de subida
+	useEffect(() => {
+		onUploadingChange?.(subiendo.length > 0);
+	}, [subiendo.length, onUploadingChange]);
+
 	const onDrop = useCallback(
-		(acceptedFiles: File[]) => {
+		async (acceptedFiles: File[]) => {
 			setError(null);
 
-			// Validar cantidad de archivos
-			if (documentos.length + acceptedFiles.length > maxFiles) {
+			if (!userId) {
+				setError("Error de autenticación. Recargue la página e intente nuevamente.");
+				return;
+			}
+
+			// Validar cantidad de archivos (incluye los ya agregados y los en curso)
+			if (documentos.length + subiendo.length + acceptedFiles.length > maxFiles) {
 				setError(`Solo se pueden subir máximo ${maxFiles} documentos`);
 				return;
 			}
 
-			// Validar y agregar cada archivo
-			acceptedFiles.forEach((file) => {
-				// Validar tamaño
+			// Validar archivos primero
+			const archivosValidos: File[] = [];
+			for (const file of acceptedFiles) {
 				if (file.size > maxSizeMB * 1024 * 1024) {
 					setError(`El archivo "${file.name}" excede el tamaño máximo de ${maxSizeMB}MB`);
-					return;
+					continue;
 				}
+				archivosValidos.push(file);
+			}
 
-				const documento: DocumentoSiniestro = {
-					tipo_documento: tipoActual,
-					nombre_archivo: file.name,
-					file: file,
-					tamano_bytes: file.size,
-				};
+			if (archivosValidos.length === 0) return;
 
-				onAgregarDocumento(documento);
-			});
+			// Subir cada archivo client-side a Storage (temp/), capturando el tipo actual
+			const tipoParaEstosArchivos = tipoActual;
+			await Promise.all(
+				archivosValidos.map(async (file) => {
+					const itemId = crypto.randomUUID();
+					setSubiendo((prev) => [
+						...prev,
+						{ id: itemId, nombre_archivo: file.name, tamano_bytes: file.size },
+					]);
+
+					const storagePath = generateTempStoragePath(userId, sessionIdRef.current, file.name);
+
+					const { error: uploadError } = await supabase.storage.from(BUCKET).upload(storagePath, file, {
+						cacheControl: "3600",
+						upsert: false,
+					});
+
+					setSubiendo((prev) => prev.filter((s) => s.id !== itemId));
+
+					if (uploadError) {
+						setError(`Error al subir "${file.name}": ${uploadError.message}`);
+						return;
+					}
+
+					// Solo se agrega al padre el documento ya subido (metadata, sin el blob)
+					onAgregarDocumento({
+						tipo_documento: tipoParaEstosArchivos,
+						nombre_archivo: file.name,
+						tamano_bytes: file.size,
+						archivo_url: storagePath,
+						storage_path: storagePath,
+						upload_status: "uploaded",
+					});
+				})
+			);
 		},
-		[documentos.length, maxFiles, maxSizeMB, tipoActual, onAgregarDocumento]
+		[documentos.length, subiendo.length, maxFiles, maxSizeMB, tipoActual, onAgregarDocumento, supabase, userId]
 	);
 
 	const { getRootProps, getInputProps, isDragActive } = useDropzone({
 		onDrop,
 		accept: ACCEPTED_FILE_TYPES,
 		multiple: true,
+		disabled: !userId,
 	});
 
 	const formatFileSize = (bytes: number): string => {
@@ -132,10 +208,12 @@ export default function DocumentUploader({
 			{/* Zona de drag & drop */}
 			<Card
 				{...getRootProps()}
-				className={`border-2 border-dashed cursor-pointer transition-colors ${
-					isDragActive
-						? "border-primary bg-primary/5"
-						: "border-muted-foreground/25 hover:border-primary/50"
+				className={`border-2 border-dashed transition-colors ${
+					!userId
+						? "cursor-not-allowed opacity-60"
+						: isDragActive
+							? "border-primary bg-primary/5 cursor-pointer"
+							: "border-muted-foreground/25 hover:border-primary/50 cursor-pointer"
 				}`}
 			>
 				<CardContent className="flex flex-col items-center justify-center py-8">
@@ -144,7 +222,11 @@ export default function DocumentUploader({
 						className={`h-12 w-12 mb-4 ${isDragActive ? "text-primary" : "text-muted-foreground"}`}
 					/>
 					<p className="text-center text-sm font-medium mb-1">
-						{isDragActive ? "Suelta los archivos aquí" : "Arrastra archivos o haz click para seleccionar"}
+						{!userId
+							? "Cargando..."
+							: isDragActive
+								? "Suelta los archivos aquí"
+								: "Arrastra archivos o haz click para seleccionar"}
 					</p>
 					<p className="text-center text-xs text-muted-foreground">
 						PDF, JPG, PNG, DOC, DOCX (máx. {maxSizeMB}MB por archivo)
@@ -160,7 +242,26 @@ export default function DocumentUploader({
 				</div>
 			)}
 
-			{/* Lista de documentos agregados */}
+			{/* Archivos en proceso de subida */}
+			{subiendo.length > 0 && (
+				<div className="space-y-2">
+					{subiendo.map((item) => (
+						<Card key={item.id}>
+							<CardContent className="p-3">
+								<div className="flex items-center gap-3">
+									<Loader2 className="h-5 w-5 text-primary animate-spin flex-shrink-0" />
+									<div className="flex-1 min-w-0">
+										<p className="text-sm font-medium truncate">{item.nombre_archivo}</p>
+										<span className="text-xs text-primary font-medium">Subiendo...</span>
+									</div>
+								</div>
+							</CardContent>
+						</Card>
+					))}
+				</div>
+			)}
+
+			{/* Lista de documentos agregados (ya subidos) */}
 			{documentos.length > 0 && (
 				<div className="space-y-2">
 					<p className="text-sm font-medium">

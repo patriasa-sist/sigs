@@ -5,6 +5,9 @@
 import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
 import { checkPermission, getDataScopeFilter } from "@/utils/auth/helpers";
+import { captureError } from "@/utils/sentry";
+import { generateFinalStoragePath } from "@/utils/fileUpload";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import type {
 	RegistroSiniestroFormState,
 	GuardarSiniestroResponse,
@@ -138,6 +141,39 @@ export async function obtenerSiniestros(): Promise<ObtenerSiniestrosResponse> {
 }
 
 /**
+ * Mueve un documento ya subido client-side (en temp/) a su ruta final {siniestroId}/...
+ * y devuelve la ruta a registrar en BD.
+ *
+ * Best-effort: si el move falla (p.ej. aún no existe la policy de UPDATE en el bucket),
+ * se conserva y registra la ruta temporal, que sigue siendo legible y válida.
+ * Devuelve null si el documento no tiene storage_path (no llegó a subirse).
+ */
+async function moverDocSiniestroAStorageFinal(
+	supabase: SupabaseClient,
+	siniestroId: string,
+	doc: DocumentoSiniestro,
+	prefijoTipo?: string
+): Promise<string | null> {
+	const tempPath = doc.storage_path;
+	if (!tempPath) return null;
+
+	const nombreFinal = prefijoTipo ? `${prefijoTipo}-${doc.nombre_archivo}` : doc.nombre_archivo;
+	const finalPath = generateFinalStoragePath(siniestroId, nombreFinal);
+
+	let usedPath = finalPath;
+	const { error: moveError } = await supabase.storage
+		.from("siniestros-documentos")
+		.move(tempPath, finalPath);
+
+	if (moveError) {
+		console.error("[DOCS] Error moviendo documento de siniestro, usando ruta temporal:", moveError);
+		usedPath = tempPath;
+	}
+
+	return usedPath;
+}
+
+/**
  * Guardar nuevo siniestro (4 pasos)
  */
 export async function guardarSiniestro(formState: RegistroSiniestroFormState): Promise<GuardarSiniestroResponse> {
@@ -210,40 +246,22 @@ export async function guardarSiniestro(formState: RegistroSiniestroFormState): P
 			});
 		}
 
-		// 4. Subir documentos iniciales
-		if (formState.documentos_iniciales.length > 0) {
-			for (const doc of formState.documentos_iniciales) {
-				if (!doc.file) continue;
+		// 4. Registrar documentos iniciales (ya subidos client-side a Storage en temp/)
+		for (const doc of formState.documentos_iniciales) {
+			const usedPath = await moverDocSiniestroAStorageFinal(supabase, siniestro.id, doc);
+			if (!usedPath) continue; // Documento sin subir, se omite
 
-				// Sanitizar nombre de archivo
-				const timestamp = Date.now();
-				const sanitizedName = doc.nombre_archivo
-					.normalize("NFD")
-					.replace(/[\u0300-\u036f]/g, "")
-					.replace(/[^a-zA-Z0-9.-]/g, "_")
-					.replace(/_+/g, "_")
-					.toLowerCase();
+			const { error: docError } = await supabase.from("siniestros_documentos").insert({
+				siniestro_id: siniestro.id,
+				tipo_documento: doc.tipo_documento,
+				nombre_archivo: doc.nombre_archivo,
+				archivo_url: usedPath,
+				tamano_bytes: doc.tamano_bytes ?? null,
+			});
 
-				const storagePath = `${siniestro.id}/${timestamp}-${sanitizedName}`;
-
-				// Upload a Storage
-				const { data: uploadData, error: uploadError } = await supabase.storage
-					.from("siniestros-documentos")
-					.upload(storagePath, doc.file);
-
-				if (uploadError) {
-					console.error(`Error uploading ${doc.nombre_archivo}:`, uploadError);
-					continue; // Continuar con siguiente documento
-				}
-
-				// Insertar metadata en BD
-				await supabase.from("siniestros_documentos").insert({
-					siniestro_id: siniestro.id,
-					tipo_documento: doc.tipo_documento,
-					nombre_archivo: doc.nombre_archivo,
-					archivo_url: uploadData.path,
-					tamano_bytes: doc.file.size,
-				});
+			if (docError) {
+				console.error(`Error registrando documento ${doc.nombre_archivo}:`, docError);
+				// Best-effort: no abortar el registro del siniestro por un documento
 			}
 		}
 
@@ -255,6 +273,10 @@ export async function guardarSiniestro(formState: RegistroSiniestroFormState): P
 		};
 	} catch (error) {
 		console.error("Error guardando siniestro:", error);
+		await captureError(error, "guardarSiniestro", {
+			poliza_id: formState.poliza_seleccionada?.id,
+			num_documentos: formState.documentos_iniciales?.length ?? 0,
+		}, { feature: "siniestros" });
 		return {
 			success: false,
 			error: error instanceof Error ? error.message : "Error desconocido",
@@ -547,28 +569,9 @@ export async function agregarDocumentosSiniestro(
 		const documentosIds: string[] = [];
 
 		for (const doc of documentos) {
-			if (!doc.file) continue;
-
-			// Sanitizar nombre de archivo
-			const timestamp = Date.now();
-			const sanitizedName = doc.nombre_archivo
-				.normalize("NFD")
-				.replace(/[\u0300-\u036f]/g, "")
-				.replace(/[^a-zA-Z0-9.-]/g, "_")
-				.replace(/_+/g, "_")
-				.toLowerCase();
-
-			const storagePath = `${siniestroId}/${timestamp}-${sanitizedName}`;
-
-			// Upload a Storage
-			const { data: uploadData, error: uploadError } = await supabase.storage
-				.from("siniestros-documentos")
-				.upload(storagePath, doc.file);
-
-			if (uploadError) {
-				console.error(`Error uploading ${doc.nombre_archivo}:`, uploadError);
-				continue;
-			}
+			// Mover el documento ya subido client-side (temp/) a su ruta final
+			const usedPath = await moverDocSiniestroAStorageFinal(supabase, siniestroId, doc);
+			if (!usedPath) continue; // Documento sin subir, se omite
 
 			// Insertar metadata en BD
 			const { data: docData, error: docError } = await supabase
@@ -577,8 +580,8 @@ export async function agregarDocumentosSiniestro(
 					siniestro_id: siniestroId,
 					tipo_documento: doc.tipo_documento,
 					nombre_archivo: doc.nombre_archivo,
-					archivo_url: uploadData.path,
-					tamano_bytes: doc.file.size,
+					archivo_url: usedPath,
+					tamano_bytes: doc.tamano_bytes ?? null,
 				})
 				.select()
 				.single();
@@ -610,6 +613,10 @@ export async function agregarDocumentosSiniestro(
 		};
 	} catch (error) {
 		console.error("Error agregando documentos:", error);
+		await captureError(error, "agregarDocumentosSiniestro", {
+			siniestro_id: siniestroId,
+			num_documentos: documentos?.length ?? 0,
+		}, { feature: "siniestros" });
 		return {
 			success: false,
 			error: error instanceof Error ? error.message : "Error desconocido",
@@ -643,61 +650,46 @@ export async function cerrarSiniestro(
 			updateData.motivo_cierre_tipo = "rechazo";
 			updateData.motivo_rechazo = datosCierre.motivo_rechazo;
 
-			// Subir carta de rechazo
-			if (datosCierre.carta_rechazo.file) {
-				const timestamp = Date.now();
-				const sanitizedName = datosCierre.carta_rechazo.nombre_archivo
-					.normalize("NFD")
-					.replace(/[\u0300-\u036f]/g, "")
-					.replace(/[^a-zA-Z0-9.-]/g, "_")
-					.toLowerCase();
-
-				const storagePath = `${siniestroId}/${timestamp}-carta_rechazo-${sanitizedName}`;
-
-				const { data: uploadData, error: uploadError } = await supabase.storage
-					.from("siniestros-documentos")
-					.upload(storagePath, datosCierre.carta_rechazo.file);
-
-				if (uploadError) throw uploadError;
-
-				// Insertar metadata
-				await supabase.from("siniestros_documentos").insert({
-					siniestro_id: siniestroId,
-					tipo_documento: "carta_rechazo",
-					nombre_archivo: datosCierre.carta_rechazo.nombre_archivo,
-					archivo_url: uploadData.path,
-					tamano_bytes: datosCierre.carta_rechazo.file.size,
-				});
+			// Registrar carta de rechazo (ya subida client-side a temp/)
+			{
+				const usedPath = await moverDocSiniestroAStorageFinal(
+					supabase,
+					siniestroId,
+					datosCierre.carta_rechazo,
+					"carta_rechazo"
+				);
+				if (usedPath) {
+					await supabase.from("siniestros_documentos").insert({
+						siniestro_id: siniestroId,
+						tipo_documento: "carta_rechazo",
+						nombre_archivo: datosCierre.carta_rechazo.nombre_archivo,
+						archivo_url: usedPath,
+						tamano_bytes: datosCierre.carta_rechazo.tamano_bytes ?? null,
+					});
+				}
 			}
 		} else if (datosCierre.tipo === "declinacion") {
 			updateData.estado = "declinado";
 			updateData.motivo_cierre_tipo = "declinacion";
 			updateData.motivo_declinacion = datosCierre.motivo_declinacion;
 
-			// Subir carta de respaldo
-			if (datosCierre.carta_respaldo.file) {
-				const timestamp = Date.now();
-				const sanitizedName = datosCierre.carta_respaldo.nombre_archivo
-					.normalize("NFD")
-					.replace(/[\u0300-\u036f]/g, "")
-					.replace(/[^a-zA-Z0-9.-]/g, "_")
-					.toLowerCase();
-
-				const storagePath = `${siniestroId}/${timestamp}-carta_respaldo-${sanitizedName}`;
-
-				const { data: uploadData, error: uploadError } = await supabase.storage
-					.from("siniestros-documentos")
-					.upload(storagePath, datosCierre.carta_respaldo.file);
-
-				if (uploadError) throw uploadError;
-
-				await supabase.from("siniestros_documentos").insert({
-					siniestro_id: siniestroId,
-					tipo_documento: "carta_respaldo",
-					nombre_archivo: datosCierre.carta_respaldo.nombre_archivo,
-					archivo_url: uploadData.path,
-					tamano_bytes: datosCierre.carta_respaldo.file.size,
-				});
+			// Registrar carta de respaldo (ya subida client-side a temp/)
+			{
+				const usedPath = await moverDocSiniestroAStorageFinal(
+					supabase,
+					siniestroId,
+					datosCierre.carta_respaldo,
+					"carta_respaldo"
+				);
+				if (usedPath) {
+					await supabase.from("siniestros_documentos").insert({
+						siniestro_id: siniestroId,
+						tipo_documento: "carta_respaldo",
+						nombre_archivo: datosCierre.carta_respaldo.nombre_archivo,
+						archivo_url: usedPath,
+						tamano_bytes: datosCierre.carta_respaldo.tamano_bytes ?? null,
+					});
+				}
 			}
 		} else if (datosCierre.tipo === "indemnizacion") {
 			updateData.estado = "concluido";
@@ -710,36 +702,22 @@ export async function cerrarSiniestro(
 			updateData.moneda_pagado = datosCierre.moneda_pagado;
 			updateData.es_pago_comercial = datosCierre.es_pago_comercial;
 
-			// Subir archivos UIF y PEP
+			// Registrar archivos UIF y PEP (ya subidos client-side a temp/)
 			const archivosObligatorios = [
 				{ doc: datosCierre.archivo_uif, tipo: "archivo_uif", prefix: "uif" },
 				{ doc: datosCierre.archivo_pep, tipo: "archivo_pep", prefix: "pep" },
 			];
 
 			for (const { doc, tipo, prefix } of archivosObligatorios) {
-				if (!doc.file) continue;
-
-				const timestamp = Date.now();
-				const sanitizedName = doc.nombre_archivo
-					.normalize("NFD")
-					.replace(/[\u0300-\u036f]/g, "")
-					.replace(/[^a-zA-Z0-9.-]/g, "_")
-					.toLowerCase();
-
-				const storagePath = `${siniestroId}/${timestamp}-${prefix}-${sanitizedName}`;
-
-				const { data: uploadData, error: uploadError } = await supabase.storage
-					.from("siniestros-documentos")
-					.upload(storagePath, doc.file);
-
-				if (uploadError) throw uploadError;
+				const usedPath = await moverDocSiniestroAStorageFinal(supabase, siniestroId, doc, prefix);
+				if (!usedPath) continue;
 
 				await supabase.from("siniestros_documentos").insert({
 					siniestro_id: siniestroId,
 					tipo_documento: tipo,
 					nombre_archivo: doc.nombre_archivo,
-					archivo_url: uploadData.path,
-					tamano_bytes: doc.file.size,
+					archivo_url: usedPath,
+					tamano_bytes: doc.tamano_bytes ?? null,
 				});
 			}
 		}
@@ -760,6 +738,10 @@ export async function cerrarSiniestro(
 		};
 	} catch (error) {
 		console.error("Error cerrando siniestro:", error);
+		await captureError(error, "cerrarSiniestro", {
+			siniestro_id: siniestroId,
+			tipo_cierre: datosCierre?.tipo,
+		}, { feature: "siniestros" });
 		return {
 			success: false,
 			error: error instanceof Error ? error.message : "Error desconocido",

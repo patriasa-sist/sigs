@@ -53,7 +53,10 @@ export type DocumentoSiniestro = {
 	tipo_documento: TipoDocumentoSiniestro;
 	nombre_archivo: string;
 	archivo_url?: string; // Solo presente en documentos ya guardados
-	file?: File; // Solo presente en nuevos documentos (antes de subir)
+	file?: File; // DEPRECADO: ya no se envía al server action (excedía el límite de 2MB). Los archivos se suben client-side a Storage.
+	storage_path?: string; // Ruta en Storage tras la subida client-side (temp/...). Es lo que viaja al server action.
+	upload_status?: "uploading" | "uploaded" | "error"; // Estado de la subida client-side
+	upload_error?: string; // Mensaje de error si la subida falló
 	tamano_bytes?: number;
 	estado?: "activo" | "descartado";
 	uploaded_at?: string;

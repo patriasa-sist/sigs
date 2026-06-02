@@ -35,6 +35,7 @@ export default function DocumentosPorTipo({
 	// Documentos temporales (para el uploader)
 	const [documentosTemporales, setDocumentosTemporales] = useState<DocumentoSiniestro[]>([]);
 	const [uploading, setUploading] = useState(false);
+	const [subiendoArchivos, setSubiendoArchivos] = useState(false);
 
 	// Agrupar documentos por tipo
 	const documentosPorTipo = useMemo(() => {
@@ -278,6 +279,7 @@ export default function DocumentosPorTipo({
 								mostrarSelectorTipo={false}
 								maxFiles={50}
 								maxSizeMB={20}
+								onUploadingChange={setSubiendoArchivos}
 							/>
 
 							{/* Botón para subir los documentos temporales */}
@@ -286,7 +288,7 @@ export default function DocumentosPorTipo({
 									<Button variant="outline" onClick={() => setDocumentosTemporales([])} disabled={uploading}>
 										Cancelar
 									</Button>
-									<Button onClick={handleSubirDocumentos} disabled={uploading}>
+									<Button onClick={handleSubirDocumentos} disabled={uploading || subiendoArchivos}>
 										{uploading ? (
 											<>
 												<Loader2 className="h-4 w-4 mr-2 animate-spin" />
