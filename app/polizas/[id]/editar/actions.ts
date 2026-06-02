@@ -1553,6 +1553,33 @@ export async function actualizarPoliza(
 			});
 		}
 
+		// 4b. Soft-delete documentos existentes que el usuario quitó durante la edición.
+		// Los documentos que se conservan llegan en formState con su `id` de BD; cualquier
+		// documento activo en BD cuyo id ya no esté presente fue removido en la UI.
+		const idsConservados = new Set(
+			formState.documentos.filter((d) => d.id).map((d) => d.id),
+		);
+
+		const { data: docsActuales } = await supabase
+			.from("polizas_documentos")
+			.select("id")
+			.eq("poliza_id", polizaId)
+			.eq("estado", "activo");
+
+		const docsRemovidos = (docsActuales || []).filter((d) => !idsConservados.has(d.id));
+
+		for (const doc of docsRemovidos) {
+			const { error: descartarError } = await supabase.rpc("descartar_documento", {
+				documento_id: doc.id,
+			});
+			if (descartarError) {
+				console.error(
+					"[actualizarPoliza] Error descartando documento removido:",
+					descartarError,
+				);
+			}
+		}
+
 		// Nota: El historial de la tabla polizas es manejado por el trigger 'trigger_historial_polizas'
 		// Pero las cuotas están en otra tabla, así que las registramos manualmente si hubo cambios
 
