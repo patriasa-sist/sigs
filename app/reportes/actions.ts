@@ -585,6 +585,8 @@ export async function exportarProduccionNuevo(
 			fin_vigencia,
 			fecha_emision_compania,
 			created_at,
+			estado,
+			fecha_validacion,
 			es_renovacion,
 			responsable_id,
 			producto_id,
@@ -631,8 +633,15 @@ export async function exportarProduccionNuevo(
 			)
 		`);
 
-		polizaQuery = polizaQuery.gte("inicio_vigencia", fechaDesde);
-		polizaQuery = polizaQuery.lte("inicio_vigencia", fechaHasta);
+		// Fecha efectiva que ubica la póliza en un periodo de reporte:
+		// - validada: fecha_validacion (cuando se habilita la gestión a otras áreas)
+		// - pendiente (sin validar): created_at (fecha de registro)
+		const desdeTs = `${fechaDesde}T00:00:00`;
+		const hastaTs = `${fechaHasta}T23:59:59`;
+		polizaQuery = polizaQuery.or(
+			`and(fecha_validacion.gte.${desdeTs},fecha_validacion.lte.${hastaTs}),` +
+				`and(fecha_validacion.is.null,created_at.gte.${desdeTs},created_at.lte.${hastaTs})`
+		);
 
 		// Data scoping: comercial/agente solo ven datos de su equipo
 		if (scope.needsScoping) {
@@ -860,6 +869,7 @@ export async function exportarProduccionNuevo(
 				fin_vigencia: string;
 				fecha_emision_compania: string;
 				created_at: string;
+				fecha_validacion: string | null;
 				es_renovacion: boolean;
 				producto?: {
 					factor_contado: number;
@@ -894,6 +904,9 @@ export async function exportarProduccionNuevo(
 					tipo_poliza: (p.es_renovacion
 						? "Renovada"
 						: "Nueva") as TipoPolizaReporte,
+					validacion: p.fecha_validacion
+						? ("Validado" as const)
+						: ("Por validar" as const),
 					cliente,
 					ci_nit: ciNit,
 					director_cartera: dc
@@ -948,6 +961,7 @@ export async function exportarProduccionNuevo(
 				numero_poliza: pol.numero_poliza,
 				numero_anexo: anexo.numero_anexo,
 				tipo_poliza: tipoAnexoMap[anexo.tipo_anexo] || anexo.tipo_anexo,
+				validacion: "Validado" as const,
 				cliente,
 				ci_nit: ciNit,
 				director_cartera: dc
@@ -1067,10 +1081,14 @@ export async function exportarComisionesDirector(
 			prima_neta,
 			comision_empresa,
 			responsable_id,
+			producto:productos_aseguradoras!producto_id (
+				porcentaje_comision
+			),
 			director_cartera:directores_cartera!director_cartera_id (
 				nombre,
 				apellidos,
-				porcentaje_comision
+				porcentaje_comision,
+				factura
 			),
 			client:clients!client_id (
 				id,
@@ -1174,6 +1192,25 @@ export async function exportarComisionesDirector(
 					? montoCuotaComision * (pctDirector / 100)
 					: null;
 
+			// % comisión del producto/compañía (informativo)
+			const porcentajeCompania =
+				poliza.producto?.porcentaje_comision != null
+					? Number(poliza.producto.porcentaje_comision) * 100
+					: null;
+
+			// Desglose fiscal sobre la comisión del director
+			const facturaDirector = dc?.factura === true; // true = presenta factura fiscal
+			const it3 = montoComisionDirector != null ? montoComisionDirector * 0.03 : null;
+			const totalImporte =
+				montoComisionDirector != null ? montoComisionDirector - (it3 ?? 0) : null;
+			const aplicaRetencion = !facturaDirector && totalImporte != null;
+			const retencionRcIva = aplicaRetencion ? totalImporte! * 0.13 : null;
+			const retencionIt = aplicaRetencion ? totalImporte! * 0.03 : null;
+			const totalComision =
+				totalImporte != null
+					? totalImporte - (retencionRcIva ?? 0) - (retencionIt ?? 0)
+					: null;
+
 			return {
 				director_cartera: dc ? `${dc.nombre} ${dc.apellidos || ""}`.trim() : "Sin director",
 				numero_poliza: poliza.numero_poliza || "N/A",
@@ -1187,9 +1224,16 @@ export async function exportarComisionesDirector(
 				estado_cuota: estadoCuota,
 				monto_cuota_pt: montoCuotaPT,
 				monto_cuota_pn: montoCuotaPN,
+				porcentaje_compania: porcentajeCompania,
 				monto_cuota_comision: montoCuotaComision,
 				porcentaje_comision_director: pctDirector,
 				monto_comision_director: montoComisionDirector,
+				it_3pct: it3,
+				total_importe: totalImporte,
+				retencion_rciva: retencionRcIva,
+				retencion_it: retencionIt,
+				total_comision: totalComision,
+				director_factura: facturaDirector,
 				moneda: poliza.moneda || "Bs",
 				fecha: estadoCuota === "pagada" ? pago.fecha_pago : pago.fecha_vencimiento,
 			};

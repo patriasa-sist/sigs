@@ -176,9 +176,15 @@ export default function ExportarComisionesDirector({
 				{ header: "N° Cuota", key: "numero_cuota", width: 10 },
 				{ header: "Monto Cuota PT", key: "monto_cuota_pt", width: 16 },
 				{ header: "Monto Cuota PN", key: "monto_cuota_pn", width: 16 },
+				{ header: "% Compañía", key: "porcentaje_compania", width: 12 },
 				{ header: "Monto Cuota Comisión", key: "monto_cuota_comision", width: 20 },
 				{ header: "% Com. Director", key: "porcentaje_comision_director", width: 15 },
 				{ header: "Monto Com. Director", key: "monto_comision_director", width: 18 },
+				{ header: "3% IT", key: "it_3pct", width: 12 },
+				{ header: "Total Importe", key: "total_importe", width: 14 },
+				{ header: "Retención RC IVA 13%", key: "retencion_rciva", width: 18 },
+				{ header: "Retención IT 3%", key: "retencion_it", width: 16 },
+				{ header: "Total Comisión", key: "total_comision", width: 15 },
 				{ header: "Moneda", key: "moneda", width: 10 },
 				{ header: "Fecha", key: "fecha", width: 14 },
 			];
@@ -207,9 +213,20 @@ export default function ExportarComisionesDirector({
 			let rowColorToggle = false;
 
 			// Green columns
-			const greenColumns = ["monto_cuota_pn", "monto_cuota_comision", "monto_comision_director"];
+			const greenColumns = [
+				"monto_cuota_pn",
+				"monto_cuota_comision",
+				"monto_comision_director",
+				"total_comision",
+			];
 			// Yellow column (director commission %)
 			const yellowColumns = ["porcentaje_comision_director"];
+			// Red columns (retenciones aplicadas cuando el director no factura)
+			const redColumns = ["retencion_rciva", "retencion_it"];
+
+			// Helper para obtener la letra de columna Excel por key (robusto al reordenar)
+			const colLetter = (key: string) =>
+				worksheet.getColumn(columns.findIndex((c) => c.key === key) + 1).letter;
 
 			rows.forEach((row) => {
 				if (row.director_cartera !== lastDirector) {
@@ -232,12 +249,52 @@ export default function ExportarComisionesDirector({
 					row.numero_cuota,
 					row.monto_cuota_pt,
 					row.monto_cuota_pn ?? "",
+					row.porcentaje_compania != null ? `${row.porcentaje_compania}%` : "",
 					row.monto_cuota_comision ?? "",
 					row.porcentaje_comision_director != null ? `${row.porcentaje_comision_director}%` : "",
 					row.monto_comision_director ?? "",
+					row.it_3pct ?? "",
+					row.total_importe ?? "",
+					row.retencion_rciva ?? "",
+					row.retencion_it ?? "",
+					row.total_comision ?? "",
 					row.moneda,
 					row.fecha ? new Date(row.fecha).toLocaleDateString("es-BO") : "",
 				]);
+
+				// Fórmulas Excel para las columnas derivadas (con resultado calculado como fallback)
+				if (row.monto_comision_director != null) {
+					const rn = excelRow.number;
+					const cMcd = `${colLetter("monto_comision_director")}${rn}`;
+					const cTi = `${colLetter("total_importe")}${rn}`;
+					const cRciva = `${colLetter("retencion_rciva")}${rn}`;
+					const cIt = `${colLetter("retencion_it")}${rn}`;
+
+					excelRow.getCell(colLetter("it_3pct")).value = {
+						formula: `${cMcd}*0.03`,
+						result: row.it_3pct ?? 0,
+					};
+					excelRow.getCell(colLetter("total_importe")).value = {
+						formula: `${cMcd}-${colLetter("it_3pct")}${rn}`,
+						result: row.total_importe ?? 0,
+					};
+					// Retenciones solo si el director NO presenta factura
+					if (!row.director_factura) {
+						excelRow.getCell(colLetter("retencion_rciva")).value = {
+							formula: `${cTi}*0.13`,
+							result: row.retencion_rciva ?? 0,
+						};
+						excelRow.getCell(colLetter("retencion_it")).value = {
+							formula: `${cTi}*0.03`,
+							result: row.retencion_it ?? 0,
+						};
+					}
+					// Total Comisión = Total Importe - retenciones (celdas vacías cuentan como 0)
+					excelRow.getCell(colLetter("total_comision")).value = {
+						formula: `${cTi}-${cRciva}-${cIt}`,
+						result: row.total_comision ?? 0,
+					};
+				}
 
 				// Fondo base: naranja para "por cobrar", verde/blanco alternado para "pagada"
 				const baseFg = esPorCobrar
@@ -270,6 +327,10 @@ export default function ExportarComisionesDirector({
 							cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFF2CC" } };
 						}
 					}
+					// Retenciones: resaltar en rojo cuando tienen valor (director sin factura)
+					if (colKey && redColumns.includes(colKey) && cell.value !== "" && cell.value != null) {
+						cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF4CCCC" } };
+					}
 				});
 			});
 
@@ -287,7 +348,17 @@ export default function ExportarComisionesDirector({
 			}
 
 			// Numeric formats
-			const numericCols = ["monto_cuota_pt", "monto_cuota_pn", "monto_cuota_comision", "monto_comision_director"];
+			const numericCols = [
+				"monto_cuota_pt",
+				"monto_cuota_pn",
+				"monto_cuota_comision",
+				"monto_comision_director",
+				"it_3pct",
+				"total_importe",
+				"retencion_rciva",
+				"retencion_it",
+				"total_comision",
+			];
 			numericCols.forEach((key) => {
 				const colIdx = columns.findIndex((c) => c.key === key) + 1;
 				if (colIdx > 0) {

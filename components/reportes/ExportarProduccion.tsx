@@ -128,6 +128,7 @@ export default function ExportarProduccion({ regionales, companias, equipos }: F
 				{ header: "N° Póliza", key: "numero_poliza", width: 15 },
 				{ header: "N° Anexo", key: "numero_anexo", width: 12 },
 				{ header: "Tipo", key: "tipo_poliza", width: 14 },
+				{ header: "Validación", key: "validacion", width: 13 },
 				{ header: "Cliente", key: "cliente", width: 30 },
 				{ header: "CI/NIT", key: "ci_nit", width: 15 },
 				{ header: "Director de Cartera", key: "director_cartera", width: 22 },

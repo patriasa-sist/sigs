@@ -66,6 +66,7 @@ export type ExportProduccionNuevoRow = {
 	numero_poliza: string;
 	numero_anexo: string | null;
 	tipo_poliza: TipoPolizaReporte;
+	validacion: "Validado" | "Por validar";
 	cliente: string;
 	ci_nit: string;
 	director_cartera: string;
@@ -123,9 +124,16 @@ export type ExportComisionesDirectorRow = {
   estado_cuota: "pagada" | "por_cobrar";
   monto_cuota_pt: number;
   monto_cuota_pn: number | null;
+  porcentaje_compania: number | null; // % comisión del producto/compañía (informativo)
   monto_cuota_comision: number | null;
   porcentaje_comision_director: number | null;
   monto_comision_director: number | null;
+  it_3pct: number | null; // 3% IT sobre monto_comision_director
+  total_importe: number | null; // monto_comision_director - it_3pct
+  retencion_rciva: number | null; // 13% sobre total_importe, solo si director no factura
+  retencion_it: number | null; // 3% sobre total_importe, solo si director no factura
+  total_comision: number | null; // total_importe - retenciones
+  director_factura: boolean; // true = presenta factura fiscal
   moneda: string;
   fecha: string; // fecha_pago si pagada, fecha_vencimiento si por cobrar
 };
