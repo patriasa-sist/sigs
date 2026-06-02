@@ -11,6 +11,7 @@
  */
 
 import { z } from "zod";
+import { DOCUMENT_TYPES } from "../clientForm";
 
 // ============================================
 // ENUMERATIONS
@@ -79,7 +80,7 @@ export const NaturalClientSchema = z.object({
 	segundo_nombre: z.string().nullable(),
 	primer_apellido: z.string().min(1, "Primer apellido requerido"),
 	segundo_apellido: z.string().nullable(),
-	tipo_documento: z.enum(["ci", "pasaporte"]),
+	tipo_documento: z.enum(DOCUMENT_TYPES),
 	numero_documento: z.string().min(6, "Documento debe tener al menos 6 caracteres"),
 	extension_ci: z.string().nullable(),
 	nacionalidad: z.string().min(1, "Nacionalidad requerida"),

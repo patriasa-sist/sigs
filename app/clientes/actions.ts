@@ -84,6 +84,63 @@ function getErrorMessage(error: unknown): string {
 	return "Error desconocido";
 }
 
+/**
+ * Resolves a value from an object by following a Zod issue path.
+ * @param obj - The data that was validated
+ * @param path - The issue path (array of keys/indices)
+ * @returns The value at that path, or undefined if unreachable
+ */
+function getValueAtPath(obj: unknown, path: ReadonlyArray<PropertyKey>): unknown {
+	let current: unknown = obj;
+	for (const key of path) {
+		if (current === null || typeof current !== "object") return undefined;
+		current = (current as Record<PropertyKey, unknown>)[key];
+	}
+	return current;
+}
+
+/**
+ * Extracts human-readable "expected" and "received" descriptors from a Zod issue.
+ *
+ * Zod 4 enum issues (`invalid_value`) expose `values` (the allowed options) instead
+ * of `expected`, and do not include the received value at all. This helper normalizes
+ * both across issue types and recovers the actual received value from the original
+ * input via the issue path — avoiding the misleading "N/A" the previous logging showed.
+ *
+ * @param issue - A single Zod issue
+ * @param data - The original data passed to `.parse()` / `.safeParse()`
+ */
+function describeZodIssue(
+	issue: ZodError["issues"][number],
+	data: unknown,
+): { expected: string; received: string } {
+	let expected = "N/A";
+	if ("expected" in issue && issue.expected != null) {
+		expected = String(issue.expected);
+	} else if (
+		"values" in issue &&
+		Array.isArray((issue as { values?: unknown[] }).values)
+	) {
+		expected = (issue as { values: unknown[] }).values.map(String).join(" | ");
+	}
+
+	const format = (value: unknown): string =>
+		typeof value === "string" ? `"${value}"` : String(value);
+
+	let received = "N/A";
+	const actual = getValueAtPath(data, issue.path);
+	if (actual !== undefined) {
+		received = format(actual);
+	} else if (
+		"input" in issue &&
+		(issue as { input?: unknown }).input !== undefined
+	) {
+		received = format((issue as { input?: unknown }).input);
+	}
+
+	return { expected, received };
+}
+
 // ============================================
 // CLIENT QUERY ACTIONS
 // ============================================
@@ -237,6 +294,9 @@ export async function getAllClients(options?: {
 		const errors: Array<{ clientId: string; error: string }> = [];
 
 		for (const clientData of clientsData) {
+			// Declared outside the try so the catch block can recover the
+			// received value via each issue's path for clearer logging.
+			let queryResult: ClientQueryResult | undefined;
 			try {
 				// Prepare query result structure
 				// Handle Supabase returning either object or array for 1:1 relationships
@@ -244,7 +304,7 @@ export async function getAllClients(options?: {
 					? executivesMap.get(clientData.commercial_owner_id) ?? null
 					: null;
 
-				const queryResult: ClientQueryResult = {
+				queryResult = {
 					clients: clientData,
 					natural_clients: Array.isArray(clientData.natural_clients)
 						? clientData.natural_clients[0] ?? null
@@ -284,7 +344,8 @@ export async function getAllClients(options?: {
 						const fieldPath = issue.path.length > 0
 							? issue.path.join('.')
 							: 'root';
-						return `[${fieldPath}] ${issue.message} (expected: ${(issue as { expected?: unknown }).expected ?? 'N/A'}, received: ${(issue as { received?: unknown }).received ?? 'N/A'})`;
+						const { expected, received } = describeZodIssue(issue, queryResult);
+						return `[${fieldPath}] ${issue.message} (expected: ${expected}, received: ${received})`;
 					});
 					errorMsg = detailedErrors.join(' | ');
 
@@ -292,8 +353,9 @@ export async function getAllClients(options?: {
 					console.error(`[getAllClients] Validation error for client ${clientData.id}:`);
 					for (const issue of validationError.issues) {
 						const fieldPath = issue.path.length > 0 ? issue.path.join('.') : 'root';
+						const { expected, received } = describeZodIssue(issue, queryResult);
 						console.error(`  - Field "${fieldPath}": ${issue.message}`);
-						console.error(`    Expected: ${(issue as { expected?: unknown }).expected ?? 'N/A'}, Received: ${(issue as { received?: unknown }).received ?? 'N/A'}`);
+						console.error(`    Expected: ${expected}, Received: ${received}`);
 					}
 				} else {
 					errorMsg = getErrorMessage(validationError);
