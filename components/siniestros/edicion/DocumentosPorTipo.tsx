@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { FileText, Trash2, ExternalLink, Loader2, RotateCcw } from "lucide-react";
 import { TIPOS_DOCUMENTO_SINIESTRO, type TipoDocumentoSiniestro, type DocumentoSiniestroConUsuario, type DocumentoSiniestro } from "@/types/siniestro";
 import { agregarDocumentosSiniestro } from "@/app/siniestros/actions";
+import { formatFechaLaPaz } from "@/utils/formatters";
 import {
 	descartarDocumentoSiniestro,
 	restaurarDocumentoSiniestro,
@@ -332,7 +333,7 @@ export default function DocumentosPorTipo({
 											</p>
 											<p className="text-xs text-muted-foreground">
 												{doc.usuario_nombre || "Desconocido"} •{" "}
-												{doc.uploaded_at ? new Date(doc.uploaded_at).toLocaleDateString("es-BO") : ""}
+												{doc.uploaded_at ? formatFechaLaPaz(doc.uploaded_at) : ""}
 											</p>
 										</div>
 

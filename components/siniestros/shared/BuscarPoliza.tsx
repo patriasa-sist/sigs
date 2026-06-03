@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Search, Loader2, FileText } from "lucide-react";
 import { buscarPolizasActivas } from "@/app/siniestros/actions";
 import type { PolizaParaSiniestro } from "@/types/siniestro";
+import { formatDate } from "@/utils/formatters";
 
 interface BuscarPolizaProps {
 	onPolizaSelect: (poliza: PolizaParaSiniestro) => void;
@@ -157,8 +158,8 @@ export default function BuscarPoliza({ onPolizaSelect, polizaSeleccionada }: Bus
 											<div className="md:col-span-2">
 												<span className="text-muted-foreground">Vigencia:</span>{" "}
 												<span className="font-medium">
-													{new Date(poliza.inicio_vigencia).toLocaleDateString("es-BO")} -{" "}
-													{new Date(poliza.fin_vigencia).toLocaleDateString("es-BO")}
+													{formatDate(poliza.inicio_vigencia)} -{" "}
+													{formatDate(poliza.fin_vigencia)}
 												</span>
 											</div>
 										</div>

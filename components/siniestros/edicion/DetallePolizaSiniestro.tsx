@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { formatDate } from "@/utils/formatters";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -200,7 +201,7 @@ export default function DetallePolizaSiniestro({ polizaId }: DetallePolizaSinies
 								<div className="text-sm">
 									<span className="text-muted-foreground">F. Emisión:</span>
 									<p className="font-medium">
-										{new Date(poliza.fecha_emision_compania).toLocaleDateString("es-BO")}
+										{formatDate(poliza.fecha_emision_compania)}
 									</p>
 								</div>
 							</div>
@@ -212,9 +213,7 @@ export default function DetallePolizaSiniestro({ polizaId }: DetallePolizaSinies
 							<div className="text-sm">
 								<span className="text-muted-foreground">Inicio vigencia:</span>
 								<p className="font-medium">
-									{poliza.inicio_vigencia && typeof poliza.inicio_vigencia === 'string'
-										? new Date(poliza.inicio_vigencia).toLocaleDateString("es-BO")
-										: "N/A"}
+									{poliza.inicio_vigencia ? formatDate(poliza.inicio_vigencia) : "N/A"}
 								</p>
 							</div>
 						</div>
@@ -225,9 +224,7 @@ export default function DetallePolizaSiniestro({ polizaId }: DetallePolizaSinies
 							<div className="text-sm">
 								<span className="text-muted-foreground">Fin vigencia:</span>
 								<p className="font-medium">
-									{poliza.fin_vigencia && typeof poliza.fin_vigencia === 'string'
-										? new Date(poliza.fin_vigencia).toLocaleDateString("es-BO")
-										: "N/A"}
+									{poliza.fin_vigencia ? formatDate(poliza.fin_vigencia) : "N/A"}
 								</p>
 							</div>
 						</div>

@@ -3,6 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { History, Circle, User, Calendar, FileText, MessageSquare, Edit, XCircle, CheckCircle } from "lucide-react";
 import type { HistorialSiniestro } from "@/types/siniestro";
+import { formatFechaLaPaz, formatHoraLaPaz } from "@/utils/formatters";
 
 interface HistorialCronologicoProps {
 	historial: HistorialSiniestro[];
@@ -123,11 +124,8 @@ export default function HistorialCronologico({ historial }: HistorialCronologico
 										<div className="flex items-center gap-1 text-xs text-muted-foreground">
 											<Calendar className="h-3 w-3" />
 											<span>
-												{new Date(item.created_at).toLocaleDateString("es-BO")} -{" "}
-												{new Date(item.created_at).toLocaleTimeString("es-BO", {
-													hour: "2-digit",
-													minute: "2-digit",
-												})}
+												{formatFechaLaPaz(item.created_at)} -{" "}
+												{formatHoraLaPaz(item.created_at)}
 											</span>
 										</div>
 									</div>

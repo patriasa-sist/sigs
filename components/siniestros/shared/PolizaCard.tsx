@@ -7,6 +7,7 @@ import { FileText, X, User, Building, Calendar, DollarSign, File, CheckCircle, C
 import DocumentosPolizaModal from "./DocumentosPolizaModal";
 import { obtenerAseguradosPoliza } from "@/app/siniestros/actions";
 import type { PolizaParaSiniestro, CuotaPago, AseguradoDetalle } from "@/types/siniestro";
+import { formatDate, hoyLaPaz } from "@/utils/formatters";
 
 interface PolizaCardProps {
 	poliza: PolizaParaSiniestro;
@@ -50,8 +51,8 @@ export default function PolizaCard({ poliza, onDeselect, showDeselectButton = tr
 	// Función para determinar si una cuota está en mora (pendiente + más de 10 días vencida)
 	const esMora = (cuota: CuotaPago) => {
 		if (cuota.estado !== "pendiente") return false;
-		const fechaVencimiento = new Date(cuota.fecha_vencimiento);
-		const hoy = new Date();
+		const fechaVencimiento = new Date(`${cuota.fecha_vencimiento}T00:00:00`);
+		const hoy = new Date(`${hoyLaPaz()}T00:00:00`);
 		const diasVencidos = Math.floor((hoy.getTime() - fechaVencimiento.getTime()) / (1000 * 60 * 60 * 24));
 		return diasVencidos > 10;
 	};
@@ -145,8 +146,8 @@ export default function PolizaCard({ poliza, onDeselect, showDeselectButton = tr
 							<div>
 								<p className="text-sm text-muted-foreground">Vigencia</p>
 								<p className="font-medium text-sm">
-									{new Date(poliza.inicio_vigencia).toLocaleDateString("es-BO")} -{" "}
-									{new Date(poliza.fin_vigencia).toLocaleDateString("es-BO")}
+									{formatDate(poliza.inicio_vigencia)} -{" "}
+									{formatDate(poliza.fin_vigencia)}
 								</p>
 							</div>
 						</div>
@@ -327,7 +328,7 @@ export default function PolizaCard({ poliza, onDeselect, showDeselectButton = tr
 													<div className="col-span-4 flex flex-col items-end justify-center">
 														<div className="flex items-center gap-1">
 															<span className={`${enMora || esVencida ? "font-medium text-red-700 dark:text-red-300" : ""}`}>
-																{new Date(cuota.fecha_vencimiento).toLocaleDateString("es-BO")}
+																{formatDate(cuota.fecha_vencimiento)}
 															</span>
 															{tieneProrrogas && (
 																<span
@@ -340,7 +341,7 @@ export default function PolizaCard({ poliza, onDeselect, showDeselectButton = tr
 														</div>
 														{tieneProrrogas && cuota.fecha_vencimiento_original && (
 															<span className="text-[10px] text-amber-600 dark:text-amber-400">
-																Original: {new Date(cuota.fecha_vencimiento_original).toLocaleDateString("es-BO")}
+																Original: {formatDate(cuota.fecha_vencimiento_original)}
 															</span>
 														)}
 													</div>

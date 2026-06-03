@@ -7,7 +7,10 @@ import type {
 	DatosCierreRechazo,
 	DatosCierreDeclinacion,
 	DatosCierreIndemnizacion,
+	DocumentoSiniestro,
+	RegistroSiniestroFormState,
 } from "@/types/siniestro";
+import { hoyLaPaz } from "@/utils/formatters";
 
 /**
  * Validar formato de email
@@ -21,10 +24,9 @@ function esEmailValido(email: string): boolean {
  * Validar que fecha no sea futura
  */
 function noEsFechaFutura(fecha: string): boolean {
-	const fechaObj = new Date(fecha);
-	const hoy = new Date();
-	hoy.setHours(0, 0, 0, 0);
-	return fechaObj <= hoy;
+	// Comparación de fechas (YYYY-MM-DD) contra "hoy" en zona La Paz (UTC-4).
+	// Comparar como strings ISO evita desfases de timezone.
+	return fecha.slice(0, 10) <= hoyLaPaz();
 }
 
 /**
@@ -158,7 +160,7 @@ export function validarCoberturas(coberturas: CoberturasStep | null): Validacion
 /**
  * Validar documentos iniciales (Paso 4)
  */
-export function validarDocumentosIniciales(documentos: any[]): ValidacionSiniestro {
+export function validarDocumentosIniciales(documentos: DocumentoSiniestro[]): ValidacionSiniestro {
 	const errores: string[] = [];
 	const advertencias: string[] = [];
 
@@ -193,7 +195,7 @@ export function validarDocumentosIniciales(documentos: any[]): ValidacionSiniest
 /**
  * Validar formulario completo antes de guardar
  */
-export function validarFormularioCompleto(formState: any): ValidacionSiniestro {
+export function validarFormularioCompleto(formState: RegistroSiniestroFormState): ValidacionSiniestro {
 	const errores: string[] = [];
 	const advertencias: string[] = [];
 

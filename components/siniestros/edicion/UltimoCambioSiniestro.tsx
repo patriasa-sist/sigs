@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Clock, ExternalLink } from "lucide-react";
 import type { HistorialSiniestro } from "@/types/siniestro";
+import { formatFechaLaPaz, formatHoraLaPaz } from "@/utils/formatters";
 
 interface UltimoCambioSiniestroProps {
 	historial: HistorialSiniestro[];
@@ -57,11 +58,8 @@ export default function UltimoCambioSiniestro({ historial, onVerHistorialComplet
 
 					<p className="text-xs text-muted-foreground mt-1">
 						Por: {ultimoCambio.usuario_nombre || "Sistema"} •{" "}
-						{new Date(ultimoCambio.created_at).toLocaleDateString("es-BO")} a las{" "}
-						{new Date(ultimoCambio.created_at).toLocaleTimeString("es-BO", {
-							hour: "2-digit",
-							minute: "2-digit",
-						})}
+						{formatFechaLaPaz(ultimoCambio.created_at)} a las{" "}
+						{formatHoraLaPaz(ultimoCambio.created_at)}
 					</p>
 				</div>
 

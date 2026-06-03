@@ -18,6 +18,7 @@ import {
 import BotonWhatsAppRegistro from "../shared/BotonWhatsAppRegistro";
 import { guardarSiniestro } from "@/app/siniestros/actions";
 import { validarDetalles, validarCoberturas, validarFormularioCompleto } from "@/utils/siniestroValidation";
+import { formatDate } from "@/utils/formatters";
 import SeleccionarPoliza from "./steps/SeleccionarPoliza";
 import DetallesSiniestroStep from "./steps/DetallesSiniestro";
 import CoberturasStepComponent from "./steps/Coberturas";
@@ -46,7 +47,7 @@ function getStepSummary(paso: number, state: RegistroSiniestroFormState): string
 		case 2: {
 			if (!state.detalles?.fecha_siniestro || !state.detalles?.lugar_hecho) return null;
 			const lugar = state.detalles.lugar_hecho.slice(0, 24);
-			return `${new Date(state.detalles.fecha_siniestro).toLocaleDateString("es-BO")} · ${lugar}`;
+			return `${formatDate(state.detalles.fecha_siniestro)} · ${lugar}`;
 		}
 		case 3: {
 			const count = state.coberturas?.coberturas_seleccionadas.length ?? 0;

@@ -3,6 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar, MapPin, Shield } from "lucide-react";
 import type { SiniestroVista, CoberturaCatalogo } from "@/types/siniestro";
+import { formatDate } from "@/utils/formatters";
 
 interface ResumenReadonlyProps {
 	siniestro: SiniestroVista;
@@ -27,7 +28,7 @@ export default function ResumenReadonly({ siniestro, coberturas }: ResumenReadon
 							<div>
 								<p className="text-sm text-muted-foreground">Fecha de Reporte</p>
 								<p className="font-medium">
-									{new Date(siniestro.fecha_reporte).toLocaleDateString("es-BO")}
+									{formatDate(siniestro.fecha_reporte)}
 								</p>
 							</div>
 						</div>

@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { MessageSquare, Loader2, User, Calendar } from "lucide-react";
 import { agregarObservacion } from "@/app/siniestros/actions";
 import type { ObservacionSiniestro } from "@/types/siniestro";
+import { formatFechaLaPaz, formatHoraLaPaz } from "@/utils/formatters";
 import { toast } from "sonner";
 
 interface AgregarObservacionProps {
@@ -137,11 +138,8 @@ export default function AgregarObservacion({
 										<div className="flex items-center gap-1 text-xs text-muted-foreground">
 											<Calendar className="h-3 w-3" />
 											<span>
-												{new Date(obs.created_at).toLocaleDateString("es-BO")} -{" "}
-												{new Date(obs.created_at).toLocaleTimeString("es-BO", {
-													hour: "2-digit",
-													minute: "2-digit",
-												})}
+												{formatFechaLaPaz(obs.created_at)} -{" "}
+												{formatHoraLaPaz(obs.created_at)}
 											</span>
 										</div>
 									</div>

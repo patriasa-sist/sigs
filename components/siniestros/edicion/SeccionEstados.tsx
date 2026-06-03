@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { formatFechaLaPaz } from "@/utils/formatters";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -133,7 +134,7 @@ export default function SeccionEstados({ siniestroId, estadoActual, estadoSinies
 							</p>
 							{estadoActual.estado_actual_fecha && (
 								<p className="text-xs text-muted-foreground mt-0.5">
-									{new Date(estadoActual.estado_actual_fecha).toLocaleDateString("es-BO")}
+									{formatFechaLaPaz(estadoActual.estado_actual_fecha)}
 								</p>
 							)}
 							{estadoActual.estado_actual_observacion && (

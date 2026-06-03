@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { StatusBadge } from "@/components/ui/status-badge";
 import type { SiniestroVistaConEstado } from "@/types/siniestro";
+import { formatDate } from "@/utils/formatters";
 
 type SortField =
 	| "fecha_siniestro"
@@ -170,7 +171,7 @@ function SiniestrosTable({ siniestros, sortField, sortDirection, onSort }: Sinie
 												{siniestro.codigo_siniestro || "—"}
 											</div>
 											<div className="text-xs text-muted-foreground mt-0.5">
-												{new Date(siniestro.fecha_siniestro).toLocaleDateString("es-BO")}
+												{formatDate(siniestro.fecha_siniestro)}
 											</div>
 										</td>
 
@@ -285,7 +286,7 @@ function SiniestrosTable({ siniestros, sortField, sortDirection, onSort }: Sinie
 												{siniestro.codigo_siniestro || "—"}
 											</div>
 											<div className="text-xs text-muted-foreground mt-0.5">
-												{new Date(siniestro.fecha_siniestro).toLocaleDateString("es-BO")}
+												{formatDate(siniestro.fecha_siniestro)}
 											</div>
 										</div>
 										<div className="flex flex-col items-end gap-1 shrink-0">

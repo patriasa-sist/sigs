@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import { formatFechaLaPaz } from "@/utils/formatters";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { AlertCircle, FileText, ExternalLink, Trash2, RotateCcw, Loader2, Upload } from "lucide-react";
@@ -260,7 +261,7 @@ export default function AgregarDocumentos({
 													<span>{formatFileSize(doc.tamano_bytes)}</span>
 													{doc.uploaded_at && (
 														<span>
-															{new Date(doc.uploaded_at).toLocaleDateString("es-BO")}
+															{formatFechaLaPaz(doc.uploaded_at)}
 														</span>
 													)}
 												</div>

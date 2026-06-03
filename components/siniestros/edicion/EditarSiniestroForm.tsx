@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { formatDate, formatFechaLaPaz } from "@/utils/formatters";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
@@ -91,7 +92,7 @@ export default function EditarSiniestroForm({
 								<span>{siniestro.ramo}</span>
 								<span className="text-border">·</span>
 								<span>
-									{new Date(siniestro.fecha_siniestro).toLocaleDateString("es-BO")}
+									{formatDate(siniestro.fecha_siniestro)}
 								</span>
 							</div>
 						</div>
@@ -243,7 +244,7 @@ export default function EditarSiniestroForm({
 								{siniestro.fecha_cierre && (
 									<p className="text-xs text-muted-foreground">
 										Fecha:{" "}
-										{new Date(siniestro.fecha_cierre).toLocaleDateString("es-BO")}
+										{formatFechaLaPaz(siniestro.fecha_cierre)}
 									</p>
 								)}
 								{siniestro.cerrado_por_nombre && (

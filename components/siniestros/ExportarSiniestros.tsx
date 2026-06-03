@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Download, Loader2 } from "lucide-react";
 import * as ExcelJS from "exceljs";
 import type { SiniestroVista } from "@/types/siniestro";
+import { toExcelDateLaPaz, formatFechaHoraLaPaz, hoyLaPaz } from "@/utils/formatters";
 
 interface ExportarSiniestrosProps {
 	siniestros: SiniestroVista[];
@@ -70,8 +71,8 @@ export default function ExportarSiniestros({ siniestros, filtrosActivos }: Expor
 			// Datos
 			siniestros.forEach((siniestro) => {
 				worksheet.addRow([
-					new Date(siniestro.fecha_siniestro),
-					new Date(siniestro.fecha_reporte),
+					toExcelDateLaPaz(siniestro.fecha_siniestro),
+					toExcelDateLaPaz(siniestro.fecha_reporte),
 					siniestro.numero_poliza,
 					siniestro.ramo,
 					siniestro.cliente_nombre,
@@ -86,7 +87,7 @@ export default function ExportarSiniestros({ siniestros, filtrosActivos }: Expor
 					siniestro.total_documentos,
 					siniestro.total_observaciones,
 					siniestro.creado_por_nombre || "N/A",
-					new Date(siniestro.fecha_creacion),
+					toExcelDateLaPaz(siniestro.fecha_creacion),
 				]);
 			});
 
@@ -152,7 +153,7 @@ export default function ExportarSiniestros({ siniestros, filtrosActivos }: Expor
 				summarySheet.getCell("A1").font = { bold: true, size: 16 };
 				summarySheet.addRow([]);
 
-				summarySheet.addRow(["Fecha de generación:", new Date().toLocaleString("es-BO")]);
+				summarySheet.addRow(["Fecha de generación:", formatFechaHoraLaPaz(new Date())]);
 				summarySheet.addRow(["Total de siniestros:", siniestros.length]);
 				summarySheet.addRow([]);
 
@@ -183,7 +184,7 @@ export default function ExportarSiniestros({ siniestros, filtrosActivos }: Expor
 			const url = window.URL.createObjectURL(blob);
 			const link = document.createElement("a");
 			link.href = url;
-			link.download = `siniestros_${new Date().toISOString().split("T")[0]}.xlsx`;
+			link.download = `siniestros_${hoyLaPaz()}.xlsx`;
 			link.click();
 			window.URL.revokeObjectURL(url);
 		} catch (error) {

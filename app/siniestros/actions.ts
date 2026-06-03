@@ -40,6 +40,7 @@ import type {
 } from "@/types/siniestro";
 import type { DatosEspecificosRamo, VehiculoAutomotor } from "@/types/cobranza";
 import { generarURLWhatsApp } from "@/utils/whatsapp";
+import { formatDate, formatFechaLaPaz, hoyLaPaz } from "@/utils/formatters";
 
 /**
  * Verificar permisos de siniestros, comercial o admin
@@ -103,8 +104,9 @@ export async function obtenerSiniestros(): Promise<ObtenerSiniestrosResponse> {
 		});
 
 		// Calcular estadísticas
-		const hoy = new Date();
-		const inicioMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+		// Inicio de mes en zona La Paz (UTC-4): instante exacto del 1ro 00:00 local
+		const [anioLaPaz, mesLaPaz] = hoyLaPaz().split("-");
+		const inicioMes = new Date(`${anioLaPaz}-${mesLaPaz}-01T00:00:00-04:00`);
 
 		const stats: SiniestrosStats = {
 			total_abiertos: siniestrosArray.filter((s) => s.estado === "abierto").length,
@@ -1733,7 +1735,7 @@ Le informamos que el estado de su siniestro ha sido actualizado:
 * *Cód. Siniestro:* ${siniestro.codigo_siniestro || "N/A"}
 * *Estado anterior:* ${estadoAnteriorNombre}
 * *Estado actual:* ${estadoData.nombre}
-* *Fecha:* ${new Date().toLocaleDateString("es-BO")}
+* *Fecha:* ${formatFechaLaPaz(new Date())}
 
 Hacemos todo lo posible para acelerar la conclusión de su caso y le informaremos de toda novedad lo más antes posible.
 Para cualquier consulta, estamos a su disposición.
@@ -1947,7 +1949,7 @@ export async function generarWhatsAppRegistroSiniestro(siniestroId: string): Pro
 
 Le informamos que su siniestro ha sido registrado exitosamente y se encuentra en proceso activo de resolución:
 * *Cód. Siniestro:* ${siniestro.codigo_siniestro}
-* *Fecha del siniestro:* ${new Date(siniestro.fecha_siniestro).toLocaleDateString("es-BO")}
+* *Fecha del siniestro:* ${formatDate(siniestro.fecha_siniestro)}
 * *Póliza:* ${
 			typeof siniestro.poliza === "object" && siniestro.poliza && "numero_poliza" in siniestro.poliza
 				? siniestro.poliza.numero_poliza
@@ -2053,7 +2055,7 @@ ${estadoTexto}
 				? siniestro.poliza.numero_poliza
 				: "N/A"
 		}
-* *Fecha de cierre:* ${new Date().toLocaleDateString("es-BO")}
+* *Fecha de cierre:* ${formatFechaLaPaz(new Date())}
 
 Para cualquier consulta o aclaración, estamos a su disposición.
 

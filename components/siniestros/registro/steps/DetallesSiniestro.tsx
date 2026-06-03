@@ -11,6 +11,7 @@ import { AlertCircle, X } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import { obtenerUsuariosResponsables } from "@/app/siniestros/actions";
 import type { DetallesSiniestro, ContactoSiniestro, Moneda } from "@/types/siniestro";
+import { hoyLaPaz } from "@/utils/formatters";
 
 interface DetallesSiniestroProps {
 	detalles: DetallesSiniestro | null;
@@ -134,8 +135,9 @@ export default function DetallesSiniestroStep({ detalles, onDetallesChange, vali
 			return;
 		}
 
-		const dateSiniestro = new Date(fechaSin);
-		const hoy = new Date();
+		// Comparar como fechas locales (medianoche) usando "hoy" en zona La Paz
+		const dateSiniestro = new Date(`${fechaSin}T00:00:00`);
+		const hoy = new Date(`${hoyLaPaz()}T00:00:00`);
 		const diff = hoy.getTime() - dateSiniestro.getTime();
 		const diasDiferencia = Math.floor(diff / (1000 * 60 * 60 * 24));
 
@@ -165,8 +167,8 @@ export default function DetallesSiniestroStep({ detalles, onDetallesChange, vali
 		handleFieldChange("contactos", nuevosContactos);
 	};
 
-	// Obtener fecha actual en formato YYYY-MM-DD
-	const today = new Date().toISOString().split("T")[0];
+	// Obtener fecha actual (zona La Paz, UTC-4) en formato YYYY-MM-DD
+	const today = hoyLaPaz();
 
 	return (
 		<Card>
