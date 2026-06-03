@@ -72,17 +72,21 @@ export type DocumentoSiniestroConUsuario = DocumentoSiniestro & {
 // ============================================
 
 export type AseguradoDetalle = {
-	tipo: "vehiculo" | "persona";
-	// Para vehículos
+	tipo: "vehiculo" | "persona" | "bien" | "equipo" | "nave" | "carga";
+	// Para vehículos / equipos / naves
 	placa?: string;
 	modelo?: string;
 	ano?: string;
 	marca?: string;
 	valor_asegurado?: number;
+	identificador?: string; // nro_chasis / nro_serie / matrícula — identifica el ítem asegurado
 	// Para personas
 	nombre?: string;
 	documento?: string;
-	relacion?: string; // Titular, dependiente, etc.
+	relacion?: string; // Titular, dependiente, beneficiario, cargo, etc.
+	// Para bienes (incendio / riesgos varios) y carga (transporte)
+	direccion?: string;
+	descripcion?: string;
 };
 
 export type ProrrogaCuota = {
@@ -528,6 +532,11 @@ export type ValidacionSiniestro = {
 
 export type BusquedaPolizasResponse = ServerResponse<{
 	polizas: PolizaParaSiniestro[];
+}>;
+
+// Desglose de asegurados de una póliza (personas, vehículos, bienes) — se carga al seleccionar
+export type ObtenerAseguradosResponse = ServerResponse<{
+	asegurados: AseguradoDetalle[];
 }>;
 
 // ============================================

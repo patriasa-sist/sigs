@@ -21,6 +21,8 @@ import type {
 	CerrarSiniestroResponse,
 	BusquedaPolizasResponse,
 	PolizaParaSiniestro,
+	AseguradoDetalle,
+	ObtenerAseguradosResponse,
 	ObtenerCoberturasPorRamoResponse,
 	AgregarDocumentosResponse,
 	DocumentoSiniestro,
@@ -1052,6 +1054,294 @@ export async function buscarPolizasActivas(query: string): Promise<BusquedaPoliz
 		};
 	} catch (error) {
 		console.error("Error buscando pólizas activas:", error);
+		return {
+			success: false,
+			error: error instanceof Error ? error.message : "Error desconocido",
+		};
+	}
+}
+
+/**
+ * Resuelve nombre + documento de una lista de client_ids en lote (3 queries fijas,
+ * independiente de la cantidad de ids). Un cliente pertenece a un único tipo, por lo
+ * que solo una de las tablas tendrá su fila.
+ */
+async function resolverClientesParaDesglose(
+	supabase: SupabaseClient,
+	clientIds: string[]
+): Promise<Map<string, { nombre: string; documento: string }>> {
+	const map = new Map<string, { nombre: string; documento: string }>();
+	const unique = [...new Set(clientIds.filter(Boolean))];
+	if (unique.length === 0) return map;
+
+	const [{ data: naturales }, { data: juridicos }, { data: unipersonales }] = await Promise.all([
+		supabase
+			.from("natural_clients")
+			.select("client_id, primer_nombre, primer_apellido, numero_documento")
+			.in("client_id", unique),
+		supabase.from("juridic_clients").select("client_id, razon_social, nit").in("client_id", unique),
+		supabase.from("unipersonal_clients").select("client_id, razon_social, nit").in("client_id", unique),
+	]);
+
+	for (const n of naturales || []) {
+		map.set(n.client_id, {
+			nombre: `${n.primer_nombre || ""} ${n.primer_apellido || ""}`.trim() || "Desconocido",
+			documento: n.numero_documento || "-",
+		});
+	}
+	for (const j of juridicos || []) {
+		map.set(j.client_id, { nombre: j.razon_social || "Desconocido", documento: j.nit || "-" });
+	}
+	for (const u of unipersonales || []) {
+		if (!map.has(u.client_id)) {
+			map.set(u.client_id, { nombre: u.razon_social || "Desconocido", documento: u.nit || "-" });
+		}
+	}
+
+	return map;
+}
+
+/**
+ * Obtener el desglose de asegurados de una póliza (personas, vehículos y bienes) según su ramo.
+ * Se carga al SELECCIONAR la póliza en el registro de siniestros (no en cada resultado de búsqueda)
+ * para mantener liviana la búsqueda. Mapeo de tablas espejo del cargador canónico en
+ * app/polizas/actions.ts (obtenerPolizaDetalle).
+ */
+export async function obtenerAseguradosPoliza(
+	polizaId: string,
+	ramo: string
+): Promise<ObtenerAseguradosResponse> {
+	const permiso = await verificarPermisoSiniestros();
+	if (!permiso.authorized) {
+		return { success: false, error: permiso.error };
+	}
+
+	const supabase = await createClient();
+
+	try {
+		const ramoLower = (ramo || "").toLowerCase();
+		const asegurados: AseguradoDetalle[] = [];
+
+		// --- AUTOMOTOR (vehículos) ---
+		if (ramoLower.includes("automotor")) {
+			const { data } = await supabase
+				.from("polizas_automotor_vehiculos")
+				.select("placa, modelo, ano, valor_asegurado, nro_chasis, marcas_vehiculo(nombre)")
+				.eq("poliza_id", polizaId);
+			for (const v of data || []) {
+				asegurados.push({
+					tipo: "vehiculo",
+					placa: v.placa || undefined,
+					marca: (v.marcas_vehiculo as { nombre?: string } | null)?.nombre || undefined,
+					modelo: v.modelo || undefined,
+					ano: v.ano?.toString() || undefined,
+					valor_asegurado: v.valor_asegurado != null ? Number(v.valor_asegurado) : undefined,
+					identificador: v.nro_chasis || undefined,
+				});
+			}
+		}
+
+		// --- RESPONSABILIDAD CIVIL (vehículos) ---
+		if (ramoLower.includes("responsabilidad civil")) {
+			const { data } = await supabase
+				.from("polizas_rc_vehiculos")
+				.select("placa, modelo, ano, nro_chasis, marca_vehiculo_id")
+				.eq("poliza_id", polizaId);
+			const marcaIds = (data || []).map((v) => v.marca_vehiculo_id).filter(Boolean);
+			const { data: marcas } = marcaIds.length
+				? await supabase.from("marcas_vehiculo").select("id, nombre").in("id", marcaIds)
+				: { data: [] };
+			const marcaMap = new Map((marcas || []).map((m: { id: string; nombre: string }) => [m.id, m.nombre]));
+			for (const v of data || []) {
+				asegurados.push({
+					tipo: "vehiculo",
+					placa: v.placa || undefined,
+					marca: v.marca_vehiculo_id ? marcaMap.get(v.marca_vehiculo_id) || undefined : undefined,
+					modelo: v.modelo || undefined,
+					ano: v.ano?.toString() || undefined,
+					identificador: v.nro_chasis || undefined,
+				});
+			}
+		}
+
+		// --- RAMOS TÉCNICOS (equipos) ---
+		if (ramoLower.includes("técnicos") || ramoLower.includes("tecnicos")) {
+			const { data } = await supabase
+				.from("polizas_ramos_tecnicos_equipos")
+				.select("nro_serie, placa, modelo, ano, valor_asegurado, marcas_equipo(nombre)")
+				.eq("poliza_id", polizaId);
+			for (const e of data || []) {
+				asegurados.push({
+					tipo: "equipo",
+					placa: e.placa || undefined,
+					marca: (e.marcas_equipo as { nombre?: string } | null)?.nombre || undefined,
+					modelo: e.modelo || undefined,
+					ano: e.ano?.toString() || undefined,
+					valor_asegurado: e.valor_asegurado != null ? Number(e.valor_asegurado) : undefined,
+					identificador: e.nro_serie || undefined,
+				});
+			}
+		}
+
+		// --- SALUD (personas: asegurados con client_id + beneficiarios por nombre) ---
+		if (ramoLower.includes("salud") || ramoLower.includes("enfermedad")) {
+			const { data: aseg } = await supabase
+				.from("polizas_salud_asegurados")
+				.select("client_id, rol")
+				.eq("poliza_id", polizaId);
+			const clientMap = await resolverClientesParaDesglose(supabase, (aseg || []).map((a) => a.client_id));
+			for (const a of aseg || []) {
+				const c = clientMap.get(a.client_id);
+				asegurados.push({
+					tipo: "persona",
+					nombre: c?.nombre || "Desconocido",
+					documento: c?.documento,
+					relacion: a.rol || "Titular",
+				});
+			}
+
+			const { data: benef } = await supabase
+				.from("polizas_salud_beneficiarios")
+				.select("nombre_completo, carnet, rol")
+				.eq("poliza_id", polizaId);
+			for (const b of benef || []) {
+				asegurados.push({
+					tipo: "persona",
+					nombre: b.nombre_completo || "Desconocido",
+					documento: b.carnet || undefined,
+					relacion: b.rol || "Beneficiario",
+				});
+			}
+		}
+
+		// --- VIDA / ACCIDENTES PERSONALES / SEPELIO (personas) ---
+		if (ramoLower.includes("vida") || ramoLower.includes("accidentes personales") || ramoLower.includes("sepelio")) {
+			const { data: aseg } = await supabase
+				.from("polizas_asegurados_nivel")
+				.select("client_id, cargo, rol")
+				.eq("poliza_id", polizaId);
+			const clientMap = await resolverClientesParaDesglose(supabase, (aseg || []).map((a) => a.client_id));
+			for (const a of aseg || []) {
+				const c = clientMap.get(a.client_id);
+				asegurados.push({
+					tipo: "persona",
+					nombre: c?.nombre || "Desconocido",
+					documento: c?.documento,
+					relacion: a.rol || a.cargo || "Asegurado",
+				});
+			}
+
+			const { data: benef } = await supabase
+				.from("polizas_beneficiarios")
+				.select("nombre_completo, carnet, rol")
+				.eq("poliza_id", polizaId);
+			for (const b of benef || []) {
+				asegurados.push({
+					tipo: "persona",
+					nombre: b.nombre_completo || "Desconocido",
+					documento: b.carnet || undefined,
+					relacion: b.rol || "Beneficiario",
+				});
+			}
+		}
+
+		// --- INCENDIO (bienes + asegurados) ---
+		if (ramoLower.includes("incendio")) {
+			const { data: bienes } = await supabase
+				.from("polizas_incendio_bienes")
+				.select("direccion, valor_total_declarado")
+				.eq("poliza_id", polizaId);
+			for (const b of bienes || []) {
+				asegurados.push({
+					tipo: "bien",
+					direccion: b.direccion || undefined,
+					valor_asegurado: b.valor_total_declarado != null ? Number(b.valor_total_declarado) : undefined,
+				});
+			}
+
+			const { data: aseg } = await supabase
+				.from("polizas_incendio_asegurados")
+				.select("client_id")
+				.eq("poliza_id", polizaId);
+			const clientMap = await resolverClientesParaDesglose(supabase, (aseg || []).map((a) => a.client_id));
+			for (const a of aseg || []) {
+				const c = clientMap.get(a.client_id);
+				asegurados.push({ tipo: "persona", nombre: c?.nombre || "Desconocido", documento: c?.documento, relacion: "Asegurado adicional" });
+			}
+		}
+
+		// --- RIESGOS VARIOS (bienes + asegurados) ---
+		if (ramoLower.includes("riesgos varios")) {
+			const { data: bienes } = await supabase
+				.from("polizas_riesgos_varios_bienes")
+				.select("direccion, valor_total_declarado")
+				.eq("poliza_id", polizaId);
+			for (const b of bienes || []) {
+				asegurados.push({
+					tipo: "bien",
+					direccion: b.direccion || undefined,
+					valor_asegurado: b.valor_total_declarado != null ? Number(b.valor_total_declarado) : undefined,
+				});
+			}
+
+			const { data: aseg } = await supabase
+				.from("polizas_riesgos_varios_asegurados")
+				.select("client_id")
+				.eq("poliza_id", polizaId);
+			const clientMap = await resolverClientesParaDesglose(supabase, (aseg || []).map((a) => a.client_id));
+			for (const a of aseg || []) {
+				const c = clientMap.get(a.client_id);
+				asegurados.push({ tipo: "persona", nombre: c?.nombre || "Desconocido", documento: c?.documento, relacion: "Asegurado adicional" });
+			}
+		}
+
+		// --- TRANSPORTE (carga) ---
+		if (ramoLower.includes("transporte")) {
+			const { data } = await supabase
+				.from("polizas_transporte")
+				.select("materia_asegurada, valor_asegurado, factura")
+				.eq("poliza_id", polizaId);
+			for (const t of data || []) {
+				asegurados.push({
+					tipo: "carga",
+					descripcion: t.materia_asegurada || undefined,
+					valor_asegurado: t.valor_asegurado != null ? Number(t.valor_asegurado) : undefined,
+					identificador: t.factura || undefined,
+				});
+			}
+		}
+
+		// --- AERONAVEGACIÓN (naves + asegurados) ---
+		if (ramoLower.includes("aeronavegacion") || ramoLower.includes("aeronavegación") || ramoLower.includes("naves") || ramoLower.includes("embarcacion")) {
+			const { data: naves } = await supabase
+				.from("polizas_aeronavegacion_naves")
+				.select("matricula, marca, modelo, ano, serie, valor_casco")
+				.eq("poliza_id", polizaId);
+			for (const n of naves || []) {
+				asegurados.push({
+					tipo: "nave",
+					marca: n.marca || undefined,
+					modelo: n.modelo || undefined,
+					ano: n.ano?.toString() || undefined,
+					valor_asegurado: n.valor_casco != null ? Number(n.valor_casco) : undefined,
+					identificador: n.matricula || n.serie || undefined,
+				});
+			}
+
+			const { data: aseg } = await supabase
+				.from("polizas_aeronavegacion_asegurados")
+				.select("client_id")
+				.eq("poliza_id", polizaId);
+			const clientMap = await resolverClientesParaDesglose(supabase, (aseg || []).map((a) => a.client_id));
+			for (const a of aseg || []) {
+				const c = clientMap.get(a.client_id);
+				asegurados.push({ tipo: "persona", nombre: c?.nombre || "Desconocido", documento: c?.documento, relacion: "Asegurado" });
+			}
+		}
+
+		return { success: true, data: { asegurados } };
+	} catch (error) {
+		await captureError(error, "obtenerAseguradosPoliza", { polizaId, ramo });
 		return {
 			success: false,
 			error: error instanceof Error ? error.message : "Error desconocido",

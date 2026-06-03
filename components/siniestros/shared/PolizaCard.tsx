@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileText, X, User, Building, Calendar, DollarSign, File, CheckCircle, Clock, XCircle, Phone, Mail, AlertTriangle } from "lucide-react";
+import { FileText, X, User, Building, Calendar, DollarSign, File, CheckCircle, Clock, XCircle, Phone, Mail, AlertTriangle, Loader2, Car, Wrench, Plane, Package, Home, Users } from "lucide-react";
 import DocumentosPolizaModal from "./DocumentosPolizaModal";
-import type { PolizaParaSiniestro, CuotaPago } from "@/types/siniestro";
+import { obtenerAseguradosPoliza } from "@/app/siniestros/actions";
+import type { PolizaParaSiniestro, CuotaPago, AseguradoDetalle } from "@/types/siniestro";
 
 interface PolizaCardProps {
 	poliza: PolizaParaSiniestro;
@@ -16,6 +17,32 @@ interface PolizaCardProps {
 export default function PolizaCard({ poliza, onDeselect, showDeselectButton = true }: PolizaCardProps) {
 	const [showDocumentosModal, setShowDocumentosModal] = useState(false);
 	const [showAllCuotas, setShowAllCuotas] = useState(false);
+
+	// Desglose de asegurados (personas, vehículos, bienes). Se carga al seleccionar la póliza,
+	// no en la búsqueda, para mantenerla liviana. Si ya viene precargado, se reutiliza.
+	const [asegurados, setAsegurados] = useState<AseguradoDetalle[] | undefined>(poliza.asegurados);
+	const [loadingAsegurados, setLoadingAsegurados] = useState(false);
+	const [showAllAsegurados, setShowAllAsegurados] = useState(false);
+
+	useEffect(() => {
+		if (poliza.asegurados !== undefined) {
+			setAsegurados(poliza.asegurados);
+			return;
+		}
+		let activo = true;
+		setLoadingAsegurados(true);
+		obtenerAseguradosPoliza(poliza.id, poliza.ramo)
+			.then((res) => {
+				if (!activo) return;
+				setAsegurados(res.success ? res.data.asegurados : []);
+			})
+			.finally(() => {
+				if (activo) setLoadingAsegurados(false);
+			});
+		return () => {
+			activo = false;
+		};
+	}, [poliza.id, poliza.ramo, poliza.asegurados]);
 
 	// Contar cuotas vencidas
 	const cuotasVencidas = poliza.cuotas?.filter(c => c.estado === "vencida").length || 0;
@@ -136,39 +163,45 @@ export default function PolizaCard({ poliza, onDeselect, showDeselectButton = tr
 						</div>
 					</div>
 
-					{/* Asegurados (si existen) */}
-					{poliza.asegurados && poliza.asegurados.length > 0 && (
-						<div className="pt-2 border-t">
-							<p className="text-sm text-muted-foreground mb-2">Asegurados:</p>
+					{/* Desglose de asegurados (personas, vehículos, bienes) */}
+					<div className="pt-2 border-t">
+						<div className="flex items-center justify-between mb-2">
+							<p className="text-sm font-medium flex items-center gap-1.5">
+								<Users className="h-4 w-4 text-muted-foreground" />
+								Desglose de asegurados
+								{asegurados && asegurados.length > 0 && (
+									<span className="text-xs text-muted-foreground">({asegurados.length})</span>
+								)}
+							</p>
+							{asegurados && asegurados.length > 6 && (
+								<Button
+									variant="outline"
+									size="sm"
+									onClick={() => setShowAllAsegurados(!showAllAsegurados)}
+									className="h-7 text-xs px-3"
+								>
+									{showAllAsegurados ? "Ver menos" : `Ver todos (${asegurados.length})`}
+								</Button>
+							)}
+						</div>
+
+						{loadingAsegurados ? (
+							<div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
+								<Loader2 className="h-4 w-4 animate-spin" />
+								Cargando desglose...
+							</div>
+						) : !asegurados || asegurados.length === 0 ? (
+							<p className="text-sm text-muted-foreground italic py-1">
+								Esta póliza no tiene un desglose de asegurados registrado.
+							</p>
+						) : (
 							<div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-								{poliza.asegurados.map((aseg, idx) => (
-									<div key={idx} className="bg-secondary/30 rounded-lg p-2 text-sm">
-										{aseg.tipo === "vehiculo" ? (
-											<div>
-												<p className="font-medium">
-													Placa: {aseg.placa} {aseg.marca && `- ${aseg.marca}`}
-												</p>
-												{aseg.modelo && <p className="text-xs text-muted-foreground">Modelo: {aseg.modelo}</p>}
-												{aseg.valor_asegurado && (
-													<p className="text-xs text-muted-foreground">
-														Valor: Bs {aseg.valor_asegurado.toLocaleString("es-BO")}
-													</p>
-												)}
-											</div>
-										) : (
-											<div>
-												<p className="font-medium">{aseg.nombre}</p>
-												{aseg.documento && (
-													<p className="text-xs text-muted-foreground">CI: {aseg.documento}</p>
-												)}
-												{aseg.relacion && <p className="text-xs text-muted-foreground">{aseg.relacion}</p>}
-											</div>
-										)}
-									</div>
+								{(showAllAsegurados ? asegurados : asegurados.slice(0, 6)).map((aseg, idx) => (
+									<AseguradoItem key={idx} aseg={aseg} moneda={poliza.moneda} />
 								))}
 							</div>
-						</div>
-					)}
+						)}
+					</div>
 
 					{/* Estado de Cuotas de Pago */}
 					{poliza.cuotas_total !== undefined && poliza.cuotas_total > 0 && (
@@ -354,5 +387,88 @@ export default function PolizaCard({ poliza, onDeselect, showDeselectButton = tr
 				onOpenChange={setShowDocumentosModal}
 			/>
 		</>
+	);
+}
+
+// Tarjeta individual del desglose: muestra un asegurado según su tipo (persona, vehículo, bien, etc.)
+function AseguradoItem({ aseg, moneda }: { aseg: AseguradoDetalle; moneda: string }) {
+	const valor =
+		aseg.valor_asegurado != null
+			? `${moneda} ${aseg.valor_asegurado.toLocaleString("es-BO", { minimumFractionDigits: 2 })}`
+			: null;
+
+	if (aseg.tipo === "persona") {
+		return (
+			<div className="bg-secondary/30 rounded-lg p-2 text-sm">
+				<div className="flex items-start gap-2">
+					<User className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-0.5" />
+					<div className="min-w-0">
+						<p className="font-medium truncate">{aseg.nombre}</p>
+						{aseg.documento && <p className="text-xs text-muted-foreground">CI/Doc: {aseg.documento}</p>}
+						{aseg.relacion && <p className="text-xs text-muted-foreground">{aseg.relacion}</p>}
+					</div>
+				</div>
+			</div>
+		);
+	}
+
+	if (aseg.tipo === "bien") {
+		return (
+			<div className="bg-secondary/30 rounded-lg p-2 text-sm">
+				<div className="flex items-start gap-2">
+					<Home className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-0.5" />
+					<div className="min-w-0">
+						<p className="font-medium truncate">{aseg.direccion || "Bien asegurado"}</p>
+						{valor && <p className="text-xs text-muted-foreground">Valor: {valor}</p>}
+					</div>
+				</div>
+			</div>
+		);
+	}
+
+	if (aseg.tipo === "carga") {
+		return (
+			<div className="bg-secondary/30 rounded-lg p-2 text-sm">
+				<div className="flex items-start gap-2">
+					<Package className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-0.5" />
+					<div className="min-w-0">
+						<p className="font-medium truncate">{aseg.descripcion || "Carga asegurada"}</p>
+						{aseg.identificador && <p className="text-xs text-muted-foreground">Factura: {aseg.identificador}</p>}
+						{valor && <p className="text-xs text-muted-foreground">Valor: {valor}</p>}
+					</div>
+				</div>
+			</div>
+		);
+	}
+
+	// vehiculo | equipo | nave (ítems con marca/modelo/identificador)
+	const Icon = aseg.tipo === "equipo" ? Wrench : aseg.tipo === "nave" ? Plane : Car;
+	const titulo = aseg.placa
+		? `Placa: ${aseg.placa}`
+		: aseg.identificador
+			? `${aseg.tipo === "equipo" ? "Serie" : "Matrícula"}: ${aseg.identificador}`
+			: aseg.marca || "Ítem asegurado";
+
+	return (
+		<div className="bg-secondary/30 rounded-lg p-2 text-sm">
+			<div className="flex items-start gap-2">
+				<Icon className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-0.5" />
+				<div className="min-w-0">
+					<p className="font-medium truncate">
+						{titulo}
+						{aseg.marca && aseg.placa && ` - ${aseg.marca}`}
+					</p>
+					{(aseg.modelo || aseg.ano) && (
+						<p className="text-xs text-muted-foreground">
+							{[aseg.modelo, aseg.ano].filter(Boolean).join(" · ")}
+						</p>
+					)}
+					{aseg.placa && aseg.identificador && (
+						<p className="text-xs text-muted-foreground">Chasis: {aseg.identificador}</p>
+					)}
+					{valor && <p className="text-xs text-muted-foreground">Valor: {valor}</p>}
+				</div>
+			</div>
+		</div>
 	);
 }

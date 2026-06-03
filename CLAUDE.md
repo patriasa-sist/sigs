@@ -7,6 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - when looking for Database Strucuture or details look directly into Supabase using the MCP, do not trust the local migration files
 - be careful not to query the entire database when querying
 - just run lint and tsc verifications, do not build the project or execute dev servers
+- ALWAYS fix any errors that show up during lint and tsc verifications, do not excuse yourself saying "that was not from my changes"
 
 ## Development Commands
 
@@ -528,8 +529,8 @@ Route: `/reportes/` — requires `gerencia.exportar` OR `gerencia.amlc` (middlew
 
 - **Page**: `app/reportes/page.tsx` — orchestrator with per-component permission gating
 - **Server actions**:
-  - `app/reportes/actions.ts` — `exportarProduccion`, `exportarProduccionNuevo`, `exportarComisionesDirector`, helpers (`obtenerRegionales`, `obtenerCompanias`, `obtenerEquiposParaFiltro`, `obtenerDirectoresParaFiltro`)
-  - `app/reportes/actions-amlc.ts` — `exportarAMLC`
+    - `app/reportes/actions.ts` — `exportarProduccion`, `exportarProduccionNuevo`, `exportarComisionesDirector`, helpers (`obtenerRegionales`, `obtenerCompanias`, `obtenerEquiposParaFiltro`, `obtenerDirectoresParaFiltro`)
+    - `app/reportes/actions-amlc.ts` — `exportarAMLC`
 - **Components**: `components/reportes/ExportarProduccion.tsx`, `ExportarContable.tsx`, `ExportarComisionesDirector.tsx`, `ExportarAMLC.tsx`
 
 ### Permisos
