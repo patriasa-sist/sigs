@@ -64,7 +64,7 @@ export default function DocumentosPolizaModal({
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto overflow-x-hidden">
+			<DialogContent className="w-[95vw] max-w-2xl max-h-[85vh] overflow-y-auto overflow-x-hidden">
 				<DialogHeader>
 					<DialogTitle>Documentos de la Póliza {numeroPoliza}</DialogTitle>
 					<DialogDescription>
@@ -89,30 +89,33 @@ export default function DocumentosPolizaModal({
 					) : (
 						documentos.map((doc) => (
 							<Card key={doc.id}>
-								<CardContent className="p-4">
-									<div className="flex items-start gap-4">
-										{/* Icono del archivo */}
-										<div className="flex-shrink-0">{getFileIcon(doc.nombre_archivo)}</div>
+								<CardContent className="p-3 sm:p-4">
+									<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+										<div className="flex items-start gap-3 min-w-0 flex-1">
+											{/* Icono del archivo */}
+											<div className="flex-shrink-0">{getFileIcon(doc.nombre_archivo)}</div>
 
-										{/* Información del documento */}
-										<div className="flex-1 min-w-0">
-											<p className="font-medium text-sm truncate">{doc.nombre_archivo}</p>
-											<div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-												<span className="bg-secondary px-2 py-0.5 rounded">{doc.tipo_documento}</span>
-												<span>{formatFileSize(doc.tamano_bytes)}</span>
+											{/* Información del documento */}
+											<div className="flex-1 min-w-0">
+												<p className="font-medium text-sm break-words">{doc.nombre_archivo}</p>
+												<div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-xs text-muted-foreground">
+													<span className="bg-secondary px-2 py-0.5 rounded">{doc.tipo_documento}</span>
+													<span>{formatFileSize(doc.tamano_bytes)}</span>
+												</div>
 											</div>
 										</div>
 
 										{/* Acciones */}
-										<div className="flex gap-2 flex-shrink-0">
+										<div className="flex flex-shrink-0 sm:justify-end">
 											<Button
 												variant="outline"
 												size="sm"
 												onClick={() => handleOpenInNewTab(doc)}
 												title="Ver documento"
+												className="w-full sm:w-auto"
 											>
 												<ExternalLink className="h-4 w-4 mr-1" />
-												Ver
+												Ver documento
 											</Button>
 										</div>
 									</div>
