@@ -33,8 +33,55 @@ import type {
 	BienAseguradoIncendio,
 	AseguradoIncendio,
 	ItemIncendio,
+	TipoTransporte,
+	ModalidadTransporte,
+	NivelAPNave,
+	NaveEmbarcacion,
+	AseguradoAeronavegacion,
+	UsoNave,
+	DatosAeronavegacion,
+	EquipoIndustrial,
+	BienAseguradoRiesgosVarios,
+	ItemRiesgosVarios,
+	AseguradoRiesgosVarios,
 } from "@/types/poliza";
 import type { ActionResult } from "@/types/policyPermission";
+
+/**
+ * Resuelve nombre completo y documento (CI/NIT) de un cliente registrado,
+ * buscando primero en natural_clients y con fallback a juridic_clients.
+ * Lo usan los ramos que listan asegurados/clientes adicionales.
+ */
+async function resolverClienteNombreCI(
+	supabase: SupabaseClient,
+	clientId: string
+): Promise<{ client_name: string; client_ci: string }> {
+	const { data: naturalClient } = await supabase
+		.from("natural_clients")
+		.select("primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, numero_documento")
+		.eq("client_id", clientId)
+		.single();
+
+	if (naturalClient) {
+		return {
+			client_name: [naturalClient.primer_nombre, naturalClient.segundo_nombre, naturalClient.primer_apellido, naturalClient.segundo_apellido]
+				.filter(Boolean)
+				.join(" "),
+			client_ci: naturalClient.numero_documento || "-",
+		};
+	}
+
+	const { data: juridicClient } = await supabase
+		.from("juridic_clients")
+		.select("razon_social, nit")
+		.eq("client_id", clientId)
+		.single();
+
+	return {
+		client_name: juridicClient?.razon_social || "Cliente",
+		client_ci: juridicClient?.nit || "-",
+	};
+}
 
 /**
  * Carga una póliza con todos sus datos y la transforma a PolizaFormState.
@@ -608,6 +655,192 @@ export async function cargarPolizaFormState(
 						asientos: v.asientos ?? undefined,
 						cilindrada: v.cilindrada ?? undefined,
 					})),
+				},
+			};
+		}
+
+		// Transportes
+		if (ramoLower.includes("transporte")) {
+			const { data: transporte, error: errorTransporte } = await supabase
+				.from("polizas_transporte")
+				.select("materia_asegurada, tipo_embalaje, fecha_embarque, tipo_transporte, pais_origen_id, ciudad_origen, pais_destino_id, ciudad_destino, valor_asegurado, factura, fecha_factura, cobertura_a, cobertura_c, modalidad")
+				.eq("poliza_id", polizaId)
+				.maybeSingle();
+
+			if (errorTransporte) {
+				throw new Error(`Error al cargar datos de transporte: ${errorTransporte.message}`);
+			}
+
+			if (transporte) {
+				datos_especificos = {
+					tipo_ramo: "Transportes",
+					datos: {
+						materia_asegurada: transporte.materia_asegurada,
+						tipo_embalaje: transporte.tipo_embalaje,
+						fecha_embarque: transporte.fecha_embarque,
+						tipo_transporte: transporte.tipo_transporte as TipoTransporte,
+						ciudad_origen: transporte.ciudad_origen,
+						pais_origen_id: transporte.pais_origen_id,
+						ciudad_destino: transporte.ciudad_destino,
+						pais_destino_id: transporte.pais_destino_id,
+						valor_asegurado: Number(transporte.valor_asegurado),
+						factura: transporte.factura,
+						fecha_factura: transporte.fecha_factura,
+						cobertura_a: transporte.cobertura_a ?? false,
+						cobertura_c: transporte.cobertura_c ?? false,
+						modalidad: transporte.modalidad as ModalidadTransporte,
+					},
+				};
+			}
+		}
+
+		// Aeronavegación / Naves o embarcaciones (mismas tablas; el tipo de nave deriva del ramo)
+		if (ramoLower.includes("aeronavegacion") || ramoLower.includes("nave") || ramoLower.includes("embarcacion")) {
+			const esAeronavegacion = ramoLower.includes("aeronavegacion");
+			const tipoNave: "aeronave" | "embarcacion" = esAeronavegacion ? "aeronave" : "embarcacion";
+
+			const { data: nivelesDB } = await supabase
+				.from("polizas_aeronavegacion_niveles_ap")
+				.select("id, nombre, monto_muerte_accidental, monto_invalidez, monto_gastos_medicos")
+				.eq("poliza_id", polizaId);
+
+			const { data: navesDB } = await supabase
+				.from("polizas_aeronavegacion_naves")
+				.select("id, matricula, marca, modelo, ano, serie, uso, nro_pasajeros, nro_tripulantes, valor_casco, valor_responsabilidad_civil, nivel_ap_id")
+				.eq("poliza_id", polizaId);
+
+			const { data: aseguradosAeroDB } = await supabase
+				.from("polizas_aeronavegacion_asegurados")
+				.select("client_id")
+				.eq("poliza_id", polizaId);
+
+			const niveles_ap: NivelAPNave[] = (nivelesDB || []).map((n) => ({
+				id: n.id,
+				nombre: n.nombre,
+				monto_muerte_accidental: Number(n.monto_muerte_accidental),
+				monto_invalidez: Number(n.monto_invalidez),
+				monto_gastos_medicos: Number(n.monto_gastos_medicos),
+			}));
+
+			const naves: NaveEmbarcacion[] = (navesDB || []).map((nv) => ({
+				id: nv.id,
+				matricula: nv.matricula,
+				marca: nv.marca,
+				modelo: nv.modelo,
+				ano: nv.ano,
+				serie: nv.serie,
+				uso: nv.uso as UsoNave,
+				nro_pasajeros: nv.nro_pasajeros,
+				nro_tripulantes: nv.nro_tripulantes,
+				valor_casco: Number(nv.valor_casco),
+				valor_responsabilidad_civil: Number(nv.valor_responsabilidad_civil),
+				nivel_ap_id: nv.nivel_ap_id || undefined,
+			}));
+
+			const asegurados_adicionales: AseguradoAeronavegacion[] = [];
+			for (const a of aseguradosAeroDB || []) {
+				const { client_name, client_ci } = await resolverClienteNombreCI(supabase, a.client_id);
+				asegurados_adicionales.push({ client_id: a.client_id, client_name, client_ci });
+			}
+
+			// tipo_poliza no se persiste en BD; se infiere por cantidad de naves
+			const datosAero: DatosAeronavegacion = {
+				tipo_poliza: naves.length > 1 ? "corporativo" : "individual",
+				tipo_nave: tipoNave,
+				niveles_ap,
+				naves,
+				asegurados_adicionales,
+			};
+
+			datos_especificos = esAeronavegacion
+				? { tipo_ramo: "Aeronavegación", datos: datosAero }
+				: { tipo_ramo: "Naves o embarcaciones", datos: datosAero };
+		}
+
+		// Ramos técnicos (Equipos Industriales)
+		if (ramoLower.includes("ramo") && ramoLower.includes("tecnico")) {
+			const { data: rt } = await supabase
+				.from("polizas_ramos_tecnicos")
+				.select("valor_asegurado, tipo_poliza")
+				.eq("poliza_id", polizaId)
+				.maybeSingle();
+
+			const { data: equiposDB } = await supabase
+				.from("polizas_ramos_tecnicos_equipos")
+				.select("id, nro_serie, valor_asegurado, franquicia, nro_chasis, uso, coaseguro, placa, tipo_equipo_id, marca_equipo_id, modelo, ano, color, nro_motor, plaza_circulacion")
+				.eq("poliza_id", polizaId);
+
+			const equipos: EquipoIndustrial[] = (equiposDB || []).map((e) => ({
+				id: e.id,
+				nro_serie: e.nro_serie,
+				valor_asegurado: Number(e.valor_asegurado),
+				franquicia: Number(e.franquicia),
+				nro_chasis: e.nro_chasis,
+				uso: e.uso as "publico" | "particular",
+				coaseguro: Number(e.coaseguro),
+				placa: e.placa || undefined,
+				tipo_equipo_id: e.tipo_equipo_id || undefined,
+				marca_equipo_id: e.marca_equipo_id || undefined,
+				modelo: e.modelo || undefined,
+				ano: e.ano || undefined,
+				color: e.color || undefined,
+				nro_motor: e.nro_motor || undefined,
+				plaza_circulacion: e.plaza_circulacion || undefined,
+			}));
+
+			datos_especificos = {
+				tipo_ramo: "Ramos técnicos",
+				datos: {
+					valor_asegurado: rt ? Number(rt.valor_asegurado) : 0,
+					tipo_poliza: (rt?.tipo_poliza as "individual" | "corporativo") ?? "individual",
+					equipos,
+				},
+			};
+		}
+
+		// Riesgos Varios Misceláneos (bienes con items + asegurados; mismo patrón que Incendio)
+		if (ramoLower.includes("riesgo") && ramoLower.includes("vario")) {
+			const { data: bienesDB, error: errorBienesRV } = await supabase
+				.from("polizas_riesgos_varios_bienes")
+				.select("id, direccion, valor_total_declarado, es_primer_riesgo")
+				.eq("poliza_id", polizaId);
+
+			if (errorBienesRV) {
+				throw new Error(`Error al cargar bienes de riesgos varios: ${errorBienesRV.message}`);
+			}
+
+			const bienes: BienAseguradoRiesgosVarios[] = [];
+			for (const bien of bienesDB || []) {
+				const { data: itemsDB } = await supabase
+					.from("polizas_riesgos_varios_items")
+					.select("nombre, monto")
+					.eq("bien_id", bien.id);
+
+				bienes.push({
+					direccion: bien.direccion,
+					valor_total_declarado: Number(bien.valor_total_declarado),
+					es_primer_riesgo: bien.es_primer_riesgo,
+					items: (itemsDB || []).map((i) => ({ nombre: i.nombre as ItemRiesgosVarios["nombre"], monto: Number(i.monto) })),
+				});
+			}
+
+			const { data: aseguradosRVDB } = await supabase
+				.from("polizas_riesgos_varios_asegurados")
+				.select("client_id")
+				.eq("poliza_id", polizaId);
+
+			const asegurados: AseguradoRiesgosVarios[] = [];
+			for (const a of aseguradosRVDB || []) {
+				const { client_name, client_ci } = await resolverClienteNombreCI(supabase, a.client_id);
+				asegurados.push({ client_id: a.client_id, client_name, client_ci });
+			}
+
+			datos_especificos = {
+				tipo_ramo: "Riesgos Varios Misceláneos",
+				datos: {
+					valor_total_asegurado: bienes.reduce((sum, b) => sum + b.valor_total_declarado, 0),
+					bienes,
+					asegurados,
 				},
 			};
 		}

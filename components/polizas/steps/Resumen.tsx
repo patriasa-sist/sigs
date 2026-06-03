@@ -22,10 +22,27 @@ import type {
 	DatosRiesgosVarios,
 	DatosResponsabilidadCivil,
 	DatosRamosTecnicos,
+	DatosTransporte,
+	DatosAeronavegacion,
 } from "@/types/poliza";
 import { validarFechasPago } from "@/utils/polizaValidation";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/utils/supabase/client";
+
+const LABELS_TIPO_TRANSPORTE: Record<string, string> = {
+	terrestre: "Terrestre",
+	maritimo: "Marítimo",
+	aereo: "Aéreo",
+	ferreo: "Férreo",
+	multimodal: "Multimodal",
+};
+
+const LABELS_MODALIDAD_TRANSPORTE: Record<string, string> = {
+	flotante: "Flotante",
+	flat: "Flat",
+	un_solo_embarque: "Un solo embarque",
+	flat_prima_minima_deposito: "Flat con prima mínima depósito",
+};
 
 type Props = {
 	formState: PolizaFormState;
@@ -610,6 +627,79 @@ export function Resumen({ formState, onAnterior, onEditarPaso, onGuardar, guarda
 												datos_especificos.datos as DatosResponsabilidadCivil
 											).valor_asegurado.toLocaleString("es-BO")}{" "}
 											{modalidad_pago?.moneda || "Bs"}
+										</div>
+									</div>
+								)}
+
+								{/* Transportes */}
+								{datos_especificos?.tipo_ramo === "Transportes" && (
+									<div className="text-sm text-muted-foreground space-y-2">
+										<div>
+											<span className="font-medium text-foreground">Materia asegurada:</span>{" "}
+											{(datos_especificos.datos as DatosTransporte).materia_asegurada}
+										</div>
+										<div>
+											<span className="font-medium text-foreground">Tipo de transporte:</span>{" "}
+											{LABELS_TIPO_TRANSPORTE[(datos_especificos.datos as DatosTransporte).tipo_transporte] ??
+												(datos_especificos.datos as DatosTransporte).tipo_transporte}
+										</div>
+										<div>
+											<span className="font-medium text-foreground">Ruta:</span>{" "}
+											{(datos_especificos.datos as DatosTransporte).ciudad_origen} →{" "}
+											{(datos_especificos.datos as DatosTransporte).ciudad_destino}
+										</div>
+										<div>
+											<span className="font-medium text-foreground">Valor Asegurado:</span>{" "}
+											{(datos_especificos.datos as DatosTransporte).valor_asegurado.toLocaleString("es-BO")}{" "}
+											{modalidad_pago?.moneda || "Bs"}
+										</div>
+										<div>
+											<span className="font-medium text-foreground">Modalidad:</span>{" "}
+											{LABELS_MODALIDAD_TRANSPORTE[(datos_especificos.datos as DatosTransporte).modalidad] ??
+												(datos_especificos.datos as DatosTransporte).modalidad}
+										</div>
+										<div>
+											<span className="font-medium text-foreground">Coberturas:</span>{" "}
+											{[
+												(datos_especificos.datos as DatosTransporte).cobertura_a && "A (Todo Riesgo)",
+												(datos_especificos.datos as DatosTransporte).cobertura_c && "C (Riesgos Nombrados)",
+											]
+												.filter(Boolean)
+												.join(", ") || "—"}
+										</div>
+									</div>
+								)}
+
+								{/* Aeronavegación / Naves o embarcaciones */}
+								{(datos_especificos?.tipo_ramo === "Aeronavegación" ||
+									datos_especificos?.tipo_ramo === "Naves o embarcaciones") && (
+									<div className="text-sm text-muted-foreground space-y-2">
+										<div>
+											<span className="font-medium text-foreground">Tipo:</span>{" "}
+											{(datos_especificos.datos as DatosAeronavegacion).tipo_nave === "aeronave"
+												? "Aeronave"
+												: "Embarcación"}
+											{" · "}
+											{(datos_especificos.datos as DatosAeronavegacion).tipo_poliza === "individual"
+												? "Individual"
+												: "Corporativo"}
+										</div>
+										<div>
+											<span className="font-medium text-foreground">
+												{(datos_especificos.datos as DatosAeronavegacion).tipo_nave === "aeronave"
+													? "Aeronaves"
+													: "Naves/Embarcaciones"}
+												:
+											</span>{" "}
+											{(datos_especificos.datos as DatosAeronavegacion).naves.length}
+										</div>
+										<div>
+											<span className="font-medium text-foreground">Niveles AP:</span>{" "}
+											{(datos_especificos.datos as DatosAeronavegacion).niveles_ap.length}
+										</div>
+										<div>
+											<span className="font-medium text-foreground">Asegurados adicionales:</span>{" "}
+											{(datos_especificos.datos as DatosAeronavegacion).asegurados_adicionales.length}
 										</div>
 									</div>
 								)}
