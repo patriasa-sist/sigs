@@ -754,6 +754,18 @@ export async function cerrarSiniestro(
 /**
  * Buscar pólizas activas para siniestros
  */
+/**
+ * Construye un patrón ILIKE permisivo para identificadores (placa, N° de póliza, chasis, etc.):
+ * ignora espacios, guiones y cualquier separador intercalando `%` entre cada carácter alfanumérico.
+ * Así "ABC123" encuentra "ABC-123" y "AUT-SCE 123" encuentra "AUT SCE123" (simétrico en ambos sentidos).
+ * Si el valor no tiene alfanuméricos, cae al patrón simple para no generar un comodín que matchee todo.
+ */
+function patronFlexibleIlike(value: string): string {
+	const chars = value.toLowerCase().replace(/[^a-z0-9]/g, "").split("");
+	if (chars.length === 0) return `%${value}%`;
+	return `%${chars.join("%")}%`;
+}
+
 export async function buscarPolizasActivas(query: string): Promise<BusquedaPolizasResponse> {
 	const permiso = await verificarPermisoSiniestros();
 	if (!permiso.authorized) {
@@ -764,6 +776,9 @@ export async function buscarPolizasActivas(query: string): Promise<BusquedaPoliz
 
 	try {
 		const palabras = query.split(/\s+/).filter(Boolean);
+
+		// Patrón permisivo para identificadores (ignora espacios y guiones)
+		const idPat = patronFlexibleIlike(query);
 
 		// Fase 1: búsquedas paralelas — clientes por texto + tablas específicas por ramo
 		let natClientesQuery = supabase.from("natural_clients").select("client_id");
@@ -802,19 +817,19 @@ export async function buscarPolizasActivas(query: string): Promise<BusquedaPoliz
 			supabase
 				.from("polizas_automotor_vehiculos")
 				.select("poliza_id")
-				.or(`placa.ilike.%${query}%,nro_chasis.ilike.%${query}%,nro_motor.ilike.%${query}%`)
+				.or(`placa.ilike.${idPat},nro_chasis.ilike.${idPat},nro_motor.ilike.${idPat}`)
 				.limit(30),
 			// Responsabilidad Civil: placa, chasis
 			supabase
 				.from("polizas_rc_vehiculos")
 				.select("poliza_id")
-				.or(`placa.ilike.%${query}%,nro_chasis.ilike.%${query}%`)
+				.or(`placa.ilike.${idPat},nro_chasis.ilike.${idPat}`)
 				.limit(30),
 			// Ramos Técnicos: número de serie, placa
 			supabase
 				.from("polizas_ramos_tecnicos_equipos")
 				.select("poliza_id")
-				.or(`nro_serie.ilike.%${query}%,placa.ilike.%${query}%`)
+				.or(`nro_serie.ilike.${idPat},placa.ilike.${idPat}`)
 				.limit(30),
 			// Salud: nombre o carnet de beneficiarios
 			supabase
@@ -838,13 +853,13 @@ export async function buscarPolizasActivas(query: string): Promise<BusquedaPoliz
 			supabase
 				.from("polizas_transporte")
 				.select("poliza_id")
-				.or(`factura.ilike.%${query}%,materia_asegurada.ilike.%${query}%`)
+				.or(`factura.ilike.${idPat},materia_asegurada.ilike.%${query}%`)
 				.limit(30),
 			// Aeronavegación: matrícula o número de serie
 			supabase
 				.from("polizas_aeronavegacion_naves")
 				.select("poliza_id")
-				.or(`matricula.ilike.%${query}%,serie.ilike.%${query}%`)
+				.or(`matricula.ilike.${idPat},serie.ilike.${idPat}`)
 				.limit(30),
 			// Vida/AP/Sepelio: nombre o carnet de asegurados mínimos
 			supabase
@@ -909,7 +924,7 @@ export async function buscarPolizasActivas(query: string): Promise<BusquedaPoliz
 			)
 			.eq("estado", "activa");
 
-		const orConditions: string[] = [`numero_poliza.ilike.%${query}%`];
+		const orConditions: string[] = [`numero_poliza.ilike.${idPat}`];
 		if (clientIdsEncontrados.length > 0) {
 			orConditions.push(`client_id.in.(${clientIdsEncontrados.join(",")})`);
 		}
