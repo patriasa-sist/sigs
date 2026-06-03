@@ -15,6 +15,25 @@ interface PolizaCardProps {
 	showDeselectButton?: boolean;
 }
 
+// Estado mostrado de una cuota. Se DERIVA de las fechas (igual que cobranzas en
+// utils/estadoCuota.ts), no de la columna `estado` (legacy/manual que solo guarda
+// pendiente|pagado|parcial). Se separa "por_cobrar" (aún no vence, no es culpa del
+// cliente) de "vencida"/"mora" para no mostrar cuotas futuras como si fueran un atraso.
+type EstadoCuotaUI = "pagada" | "parcial" | "por_cobrar" | "vencida" | "mora";
+
+const DIAS_PARA_MORA = 10; // venció hace más de estos días => MORA
+
+function clasificarCuota(cuota: CuotaPago): EstadoCuotaUI {
+	if (cuota.fecha_pago || cuota.estado === "pagado") return "pagada";
+	if (cuota.estado === "parcial") return "parcial";
+	const fechaVencimiento = new Date(`${cuota.fecha_vencimiento}T00:00:00`);
+	const hoy = new Date(`${hoyLaPaz()}T00:00:00`);
+	const diasVencidos = Math.floor((hoy.getTime() - fechaVencimiento.getTime()) / (1000 * 60 * 60 * 24));
+	if (diasVencidos <= 0) return "por_cobrar"; // aún no vence
+	if (diasVencidos > DIAS_PARA_MORA) return "mora";
+	return "vencida";
+}
+
 export default function PolizaCard({ poliza, onDeselect, showDeselectButton = true }: PolizaCardProps) {
 	const [showDocumentosModal, setShowDocumentosModal] = useState(false);
 	const [showAllCuotas, setShowAllCuotas] = useState(false);
@@ -45,20 +64,9 @@ export default function PolizaCard({ poliza, onDeselect, showDeselectButton = tr
 		};
 	}, [poliza.id, poliza.ramo, poliza.asegurados]);
 
-	// Contar cuotas vencidas
-	const cuotasVencidas = poliza.cuotas?.filter(c => c.estado === "vencida").length || 0;
-
-	// Función para determinar si una cuota está en mora (pendiente + más de 10 días vencida)
-	const esMora = (cuota: CuotaPago) => {
-		if (cuota.estado !== "pendiente") return false;
-		const fechaVencimiento = new Date(`${cuota.fecha_vencimiento}T00:00:00`);
-		const hoy = new Date(`${hoyLaPaz()}T00:00:00`);
-		const diasVencidos = Math.floor((hoy.getTime() - fechaVencimiento.getTime()) / (1000 * 60 * 60 * 24));
-		return diasVencidos > 10;
-	};
-
-	// Contar cuotas en mora
-	const cuotasEnMora = poliza.cuotas?.filter(esMora).length || 0;
+	// Conteos para la alerta de pagos atrasados (vencida = venció hace <=10 días; mora = >10 días)
+	const cuotasVencidas = poliza.cuotas?.filter(c => clasificarCuota(c) === "vencida").length || 0;
+	const cuotasEnMora = poliza.cuotas?.filter(c => clasificarCuota(c) === "mora").length || 0;
 
 	return (
 		<>
@@ -268,26 +276,35 @@ export default function PolizaCard({ poliza, onDeselect, showDeselectButton = tr
 									<div className={`space-y-1 ${showAllCuotas ? "max-h-96 overflow-y-auto pr-1" : ""}`}>
 										{(showAllCuotas ? poliza.cuotas : poliza.cuotas.slice(0, 5)).map((cuota) => {
 											const tieneProrrogas = cuota.prorrogas_historial && cuota.prorrogas_historial.length > 0;
-											const esVencida = cuota.estado === "vencida";
-											const esPagada = cuota.estado === "pagada";
-											const enMora = esMora(cuota);
+											const estadoCuota = clasificarCuota(cuota);
+											const esPagada = estadoCuota === "pagada";
+											const esVencida = estadoCuota === "vencida";
+											const enMora = estadoCuota === "mora";
+											// Énfasis de texto solo para atrasos reales: rojo (mora), ámbar (vencida)
+											const emphTextClass = enMora
+												? "text-red-700 dark:text-red-300"
+												: esVencida
+													? "text-amber-700 dark:text-amber-300"
+													: "";
 
 											return (
 												<div
 													key={cuota.id}
 													className={`grid grid-cols-12 gap-2 text-xs p-2 rounded border ${
-														esVencida
+														enMora
 															? "bg-red-100 dark:bg-red-950/40 border-red-300 dark:border-red-700"
-															: enMora
-																? "bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800"
-																: esPagada
-																	? "bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800"
-																	: "bg-secondary/20 border-secondary"
+															: esVencida
+																? "bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800"
+																: estadoCuota === "parcial"
+																	? "bg-orange-50 dark:bg-orange-950/20 border-orange-200 dark:border-orange-800"
+																	: esPagada
+																		? "bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800"
+																		: "bg-secondary/20 border-secondary"
 													}`}
 												>
 													{/* Número de cuota */}
 													<div className="col-span-2 flex items-center">
-														<span className={`font-medium ${enMora || esVencida ? "text-red-700 dark:text-red-300" : ""}`}>
+														<span className={`font-medium ${emphTextClass}`}>
 															#{cuota.numero_cuota}
 														</span>
 													</div>
@@ -306,20 +323,25 @@ export default function PolizaCard({ poliza, onDeselect, showDeselectButton = tr
 															</>
 														) : esVencida ? (
 															<>
-																<XCircle className="h-3 w-3 text-red-600 dark:text-red-400 flex-shrink-0" />
-																<span className="text-red-700 dark:text-red-300 font-medium">Vencida</span>
+																<AlertTriangle className="h-3 w-3 text-amber-600 dark:text-amber-400 flex-shrink-0" />
+																<span className="text-amber-700 dark:text-amber-300 font-medium">Vencida</span>
+															</>
+														) : estadoCuota === "parcial" ? (
+															<>
+																<Clock className="h-3 w-3 text-orange-600 dark:text-orange-400 flex-shrink-0" />
+																<span className="text-orange-700 dark:text-orange-300">Parcial</span>
 															</>
 														) : (
 															<>
-																<Clock className="h-3 w-3 text-amber-600 dark:text-amber-400 flex-shrink-0" />
-																<span className="text-amber-700 dark:text-amber-300">Pendiente</span>
+																<Calendar className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+																<span className="text-muted-foreground">Por cobrar</span>
 															</>
 														)}
 													</div>
 
 													{/* Monto */}
 													<div className="col-span-3 flex items-center justify-end">
-														<span className={`font-medium ${enMora || esVencida ? "text-red-700 dark:text-red-300" : ""}`}>
+														<span className={`font-medium ${emphTextClass}`}>
 															{poliza.moneda} {cuota.monto.toLocaleString("es-BO", { minimumFractionDigits: 2 })}
 														</span>
 													</div>
@@ -327,7 +349,7 @@ export default function PolizaCard({ poliza, onDeselect, showDeselectButton = tr
 													{/* Fecha vencimiento */}
 													<div className="col-span-4 flex flex-col items-end justify-center">
 														<div className="flex items-center gap-1">
-															<span className={`${enMora || esVencida ? "font-medium text-red-700 dark:text-red-300" : ""}`}>
+															<span className={emphTextClass ? `font-medium ${emphTextClass}` : ""}>
 																{formatDate(cuota.fecha_vencimiento)}
 															</span>
 															{tieneProrrogas && (

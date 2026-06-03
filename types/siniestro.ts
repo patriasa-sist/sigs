@@ -103,8 +103,8 @@ export type CuotaPago = {
 	numero_cuota: number;
 	monto: number;
 	fecha_vencimiento: string;
-	estado: "pendiente" | "pagada" | "vencida" | "parcial";
-	fecha_pago?: string;
+	estado: "pendiente" | "pagado" | "parcial"; // valores reales en BD (masculino); el vencimiento se deriva de las fechas
+	fecha_pago?: string | null;
 	fecha_vencimiento_original?: string; // Fecha original antes de prórrogas
 	prorrogas_historial?: ProrrogaCuota[]; // Array de prórrogas aplicadas
 	observaciones?: string;
@@ -466,7 +466,7 @@ export type HistorialSiniestro = {
 	campo_modificado?: string;
 	valor_anterior?: string;
 	valor_nuevo?: string; // Para cambio_estado: nombre del nuevo estado
-	detalles?: any; // JSONB - información adicional del cambio
+	detalles?: Record<string, unknown>; // JSONB - información adicional del cambio
 	created_at: string;
 	created_by?: string;
 	usuario_nombre?: string;

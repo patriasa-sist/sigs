@@ -1020,7 +1020,7 @@ export async function buscarPolizasActivas(query: string): Promise<BusquedaPoliz
 				.order("numero_cuota");
 
 			const cuotas = cuotasRaw || [];
-			const cuotasPagadas = cuotas.filter((c) => c.estado === "pagada").length;
+			const cuotasPagadas = cuotas.filter((c) => c.fecha_pago != null || c.estado === "pagado").length;
 			const cuotasPendientes = cuotas.length - cuotasPagadas;
 
 			// Obtener documentos activos de la póliza
