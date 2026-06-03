@@ -31,6 +31,7 @@ import {
 	Ship,
 	Wrench,
 	Plus,
+	RotateCw,
 	Flame,
 	ShieldAlert,
 	Users,
@@ -327,6 +328,16 @@ export default function PolizaDetallePage() {
 							<Button size="sm" onClick={() => router.push(`/polizas/anexos/nuevo?polizaId=${polizaId}`)}>
 								<Plus className="h-4 w-4" />
 								Nuevo Anexo
+							</Button>
+						)}
+						{(poliza.estado === "activa" || poliza.estado === "vencida") && (
+							<Button
+								variant="outline"
+								size="sm"
+								onClick={() => router.push(`/polizas/${polizaId}/renovar`)}
+							>
+								<RotateCw className="h-4 w-4" />
+								Renovar Póliza
 							</Button>
 						)}
 						{puedeValidar && (

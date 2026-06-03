@@ -125,7 +125,7 @@ function parsePolizaError(
 }
 
 interface NuevaPolizaFormProps {
-	mode?: "create" | "edit";
+	mode?: "create" | "edit" | "renovacion";
 	polizaId?: string;
 	initialData?: PolizaFormState;
 }
@@ -330,7 +330,7 @@ export function NuevaPolizaForm({ mode = "create", polizaId, initialData }: Nuev
 			if (mode === "create") {
 				clearPolizaDraft();
 			}
-			if (mode === "edit" && polizaId) {
+			if ((mode === "edit" || mode === "renovacion") && polizaId) {
 				router.push(`/polizas/${polizaId}`);
 			} else {
 				router.push("/polizas");
@@ -475,7 +475,7 @@ export function NuevaPolizaForm({ mode = "create", polizaId, initialData }: Nuev
 						finVigencia={formState.datos_basicos?.fin_vigencia}
 						producto={productoSeleccionado}
 						porcentajeComisionUsuario={porcentajeComisionUsuario}
-						mode={mode}
+						mode={mode === "edit" ? "edit" : "create"}
 						onChange={(datos) => {
 							setFormState((prev) => ({
 								...prev,
@@ -534,7 +534,7 @@ export function NuevaPolizaForm({ mode = "create", polizaId, initialData }: Nuev
 						<FileText className="h-6 w-6 text-primary shrink-0" />
 						<div className="min-w-0">
 							<h1 className="text-xl font-semibold text-foreground leading-tight">
-								{mode === "edit" ? "Editar Póliza" : "Nueva Póliza"}
+								{mode === "edit" ? "Editar Póliza" : mode === "renovacion" ? "Renovar Póliza" : "Nueva Póliza"}
 							</h1>
 							<p className="text-sm text-muted-foreground leading-tight">
 								{STEP_CONFIG[formState.paso_actual - 1]?.label} — Paso {formState.paso_actual} de 6
