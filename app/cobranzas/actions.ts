@@ -952,6 +952,7 @@ export async function obtenerDetallePolizaParaCuotas(polizaId: string): Promise<
 				compania:companias_aseguradoras!compania_aseguradora_id(id, nombre),
 				responsable:profiles!responsable_id(id, full_name),
 				regional:regionales!regional_id(id, nombre),
+				director_cartera:directores_cartera!director_cartera_id(nombre, apellidos),
 				cuotas:polizas_pagos(*)
 			`
 			)
@@ -1198,6 +1199,12 @@ export async function obtenerDetallePolizaParaCuotas(polizaId: string): Promise<
 			contacto,
 			datos_ramo,
 			cuotas_inclusion,
+			director_cartera: (() => {
+				const dc = poliza.director_cartera as { nombre?: string; apellidos?: string } | null;
+				if (!dc) return null;
+				const nombre = `${dc.nombre || ""} ${dc.apellidos || ""}`.trim();
+				return nombre || null;
+			})(),
 		};
 
 		return { success: true, data: polizaExtendida };

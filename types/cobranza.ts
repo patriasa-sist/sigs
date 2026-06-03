@@ -26,7 +26,7 @@ export type CuotaPago = {
 	estado_real?: EstadoPago; // Estado calculado automáticamente (GENERATED COLUMN)
 	observaciones: string | null;
 	fecha_vencimiento_original?: string | null; // Fecha original antes de prórrogas
-	prorrogas_historial?: any[] | null; // Array de prórrogas aplicadas
+	prorrogas_historial?: ProrrogaHistorial[] | null; // Array de prórrogas aplicadas
 	created_at: string;
 	updated_at: string;
 	created_by: string | null;
@@ -445,6 +445,8 @@ export type DatosEspecificosRamo =
 export type PolizaConPagosExtendida = PolizaConPagos & {
 	contacto: ContactoCliente;
 	datos_ramo: DatosEspecificosRamo;
+	// Nombre completo del director de cartera asignado a la póliza (comisión)
+	director_cartera?: string | null;
 	// Cuotas propias de anexos de inclusión (independientes de las cuotas de la póliza madre)
 	cuotas_inclusion?: CuotaAnexoPropia[];
 };

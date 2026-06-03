@@ -296,6 +296,12 @@ export default function CuotasModal({
 									{poliza.moneda} {formatCurrency(poliza.prima_total)}
 								</p>
 							</div>
+							{polizaExtendida?.director_cartera && (
+								<div>
+									<p className="text-xs text-muted-foreground">Director de cartera</p>
+									<p className="font-medium mt-0.5">{polizaExtendida.director_cartera}</p>
+								</div>
+							)}
 						</div>
 					</div>
 
