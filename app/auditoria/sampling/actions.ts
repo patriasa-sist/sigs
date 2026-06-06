@@ -23,6 +23,8 @@ export type ClienteSampling = {
 	status: string;
 	nombre_display: string;
 	created_at: string;
+	/** Cargado bajo una ventana de excepción: la falta de documentos es autorizada. */
+	carga_retroactiva: boolean;
 };
 
 export type ClienteSamplingDetalle = ClienteSampling & {
@@ -54,6 +56,7 @@ export async function obtenerMuestraAleatoria(): Promise<ClienteSampling[]> {
 			client_type,
 			status,
 			created_at,
+			carga_retroactiva,
 			natural_clients (primer_nombre, primer_apellido),
 			juridic_clients (razon_social),
 			unipersonal_clients (nombre_propietario, apellido_propietario, razon_social)
@@ -98,6 +101,7 @@ export async function obtenerMuestraAleatoria(): Promise<ClienteSampling[]> {
 			status: c.status,
 			nombre_display,
 			created_at: c.created_at,
+			carga_retroactiva: c.carga_retroactiva ?? false,
 		};
 	});
 }
@@ -122,6 +126,7 @@ export async function obtenerDetalleSampling(
 			client_type,
 			status,
 			created_at,
+			carga_retroactiva,
 			natural_clients (primer_nombre, primer_apellido),
 			juridic_clients (razon_social),
 			unipersonal_clients (nombre_propietario, apellido_propietario, razon_social)
@@ -183,6 +188,7 @@ export async function obtenerDetalleSampling(
 		status: client.status,
 		nombre_display,
 		created_at: client.created_at,
+		carga_retroactiva: client.carga_retroactiva ?? false,
 		documentos: docs,
 		documentos_requeridos,
 		documentos_subidos,

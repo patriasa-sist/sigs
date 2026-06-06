@@ -9,6 +9,7 @@ import {
 	type ExcepcionDocumentoVista,
 	NON_EXCEPTABLE_DOCUMENTS,
 	ALL_DOCUMENT_TYPES,
+	isDocumentExceptable,
 } from "@/types/clienteDocumento";
 
 // ============================================================================
@@ -136,6 +137,8 @@ export async function obtenerMisExcepciones(): Promise<ExcepcionDocumento[]> {
 	if (!user) return [];
 
 	const supabase = await createClient();
+
+	// Excepciones reales: de uso único, por documento, otorgadas por UIF.
 	const { data, error } = await supabase
 		.from("document_exceptions")
 		.select("*")
@@ -144,10 +147,39 @@ export async function obtenerMisExcepciones(): Promise<ExcepcionDocumento[]> {
 
 	if (error) {
 		console.error("Error obteniendo excepciones:", error);
-		return [];
+		// No retornamos aún: la ventana global puede seguir aplicando.
 	}
 
-	return (data ?? []) as ExcepcionDocumento[];
+	const reales = (data ?? []) as ExcepcionDocumento[];
+
+	// Ventana temporal de carga retroactiva (backfill): si el usuario está
+	// cubierto por una ventana vigente, TODOS los documentos exceptuables se
+	// vuelven opcionales. Son excepciones "virtuales": no existen como filas,
+	// por lo que no se consumen al crear cada cliente (ver migration_ventana_excepcion_docs.sql).
+	const { data: enVentana } = await supabase.rpc("usuario_tiene_ventana_excepcion");
+
+	if (enVentana === true) {
+		const yaPresentes = new Set(reales.map((e) => e.tipo_documento));
+		const ahora = new Date().toISOString();
+		const virtuales: ExcepcionDocumento[] = (Object.keys(ALL_DOCUMENT_TYPES) as TipoDocumentoCliente[])
+			.filter((tipo) => isDocumentExceptable(tipo) && !yaPresentes.has(tipo))
+			.map((tipo) => ({
+				id: `ventana:${tipo}`,
+				user_id: user.id,
+				tipo_documento: tipo,
+				motivo: "Ventana temporal de carga retroactiva",
+				estado: "activa",
+				otorgado_por: user.id,
+				fecha_otorgamiento: ahora,
+				usado_en_client_id: null,
+				fecha_uso: null,
+				revocado_por: null,
+				fecha_revocacion: null,
+			}));
+		return [...reales, ...virtuales];
+	}
+
+	return reales;
 }
 
 // ============================================================================

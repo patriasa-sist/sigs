@@ -173,6 +173,7 @@ function ClientSamplingCard({
 
 	const typeInfo = CLIENT_TYPE_LABELS[cliente.client_type] || CLIENT_TYPE_LABELS.natural;
 	const TypeIcon = typeInfo.icon;
+	const esRetroactiva = cliente.carga_retroactiva;
 
 	const handleToggle = useCallback(async () => {
 		if (expanded) {
@@ -198,7 +199,9 @@ function ClientSamplingCard({
 	const locked = saved !== null;
 	const allUploaded = detalle ? detalle.documentos_faltantes.length === 0 : false;
 	const hayFlagged = Object.keys(flagged).length > 0;
-	const hayFaltantes = detalle ? detalle.documentos_faltantes.length > 0 : false;
+	// En clientes de carga retroactiva la falta de documentos es autorizada:
+	// no se ofrece reportarla como incidencia (sí se puede marcar un doc incorrecto).
+	const hayFaltantes = detalle ? detalle.documentos_faltantes.length > 0 && !esRetroactiva : false;
 	const puedeNotificar = destinatario?.ok === true;
 
 	const toggleFlag = (tipo: string, documentoId: string | null) => {
@@ -297,6 +300,14 @@ function ClientSamplingCard({
 							</div>
 						</div>
 						<div className="flex items-center gap-2">
+							{esRetroactiva && (
+								<span
+									className="text-xs font-medium px-2 py-1 rounded-full bg-indigo-100 text-indigo-700"
+									title="Cliente cargado bajo la ventana de carga retroactiva autorizada. La ausencia de documentos es esperada."
+								>
+									Carga retroactiva
+								</span>
+							)}
 							{saved && (
 								<span
 									className={`text-xs font-medium px-2 py-1 rounded-full ${
@@ -316,14 +327,20 @@ function ClientSamplingCard({
 							{detalle && !saved && (
 								<span
 									className={`text-xs font-medium px-2 py-1 rounded-full ${
-										allUploaded ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+										allUploaded
+											? "bg-green-100 text-green-700"
+											: esRetroactiva
+												? "bg-indigo-50 text-indigo-700"
+												: "bg-red-100 text-red-700"
 									}`}
 								>
 									{allUploaded
 										? "Completo"
-										: `${detalle.documentos_faltantes.length} faltante${
-												detalle.documentos_faltantes.length > 1 ? "s" : ""
-											}`}
+										: esRetroactiva
+											? `${detalle.documentos_faltantes.length} sin cargar (autorizado)`
+											: `${detalle.documentos_faltantes.length} faltante${
+													detalle.documentos_faltantes.length > 1 ? "s" : ""
+												}`}
 								</span>
 							)}
 							{loading ? (
@@ -340,6 +357,17 @@ function ClientSamplingCard({
 
 			{expanded && detalle && (
 				<CardContent className="border-t pt-4">
+					{/* Aviso de carga retroactiva: documentos no exigidos por autorización */}
+					{esRetroactiva && (
+						<div className="mb-4 flex items-start gap-2 rounded-md bg-indigo-50 border border-indigo-200 p-2.5 text-xs text-indigo-800">
+							<AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+							<span>
+								Cliente cargado bajo una ventana de <strong>carga retroactiva autorizada</strong>. La
+								ausencia de documentos es esperada y no debe reportarse como incidencia.
+							</span>
+						</div>
+					)}
+
 					{/* Summary bar */}
 					<div className="flex items-center gap-4 mb-4 text-sm">
 						<span className="flex items-center gap-1 text-green-700">
