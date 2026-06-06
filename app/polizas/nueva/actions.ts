@@ -125,16 +125,22 @@ async function insertarPagos(
 		return;
 	}
 
+	// Carga retroactiva: las cuotas se registran como YA PAGADAS (sin generar
+	// cobranza), de forma automática. La prima es opcional.
+	const esRetro = formState.datos_basicos?.es_retroactiva === true;
+
 	if (formState.modalidad_pago.tipo === "contado") {
-		// Carga retroactiva con prima: registrar como ya pagada
-		const pagada = formState.modalidad_pago.cuota_pagada === true;
+		// Sin prima registrada (cuota 0): no insertar cuota (polizas_pagos exige monto > 0)
+		if (!formState.modalidad_pago.cuota_unica || formState.modalidad_pago.cuota_unica <= 0) {
+			return;
+		}
 		const { error: errorPago } = await supabase.from("polizas_pagos").insert({
 			poliza_id: polizaId,
 			numero_cuota: 1,
 			monto: formState.modalidad_pago.cuota_unica,
 			fecha_vencimiento: formState.modalidad_pago.fecha_pago_unico,
-			estado: pagada ? "pagado" : "pendiente",
-			fecha_pago: pagada ? formState.modalidad_pago.fecha_pago_unico : null,
+			estado: esRetro ? "pagado" : "pendiente",
+			fecha_pago: esRetro ? formState.modalidad_pago.fecha_pago_unico : null,
 		});
 
 		throwIfError(errorPago, "Error al guardar el pago");
@@ -151,36 +157,34 @@ async function insertarPagos(
 
 		let numeroCuotaActual = 1;
 
-		const inicialPagada = formState.modalidad_pago.cuota_inicial_pagada === true;
-
 		if (formState.modalidad_pago.cuota_inicial > 0) {
 			cuotas.push({
 				poliza_id: polizaId,
 				numero_cuota: numeroCuotaActual,
 				monto: formState.modalidad_pago.cuota_inicial,
 				fecha_vencimiento: formState.modalidad_pago.fecha_inicio_cuotas,
-				estado: inicialPagada ? "pagado" : "pendiente",
-				fecha_pago: inicialPagada ? formState.modalidad_pago.fecha_inicio_cuotas : null,
+				estado: esRetro ? "pagado" : "pendiente",
+				fecha_pago: esRetro ? formState.modalidad_pago.fecha_inicio_cuotas : null,
 				observaciones: "Cuota inicial",
 			});
 			numeroCuotaActual++;
 		}
 
 		formState.modalidad_pago.cuotas.forEach((cuota) => {
-			// Carga retroactiva: la cuota puede venir marcada como pagada
-			const cuotaPagada = cuota.estado === "pagado";
 			cuotas.push({
 				poliza_id: polizaId,
 				numero_cuota: numeroCuotaActual,
 				monto: cuota.monto,
 				fecha_vencimiento: cuota.fecha_vencimiento,
-				estado: cuotaPagada ? "pagado" : "pendiente",
-				fecha_pago: cuotaPagada ? (cuota.fecha_pago ?? cuota.fecha_vencimiento) : null,
+				estado: esRetro ? "pagado" : "pendiente",
+				fecha_pago: esRetro ? cuota.fecha_vencimiento : null,
 			});
 			numeroCuotaActual++;
 		});
 
 		if (cuotas.length === 0) {
+			// Retroactiva puede no registrar prima/cuotas; en directa normal sí es obligatorio.
+			if (esRetro) return;
 			throw new Error("Debe definir al menos una cuota de pago");
 		}
 

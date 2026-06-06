@@ -304,6 +304,7 @@ export async function actualizarPoliza(
 			comision_encargado?: number;
 		};
 		const sinPrimaPropia = formState.datos_basicos.tipo_prima === "sin_prima_propia";
+		const esRetro = formState.datos_basicos.es_retroactiva === true;
 
 		// Extraer campos ramo-específicos que se guardan en la tabla polizas
 		const datosEsp = formState.datos_especificos?.datos;
@@ -394,37 +395,51 @@ export async function actualizarPoliza(
 				}
 			}
 		} else if (formState.modalidad_pago.tipo === "contado") {
-			// Buscar la cuota existente para contado
-			const cuotaExistente = currentPagos?.find(p => p.numero_cuota === 1);
-
-			if (cuotaExistente) {
-				// Solo actualizar si no está pagada
-				if (!idsCuotasPagadas.has(cuotaExistente.id)) {
-					const { error: updateError } = await supabase
-						.from("polizas_pagos")
-						.update({
-							monto: formState.modalidad_pago.cuota_unica,
-							fecha_vencimiento: formState.modalidad_pago.fecha_pago_unico,
-						})
-						.eq("id", cuotaExistente.id);
-
-					if (updateError) {
-						console.error("[actualizarPoliza] Error updating contado cuota:", updateError);
-						return { success: false, error: "Error al actualizar la cuota de pago" };
-					}
+			const cuotaUnica = formState.modalidad_pago.cuota_unica;
+			// Retroactiva sin prima registrada (cuota 0): no crear cuota (CHECK monto > 0)
+			if (!cuotaUnica || cuotaUnica <= 0) {
+				// Si quedó una cuota previa no pagada, eliminarla
+				const cuotaPrevia = currentPagos?.find(p => p.numero_cuota === 1 && p.estado !== "pagado");
+				if (cuotaPrevia) {
+					const supabaseAdmin = createAdminClient();
+					await supabaseAdmin.from("polizas_pagos").delete().eq("id", cuotaPrevia.id);
 				}
 			} else {
-				// No existe, crear nueva
-				const { error: insertError } = await supabase.from("polizas_pagos").insert({
-					poliza_id: polizaId,
-					numero_cuota: 1,
-					monto: formState.modalidad_pago.cuota_unica,
-					fecha_vencimiento: formState.modalidad_pago.fecha_pago_unico,
-					estado: "pendiente",
-				});
-				if (insertError) {
-					console.error("[actualizarPoliza] Error inserting contado cuota:", insertError);
-					return { success: false, error: "Error al guardar la cuota de pago" };
+				// Buscar la cuota existente para contado
+				const cuotaExistente = currentPagos?.find(p => p.numero_cuota === 1);
+
+				if (cuotaExistente) {
+					// Solo actualizar si no está pagada
+					if (!idsCuotasPagadas.has(cuotaExistente.id)) {
+						const { error: updateError } = await supabase
+							.from("polizas_pagos")
+							.update({
+								monto: cuotaUnica,
+								fecha_vencimiento: formState.modalidad_pago.fecha_pago_unico,
+								estado: esRetro ? "pagado" : "pendiente",
+								fecha_pago: esRetro ? formState.modalidad_pago.fecha_pago_unico : null,
+							})
+							.eq("id", cuotaExistente.id);
+
+						if (updateError) {
+							console.error("[actualizarPoliza] Error updating contado cuota:", updateError);
+							return { success: false, error: "Error al actualizar la cuota de pago" };
+						}
+					}
+				} else {
+					// No existe, crear nueva
+					const { error: insertError } = await supabase.from("polizas_pagos").insert({
+						poliza_id: polizaId,
+						numero_cuota: 1,
+						monto: cuotaUnica,
+						fecha_vencimiento: formState.modalidad_pago.fecha_pago_unico,
+						estado: esRetro ? "pagado" : "pendiente",
+						fecha_pago: esRetro ? formState.modalidad_pago.fecha_pago_unico : null,
+					});
+					if (insertError) {
+						console.error("[actualizarPoliza] Error inserting contado cuota:", insertError);
+						return { success: false, error: "Error al guardar la cuota de pago" };
+					}
 				}
 			}
 		} else {
@@ -458,6 +473,7 @@ export async function actualizarPoliza(
 				monto: number;
 				fecha_vencimiento: string;
 				estado: string;
+				fecha_pago?: string | null;
 				observaciones?: string;
 			}> = [];
 
@@ -473,7 +489,8 @@ export async function actualizarPoliza(
 						numero_cuota: 1,
 						monto: formState.modalidad_pago.cuota_inicial,
 						fecha_vencimiento: formState.modalidad_pago.fecha_inicio_cuotas,
-						estado: "pendiente",
+						estado: esRetro ? "pagado" : "pendiente",
+						fecha_pago: esRetro ? formState.modalidad_pago.fecha_inicio_cuotas : null,
 						observaciones: "Cuota inicial",
 					});
 				}
@@ -490,7 +507,8 @@ export async function actualizarPoliza(
 						numero_cuota: cuota.numero,
 						monto: cuota.monto,
 						fecha_vencimiento: cuota.fecha_vencimiento,
-						estado: "pendiente",
+						estado: esRetro ? "pagado" : "pendiente",
+						fecha_pago: esRetro ? cuota.fecha_vencimiento : null,
 					});
 				}
 			}

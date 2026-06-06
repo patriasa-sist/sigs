@@ -81,8 +81,6 @@ export function ModalidadPago({
 }: Props) {
 	const sinPrimaPropia = tipoPrima === "sin_prima_propia";
 	const [tipoPago, setTipoPago] = useState<"contado" | "credito">(datos?.tipo || "contado");
-	// Carga retroactiva: marcar todas las cuotas como ya pagadas (sin generar cobranza)
-	const [marcarPagadas, setMarcarPagadas] = useState<boolean>(false);
 
 	// Check if modality change should be blocked (paid cuotas exist)
 	const bloquearCambioModalidad = mode === "edit" && tieneCuotasPagadas(datos);
@@ -318,23 +316,10 @@ export function ModalidadPago({
 				moneda,
 				prima_neta,
 				comision,
-				// Carga retroactiva: registrar como pagada con su fecha
-				...(esRetroactiva && marcarPagadas
-					? { cuota_pagada: true }
-					: {}),
 			};
 		} else {
 			// cantidad_cuotas representa el total de cuotas (inicial + regulares)
 			const totalCuotas = cuotaInicial > 0 ? cuotas.length + 1 : cuotas.length;
-			// Carga retroactiva: marcar cuotas como ya pagadas con su fecha de vencimiento
-			const cuotasFinal =
-				esRetroactiva && marcarPagadas
-					? cuotas.map((c) => ({
-							...c,
-							estado: "pagado" as const,
-							fecha_pago: c.fecha_pago ?? c.fecha_vencimiento,
-						}))
-					: cuotas;
 			datosPago = {
 				tipo: "credito",
 				prima_total: primaTotal,
@@ -343,11 +328,10 @@ export function ModalidadPago({
 				cuota_inicial: cuotaInicial,
 				fecha_inicio_cuotas: fechaInicioCuotas,
 				periodo_pago: periodoPago,
-				cuotas: cuotasFinal,
+				cuotas,
 				prima_neta,
 				comision,
 				usar_factores_contado: usarFactoresContado || undefined,
-				...(esRetroactiva && marcarPagadas && cuotaInicial > 0 ? { cuota_inicial_pagada: true } : {}),
 			};
 		}
 
@@ -357,8 +341,8 @@ export function ModalidadPago({
 			datosPago.comision_encargado = calculos.comision_encargado;
 		}
 
-		// Validar campos requeridos
-		const validacion = validarModalidadPago(datosPago);
+		// Validar campos requeridos (retroactiva: prima opcional)
+		const validacion = validarModalidadPago(datosPago, tipoPrima, esRetroactiva);
 		if (!validacion.valido) {
 			const nuevosErrores: Record<string, string> = {};
 			validacion.errores.forEach((error) => {
@@ -368,8 +352,14 @@ export function ModalidadPago({
 			return;
 		}
 
+		// Retroactiva sin prima registrada: no validar fechas contra vigencia
+		const sinPrimaRegistrada =
+			datosPago.tipo === "contado"
+				? !datosPago.cuota_unica || datosPago.cuota_unica <= 0
+				: datosPago.cuotas.length === 0;
+
 		// Validar fechas contra vigencia (advertencia que bloquea)
-		if (inicioVigencia && finVigencia) {
+		if (inicioVigencia && finVigencia && !sinPrimaRegistrada) {
 			const validacionVigencia = validarFechasDentroVigencia(datosPago, inicioVigencia, finVigencia);
 			if (!validacionVigencia.valido) {
 				const nuevasAdvertencias: Record<string, string> = {};
@@ -399,11 +389,12 @@ export function ModalidadPago({
 
 	// En modo edición, si ya hay cuotas cargadas de la BD (tienen id), no requerir cuotasGeneradas
 	const cuotasExistentes = cuotas.some((c) => c.id);
-	const tieneDatos = sinPrimaPropia
-		? true // sin prima propia: se puede continuar sin prima ni cuotas
-		: tipoPago === "contado"
-			? cuotaUnica > 0 && fechaPagoUnico
-			: primaTotal > 0 && cuotas.length > 0 && (cuotasGeneradas || cuotasExistentes);
+	const tieneDatos =
+		sinPrimaPropia || esRetroactiva
+			? true // sin prima propia / retroactiva: se puede continuar sin prima ni cuotas
+			: tipoPago === "contado"
+				? cuotaUnica > 0 && fechaPagoUnico
+				: primaTotal > 0 && cuotas.length > 0 && (cuotasGeneradas || cuotasExistentes);
 
 	// Render simplificado para pólizas SIN PRIMA PROPIA (madre / open-cover)
 	if (sinPrimaPropia) {
@@ -1254,25 +1245,15 @@ export function ModalidadPago({
 				</div>
 			)}
 
-			{/* Carga retroactiva: marcar cuotas como ya pagadas */}
-			{esRetroactiva && (
-				<div className="mb-6 p-4 bg-secondary border border-border rounded-lg flex items-start gap-3">
-					<input
-						id="marcar_pagadas"
-						type="checkbox"
-						className="mt-1 h-4 w-4"
-						checked={marcarPagadas}
-						onChange={(e) => setMarcarPagadas(e.target.checked)}
-					/>
-					<div>
-						<Label htmlFor="marcar_pagadas" className="cursor-pointer font-medium text-foreground">
-							Registrar las cuotas como ya pagadas (histórico)
-						</Label>
-						<p className="text-xs text-muted-foreground mt-1">
-							Marca todas las cuotas como pagadas con su fecha de vencimiento. La póliza no aparecerá como
-							pendiente en Cobranzas, pero la prima sí se reflejará en los reportes de Producción del período.
-						</p>
-					</div>
+			{/* Carga retroactiva: aviso (las cuotas se registran como pagadas automáticamente) */}
+			{esRetroactiva && !sinPrimaPropia && (
+				<div className="mb-6 p-3 bg-secondary border border-border rounded-lg flex items-start gap-2">
+					<AlertCircle className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
+					<p className="text-xs text-muted-foreground">
+						Carga histórica: la prima es opcional. Si registra cuotas, se guardarán como{" "}
+						<strong>pagadas</strong> (con su fecha de vencimiento) para no generar cobranza, pero sí reflejar
+						la prima en Producción del período. Puede continuar sin prima.
+					</p>
 				</div>
 			)}
 
