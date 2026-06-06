@@ -61,8 +61,13 @@ export function DatosBasicos({ datos, onChange, onSiguiente, onAnterior }: Props
 			moneda: "Bs",
 			es_renovacion: false,
 			nro_poliza_anterior: "",
+			tipo_prima: "directa",
+			es_retroactiva: false,
 		},
 	);
+
+	// Rol del usuario actual (para gating de carga retroactiva)
+	const [userRole, setUserRole] = useState<string>("");
 
 	// Catálogos
 	const [companias, setCompanias] = useState<CompaniaAseguradora[]>([]);
@@ -157,6 +162,7 @@ export function DatosBasicos({ datos, onChange, onSiguiente, onAnterior }: Props
 				}
 			}
 
+			setUserRole(userRole);
 			setCompanias(companiasData || []);
 			setRegionales(regionalesData || []);
 			setCategorias(categoriasData || []);
@@ -400,6 +406,54 @@ export function DatosBasicos({ datos, onChange, onSiguiente, onAnterior }: Props
 						)}
 						<p className="text-xs text-muted-foreground mt-1">
 							Puede ser una póliza registrada en el sistema o de terceros
+						</p>
+					</div>
+				)}
+			</div>
+
+			{/* Tipo de prima y carga retroactiva */}
+			<div className="mb-6 p-4 border border-border rounded-lg bg-secondary space-y-4">
+				{/* Póliza sin prima propia (madre / open-cover) */}
+				<div>
+					<div className="flex items-center gap-3">
+						<Checkbox
+							id="sin_prima_propia"
+							checked={formData.tipo_prima === "sin_prima_propia"}
+							onCheckedChange={(checked) => {
+								setFormData((prev) => ({
+									...prev,
+									tipo_prima: checked === true ? "sin_prima_propia" : "directa",
+								}));
+							}}
+						/>
+						<Label htmlFor="sin_prima_propia" className="cursor-pointer font-medium text-foreground">
+							Póliza sin prima propia (madre / open-cover)
+						</Label>
+					</div>
+					<p className="text-xs text-muted-foreground mt-1 ml-7">
+						La póliza no genera prima ni cuotas propias. La prima se registra mediante anexos de inclusión
+						(declaraciones). Usado en transporte flotante y AP de grupo.
+					</p>
+				</div>
+
+				{/* Póliza retroactiva (carga histórica) - solo roles autorizados */}
+				{["admin", "uif"].includes(userRole) && (
+					<div>
+						<div className="flex items-center gap-3">
+							<Checkbox
+								id="es_retroactiva"
+								checked={formData.es_retroactiva || false}
+								onCheckedChange={(checked) => {
+									setFormData((prev) => ({ ...prev, es_retroactiva: checked === true }));
+								}}
+							/>
+							<Label htmlFor="es_retroactiva" className="cursor-pointer font-medium text-foreground">
+								Póliza retroactiva (carga histórica)
+							</Label>
+						</div>
+						<p className="text-xs text-muted-foreground mt-1 ml-7">
+							Para registrar pólizas anteriores y dar trazabilidad a siniestros. No genera cobranza:
+							puede dejar la prima en 0, o registrar la prima histórica con sus cuotas marcadas como pagadas.
 						</p>
 					</div>
 				)}

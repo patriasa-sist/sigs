@@ -4,6 +4,7 @@ import type {
 	DatosBasicosPoliza,
 	VehiculoAutomotor,
 	ModalidadPago,
+	TipoPrima,
 	ValidationError,
 	ValidationResult,
 	DocumentoPoliza,
@@ -212,8 +213,41 @@ export function validarPlacasUnicas(vehiculos: VehiculoAutomotor[]): ValidationR
 /**
  * Valida modalidad de pago (Paso 4)
  */
-export function validarModalidadPago(pago: Partial<ModalidadPago>): ValidationResult {
+export function validarModalidadPago(
+	pago: Partial<ModalidadPago>,
+	tipoPrima: TipoPrima = "directa"
+): ValidationResult {
 	const errores: ValidationError[] = [];
+
+	// Pólizas SIN PRIMA PROPIA (madre open-cover / flotante / AP, o retroactiva
+	// sin prima): se permite prima_total = 0 y CERO cuotas. La prima, si existe,
+	// llega por anexos de inclusión.
+	if (tipoPrima === "sin_prima_propia") {
+		if (!pago.moneda || !POLIZA_RULES.MONEDAS.includes(pago.moneda as any)) {
+			errores.push({
+				campo: "moneda",
+				mensaje: `Moneda debe ser: ${POLIZA_RULES.MONEDAS.join(", ")}`,
+			});
+		}
+		// Coherencia suave: si excepcionalmente se ingresó prima > 0 a crédito con
+		// cuotas (retroactiva con prima real), la suma debe cuadrar.
+		if (
+			pago.prima_total &&
+			pago.prima_total > 0 &&
+			pago.tipo === "credito" &&
+			pago.cuotas &&
+			pago.cuotas.length > 0
+		) {
+			const total = (pago.cuota_inicial ?? 0) + pago.cuotas.reduce((s, c) => s + c.monto, 0);
+			if (Math.abs(total - pago.prima_total) > 0.01) {
+				errores.push({
+					campo: "cuotas",
+					mensaje: `La suma de cuotas (${total.toFixed(2)}) no coincide con prima total (${pago.prima_total.toFixed(2)})`,
+				});
+			}
+		}
+		return { valido: errores.length === 0, errores };
+	}
 
 	if (!pago.tipo) {
 		errores.push({ campo: "tipo", mensaje: "Tipo de pago es requerido" });

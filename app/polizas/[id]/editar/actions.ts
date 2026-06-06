@@ -303,6 +303,7 @@ export async function actualizarPoliza(
 			comision_empresa?: number;
 			comision_encargado?: number;
 		};
+		const sinPrimaPropia = formState.datos_basicos.tipo_prima === "sin_prima_propia";
 
 		// Extraer campos ramo-específicos que se guardan en la tabla polizas
 		const datosEsp = formState.datos_especificos?.datos;
@@ -333,11 +334,13 @@ export async function actualizarPoliza(
 			modalidad_pago: formState.modalidad_pago.tipo,
 			prima_total: formState.modalidad_pago.prima_total,
 			moneda: formState.modalidad_pago.moneda,
-			prima_neta: pagoData.prima_neta || null,
-			comision: pagoData.comision_empresa || pagoData.comision || null,
-			comision_empresa: pagoData.comision_empresa || null,
-			comision_encargado: pagoData.comision_encargado || null,
+			prima_neta: sinPrimaPropia ? null : pagoData.prima_neta || null,
+			comision: sinPrimaPropia ? null : pagoData.comision_empresa || pagoData.comision || null,
+			comision_empresa: sinPrimaPropia ? null : pagoData.comision_empresa || null,
+			comision_encargado: sinPrimaPropia ? null : pagoData.comision_encargado || null,
 			usar_factores_contado: formState.modalidad_pago.tipo === "credito" && formState.modalidad_pago.usar_factores_contado === true,
+			tipo_prima: formState.datos_basicos.tipo_prima ?? "directa",
+			es_retroactiva: formState.datos_basicos.es_retroactiva ?? false,
 			es_renovacion: formState.datos_basicos.es_renovacion || false,
 			nro_poliza_anterior: formState.datos_basicos.es_renovacion ? (formState.datos_basicos.nro_poliza_anterior || null) : null,
 			regional_asegurado_id: regionalAseguradoId,
@@ -373,7 +376,24 @@ export async function actualizarPoliza(
 		// Map de cuotas pagadas por id para verificación rápida
 		const idsCuotasPagadas = new Set(cuotasPagadas.map(p => p.id));
 
-		if (formState.modalidad_pago.tipo === "contado") {
+		if (sinPrimaPropia) {
+			// Póliza madre / open-cover: no debe tener cuotas propias.
+			// Eliminar cuotas no pagadas existentes (la prima llega por anexos).
+			const idsNoPagadas = (currentPagos || [])
+				.filter(p => p.estado !== "pagado")
+				.map(p => p.id);
+			if (idsNoPagadas.length > 0) {
+				const supabaseAdmin = createAdminClient();
+				const { error: deleteError } = await supabaseAdmin
+					.from("polizas_pagos")
+					.delete()
+					.in("id", idsNoPagadas);
+				if (deleteError) {
+					console.error("[actualizarPoliza] Error deleting cuotas (sin_prima_propia):", deleteError);
+					return { success: false, error: mapSupabaseError(deleteError, "Error al limpiar cuotas anteriores") };
+				}
+			}
+		} else if (formState.modalidad_pago.tipo === "contado") {
 			// Buscar la cuota existente para contado
 			const cuotaExistente = currentPagos?.find(p => p.numero_cuota === 1);
 

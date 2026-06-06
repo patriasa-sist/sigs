@@ -31,6 +31,7 @@ export default function ExportarProduccion({ regionales, companias, equipos }: F
 	const [regionalId, setRegionalId] = useState<string>("");
 	const [companiaId, setCompaniaId] = useState<string>("");
 	const [equipoId, setEquipoId] = useState<string>("");
+	const [excluirRetroactivas, setExcluirRetroactivas] = useState<boolean>(false);
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
@@ -57,6 +58,7 @@ export default function ExportarProduccion({ regionales, companias, equipos }: F
 				regional_id: regionalId || undefined,
 				compania_id: companiaId || undefined,
 				equipo_id: equipoId || undefined,
+				excluir_retroactivas: excluirRetroactivas || undefined,
 			};
 
 			const result = await exportarProduccionNuevo(filtros);
@@ -368,6 +370,16 @@ export default function ExportarProduccion({ regionales, companias, equipos }: F
 							</Select>
 						</div>
 					</div>
+
+					<label className="mt-4 flex items-center gap-2 text-sm cursor-pointer w-fit">
+						<input
+							type="checkbox"
+							className="h-4 w-4"
+							checked={excluirRetroactivas}
+							onChange={(e) => setExcluirRetroactivas(e.target.checked)}
+						/>
+						<span className="text-muted-foreground">Excluir pólizas cargadas retroactivamente (históricas)</span>
+					</label>
 				</div>
 
 				{error && (

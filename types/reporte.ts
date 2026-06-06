@@ -16,6 +16,8 @@ export type ExportProduccionFilters = {
 	regional_id?: string;
 	compania_id?: string;
 	equipo_id?: string;
+	/** Si true, excluye las pólizas cargadas retroactivamente (históricas). Default: incluir. */
+	excluir_retroactivas?: boolean;
 };
 
 // ============================================

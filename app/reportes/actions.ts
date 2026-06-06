@@ -660,6 +660,9 @@ export async function exportarProduccionNuevo(
 				filtros.compania_id
 			);
 		}
+		if (filtros.excluir_retroactivas) {
+			polizaQuery = polizaQuery.eq("es_retroactiva", false);
+		}
 		if (memberIds) {
 			polizaQuery = polizaQuery.in("responsable_id", memberIds);
 		}

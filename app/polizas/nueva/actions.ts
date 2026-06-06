@@ -119,13 +119,22 @@ async function insertarPagos(
 ) {
 	if (!formState.modalidad_pago) return;
 
+	// Pólizas SIN PRIMA PROPIA (madre / open-cover): no se insertan cuotas.
+	// La prima llega después por anexos de inclusión (declaraciones).
+	if (formState.datos_basicos?.tipo_prima === "sin_prima_propia") {
+		return;
+	}
+
 	if (formState.modalidad_pago.tipo === "contado") {
+		// Carga retroactiva con prima: registrar como ya pagada
+		const pagada = formState.modalidad_pago.cuota_pagada === true;
 		const { error: errorPago } = await supabase.from("polizas_pagos").insert({
 			poliza_id: polizaId,
 			numero_cuota: 1,
 			monto: formState.modalidad_pago.cuota_unica,
 			fecha_vencimiento: formState.modalidad_pago.fecha_pago_unico,
-			estado: "pendiente",
+			estado: pagada ? "pagado" : "pendiente",
+			fecha_pago: pagada ? formState.modalidad_pago.fecha_pago_unico : null,
 		});
 
 		throwIfError(errorPago, "Error al guardar el pago");
@@ -136,10 +145,13 @@ async function insertarPagos(
 			monto: number;
 			fecha_vencimiento: string;
 			estado: string;
+			fecha_pago?: string | null;
 			observaciones?: string;
 		}> = [];
 
 		let numeroCuotaActual = 1;
+
+		const inicialPagada = formState.modalidad_pago.cuota_inicial_pagada === true;
 
 		if (formState.modalidad_pago.cuota_inicial > 0) {
 			cuotas.push({
@@ -147,19 +159,23 @@ async function insertarPagos(
 				numero_cuota: numeroCuotaActual,
 				monto: formState.modalidad_pago.cuota_inicial,
 				fecha_vencimiento: formState.modalidad_pago.fecha_inicio_cuotas,
-				estado: "pendiente",
+				estado: inicialPagada ? "pagado" : "pendiente",
+				fecha_pago: inicialPagada ? formState.modalidad_pago.fecha_inicio_cuotas : null,
 				observaciones: "Cuota inicial",
 			});
 			numeroCuotaActual++;
 		}
 
 		formState.modalidad_pago.cuotas.forEach((cuota) => {
+			// Carga retroactiva: la cuota puede venir marcada como pagada
+			const cuotaPagada = cuota.estado === "pagado";
 			cuotas.push({
 				poliza_id: polizaId,
 				numero_cuota: numeroCuotaActual,
 				monto: cuota.monto,
 				fecha_vencimiento: cuota.fecha_vencimiento,
-				estado: "pendiente",
+				estado: cuotaPagada ? "pagado" : "pendiente",
+				fecha_pago: cuotaPagada ? (cuota.fecha_pago ?? cuota.fecha_vencimiento) : null,
 			});
 			numeroCuotaActual++;
 		});
@@ -776,6 +792,7 @@ export async function guardarPoliza(formState: PolizaFormState) {
 
 		// 2. Insertar póliza principal
 		const pagoData = formState.modalidad_pago as { prima_neta?: number; comision?: number; comision_empresa?: number; comision_encargado?: number };
+		const sinPrimaPropia = formState.datos_basicos.tipo_prima === "sin_prima_propia";
 
 		// Extraer campos ramo-específicos que se guardan en la tabla polizas
 		const datosEsp = formState.datos_especificos?.datos;
@@ -807,11 +824,13 @@ export async function guardarPoliza(formState: PolizaFormState) {
 				modalidad_pago: formState.modalidad_pago.tipo,
 				prima_total: formState.modalidad_pago.prima_total,
 				moneda: formState.modalidad_pago.moneda,
-				prima_neta: pagoData.prima_neta || null,
-				comision: pagoData.comision_empresa || pagoData.comision || null,
-				comision_empresa: pagoData.comision_empresa || null,
-				comision_encargado: pagoData.comision_encargado || null,
+				prima_neta: sinPrimaPropia ? null : pagoData.prima_neta || null,
+				comision: sinPrimaPropia ? null : pagoData.comision_empresa || pagoData.comision || null,
+				comision_empresa: sinPrimaPropia ? null : pagoData.comision_empresa || null,
+				comision_encargado: sinPrimaPropia ? null : pagoData.comision_encargado || null,
 				usar_factores_contado: formState.modalidad_pago.tipo === "credito" && formState.modalidad_pago.usar_factores_contado === true,
+				tipo_prima: formState.datos_basicos.tipo_prima ?? "directa",
+				es_retroactiva: formState.datos_basicos.es_retroactiva ?? false,
 				estado: "pendiente",
 				es_renovacion: formState.datos_basicos.es_renovacion || false,
 				nro_poliza_anterior: formState.datos_basicos.es_renovacion ? (formState.datos_basicos.nro_poliza_anterior || null) : null,

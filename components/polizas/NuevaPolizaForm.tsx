@@ -476,6 +476,8 @@ export function NuevaPolizaForm({ mode = "create", polizaId, initialData }: Nuev
 						producto={productoSeleccionado}
 						porcentajeComisionUsuario={porcentajeComisionUsuario}
 						mode={mode === "edit" ? "edit" : "create"}
+						tipoPrima={formState.datos_basicos?.tipo_prima ?? "directa"}
+						esRetroactiva={formState.datos_basicos?.es_retroactiva ?? false}
 						onChange={(datos) => {
 							setFormState((prev) => ({
 								...prev,

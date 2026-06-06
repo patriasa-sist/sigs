@@ -85,6 +85,9 @@ export async function obtenerPolizaParaRenovacion(
 						inicio_vigencia: "",
 						fin_vigencia: "",
 						fecha_emision_compania: "",
+						// Renovación = póliza del período corriente, nunca carga histórica.
+						// Se conserva tipo_prima (una madre se renueva como madre).
+						es_retroactiva: false,
 					}
 				: null,
 		};

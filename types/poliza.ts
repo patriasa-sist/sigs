@@ -140,6 +140,12 @@ export type AseguradoSeleccionado = ClienteBase & {
 
 export type GrupoProduccion = "generales" | "personales";
 
+// Discriminador de prima a nivel de póliza.
+// - "directa": comportamiento normal (contado/crédito con cuotas propias).
+// - "sin_prima_propia": póliza madre (open-cover/flotante/AP) sin prima ni cuotas
+//   propias; la prima, si existe, llega por anexos de inclusión (declaraciones).
+export type TipoPrima = "directa" | "sin_prima_propia";
+
 export type DatosBasicosPoliza = {
 	numero_poliza: string;
 	compania_aseguradora_id: string;
@@ -156,6 +162,8 @@ export type DatosBasicosPoliza = {
 	moneda: Moneda; // NUEVO: Moneda se define a nivel de póliza
 	es_renovacion: boolean; // Indica si la póliza es una renovación de otra
 	nro_poliza_anterior?: string; // Número de la póliza que se renueva (texto libre)
+	tipo_prima: TipoPrima; // directa (default) o sin_prima_propia (madre/open-cover)
+	es_retroactiva: boolean; // Carga histórica para trazabilidad de siniestros (sin cobranza)
 };
 
 // ============================================
@@ -711,6 +719,8 @@ export type PolizaDB = {
 	comision_empresa?: number; // Comisión calculada para la empresa
 	comision_encargado?: number; // Comisión calculada para el encargado
 	usar_factores_contado?: boolean; // Si true, se usó factor_contado a pesar de ser pago a crédito
+	tipo_prima?: TipoPrima; // directa (default) o sin_prima_propia (madre/open-cover)
+	es_retroactiva?: boolean; // Carga histórica retroactiva (sin cobranza)
 	estado: "pendiente" | "activa" | "vencida" | "cancelada" | "renovada" | "rechazada" | "anulada";
 	validado_por?: string; // Usuario gerente que validó la póliza
 	fecha_validacion?: string; // Fecha de validación gerencial

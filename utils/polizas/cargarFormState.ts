@@ -205,6 +205,8 @@ export async function cargarPolizaFormState(
 			moneda: poliza.moneda,
 			es_renovacion: poliza.es_renovacion || false,
 			nro_poliza_anterior: poliza.nro_poliza_anterior || "",
+			tipo_prima: poliza.tipo_prima ?? "directa",
+			es_retroactiva: poliza.es_retroactiva ?? false,
 		};
 
 		// 4. Get payment data and build modalidad_pago
@@ -219,7 +221,17 @@ export async function cargarPolizaFormState(
 		// Check if any cuota is paid (to block modality changes)
 		const tienePagos = pagos?.some((p) => p.estado === "pagado") || false;
 
-		if (poliza.modalidad_pago === "contado") {
+		if (poliza.tipo_prima === "sin_prima_propia") {
+			// Póliza madre / open-cover: sin prima ni cuotas propias.
+			// Construir modalidad degenerada (contado, prima 0) sin cargar pagos.
+			modalidad_pago = {
+				tipo: "contado",
+				cuota_unica: 0,
+				fecha_pago_unico: poliza.inicio_vigencia,
+				prima_total: 0,
+				moneda: poliza.moneda,
+			};
+		} else if (poliza.modalidad_pago === "contado") {
 			const pago = pagos?.[0];
 			modalidad_pago = {
 				tipo: "contado",

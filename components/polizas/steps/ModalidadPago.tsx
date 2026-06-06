@@ -21,6 +21,7 @@ import type {
 	PeriodoPago,
 	ProductoAseguradora,
 	CalculoComisionResult,
+	TipoPrima,
 } from "@/types/poliza";
 import {
 	validarModalidadPago,
@@ -44,6 +45,8 @@ type Props = {
 	producto?: ProductoAseguradora | null; // Producto seleccionado para cálculos dinámicos
 	porcentajeComisionUsuario?: number; // Porcentaje de comisión del usuario encargado
 	mode?: "create" | "edit"; // Modo del formulario
+	tipoPrima?: TipoPrima; // "sin_prima_propia" → permite prima 0 y 0 cuotas (madre/open-cover)
+	esRetroactiva?: boolean; // Carga histórica → permite marcar cuotas como ya pagadas
 	onChange: (datos: ModalidadPagoType) => void;
 	onSiguiente: () => void;
 	onAnterior: () => void;
@@ -70,11 +73,16 @@ export function ModalidadPago({
 	producto,
 	porcentajeComisionUsuario = 0.5,
 	mode = "create",
+	tipoPrima = "directa",
+	esRetroactiva = false,
 	onChange,
 	onSiguiente,
 	onAnterior,
 }: Props) {
+	const sinPrimaPropia = tipoPrima === "sin_prima_propia";
 	const [tipoPago, setTipoPago] = useState<"contado" | "credito">(datos?.tipo || "contado");
+	// Carga retroactiva: marcar todas las cuotas como ya pagadas (sin generar cobranza)
+	const [marcarPagadas, setMarcarPagadas] = useState<boolean>(false);
 
 	// Check if modality change should be blocked (paid cuotas exist)
 	const bloquearCambioModalidad = mode === "edit" && tieneCuotasPagadas(datos);
@@ -271,6 +279,36 @@ export function ModalidadPago({
 	const handleContinuar = () => {
 		let datosPago: ModalidadPagoType & { comision_empresa?: number; comision_encargado?: number };
 
+		// Póliza SIN PRIMA PROPIA: contado degenerado (prima 0, sin cuotas reales).
+		// La prima, si existe, llega por anexos de inclusión.
+		if (sinPrimaPropia) {
+			const datosSinPrima: ModalidadPagoType = {
+				tipo: "contado",
+				cuota_unica: 0,
+				fecha_pago_unico: inicioVigencia || fechaPagoUnico || "",
+				prima_total: 0,
+				moneda,
+			};
+			const validacionSinPrima = validarModalidadPago(datosSinPrima, "sin_prima_propia");
+			if (!validacionSinPrima.valido) {
+				const nuevosErrores: Record<string, string> = {};
+				validacionSinPrima.errores.forEach((error) => {
+					nuevosErrores[error.campo] = error.mensaje;
+				});
+				setErrores(nuevosErrores);
+				return;
+			}
+			setErrores({});
+			setAdvertencias({});
+			onChange(datosSinPrima);
+			if (mode === "edit") {
+				setDatosActualizados(true);
+				setTimeout(() => setDatosActualizados(false), 2000);
+			}
+			onSiguiente();
+			return;
+		}
+
 		if (tipoPago === "contado") {
 			datosPago = {
 				tipo: "contado",
@@ -280,10 +318,23 @@ export function ModalidadPago({
 				moneda,
 				prima_neta,
 				comision,
+				// Carga retroactiva: registrar como pagada con su fecha
+				...(esRetroactiva && marcarPagadas
+					? { cuota_pagada: true }
+					: {}),
 			};
 		} else {
 			// cantidad_cuotas representa el total de cuotas (inicial + regulares)
 			const totalCuotas = cuotaInicial > 0 ? cuotas.length + 1 : cuotas.length;
+			// Carga retroactiva: marcar cuotas como ya pagadas con su fecha de vencimiento
+			const cuotasFinal =
+				esRetroactiva && marcarPagadas
+					? cuotas.map((c) => ({
+							...c,
+							estado: "pagado" as const,
+							fecha_pago: c.fecha_pago ?? c.fecha_vencimiento,
+						}))
+					: cuotas;
 			datosPago = {
 				tipo: "credito",
 				prima_total: primaTotal,
@@ -292,10 +343,11 @@ export function ModalidadPago({
 				cuota_inicial: cuotaInicial,
 				fecha_inicio_cuotas: fechaInicioCuotas,
 				periodo_pago: periodoPago,
-				cuotas,
+				cuotas: cuotasFinal,
 				prima_neta,
 				comision,
 				usar_factores_contado: usarFactoresContado || undefined,
+				...(esRetroactiva && marcarPagadas && cuotaInicial > 0 ? { cuota_inicial_pagada: true } : {}),
 			};
 		}
 
@@ -347,10 +399,80 @@ export function ModalidadPago({
 
 	// En modo edición, si ya hay cuotas cargadas de la BD (tienen id), no requerir cuotasGeneradas
 	const cuotasExistentes = cuotas.some((c) => c.id);
-	const tieneDatos =
-		tipoPago === "contado"
+	const tieneDatos = sinPrimaPropia
+		? true // sin prima propia: se puede continuar sin prima ni cuotas
+		: tipoPago === "contado"
 			? cuotaUnica > 0 && fechaPagoUnico
 			: primaTotal > 0 && cuotas.length > 0 && (cuotasGeneradas || cuotasExistentes);
+
+	// Render simplificado para pólizas SIN PRIMA PROPIA (madre / open-cover)
+	if (sinPrimaPropia) {
+		return (
+			<div className="bg-card rounded-lg shadow-sm border border-border p-6">
+				<div className="flex items-center justify-between mb-6">
+					<div>
+						<h2 className="text-lg font-semibold text-foreground">Modalidad de Pago</h2>
+						<p className="text-sm text-muted-foreground mt-1">Póliza sin prima propia</p>
+					</div>
+					<div className="flex items-center gap-2 text-success">
+						<CheckCircle2 className="h-5 w-5" />
+						<span className="text-sm font-medium">Sin prima propia</span>
+					</div>
+				</div>
+
+				<div className="mb-6 p-4 bg-secondary border border-border rounded-lg flex gap-3">
+					<AlertCircle className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
+					<div className="text-sm text-foreground">
+						<p className="font-medium">Esta póliza no tiene prima ni cuotas propias.</p>
+						<p className="text-muted-foreground mt-1">
+							La prima se registrará mediante <strong>anexos de inclusión</strong> (declaraciones) durante
+							la vigencia. No se generarán cuotas de cobranza para la póliza madre.
+						</p>
+					</div>
+				</div>
+
+				{/* Moneda */}
+				<div className="max-w-xs space-y-2">
+					<Label htmlFor="moneda_sin_prima">
+						Moneda <span className="text-destructive">*</span>
+					</Label>
+					<Select value={moneda} onValueChange={(value) => setMoneda(value as Moneda)}>
+						<SelectTrigger className={errores.moneda ? "border-destructive" : ""}>
+							<SelectValue />
+						</SelectTrigger>
+						<SelectContent>
+							<SelectItem value="Bs">Bolivianos (Bs)</SelectItem>
+							<SelectItem value="USD">Dólares (USD)</SelectItem>
+							<SelectItem value="USDT">Tether (USDT)</SelectItem>
+							<SelectItem value="UFV">UFV</SelectItem>
+						</SelectContent>
+					</Select>
+					{errores.moneda && <p className="text-sm text-destructive">{errores.moneda}</p>}
+				</div>
+
+				{/* Botones de navegación */}
+				<div className="flex justify-between pt-6 mt-6 border-t border-border">
+					<Button variant="outline" onClick={onAnterior}>
+						<ChevronLeft className="mr-2 h-5 w-5" />
+						Anterior
+					</Button>
+					<Button onClick={handleContinuar}>
+						{mode === "edit" ? (
+							<>
+								<Save className="mr-2 h-4 w-4" />
+								Guardar y Continuar
+							</>
+						) : (
+							<>
+								Continuar con Documentos
+								<ChevronRight className="ml-2 h-5 w-5" />
+							</>
+						)}
+					</Button>
+				</div>
+			</div>
+		);
+	}
 
 	return (
 		<div className="bg-card rounded-lg shadow-sm border border-border p-6">
@@ -1129,6 +1251,28 @@ export function ModalidadPago({
 								<li key={campo}>• {mensaje}</li>
 							))}
 					</ul>
+				</div>
+			)}
+
+			{/* Carga retroactiva: marcar cuotas como ya pagadas */}
+			{esRetroactiva && (
+				<div className="mb-6 p-4 bg-secondary border border-border rounded-lg flex items-start gap-3">
+					<input
+						id="marcar_pagadas"
+						type="checkbox"
+						className="mt-1 h-4 w-4"
+						checked={marcarPagadas}
+						onChange={(e) => setMarcarPagadas(e.target.checked)}
+					/>
+					<div>
+						<Label htmlFor="marcar_pagadas" className="cursor-pointer font-medium text-foreground">
+							Registrar las cuotas como ya pagadas (histórico)
+						</Label>
+						<p className="text-xs text-muted-foreground mt-1">
+							Marca todas las cuotas como pagadas con su fecha de vencimiento. La póliza no aparecerá como
+							pendiente en Cobranzas, pero la prima sí se reflejará en los reportes de Producción del período.
+						</p>
+					</div>
 				</div>
 			)}
 
