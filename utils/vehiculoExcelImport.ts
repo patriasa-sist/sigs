@@ -27,7 +27,18 @@ const COLUMNAS_ESPERADAS = {
 };
 
 /**
- * Normaliza el nombre de una columna para matching
+ * Cat\u00e1logos para resolver nombres (Excel) a IDs (UUID de la BD).
+ * La plantilla usa nombres legibles (ej. "Toyota", "Vagoneta") pero la BD
+ * almacena marca_id / tipo_vehiculo_id como UUID. Necesitamos mapear.
+ */
+type CatalogoItem = { id: string; nombre: string };
+export type CatalogosVehiculo = {
+	marcas?: CatalogoItem[];
+	tiposVehiculo?: CatalogoItem[];
+};
+
+/**
+ * Normaliza un texto para matching (min\u00fasculas, sin acentos, sin espacios extra)
  */
 function normalizarNombreColumna(nombre: string): string {
 	return nombre
@@ -35,6 +46,35 @@ function normalizarNombreColumna(nombre: string): string {
 		.trim()
 		.normalize("NFD")
 		.replace(/[\u0300-\u036f]/g, ""); // Eliminar acentos
+}
+
+/**
+ * Construye un mapa nombre-normalizado \u2192 id a partir de un cat\u00e1logo.
+ * Tambi\u00e9n indexa los ids para poder detectar valores que ya vienen como UUID.
+ */
+function construirResolverCatalogo(items: CatalogoItem[] = []) {
+	const porNombre = new Map<string, string>();
+	const idsValidos = new Set<string>();
+
+	for (const item of items) {
+		porNombre.set(normalizarNombreColumna(item.nombre), item.id);
+		idsValidos.add(item.id);
+	}
+
+	/**
+	 * Resuelve un valor del Excel a un UUID v\u00e1lido del cat\u00e1logo.
+	 * - Si coincide con un nombre del cat\u00e1logo \u2192 devuelve su id.
+	 * - Si ya es un UUID v\u00e1lido del cat\u00e1logo \u2192 lo conserva.
+	 * - Si no coincide con nada \u2192 undefined (campo opcional, no se inserta texto inv\u00e1lido).
+	 */
+	return (valor?: string): string | undefined => {
+		if (!valor) return undefined;
+		const normalizado = normalizarNombreColumna(valor);
+		const porNombreMatch = porNombre.get(normalizado);
+		if (porNombreMatch) return porNombreMatch;
+		if (idsValidos.has(valor)) return valor;
+		return undefined;
+	};
 }
 
 /**
@@ -90,11 +130,19 @@ function convertirAString(valor: unknown): string | undefined {
 	return String(valor).trim() || undefined;
 }
 
+type ResolverCatalogo = (valor?: string) => string | undefined;
+
 /**
  * Parsea una fila del Excel a VehiculoAutomotor
  */
-function parsearFilaVehiculo(fila: unknown[], mapa: Record<string, number>): Partial<VehiculoAutomotor> {
+function parsearFilaVehiculo(
+	fila: unknown[],
+	mapa: Record<string, number>,
+	resolverTipo: ResolverCatalogo,
+	resolverMarca: ResolverCatalogo
+): { vehiculo: Partial<VehiculoAutomotor>; advertencias: string[] } {
 	const vehiculo: Partial<VehiculoAutomotor> = {};
+	const advertencias: string[] = [];
 
 	// Campos obligatorios
 	if (mapa.placa !== undefined) {
@@ -128,12 +176,23 @@ function parsearFilaVehiculo(fila: unknown[], mapa: Record<string, number>): Par
 	}
 
 	// Campos opcionales
+	// tipo_vehiculo y marca vienen como NOMBRE en el Excel pero la BD guarda
+	// UUID (FK a catálogos). Resolvemos nombre → id; si el nombre no coincide
+	// con ningún catálogo, dejamos el campo vacío y avisamos al usuario.
 	if (mapa.tipo_vehiculo !== undefined) {
-		vehiculo.tipo_vehiculo_id = convertirAString(fila[mapa.tipo_vehiculo]);
+		const tipoTexto = convertirAString(fila[mapa.tipo_vehiculo]);
+		vehiculo.tipo_vehiculo_id = resolverTipo(tipoTexto);
+		if (tipoTexto && !vehiculo.tipo_vehiculo_id) {
+			advertencias.push(`Tipo de vehículo "${tipoTexto}" no reconocido; se dejó vacío.`);
+		}
 	}
 
 	if (mapa.marca !== undefined) {
-		vehiculo.marca_id = convertirAString(fila[mapa.marca]);
+		const marcaTexto = convertirAString(fila[mapa.marca]);
+		vehiculo.marca_id = resolverMarca(marcaTexto);
+		if (marcaTexto && !vehiculo.marca_id) {
+			advertencias.push(`Marca "${marcaTexto}" no reconocida; se dejó vacía.`);
+		}
 	}
 
 	if (mapa.modelo !== undefined) {
@@ -165,14 +224,21 @@ function parsearFilaVehiculo(fila: unknown[], mapa: Record<string, number>): Par
 		vehiculo.plaza_circulacion = convertirAString(fila[mapa.plaza_circulacion]);
 	}
 
-	return vehiculo;
+	return { vehiculo, advertencias };
 }
 
 /**
  * Importa vehículos desde un archivo Excel usando ExcelJS
  */
-export async function importarVehiculosDesdeExcel(archivo: File): Promise<ExcelImportResult> {
+export async function importarVehiculosDesdeExcel(
+	archivo: File,
+	catalogos: CatalogosVehiculo = {}
+): Promise<ExcelImportResult> {
 	try {
+		// Resolvers nombre → UUID para campos que son FK a catálogos
+		const resolverTipo = construirResolverCatalogo(catalogos.tiposVehiculo);
+		const resolverMarca = construirResolverCatalogo(catalogos.marcas);
+
 		// Convertir File a ArrayBuffer
 		const arrayBuffer = await archivo.arrayBuffer();
 
@@ -233,6 +299,7 @@ export async function importarVehiculosDesdeExcel(archivo: File): Promise<ExcelI
 
 		const vehiculos_validos: VehiculoAutomotor[] = [];
 		const errores: Array<{ fila: number; errores: string[] }> = [];
+		const advertencias: Array<{ fila: number; advertencias: string[] }> = [];
 
 		// Procesar filas de datos (desde la segunda fila)
 		worksheet.eachRow((row, rowNumber) => {
@@ -252,13 +319,22 @@ export async function importarVehiculosDesdeExcel(archivo: File): Promise<ExcelI
 				return;
 			}
 
-			const vehiculoParcial = parsearFilaVehiculo(valores, mapa);
+			const { vehiculo: vehiculoParcial, advertencias: advertenciasFila } = parsearFilaVehiculo(
+				valores,
+				mapa,
+				resolverTipo,
+				resolverMarca
+			);
 
 			// Validar vehículo
 			const validacion = validarVehiculoAutomotor(vehiculoParcial);
 
 			if (validacion.valido) {
 				vehiculos_validos.push(vehiculoParcial as VehiculoAutomotor);
+				// Solo reportamos advertencias de vehículos que sí se importaron
+				if (advertenciasFila.length > 0) {
+					advertencias.push({ fila: rowNumber, advertencias: advertenciasFila });
+				}
 			} else {
 				errores.push({
 					fila: rowNumber,
@@ -271,6 +347,7 @@ export async function importarVehiculosDesdeExcel(archivo: File): Promise<ExcelI
 			exito: vehiculos_validos.length > 0,
 			vehiculos_validos,
 			errores,
+			advertencias,
 		};
 	} catch (error) {
 		console.error("Error procesando Excel:", error);

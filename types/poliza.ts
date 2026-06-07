@@ -891,6 +891,12 @@ export type ExcelImportResult = {
 		fila: number;
 		errores: string[];
 	}>;
+	// Advertencias no bloqueantes: el vehículo se importó, pero algún dato
+	// opcional no se pudo resolver (ej. marca/tipo no reconocidos en catálogo).
+	advertencias?: Array<{
+		fila: number;
+		advertencias: string[];
+	}>;
 };
 
 // ============================================

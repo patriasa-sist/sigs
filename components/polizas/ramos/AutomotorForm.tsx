@@ -25,6 +25,7 @@ export function AutomotorForm({ datos, onChange, onSiguiente, onAnterior }: Prop
 	const [vehiculoEditando, setVehiculoEditando] = useState<VehiculoAutomotor | null>(null);
 	const [indexEditando, setIndexEditando] = useState<number | null>(null);
 	const [errores, setErrores] = useState<string[]>([]);
+	const [advertencias, setAdvertencias] = useState<string[]>([]);
 	const [importando, setImportando] = useState(false);
 
 	// Catálogos para mostrar nombres en lugar de IDs
@@ -132,9 +133,17 @@ export function AutomotorForm({ datos, onChange, onSiguiente, onAnterior }: Prop
 
 		setImportando(true);
 		setErrores([]);
+		setAdvertencias([]);
 
 		try {
-			const resultado = await importarVehiculosDesdeExcel(file);
+			const resultado = await importarVehiculosDesdeExcel(file, { marcas, tiposVehiculo });
+
+			// Mostrar advertencias no bloqueantes (marca/tipo no reconocidos, etc.)
+			if (resultado.advertencias && resultado.advertencias.length > 0) {
+				setAdvertencias(
+					resultado.advertencias.map((a) => `Fila ${a.fila}: ${a.advertencias.join(" ")}`)
+				);
+			}
 
 			if (resultado.exito && resultado.vehiculos_validos.length > 0) {
 				// Combinar con vehículos existentes
@@ -284,6 +293,24 @@ export function AutomotorForm({ datos, onChange, onSiguiente, onAnterior }: Prop
 					<ul className="text-sm text-red-700 space-y-1">
 						{errores.map((error, i) => (
 							<li key={i}>• {error}</li>
+						))}
+					</ul>
+				</div>
+			)}
+
+			{/* Advertencias (no bloqueantes) */}
+			{advertencias.length > 0 && (
+				<div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+					<h4 className="text-sm font-semibold text-amber-800 mb-2">
+						Advertencias de importación:
+					</h4>
+					<p className="text-xs text-amber-700 mb-2">
+						Los vehículos se importaron, pero revise estos datos y complételos manualmente si
+						corresponde.
+					</p>
+					<ul className="text-sm text-amber-700 space-y-1">
+						{advertencias.map((adv, i) => (
+							<li key={i}>• {adv}</li>
 						))}
 					</ul>
 				</div>
