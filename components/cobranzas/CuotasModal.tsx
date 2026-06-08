@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Fragment } from "react";
 import {
 	Dialog,
 	DialogContent,
@@ -12,9 +12,7 @@ import {
 	Phone,
 	Mail,
 	MessageCircle,
-	Car,
 	Users,
-	MapPin,
 	Calendar,
 	Clock,
 	FileWarning,
@@ -24,12 +22,15 @@ import {
 	AlertCircle,
 	BellRing,
 	RefreshCw,
+	StickyNote,
+	ChevronDown,
+	ChevronRight,
 } from "lucide-react";
 import type { PolizaConPagos, CuotaPago, PolizaConPagosExtendida } from "@/types/cobranza";
 import {
 	obtenerDetallePolizaParaCuotas,
 	prepararDatosAvisoMora,
-	obtenerComprobanteCuota,
+	obtenerComprobanteAbono,
 } from "@/app/cobranzas/actions";
 import {
 	enviarRecordatorioWhatsApp,
@@ -43,6 +44,9 @@ import { generarURLWhatsApp } from "@/utils/whatsapp";
 import { contarCuotasVencidas, obtenerEstadoReal } from "@/utils/estadoCuota";
 import RegistrarProrrogaModal from "./RegistrarProrrogaModal";
 import SustituirComprobanteModal from "./SustituirComprobanteModal";
+import RamoDetalle from "./RamoDetalle";
+import NotasCuotaModal, { type NotasTarget } from "./NotasCuotaModal";
+import RegistrarPagoAnexoModal, { type CuotaAnexoTarget } from "./RegistrarPagoAnexoModal";
 import { toast } from "sonner";
 
 interface CuotasModalProps {
@@ -87,8 +91,13 @@ export default function CuotasModal({
 	const [prorrogaModalOpen, setProrrogaModalOpen] = useState(false);
 	const [generatingPDF, setGeneratingPDF] = useState(false);
 	const [loadingComprobante, setLoadingComprobante] = useState<string | null>(null);
-	const [selectedCuotaSustituir, setSelectedCuotaSustituir] = useState<CuotaPago | null>(null);
+	const [sustituirAbono, setSustituirAbono] = useState<{ abonoId: string; cuotaNumero?: number } | null>(null);
 	const [sustituirModalOpen, setSustituirModalOpen] = useState(false);
+	const [expandedCuotas, setExpandedCuotas] = useState<Set<string>>(new Set());
+	const [notasTarget, setNotasTarget] = useState<NotasTarget | null>(null);
+	const [notasOpen, setNotasOpen] = useState(false);
+	const [pagoAnexoTarget, setPagoAnexoTarget] = useState<CuotaAnexoTarget | null>(null);
+	const [pagoAnexoOpen, setPagoAnexoOpen] = useState(false);
 
 	useEffect(() => {
 		if (open && poliza) loadExtendedData();
@@ -213,15 +222,15 @@ export default function CuotasModal({
 		loadExtendedData();
 	};
 
-	const handleVerComprobante = async (cuota: CuotaPago) => {
-		setLoadingComprobante(cuota.id);
+	const handleVerComprobanteAbono = async (abonoId: string) => {
+		setLoadingComprobante(abonoId);
 		try {
-			const response = await obtenerComprobanteCuota(cuota.id);
+			const response = await obtenerComprobanteAbono(abonoId);
 			if (response.success && response.data) {
 				window.open(response.data.publicUrl, "_blank");
 			} else {
 				toast.info("Sin comprobante", {
-					description: response.error || "No se encontró comprobante para esta cuota",
+					description: response.error || "No se encontró comprobante para este abono",
 				});
 			}
 		} catch {
@@ -231,9 +240,18 @@ export default function CuotasModal({
 		}
 	};
 
-	const handleSustituirComprobante = (cuota: CuotaPago) => {
-		setSelectedCuotaSustituir(cuota);
+	const handleSustituirAbono = (abonoId: string, cuotaNumero?: number) => {
+		setSustituirAbono({ abonoId, cuotaNumero });
 		setSustituirModalOpen(true);
+	};
+
+	const toggleExpand = (cuotaId: string) => {
+		setExpandedCuotas((prev) => {
+			const next = new Set(prev);
+			if (next.has(cuotaId)) next.delete(cuotaId);
+			else next.add(cuotaId);
+			return next;
+		});
 	};
 
 	if (!poliza) return null;
@@ -395,112 +413,10 @@ export default function CuotasModal({
 
 							{/* Ramo-specific data */}
 							{polizaExtendida.datos_ramo && (
-								<div className="rounded-md border border-border p-4">
-									{/* Automotor */}
-									{polizaExtendida.datos_ramo.tipo === "automotor" && (
-										<>
-											<h3 className="text-sm font-medium text-foreground mb-3 flex items-center gap-2">
-												<Car className="h-4 w-4 text-primary" />
-												Vehículos Asegurados ({polizaExtendida.datos_ramo.vehiculos.length})
-											</h3>
-											<div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-												{polizaExtendida.datos_ramo.vehiculos.map((vehiculo) => (
-													<div
-														key={vehiculo.id}
-														className="rounded-md border border-border bg-card p-3"
-													>
-														<p className="font-semibold text-primary text-sm">
-															{vehiculo.placa}
-														</p>
-														<p className="text-xs text-muted-foreground mt-0.5">
-															{[vehiculo.marca, vehiculo.modelo, vehiculo.ano]
-																.filter(Boolean)
-																.join(" ")}
-														</p>
-														<p className="text-xs font-medium text-foreground mt-1.5 tabular-nums">
-															{polizaExtendida.moneda}{" "}
-															{formatCurrency(vehiculo.valor_asegurado)}
-														</p>
-													</div>
-												))}
-											</div>
-										</>
-									)}
-
-									{/* Salud / Vida / AP / Sepelio */}
-									{(polizaExtendida.datos_ramo.tipo === "salud" ||
-										polizaExtendida.datos_ramo.tipo === "vida" ||
-										polizaExtendida.datos_ramo.tipo === "ap" ||
-										polizaExtendida.datos_ramo.tipo === "sepelio") && (
-										<>
-											<h3 className="text-sm font-medium text-foreground mb-3 flex items-center gap-2">
-												<Users className="h-4 w-4 text-primary" />
-												Asegurados ({polizaExtendida.datos_ramo.asegurados.length})
-											</h3>
-											{polizaExtendida.datos_ramo.asegurados.length > 0 ? (
-												<div className="space-y-2">
-													{polizaExtendida.datos_ramo.asegurados.map((asegurado, idx) => (
-														<div
-															key={idx}
-															className="border-l-2 border-l-primary pl-3 py-0.5 text-sm"
-														>
-															<p className="font-medium">{asegurado.client_name}</p>
-															<p className="text-xs text-muted-foreground">
-																CI: {asegurado.client_ci}
-																{asegurado.nivel_nombre &&
-																	` · Nivel: ${asegurado.nivel_nombre}`}
-																{asegurado.cargo && ` · ${asegurado.cargo}`}
-															</p>
-														</div>
-													))}
-												</div>
-											) : (
-												<p className="text-sm text-muted-foreground">
-													No hay asegurados registrados
-												</p>
-											)}
-											{polizaExtendida.datos_ramo.producto && (
-												<p className="text-sm mt-2">
-													<span className="font-medium text-muted-foreground">
-														Producto:
-													</span>{" "}
-													{polizaExtendida.datos_ramo.producto}
-												</p>
-											)}
-										</>
-									)}
-
-									{/* Incendio */}
-									{polizaExtendida.datos_ramo.tipo === "incendio" && (
-										<>
-											<h3 className="text-sm font-medium text-foreground mb-3 flex items-center gap-2">
-												<MapPin className="h-4 w-4 text-primary" />
-												Ubicaciones Aseguradas
-											</h3>
-											{polizaExtendida.datos_ramo.ubicaciones.length > 0 ? (
-												<div className="space-y-1.5">
-													{polizaExtendida.datos_ramo.ubicaciones.map((ub, idx) => (
-														<div key={idx} className="flex items-start gap-2 text-sm">
-															<MapPin className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
-															<span>{ub}</span>
-														</div>
-													))}
-												</div>
-											) : (
-												<p className="text-sm text-muted-foreground">
-													No hay ubicaciones registradas
-												</p>
-											)}
-										</>
-									)}
-
-									{/* Otros */}
-									{polizaExtendida.datos_ramo.tipo === "otros" && (
-										<p className="text-sm text-muted-foreground">
-											{polizaExtendida.datos_ramo.descripcion}
-										</p>
-									)}
-								</div>
+								<RamoDetalle
+									datos={polizaExtendida.datos_ramo}
+									moneda={polizaExtendida.moneda}
+								/>
 							)}
 
 							{/* Notificación consolidada para 2+ cuotas vencidas */}
@@ -611,24 +527,49 @@ export default function CuotasModal({
 												polizaExtendida?.contacto?.telefono
 											);
 											const hasEmail = !!polizaExtendida?.contacto?.correo;
+											const abonos = polizaExtendida?.abonos_por_cuota?.[cuota.id] ?? [];
+											const abonado = abonos.reduce((s, a) => s + a.monto, 0);
+											const isExpanded = expandedCuotas.has(cuota.id);
 
 											return (
+												<Fragment key={cuota.id}>
 												<tr
-													key={cuota.id}
 													className={`border-b border-border hover:bg-secondary/50 transition-colors duration-150 border-l-2 ${
 														estadoReal === "vencido"
 															? "border-l-destructive"
 															: "border-l-transparent"
 													}`}
 												>
-													{/* N° */}
+													{/* N° + expand de abonos */}
 													<td className="px-4 py-3 text-sm font-medium">
-														{cuota.numero_cuota}
+														<div className="flex items-center gap-1">
+															{abonos.length > 0 ? (
+																<button
+																	onClick={() => toggleExpand(cuota.id)}
+																	className="text-muted-foreground hover:text-foreground"
+																	title={isExpanded ? "Ocultar abonos" : `Ver ${abonos.length} abono(s)`}
+																>
+																	{isExpanded ? (
+																		<ChevronDown className="h-4 w-4" />
+																	) : (
+																		<ChevronRight className="h-4 w-4" />
+																	)}
+																</button>
+															) : (
+																<span className="inline-block w-4" />
+															)}
+															{cuota.numero_cuota}
+														</div>
 													</td>
 
 													{/* Monto */}
 													<td className="px-4 py-3 text-sm font-medium tabular-nums whitespace-nowrap">
 														{poliza.moneda} {formatCurrency(cuota.monto)}
+														{abonado > 0.01 && abonado < cuota.monto - 0.01 && (
+															<div className="text-xs font-normal text-muted-foreground">
+																abonado {formatCurrency(abonado)}
+															</div>
+														)}
 													</td>
 
 													{/* Vencimiento */}
@@ -711,40 +652,99 @@ export default function CuotasModal({
 																</Button>
 															)}
 
-															{/* Comprobante */}
-															{estadoReal === "pagado" && (
-																<Button
-																	size="sm"
-																	variant="ghost"
-																	onClick={() => handleVerComprobante(cuota)}
-																	disabled={loadingComprobante === cuota.id}
-																	title="Ver comprobante de pago"
-																	className="gap-1"
-																>
-																	{loadingComprobante === cuota.id ? (
-																		<Loader2 className="h-4 w-4 animate-spin" />
-																	) : (
-																		<Paperclip className="h-4 w-4" />
-																	)}
-																	Comprobante
-																</Button>
-															)}
-
-															{/* Sustituir comprobante — solo admin */}
-															{estadoReal === "pagado" && isAdmin && (
+															{/* Notas */}
+															{polizaExtendida && (
 																<Button
 																	size="icon"
 																	variant="ghost"
-																	className="h-8 w-8"
-																	onClick={() => handleSustituirComprobante(cuota)}
-																	title="Sustituir comprobante de pago"
+																	className="h-8 w-8 relative"
+																	onClick={() => {
+																		setNotasTarget({
+																			pagoId: cuota.id,
+																			label: `Cuota #${cuota.numero_cuota}`,
+																		});
+																		setNotasOpen(true);
+																	}}
+																	title="Notas de la cuota"
 																>
-																	<RefreshCw className="h-4 w-4 text-muted-foreground" />
+																	<StickyNote className="h-4 w-4 text-muted-foreground" />
+																	{(polizaExtendida.notas_por_cuota?.[cuota.id]?.length ?? 0) > 0 && (
+																		<span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-[10px] leading-none rounded-full h-4 min-w-4 px-1 flex items-center justify-center">
+																			{polizaExtendida.notas_por_cuota![cuota.id].length}
+																		</span>
+																	)}
 																</Button>
 															)}
+
+															{/* Comprobantes: ver en la sub-fila expandible de abonos (chevron en col. N°) */}
 														</div>
 													</td>
 												</tr>
+
+												{/* Sub-fila: abonos de la cuota, cada uno con su comprobante */}
+												{isExpanded && abonos.length > 0 && (
+													<tr className="bg-secondary/30">
+														<td colSpan={6} className="px-4 py-2">
+															<div className="pl-6 space-y-1.5">
+																<p className="text-xs font-medium text-muted-foreground">
+																	Abonos ({abonos.length}) — {poliza.moneda} {formatCurrency(abonado)} de {formatCurrency(cuota.monto)}
+																</p>
+																{abonos.map((abono, idx) => (
+																	<div
+																		key={abono.id}
+																		className="flex items-center gap-3 text-sm bg-card border border-border rounded-md px-3 py-1.5"
+																	>
+																		<span className="text-xs text-muted-foreground w-6">#{idx + 1}</span>
+																		<span className="font-medium tabular-nums">
+																			{poliza.moneda} {formatCurrency(abono.monto)}
+																		</span>
+																		<span className="text-xs text-muted-foreground">
+																			{formatearFecha(abono.fecha_pago, "corto")}
+																		</span>
+																		{abono.autor && (
+																			<span className="text-xs text-muted-foreground truncate hidden sm:inline">
+																				· {abono.autor}
+																			</span>
+																		)}
+																		<div className="ml-auto flex items-center gap-1">
+																			{abono.tiene_comprobante ? (
+																				<Button
+																					size="sm"
+																					variant="ghost"
+																					className="gap-1 h-7"
+																					onClick={() => handleVerComprobanteAbono(abono.id)}
+																					disabled={loadingComprobante === abono.id}
+																					title="Ver comprobante"
+																				>
+																					{loadingComprobante === abono.id ? (
+																						<Loader2 className="h-4 w-4 animate-spin" />
+																					) : (
+																						<Paperclip className="h-4 w-4" />
+																					)}
+																					Comprobante
+																				</Button>
+																			) : (
+																				<span className="text-xs text-muted-foreground">Sin comprobante</span>
+																			)}
+																			{isAdmin && (
+																				<Button
+																					size="icon"
+																					variant="ghost"
+																					className="h-7 w-7"
+																					onClick={() => handleSustituirAbono(abono.id, cuota.numero_cuota)}
+																					title="Sustituir comprobante del abono"
+																				>
+																					<RefreshCw className="h-4 w-4 text-muted-foreground" />
+																				</Button>
+																			)}
+																		</div>
+																	</div>
+																))}
+															</div>
+														</td>
+													</tr>
+												)}
+												</Fragment>
 											);
 										})}
 									</tbody>
@@ -773,10 +773,17 @@ export default function CuotasModal({
 											<th className="px-4 py-2 text-left text-xs font-medium text-green-700">Monto</th>
 											<th className="px-4 py-2 text-left text-xs font-medium text-green-700">Vencimiento</th>
 											<th className="px-4 py-2 text-left text-xs font-medium text-green-700">Estado</th>
+											<th className="px-4 py-2 text-right text-xs font-medium text-green-700">Acciones</th>
 										</tr>
 									</thead>
 									<tbody className="divide-y divide-green-100">
-										{polizaExtendida.cuotas_inclusion.map((ci) => (
+										{polizaExtendida.cuotas_inclusion.map((ci) => {
+											const abonosAnexo = polizaExtendida.abonos_por_cuota?.[ci.id] ?? [];
+											const abonadoAnexo = abonosAnexo.reduce((s, a) => s + a.monto, 0);
+											const notasCount = polizaExtendida.notas_por_cuota?.[ci.id]?.length ?? 0;
+											const comprobanteAbono = abonosAnexo.find((a) => a.tiene_comprobante);
+											const pagable = ci.estado !== "pagado";
+											return (
 											<tr key={ci.id} className="hover:bg-green-50/50">
 												<td className="px-4 py-2 text-xs font-medium text-green-800">
 													{ci.numero_anexo}
@@ -784,6 +791,11 @@ export default function CuotasModal({
 												<td className="px-4 py-2 text-xs">{ci.numero_cuota}</td>
 												<td className="px-4 py-2 text-xs font-medium tabular-nums">
 													{poliza.moneda} {formatCurrency(ci.monto)}
+													{abonadoAnexo > 0.01 && abonadoAnexo < ci.monto - 0.01 && (
+														<span className="block text-[11px] font-normal text-muted-foreground">
+															abonado {formatCurrency(abonadoAnexo)}
+														</span>
+													)}
 												</td>
 												<td className="px-4 py-2 text-xs">
 													{ci.fecha_vencimiento ? formatearFecha(ci.fecha_vencimiento, "corto") : "—"}
@@ -791,8 +803,66 @@ export default function CuotasModal({
 												<td className="px-4 py-2">
 													<EstadoBadge estado={ci.estado as "pendiente" | "pagado" | "vencido" | "parcial"} />
 												</td>
+												<td className="px-4 py-2">
+													<div className="flex items-center justify-end gap-1.5">
+														{pagable && (
+															<Button
+																size="sm"
+																variant="default"
+																onClick={() => {
+																	setPagoAnexoTarget({
+																		id: ci.id,
+																		numero_anexo: ci.numero_anexo,
+																		numero_cuota: ci.numero_cuota,
+																		monto: ci.monto,
+																	});
+																	setPagoAnexoOpen(true);
+																}}
+															>
+																Registrar Pago
+															</Button>
+														)}
+														{comprobanteAbono && (
+															<Button
+																size="icon"
+																variant="ghost"
+																className="h-8 w-8"
+																title="Ver comprobante"
+																onClick={() => handleVerComprobanteAbono(comprobanteAbono.id)}
+																disabled={loadingComprobante === comprobanteAbono.id}
+															>
+																{loadingComprobante === comprobanteAbono.id ? (
+																	<Loader2 className="h-4 w-4 animate-spin" />
+																) : (
+																	<Paperclip className="h-4 w-4" />
+																)}
+															</Button>
+														)}
+														<Button
+															size="icon"
+															variant="ghost"
+															className="h-8 w-8 relative"
+															title="Notas de la cuota"
+															onClick={() => {
+																setNotasTarget({
+																	anexoPagoId: ci.id,
+																	label: `Anexo ${ci.numero_anexo} · Cuota ${ci.numero_cuota}`,
+																});
+																setNotasOpen(true);
+															}}
+														>
+															<StickyNote className="h-4 w-4 text-muted-foreground" />
+															{notasCount > 0 && (
+																<span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-[10px] leading-none rounded-full h-4 min-w-4 px-1 flex items-center justify-center">
+																	{notasCount}
+																</span>
+															)}
+														</Button>
+													</div>
+												</td>
 											</tr>
-										))}
+											);
+										})}
 									</tbody>
 								</table>
 							</div>
@@ -817,15 +887,50 @@ export default function CuotasModal({
 			/>
 
 			<SustituirComprobanteModal
-				pagoId={selectedCuotaSustituir?.id ?? null}
-				cuotaNumero={selectedCuotaSustituir?.numero_cuota}
+				abonoId={sustituirAbono?.abonoId ?? null}
+				cuotaNumero={sustituirAbono?.cuotaNumero}
 				open={sustituirModalOpen}
 				onClose={() => {
 					setSustituirModalOpen(false);
-					setSelectedCuotaSustituir(null);
+					setSustituirAbono(null);
 				}}
 				onSuccess={() => {
 					toast.success("Comprobante actualizado correctamente");
+					loadExtendedData();
+				}}
+			/>
+
+			<NotasCuotaModal
+				target={notasTarget}
+				notasIniciales={
+					notasTarget
+						? (notasTarget.pagoId
+								? polizaExtendida?.notas_por_cuota?.[notasTarget.pagoId]
+								: notasTarget.anexoPagoId
+								? polizaExtendida?.notas_por_cuota?.[notasTarget.anexoPagoId]
+								: undefined) ?? []
+						: []
+				}
+				open={notasOpen}
+				onClose={() => {
+					setNotasOpen(false);
+					setNotasTarget(null);
+				}}
+				onAdded={loadExtendedData}
+			/>
+
+			<RegistrarPagoAnexoModal
+				cuota={pagoAnexoTarget}
+				moneda={poliza.moneda}
+				open={pagoAnexoOpen}
+				onClose={() => {
+					setPagoAnexoOpen(false);
+					setPagoAnexoTarget(null);
+				}}
+				onSuccess={() => {
+					setPagoAnexoOpen(false);
+					setPagoAnexoTarget(null);
+					loadExtendedData();
 				}}
 			/>
 		</>

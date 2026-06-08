@@ -293,7 +293,39 @@ export type RegistrarPagoResponse = CobranzaServerResponse<{
 	cuotas_actualizadas: string[]; // Array de IDs de cuotas actualizadas
 	tipo_pago: TipoPago;
 	exceso_generado?: number; // Solo si tipo_pago === 'exceso'
+	abono_id?: string; // ID del abono creado (para enlazar el comprobante)
 }>;
+
+/**
+ * Abono (pago parcial o total) sobre una cuota (Mejora #2). Cada abono puede
+ * llevar su propio comprobante. La cuota conserva su monto original; su estado
+ * se deriva de la suma de abonos.
+ */
+export type AbonoCuota = {
+	id: string;
+	monto: number;
+	fecha_pago: string;
+	observaciones: string | null;
+	created_at: string;
+	autor: string | null;
+	tiene_comprobante: boolean;
+};
+
+/** Saldo actual de una cuota: monto original menos lo abonado. */
+export type SaldoCuota = {
+	monto: number;
+	abonado: number;
+	saldo: number;
+	abonos: AbonoCuota[];
+};
+
+/** Datos para registrar un pago sobre una cuota de ANEXO (Mejora #3). */
+export type RegistroPagoAnexo = {
+	anexo_pago_id: string;
+	monto_pagado: number;
+	fecha_pago: string;
+	observaciones?: string;
+};
 
 /**
  * Respuesta de redistribuirExceso()
@@ -414,10 +446,59 @@ export type AseguradoPoliza = {
 	client_ci: string;
 	nivel_nombre?: string;
 	cargo?: string;
+	/** Relación con la póliza: Contratante | Titular | Cónyuge | Descendiente | Asegurado */
+	relacion?: string;
+};
+
+/** Nivel/plan resumido para visualización en cobranzas */
+export type NivelResumen = {
+	nombre: string;
+	monto?: number;
+};
+
+/** Vehículo resumido (Responsabilidad Civil) */
+export type VehiculoResumen = {
+	placa: string;
+	tipo_vehiculo?: string;
+	marca?: string;
+	modelo?: string;
+	ano?: number;
+	uso?: string;
+};
+
+/** Equipo industrial resumido (Ramos Técnicos) */
+export type EquipoResumen = {
+	nro_serie: string;
+	tipo_equipo?: string;
+	marca?: string;
+	modelo?: string;
+	ano?: number;
+	valor_asegurado: number;
+};
+
+/** Nave/aeronave resumida (Aeronavegación / Naves) */
+export type NaveResumen = {
+	matricula: string;
+	marca?: string;
+	modelo?: string;
+	ano?: number;
+	valor_casco?: number;
+};
+
+/** Bien asegurado resumido (Incendio / Riesgos Varios) */
+export type BienResumen = {
+	direccion: string;
+	valor_total?: number;
+	items?: { nombre: string; monto: number }[];
 };
 
 /**
- * Datos específicos según el tipo de ramo (discriminated union)
+ * Datos específicos según el tipo de ramo (discriminated union).
+ *
+ * NOTA: esta unión es compartida con el módulo de Siniestros y el PDF de Aviso
+ * de Mora. Las variantes existentes (automotor / salud-vida-ap-sepelio / incendio
+ * / otros) NO deben cambiar de forma; las nuevas variantes y los campos opcionales
+ * son aditivos y retrocompatibles.
  */
 export type DatosEspecificosRamo =
 	| {
@@ -427,11 +508,46 @@ export type DatosEspecificosRamo =
 	| {
 			tipo: "salud" | "vida" | "ap" | "sepelio";
 			asegurados: AseguradoPoliza[];
+			niveles?: NivelResumen[];
 			producto?: string; // Para Vida
 	  }
 	| {
 			tipo: "incendio";
-			ubicaciones: string[]; // Array de direcciones
+			ubicaciones: string[]; // Array de direcciones (compat)
+			bienes?: BienResumen[];
+			asegurados?: AseguradoPoliza[];
+	  }
+	| {
+			tipo: "responsabilidad_civil";
+			tipo_poliza?: string;
+			valor_asegurado: number;
+			vehiculos: VehiculoResumen[];
+	  }
+	| {
+			tipo: "transporte";
+			materia_asegurada: string;
+			tipo_transporte?: string;
+			ciudad_origen?: string;
+			pais_origen?: string;
+			ciudad_destino?: string;
+			pais_destino?: string;
+			valor_asegurado: number;
+			modalidad?: string;
+	  }
+	| {
+			tipo: "riesgos_varios";
+			bienes: BienResumen[];
+			asegurados?: AseguradoPoliza[];
+	  }
+	| {
+			tipo: "naves";
+			subtipo: "aeronave" | "embarcacion";
+			naves: NaveResumen[];
+	  }
+	| {
+			tipo: "ramos_tecnicos";
+			valor_asegurado: number;
+			equipos: EquipoResumen[];
 	  }
 	| {
 			tipo: "otros";
@@ -449,6 +565,29 @@ export type PolizaConPagosExtendida = PolizaConPagos & {
 	director_cartera?: string | null;
 	// Cuotas propias de anexos de inclusión (independientes de las cuotas de la póliza madre)
 	cuotas_inclusion?: CuotaAnexoPropia[];
+	// Notas estructuradas por cuota, indexadas por id de cuota (de póliza o de anexo)
+	notas_por_cuota?: Record<string, CuotaNota[]>;
+	// Abonos por cuota, indexados por id de cuota (de póliza o de anexo)
+	abonos_por_cuota?: Record<string, AbonoCuota[]>;
+};
+
+/**
+ * Nota estructurada sobre una cuota (Mejora #1). Permite anotar el motivo de
+ * no-pago / la excusa del cliente sin contaminar el log de pagos.
+ * Pertenece a una cuota de póliza (pago_id) o de anexo (anexo_pago_id).
+ */
+export type CuotaNota = {
+	id: string;
+	nota: string;
+	created_at: string; // ISO timestamp
+	autor: string | null; // profiles.full_name del autor
+};
+
+/** Payload para registrar una nota sobre una cuota. */
+export type RegistroNotaCuota = {
+	pagoId?: string;
+	anexoPagoId?: string;
+	nota: string;
 };
 
 // ============================================

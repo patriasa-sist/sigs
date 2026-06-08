@@ -23,7 +23,7 @@ import {
 	X,
 	CreditCard,
 } from "lucide-react";
-import { registrarPago, obtenerCuotasPendientesPorPoliza, subirComprobantePago } from "@/app/cobranzas/actions";
+import { registrarPago, obtenerCuotasPendientesPorPoliza, subirComprobantePago, obtenerAbonosCuota } from "@/app/cobranzas/actions";
 import type { CuotaPago, PolizaConPagos, ExcessPaymentDistribution, TipoComprobante } from "@/types/cobranza";
 import { validarTamanoArchivo, validarTipoArchivo, formatearTamanoArchivo, formatearFecha } from "@/utils/cobranza";
 
@@ -47,6 +47,7 @@ export default function RegistrarPagoModal({
 	const [observaciones, setObservaciones] = useState<string>("");
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
+	const [saldoInfo, setSaldoInfo] = useState<{ monto: number; abonado: number; saldo: number } | null>(null);
 
 	const [selectedFile, setSelectedFile] = useState<File | null>(null);
 	const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -58,17 +59,30 @@ export default function RegistrarPagoModal({
 	const fileInputRef = useRef<HTMLInputElement>(null);
 
 	useEffect(() => {
-		if (open && cuota) {
-			setMontoPagado(cuota.monto.toString());
-			setFechaPago(new Date().toISOString().split("T")[0]);
-			setObservaciones("");
-			setError(null);
-			setSelectedFile(null);
-			setPreviewUrl(null);
-			setTipoComprobante("factura");
-			setFileError(null);
-		}
+		if (!open || !cuota) return;
+		setFechaPago(new Date().toISOString().split("T")[0]);
+		setObservaciones("");
+		setError(null);
+		setSelectedFile(null);
+		setPreviewUrl(null);
+		setTipoComprobante("factura");
+		setFileError(null);
+		setSaldoInfo(null);
+		setMontoPagado("");
+		// Cargar saldo real (monto - abonos previos) para defaultear el monto y mostrar el avance
+		obtenerAbonosCuota(cuota.id).then((res) => {
+			if (res.success && res.data) {
+				setSaldoInfo({ monto: res.data.monto, abonado: res.data.abonado, saldo: res.data.saldo });
+				setMontoPagado(res.data.saldo.toFixed(2));
+			} else {
+				setSaldoInfo({ monto: cuota.monto, abonado: 0, saldo: cuota.monto });
+				setMontoPagado(cuota.monto.toString());
+			}
+		});
 	}, [open, cuota]);
+
+	// Saldo pendiente de la cuota (monto original menos lo ya abonado)
+	const saldoActual = saldoInfo?.saldo ?? cuota?.monto ?? 0;
 
 	const formatCurrency = (amount: number) =>
 		new Intl.NumberFormat("es-BO", {
@@ -81,8 +95,8 @@ export default function RegistrarPagoModal({
 		if (!cuota || !montoPagado) return null;
 		const monto = parseFloat(montoPagado);
 		if (isNaN(monto)) return null;
-		if (monto < cuota.monto) return "parcial";
-		if (monto === cuota.monto) return "exacto";
+		if (monto < saldoActual) return "parcial";
+		if (monto === saldoActual) return "exacto";
 		return "exceso";
 	};
 
@@ -90,14 +104,14 @@ export default function RegistrarPagoModal({
 		if (!cuota || !montoPagado) return 0;
 		const monto = parseFloat(montoPagado);
 		if (isNaN(monto)) return 0;
-		return Math.max(0, monto - cuota.monto);
+		return Math.max(0, monto - saldoActual);
 	};
 
 	const getSaldoPendiente = () => {
 		if (!cuota || !montoPagado) return 0;
 		const monto = parseFloat(montoPagado);
 		if (isNaN(monto)) return 0;
-		return Math.max(0, cuota.monto - monto);
+		return Math.max(0, saldoActual - monto);
 	};
 
 	const processFile = useCallback((file: File) => {
@@ -196,12 +210,14 @@ export default function RegistrarPagoModal({
 			});
 
 			if (result.success && result.data) {
-				const formData = new FormData();
-				formData.append("file", selectedFile);
-				formData.append("tipo_archivo", tipoComprobante);
-				const uploadResult = await subirComprobantePago(cuota.id, formData);
-				if (!uploadResult.success) {
-					console.error("Warning: Failed to upload comprobante:", uploadResult.error);
+				if (result.data.abono_id) {
+					const formData = new FormData();
+					formData.append("file", selectedFile);
+					formData.append("tipo_archivo", tipoComprobante);
+					const uploadResult = await subirComprobantePago(result.data.abono_id, formData);
+					if (!uploadResult.success) {
+						console.error("Warning: Failed to upload comprobante:", uploadResult.error);
+					}
 				}
 
 				if (result.data.tipo_pago === "exceso" && result.data.exceso_generado) {
@@ -269,10 +285,15 @@ export default function RegistrarPagoModal({
 							<p className="font-medium mt-0.5 truncate">{poliza.client.nombre_completo}</p>
 						</div>
 						<div>
-							<p className="text-xs text-muted-foreground">Monto de cuota</p>
+							<p className="text-xs text-muted-foreground">Saldo pendiente</p>
 							<p className="font-semibold tabular-nums mt-0.5">
-								{poliza.moneda} {formatCurrency(cuota.monto)}
+								{poliza.moneda} {formatCurrency(saldoActual)}
 							</p>
+							{saldoInfo && saldoInfo.abonado > 0 && (
+								<p className="text-xs text-muted-foreground mt-0.5">
+									Cuota {formatCurrency(saldoInfo.monto)} · abonado {formatCurrency(saldoInfo.abonado)}
+								</p>
+							)}
 						</div>
 						<div>
 							<p className="text-xs text-muted-foreground">Vencimiento</p>

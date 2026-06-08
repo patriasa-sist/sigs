@@ -27,7 +27,7 @@ import {
 } from "@/utils/cobranza";
 
 interface SustituirComprobanteModalProps {
-	pagoId: string | null;
+	abonoId: string | null;
 	cuotaNumero?: number;
 	open: boolean;
 	onClose: () => void;
@@ -35,7 +35,7 @@ interface SustituirComprobanteModalProps {
 }
 
 export default function SustituirComprobanteModal({
-	pagoId,
+	abonoId,
 	cuotaNumero,
 	open,
 	onClose,
@@ -65,14 +65,14 @@ export default function SustituirComprobanteModal({
 	};
 
 	const handleSubmit = async () => {
-		if (!pagoId || !file) return;
+		if (!abonoId || !file) return;
 		setLoading(true);
 		setError(null);
 		try {
 			const formData = new FormData();
 			formData.append("file", file);
 			formData.append("tipo_archivo", tipoArchivo);
-			const result = await sustituirComprobantePago(pagoId, formData);
+			const result = await sustituirComprobantePago(abonoId, formData);
 			if (result.success) {
 				toast.success("Comprobante sustituido", {
 					description: "El nuevo comprobante fue guardado correctamente",
@@ -96,7 +96,7 @@ export default function SustituirComprobanteModal({
 		onClose();
 	};
 
-	if (!pagoId) return null;
+	if (!abonoId) return null;
 
 	return (
 		<Dialog open={open} onOpenChange={handleClose}>

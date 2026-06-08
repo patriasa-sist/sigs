@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { checkPermission, getDataScopeFilter } from "@/utils/auth/helpers";
 import { obtenerEjecutivosFiltro } from "@/utils/ejecutivos";
 import { obtenerEstadoReal } from "@/utils/estadoCuota";
+import { obtenerDetalleRamo } from "@/utils/polizas/detalleRamo";
 import type {
 	CuotaPago,
 	PolizaConPagos,
@@ -24,12 +25,15 @@ import type {
 	// New types for improvements
 	PolizaConPagosExtendida,
 	ContactoCliente,
-	DatosEspecificosRamo,
-	VehiculoAutomotor,
 	TipoComprobante,
 	Comprobante,
 	ObtenerDetallePolizaResponse,
 	SubirComprobanteResponse,
+	CuotaNota,
+	RegistroNotaCuota,
+	SaldoCuota,
+	AbonoCuota,
+	RegistroPagoAnexo,
 	RegistroProrroga,
 	RegistrarProrrogaResponse,
 	AvisoMoraData,
@@ -85,6 +89,84 @@ async function verificarPermisoCobranza() {
 	}
 
 	return { authorized: true as const, userId: profile.id, role: profile.role };
+}
+
+/** Cliente Supabase del servidor (con la sesión del usuario). */
+type SupaClient = Awaited<ReturnType<typeof createClient>>;
+
+/**
+ * Recalcula el estado de una cuota de póliza a partir de la suma de sus abonos.
+ * Setea estado y fecha_pago; el trigger de la BD deriva estado_real.
+ * La cuota conserva siempre su monto original (Mejora #2: libro de abonos).
+ */
+async function recomputarEstadoCuotaPoliza(
+	supabase: SupaClient,
+	cuotaId: string,
+	fechaUltimoPago: string
+): Promise<void> {
+	const { data: cuota } = await supabase.from("polizas_pagos").select("monto").eq("id", cuotaId).single();
+	if (!cuota) return;
+	const { data: abonos } = await supabase.from("polizas_pagos_abonos").select("monto").eq("pago_id", cuotaId);
+	const abonado = (abonos ?? []).reduce((s, a) => s + Number(a.monto), 0);
+	const monto = Number(cuota.monto);
+
+	let estado: "pendiente" | "parcial" | "pagado";
+	let fecha_pago: string | null;
+	if (abonado >= monto - 0.01) {
+		estado = "pagado";
+		fecha_pago = fechaUltimoPago;
+	} else if (abonado > 0) {
+		estado = "parcial";
+		fecha_pago = null;
+	} else {
+		estado = "pendiente";
+		fecha_pago = null;
+	}
+
+	await supabase.from("polizas_pagos").update({ estado, fecha_pago }).eq("id", cuotaId);
+}
+
+/**
+ * Recalcula el estado de una cuota de ANEXO (polizas_anexos_pagos) a partir de
+ * la suma de sus abonos. No hay trigger de estado_real, así que el estado
+ * 'vencido' lo deriva la vista por fecha; aquí solo seteamos pagado/parcial/pendiente.
+ */
+async function recomputarEstadoCuotaAnexo(
+	supabase: SupaClient,
+	anexoPagoId: string,
+	fechaUltimoPago: string,
+	usuarioId: string | null
+): Promise<void> {
+	const { data: cuota } = await supabase
+		.from("polizas_anexos_pagos")
+		.select("monto")
+		.eq("id", anexoPagoId)
+		.single();
+	if (!cuota) return;
+	const { data: abonos } = await supabase
+		.from("polizas_pagos_abonos")
+		.select("monto")
+		.eq("anexo_pago_id", anexoPagoId);
+	const abonado = (abonos ?? []).reduce((s, a) => s + Number(a.monto), 0);
+	const monto = Number(cuota.monto);
+
+	let estado: "pendiente" | "parcial" | "pagado";
+	let fecha_pago: string | null;
+	if (abonado >= monto - 0.01) {
+		estado = "pagado";
+		fecha_pago = fechaUltimoPago;
+	} else if (abonado > 0) {
+		estado = "parcial";
+		fecha_pago = null;
+	} else {
+		estado = "pendiente";
+		fecha_pago = null;
+	}
+
+	await supabase
+		.from("polizas_anexos_pagos")
+		.update({ estado, fecha_pago, updated_by: usuarioId, updated_at: new Date().toISOString() })
+		.eq("id", anexoPagoId);
 }
 
 /**
@@ -351,10 +433,10 @@ export async function registrarPago(registro: RegistroPago): Promise<RegistrarPa
 	const supabase = await createClient();
 
 	try {
-		// Fetch current quota
+		// Cuota actual (su monto original nunca se reduce)
 		const { data: cuota, error: cuotaError } = await supabase
 			.from("polizas_pagos")
-			.select("*")
+			.select("id, monto")
 			.eq("id", registro.cuota_id)
 			.single();
 
@@ -362,66 +444,53 @@ export async function registrarPago(registro: RegistroPago): Promise<RegistrarPa
 			return { success: false, error: "Cuota no encontrada" };
 		}
 
-		// Validate quota is not already paid
-		if (cuota.estado === "pagado") {
-			return { success: false, error: "Esta cuota ya está marcada como pagada" };
+		const montoCuota = Number(cuota.monto);
+
+		// Saldo actual = monto - abonos previos
+		const { data: abonosPrev } = await supabase
+			.from("polizas_pagos_abonos")
+			.select("monto")
+			.eq("pago_id", registro.cuota_id);
+		const abonadoPrev = (abonosPrev ?? []).reduce((s, a) => s + Number(a.monto), 0);
+		const saldo = montoCuota - abonadoPrev;
+
+		if (saldo <= 0.01) {
+			return { success: false, error: "Esta cuota ya está totalmente pagada" };
 		}
 
-		// MEJORA #2: Restricción mensual eliminada - Las cuotas vencidas ahora pueden pagarse en cualquier momento
-
-		const montoCuota = cuota.monto;
 		const montoPagado = registro.monto_pagado;
-
-		// Determine payment type
-		let tipoPago: "parcial" | "exacto" | "exceso";
-		let excesoGenerado = 0;
-		let nuevoEstado: "pendiente" | "pagado" | "parcial" | "vencido";
-		let observaciones = cuota.observaciones || "";
-
-		if (montoPagado < montoCuota) {
-			// PARTIAL PAYMENT
-			tipoPago = "parcial";
-			nuevoEstado = "parcial";
-			observaciones += `\n[${registro.fecha_pago}] Pago parcial de ${montoPagado}. Saldo pendiente: ${
-				montoCuota - montoPagado
-			}.`;
-		} else if (montoPagado === montoCuota) {
-			// EXACT PAYMENT
-			tipoPago = "exacto";
-			nuevoEstado = "pagado";
-			observaciones += `\n[${registro.fecha_pago}] Pago completo de ${montoPagado}.`;
-		} else {
-			// EXCESS PAYMENT
-			tipoPago = "exceso";
-			nuevoEstado = "pagado";
-			excesoGenerado = montoPagado - montoCuota;
-			observaciones += `\n[${registro.fecha_pago}] Pago de ${montoPagado}. Exceso generado: ${excesoGenerado}.`;
+		if (montoPagado <= 0) {
+			return { success: false, error: "El monto debe ser mayor a 0" };
 		}
 
-		// Add custom observations
-		if (registro.observaciones) {
-			observaciones += `\n${registro.observaciones}`;
+		// El abono sobre ESTA cuota nunca excede su saldo; el resto es exceso a redistribuir
+		const montoAbono = Math.min(montoPagado, saldo);
+		const excesoGenerado = Math.max(0, montoPagado - saldo);
+
+		// Registrar el abono (cada pago parcial es su propio registro)
+		const { data: abono, error: abonoError } = await supabase
+			.from("polizas_pagos_abonos")
+			.insert({
+				pago_id: registro.cuota_id,
+				monto: montoAbono,
+				fecha_pago: registro.fecha_pago,
+				observaciones: registro.observaciones?.trim() || null,
+				created_by: permiso.userId,
+			})
+			.select("id")
+			.single();
+
+		if (abonoError || !abono) {
+			console.error("Error inserting abono:", abonoError);
+			return { success: false, error: "Error al registrar el abono" };
 		}
 
-		// Update quota
-		const updatePayload: Record<string, unknown> = {
-			estado: nuevoEstado,
-			fecha_pago: tipoPago !== "parcial" ? registro.fecha_pago : null,
-			observaciones: observaciones.trim(),
-		};
-		// Reduce monto to remaining balance on partial payment, consistent with redistribuirExceso
-		if (tipoPago === "parcial") {
-			updatePayload.monto = montoCuota - montoPagado;
-		}
-		const { error: updateError } = await supabase
-			.from("polizas_pagos")
-			.update(updatePayload)
-			.eq("id", registro.cuota_id);
+		// Recalcular el estado de la cuota a partir de la suma de abonos
+		const fueCompletada = abonadoPrev + montoAbono >= montoCuota - 0.01;
+		await recomputarEstadoCuotaPoliza(supabase, registro.cuota_id, registro.fecha_pago);
 
-		if (updateError) {
-			console.error("Error updating quota:", updateError);
-			return { success: false, error: "Error al registrar el pago" };
-		}
+		const tipoPago: "parcial" | "exacto" | "exceso" =
+			excesoGenerado > 0 ? "exceso" : fueCompletada ? "exacto" : "parcial";
 
 		// Revalidate collections page
 		revalidatePath("/cobranzas");
@@ -432,6 +501,7 @@ export async function registrarPago(registro: RegistroPago): Promise<RegistrarPa
 				cuotas_actualizadas: [registro.cuota_id],
 				tipo_pago: tipoPago,
 				exceso_generado: excesoGenerado > 0 ? excesoGenerado : undefined,
+				abono_id: abono.id,
 			},
 		};
 	} catch (error) {
@@ -473,64 +543,43 @@ export async function redistribuirExceso(distribucion: ExcessPaymentDistribution
 		let cuotasActualizadas = 0;
 		const fecha_hoy = new Date().toISOString().split("T")[0];
 
-		// Update each quota with distributed amount
+		// Aplicar el exceso como abonos en las cuotas destino (Mejora #2)
 		for (const dist of distribucion.distribuciones) {
 			if (dist.monto_a_aplicar <= 0) continue;
 
-			// Fetch current quota
-			const { data: cuota, error: cuotaError } = await supabase
+			// Saldo actual de la cuota destino = monto original - abonos previos
+			const { data: cuota } = await supabase
 				.from("polizas_pagos")
-				.select("*")
+				.select("monto")
 				.eq("id", dist.cuota_id)
 				.single();
+			if (!cuota) continue;
 
-			if (cuotaError || !cuota) {
-				console.error(`Error fetching quota ${dist.cuota_id}:`, cuotaError);
+			const { data: abonosPrev } = await supabase
+				.from("polizas_pagos_abonos")
+				.select("monto")
+				.eq("pago_id", dist.cuota_id);
+			const abonadoPrev = (abonosPrev ?? []).reduce((s, a) => s + Number(a.monto), 0);
+			const saldo = Number(cuota.monto) - abonadoPrev;
+			if (saldo <= 0.01) continue;
+
+			const montoAbono = Math.min(dist.monto_a_aplicar, saldo);
+
+			const { error: abonoError } = await supabase.from("polizas_pagos_abonos").insert({
+				pago_id: dist.cuota_id,
+				monto: montoAbono,
+				fecha_pago: fecha_hoy,
+				observaciones: "Aplicado por redistribución de exceso",
+				created_by: permiso.userId,
+			});
+
+			if (abonoError) {
+				console.error(`Error creating abono for quota ${dist.cuota_id}:`, abonoError);
 				continue;
 			}
 
-			const nuevoMonto = cuota.monto - dist.monto_a_aplicar;
-			let nuevoEstado: "pendiente" | "pagado" | "parcial" | "vencido" = cuota.estado;
-			let observaciones = cuota.observaciones || "";
-
-			// If fully paid, mark as paid
-			if (nuevoMonto <= 0.01) {
-				nuevoEstado = "pagado";
-				observaciones += `\n[${fecha_hoy}] Pago completo vía redistribución de exceso. Monto aplicado: ${dist.monto_a_aplicar}.`;
-			} else {
-				nuevoEstado = "parcial";
-				observaciones += `\n[${fecha_hoy}] Pago parcial vía redistribución de exceso. Monto aplicado: ${dist.monto_a_aplicar}. Saldo: ${nuevoMonto}.`;
-			}
-
-			// Update quota
-			const { error: updateError } = await supabase
-				.from("polizas_pagos")
-				.update({
-					monto: Math.max(0, nuevoMonto),
-					estado: nuevoEstado,
-					fecha_pago: nuevoEstado === "pagado" ? fecha_hoy : cuota.fecha_pago,
-					observaciones: observaciones.trim(),
-				})
-				.eq("id", dist.cuota_id);
-
-			if (updateError) {
-				console.error(`Error updating quota ${dist.cuota_id}:`, updateError);
-				continue;
-			}
-
+			await recomputarEstadoCuotaPoliza(supabase, dist.cuota_id, fecha_hoy);
 			cuotasActualizadas++;
-		}
-
-		// Update original quota to record redistribution
-		const { error: origenError } = await supabase
-			.from("polizas_pagos")
-			.update({
-				observaciones: `Exceso de ${distribucion.monto_exceso} redistribuido entre ${cuotasActualizadas} cuotas.`,
-			})
-			.eq("id", distribucion.cuota_origen_id);
-
-		if (origenError) {
-			console.error("Error updating origin quota:", origenError);
 		}
 
 		// Revalidate
@@ -576,7 +625,25 @@ export async function obtenerCuotasPendientesPorPoliza(polizaId: string): Promis
 			return { success: false, error: "Error al obtener cuotas pendientes" };
 		}
 
-		return { success: true, data: data || [] };
+		const cuotas = (data || []) as CuotaPago[];
+		if (cuotas.length === 0) return { success: true, data: [] };
+
+		// Restar abonos previos para exponer el SALDO real como `monto`
+		const ids = cuotas.map((c) => c.id);
+		const { data: abonos } = await supabase
+			.from("polizas_pagos_abonos")
+			.select("pago_id, monto")
+			.in("pago_id", ids);
+		const abonadoPorCuota = new Map<string, number>();
+		for (const a of abonos ?? []) {
+			abonadoPorCuota.set(a.pago_id, (abonadoPorCuota.get(a.pago_id) ?? 0) + Number(a.monto));
+		}
+
+		const conSaldo = cuotas
+			.map((c) => ({ ...c, monto: Number(c.monto) - (abonadoPorCuota.get(c.id) ?? 0) }))
+			.filter((c) => c.monto > 0.01);
+
+		return { success: true, data: conSaldo };
 	} catch (error) {
 		return {
 			success: false,
@@ -1004,94 +1071,9 @@ export async function obtenerDetallePolizaParaCuotas(polizaId: string): Promise<
 			}
 		}
 
-		// Get ramo-specific data
-		let datos_ramo: DatosEspecificosRamo;
-
-		switch (poliza.ramo.toLowerCase()) {
-			case "automotor":
-			case "automotores": {
-				// Query vehicles from separate table
-				type VehiculoRaw = {
-					id: string;
-					placa: string;
-					valor_asegurado: number;
-					tipo_vehiculo: { nombre: string } | null;
-					marca: { nombre: string } | null;
-					modelo: string | null;
-					ano: number | null;
-					color: string | null;
-				};
-
-				const { data: vehiculos, error: vehiculosError } = await supabase
-					.from("polizas_automotor_vehiculos")
-					.select(
-						`
-						id,
-						placa,
-						valor_asegurado,
-						tipo_vehiculo:tipos_vehiculo(nombre),
-						marca:marcas_vehiculo(nombre),
-						modelo,
-						ano,
-						color
-					`
-					)
-					.eq("poliza_id", polizaId);
-
-				if (vehiculosError) {
-					console.error("Error fetching vehiculos:", vehiculosError);
-				}
-
-				const vehiculosFormateados: VehiculoAutomotor[] =
-					(vehiculos as VehiculoRaw[] | null)?.map((v) => ({
-						id: v.id,
-						placa: v.placa,
-						tipo_vehiculo: v.tipo_vehiculo?.nombre,
-						marca: v.marca?.nombre,
-						modelo: v.modelo ?? undefined,
-						ano: v.ano ?? undefined,
-						color: v.color ?? undefined,
-						valor_asegurado: v.valor_asegurado,
-					})) || [];
-
-				datos_ramo = {
-					tipo: "automotor",
-					vehiculos: vehiculosFormateados,
-				};
-				break;
-			}
-
-			case "salud":
-			case "vida":
-			case "ap":
-			case "accidentes personales":
-			case "sepelio": {
-				// For now, return placeholder - these would need their own table queries
-				// TODO: Implement queries for polizas_salud, polizas_vida, etc.
-				datos_ramo = {
-					tipo: "salud", // Normalize type
-					asegurados: [],
-					producto: poliza.ramo,
-				};
-				break;
-			}
-
-			case "incendio":
-			case "incendio y aliados": {
-				// TODO: Implement query for polizas_incendio table
-				datos_ramo = {
-					tipo: "incendio",
-					ubicaciones: [],
-				};
-				break;
-			}
-
-			default:
-				datos_ramo = {
-					tipo: "otros",
-					descripcion: poliza.ramo,
-				};
-		}
+		// Datos específicos del ramo (autos, asegurados, ubicaciones, naves, etc.)
+		// Despacho acento-insensible compartido; cubre todos los ramos con tabla de detalle.
+		const datos_ramo = await obtenerDetalleRamo(supabase, polizaId, poliza.ramo);
 
 		// Calculate totals
 		const cuotas = (poliza.cuotas || []) as CuotaPago[];
@@ -1130,13 +1112,87 @@ export async function obtenerDetallePolizaParaCuotas(polizaId: string): Promise<
 					numero_cuota: p.numero_cuota ?? 0,
 					monto: Number(p.monto),
 					fecha_vencimiento: p.fecha_vencimiento || "",
-					estado: p.estado || "pendiente",
+					estado:
+						(p.estado || "pendiente") === "pendiente" && p.fecha_vencimiento && p.fecha_vencimiento < todayStr
+							? "vencido"
+							: p.estado || "pendiente",
 					observaciones: p.observaciones || undefined,
 				};
 			}).sort((a, b) => {
 				if (a.numero_anexo !== b.numero_anexo) return a.numero_anexo.localeCompare(b.numero_anexo);
 				return a.numero_cuota - b.numero_cuota;
 			});
+		}
+
+		// Notas estructuradas por cuota (Mejora #1): cuotas de póliza y de anexo
+		const notas_por_cuota: Record<string, CuotaNota[]> = {};
+		{
+			const pagoIds = (cuotas as CuotaPago[]).map((c) => c.id);
+			const anexoPagoIds = (cuotas_inclusion ?? []).map((c) => c.id);
+			const orParts: string[] = [];
+			if (pagoIds.length > 0) orParts.push(`pago_id.in.(${pagoIds.join(",")})`);
+			if (anexoPagoIds.length > 0) orParts.push(`anexo_pago_id.in.(${anexoPagoIds.join(",")})`);
+			if (orParts.length > 0) {
+				const { data: notasRows } = await supabase
+					.from("polizas_cuotas_notas")
+					.select("id, pago_id, anexo_pago_id, nota, created_at, autor:profiles!created_by(full_name)")
+					.or(orParts.join(","))
+					.order("created_at", { ascending: true });
+				for (const n of notasRows ?? []) {
+					const key = (n.pago_id ?? n.anexo_pago_id) as string | null;
+					if (!key) continue;
+					const autorObj = n.autor as unknown as { full_name?: string } | null;
+					(notas_por_cuota[key] ??= []).push({
+						id: n.id as string,
+						nota: n.nota as string,
+						created_at: n.created_at as string,
+						autor: autorObj?.full_name ?? null,
+					});
+				}
+			}
+		}
+
+		// Abonos por cuota (Mejora #2): historial de pagos parciales con comprobante
+		const abonos_por_cuota: Record<string, AbonoCuota[]> = {};
+		{
+			const pagoIds = (cuotas as CuotaPago[]).map((c) => c.id);
+			const anexoPagoIds = (cuotas_inclusion ?? []).map((c) => c.id);
+			const orParts: string[] = [];
+			if (pagoIds.length > 0) orParts.push(`pago_id.in.(${pagoIds.join(",")})`);
+			if (anexoPagoIds.length > 0) orParts.push(`anexo_pago_id.in.(${anexoPagoIds.join(",")})`);
+			if (orParts.length > 0) {
+				const { data: abonosRows } = await supabase
+					.from("polizas_pagos_abonos")
+					.select("id, pago_id, anexo_pago_id, monto, fecha_pago, observaciones, created_at, autor:profiles!created_by(full_name)")
+					.or(orParts.join(","))
+					.order("created_at", { ascending: true });
+
+				const abonoIds = (abonosRows ?? []).map((a) => a.id as string);
+				const comprobanteAbonoIds = new Set<string>();
+				if (abonoIds.length > 0) {
+					const { data: comps } = await supabase
+						.from("polizas_pagos_comprobantes")
+						.select("abono_id")
+						.in("abono_id", abonoIds)
+						.eq("estado", "activo");
+					for (const c of comps ?? []) if (c.abono_id) comprobanteAbonoIds.add(c.abono_id as string);
+				}
+
+				for (const a of abonosRows ?? []) {
+					const key = (a.pago_id ?? a.anexo_pago_id) as string | null;
+					if (!key) continue;
+					const autorObj = a.autor as unknown as { full_name?: string } | null;
+					(abonos_por_cuota[key] ??= []).push({
+						id: a.id as string,
+						monto: Number(a.monto),
+						fecha_pago: a.fecha_pago as string,
+						observaciones: (a.observaciones as string | null) ?? null,
+						created_at: a.created_at as string,
+						autor: autorObj?.full_name ?? null,
+						tiene_comprobante: comprobanteAbonoIds.has(a.id as string),
+					});
+				}
+			}
 		}
 
 		// Build extended policy object
@@ -1199,6 +1255,8 @@ export async function obtenerDetallePolizaParaCuotas(polizaId: string): Promise<
 			contacto,
 			datos_ramo,
 			cuotas_inclusion,
+			notas_por_cuota,
+			abonos_por_cuota,
 			director_cartera: (() => {
 				const dc = poliza.director_cartera as { nombre?: string; apellidos?: string } | null;
 				if (!dc) return null;
@@ -1218,18 +1276,90 @@ export async function obtenerDetallePolizaParaCuotas(polizaId: string): Promise<
 }
 
 /**
+ * Mejora #1: Agrega una nota estructurada a una cuota (de póliza o de anexo).
+ * Permite anotar el motivo de no-pago sin contaminar el log de pagos.
+ */
+export async function agregarNotaCuota(registro: RegistroNotaCuota): Promise<CobranzaServerResponse<CuotaNota>> {
+	const permiso = await verificarPermisoCobranza();
+	if (!permiso.authorized) {
+		return { success: false, error: permiso.error };
+	}
+
+	const texto = registro.nota?.trim();
+	if (!texto) {
+		return { success: false, error: "La nota no puede estar vacía" };
+	}
+
+	const tienePago = !!registro.pagoId;
+	const tieneAnexo = !!registro.anexoPagoId;
+	if (tienePago === tieneAnexo) {
+		return { success: false, error: "Debe especificar exactamente una cuota (póliza o anexo)" };
+	}
+
+	const supabase = await createClient();
+
+	try {
+		const { data, error } = await supabase
+			.from("polizas_cuotas_notas")
+			.insert({
+				pago_id: registro.pagoId ?? null,
+				anexo_pago_id: registro.anexoPagoId ?? null,
+				nota: texto,
+				created_by: permiso.userId,
+			})
+			.select("id, nota, created_at")
+			.single();
+
+		if (error || !data) {
+			console.error("Error inserting nota:", error);
+			return { success: false, error: "Error al guardar la nota" };
+		}
+
+		// Resolver nombre del autor para mostrarlo de inmediato
+		const { data: prof } = await supabase
+			.from("profiles")
+			.select("full_name")
+			.eq("id", permiso.userId)
+			.single();
+
+		revalidatePath("/cobranzas");
+		return {
+			success: true,
+			data: {
+				id: data.id as string,
+				nota: data.nota as string,
+				created_at: data.created_at as string,
+				autor: prof?.full_name ?? null,
+			},
+		};
+	} catch (error) {
+		return {
+			success: false,
+			error: error instanceof Error ? error.message : "Error desconocido",
+		};
+	}
+}
+
+/**
  * MEJORA #1: Subir comprobante de pago a Supabase Storage
  */
-export async function subirComprobantePago(pagoId: string, fileData: FormData): Promise<SubirComprobanteResponse> {
+export async function subirComprobantePago(abonoId: string, fileData: FormData): Promise<SubirComprobanteResponse> {
+	const permiso = await verificarPermisoCobranza();
+	if (!permiso.authorized) {
+		return { success: false, error: permiso.error };
+	}
+
 	try {
 		const supabase = await createClient();
 
-		// Get authenticated user
-		const {
-			data: { user },
-		} = await supabase.auth.getUser();
-		if (!user) {
-			return { success: false, error: "No autenticado" };
+		// Abono dueño del comprobante (define la cuota: de póliza o de anexo)
+		const { data: abono, error: abonoError } = await supabase
+			.from("polizas_pagos_abonos")
+			.select("id, pago_id, anexo_pago_id")
+			.eq("id", abonoId)
+			.single();
+		if (abonoError || !abono) {
+			return { success: false, error: "Abono no encontrado" };
 		}
 
 		// Extract file and tipo from FormData
@@ -1257,7 +1387,7 @@ export async function subirComprobantePago(pagoId: string, fileData: FormData): 
 
 		// Generate unique filename with user folder
 		const fileExt = file.name.split(".").pop();
-		const fileName = `${user.id}/${pagoId}_${Date.now()}.${fileExt}`;
+		const fileName = `${permiso.userId}/${abonoId}_${Date.now()}.${fileExt}`;
 
 		// Upload to Supabase Storage
 		const { data: uploadData, error: uploadError } = await supabase.storage
@@ -1272,18 +1402,20 @@ export async function subirComprobantePago(pagoId: string, fileData: FormData): 
 			return { success: false, error: `Error al subir archivo: ${uploadError.message}` };
 		}
 
-		// Create record in database with relative storage path (not public URL)
+		// Create record linked to the abono (and its owner cuota de póliza/anexo)
 		const { data: comprobante, error: dbError } = await supabase
 			.from("polizas_pagos_comprobantes")
 			.insert({
-				pago_id: pagoId,
+				pago_id: abono.pago_id,
+				anexo_pago_id: abono.anexo_pago_id,
+				abono_id: abonoId,
 				nombre_archivo: file.name,
 				archivo_url: uploadData.path,
 				tamano_bytes: file.size,
 				tipo_archivo: tipoArchivo,
-				uploaded_by: user.id,
+				uploaded_by: permiso.userId,
 			})
-			.select()
+			.select("id")
 			.single();
 
 		if (dbError) {
@@ -1477,11 +1609,11 @@ export async function prepararDatosAvisoMora(polizaId: string): Promise<Preparar
 }
 
 /**
- * Obtiene el comprobante de pago de una cuota y retorna una URL firmada temporal para visualización
- * El bucket pagos-comprobantes es privado, por lo que se usa createSignedUrl
+ * Obtiene el comprobante de un ABONO y retorna una URL firmada temporal.
+ * El bucket pagos-comprobantes es privado, por lo que se usa createSignedUrl.
  */
-export async function obtenerComprobanteCuota(
-	pagoId: string
+export async function obtenerComprobanteAbono(
+	abonoId: string
 ): Promise<CobranzaServerResponse<{ comprobante: Comprobante; publicUrl: string }>> {
 	const permiso = await verificarPermisoCobranza();
 	if (!permiso.authorized) {
@@ -1494,7 +1626,7 @@ export async function obtenerComprobanteCuota(
 		const { data, error } = await supabase
 			.from("polizas_pagos_comprobantes")
 			.select("*")
-			.eq("pago_id", pagoId)
+			.eq("abono_id", abonoId)
 			.eq("estado", "activo")
 			.maybeSingle();
 
@@ -1504,7 +1636,7 @@ export async function obtenerComprobanteCuota(
 		}
 
 		if (!data) {
-			return { success: false, error: "No se encontró comprobante para esta cuota" };
+			return { success: false, error: "No se encontró comprobante para este abono" };
 		}
 
 		// Generate signed URL (valid for 1 hour) since bucket is private
@@ -1525,7 +1657,7 @@ export async function obtenerComprobanteCuota(
 			},
 		};
 	} catch (error) {
-		console.error("Error in obtenerComprobanteCuota:", error);
+		console.error("Error in obtenerComprobanteAbono:", error);
 		return {
 			success: false,
 			error: error instanceof Error ? error.message : "Error desconocido",
@@ -1534,10 +1666,208 @@ export async function obtenerComprobanteCuota(
 }
 
 /**
+ * Obtiene el saldo y los abonos de una cuota de póliza (Mejora #2).
+ * Lo usa el modal de registro para mostrar "ya abonado" y el saldo pendiente.
+ */
+export async function obtenerAbonosCuota(cuotaId: string): Promise<CobranzaServerResponse<SaldoCuota>> {
+	const permiso = await verificarPermisoCobranza();
+	if (!permiso.authorized) {
+		return { success: false, error: permiso.error };
+	}
+
+	const supabase = await createClient();
+
+	try {
+		const { data: cuota, error: cuotaError } = await supabase
+			.from("polizas_pagos")
+			.select("monto")
+			.eq("id", cuotaId)
+			.single();
+		if (cuotaError || !cuota) {
+			return { success: false, error: "Cuota no encontrada" };
+		}
+
+		const { data: abonosRows } = await supabase
+			.from("polizas_pagos_abonos")
+			.select("id, monto, fecha_pago, observaciones, created_at, autor:profiles!created_by(full_name)")
+			.eq("pago_id", cuotaId)
+			.order("created_at", { ascending: true });
+
+		const abonoIds = (abonosRows ?? []).map((a) => a.id as string);
+		const comprobanteAbonoIds = new Set<string>();
+		if (abonoIds.length > 0) {
+			const { data: comps } = await supabase
+				.from("polizas_pagos_comprobantes")
+				.select("abono_id")
+				.in("abono_id", abonoIds)
+				.eq("estado", "activo");
+			for (const c of comps ?? []) if (c.abono_id) comprobanteAbonoIds.add(c.abono_id as string);
+		}
+
+		const abonos = (abonosRows ?? []).map((a) => {
+			const autorObj = a.autor as unknown as { full_name?: string } | null;
+			return {
+				id: a.id as string,
+				monto: Number(a.monto),
+				fecha_pago: a.fecha_pago as string,
+				observaciones: (a.observaciones as string | null) ?? null,
+				created_at: a.created_at as string,
+				autor: autorObj?.full_name ?? null,
+				tiene_comprobante: comprobanteAbonoIds.has(a.id as string),
+			};
+		});
+
+		const monto = Number(cuota.monto);
+		const abonado = abonos.reduce((s, a) => s + a.monto, 0);
+		return { success: true, data: { monto, abonado, saldo: monto - abonado, abonos } };
+	} catch (error) {
+		return { success: false, error: error instanceof Error ? error.message : "Error desconocido" };
+	}
+}
+
+/**
+ * Mejora #3: Registra un pago (abono) sobre una cuota de ANEXO.
+ * Mismo libro de abonos que las cuotas de póliza; sin redistribución de exceso
+ * (el monto no puede superar el saldo de la cuota de anexo).
+ */
+export async function registrarPagoAnexo(registro: RegistroPagoAnexo): Promise<RegistrarPagoResponse> {
+	const permiso = await verificarPermisoCobranza();
+	if (!permiso.authorized) {
+		return { success: false, error: permiso.error };
+	}
+
+	const supabase = await createClient();
+
+	try {
+		const { data: cuota, error: cuotaError } = await supabase
+			.from("polizas_anexos_pagos")
+			.select("id, monto")
+			.eq("id", registro.anexo_pago_id)
+			.single();
+		if (cuotaError || !cuota) {
+			return { success: false, error: "Cuota de anexo no encontrada" };
+		}
+
+		const montoCuota = Number(cuota.monto);
+		const { data: abonosPrev } = await supabase
+			.from("polizas_pagos_abonos")
+			.select("monto")
+			.eq("anexo_pago_id", registro.anexo_pago_id);
+		const abonadoPrev = (abonosPrev ?? []).reduce((s, a) => s + Number(a.monto), 0);
+		const saldo = montoCuota - abonadoPrev;
+
+		if (saldo <= 0.01) {
+			return { success: false, error: "Esta cuota de anexo ya está totalmente pagada" };
+		}
+
+		const montoPagado = registro.monto_pagado;
+		if (montoPagado <= 0) {
+			return { success: false, error: "El monto debe ser mayor a 0" };
+		}
+		if (montoPagado > saldo + 0.01) {
+			return { success: false, error: `El monto supera el saldo de la cuota (${saldo.toFixed(2)})` };
+		}
+
+		const { data: abono, error: abonoError } = await supabase
+			.from("polizas_pagos_abonos")
+			.insert({
+				anexo_pago_id: registro.anexo_pago_id,
+				monto: montoPagado,
+				fecha_pago: registro.fecha_pago,
+				observaciones: registro.observaciones?.trim() || null,
+				created_by: permiso.userId,
+			})
+			.select("id")
+			.single();
+
+		if (abonoError || !abono) {
+			console.error("Error inserting abono de anexo:", abonoError);
+			return { success: false, error: "Error al registrar el abono" };
+		}
+
+		await recomputarEstadoCuotaAnexo(supabase, registro.anexo_pago_id, registro.fecha_pago, permiso.userId ?? null);
+
+		const fueCompletada = abonadoPrev + montoPagado >= montoCuota - 0.01;
+
+		revalidatePath("/cobranzas");
+		return {
+			success: true,
+			data: {
+				cuotas_actualizadas: [registro.anexo_pago_id],
+				tipo_pago: fueCompletada ? "exacto" : "parcial",
+				abono_id: abono.id,
+			},
+		};
+	} catch (error) {
+		console.error("Error en registrarPagoAnexo:", error);
+		return { success: false, error: error instanceof Error ? error.message : "Error desconocido" };
+	}
+}
+
+/**
+ * Mejora #3: Saldo y abonos de una cuota de ANEXO (para el modal de pago).
+ */
+export async function obtenerAbonosAnexoCuota(anexoPagoId: string): Promise<CobranzaServerResponse<SaldoCuota>> {
+	const permiso = await verificarPermisoCobranza();
+	if (!permiso.authorized) {
+		return { success: false, error: permiso.error };
+	}
+
+	const supabase = await createClient();
+
+	try {
+		const { data: cuota, error: cuotaError } = await supabase
+			.from("polizas_anexos_pagos")
+			.select("monto")
+			.eq("id", anexoPagoId)
+			.single();
+		if (cuotaError || !cuota) {
+			return { success: false, error: "Cuota de anexo no encontrada" };
+		}
+
+		const { data: abonosRows } = await supabase
+			.from("polizas_pagos_abonos")
+			.select("id, monto, fecha_pago, observaciones, created_at, autor:profiles!created_by(full_name)")
+			.eq("anexo_pago_id", anexoPagoId)
+			.order("created_at", { ascending: true });
+
+		const abonoIds = (abonosRows ?? []).map((a) => a.id as string);
+		const comprobanteAbonoIds = new Set<string>();
+		if (abonoIds.length > 0) {
+			const { data: comps } = await supabase
+				.from("polizas_pagos_comprobantes")
+				.select("abono_id")
+				.in("abono_id", abonoIds)
+				.eq("estado", "activo");
+			for (const c of comps ?? []) if (c.abono_id) comprobanteAbonoIds.add(c.abono_id as string);
+		}
+
+		const abonos = (abonosRows ?? []).map((a) => {
+			const autorObj = a.autor as unknown as { full_name?: string } | null;
+			return {
+				id: a.id as string,
+				monto: Number(a.monto),
+				fecha_pago: a.fecha_pago as string,
+				observaciones: (a.observaciones as string | null) ?? null,
+				created_at: a.created_at as string,
+				autor: autorObj?.full_name ?? null,
+				tiene_comprobante: comprobanteAbonoIds.has(a.id as string),
+			};
+		});
+
+		const monto = Number(cuota.monto);
+		const abonado = abonos.reduce((s, a) => s + a.monto, 0);
+		return { success: true, data: { monto, abonado, saldo: monto - abonado, abonos } };
+	} catch (error) {
+		return { success: false, error: error instanceof Error ? error.message : "Error desconocido" };
+	}
+}
+
+/**
  * Sustituye el comprobante de pago de una cuota. Solo administradores.
  * Elimina el archivo anterior del Storage y registra el nuevo.
  */
-export async function sustituirComprobantePago(pagoId: string, fileData: FormData): Promise<SubirComprobanteResponse> {
+export async function sustituirComprobantePago(abonoId: string, fileData: FormData): Promise<SubirComprobanteResponse> {
 	try {
 		const { allowed, profile } = await checkPermission("cobranzas.ver");
 		if (!allowed || !profile || profile.role !== "admin") {
@@ -1559,11 +1889,19 @@ export async function sustituirComprobantePago(pagoId: string, fileData: FormDat
 
 		const supabase = await createClient();
 
-		// Fetch existing comprobante
+		// Abono dueño (para conocer la cuota y el comprobante actual)
+		const { data: abono } = await supabase
+			.from("polizas_pagos_abonos")
+			.select("id, pago_id, anexo_pago_id")
+			.eq("id", abonoId)
+			.single();
+		if (!abono) return { success: false, error: "Abono no encontrado" };
+
+		// Fetch existing comprobante del abono
 		const { data: comprobanteActual, error: fetchError } = await supabase
 			.from("polizas_pagos_comprobantes")
 			.select("id, archivo_url")
-			.eq("pago_id", pagoId)
+			.eq("abono_id", abonoId)
 			.eq("estado", "activo")
 			.maybeSingle();
 
@@ -1573,7 +1911,7 @@ export async function sustituirComprobantePago(pagoId: string, fileData: FormDat
 
 		// Upload new file
 		const fileExt = file.name.split(".").pop();
-		const fileName = `${profile.id}/${pagoId}_${Date.now()}.${fileExt}`;
+		const fileName = `${profile.id}/${abonoId}_${Date.now()}.${fileExt}`;
 		const { data: uploadData, error: uploadError } = await supabase.storage
 			.from("pagos-comprobantes")
 			.upload(fileName, file, { contentType: file.type, upsert: false });
@@ -1609,11 +1947,13 @@ export async function sustituirComprobantePago(pagoId: string, fileData: FormDat
 			revalidatePath("/cobranzas");
 			return { success: true, data: { comprobante_id: updated.id, archivo_url: uploadData.path } };
 		} else {
-			// No existing comprobante — create new one
+			// No existing comprobante — create new one para el abono
 			const { data: comprobante, error: dbError } = await supabase
 				.from("polizas_pagos_comprobantes")
 				.insert({
-					pago_id: pagoId,
+					pago_id: abono.pago_id,
+					anexo_pago_id: abono.anexo_pago_id,
+					abono_id: abonoId,
 					nombre_archivo: file.name,
 					archivo_url: uploadData.path,
 					tamano_bytes: file.size,
@@ -1684,6 +2024,7 @@ export async function obtenerCobranzasPaginadas(params: CobranzaFiltros = {}): P
 
 		// ── Pre-paso: búsqueda de texto → client_ids coincidentes ─────────
 		let searchClientIds: string[] | null = null;
+		let searchAnexoPolizaIds: string[] = [];
 		let searchPolizaMatch = "";
 		if (search?.trim()) {
 			const q = search.trim().substring(0, 100);
@@ -1697,7 +2038,7 @@ export async function obtenerCobranzasPaginadas(params: CobranzaFiltros = {}): P
 				);
 			}
 
-			const [natRes, jurRes, uniRes] = await Promise.all([
+			const [natRes, jurRes, uniRes, anexoRes] = await Promise.all([
 				natQuery,
 				supabase.from("juridic_clients")
 					.select("client_id")
@@ -1705,12 +2046,17 @@ export async function obtenerCobranzasPaginadas(params: CobranzaFiltros = {}): P
 				supabase.from("unipersonal_clients")
 					.select("client_id")
 					.or(`razon_social.ilike.%${q}%,nit.ilike.%${q}%`),
+				// Mejora #3: buscar por número de anexo → devuelve la póliza madre
+				supabase.from("polizas_anexos")
+					.select("poliza_id")
+					.ilike("numero_anexo", `%${q}%`),
 			]);
 			searchClientIds = [
 				...(natRes.data?.map((r) => r.client_id) ?? []),
 				...(jurRes.data?.map((r) => r.client_id) ?? []),
 				...(uniRes.data?.map((r) => r.client_id) ?? []),
 			];
+			searchAnexoPolizaIds = [...new Set((anexoRes.data?.map((r) => r.poliza_id) ?? []))];
 		}
 
 		// ── Round 1: vista con filtros, orden y paginación ─────────────────
@@ -1740,13 +2086,12 @@ export async function obtenerCobranzasPaginadas(params: CobranzaFiltros = {}): P
 			query = query.or("cuotas_pendientes.gt.0,cuotas_vencidas.gt.0");
 		}
 
-		// Texto: número de póliza O cliente
+		// Texto: número de póliza O cliente O número de anexo
 		if (searchClientIds !== null) {
-			// combinar: poliza ilike O client_id IN (...)
-			const clientFilter = searchClientIds.length > 0
-				? `client_id.in.(${searchClientIds.join(",")})`
-				: "client_id.eq.00000000-0000-0000-0000-000000000000"; // sin resultados
-			query = query.or(`numero_poliza.ilike.%${searchPolizaMatch}%,${clientFilter}`);
+			const orFilters = [`numero_poliza.ilike.%${searchPolizaMatch}%`];
+			if (searchClientIds.length > 0) orFilters.push(`client_id.in.(${searchClientIds.join(",")})`);
+			if (searchAnexoPolizaIds.length > 0) orFilters.push(`id.in.(${searchAnexoPolizaIds.join(",")})`);
+			query = query.or(orFilters.join(","));
 		}
 
 		// Orden + paginación
