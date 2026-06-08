@@ -174,9 +174,8 @@ export function IncendioForm({ datos, regionales, onChange, onSiguiente, onAnter
 			nuevosErrores.bienes = "Debe agregar al menos un bien asegurado";
 		}
 
-		if (asegurados.length === 0) {
-			nuevosErrores.asegurados = "Debe agregar al menos un asegurado";
-		}
+		// Asegurados adicionales son opcionales: el incendio cubre el bien (edificio),
+		// no necesariamente personas. El tomador/contratante ya se define en el Paso 1.
 
 		if (Object.keys(nuevosErrores).length > 0) {
 			setErrores(nuevosErrores);
@@ -194,7 +193,7 @@ export function IncendioForm({ datos, regionales, onChange, onSiguiente, onAnter
 		onSiguiente();
 	};
 
-	const tieneDatos = valorAseguradoTotal > 0 && regionalId && bienes.length > 0 && asegurados.length > 0;
+	const tieneDatos = valorAseguradoTotal > 0 && regionalId && bienes.length > 0;
 
 	return (
 		<div className="bg-white rounded-lg shadow-sm border p-6">
@@ -345,7 +344,7 @@ export function IncendioForm({ datos, regionales, onChange, onSiguiente, onAnter
 				<div className="space-y-3">
 					<div className="flex items-center justify-between">
 						<Label>
-							Asegurados <span className="text-red-500">*</span>
+							Asegurados adicionales <span className="text-gray-400 font-normal">(opcional)</span>
 						</Label>
 						<Button type="button" variant="outline" size="sm" onClick={() => setMostrarBuscador(true)}>
 							<Plus className="mr-2 h-4 w-4" />
@@ -353,13 +352,11 @@ export function IncendioForm({ datos, regionales, onChange, onSiguiente, onAnter
 						</Button>
 					</div>
 
-					{errores.asegurados && <p className="text-sm text-red-600">{errores.asegurados}</p>}
-
 					{asegurados.length === 0 ? (
 						<div className="border-2 border-dashed rounded-lg p-8 text-center">
 							<Users className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-							<p className="text-sm text-gray-600">No hay asegurados agregados</p>
-							<p className="text-xs text-gray-500 mt-1">Haga clic en &quot;Agregar Asegurado&quot; para comenzar</p>
+							<p className="text-sm text-gray-600">No hay asegurados adicionales</p>
+							<p className="text-xs text-gray-500 mt-1">Opcional: agregue coasegurados si corresponde</p>
 						</div>
 					) : (
 						<div className="border rounded-lg divide-y">
