@@ -51,11 +51,21 @@ export async function obtenerPolizasPendientes() {
 		}
 
 		const { allowed } = await checkPermission("polizas.validar");
-		if (!allowed) {
-			return { success: false, error: "No tiene permisos para validar pólizas" };
-		}
-
 		const { needsScoping, teamMemberIds } = await getDataScopeFilter("polizas");
+
+		// Líderes de equipo sin el permiso JWT también pueden validar (solo su equipo).
+		let esLider = false;
+		if (!allowed) {
+			const { data: leaderTeams } = await supabase
+				.from("equipo_miembros")
+				.select("equipo_id")
+				.eq("user_id", user.id)
+				.eq("rol_equipo", "lider");
+			esLider = (leaderTeams?.length ?? 0) > 0;
+			if (!esLider) {
+				return { success: false, error: "No tiene permisos para validar pólizas" };
+			}
+		}
 
 		// Obtener pólizas pendientes con joins
 		let query = supabase
@@ -90,7 +100,7 @@ export async function obtenerPolizasPendientes() {
 			.eq("estado", "pendiente")
 			.order("created_at", { ascending: false });
 
-		if (needsScoping && teamMemberIds.length > 0) {
+		if ((needsScoping || esLider) && teamMemberIds.length > 0) {
 			query = query.in("responsable_id", teamMemberIds);
 		}
 

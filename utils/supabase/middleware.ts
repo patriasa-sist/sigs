@@ -125,10 +125,24 @@ export async function updateSession(request: NextRequest) {
 		const requiredPermission = matchingRoutes[0]?.[1];
 
 		if (requiredPermission) {
+			const matchedRoute = matchingRoutes[0][0];
 			// Admin bypass: admin siempre tiene acceso
 			const isAdmin = effectiveRole === "admin";
 			const requiredList = Array.isArray(requiredPermission) ? requiredPermission : [requiredPermission];
-			const hasPermission = isAdmin || requiredList.some((p) => userPermissions.includes(p));
+			let hasPermission = isAdmin || requiredList.some((p) => userPermissions.includes(p));
+
+			// Excepción: los líderes de equipo pueden acceder a Validación aunque no
+			// tengan el permiso polizas.validar (validan pólizas/anexos de su equipo).
+			// El estado de líder no viaja en el JWT, así que se consulta a la BD solo
+			// para esta ruta y solo cuando el permiso no alcanza.
+			if (!hasPermission && matchedRoute === "/gerencia/validacion") {
+				const { count } = await supabase
+					.from("equipo_miembros")
+					.select("*", { count: "exact", head: true })
+					.eq("user_id", user.id)
+					.eq("rol_equipo", "lider");
+				hasPermission = (count ?? 0) > 0;
+			}
 
 			if (!hasPermission) {
 				url.pathname = "/unauthorized";
