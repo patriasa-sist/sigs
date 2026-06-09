@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import Image from "next/image";
 import {
 	Dialog,
 	DialogContent,
@@ -49,8 +50,11 @@ export default function RegistrarPagoAnexoModal({
 	const [error, setError] = useState<string | null>(null);
 	const [saldoInfo, setSaldoInfo] = useState<{ monto: number; abonado: number; saldo: number } | null>(null);
 	const [selectedFile, setSelectedFile] = useState<File | null>(null);
+	const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 	const [fileError, setFileError] = useState<string | null>(null);
 	const [tipoComprobante, setTipoComprobante] = useState<TipoComprobante>("factura");
+	const [isDragging, setIsDragging] = useState(false);
+	const dropZoneRef = useRef<HTMLDivElement>(null);
 	const fileInputRef = useRef<HTMLInputElement>(null);
 
 	useEffect(() => {
@@ -59,6 +63,7 @@ export default function RegistrarPagoAnexoModal({
 		setObservaciones("");
 		setError(null);
 		setSelectedFile(null);
+		setPreviewUrl(null);
 		setFileError(null);
 		setTipoComprobante("factura");
 		setSaldoInfo(null);
@@ -79,21 +84,66 @@ export default function RegistrarPagoAnexoModal({
 	const formatCurrency = (amount: number) =>
 		new Intl.NumberFormat("es-BO", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amount);
 
-	const processFile = (file: File) => {
+	const processFile = useCallback((file: File) => {
 		setFileError(null);
 		const sizeValidation = validarTamanoArchivo(file);
 		if (!sizeValidation.valid) {
 			setFileError(sizeValidation.error || "Archivo inválido");
 			setSelectedFile(null);
+			setPreviewUrl(null);
 			return;
 		}
 		const typeValidation = validarTipoArchivo(file);
 		if (!typeValidation.valid) {
 			setFileError(typeValidation.error || "Tipo no permitido");
 			setSelectedFile(null);
+			setPreviewUrl(null);
 			return;
 		}
 		setSelectedFile(file);
+		if (file.type.startsWith("image/")) {
+			setPreviewUrl(URL.createObjectURL(file));
+		} else {
+			setPreviewUrl(null);
+		}
+	}, []);
+
+	const handleDragOver = useCallback((e: React.DragEvent) => {
+		e.preventDefault(); e.stopPropagation(); setIsDragging(true);
+	}, []);
+
+	const handleDragLeave = useCallback((e: React.DragEvent) => {
+		e.preventDefault(); e.stopPropagation(); setIsDragging(false);
+	}, []);
+
+	const handleDrop = useCallback((e: React.DragEvent) => {
+		e.preventDefault(); e.stopPropagation(); setIsDragging(false);
+		const file = e.dataTransfer.files?.[0];
+		if (file) processFile(file);
+	}, [processFile]);
+
+	useEffect(() => {
+		if (!open || selectedFile) return;
+		const handlePaste = (e: ClipboardEvent) => {
+			const items = e.clipboardData?.items;
+			if (!items) return;
+			for (const item of items) {
+				if (item.kind === "file") {
+					const file = item.getAsFile();
+					if (file) { e.preventDefault(); processFile(file); return; }
+				}
+			}
+		};
+		document.addEventListener("paste", handlePaste);
+		return () => document.removeEventListener("paste", handlePaste);
+	}, [open, selectedFile, processFile]);
+
+	const handleRemoveFile = () => {
+		if (previewUrl) URL.revokeObjectURL(previewUrl);
+		setSelectedFile(null);
+		setPreviewUrl(null);
+		setFileError(null);
+		if (fileInputRef.current) fileInputRef.current.value = "";
 	};
 
 	const handleSubmit = async (e: React.FormEvent) => {
@@ -217,11 +267,23 @@ export default function RegistrarPagoAnexoModal({
 
 						{!selectedFile ? (
 							<div
+								ref={dropZoneRef}
+								onDragOver={handleDragOver}
+								onDragLeave={handleDragLeave}
+								onDrop={handleDrop}
 								onClick={() => fileInputRef.current?.click()}
-								className="flex flex-col items-center gap-1.5 rounded-md border-2 border-dashed cursor-pointer py-5 px-4 transition-colors border-border hover:border-primary/60 hover:bg-secondary/50"
+								className={`flex flex-col items-center gap-1.5 rounded-md border-2 border-dashed cursor-pointer py-5 px-4 transition-colors ${
+									isDragging
+										? "border-primary bg-primary/5"
+										: "border-border hover:border-primary/60 hover:bg-secondary/50"
+								}`}
 							>
-								<Upload className="h-7 w-7 text-muted-foreground" />
-								<p className="text-sm text-muted-foreground text-center">Haz clic para seleccionar</p>
+								<Upload
+									className={`h-7 w-7 ${isDragging ? "text-primary" : "text-muted-foreground"}`}
+								/>
+								<p className="text-sm text-muted-foreground text-center">
+									Arrastra un archivo, pega con Ctrl+V o haz clic aquí
+								</p>
 								<p className="text-xs text-muted-foreground">JPG, PNG, WebP o PDF (máx. 10 MB)</p>
 								<input
 									ref={fileInputRef}
@@ -236,17 +298,45 @@ export default function RegistrarPagoAnexoModal({
 								/>
 							</div>
 						) : (
-							<div className="flex items-center justify-between rounded-md border border-border bg-secondary px-3 py-2">
-								<div className="flex items-center gap-2 min-w-0">
-									<FileText className="h-4 w-4 text-primary shrink-0" />
-									<div className="min-w-0">
-										<p className="text-sm font-medium truncate max-w-[220px]">{selectedFile.name}</p>
-										<p className="text-xs text-muted-foreground">{formatearTamanoArchivo(selectedFile.size)}</p>
+							<div className="rounded-md border border-border bg-secondary overflow-hidden">
+								{previewUrl && (
+									<a href={previewUrl} target="_blank" rel="noopener noreferrer" className="block">
+										<Image
+											src={previewUrl}
+											alt="Vista previa del comprobante"
+											width={800}
+											height={192}
+											unoptimized
+											className="w-full max-h-48 object-contain bg-black/5"
+										/>
+									</a>
+								)}
+								{!previewUrl && selectedFile.type === "application/pdf" && (
+									<button
+										type="button"
+										className="flex items-center gap-2 px-3 py-2 text-sm text-primary hover:underline w-full"
+										onClick={() => {
+											const url = URL.createObjectURL(selectedFile);
+											window.open(url, "_blank");
+											setTimeout(() => URL.revokeObjectURL(url), 10000);
+										}}
+									>
+										<FileText className="h-4 w-4 shrink-0" />
+										Abrir PDF para verificar
+									</button>
+								)}
+								<div className="flex items-center justify-between px-3 py-2">
+									<div className="flex items-center gap-2 min-w-0">
+										<FileText className="h-4 w-4 text-primary shrink-0" />
+										<div className="min-w-0">
+											<p className="text-sm font-medium truncate max-w-[220px]">{selectedFile.name}</p>
+											<p className="text-xs text-muted-foreground">{formatearTamanoArchivo(selectedFile.size)}</p>
+										</div>
 									</div>
+									<Button type="button" variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={handleRemoveFile}>
+										<X className="h-4 w-4" />
+									</Button>
 								</div>
-								<Button type="button" variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => setSelectedFile(null)}>
-									<X className="h-4 w-4" />
-								</Button>
 							</div>
 						)}
 						{fileError && <p className="text-xs text-destructive">{fileError}</p>}
