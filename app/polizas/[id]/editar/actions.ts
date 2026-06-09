@@ -304,7 +304,6 @@ export async function actualizarPoliza(
 			comision_encargado?: number;
 		};
 		const sinPrimaPropia = formState.datos_basicos.tipo_prima === "sin_prima_propia";
-		const esRetro = formState.datos_basicos.es_retroactiva === true;
 
 		// Extraer campos ramo-específicos que se guardan en la tabla polizas
 		const datosEsp = formState.datos_especificos?.datos;
@@ -416,8 +415,8 @@ export async function actualizarPoliza(
 							.update({
 								monto: cuotaUnica,
 								fecha_vencimiento: formState.modalidad_pago.fecha_pago_unico,
-								estado: esRetro ? "pagado" : "pendiente",
-								fecha_pago: esRetro ? formState.modalidad_pago.fecha_pago_unico : null,
+								estado: "pendiente",
+								fecha_pago: null,
 							})
 							.eq("id", cuotaExistente.id);
 
@@ -433,8 +432,8 @@ export async function actualizarPoliza(
 						numero_cuota: 1,
 						monto: cuotaUnica,
 						fecha_vencimiento: formState.modalidad_pago.fecha_pago_unico,
-						estado: esRetro ? "pagado" : "pendiente",
-						fecha_pago: esRetro ? formState.modalidad_pago.fecha_pago_unico : null,
+						estado: "pendiente",
+						fecha_pago: null,
 					});
 					if (insertError) {
 						console.error("[actualizarPoliza] Error inserting contado cuota:", insertError);
@@ -489,8 +488,8 @@ export async function actualizarPoliza(
 						numero_cuota: 1,
 						monto: formState.modalidad_pago.cuota_inicial,
 						fecha_vencimiento: formState.modalidad_pago.fecha_inicio_cuotas,
-						estado: esRetro ? "pagado" : "pendiente",
-						fecha_pago: esRetro ? formState.modalidad_pago.fecha_inicio_cuotas : null,
+						estado: "pendiente",
+						fecha_pago: null,
 						observaciones: "Cuota inicial",
 					});
 				}
@@ -507,8 +506,8 @@ export async function actualizarPoliza(
 						numero_cuota: cuota.numero,
 						monto: cuota.monto,
 						fecha_vencimiento: cuota.fecha_vencimiento,
-						estado: esRetro ? "pagado" : "pendiente",
-						fecha_pago: esRetro ? cuota.fecha_vencimiento : null,
+						estado: "pendiente",
+						fecha_pago: null,
 					});
 				}
 			}

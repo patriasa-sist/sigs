@@ -125,8 +125,9 @@ async function insertarPagos(
 		return;
 	}
 
-	// Carga retroactiva: las cuotas se registran como YA PAGADAS (sin generar
-	// cobranza), de forma automática. La prima es opcional.
+	// Carga retroactiva: la prima total puede ser mayor a las cuotas registradas
+	// (solo se cargan las cuotas pendientes de cobro; las ya cobradas no se registran).
+	// Las cuotas se guardan como PENDIENTES para que Cobranza las gestione normalmente.
 	const esRetro = formState.datos_basicos?.es_retroactiva === true;
 
 	if (formState.modalidad_pago.tipo === "contado") {
@@ -139,8 +140,8 @@ async function insertarPagos(
 			numero_cuota: 1,
 			monto: formState.modalidad_pago.cuota_unica,
 			fecha_vencimiento: formState.modalidad_pago.fecha_pago_unico,
-			estado: esRetro ? "pagado" : "pendiente",
-			fecha_pago: esRetro ? formState.modalidad_pago.fecha_pago_unico : null,
+			estado: "pendiente",
+			fecha_pago: null,
 		});
 
 		throwIfError(errorPago, "Error al guardar el pago");
@@ -163,8 +164,8 @@ async function insertarPagos(
 				numero_cuota: numeroCuotaActual,
 				monto: formState.modalidad_pago.cuota_inicial,
 				fecha_vencimiento: formState.modalidad_pago.fecha_inicio_cuotas,
-				estado: esRetro ? "pagado" : "pendiente",
-				fecha_pago: esRetro ? formState.modalidad_pago.fecha_inicio_cuotas : null,
+				estado: "pendiente",
+				fecha_pago: null,
 				observaciones: "Cuota inicial",
 			});
 			numeroCuotaActual++;
@@ -176,8 +177,8 @@ async function insertarPagos(
 				numero_cuota: numeroCuotaActual,
 				monto: cuota.monto,
 				fecha_vencimiento: cuota.fecha_vencimiento,
-				estado: esRetro ? "pagado" : "pendiente",
-				fecha_pago: esRetro ? cuota.fecha_vencimiento : null,
+				estado: "pendiente",
+				fecha_pago: null,
 			});
 			numeroCuotaActual++;
 		});

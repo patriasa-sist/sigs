@@ -80,7 +80,7 @@ export function validarDatosBasicos(datos: Partial<DatosBasicosPoliza>): Validat
 	// Validar grupo de producción
 	if (!datos.grupo_produccion) {
 		errores.push({ campo: "grupo_produccion", mensaje: VALIDATION_MESSAGES.CAMPO_REQUERIDO });
-	} else if (!POLIZA_RULES.GRUPOS_PRODUCCION.includes(datos.grupo_produccion as any)) {
+	} else if (!(POLIZA_RULES.GRUPOS_PRODUCCION as readonly string[]).includes(datos.grupo_produccion)) {
 		errores.push({
 			campo: "grupo_produccion",
 			mensaje: `Grupo de producción debe ser: ${POLIZA_RULES.GRUPOS_PRODUCCION.join(" o ")}`,
@@ -88,7 +88,7 @@ export function validarDatosBasicos(datos: Partial<DatosBasicosPoliza>): Validat
 	}
 
 	// Validar moneda
-	if (!datos.moneda || !POLIZA_RULES.MONEDAS.includes(datos.moneda as any)) {
+	if (!datos.moneda || !(POLIZA_RULES.MONEDAS as readonly string[]).includes(datos.moneda)) {
 		errores.push({
 			campo: "moneda",
 			mensaje: `Moneda debe ser: ${POLIZA_RULES.MONEDAS.join(", ")}`,
@@ -140,7 +140,7 @@ export function validarVehiculoAutomotor(vehiculo: Partial<VehiculoAutomotor>): 
 		errores.push({ campo: "nro_chasis", mensaje: "Número de chasis es requerido" });
 	}
 
-	if (!vehiculo.uso || !VEHICULO_RULES.TIPOS_USO.includes(vehiculo.uso as any)) {
+	if (!vehiculo.uso || !(VEHICULO_RULES.TIPOS_USO as readonly string[]).includes(vehiculo.uso)) {
 		errores.push({
 			campo: "uso",
 			mensaje: `Uso debe ser: ${VEHICULO_RULES.TIPOS_USO.join(" o ")}`,
@@ -221,7 +221,7 @@ export function validarModalidadPago(
 	const errores: ValidationError[] = [];
 
 	const soloMoneda = (): ValidationResult => {
-		if (!pago.moneda || !POLIZA_RULES.MONEDAS.includes(pago.moneda as any)) {
+		if (!pago.moneda || !(POLIZA_RULES.MONEDAS as readonly string[]).includes(pago.moneda)) {
 			errores.push({
 				campo: "moneda",
 				mensaje: `Moneda debe ser: ${POLIZA_RULES.MONEDAS.join(", ")}`,
@@ -262,7 +262,7 @@ export function validarModalidadPago(
 	}
 
 	// Validar moneda
-	if (!pago.moneda || !POLIZA_RULES.MONEDAS.includes(pago.moneda as any)) {
+	if (!pago.moneda || !(POLIZA_RULES.MONEDAS as readonly string[]).includes(pago.moneda)) {
 		errores.push({
 			campo: "moneda",
 			mensaje: `Moneda debe ser: ${POLIZA_RULES.MONEDAS.join(", ")}`,
@@ -302,7 +302,7 @@ export function validarModalidadPago(
 			errores.push({ campo: "fecha_inicio_cuotas", mensaje: "Fecha de inicio de cuotas es requerida" });
 		}
 
-		if (!pago.periodo_pago || !POLIZA_RULES.PERIODOS_PAGO.includes(pago.periodo_pago as any)) {
+		if (!pago.periodo_pago || !(POLIZA_RULES.PERIODOS_PAGO as readonly string[]).includes(pago.periodo_pago)) {
 			errores.push({
 				campo: "periodo_pago",
 				mensaje: `Periodo de pago debe ser: ${POLIZA_RULES.PERIODOS_PAGO.join(", ")}`,
@@ -331,7 +331,19 @@ export function validarModalidadPago(
 			const totalEsperado = pago.prima_total;
 			const totalCalculado = pago.cuota_inicial + sumaCuotas;
 
-			if (Math.abs(totalCalculado - totalEsperado) > 0.01) {
+			if (esRetroactiva) {
+				// Carga histórica: se registran SOLO las cuotas pendientes de cobro, por lo que
+				// la suma puede ser MENOR a la prima total (el resto ya se cobró fuera del sistema).
+				// Solo se bloquea si la suma SUPERA la prima total.
+				if (totalCalculado - totalEsperado > 0.01) {
+					errores.push({
+						campo: "cuotas",
+						mensaje: `La suma de cuotas (${totalCalculado.toFixed(
+							2
+						)}) no puede superar la prima total (${totalEsperado.toFixed(2)})`,
+					});
+				}
+			} else if (Math.abs(totalCalculado - totalEsperado) > 0.01) {
 				errores.push({
 					campo: "cuotas",
 					mensaje: `La suma de cuotas (${totalCalculado.toFixed(
@@ -354,7 +366,7 @@ export function validarModalidadPago(
  * pueden tener cuotas con fechas pasadas que necesitan ser registradas.
  * Solo se valida contra fin de vigencia (ver validarFechasDentroVigencia)
  */
-export function validarFechasPago(pago: ModalidadPago): ValidationResult {
+export function validarFechasPago(): ValidationResult {
 	// Validación deshabilitada - permitir cualquier fecha
 	// Las pólizas en curso pueden tener cuotas vencidas que se están registrando
 	return {

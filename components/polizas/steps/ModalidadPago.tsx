@@ -111,6 +111,11 @@ export function ModalidadPago({
 		datos?.tipo === "credito" ? (datos.usar_factores_contado ?? false) : false,
 	);
 
+	// Carga retroactiva: monto fijo por cuota pendiente. Permite generar cuotas con un
+	// importe distinto al de dividir la prima total entre la cantidad (ej: prima 600 con
+	// 3 cuotas pendientes de 100 c/u, ya que las 3 anteriores se cobraron fuera del sistema).
+	const [montoPorCuotaRetro, setMontoPorCuotaRetro] = useState<number>(0);
+
 	// Estado común
 	const [moneda, setMoneda] = useState<Moneda>(datos?.moneda || "Bs");
 	const [errores, setErrores] = useState<Record<string, string>>({});
@@ -223,9 +228,16 @@ export function ModalidadPago({
 			return;
 		}
 
-		// Calcular monto de cada cuota regular
+		// Calcular monto de cada cuota regular.
+		// Carga retroactiva con monto fijo: usar ese importe en vez de dividir la prima total
+		// (se registran solo las cuotas pendientes, no la prima completa).
 		const restoAPagar = primaTotal - cuotaInicial;
-		const montoPorCuota = numCuotasRegulares > 0 ? restoAPagar / numCuotasRegulares : 0;
+		const usarMontoFijoRetro = esRetroactiva && montoPorCuotaRetro > 0;
+		const montoPorCuota = usarMontoFijoRetro
+			? montoPorCuotaRetro
+			: numCuotasRegulares > 0
+				? restoAPagar / numCuotasRegulares
+				: 0;
 
 		// Calcular fechas para las cuotas regulares
 		// Si hay cuota inicial, las regulares empiezan desde el mes siguiente
@@ -718,6 +730,37 @@ export function ModalidadPago({
 							</Select>
 							{errores.moneda && <p className="text-sm text-destructive">{errores.moneda}</p>}
 						</div>
+
+						{/* Carga retroactiva: monto fijo por cuota pendiente */}
+						{esRetroactiva && (
+							<div className="md:col-span-2 p-3 rounded-lg border border-primary/30 bg-primary/5 space-y-2">
+								<Label htmlFor="monto_por_cuota_retro" className="text-foreground">
+									Monto por cuota pendiente
+									<span className="text-xs font-normal text-muted-foreground ml-2">
+										(carga histórica — opcional)
+									</span>
+								</Label>
+								<Input
+									id="monto_por_cuota_retro"
+									type="number"
+									min="0"
+									step="0.01"
+									value={montoPorCuotaRetro || ""}
+									onChange={(e) => {
+										setMontoPorCuotaRetro(parseFloat(e.target.value) || 0);
+										setCuotasGeneradas(false);
+									}}
+									placeholder="Ej: 100.00"
+									className="max-w-xs"
+								/>
+								<p className="text-xs text-muted-foreground">
+									Use la prima total real de la póliza arriba y aquí el importe de cada cuota que aún
+									está <strong>pendiente de cobro</strong>. Al generar, se crearán solo esas cuotas (las
+									ya cobradas antes de cargar la póliza no se registran). Si lo deja vacío, las cuotas se
+									calculan dividiendo la prima total.
+								</p>
+							</div>
+						)}
 
 						{/* Checkbox: Usar factores de contado */}
 						{producto && (
@@ -1245,15 +1288,68 @@ export function ModalidadPago({
 				</div>
 			)}
 
-			{/* Carga retroactiva: aviso (las cuotas se registran como pagadas automáticamente) */}
+			{/* Carga retroactiva: aviso + desglose prima total vs cuotas registradas */}
 			{esRetroactiva && !sinPrimaPropia && (
-				<div className="mb-6 p-3 bg-secondary border border-border rounded-lg flex items-start gap-2">
-					<AlertCircle className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
-					<p className="text-xs text-muted-foreground">
-						Carga histórica: la prima es opcional. Si registra cuotas, se guardarán como{" "}
-						<strong>pagadas</strong> (con su fecha de vencimiento) para no generar cobranza, pero sí reflejar
-						la prima en Producción del período. Puede continuar sin prima.
-					</p>
+				<div className="mb-6 space-y-3">
+					<div className="p-3 bg-secondary border border-border rounded-lg flex items-start gap-2">
+						<AlertCircle className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
+						<p className="text-xs text-muted-foreground">
+							Carga histórica: registre la prima total real de la póliza, pero solo las cuotas que aún
+							están <strong>pendientes de cobro</strong>. Se guardarán como <strong>pendientes</strong> para
+							que Cobranza las gestione; las cuotas ya cobradas antes de cargar la póliza no se registran,
+							por eso la suma de cuotas puede ser menor a la prima total. La prima es opcional (puede
+							continuar sin registrar cuotas).
+						</p>
+					</div>
+
+					{/* Desglose: prima total vs cuotas registradas vs saldo histórico no registrado */}
+					{tipoPago === "credito" && cuotas.length > 0 && primaTotal > 0 && (() => {
+						const sumaCuotasRetro =
+							(cuotaInicial > 0 ? cuotaInicial : 0) + cuotas.reduce((s, c) => s + (c.monto || 0), 0);
+						const saldoHistoricoRetro = primaTotal - sumaCuotasRetro;
+						const excede = saldoHistoricoRetro < -0.01;
+						return (
+							<div className="p-4 bg-card border border-border rounded-lg">
+								<div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
+									<div>
+										<p className="text-muted-foreground font-medium">Prima total</p>
+										<p className="text-foreground text-lg font-bold">
+											{primaTotal.toLocaleString("es-BO", { minimumFractionDigits: 2 })} {moneda}
+										</p>
+									</div>
+									<div>
+										<p className="text-muted-foreground font-medium">Cuotas registradas</p>
+										<p className="text-foreground text-lg font-bold">
+											{sumaCuotasRetro.toLocaleString("es-BO", { minimumFractionDigits: 2 })} {moneda}
+										</p>
+									</div>
+									<div>
+										<p className="text-muted-foreground font-medium">
+											{excede ? "Excede la prima" : "Saldo histórico (no registrado)"}
+										</p>
+										<p
+											className={`text-lg font-bold ${excede ? "text-destructive" : "text-foreground"}`}
+										>
+											{Math.abs(saldoHistoricoRetro).toLocaleString("es-BO", {
+												minimumFractionDigits: 2,
+											})}{" "}
+											{moneda}
+										</p>
+									</div>
+								</div>
+								{excede ? (
+									<p className="text-xs text-destructive mt-2">
+										La suma de cuotas supera la prima total. Reduzca las cuotas o aumente la prima.
+									</p>
+								) : saldoHistoricoRetro > 0.01 ? (
+									<p className="text-xs text-muted-foreground mt-2">
+										El saldo histórico corresponde a cuotas ya cobradas fuera del sistema y no se
+										registrará en Cobranza.
+									</p>
+								) : null}
+							</div>
+						);
+					})()}
 				</div>
 			)}
 

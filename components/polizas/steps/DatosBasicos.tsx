@@ -437,7 +437,7 @@ export function DatosBasicos({ datos, onChange, onSiguiente, onAnterior }: Props
 				</div>
 
 				{/* Póliza retroactiva (carga histórica) - solo roles autorizados */}
-				{["admin", "uif"].includes(userRole) && (
+				{["admin", "uif", "agente", "comercial"].includes(userRole) && (
 					<div>
 						<div className="flex items-center gap-3">
 							<Checkbox
@@ -452,8 +452,9 @@ export function DatosBasicos({ datos, onChange, onSiguiente, onAnterior }: Props
 							</Label>
 						</div>
 						<p className="text-xs text-muted-foreground mt-1 ml-7">
-							Para registrar pólizas anteriores y dar trazabilidad a siniestros. No genera cobranza:
-							puede dejar la prima en 0, o registrar la prima histórica con sus cuotas marcadas como pagadas.
+							Para registrar pólizas anteriores y dar trazabilidad a siniestros. Permite registrar la
+							prima total real pero cargar solo las cuotas que aún están pendientes de cobro (las cuotas
+							ya cobradas antes de cargar la póliza no se registran).
 						</p>
 					</div>
 				)}

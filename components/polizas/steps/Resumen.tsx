@@ -61,7 +61,7 @@ export function Resumen({ formState, onAnterior, onEditarPaso, onGuardar, guarda
 
 		// Validar fechas de pago
 		if (formState.modalidad_pago) {
-			const validacion = validarFechasPago(formState.modalidad_pago);
+			const validacion = validarFechasPago();
 			if (!validacion.valido) {
 				validacion.errores.forEach((error) => {
 					nuevasAdvertencias.push({
