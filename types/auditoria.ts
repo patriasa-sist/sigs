@@ -73,9 +73,7 @@ export type ResumenRevisiones = {
 /**
  * Resultado de resolver el destinatario de la notificación (creador del cliente).
  */
-export type DestinatarioNotificacion =
-	| { ok: true; nombre: string; email: string }
-	| { ok: false; motivo: string };
+export type DestinatarioNotificacion = { ok: true; nombre: string; email: string } | { ok: false; motivo: string };
 
 /**
  * Resultado de guardar una revisión.

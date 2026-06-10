@@ -1,7 +1,17 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ChevronRight, ChevronLeft, CheckCircle2, Plus, FileSpreadsheet, Cog, Edit, Trash2, Download } from "lucide-react";
+import {
+	ChevronRight,
+	ChevronLeft,
+	CheckCircle2,
+	Plus,
+	FileSpreadsheet,
+	Cog,
+	Edit,
+	Trash2,
+	Download,
+} from "lucide-react";
 import type { DatosRamosTecnicos, EquipoIndustrial, TipoEquipo, MarcaEquipo } from "@/types/poliza";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,7 +29,9 @@ type Props = {
 };
 
 export function RamosTecnicosForm({ datos, onChange, onSiguiente, onAnterior }: Props) {
-	const [valorAsegurado, setValorAsegurado] = useState<string>(datos?.valor_asegurado ? String(datos.valor_asegurado) : "");
+	const [valorAsegurado, setValorAsegurado] = useState<string>(
+		datos?.valor_asegurado ? String(datos.valor_asegurado) : "",
+	);
 	const [tipoPoliza, setTipoPoliza] = useState<"individual" | "corporativo">(datos?.tipo_poliza || "individual");
 	const [equipos, setEquipos] = useState<EquipoIndustrial[]>(datos?.equipos || []);
 	const [modalAbierto, setModalAbierto] = useState(false);
@@ -41,10 +53,11 @@ export function RamosTecnicosForm({ datos, onChange, onSiguiente, onAnterior }: 
 		try {
 			const supabase = createClient();
 
-			const [{ data: tiposData, error: errorTipos }, { data: marcasData, error: errorMarcas }] = await Promise.all([
-				supabase.from("tipos_equipo").select("*").eq("activo", true).order("nombre"),
-				supabase.from("marcas_equipo").select("*").eq("activo", true).order("nombre"),
-			]);
+			const [{ data: tiposData, error: errorTipos }, { data: marcasData, error: errorMarcas }] =
+				await Promise.all([
+					supabase.from("tipos_equipo").select("*").eq("activo", true).order("nombre"),
+					supabase.from("marcas_equipo").select("*").eq("activo", true).order("nombre"),
+				]);
 
 			if (errorTipos) {
 				console.error("Error cargando tipos de equipo:", errorTipos);
@@ -137,7 +150,11 @@ export function RamosTecnicosForm({ datos, onChange, onSiguiente, onAnterior }: 
 		if (confirm("¿Está seguro de eliminar este equipo?")) {
 			const nuevosEquipos = equipos.filter((_, i) => i !== index);
 			setEquipos(nuevosEquipos);
-			onChange({ valor_asegurado: parseFloat(valorAsegurado) || 0, tipo_poliza: tipoPoliza, equipos: nuevosEquipos });
+			onChange({
+				valor_asegurado: parseFloat(valorAsegurado) || 0,
+				tipo_poliza: tipoPoliza,
+				equipos: nuevosEquipos,
+			});
 		}
 	};
 
@@ -165,17 +182,16 @@ export function RamosTecnicosForm({ datos, onChange, onSiguiente, onAnterior }: 
 				}
 
 				setEquipos(nuevosEquipos);
-				onChange({ valor_asegurado: parseFloat(valorAsegurado) || 0, tipo_poliza: tipoPoliza, equipos: nuevosEquipos });
+				onChange({
+					valor_asegurado: parseFloat(valorAsegurado) || 0,
+					tipo_poliza: tipoPoliza,
+					equipos: nuevosEquipos,
+				});
 
 				// Mostrar errores si los hay (filas con problemas)
 				if (resultado.errores.length > 0) {
-					const mensajesError = resultado.errores.map(
-						(e) => `Fila ${e.fila}: ${e.errores.join(", ")}`
-					);
-					setErrores([
-						`Se importaron ${resultado.equipos_validos.length} equipos.`,
-						...mensajesError,
-					]);
+					const mensajesError = resultado.errores.map((e) => `Fila ${e.fila}: ${e.errores.join(", ")}`);
+					setErrores([`Se importaron ${resultado.equipos_validos.length} equipos.`, ...mensajesError]);
 				} else {
 					alert(`Se importaron ${resultado.equipos_validos.length} equipos exitosamente.`);
 				}
@@ -183,7 +199,7 @@ export function RamosTecnicosForm({ datos, onChange, onSiguiente, onAnterior }: 
 				setErrores(
 					resultado.errores.length > 0
 						? resultado.errores.map((e) => `Fila ${e.fila}: ${e.errores.join(", ")}`)
-						: ["No se pudieron importar equipos del archivo."]
+						: ["No se pudieron importar equipos del archivo."],
 				);
 			}
 		} catch (error) {
@@ -236,9 +252,7 @@ export function RamosTecnicosForm({ datos, onChange, onSiguiente, onAnterior }: 
 		<div className="bg-white rounded-lg shadow-sm border p-6">
 			<div className="flex items-center justify-between mb-6">
 				<div>
-					<h2 className="text-xl font-semibold text-gray-900">
-						Paso 3: Datos del Ramo Técnico
-					</h2>
+					<h2 className="text-xl font-semibold text-gray-900">Paso 3: Datos del Ramo Técnico</h2>
 					<p className="text-sm text-gray-600 mt-1">
 						Complete los datos del ramo técnico. Los equipos son opcionales según el producto.
 					</p>
@@ -290,8 +304,13 @@ export function RamosTecnicosForm({ datos, onChange, onSiguiente, onAnterior }: 
 
 			{/* Equipos (opcional) */}
 			<div className="mb-2">
-				<p className="text-sm font-medium text-gray-700">Equipos Asegurados <span className="text-gray-400 font-normal">(opcional)</span></p>
-				<p className="text-xs text-gray-500 mt-0.5">Solo aplica para productos con equipos identificables (p.ej. Equipo Pesado Móvil, Rotura de Maquinaria)</p>
+				<p className="text-sm font-medium text-gray-700">
+					Equipos Asegurados <span className="text-gray-400 font-normal">(opcional)</span>
+				</p>
+				<p className="text-xs text-gray-500 mt-0.5">
+					Solo aplica para productos con equipos identificables (p.ej. Equipo Pesado Móvil, Rotura de
+					Maquinaria)
+				</p>
 			</div>
 
 			{/* Botones de acciones */}
@@ -341,9 +360,7 @@ export function RamosTecnicosForm({ datos, onChange, onSiguiente, onAnterior }: 
 				<div className="text-center py-12 border-2 border-dashed rounded-lg">
 					<Cog className="h-12 w-12 text-gray-400 mx-auto mb-4" />
 					<p className="text-gray-600 mb-2">No hay equipos agregados</p>
-					<p className="text-sm text-gray-500">
-						Agregue equipos manualmente o importe desde Excel
-					</p>
+					<p className="text-sm text-gray-500">Agregue equipos manualmente o importe desde Excel</p>
 				</div>
 			) : (
 				<div className="overflow-x-auto border rounded-lg mb-6">
@@ -359,9 +376,7 @@ export function RamosTecnicosForm({ datos, onChange, onSiguiente, onAnterior }: 
 								<th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">
 									Marca/Modelo
 								</th>
-								<th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">
-									Año
-								</th>
+								<th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">Año</th>
 								<th className="px-4 py-3 text-right text-xs font-medium text-gray-700 uppercase">
 									Valor Asegurado
 								</th>
@@ -382,9 +397,7 @@ export function RamosTecnicosForm({ datos, onChange, onSiguiente, onAnterior }: 
 						<tbody className="divide-y">
 							{equipos.map((equipo, index) => (
 								<tr key={index} className="hover:bg-gray-50">
-									<td className="px-4 py-3 font-medium text-gray-900">
-										{equipo.nro_serie}
-									</td>
+									<td className="px-4 py-3 font-medium text-gray-900">{equipo.nro_serie}</td>
 									<td className="px-4 py-3 text-sm text-gray-600">
 										{obtenerNombreTipo(equipo.tipo_equipo_id)}
 									</td>
@@ -392,14 +405,18 @@ export function RamosTecnicosForm({ datos, onChange, onSiguiente, onAnterior }: 
 										{obtenerNombreMarca(equipo.marca_equipo_id)}
 										{equipo.modelo ? ` ${equipo.modelo}` : ""}
 									</td>
-									<td className="px-4 py-3 text-sm text-gray-600">
-										{equipo.ano || "-"}
+									<td className="px-4 py-3 text-sm text-gray-600">{equipo.ano || "-"}</td>
+									<td className="px-4 py-3 text-sm text-gray-900 text-right">
+										{equipo.valor_asegurado.toLocaleString("es-BO", {
+											minimumFractionDigits: 2,
+											maximumFractionDigits: 2,
+										})}
 									</td>
 									<td className="px-4 py-3 text-sm text-gray-900 text-right">
-										{equipo.valor_asegurado.toLocaleString("es-BO", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-									</td>
-									<td className="px-4 py-3 text-sm text-gray-900 text-right">
-										{equipo.franquicia.toLocaleString("es-BO", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+										{equipo.franquicia.toLocaleString("es-BO", {
+											minimumFractionDigits: 2,
+											maximumFractionDigits: 2,
+										})}
 									</td>
 									<td className="px-4 py-3 text-center">
 										<span
@@ -413,7 +430,11 @@ export function RamosTecnicosForm({ datos, onChange, onSiguiente, onAnterior }: 
 										</span>
 									</td>
 									<td className="px-4 py-3 text-center text-sm text-gray-900">
-										{equipo.coaseguro?.toLocaleString("es-BO", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%
+										{equipo.coaseguro?.toLocaleString("es-BO", {
+											minimumFractionDigits: 2,
+											maximumFractionDigits: 2,
+										})}
+										%
 									</td>
 									<td className="px-4 py-3 text-center">
 										<div className="flex items-center justify-center gap-2">

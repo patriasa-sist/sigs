@@ -608,18 +608,18 @@ function VehicleEditor({ vehicles, onChange, label }: VehicleEditorProps) {
 										{vehicle.originalCurrency === "Bs."
 											? `Bs. ${vehicle.originalInsuredValue.toLocaleString("es-BO", {
 													minimumFractionDigits: 2,
-											  })}`
+												})}`
 											: `$us. ${vehicle.originalInsuredValue.toLocaleString("es-BO", {
 													minimumFractionDigits: 2,
-											  })}`}{" "}
+												})}`}{" "}
 										→{" "}
 										{vehicle.currency === "Bs."
 											? `Bs. ${vehicle.insuredValue.toLocaleString("es-BO", {
 													minimumFractionDigits: 2,
-											  })}`
+												})}`
 											: `$us. ${vehicle.insuredValue.toLocaleString("es-BO", {
 													minimumFractionDigits: 2,
-											  })}`}
+												})}`}
 									</div>
 								)}
 							{/* Warning for changed currency */}
@@ -951,7 +951,7 @@ export default function LetterGenerator({ selectedRecords, onClose, onGenerated 
 					validRecords.push(record);
 				} else {
 					validationErrors.push(
-						`Registro ${index + 1} (${record.asegurado}): ${validation.errors.join(", ")}`
+						`Registro ${index + 1} (${record.asegurado}): ${validation.errors.join(", ")}`,
 					);
 				}
 			});
@@ -1016,7 +1016,7 @@ export default function LetterGenerator({ selectedRecords, onClose, onGenerated 
 	};
 
 	const generateSinglePDF = async (
-		letterData: LetterData
+		letterData: LetterData,
 	): Promise<{ pdfBlob: Blob; finalLetterData: LetterData }> => {
 		// Generate real reference number only when actually creating the PDF
 		// and only if it's still a placeholder (not manually edited)
@@ -1516,7 +1516,7 @@ function LetterCard({
 
 	const isReferenceValid = useMemo(
 		() => letter.referenceNumber && letter.referenceNumber.length > 0, // Any reference number is valid now
-		[letter.referenceNumber]
+		[letter.referenceNumber],
 	);
 
 	useEffect(() => {
@@ -1543,7 +1543,7 @@ function LetterCard({
 	const updatePolicy = (
 		policyIndex: number,
 		field: keyof NonNullable<PolicyForLetter["manualFields"]>,
-		value: string | number | string[] | VehicleForLetter[] | InsuredMemberWithType[]
+		value: string | number | string[] | VehicleForLetter[] | InsuredMemberWithType[],
 	) => {
 		const updatedPolicies = editedLetter.policies.map((policy, index) => {
 			if (index === policyIndex) {
@@ -1916,7 +1916,7 @@ function LetterCard({
 																	updatePolicy(
 																		index,
 																		"insuredMembersWithType",
-																		newMembers
+																		newMembers,
 																	)
 																}
 															/>
@@ -2169,7 +2169,7 @@ function LetterCard({
 															✓ Valor asegurado:{" "}
 															{formatMonetaryValue(
 																policy.manualFields.insuredValue,
-																policy.manualFields.insuredValueCurrency
+																policy.manualFields.insuredValueCurrency,
 															)}
 														</div>
 													)}
@@ -2190,11 +2190,11 @@ function LetterCard({
 																					{member.name} (
 																					{member.beneficiaryType})
 																				</li>
-																			)
-																	  )
+																			),
+																		)
 																	: policy.insuredMembers?.map((member, i) => (
 																			<li key={i}>{member}</li>
-																	  ))}
+																		))}
 															</ul>
 														</div>
 													)}
@@ -2206,7 +2206,7 @@ function LetterCard({
 															✓ Valor asegurado:{" "}
 															{formatMonetaryValue(
 																policy.manualFields.insuredValue,
-																policy.manualFields.insuredValueCurrency
+																policy.manualFields.insuredValueCurrency,
 															)}
 														</div>
 													)}
@@ -2220,7 +2220,7 @@ function LetterCard({
 																	{policy.manualFields.insuredMembers.map(
 																		(member, i) => (
 																			<li key={i}>{member}</li>
-																		)
+																		),
 																	)}
 																</ul>
 															</div>
@@ -2233,7 +2233,7 @@ function LetterCard({
 															✓ Valor Asegurado:{" "}
 															{formatMonetaryValue(
 																policy.manualFields.insuredValue,
-																policy.manualFields.insuredValueCurrency
+																policy.manualFields.insuredValueCurrency,
 															)}
 														</div>
 													)}
@@ -2245,10 +2245,10 @@ function LetterCard({
 																{v.currency === "Bs."
 																	? `Bs. ${v.insuredValue.toLocaleString("es-BO", {
 																			minimumFractionDigits: 2,
-																	  })}`
+																		})}`
 																	: `$us. ${v.insuredValue.toLocaleString("es-BO", {
 																			minimumFractionDigits: 2,
-																	  })}`}
+																		})}`}
 															</li>
 														))}
 													</ul>
@@ -2262,7 +2262,7 @@ function LetterCard({
 															✓ Extraterritorialidad:{" "}
 															{formatMonetaryValue(
 																policy.manualFields.territoriality,
-																policy.manualFields.territorialityCurrency
+																policy.manualFields.territorialityCurrency,
 															)}
 														</div>
 													)}
@@ -2279,7 +2279,7 @@ function LetterCard({
 															✓ Valor Asegurado:{" "}
 															{formatMonetaryValue(
 																policy.manualFields.insuredValue,
-																policy.manualFields.insuredValueCurrency
+																policy.manualFields.insuredValueCurrency,
 															)}
 														</div>
 													)}
@@ -2311,10 +2311,10 @@ function LetterCard({
 																				{place.description} -{" "}
 																				{formatMonetaryValue(
 																					place.insuredValue,
-																					place.currency
+																					place.currency,
 																				)}
 																			</li>
-																		)
+																		),
 																	)}
 																</ul>
 															</>
@@ -2333,7 +2333,7 @@ function LetterCard({
 															✓ Valor Asegurado:{" "}
 															{formatMonetaryValue(
 																policy.manualFields.insuredValue,
-																policy.manualFields.insuredValueCurrency
+																policy.manualFields.insuredValueCurrency,
 															)}
 														</div>
 													)}

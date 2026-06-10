@@ -4,28 +4,10 @@ import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/ui/select";
-import {
-	Search,
-	ChevronLeft,
-	ChevronRight,
-	AlertTriangle,
-	X,
-	SlidersHorizontal,
-	ChevronDown,
-} from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Search, ChevronLeft, ChevronRight, AlertTriangle, X, SlidersHorizontal, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import type {
-	SiniestroVistaConEstado,
-	SiniestrosStats,
-	EstadoSiniestro,
-} from "@/types/siniestro";
+import type { SiniestroVistaConEstado, SiniestrosStats, EstadoSiniestro } from "@/types/siniestro";
 import StatsCards from "./StatsCards";
 import SiniestrosTable from "./SiniestrosTable";
 import ExportarSiniestros from "./ExportarSiniestros";
@@ -79,10 +61,7 @@ export default function Dashboard({ siniestrosIniciales, statsIniciales }: Dashb
 	const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
 
 	// Siniestros que requieren atención (sobre el total, no filtrado)
-	const siniestrosConAtencion = useMemo(
-		() => siniestros.filter((s) => s.requiere_atencion),
-		[siniestros]
-	);
+	const siniestrosConAtencion = useMemo(() => siniestros.filter((s) => s.requiere_atencion), [siniestros]);
 
 	// Conteo de filtros avanzados activos
 	const activeAdvancedCount = [
@@ -120,13 +99,10 @@ export default function Dashboard({ siniestrosIniciales, statsIniciales }: Dashb
 		return () => clearTimeout(timer);
 	}, [searchInput]);
 
-	const ramosUnicos = useMemo(
-		() => Array.from(new Set(siniestros.map((s) => s.ramo))).sort(),
-		[siniestros]
-	);
+	const ramosUnicos = useMemo(() => Array.from(new Set(siniestros.map((s) => s.ramo))).sort(), [siniestros]);
 	const departamentosUnicos = useMemo(
 		() => Array.from(new Set(siniestros.map((s) => s.departamento_nombre))).sort(),
-		[siniestros]
+		[siniestros],
 	);
 	const responsablesUnicos = useMemo(
 		() =>
@@ -134,14 +110,14 @@ export default function Dashboard({ siniestrosIniciales, statsIniciales }: Dashb
 				new Set(
 					siniestros
 						.map((s) => s.responsable_nombre)
-						.filter((r): r is string => r !== undefined && r !== null)
-				)
+						.filter((r): r is string => r !== undefined && r !== null),
+				),
 			).sort(),
-		[siniestros]
+		[siniestros],
 	);
 	const companiasUnicas = useMemo(
 		() => Array.from(new Set(siniestros.map((s) => s.compania_nombre))).sort(),
-		[siniestros]
+		[siniestros],
 	);
 	const etapasInternasUnicas = useMemo(
 		() =>
@@ -149,10 +125,10 @@ export default function Dashboard({ siniestrosIniciales, statsIniciales }: Dashb
 				new Set(
 					siniestros
 						.map((s) => s.estado_actual_nombre)
-						.filter((e): e is string => e !== undefined && e !== null)
-				)
+						.filter((e): e is string => e !== undefined && e !== null),
+				),
 			).sort(),
-		[siniestros]
+		[siniestros],
 	);
 
 	const filteredData = useMemo(() => {
@@ -170,13 +146,10 @@ export default function Dashboard({ siniestrosIniciales, statsIniciales }: Dashb
 				(s.compania_nombre && s.compania_nombre.toLowerCase().includes(searchLower));
 
 			const matchesEstado = estadoFiltro === "todos" || s.estado === estadoFiltro;
-			const matchesEtapa =
-				etapaInternaFiltro === "todos" || s.estado_actual_nombre === etapaInternaFiltro;
+			const matchesEtapa = etapaInternaFiltro === "todos" || s.estado_actual_nombre === etapaInternaFiltro;
 			const matchesRamo = ramoFiltro === "todos" || s.ramo === ramoFiltro;
-			const matchesDpto =
-				departamentoFiltro === "todos" || s.departamento_nombre === departamentoFiltro;
-			const matchesResp =
-				responsableFiltro === "todos" || s.responsable_nombre === responsableFiltro;
+			const matchesDpto = departamentoFiltro === "todos" || s.departamento_nombre === departamentoFiltro;
+			const matchesResp = responsableFiltro === "todos" || s.responsable_nombre === responsableFiltro;
 			const matchesComp = companiaFiltro === "todos" || s.compania_nombre === companiaFiltro;
 
 			return (
@@ -259,13 +232,12 @@ export default function Dashboard({ siniestrosIniciales, statsIniciales }: Dashb
 							<div className="min-w-0">
 								<p className="text-sm font-medium text-amber-900">
 									{siniestrosConAtencion.length} siniestro
-									{siniestrosConAtencion.length !== 1 ? "s" : ""} sin actualizar en más de 10
-									días
+									{siniestrosConAtencion.length !== 1 ? "s" : ""} sin actualizar en más de 10 días
 								</p>
 								<div className="mt-2 space-y-1">
 									{siniestrosConAtencion.slice(0, 3).map((s) => {
 										const dias = Math.floor(
-											(Date.now() - new Date(s.updated_at).getTime()) / 86400000
+											(Date.now() - new Date(s.updated_at).getTime()) / 86400000,
 										);
 										return (
 											<Link
@@ -333,9 +305,7 @@ export default function Dashboard({ siniestrosIniciales, statsIniciales }: Dashb
 							}}
 						>
 							<SelectTrigger className="w-full sm:w-48">
-								<SelectValue>
-									{ESTADO_LABELS[estadoFiltro] ?? "Todos los estados"}
-								</SelectValue>
+								<SelectValue>{ESTADO_LABELS[estadoFiltro] ?? "Todos los estados"}</SelectValue>
 							</SelectTrigger>
 							<SelectContent>
 								{Object.entries(ESTADO_LABELS).map(([val, label]) => (
@@ -381,9 +351,7 @@ export default function Dashboard({ siniestrosIniciales, statsIniciales }: Dashb
 						<div className="pt-3 border-t border-border space-y-3">
 							<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
 								<div>
-									<label className="text-xs text-muted-foreground mb-1.5 block">
-										Etapa interna
-									</label>
+									<label className="text-xs text-muted-foreground mb-1.5 block">Etapa interna</label>
 									<Select
 										value={etapaInternaFiltro}
 										onValueChange={(v) => {
@@ -406,9 +374,7 @@ export default function Dashboard({ siniestrosIniciales, statsIniciales }: Dashb
 								</div>
 
 								<div>
-									<label className="text-xs text-muted-foreground mb-1.5 block">
-										Ramo
-									</label>
+									<label className="text-xs text-muted-foreground mb-1.5 block">Ramo</label>
 									<Select
 										value={ramoFiltro}
 										onValueChange={(v) => {
@@ -431,9 +397,7 @@ export default function Dashboard({ siniestrosIniciales, statsIniciales }: Dashb
 								</div>
 
 								<div>
-									<label className="text-xs text-muted-foreground mb-1.5 block">
-										Departamento
-									</label>
+									<label className="text-xs text-muted-foreground mb-1.5 block">Departamento</label>
 									<Select
 										value={departamentoFiltro}
 										onValueChange={(v) => {
@@ -456,9 +420,7 @@ export default function Dashboard({ siniestrosIniciales, statsIniciales }: Dashb
 								</div>
 
 								<div>
-									<label className="text-xs text-muted-foreground mb-1.5 block">
-										Responsable
-									</label>
+									<label className="text-xs text-muted-foreground mb-1.5 block">Responsable</label>
 									<Select
 										value={responsableFiltro}
 										onValueChange={(v) => {
@@ -481,9 +443,7 @@ export default function Dashboard({ siniestrosIniciales, statsIniciales }: Dashb
 								</div>
 
 								<div>
-									<label className="text-xs text-muted-foreground mb-1.5 block">
-										Compañía
-									</label>
+									<label className="text-xs text-muted-foreground mb-1.5 block">Compañía</label>
 									<Select
 										value={companiaFiltro}
 										onValueChange={(v) => {
@@ -551,8 +511,7 @@ export default function Dashboard({ siniestrosIniciales, statsIniciales }: Dashb
 				<div className="flex items-center justify-between">
 					<p className="text-sm text-muted-foreground">
 						{(currentPage - 1) * ITEMS_PER_PAGE + 1}–
-						{Math.min(currentPage * ITEMS_PER_PAGE, sortedData.length)} de{" "}
-						{sortedData.length}
+						{Math.min(currentPage * ITEMS_PER_PAGE, sortedData.length)} de {sortedData.length}
 					</p>
 					<div className="flex items-center gap-2">
 						<Button

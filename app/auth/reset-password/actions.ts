@@ -39,7 +39,7 @@ export async function updatePassword(formData: FormData) {
 		if (sessionError || !sessionData.session) {
 			console.error("Session error:", sessionError?.message || "No active session");
 			redirect(
-				"/auth/reset-password?error=Session%20expired.%20Please%20use%20the%20password%20reset%20link%20again."
+				"/auth/reset-password?error=Session%20expired.%20Please%20use%20the%20password%20reset%20link%20again.",
 			);
 		}
 

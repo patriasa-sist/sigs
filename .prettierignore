@@ -3,6 +3,22 @@
 node_modules
 package-lock.json
 
+# Archivos que escriben/regeneran herramientas (formatearlos genera ping-pong de diffs):
+# - next-env.d.ts: Next.js lo regenera en cada dev/build ("should not be edited")
+# - package.json: npm lo reescribe en cada install con su propio formato
+# - tsconfig.json: Next.js lo parchea automáticamente al arrancar si falta una opción
+# - .mcp.json: Claude Code lo reescribe al agregar/quitar servidores MCP
+# - components.json: lo escribe el CLI de shadcn
+next-env.d.ts
+package.json
+tsconfig.json
+.mcp.json
+components.json
+
+# Componentes shadcn/ui: código vendoreado del registro, mantener byte-idéntico
+# para que `shadcn diff`/`add` puedan comparar contra el original sin ruido
+components/ui
+
 # Estáticos y SQL (prettier no parsea .sql; docs contiene migraciones + markdown de referencia)
 public
 supabase

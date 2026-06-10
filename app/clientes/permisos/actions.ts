@@ -25,9 +25,7 @@ import type {
 // TYPES
 // ============================================
 
-export type ActionResult<T> =
-	| { success: true; data: T }
-	| { success: false; error: string };
+export type ActionResult<T> = { success: true; data: T } | { success: false; error: string };
 
 // ============================================
 // HELPER FUNCTIONS
@@ -69,7 +67,7 @@ async function getAuthenticatedUserWithRole() {
 async function isUserTeamLeaderForCommercialOwner(
 	supabase: Awaited<ReturnType<typeof import("@/utils/supabase/server").createClient>>,
 	userId: string,
-	commercialOwnerId: string
+	commercialOwnerId: string,
 ): Promise<boolean> {
 	// Get all teams where current user is a leader
 	const { data: leaderTeams } = await supabase
@@ -120,11 +118,7 @@ async function requireAdminOrTeamLeaderForClient(clientId: string) {
 		.single();
 
 	if (clientData?.commercial_owner_id) {
-		const isLeader = await isUserTeamLeaderForCommercialOwner(
-			supabase,
-			user.id,
-			clientData.commercial_owner_id
-		);
+		const isLeader = await isUserTeamLeaderForCommercialOwner(supabase, user.id, clientData.commercial_owner_id);
 		if (isLeader) {
 			return { supabase, user, profile, isTeamLeader: true };
 		}
@@ -143,9 +137,7 @@ async function requireAdminOrTeamLeaderForClient(clientId: string) {
  * @param clientId - UUID of the client to check
  * @returns Permission check result with canEdit flag and reason
  */
-export async function checkEditPermission(
-	clientId: string
-): Promise<ActionResult<PermissionCheckResult>> {
+export async function checkEditPermission(clientId: string): Promise<ActionResult<PermissionCheckResult>> {
 	try {
 		const { supabase, user, profile } = await getAuthenticatedUserWithRole();
 
@@ -175,7 +167,7 @@ export async function checkEditPermission(
 			const isLeader = await isUserTeamLeaderForCommercialOwner(
 				supabase,
 				user.id,
-				clientData.commercial_owner_id
+				clientData.commercial_owner_id,
 			);
 			if (isLeader) {
 				return {
@@ -235,7 +227,7 @@ export async function checkEditPermission(
 				expires_at,
 				granted_by,
 				granter:profiles!granted_by (full_name)
-			`
+			`,
 			)
 			.eq("client_id", clientId)
 			.eq("user_id", user.id)
@@ -309,9 +301,7 @@ export async function checkEditPermission(
  * @param input - Permission grant input (client_id, user_id, optional expires_at and notes)
  * @returns Result with the new permission ID
  */
-export async function grantEditPermission(
-	input: GrantPermissionInput
-): Promise<ActionResult<{ id: string }>> {
+export async function grantEditPermission(input: GrantPermissionInput): Promise<ActionResult<{ id: string }>> {
 	try {
 		const { supabase, user, isTeamLeader } = await requireAdminOrTeamLeaderForClient(input.client_id);
 
@@ -426,10 +416,7 @@ export async function grantEditPermission(
  * @param notes - Optional reason for revocation
  * @returns Success/failure result
  */
-export async function revokeEditPermission(
-	permissionId: string,
-	notes?: string
-): Promise<ActionResult<void>> {
+export async function revokeEditPermission(permissionId: string, notes?: string): Promise<ActionResult<void>> {
 	try {
 		const { supabase, user, profile } = await getAuthenticatedUserWithRole();
 
@@ -476,9 +463,7 @@ export async function revokeEditPermission(
 			.update({
 				revoked_at: new Date().toISOString(),
 				revoked_by: user.id,
-				notes: notes
-					? `Revocado: ${notes}`
-					: "Revocado",
+				notes: notes ? `Revocado: ${notes}` : "Revocado",
 			})
 			.eq("id", permissionId);
 
@@ -509,9 +494,7 @@ export async function revokeEditPermission(
  * @param clientId - UUID of the client
  * @returns List of active permissions with user info
  */
-export async function getClientPermissions(
-	clientId: string
-): Promise<ActionResult<ClientEditPermissionViewModel[]>> {
+export async function getClientPermissions(clientId: string): Promise<ActionResult<ClientEditPermissionViewModel[]>> {
 	try {
 		const { supabase } = await requireAdminOrTeamLeaderForClient(clientId);
 
@@ -528,7 +511,7 @@ export async function getClientPermissions(
 				notes,
 				user:profiles!user_id (full_name, email),
 				granter:profiles!granted_by (full_name)
-			`
+			`,
 			)
 			.eq("client_id", clientId)
 			.is("revoked_at", null)
@@ -540,32 +523,29 @@ export async function getClientPermissions(
 		}
 
 		// Transform to view model - handle both array and object forms from Supabase
-		const permissions: ClientEditPermissionViewModel[] = (data || []).map(
-			(p) => {
-				const userRaw = p.user;
-				const granterRaw = p.granter;
-				const userData = Array.isArray(userRaw) ? userRaw[0] : userRaw;
-				const granterData = Array.isArray(granterRaw) ? granterRaw[0] : granterRaw;
+		const permissions: ClientEditPermissionViewModel[] = (data || []).map((p) => {
+			const userRaw = p.user;
+			const granterRaw = p.granter;
+			const userData = Array.isArray(userRaw) ? userRaw[0] : userRaw;
+			const granterData = Array.isArray(granterRaw) ? granterRaw[0] : granterRaw;
 
-				// Calculate if active (not expired)
-				const isActive =
-					!p.expires_at || new Date(p.expires_at) > new Date();
+			// Calculate if active (not expired)
+			const isActive = !p.expires_at || new Date(p.expires_at) > new Date();
 
-				return {
-					id: p.id,
-					client_id: p.client_id,
-					user_id: p.user_id,
-					user_name: userData?.full_name || "Desconocido",
-					user_email: userData?.email || "",
-					granted_by: p.granted_by,
-					granted_by_name: granterData?.full_name || "Desconocido",
-					granted_at: p.granted_at,
-					expires_at: p.expires_at,
-					is_active: isActive,
-					notes: p.notes,
-				};
-			}
-		);
+			return {
+				id: p.id,
+				client_id: p.client_id,
+				user_id: p.user_id,
+				user_name: userData?.full_name || "Desconocido",
+				user_email: userData?.email || "",
+				granted_by: p.granted_by,
+				granted_by_name: granterData?.full_name || "Desconocido",
+				granted_at: p.granted_at,
+				expires_at: p.expires_at,
+				is_active: isActive,
+				notes: p.notes,
+			};
+		});
 
 		return { success: true, data: permissions };
 	} catch (error) {
@@ -588,9 +568,7 @@ export async function getClientPermissions(
  *
  * @returns List of comercial/agente users
  */
-export async function getComercialUsers(): Promise<
-	ActionResult<ComercialUser[]>
-> {
+export async function getComercialUsers(): Promise<ActionResult<ComercialUser[]>> {
 	try {
 		const { supabase, user, profile } = await getAuthenticatedUserWithRole();
 
@@ -632,10 +610,7 @@ export async function getComercialUsers(): Promise<
 
 		const teamIds = leaderTeams.map((t: { equipo_id: string }) => t.equipo_id);
 
-		const { data: teamMembers } = await supabase
-			.from("equipo_miembros")
-			.select("user_id")
-			.in("equipo_id", teamIds);
+		const { data: teamMembers } = await supabase.from("equipo_miembros").select("user_id").in("equipo_id", teamIds);
 
 		const memberIds = (teamMembers ?? []).map((m: { user_id: string }) => m.user_id);
 
@@ -706,9 +681,7 @@ export async function getMyEditPermissions(): Promise<
 		}
 
 		// Filter out expired permissions
-		const activePermissions = (data || []).filter(
-			(p) => !p.expires_at || new Date(p.expires_at) > new Date()
-		);
+		const activePermissions = (data || []).filter((p) => !p.expires_at || new Date(p.expires_at) > new Date());
 
 		return { success: true, data: activePermissions };
 	} catch (error) {

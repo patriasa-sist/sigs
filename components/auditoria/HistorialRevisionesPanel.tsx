@@ -9,10 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Download, Loader2, CheckCircle2, XCircle } from "lucide-react";
 import * as ExcelJS from "exceljs";
 import { ALL_DOCUMENT_TYPES, type TipoDocumentoCliente } from "@/types/clienteDocumento";
-import {
-	obtenerHistorialRevisiones,
-	obtenerResumenRevisiones,
-} from "@/app/auditoria/revisiones/actions";
+import { obtenerHistorialRevisiones, obtenerResumenRevisiones } from "@/app/auditoria/revisiones/actions";
 import type { AuditorUif, HistorialRevisionRow, ResumenRevisiones } from "@/types/auditoria";
 
 type Props = {
@@ -186,10 +183,7 @@ export function HistorialRevisionesPanel({ isAdmin, auditores }: Props) {
 				{isAdmin && (
 					<div className="space-y-1.5">
 						<Label className="text-sm">Auditor</Label>
-						<Select
-							value={auditorId || "all"}
-							onValueChange={(v) => setAuditorId(v === "all" ? "" : v)}
-						>
+						<Select value={auditorId || "all"} onValueChange={(v) => setAuditorId(v === "all" ? "" : v)}>
 							<SelectTrigger className="w-56">
 								<SelectValue placeholder="Todos" />
 							</SelectTrigger>
@@ -305,9 +299,7 @@ export function HistorialRevisionesPanel({ isAdmin, auditores }: Props) {
 							<div key={r.id} className="p-3">
 								<div className="flex items-start justify-between gap-3">
 									<div className="min-w-0">
-										<p className="font-medium text-gray-900 truncate">
-											{r.nombre_cliente || "—"}
-										</p>
+										<p className="font-medium text-gray-900 truncate">{r.nombre_cliente || "—"}</p>
 										<p className="text-xs text-gray-500">
 											{CLIENT_TYPE_LABELS[r.client_type || ""] || r.client_type} ·{" "}
 											{fmtFecha(r.fecha_revision)}

@@ -53,7 +53,7 @@ export const PDF_CONSTANTS = {
 export function determineTemplateType(
 	ramo: string,
 	puc?: string,
-	compania?: string
+	compania?: string,
 ): "salud" | "accidentes" | "incendios" | "automotor" | "general" {
 	// Clean PUC for comparison (remove dashes and other non-digits)
 	const cleanPuc = puc?.replace(/\D/g, "");
@@ -151,7 +151,7 @@ export function groupRecordsForLetters(records: ProcessedInsuranceRecord[]): Let
 					...new Set(
 						policyGroup
 							.map((r) => r.materiaAsegurada?.trim())
-							.filter((name): name is string => !!name && name.toUpperCase() !== "TITULAR")
+							.filter((name): name is string => !!name && name.toUpperCase() !== "TITULAR"),
 					),
 				];
 				const titular = mainRecord.asegurado.trim();
@@ -369,7 +369,7 @@ export async function groupRecordsForLettersWithReferences(records: ProcessedIns
 					...new Set(
 						policyGroup
 							.map((r) => r.materiaAsegurada?.trim())
-							.filter((name): name is string => !!name && name.toUpperCase() !== "TITULAR")
+							.filter((name): name is string => !!name && name.toUpperCase() !== "TITULAR"),
 					),
 				];
 				const titular = mainRecord.asegurado.trim();

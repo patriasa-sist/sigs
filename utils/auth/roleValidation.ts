@@ -10,7 +10,7 @@ export interface RoleChangeValidation {
 export async function validateRoleChange(
 	targetUserId: string,
 	newRole: UserRole,
-	currentUserId?: string
+	currentUserId?: string,
 ): Promise<RoleChangeValidation> {
 	try {
 		const supabase = await createClient();

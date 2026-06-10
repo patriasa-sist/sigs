@@ -34,11 +34,7 @@ import {
 	guardarRevision,
 	reintentarNotificacion,
 } from "@/app/auditoria/revisiones/actions";
-import type {
-	DestinatarioNotificacion,
-	RevisionDocumentoProblema,
-	UltimaRevisionCliente,
-} from "@/types/auditoria";
+import type { DestinatarioNotificacion, RevisionDocumentoProblema, UltimaRevisionCliente } from "@/types/auditoria";
 import { createClient } from "@/utils/supabase/client";
 
 const CLIENT_TYPE_LABELS: Record<string, { label: string; icon: typeof User }> = {
@@ -395,9 +391,7 @@ function ClientSamplingCard({
 									uploaded={uploaded}
 									documento={documento}
 									flagged={!!flagged[tipo]}
-									onToggleFlag={
-										uploaded ? () => toggleFlag(tipo, documento?.id ?? null) : undefined
-									}
+									onToggleFlag={uploaded ? () => toggleFlag(tipo, documento?.id ?? null) : undefined}
 									locked={locked}
 								/>
 							);
@@ -459,9 +453,7 @@ function ClientSamplingCard({
 					{/* Notas generales */}
 					{!locked && (
 						<div className="mt-4">
-							<label className="text-xs font-medium text-gray-600 mb-1 block">
-								Notas del auditor
-							</label>
+							<label className="text-xs font-medium text-gray-600 mb-1 block">Notas del auditor</label>
 							<textarea
 								value={notas}
 								onChange={(e) => setNotas(e.target.value)}
@@ -477,8 +469,8 @@ function ClientSamplingCard({
 						<div className="mt-3 flex items-start gap-2 rounded-md bg-amber-50 border border-amber-200 p-2.5 text-xs text-amber-800">
 							<AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
 							<span>
-								No se puede notificar: {destinatario.ok ? "" : destinatario.motivo} No es posible
-								marcar como incorrecto sin un destinatario válido.
+								No se puede notificar: {destinatario.ok ? "" : destinatario.motivo} No es posible marcar
+								como incorrecto sin un destinatario válido.
 							</span>
 						</div>
 					)}
@@ -548,11 +540,7 @@ function ClientSamplingCard({
 										Reportar faltantes y notificar
 									</Button>
 								)}
-								<Button
-									size="sm"
-									onClick={() => handleSave("correcto")}
-									disabled={saving}
-								>
+								<Button size="sm" onClick={() => handleSave("correcto")} disabled={saving}>
 									{saving ? (
 										<Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
 									) : (
@@ -603,8 +591,7 @@ export function SamplingPanel() {
 			<div className="flex items-center justify-between">
 				<div>
 					<p className="text-sm text-gray-600">
-						Seleccione 3 clientes al azar para verificar que sus documentos fueron cargados
-						correctamente.
+						Seleccione 3 clientes al azar para verificar que sus documentos fueron cargados correctamente.
 					</p>
 					{revisadosHoy !== null && (
 						<p className="text-xs text-gray-500 mt-1">
@@ -625,9 +612,7 @@ export function SamplingPanel() {
 			{!hasLoaded && (
 				<div className="text-center py-12 text-gray-400">
 					<FileText className="h-12 w-12 mx-auto mb-3 opacity-50" />
-					<p className="text-sm">
-						Presione &quot;Generar muestra&quot; para seleccionar 3 clientes al azar
-					</p>
+					<p className="text-sm">Presione &quot;Generar muestra&quot; para seleccionar 3 clientes al azar</p>
 				</div>
 			)}
 

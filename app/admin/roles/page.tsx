@@ -35,10 +35,13 @@ export default async function AdminRolesPage() {
 	}
 
 	const totalUsers = users?.length || 0;
-	const roleCounts = VALID_ROLES.reduce((acc, role) => {
-		acc[role] = users?.filter((u) => u.role === role).length || 0;
-		return acc;
-	}, {} as Record<string, number>);
+	const roleCounts = VALID_ROLES.reduce(
+		(acc, role) => {
+			acc[role] = users?.filter((u) => u.role === role).length || 0;
+			return acc;
+		},
+		{} as Record<string, number>,
+	);
 
 	return (
 		<div className="flex-1 w-full flex flex-col gap-6">
@@ -62,7 +65,9 @@ export default async function AdminRolesPage() {
 						<div className="flex items-center gap-2">
 							<span className="text-2xl font-semibold text-foreground">{totalUsers}</span>
 							<span className="text-xs text-muted-foreground leading-tight">
-								usuarios<br />en total
+								usuarios
+								<br />
+								en total
 							</span>
 						</div>
 
@@ -75,12 +80,8 @@ export default async function AdminRolesPage() {
 							return (
 								<div key={role} className="flex items-center gap-1.5 min-w-0">
 									<Icon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-									<span className="text-sm font-semibold text-foreground">
-										{roleCounts[role]}
-									</span>
-									<span className="text-xs text-muted-foreground truncate">
-										{getRoleLabel(role)}
-									</span>
+									<span className="text-sm font-semibold text-foreground">{roleCounts[role]}</span>
+									<span className="text-xs text-muted-foreground truncate">{getRoleLabel(role)}</span>
 								</div>
 							);
 						})}
@@ -136,7 +137,10 @@ export default async function AdminRolesPage() {
 
 										{/* Right: current badge + selector */}
 										<div className="flex items-center gap-3 shrink-0">
-											<Badge variant="secondary" className="text-xs hidden sm:flex items-center gap-1">
+											<Badge
+												variant="secondary"
+												className="text-xs hidden sm:flex items-center gap-1"
+											>
 												<Icon className="h-3 w-3" />
 												{getRoleLabel(user.role)}
 											</Badge>

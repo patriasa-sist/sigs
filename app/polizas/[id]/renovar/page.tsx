@@ -55,13 +55,9 @@ export default function RenovarPolizaPage() {
 			<div className="container mx-auto px-4 py-8 max-w-2xl">
 				<div className="text-center py-16 bg-white rounded-lg shadow-sm border">
 					<XCircle className="h-16 w-16 text-red-500 mx-auto mb-4" />
-					<h2 className="text-2xl font-bold text-gray-900 mb-2">
-						No se pudo iniciar la renovación
-					</h2>
+					<h2 className="text-2xl font-bold text-gray-900 mb-2">No se pudo iniciar la renovación</h2>
 					<p className="text-gray-600 mb-6">{error}</p>
-					<Button onClick={() => router.push(`/polizas/${polizaId}`)}>
-						Volver al detalle
-					</Button>
+					<Button onClick={() => router.push(`/polizas/${polizaId}`)}>Volver al detalle</Button>
 				</div>
 			</div>
 		);

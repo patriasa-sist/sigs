@@ -36,9 +36,7 @@ export interface ClienteTransferible {
 	status: string;
 }
 
-type ActionResult<T> =
-	| { success: true; data: T }
-	| { success: false; error: string };
+type ActionResult<T> = { success: true; data: T } | { success: false; error: string };
 
 // ============================================
 // SERVER ACTIONS
@@ -63,10 +61,7 @@ export async function obtenerUsuariosConDatos(): Promise<ActionResult<UsuarioCon
 
 		for (const profile of profiles || []) {
 			const [polizasCount, clientesCount] = await Promise.all([
-				supabase
-					.from("polizas")
-					.select("id", { count: "exact", head: true })
-					.eq("responsable_id", profile.id),
+				supabase.from("polizas").select("id", { count: "exact", head: true }).eq("responsable_id", profile.id),
 				supabase
 					.from("clients")
 					.select("id", { count: "exact", head: true })
@@ -88,16 +83,15 @@ export async function obtenerUsuariosConDatos(): Promise<ActionResult<UsuarioCon
 	}
 }
 
-export async function obtenerPolizasPorUsuario(
-	userId: string
-): Promise<ActionResult<PolizaTransferible[]>> {
+export async function obtenerPolizasPorUsuario(userId: string): Promise<ActionResult<PolizaTransferible[]>> {
 	await requirePermission("admin.equipos");
 	const supabase = await createClient();
 
 	try {
 		const { data, error } = await supabase
 			.from("polizas")
-			.select(`
+			.select(
+				`
 				id,
 				numero_poliza,
 				ramo,
@@ -105,7 +99,8 @@ export async function obtenerPolizasPorUsuario(
 				inicio_vigencia,
 				fin_vigencia,
 				companias_aseguradoras (nombre)
-			`)
+			`,
+			)
 			.eq("responsable_id", userId)
 			.order("numero_poliza");
 
@@ -133,38 +128,32 @@ export async function obtenerPolizasPorUsuario(
 	}
 }
 
-export async function obtenerClientesPorUsuario(
-	userId: string
-): Promise<ActionResult<ClienteTransferible[]>> {
+export async function obtenerClientesPorUsuario(userId: string): Promise<ActionResult<ClienteTransferible[]>> {
 	await requirePermission("admin.equipos");
 	const supabase = await createClient();
 
 	try {
 		const { data: rawClients, error } = await supabase
 			.from("clients")
-			.select(`
+			.select(
+				`
 				id,
 				client_type,
 				status,
 				natural_clients (primer_nombre, primer_apellido, numero_documento),
 				juridic_clients (razon_social, nit),
 				unipersonal_clients (razon_social, nit)
-			`)
+			`,
+			)
 			.eq("commercial_owner_id", userId)
 			.order("created_at", { ascending: false });
 
 		if (error) throw error;
 
 		const clientes: ClienteTransferible[] = (rawClients || []).map((c) => {
-			const nc = Array.isArray(c.natural_clients)
-				? c.natural_clients[0]
-				: c.natural_clients;
-			const jc = Array.isArray(c.juridic_clients)
-				? c.juridic_clients[0]
-				: c.juridic_clients;
-			const uc = Array.isArray(c.unipersonal_clients)
-				? c.unipersonal_clients[0]
-				: c.unipersonal_clients;
+			const nc = Array.isArray(c.natural_clients) ? c.natural_clients[0] : c.natural_clients;
+			const jc = Array.isArray(c.juridic_clients) ? c.juridic_clients[0] : c.juridic_clients;
+			const uc = Array.isArray(c.unipersonal_clients) ? c.unipersonal_clients[0] : c.unipersonal_clients;
 
 			let nombre = "Desconocido";
 			let documento = "-";
@@ -199,7 +188,7 @@ export async function obtenerClientesPorUsuario(
 export async function transferirPolizas(
 	polizaIds: string[],
 	nuevoResponsableId: string,
-	motivo?: string
+	motivo?: string,
 ): Promise<ActionResult<{ transferidos: number }>> {
 	const profile = await requirePermission("admin.equipos");
 	const supabase = await createClient();
@@ -252,7 +241,7 @@ export async function transferirPolizas(
 export async function transferirClientes(
 	clientIds: string[],
 	nuevoEjecutivoId: string,
-	motivo?: string
+	motivo?: string,
 ): Promise<ActionResult<{ transferidos: number }>> {
 	const profile = await requirePermission("admin.equipos");
 	const supabase = await createClient();

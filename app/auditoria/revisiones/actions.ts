@@ -33,17 +33,11 @@ function docLabel(tipo: string): string {
 // Destinatario de notificación (creador del cliente)
 // ================================================
 
-export async function obtenerDestinatarioNotificacion(
-	clientId: string
-): Promise<DestinatarioNotificacion> {
+export async function obtenerDestinatarioNotificacion(clientId: string): Promise<DestinatarioNotificacion> {
 	await requirePermission("auditoria.ver");
 	const supabase = await createClient();
 
-	const { data: client, error } = await supabase
-		.from("clients")
-		.select("created_by")
-		.eq("id", clientId)
-		.single();
+	const { data: client, error } = await supabase.from("clients").select("created_by").eq("id", clientId).single();
 
 	if (error || !client) {
 		return { ok: false, motivo: "No se pudo cargar el cliente." };
@@ -167,7 +161,7 @@ export async function guardarRevision(input: RevisionInput): Promise<GuardarRevi
 				tipo_documento: d.tipo_documento,
 				problema: d.problema,
 				nota: d.nota || null,
-			}))
+			})),
 		);
 		if (docsError) {
 			console.error("[guardarRevision] docs insert error:", docsError);
@@ -272,9 +266,7 @@ export async function reintentarNotificacion(revisionId: string): Promise<Guarda
 // Última revisión por cliente (etiqueta en sampler)
 // ================================================
 
-export async function obtenerUltimasRevisiones(
-	clientIds: string[]
-): Promise<UltimaRevisionCliente[]> {
+export async function obtenerUltimasRevisiones(clientIds: string[]): Promise<UltimaRevisionCliente[]> {
 	await requirePermission("auditoria.ver");
 	if (clientIds.length === 0) return [];
 	const supabase = await createClient();
@@ -304,17 +296,12 @@ export async function obtenerUltimasRevisiones(
 // Historial de revisiones (reporte)
 // ================================================
 
-export async function obtenerHistorialRevisiones(
-	filtros: HistorialFiltros = {}
-): Promise<HistorialRevisionRow[]> {
+export async function obtenerHistorialRevisiones(filtros: HistorialFiltros = {}): Promise<HistorialRevisionRow[]> {
 	const profile = await requirePermission("auditoria.ver");
 	const supabase = await createClient();
 	const isAdmin = profile.role === "admin";
 
-	let query = supabase
-		.from("auditoria_revisiones")
-		.select("*")
-		.order("fecha_revision", { ascending: false });
+	let query = supabase.from("auditoria_revisiones").select("*").order("fecha_revision", { ascending: false });
 
 	// Solo admin puede filtrar por auditor; uif está limitado a lo suyo por RLS
 	if (isAdmin && filtros.auditorId) {
@@ -385,9 +372,7 @@ export async function obtenerResumenRevisiones(auditorId?: string): Promise<Resu
 	startOfWeek.setDate(startOfWeek.getDate() - dow);
 	const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-	const earliest = new Date(
-		Math.min(startOfYesterday.getTime(), startOfWeek.getTime(), startOfMonth.getTime())
-	);
+	const earliest = new Date(Math.min(startOfYesterday.getTime(), startOfWeek.getTime(), startOfMonth.getTime()));
 
 	let query = supabase
 		.from("auditoria_revisiones")

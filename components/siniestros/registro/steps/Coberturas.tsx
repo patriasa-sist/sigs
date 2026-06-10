@@ -18,14 +18,17 @@ interface CoberturasProps {
 // UUID real de la cobertura "Gestión comercial" en coberturas_catalogo
 const GESTION_COMERCIAL_ID = "a5eb5c20-fcd7-4147-85da-c753956eba81";
 
-export default function CoberturasStepComponent({ ramo, coberturas, onCoberturasChange, showMinError }: CoberturasProps) {
+export default function CoberturasStepComponent({
+	ramo,
+	coberturas,
+	onCoberturasChange,
+	showMinError,
+}: CoberturasProps) {
 	const [gestionComercialSeleccionada, setGestionComercialSeleccionada] = useState(false);
 
 	// Inicializar estado si Gestión comercial ya está seleccionada
 	useEffect(() => {
-		const yaSeleccionada = coberturas?.coberturas_seleccionadas?.some(
-			(c) => c.id === GESTION_COMERCIAL_ID
-		);
+		const yaSeleccionada = coberturas?.coberturas_seleccionadas?.some((c) => c.id === GESTION_COMERCIAL_ID);
 		setGestionComercialSeleccionada(yaSeleccionada || false);
 	}, [coberturas?.coberturas_seleccionadas]);
 
@@ -72,9 +75,7 @@ export default function CoberturasStepComponent({ ramo, coberturas, onCoberturas
 		<Card>
 			<CardHeader>
 				<CardTitle>Paso 3: Coberturas Afectadas</CardTitle>
-				<CardDescription>
-					Selecciona las coberturas de la póliza que aplican a este siniestro
-				</CardDescription>
+				<CardDescription>Selecciona las coberturas de la póliza que aplican a este siniestro</CardDescription>
 			</CardHeader>
 			<CardContent className="space-y-4">
 				{/* Error inline si no hay coberturas seleccionadas */}

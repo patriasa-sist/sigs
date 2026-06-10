@@ -1,12 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import {
-	Dialog,
-	DialogContent,
-	DialogHeader,
-	DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -126,15 +121,12 @@ export default function RegistrarProrrogaModal({
 						<div>
 							<p className="text-xs text-muted-foreground">Monto</p>
 							<p className="font-semibold tabular-nums mt-0.5">
-								{poliza.moneda}{" "}
-								{cuota.monto.toLocaleString("es-BO", { minimumFractionDigits: 2 })}
+								{poliza.moneda} {cuota.monto.toLocaleString("es-BO", { minimumFractionDigits: 2 })}
 							</p>
 						</div>
 						<div className="col-span-2">
 							<p className="text-xs text-muted-foreground">Vencimiento actual</p>
-							<p className="font-medium mt-0.5">
-								{formatearFecha(cuota.fecha_vencimiento, "largo")}
-							</p>
+							<p className="font-medium mt-0.5">{formatearFecha(cuota.fecha_vencimiento, "largo")}</p>
 						</div>
 					</div>
 				</div>
@@ -149,7 +141,7 @@ export default function RegistrarProrrogaModal({
 									variant="outline"
 									className={cn(
 										"w-full justify-start text-left font-normal h-10",
-										!nuevaFecha && "text-muted-foreground"
+										!nuevaFecha && "text-muted-foreground",
 									)}
 								>
 									<CalendarIcon className="mr-2 h-4 w-4 shrink-0" />
@@ -170,9 +162,7 @@ export default function RegistrarProrrogaModal({
 								/>
 							</PopoverContent>
 						</Popover>
-						<p className="text-xs text-muted-foreground">
-							Debe ser una fecha futura (después de hoy)
-						</p>
+						<p className="text-xs text-muted-foreground">Debe ser una fecha futura (después de hoy)</p>
 					</div>
 
 					{/* Extension days feedback */}
@@ -188,8 +178,7 @@ export default function RegistrarProrrogaModal({
 					{/* Reason */}
 					<div className="space-y-1.5">
 						<Label htmlFor="motivo">
-							Motivo{" "}
-							<span className="text-muted-foreground font-normal">(opcional)</span>
+							Motivo <span className="text-muted-foreground font-normal">(opcional)</span>
 						</Label>
 						<Textarea
 							id="motivo"
@@ -200,9 +189,7 @@ export default function RegistrarProrrogaModal({
 							maxLength={500}
 							className="resize-none"
 						/>
-						<p className="text-xs text-muted-foreground text-right">
-							{motivo.length}/500
-						</p>
+						<p className="text-xs text-muted-foreground text-right">{motivo.length}/500</p>
 					</div>
 
 					{/* Error */}

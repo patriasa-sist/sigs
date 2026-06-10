@@ -13,10 +13,7 @@ export const metadata = {
 export default async function PermisosPage() {
 	await requirePermission("admin.permisos");
 
-	const [matrizResult, usuariosResult] = await Promise.all([
-		obtenerMatrizPermisos(),
-		obtenerUsuariosConPermisos(),
-	]);
+	const [matrizResult, usuariosResult] = await Promise.all([obtenerMatrizPermisos(), obtenerUsuariosConPermisos()]);
 
 	return (
 		<div className="flex-1 w-full flex flex-col gap-6">

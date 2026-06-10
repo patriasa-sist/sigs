@@ -39,11 +39,7 @@ function StatsCards({ stats, requierenAtencionCount }: StatsCardsProps) {
 
 			{/* Requieren atención — borde izquierdo ámbar si hay casos */}
 			<Card
-				className={
-					tieneAtencion
-						? "bg-card shadow-sm border-amber-200"
-						: "bg-card shadow-sm"
-				}
+				className={tieneAtencion ? "bg-card shadow-sm border-amber-200" : "bg-card shadow-sm"}
 				style={tieneAtencion ? { borderLeftWidth: "3px", borderLeftColor: "#F59E0B" } : undefined}
 			>
 				<CardContent className="p-5">
@@ -59,9 +55,7 @@ function StatsCards({ stats, requierenAtencionCount }: StatsCardsProps) {
 							</p>
 						</div>
 						<div
-							className={`p-2 rounded-md flex-shrink-0 ${
-								tieneAtencion ? "bg-amber-50" : "bg-secondary"
-							}`}
+							className={`p-2 rounded-md flex-shrink-0 ${tieneAtencion ? "bg-amber-50" : "bg-secondary"}`}
 						>
 							<AlertTriangle
 								className={`h-4 w-4 ${tieneAtencion ? "text-amber-600" : "text-muted-foreground"}`}
@@ -77,9 +71,7 @@ function StatsCards({ stats, requierenAtencionCount }: StatsCardsProps) {
 					<div className="flex items-start justify-between gap-3">
 						<div className="min-w-0">
 							<p className="text-sm text-muted-foreground">Cerrados total</p>
-							<p className="text-2xl font-semibold text-foreground mt-1 tabular-nums">
-								{totalCerrados}
-							</p>
+							<p className="text-2xl font-semibold text-foreground mt-1 tabular-nums">{totalCerrados}</p>
 							<div className="flex gap-3 mt-2">
 								<span className="text-xs text-muted-foreground">
 									{stats.siniestros_por_estado.concluido} concluidos

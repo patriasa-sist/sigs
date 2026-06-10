@@ -35,10 +35,7 @@ export default async function SiniestrosPage() {
 			</div>
 
 			{result.success ? (
-				<Dashboard
-					siniestrosIniciales={result.data.siniestros}
-					statsIniciales={result.data.stats}
-				/>
+				<Dashboard siniestrosIniciales={result.data.siniestros} statsIniciales={result.data.stats} />
 			) : (
 				<Card>
 					<CardContent className="flex items-start gap-3 p-5">

@@ -31,13 +31,7 @@ interface RechazoPolizaModalProps {
 const MIN_CHARS = 10;
 const MAX_CHARS = 500;
 
-export function RechazoPolizaModal({
-	isOpen,
-	onClose,
-	onConfirm,
-	poliza,
-	isLoading,
-}: RechazoPolizaModalProps) {
+export function RechazoPolizaModal({ isOpen, onClose, onConfirm, poliza, isLoading }: RechazoPolizaModalProps) {
 	const [motivo, setMotivo] = useState("");
 	const [error, setError] = useState<string | null>(null);
 
@@ -139,7 +133,9 @@ export function RechazoPolizaModal({
 									{error ? (
 										<span className="text-destructive">{error}</span>
 									) : (
-										<span className={`transition-colors ${isReady ? "text-primary font-medium" : "text-muted-foreground"}`}>
+										<span
+											className={`transition-colors ${isReady ? "text-primary font-medium" : "text-muted-foreground"}`}
+										>
 											{isReady
 												? "Listo para enviar"
 												: `${MIN_CHARS - charCount} caracteres restantes`}
@@ -156,9 +152,8 @@ export function RechazoPolizaModal({
 						<div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 px-3.5 py-3">
 							<AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
 							<div className="text-xs text-amber-800 leading-relaxed">
-								<span className="font-semibold">El creador tendrá 24 horas para editar.</span>{" "}
-								La póliza quedará marcada como rechazada y podrá ser corregida y
-								reenviada a validación.
+								<span className="font-semibold">El creador tendrá 24 horas para editar.</span> La póliza
+								quedará marcada como rechazada y podrá ser corregida y reenviada a validación.
 							</div>
 						</div>
 					</div>

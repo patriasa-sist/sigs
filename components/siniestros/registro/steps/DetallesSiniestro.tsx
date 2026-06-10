@@ -35,7 +35,11 @@ type UsuarioResponsable = {
 
 const MONEDAS: Moneda[] = ["Bs", "USD", "USDT", "UFV"];
 
-export default function DetallesSiniestroStep({ detalles, onDetallesChange, validationTrigger }: DetallesSiniestroProps) {
+export default function DetallesSiniestroStep({
+	detalles,
+	onDetallesChange,
+	validationTrigger,
+}: DetallesSiniestroProps) {
 	const [regionales, setRegionales] = useState<Regional[]>([]);
 	const [responsables, setResponsables] = useState<UsuarioResponsable[]>([]);
 	const [usuarioActualId, setUsuarioActualId] = useState<string | null>(null);
@@ -95,7 +99,8 @@ export default function DetallesSiniestroStep({ detalles, onDetallesChange, vali
 		const e: Record<string, string> = {};
 		if (!detalles?.fecha_siniestro) e.fecha_siniestro = "La fecha del siniestro es obligatoria";
 		if (!detalles?.fecha_reporte) e.fecha_reporte = "La fecha de reporte es obligatoria";
-		if (!detalles?.fecha_reporte_compania) e.fecha_reporte_compania = "La fecha de reporte a la compañía es obligatoria";
+		if (!detalles?.fecha_reporte_compania)
+			e.fecha_reporte_compania = "La fecha de reporte a la compañía es obligatoria";
 		if (!detalles?.lugar_hecho || detalles.lugar_hecho.trim().length < 5)
 			e.lugar_hecho = "El lugar del hecho es obligatorio (mínimo 5 caracteres)";
 		if (!detalles?.departamento_id) e.departamento_id = "Debe seleccionar un departamento";
@@ -104,8 +109,7 @@ export default function DetallesSiniestroStep({ detalles, onDetallesChange, vali
 		if (!detalles?.moneda) e.moneda = "Debe seleccionar una moneda";
 		if (!detalles?.descripcion || detalles.descripcion.trim().length < 20)
 			e.descripcion = "La descripción debe tener al menos 20 caracteres";
-		if (!detalles?.contactos || detalles.contactos.length === 0)
-			e.contactos = "Debe agregar al menos un contacto";
+		if (!detalles?.contactos || detalles.contactos.length === 0) e.contactos = "Debe agregar al menos un contacto";
 		setErrores(e);
 	}, [validationTrigger]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -174,9 +178,7 @@ export default function DetallesSiniestroStep({ detalles, onDetallesChange, vali
 		<Card>
 			<CardHeader>
 				<CardTitle>Paso 2: Detalles del Siniestro</CardTitle>
-				<CardDescription>
-					Fechas, lugar del hecho, monto de reserva y contactos
-				</CardDescription>
+				<CardDescription>Fechas, lugar del hecho, monto de reserva y contactos</CardDescription>
 			</CardHeader>
 			<CardContent className="space-y-6">
 				{/* Fechas - Primera fila */}
@@ -384,9 +386,7 @@ export default function DetallesSiniestroStep({ detalles, onDetallesChange, vali
 					<Label>
 						Contactos <span className="text-destructive">*</span>
 					</Label>
-					{errores.contactos && (
-						<p className="text-sm text-destructive">{errores.contactos}</p>
-					)}
+					{errores.contactos && <p className="text-sm text-destructive">{errores.contactos}</p>}
 					<p className="text-xs text-muted-foreground">
 						Agrega contactos relacionados al siniestro (cliente, ajustador, perito, etc.)
 					</p>

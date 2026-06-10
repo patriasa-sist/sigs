@@ -55,7 +55,7 @@ export function enviarRecordatorioWhatsApp(
 	cuota: CuotaPago,
 	poliza: PolizaConPagos,
 	contacto: ContactoCliente,
-	clienteNombre: string
+	clienteNombre: string,
 ): void {
 	// Determine which phone number to use (priority: celular > telefono)
 	const numeroTelefono = contacto.celular || contacto.telefono;
@@ -93,7 +93,10 @@ export function generarMensajeConsolidado(cuotas: CuotaPago[], poliza: PolizaCon
 
 	const total = cuotas.reduce((sum, c) => sum + c.monto, 0);
 	const lineas = cuotas
-		.map((c) => `  • Cuota N° ${c.numero_cuota} — ${formatCurrency(c.monto)} — Vence: ${formatDate(c.fecha_vencimiento)}`)
+		.map(
+			(c) =>
+				`  • Cuota N° ${c.numero_cuota} — ${formatCurrency(c.monto)} — Vence: ${formatDate(c.fecha_vencimiento)}`,
+		)
 		.join("\n");
 
 	return `Estimado/a ${clienteNombre},
@@ -119,7 +122,7 @@ export function enviarRecordatorioConsolidadoWhatsApp(
 	cuotas: CuotaPago[],
 	poliza: PolizaConPagos,
 	contacto: ContactoCliente,
-	clienteNombre: string
+	clienteNombre: string,
 ): void {
 	const numeroTelefono = contacto.celular || contacto.telefono;
 	if (!numeroTelefono) {
@@ -138,7 +141,7 @@ export function enviarRecordatorioConsolidadoEmail(
 	cuotas: CuotaPago[],
 	poliza: PolizaConPagos,
 	contacto: ContactoCliente,
-	clienteNombre: string
+	clienteNombre: string,
 ): void {
 	if (!contacto.correo) {
 		alert("No se encontró correo electrónico para este cliente");
@@ -157,7 +160,7 @@ export function enviarRecordatorioEmail(
 	cuota: CuotaPago,
 	poliza: PolizaConPagos,
 	contacto: ContactoCliente,
-	clienteNombre: string
+	clienteNombre: string,
 ): void {
 	if (!contacto.correo) {
 		alert("No se encontró correo electrónico para este cliente");

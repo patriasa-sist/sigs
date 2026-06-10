@@ -43,9 +43,10 @@ export function getPolicyCountsByStatus(client: Client): Record<string, number> 
  * @param status - Policy status
  * @returns Display label for status
  */
-export function getStatusLabel(
-	status: Policy["status"] | string
-): { label: string; color: "green" | "yellow" | "red" | "gray" | "blue" } {
+export function getStatusLabel(status: Policy["status"] | string): {
+	label: string;
+	color: "green" | "yellow" | "red" | "gray" | "blue";
+} {
 	switch (status) {
 		case "activa":
 			return { label: "VIGENTE", color: "green" };

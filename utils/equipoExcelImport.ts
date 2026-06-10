@@ -164,7 +164,10 @@ function parsearFilaEquipo(fila: unknown[], mapa: Record<string, number>): Parti
 /**
  * Valida un equipo industrial
  */
-function validarEquipoIndustrial(equipo: Partial<EquipoIndustrial>): { valido: boolean; errores: Array<{ campo: string; mensaje: string }> } {
+function validarEquipoIndustrial(equipo: Partial<EquipoIndustrial>): {
+	valido: boolean;
+	errores: Array<{ campo: string; mensaje: string }>;
+} {
 	const errores: Array<{ campo: string; mensaje: string }> = [];
 
 	// Campos obligatorios
@@ -188,14 +191,24 @@ function validarEquipoIndustrial(equipo: Partial<EquipoIndustrial>): { valido: b
 		errores.push({ campo: "uso", mensaje: "El uso es requerido" });
 	}
 
-	if (equipo.coaseguro === undefined || equipo.coaseguro < EQUIPO_RULES.COASEGURO_MIN || equipo.coaseguro > EQUIPO_RULES.COASEGURO_MAX) {
-		errores.push({ campo: "coaseguro", mensaje: `El coaseguro debe estar entre ${EQUIPO_RULES.COASEGURO_MIN} y ${EQUIPO_RULES.COASEGURO_MAX}%` });
+	if (
+		equipo.coaseguro === undefined ||
+		equipo.coaseguro < EQUIPO_RULES.COASEGURO_MIN ||
+		equipo.coaseguro > EQUIPO_RULES.COASEGURO_MAX
+	) {
+		errores.push({
+			campo: "coaseguro",
+			mensaje: `El coaseguro debe estar entre ${EQUIPO_RULES.COASEGURO_MIN} y ${EQUIPO_RULES.COASEGURO_MAX}%`,
+		});
 	}
 
 	// Validaciones opcionales
 	if (equipo.ano !== undefined && equipo.ano !== null) {
 		if (equipo.ano < EQUIPO_RULES.ANO_MIN || equipo.ano > EQUIPO_RULES.ANO_MAX) {
-			errores.push({ campo: "ano", mensaje: `El año debe estar entre ${EQUIPO_RULES.ANO_MIN} y ${EQUIPO_RULES.ANO_MAX}` });
+			errores.push({
+				campo: "ano",
+				mensaje: `El año debe estar entre ${EQUIPO_RULES.ANO_MIN} y ${EQUIPO_RULES.ANO_MAX}`,
+			});
 		}
 	}
 
@@ -233,7 +246,9 @@ export async function importarEquiposDesdeExcel(archivo: File): Promise<EquipoEx
 			return {
 				exito: false,
 				equipos_validos: [],
-				errores: [{ fila: 0, errores: ["El archivo debe tener al menos una fila de encabezados y una de datos"] }],
+				errores: [
+					{ fila: 0, errores: ["El archivo debe tener al menos una fila de encabezados y una de datos"] },
+				],
 			};
 		}
 
@@ -317,7 +332,9 @@ export async function importarEquiposDesdeExcel(archivo: File): Promise<EquipoEx
 			errores: [
 				{
 					fila: 0,
-					errores: [`Error procesando archivo: ${error instanceof Error ? error.message : "Error desconocido"}`],
+					errores: [
+						`Error procesando archivo: ${error instanceof Error ? error.message : "Error desconocido"}`,
+					],
 				},
 			],
 		};

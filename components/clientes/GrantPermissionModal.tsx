@@ -6,17 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/ui/select";
-import {
-	getComercialUsers,
-	grantEditPermission,
-} from "@/app/clientes/permisos/actions";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { getComercialUsers, grantEditPermission } from "@/app/clientes/permisos/actions";
 import type { ComercialUser, GrantPermissionInput } from "@/types/clientPermission";
 
 interface Props {
@@ -26,12 +17,7 @@ interface Props {
 	onSuccess: () => void;
 }
 
-export function GrantPermissionModal({
-	clientId,
-	clientName,
-	onClose,
-	onSuccess,
-}: Props) {
+export function GrantPermissionModal({ clientId, clientName, onClose, onSuccess }: Props) {
 	const [comercialUsers, setComercialUsers] = useState<ComercialUser[]>([]);
 	const [isLoadingUsers, setIsLoadingUsers] = useState(true);
 	const [isSubmitting, setIsSubmitting] = useState(false);
@@ -104,12 +90,7 @@ export function GrantPermissionModal({
 						<UserPlus className="h-5 w-5 text-primary" />
 						<h3 className="text-lg font-semibold">Otorgar Permiso de Edición</h3>
 					</div>
-					<Button
-						variant="ghost"
-						size="icon"
-						onClick={onClose}
-						className="rounded-full"
-					>
+					<Button variant="ghost" size="icon" onClick={onClose} className="rounded-full">
 						<X className="h-4 w-4" />
 					</Button>
 				</div>
@@ -131,14 +112,9 @@ export function GrantPermissionModal({
 								<span className="text-sm">Cargando usuarios...</span>
 							</div>
 						) : comercialUsers.length === 0 ? (
-							<p className="text-sm text-amber-600">
-								No hay usuarios con rol comercial disponibles
-							</p>
+							<p className="text-sm text-amber-600">No hay usuarios con rol comercial disponibles</p>
 						) : (
-							<Select
-								value={selectedUserId}
-								onValueChange={setSelectedUserId}
-							>
+							<Select value={selectedUserId} onValueChange={setSelectedUserId}>
 								<SelectTrigger>
 									<SelectValue placeholder="Seleccionar usuario..." />
 								</SelectTrigger>
@@ -147,9 +123,7 @@ export function GrantPermissionModal({
 										<SelectItem key={user.id} value={user.id}>
 											<div className="flex flex-col">
 												<span>{user.full_name}</span>
-												<span className="text-xs text-gray-500">
-													{user.email}
-												</span>
+												<span className="text-xs text-gray-500">{user.email}</span>
 											</div>
 										</SelectItem>
 									))}
@@ -201,18 +175,10 @@ export function GrantPermissionModal({
 
 					{/* Actions */}
 					<div className="flex justify-end gap-3 pt-4">
-						<Button
-							type="button"
-							variant="outline"
-							onClick={onClose}
-							disabled={isSubmitting}
-						>
+						<Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
 							Cancelar
 						</Button>
-						<Button
-							type="submit"
-							disabled={isSubmitting || isLoadingUsers || !selectedUserId}
-						>
+						<Button type="submit" disabled={isSubmitting || isLoadingUsers || !selectedUserId}>
 							{isSubmitting ? (
 								<>
 									<Loader2 className="h-4 w-4 mr-2 animate-spin" />

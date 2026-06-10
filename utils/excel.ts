@@ -108,12 +108,12 @@ export function validateRecord(record: any, rowIndex: number): { isValid: boolea
 					const strValue = cleanString(value);
 					if (rule.minLength && strValue.length < rule.minLength) {
 						errors.push(
-							`Fila ${rowIndex}: "${rule.field}" debe tener al menos ${rule.minLength} caracteres`
+							`Fila ${rowIndex}: "${rule.field}" debe tener al menos ${rule.minLength} caracteres`,
 						);
 					}
 					if (rule.maxLength && strValue.length > rule.maxLength) {
 						errors.push(
-							`Fila ${rowIndex}: "${rule.field}" no puede tener más de ${rule.maxLength} caracteres`
+							`Fila ${rowIndex}: "${rule.field}" no puede tener más de ${rule.maxLength} caracteres`,
 						);
 					}
 					break;
@@ -283,7 +283,7 @@ export function processRecord(record: InsuranceRecord, index: number): Processed
 export function processRecordWithPUCMapping(
 	record: InsuranceRecord,
 	index: number,
-	ramoMappingData: RamoMappingData[]
+	ramoMappingData: RamoMappingData[],
 ): ProcessedInsuranceRecord {
 	// First process the record normally (dates, status, etc.)
 	const processedRecord = processRecord(record, index);
@@ -320,7 +320,7 @@ export async function processExcelFile(file: File): Promise<ExcelUploadResult> {
 				success: false,
 				errors: [
 					`Tipo de archivo no soportado. Tipos permitidos: ${SYSTEM_CONSTANTS.SUPPORTED_FILE_TYPES.join(
-						", "
+						", ",
 					)}`,
 				],
 			};
@@ -356,7 +356,7 @@ export async function processExcelFile(file: File): Promise<ExcelUploadResult> {
 		const requiredHeaders = ["FIN DE VIGENCIA", "COMPAÑÍA", "NO. PÓLIZA", "ASEGURADO", "EJECUTIVO"];
 
 		const missingHeaders = requiredHeaders.filter(
-			(header) => !headers.some((h) => h && h.toUpperCase().includes(header.toUpperCase()))
+			(header) => !headers.some((h) => h && h.toUpperCase().includes(header.toUpperCase())),
 		);
 
 		if (missingHeaders.length > 0) {
@@ -406,7 +406,7 @@ export async function processExcelFile(file: File): Promise<ExcelUploadResult> {
 				errors.push(
 					`Fila ${rowNumber}: Error al procesar - ${
 						error instanceof Error ? error.message : "Error desconocido"
-					}`
+					}`,
 				);
 			}
 		}
@@ -476,7 +476,7 @@ export function getCriticalRecords(records: ProcessedInsuranceRecord[]): Process
  */
 export function getUniqueValues<T extends keyof ProcessedInsuranceRecord>(
 	records: ProcessedInsuranceRecord[],
-	property: T
+	property: T,
 ): string[] {
 	const values = records
 		.map((record) => record[property])

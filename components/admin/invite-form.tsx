@@ -75,7 +75,9 @@ export function InviteForm() {
 									<FormControl>
 										<Input placeholder="usuario@ejemplo.com" type="email" {...field} />
 									</FormControl>
-									<FormDescription>El usuario recibirá un correo con un enlace de invitación</FormDescription>
+									<FormDescription>
+										El usuario recibirá un correo con un enlace de invitación
+									</FormDescription>
 									<FormMessage />
 								</FormItem>
 							)}

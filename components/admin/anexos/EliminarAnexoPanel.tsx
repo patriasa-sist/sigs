@@ -10,14 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-	Table,
-	TableBody,
-	TableCell,
-	TableHead,
-	TableHeader,
-	TableRow,
-} from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -28,11 +21,7 @@ import {
 	AlertDialogHeader,
 	AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import {
-	buscarAnexosParaAdmin,
-	eliminarAnexoCompleto,
-	type AnexoAdminRow,
-} from "@/app/admin/anexos/actions";
+import { buscarAnexosParaAdmin, eliminarAnexoCompleto, type AnexoAdminRow } from "@/app/admin/anexos/actions";
 
 const TIPO_LABEL: Record<AnexoAdminRow["tipo_anexo"], string> = {
 	inclusion: "Inclusión",
@@ -118,9 +107,7 @@ export default function EliminarAnexoPanel() {
 			return;
 		}
 		toast.success(
-			result.data.reactivada
-				? "Anexo eliminado y póliza reactivada."
-				: "Anexo eliminado correctamente."
+			result.data.reactivada ? "Anexo eliminado y póliza reactivada." : "Anexo eliminado correctamente.",
 		);
 		setResultados((prev) => prev.filter((r) => r.id !== anexoSeleccionado.id));
 		cerrarConfirmacion();
@@ -147,11 +134,7 @@ export default function EliminarAnexoPanel() {
 					/>
 				</div>
 				<Button type="submit" disabled={buscando}>
-					{buscando ? (
-						<Loader2 className="h-4 w-4 animate-spin" />
-					) : (
-						<Search className="h-4 w-4" />
-					)}
+					{buscando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
 					<span className="ml-2">Buscar</span>
 				</Button>
 			</form>
@@ -220,11 +203,7 @@ export default function EliminarAnexoPanel() {
 									<TableCell className="text-center">{row.cantidad_documentos}</TableCell>
 									<TableCell className="text-center">{row.cantidad_pagos}</TableCell>
 									<TableCell className="text-right">
-										<Button
-											variant="destructive"
-											size="sm"
-											onClick={() => abrirConfirmacion(row)}
-										>
+										<Button variant="destructive" size="sm" onClick={() => abrirConfirmacion(row)}>
 											Eliminar
 										</Button>
 									</TableCell>
@@ -248,13 +227,13 @@ export default function EliminarAnexoPanel() {
 									<div className="rounded-md bg-muted p-3 text-sm space-y-1">
 										<div>
 											<span className="text-muted-foreground">Anexo:</span>{" "}
-											<strong>{anexoSeleccionado.numero_anexo}</strong>{" "}
-											({TIPO_LABEL[anexoSeleccionado.tipo_anexo]})
+											<strong>{anexoSeleccionado.numero_anexo}</strong> (
+											{TIPO_LABEL[anexoSeleccionado.tipo_anexo]})
 										</div>
 										<div>
 											<span className="text-muted-foreground">Póliza:</span>{" "}
-											<strong>{anexoSeleccionado.numero_poliza}</strong>{" "}
-											({anexoSeleccionado.ramo})
+											<strong>{anexoSeleccionado.numero_poliza}</strong> ({anexoSeleccionado.ramo}
+											)
 										</div>
 										<div>
 											<span className="text-muted-foreground">Documentos:</span>{" "}
@@ -267,8 +246,8 @@ export default function EliminarAnexoPanel() {
 
 								{reactivara && (
 									<div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
-										Este anexo es una <strong>anulación activa</strong>. Al eliminarlo, la
-										póliza volverá al estado <strong>activa</strong>.
+										Este anexo es una <strong>anulación activa</strong>. Al eliminarlo, la póliza
+										volverá al estado <strong>activa</strong>.
 									</div>
 								)}
 
@@ -296,7 +275,8 @@ export default function EliminarAnexoPanel() {
 										disabled={eliminando}
 									/>
 									<span>
-										Entiendo que esta acción es irreversible{reactivara ? " y reactivará la póliza" : ""}.
+										Entiendo que esta acción es irreversible
+										{reactivara ? " y reactivará la póliza" : ""}.
 									</span>
 								</label>
 							</div>

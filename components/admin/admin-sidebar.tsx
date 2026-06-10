@@ -4,19 +4,26 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-	Users, Mail, Shield, Lock, UsersRound, ArrowRightLeft,
-	BarChart3, Building2, Layers, Package, Tag, LayoutDashboard,
-	ChevronLeft, Settings, UserCircle, Menu,
+	Users,
+	Mail,
+	Shield,
+	Lock,
+	UsersRound,
+	ArrowRightLeft,
+	BarChart3,
+	Building2,
+	Layers,
+	Package,
+	Tag,
+	LayoutDashboard,
+	ChevronLeft,
+	Settings,
+	UserCircle,
+	Menu,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import {
-	Sheet,
-	SheetContent,
-	SheetHeader,
-	SheetTitle,
-	SheetTrigger,
-} from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 
 const navigationGroups = [
 	{
@@ -48,9 +55,7 @@ const navigationGroups = [
 	},
 	{
 		label: "Gestión Comercial",
-		items: [
-			{ href: "/admin/directores-cartera", icon: UserCircle, label: "Directores de Cartera" },
-		],
+		items: [{ href: "/admin/directores-cartera", icon: UserCircle, label: "Directores de Cartera" }],
 	},
 ];
 
@@ -97,7 +102,7 @@ function AdminNavContent({ onNavigate }: { onNavigate?: () => void }) {
 											"flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm transition-colors",
 											isActive
 												? "bg-primary/10 text-primary font-medium"
-												: "text-muted-foreground hover:text-foreground hover:bg-secondary"
+												: "text-muted-foreground hover:text-foreground hover:bg-secondary",
 										)}
 									>
 										<Icon className="h-4 w-4 shrink-0" />
@@ -130,7 +135,12 @@ export function AdminMobileNav() {
 		<div className="lg:hidden sticky top-0 z-10 flex items-center gap-2 border-b border-border bg-card px-4 py-2.5">
 			<Sheet open={open} onOpenChange={setOpen}>
 				<SheetTrigger asChild>
-					<Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" aria-label="Abrir menú de administración">
+					<Button
+						variant="ghost"
+						size="icon"
+						className="h-9 w-9 shrink-0"
+						aria-label="Abrir menú de administración"
+					>
 						<Menu className="h-5 w-5" />
 					</Button>
 				</SheetTrigger>

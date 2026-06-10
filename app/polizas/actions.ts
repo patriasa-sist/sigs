@@ -309,7 +309,17 @@ function mapPolizaToListItem(
 		regionales: unknown;
 	},
 	clientsMap: Map<string, { id: string; client_type: string }>,
-	naturalClientsMap: Map<string, { client_id: string; primer_nombre: string; segundo_nombre: string; primer_apellido: string; segundo_apellido: string; numero_documento: string }>,
+	naturalClientsMap: Map<
+		string,
+		{
+			client_id: string;
+			primer_nombre: string;
+			segundo_nombre: string;
+			primer_apellido: string;
+			segundo_apellido: string;
+			numero_documento: string;
+		}
+	>,
 	juridicClientsMap: Map<string, { client_id: string; razon_social: string; nit: string }>,
 	unipersonalClientsMap: Map<string, { client_id: string; razon_social: string; nit: string }>,
 ): PolizaListItem {
@@ -369,7 +379,9 @@ export async function obtenerPolizas(params: ObtenerPolizasParams = {}) {
 	const supabase = await createClient();
 
 	try {
-		const { data: { user } } = await supabase.auth.getUser();
+		const {
+			data: { user },
+		} = await supabase.auth.getUser();
 		if (!user) return { success: false, error: "No autenticado", polizas: [], total: 0 };
 
 		const scope = await getDataScopeFilter();
@@ -379,13 +391,15 @@ export async function obtenerPolizas(params: ObtenerPolizasParams = {}) {
 		if (search?.trim()) {
 			const q = search.trim().substring(0, 100);
 			const [natRes, jurRes, uniRes] = await Promise.all([
-				supabase.from("natural_clients")
+				supabase
+					.from("natural_clients")
 					.select("client_id")
-					.or(`primer_nombre.ilike.%${q}%,primer_apellido.ilike.%${q}%,segundo_apellido.ilike.%${q}%,numero_documento.ilike.%${q}%`),
-				supabase.from("juridic_clients")
-					.select("client_id")
-					.or(`razon_social.ilike.%${q}%,nit.ilike.%${q}%`),
-				supabase.from("unipersonal_clients")
+					.or(
+						`primer_nombre.ilike.%${q}%,primer_apellido.ilike.%${q}%,segundo_apellido.ilike.%${q}%,numero_documento.ilike.%${q}%`,
+					),
+				supabase.from("juridic_clients").select("client_id").or(`razon_social.ilike.%${q}%,nit.ilike.%${q}%`),
+				supabase
+					.from("unipersonal_clients")
 					.select("client_id")
 					.or(`razon_social.ilike.%${q}%,nit.ilike.%${q}%`),
 			]);
@@ -422,7 +436,7 @@ export async function obtenerPolizas(params: ObtenerPolizasParams = {}) {
 				profiles!polizas_responsable_id_fkey (full_name),
 				regionales!polizas_regional_id_fkey (nombre)
 			`,
-				{ count: "exact" }
+				{ count: "exact" },
 			)
 			.order("created_at", { ascending: false })
 			.range(from, to);
@@ -437,9 +451,7 @@ export async function obtenerPolizas(params: ObtenerPolizasParams = {}) {
 		if (search?.trim()) {
 			const sq = search.trim().substring(0, 100);
 			if (searchClientIds.length > 0) {
-				query = query.or(
-					`numero_poliza.ilike.%${sq}%,client_id.in.(${searchClientIds.join(",")})`
-				);
+				query = query.or(`numero_poliza.ilike.%${sq}%,client_id.in.(${searchClientIds.join(",")})`);
 			} else {
 				query = query.ilike("numero_poliza", `%${sq}%`);
 			}
@@ -456,19 +468,18 @@ export async function obtenerPolizas(params: ObtenerPolizasParams = {}) {
 
 		// Obtener info de clientes solo para la página actual
 		const clientIds = [...new Set(polizas.map((p) => p.client_id))];
-		const [
-			{ data: clients },
-			{ data: naturalClients },
-			{ data: juridicClients },
-			{ data: unipersonalClients },
-		] = await Promise.all([
-			supabase.from("clients").select("id, client_type").in("id", clientIds),
-			supabase.from("natural_clients")
-				.select("client_id, primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, numero_documento")
-				.in("client_id", clientIds),
-			supabase.from("juridic_clients").select("client_id, razon_social, nit").in("client_id", clientIds),
-			supabase.from("unipersonal_clients").select("client_id, razon_social, nit").in("client_id", clientIds),
-		]);
+		const [{ data: clients }, { data: naturalClients }, { data: juridicClients }, { data: unipersonalClients }] =
+			await Promise.all([
+				supabase.from("clients").select("id, client_type").in("id", clientIds),
+				supabase
+					.from("natural_clients")
+					.select(
+						"client_id, primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, numero_documento",
+					)
+					.in("client_id", clientIds),
+				supabase.from("juridic_clients").select("client_id, razon_social, nit").in("client_id", clientIds),
+				supabase.from("unipersonal_clients").select("client_id, razon_social, nit").in("client_id", clientIds),
+			]);
 
 		const clientsMap = new Map(clients?.map((c) => [c.id, c]) ?? []);
 		const naturalClientsMap = new Map(naturalClients?.map((c) => [c.client_id, c]) ?? []);
@@ -476,13 +487,34 @@ export async function obtenerPolizas(params: ObtenerPolizasParams = {}) {
 		const unipersonalClientsMap = new Map(unipersonalClients?.map((c) => [c.client_id, c]) ?? []);
 
 		const polizasFormateadas = polizas.map((p) =>
-			mapPolizaToListItem(p as Parameters<typeof mapPolizaToListItem>[0], clientsMap as Map<string, { id: string; client_type: string }>, naturalClientsMap as Map<string, { client_id: string; primer_nombre: string; segundo_nombre: string; primer_apellido: string; segundo_apellido: string; numero_documento: string }>, juridicClientsMap as Map<string, { client_id: string; razon_social: string; nit: string }>, unipersonalClientsMap as Map<string, { client_id: string; razon_social: string; nit: string }>)
+			mapPolizaToListItem(
+				p as Parameters<typeof mapPolizaToListItem>[0],
+				clientsMap as Map<string, { id: string; client_type: string }>,
+				naturalClientsMap as Map<
+					string,
+					{
+						client_id: string;
+						primer_nombre: string;
+						segundo_nombre: string;
+						primer_apellido: string;
+						segundo_apellido: string;
+						numero_documento: string;
+					}
+				>,
+				juridicClientsMap as Map<string, { client_id: string; razon_social: string; nit: string }>,
+				unipersonalClientsMap as Map<string, { client_id: string; razon_social: string; nit: string }>,
+			),
 		);
 
 		return { success: true, polizas: polizasFormateadas, total: count ?? 0 };
 	} catch (error) {
 		console.error("Error general obteniendo pólizas:", error);
-		return { success: false, error: error instanceof Error ? error.message : "Error desconocido", polizas: [], total: 0 };
+		return {
+			success: false,
+			error: error instanceof Error ? error.message : "Error desconocido",
+			polizas: [],
+			total: 0,
+		};
 	}
 }
 
@@ -490,7 +522,9 @@ export async function obtenerFiltrosPolizas() {
 	const supabase = await createClient();
 
 	try {
-		const { data: { user } } = await supabase.auth.getUser();
+		const {
+			data: { user },
+		} = await supabase.auth.getUser();
 		if (!user) return { success: false, error: "No autenticado", data: null };
 
 		const scope = await getDataScopeFilter();
@@ -563,7 +597,7 @@ export async function obtenerDetallePoliza(polizaId: string) {
 					juridic_clients (razon_social, nit),
 					unipersonal_clients (razon_social, nit)
 				)
-			`
+			`,
 			)
 			.eq("id", polizaId)
 			.single();
@@ -574,7 +608,7 @@ export async function obtenerDetallePoliza(polizaId: string) {
 		}
 
 		// Verificar scoping por equipo
-		const scope = await getDataScopeFilter('polizas');
+		const scope = await getDataScopeFilter("polizas");
 		if (scope.needsScoping && !scope.teamMemberIds.includes(poliza.responsable_id)) {
 			return { success: false, error: "No tiene acceso a esta póliza" };
 		}
@@ -583,7 +617,13 @@ export async function obtenerDetallePoliza(polizaId: string) {
 		type EmbeddedClient = {
 			id: string;
 			client_type: "natural" | "juridica" | "unipersonal";
-			natural_clients: { primer_nombre?: string; segundo_nombre?: string; primer_apellido?: string; segundo_apellido?: string; numero_documento?: string } | null;
+			natural_clients: {
+				primer_nombre?: string;
+				segundo_nombre?: string;
+				primer_apellido?: string;
+				segundo_apellido?: string;
+				numero_documento?: string;
+			} | null;
 			juridic_clients: { razon_social?: string; nit?: string } | null;
 			unipersonal_clients: { razon_social?: string; nit?: string } | null;
 		} | null;
@@ -634,7 +674,7 @@ export async function obtenerDetallePoliza(polizaId: string) {
 					modelo, ano, color, ejes, nro_motor, nro_asientos, plaza_circulacion,
 					tipos_vehiculo (nombre),
 					marcas_vehiculo (nombre)
-				`
+				`,
 				)
 				.eq("poliza_id", polizaId);
 
@@ -674,7 +714,7 @@ export async function obtenerDetallePoliza(polizaId: string) {
 			if (nivelesData && nivelesData.length > 0) {
 				niveles_salud = nivelesData;
 			}
-			const nivelMap = new Map(nivelesData?.map(n => [n.id, n.nombre]) || []);
+			const nivelMap = new Map(nivelesData?.map((n) => [n.id, n.nombre]) || []);
 
 			// Asegurados (contratante/titular)
 			const { data: aseguradosData } = await supabase
@@ -684,11 +724,8 @@ export async function obtenerDetallePoliza(polizaId: string) {
 
 			if (aseguradosData && aseguradosData.length > 0) {
 				// Resolver nombres de clientes
-				const clientIds = aseguradosData.map(a => a.client_id);
-				const { data: clients } = await supabase
-					.from("clients")
-					.select("id, client_type")
-					.in("id", clientIds);
+				const clientIds = aseguradosData.map((a) => a.client_id);
+				const { data: clients } = await supabase.from("clients").select("id, client_type").in("id", clientIds);
 
 				const clientMap = new Map<string, { name: string; ci: string }>();
 				for (const c of clients || []) {
@@ -698,7 +735,11 @@ export async function obtenerDetallePoliza(polizaId: string) {
 							.select("primer_nombre, primer_apellido, numero_documento")
 							.eq("client_id", c.id)
 							.single();
-						if (nc) clientMap.set(c.id, { name: `${nc.primer_nombre} ${nc.primer_apellido}`, ci: nc.numero_documento || "-" });
+						if (nc)
+							clientMap.set(c.id, {
+								name: `${nc.primer_nombre} ${nc.primer_apellido}`,
+								ci: nc.numero_documento || "-",
+							});
 					} else if (c.client_type === "juridica") {
 						const { data: jc } = await supabase
 							.from("juridic_clients")
@@ -709,7 +750,7 @@ export async function obtenerDetallePoliza(polizaId: string) {
 					}
 				}
 
-				asegurados_salud = aseguradosData.map(a => ({
+				asegurados_salud = aseguradosData.map((a) => ({
 					id: a.id,
 					client_id: a.client_id,
 					client_name: clientMap.get(a.client_id)?.name || "Desconocido",
@@ -742,7 +783,7 @@ export async function obtenerDetallePoliza(polizaId: string) {
 
 			if (bienesData && bienesData.length > 0) {
 				// Obtener items de cada bien
-				const bienIds = bienesData.map(b => b.id);
+				const bienIds = bienesData.map((b) => b.id);
 				const { data: itemsData } = await supabase
 					.from("polizas_incendio_items")
 					.select("bien_id, nombre, monto")
@@ -755,7 +796,7 @@ export async function obtenerDetallePoliza(polizaId: string) {
 					itemsByBien.set(item.bien_id, arr);
 				}
 
-				incendio_bienes = bienesData.map(b => ({
+				incendio_bienes = bienesData.map((b) => ({
 					id: b.id,
 					direccion: b.direccion,
 					valor_total_declarado: Number(b.valor_total_declarado),
@@ -773,14 +814,33 @@ export async function obtenerDetallePoliza(polizaId: string) {
 			if (asegIncendio && asegIncendio.length > 0) {
 				const resolved: PolizaDetalle["incendio_asegurados"] = [];
 				for (const a of asegIncendio) {
-					const { data: cl } = await supabase.from("clients").select("client_type").eq("id", a.client_id).single();
-					let name = "Desconocido", ci = "-";
+					const { data: cl } = await supabase
+						.from("clients")
+						.select("client_type")
+						.eq("id", a.client_id)
+						.single();
+					let name = "Desconocido",
+						ci = "-";
 					if (cl?.client_type === "natural") {
-						const { data: nc } = await supabase.from("natural_clients").select("primer_nombre, primer_apellido, numero_documento").eq("client_id", a.client_id).single();
-						if (nc) { name = `${nc.primer_nombre} ${nc.primer_apellido}`; ci = nc.numero_documento || "-"; }
+						const { data: nc } = await supabase
+							.from("natural_clients")
+							.select("primer_nombre, primer_apellido, numero_documento")
+							.eq("client_id", a.client_id)
+							.single();
+						if (nc) {
+							name = `${nc.primer_nombre} ${nc.primer_apellido}`;
+							ci = nc.numero_documento || "-";
+						}
 					} else if (cl?.client_type === "juridica") {
-						const { data: jc } = await supabase.from("juridic_clients").select("razon_social, nit").eq("client_id", a.client_id).single();
-						if (jc) { name = jc.razon_social; ci = jc.nit || "-"; }
+						const { data: jc } = await supabase
+							.from("juridic_clients")
+							.select("razon_social, nit")
+							.eq("client_id", a.client_id)
+							.single();
+						if (jc) {
+							name = jc.razon_social;
+							ci = jc.nit || "-";
+						}
 					}
 					resolved.push({ id: a.id, client_name: name, client_ci: ci });
 				}
@@ -798,7 +858,7 @@ export async function obtenerDetallePoliza(polizaId: string) {
 				.eq("poliza_id", polizaId);
 
 			if (bienesData && bienesData.length > 0) {
-				const bienIds = bienesData.map(b => b.id);
+				const bienIds = bienesData.map((b) => b.id);
 				const { data: itemsData } = await supabase
 					.from("polizas_riesgos_varios_items")
 					.select("bien_id, nombre, monto")
@@ -811,7 +871,7 @@ export async function obtenerDetallePoliza(polizaId: string) {
 					itemsByBien.set(item.bien_id, arr);
 				}
 
-				riesgos_varios_bienes = bienesData.map(b => ({
+				riesgos_varios_bienes = bienesData.map((b) => ({
 					id: b.id,
 					direccion: b.direccion,
 					valor_total_declarado: Number(b.valor_total_declarado),
@@ -828,14 +888,33 @@ export async function obtenerDetallePoliza(polizaId: string) {
 			if (asegRV && asegRV.length > 0) {
 				const resolved: PolizaDetalle["riesgos_varios_asegurados"] = [];
 				for (const a of asegRV) {
-					const { data: cl } = await supabase.from("clients").select("client_type").eq("id", a.client_id).single();
-					let name = "Desconocido", ci = "-";
+					const { data: cl } = await supabase
+						.from("clients")
+						.select("client_type")
+						.eq("id", a.client_id)
+						.single();
+					let name = "Desconocido",
+						ci = "-";
 					if (cl?.client_type === "natural") {
-						const { data: nc } = await supabase.from("natural_clients").select("primer_nombre, primer_apellido, numero_documento").eq("client_id", a.client_id).single();
-						if (nc) { name = `${nc.primer_nombre} ${nc.primer_apellido}`; ci = nc.numero_documento || "-"; }
+						const { data: nc } = await supabase
+							.from("natural_clients")
+							.select("primer_nombre, primer_apellido, numero_documento")
+							.eq("client_id", a.client_id)
+							.single();
+						if (nc) {
+							name = `${nc.primer_nombre} ${nc.primer_apellido}`;
+							ci = nc.numero_documento || "-";
+						}
 					} else if (cl?.client_type === "juridica") {
-						const { data: jc } = await supabase.from("juridic_clients").select("razon_social, nit").eq("client_id", a.client_id).single();
-						if (jc) { name = jc.razon_social; ci = jc.nit || "-"; }
+						const { data: jc } = await supabase
+							.from("juridic_clients")
+							.select("razon_social, nit")
+							.eq("client_id", a.client_id)
+							.single();
+						if (jc) {
+							name = jc.razon_social;
+							ci = jc.nit || "-";
+						}
 					}
 					resolved.push({ id: a.id, client_name: name, client_ci: ci });
 				}
@@ -854,7 +933,9 @@ export async function obtenerDetallePoliza(polizaId: string) {
 					.single(),
 				supabase
 					.from("polizas_rc_vehiculos")
-					.select("placa, nro_chasis, uso, modelo, ano, color, nro_motor, servicio, capacidad, region_uso, tipo_carroceria, propiedad, ejes, asientos, cilindrada, tipo_vehiculo_id, marca_vehiculo_id")
+					.select(
+						"placa, nro_chasis, uso, modelo, ano, color, nro_motor, servicio, capacidad, region_uso, tipo_carroceria, propiedad, ejes, asientos, cilindrada, tipo_vehiculo_id, marca_vehiculo_id",
+					)
 					.eq("poliza_id", polizaId),
 			]);
 
@@ -905,21 +986,25 @@ export async function obtenerDetallePoliza(polizaId: string) {
 		let niveles_cobertura: PolizaDetalle["niveles_cobertura"];
 		let asegurados_nivel: PolizaDetalle["asegurados_nivel"];
 		let beneficiarios_nivel: PolizaDetalle["beneficiarios_nivel"];
-		if (ramoLower.includes("vida") || ramoLower.includes("accidentes personales") || ramoLower.includes("sepelio")) {
+		if (
+			ramoLower.includes("vida") ||
+			ramoLower.includes("accidentes personales") ||
+			ramoLower.includes("sepelio")
+		) {
 			const { data: nivelesData } = await supabase
 				.from("polizas_niveles")
 				.select("id, nombre, prima_nivel, coberturas")
 				.eq("poliza_id", polizaId);
 
 			if (nivelesData && nivelesData.length > 0) {
-				niveles_cobertura = nivelesData.map(n => ({
+				niveles_cobertura = nivelesData.map((n) => ({
 					id: n.id,
 					nombre: n.nombre,
 					prima_nivel: n.prima_nivel != null ? Number(n.prima_nivel) : null,
 					coberturas: (n.coberturas || {}) as Record<string, { habilitado: boolean; valor: number }>,
 				}));
 			}
-			const nivelMap = new Map(nivelesData?.map(n => [n.id, n.nombre]) || []);
+			const nivelMap = new Map(nivelesData?.map((n) => [n.id, n.nombre]) || []);
 
 			const { data: asegNivelData } = await supabase
 				.from("polizas_asegurados_nivel")
@@ -927,14 +1012,11 @@ export async function obtenerDetallePoliza(polizaId: string) {
 				.eq("poliza_id", polizaId);
 
 			if (asegNivelData && asegNivelData.length > 0) {
-				const clientIds = [...new Set(asegNivelData.map(a => a.client_id))];
+				const clientIds = [...new Set(asegNivelData.map((a) => a.client_id))];
 				const clientMap = new Map<string, { name: string; ci: string }>();
 
 				// Batch resolve client names
-				const { data: clients } = await supabase
-					.from("clients")
-					.select("id, client_type")
-					.in("id", clientIds);
+				const { data: clients } = await supabase.from("clients").select("id, client_type").in("id", clientIds);
 
 				for (const c of clients || []) {
 					if (c.client_type === "natural" || c.client_type === "unipersonal") {
@@ -943,7 +1025,11 @@ export async function obtenerDetallePoliza(polizaId: string) {
 							.select("primer_nombre, primer_apellido, numero_documento")
 							.eq("client_id", c.id)
 							.single();
-						if (nc) clientMap.set(c.id, { name: `${nc.primer_nombre} ${nc.primer_apellido}`, ci: nc.numero_documento || "-" });
+						if (nc)
+							clientMap.set(c.id, {
+								name: `${nc.primer_nombre} ${nc.primer_apellido}`,
+								ci: nc.numero_documento || "-",
+							});
 					} else if (c.client_type === "juridica") {
 						const { data: jc } = await supabase
 							.from("juridic_clients")
@@ -954,7 +1040,7 @@ export async function obtenerDetallePoliza(polizaId: string) {
 					}
 				}
 
-				asegurados_nivel = asegNivelData.map(a => ({
+				asegurados_nivel = asegNivelData.map((a) => ({
 					id: a.id,
 					client_name: clientMap.get(a.client_id)?.name || "Desconocido",
 					client_ci: clientMap.get(a.client_id)?.ci || "-",
@@ -972,7 +1058,7 @@ export async function obtenerDetallePoliza(polizaId: string) {
 					.eq("poliza_id", polizaId);
 
 				if (benefData && benefData.length > 0) {
-					beneficiarios_nivel = benefData.map(b => ({
+					beneficiarios_nivel = benefData.map((b) => ({
 						id: b.id,
 						nombre_completo: b.nombre_completo,
 						carnet: b.carnet,
@@ -997,7 +1083,7 @@ export async function obtenerDetallePoliza(polizaId: string) {
 					cobertura_a, cobertura_c, modalidad,
 					pais_origen:paises!polizas_transporte_pais_origen_id_fkey (nombre),
 					pais_destino:paises!polizas_transporte_pais_destino_id_fkey (nombre)
-				`
+				`,
 				)
 				.eq("poliza_id", polizaId)
 				.single();
@@ -1025,7 +1111,12 @@ export async function obtenerDetallePoliza(polizaId: string) {
 		// --- AERONAVEGACIÓN / NAVES ---
 		let naves: PolizaDetalle["naves"];
 		let niveles_ap_naves: PolizaDetalle["niveles_ap_naves"];
-		if (ramoLower.includes("aeronavegacion") || ramoLower.includes("aeronavegación") || ramoLower.includes("naves") || ramoLower.includes("embarcacion")) {
+		if (
+			ramoLower.includes("aeronavegacion") ||
+			ramoLower.includes("aeronavegación") ||
+			ramoLower.includes("naves") ||
+			ramoLower.includes("embarcacion")
+		) {
 			const { data: navelesAP } = await supabase
 				.from("polizas_aeronavegacion_niveles_ap")
 				.select("id, nombre, monto_muerte_accidental, monto_invalidez, monto_gastos_medicos")
@@ -1035,11 +1126,13 @@ export async function obtenerDetallePoliza(polizaId: string) {
 				niveles_ap_naves = navelesAP;
 			}
 
-			const nivelesMap = new Map(navelesAP?.map(n => [n.id, n.nombre]) || []);
+			const nivelesMap = new Map(navelesAP?.map((n) => [n.id, n.nombre]) || []);
 
 			const { data: navesData } = await supabase
 				.from("polizas_aeronavegacion_naves")
-				.select("id, matricula, marca, modelo, ano, serie, uso, nro_pasajeros, nro_tripulantes, valor_casco, valor_responsabilidad_civil, nivel_ap_id")
+				.select(
+					"id, matricula, marca, modelo, ano, serie, uso, nro_pasajeros, nro_tripulantes, valor_casco, valor_responsabilidad_civil, nivel_ap_id",
+				)
 				.eq("poliza_id", polizaId);
 
 			if (navesData && navesData.length > 0) {
@@ -1061,7 +1154,7 @@ export async function obtenerDetallePoliza(polizaId: string) {
 					modelo, ano, color, nro_motor, plaza_circulacion,
 					tipos_equipo (nombre),
 					marcas_equipo (nombre)
-				`
+				`,
 				)
 				.eq("poliza_id", polizaId);
 
@@ -1089,42 +1182,42 @@ export async function obtenerDetallePoliza(polizaId: string) {
 		// Batch de queries independientes en paralelo
 		const profileIds = [poliza.created_by, poliza.validado_por, poliza.rechazado_por].filter(Boolean) as string[];
 
-		const [
-			{ data: documentos },
-			{ data: historialData },
-			{ data: anexosActivos },
-			{ data: profilesData },
-		] = await Promise.all([
-			supabase
-				.from("polizas_documentos")
-				.select("id, tipo_documento, nombre_archivo, archivo_url, uploaded_at")
-				.eq("poliza_id", polizaId)
-				.eq("estado", "activo")
-				.order("uploaded_at", { ascending: false }),
-			supabase
-				.from("polizas_historial_ediciones")
-				.select(`
+		const [{ data: documentos }, { data: historialData }, { data: anexosActivos }, { data: profilesData }] =
+			await Promise.all([
+				supabase
+					.from("polizas_documentos")
+					.select("id, tipo_documento, nombre_archivo, archivo_url, uploaded_at")
+					.eq("poliza_id", polizaId)
+					.eq("estado", "activo")
+					.order("uploaded_at", { ascending: false }),
+				supabase
+					.from("polizas_historial_ediciones")
+					.select(
+						`
 					id, accion, usuario_id, campos_modificados, descripcion, timestamp,
 					profiles!polizas_historial_ediciones_usuario_id_fkey (full_name)
-				`)
-				.eq("poliza_id", polizaId)
-				.order("timestamp", { ascending: false })
-				.limit(20),
-			supabase
-				.from("polizas_anexos")
-				.select(`
+				`,
+					)
+					.eq("poliza_id", polizaId)
+					.order("timestamp", { ascending: false })
+					.limit(20),
+				supabase
+					.from("polizas_anexos")
+					.select(
+						`
 					id, numero_anexo, tipo_anexo, estado, created_at,
 					fecha_validacion, fecha_rechazo, motivo_rechazo,
 					creador:profiles!created_by (full_name),
 					validador:profiles!validado_por (full_name),
 					rechazador:profiles!rechazado_por (full_name)
-				`)
-				.eq("poliza_id", polizaId)
-				.order("created_at", { ascending: false }),
-			profileIds.length > 0
-				? supabase.from("profiles").select("id, full_name").in("id", profileIds)
-				: Promise.resolve({ data: [] as Array<{ id: string; full_name: string }> }),
-		]);
+				`,
+					)
+					.eq("poliza_id", polizaId)
+					.order("created_at", { ascending: false }),
+				profileIds.length > 0
+					? supabase.from("profiles").select("id, full_name").in("id", profileIds)
+					: Promise.resolve({ data: [] as Array<{ id: string; full_name: string }> }),
+			]);
 
 		// Resolver nombres de perfiles desde el batch
 		const profilesMap = new Map((profilesData || []).map((p) => [p.id, p.full_name]));
@@ -1132,14 +1225,15 @@ export async function obtenerDetallePoliza(polizaId: string) {
 		const validador_nombre = poliza.validado_por ? (profilesMap.get(poliza.validado_por) ?? null) : null;
 		const rechazador_nombre = poliza.rechazado_por ? (profilesMap.get(poliza.rechazado_por) ?? null) : null;
 
-		const historial = historialData?.map((h) => ({
-			id: h.id,
-			accion: h.accion,
-			usuario_nombre: (h.profiles as { full_name?: string } | null)?.full_name || null,
-			campos_modificados: h.campos_modificados,
-			descripcion: h.descripcion,
-			timestamp: h.timestamp,
-		})) || [];
+		const historial =
+			historialData?.map((h) => ({
+				id: h.id,
+				accion: h.accion,
+				usuario_nombre: (h.profiles as { full_name?: string } | null)?.full_name || null,
+				campos_modificados: h.campos_modificados,
+				descripcion: h.descripcion,
+				timestamp: h.timestamp,
+			})) || [];
 
 		// ============================================
 		// CONSOLIDACIÓN DE ANEXOS ACTIVOS
@@ -1161,7 +1255,9 @@ export async function obtenerDetallePoliza(polizaId: string) {
 			if (vehiculos) {
 				const { data: anexoVehiculos } = await supabase
 					.from("polizas_anexos_automotor_vehiculos")
-					.select("id, anexo_id, accion, original_item_id, placa, valor_asegurado, franquicia, nro_chasis, uso, coaseguro, modelo, ano, color, ejes, nro_motor, nro_asientos, plaza_circulacion")
+					.select(
+						"id, anexo_id, accion, original_item_id, placa, valor_asegurado, franquicia, nro_chasis, uso, coaseguro, modelo, ano, color, ejes, nro_motor, nro_asientos, plaza_circulacion",
+					)
 					.in("anexo_id", anexoIds);
 
 				for (const av of anexoVehiculos || []) {
@@ -1197,7 +1293,9 @@ export async function obtenerDetallePoliza(polizaId: string) {
 			if (equipos) {
 				const { data: anexoEquipos } = await supabase
 					.from("polizas_anexos_ramos_tecnicos_equipos")
-					.select("id, anexo_id, accion, original_item_id, nro_serie, placa, valor_asegurado, franquicia, nro_chasis, uso, coaseguro, modelo, ano, color, nro_motor, plaza_circulacion")
+					.select(
+						"id, anexo_id, accion, original_item_id, nro_serie, placa, valor_asegurado, franquicia, nro_chasis, uso, coaseguro, modelo, ano, color, nro_motor, plaza_circulacion",
+					)
 					.in("anexo_id", anexoIds);
 
 				for (const ae of anexoEquipos || []) {
@@ -1232,7 +1330,9 @@ export async function obtenerDetallePoliza(polizaId: string) {
 			if (naves) {
 				const { data: anexoNaves } = await supabase
 					.from("polizas_anexos_aeronavegacion_naves")
-					.select("id, anexo_id, accion, original_item_id, matricula, marca, modelo, ano, serie, uso, nro_pasajeros, nro_tripulantes, valor_casco, valor_responsabilidad_civil")
+					.select(
+						"id, anexo_id, accion, original_item_id, matricula, marca, modelo, ano, serie, uso, nro_pasajeros, nro_tripulantes, valor_casco, valor_responsabilidad_civil",
+					)
 					.in("anexo_id", anexoIds);
 
 				for (const an of anexoNaves || []) {
@@ -1264,7 +1364,9 @@ export async function obtenerDetallePoliza(polizaId: string) {
 			if (beneficiarios_salud) {
 				const { data: anexoBenef } = await supabase
 					.from("polizas_anexos_salud_beneficiarios")
-					.select("id, anexo_id, accion, original_item_id, nombre_completo, carnet, fecha_nacimiento, genero, rol")
+					.select(
+						"id, anexo_id, accion, original_item_id, nombre_completo, carnet, fecha_nacimiento, genero, rol",
+					)
 					.in("anexo_id", anexoIds);
 
 				for (const ab of anexoBenef || []) {
@@ -1290,7 +1392,9 @@ export async function obtenerDetallePoliza(polizaId: string) {
 			if (incendio_bienes) {
 				const { data: anexoBienes } = await supabase
 					.from("polizas_anexos_incendio_bienes")
-					.select("id, anexo_id, accion, original_item_id, direccion, valor_total_declarado, es_primer_riesgo, items")
+					.select(
+						"id, anexo_id, accion, original_item_id, direccion, valor_total_declarado, es_primer_riesgo, items",
+					)
 					.in("anexo_id", anexoIds);
 
 				for (const ab of anexoBienes || []) {
@@ -1315,7 +1419,9 @@ export async function obtenerDetallePoliza(polizaId: string) {
 			if (riesgos_varios_bienes) {
 				const { data: anexoBienes } = await supabase
 					.from("polizas_anexos_riesgos_varios_bienes")
-					.select("id, anexo_id, accion, original_item_id, direccion, valor_total_declarado, es_primer_riesgo, items")
+					.select(
+						"id, anexo_id, accion, original_item_id, direccion, valor_total_declarado, es_primer_riesgo, items",
+					)
 					.in("anexo_id", anexoIds);
 
 				for (const ab of anexoBienes || []) {
@@ -1365,11 +1471,13 @@ export async function obtenerDetallePoliza(polizaId: string) {
 			// Cuotas consolidadas (pagos de todos los tipos de anexos activos)
 			const { data: cuotasConsolResult } = await supabase
 				.from("polizas_anexos_pagos")
-				.select(`
+				.select(
+					`
 					id, anexo_id, cuota_original_id, tipo, numero_cuota,
 					monto, fecha_vencimiento, estado, observaciones,
 					polizas_anexos!inner (id, numero_anexo, tipo_anexo, estado)
-				`)
+				`,
+				)
 				.in("anexo_id", anexoIds);
 
 			if (cuotasConsolResult && cuotasConsolResult.length > 0) {
@@ -1400,7 +1508,11 @@ export async function obtenerDetallePoliza(polizaId: string) {
 						estado: cuota.estado || "pendiente",
 						fecha_pago: cuota.fecha_pago || undefined,
 						ajustes: cuotaAjustes.map((a) => {
-							const info = a.polizas_anexos as unknown as { id: string; numero_anexo: string; tipo_anexo: string };
+							const info = a.polizas_anexos as unknown as {
+								id: string;
+								numero_anexo: string;
+								tipo_anexo: string;
+							};
 							return {
 								anexo_id: info.id,
 								numero_anexo: info.numero_anexo,
@@ -1412,22 +1524,24 @@ export async function obtenerDetallePoliza(polizaId: string) {
 				});
 
 				// Cuotas propias de inclusiones (independientes)
-				const cuotasInclusionBuilt: CuotaAnexoPropia[] = cuotasPropias.map((p) => {
-					const info = p.polizas_anexos as unknown as { id: string; numero_anexo: string };
-					return {
-						id: p.id,
-						anexo_id: info.id,
-						numero_anexo: info.numero_anexo,
-						numero_cuota: p.numero_cuota ?? 0,
-						monto: Number(p.monto),
-						fecha_vencimiento: p.fecha_vencimiento || "",
-						estado: p.estado || "pendiente",
-						observaciones: p.observaciones || undefined,
-					};
-				}).sort((a, b) => {
-					if (a.numero_anexo !== b.numero_anexo) return a.numero_anexo.localeCompare(b.numero_anexo);
-					return a.numero_cuota - b.numero_cuota;
-				});
+				const cuotasInclusionBuilt: CuotaAnexoPropia[] = cuotasPropias
+					.map((p) => {
+						const info = p.polizas_anexos as unknown as { id: string; numero_anexo: string };
+						return {
+							id: p.id,
+							anexo_id: info.id,
+							numero_anexo: info.numero_anexo,
+							numero_cuota: p.numero_cuota ?? 0,
+							monto: Number(p.monto),
+							fecha_vencimiento: p.fecha_vencimiento || "",
+							estado: p.estado || "pendiente",
+							observaciones: p.observaciones || undefined,
+						};
+					})
+					.sort((a, b) => {
+						if (a.numero_anexo !== b.numero_anexo) return a.numero_anexo.localeCompare(b.numero_anexo);
+						return a.numero_cuota - b.numero_cuota;
+					});
 
 				if (cuotasInclusionBuilt.length > 0) {
 					cuotas_inclusion = cuotasInclusionBuilt;
@@ -1454,7 +1568,8 @@ export async function obtenerDetallePoliza(polizaId: string) {
 			const creador = (a.creador as unknown as { full_name: string } | null)?.full_name || null;
 			const validador = (a.validador as unknown as { full_name: string } | null)?.full_name || null;
 			const rechazador = (a.rechazador as unknown as { full_name: string } | null)?.full_name || null;
-			const tipoLabel = a.tipo_anexo === "inclusion" ? "inclusión" : a.tipo_anexo === "exclusion" ? "exclusión" : "anulación";
+			const tipoLabel =
+				a.tipo_anexo === "inclusion" ? "inclusión" : a.tipo_anexo === "exclusion" ? "exclusión" : "anulación";
 			const entries: typeof historial = [];
 
 			entries.push({
@@ -1565,16 +1680,12 @@ export async function obtenerDetallePoliza(polizaId: string) {
 		};
 
 		// Obtener rol del usuario actual
-		const { data: profile } = await supabase
-			.from("profiles")
-			.select("role")
-			.eq("id", user.id)
-			.single();
+		const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
 
 		return {
 			success: true,
 			poliza: polizaDetalle,
-			userRole: profile?.role || null
+			userRole: profile?.role || null,
 		};
 	} catch (error) {
 		console.error("Error general obteniendo detalle póliza:", error);
@@ -1626,7 +1737,7 @@ export async function buscarPolizas(query: string) {
 				directores_cartera (nombre, apellidos),
 				profiles!polizas_responsable_id_fkey (full_name),
 				regionales!polizas_regional_id_fkey (nombre)
-			`
+			`,
 			)
 			.ilike("numero_poliza", `%${query}%`)
 			.order("created_at", { ascending: false })
@@ -1671,7 +1782,9 @@ export async function buscarPolizas(query: string) {
 			if (client?.client_type === "natural") {
 				const naturalClient = naturalClientsMap.get(poliza.client_id);
 				if (naturalClient) {
-					const nombres = [naturalClient.primer_nombre, naturalClient.segundo_nombre].filter(Boolean).join(" ");
+					const nombres = [naturalClient.primer_nombre, naturalClient.segundo_nombre]
+						.filter(Boolean)
+						.join(" ");
 					const apellidos = [naturalClient.primer_apellido, naturalClient.segundo_apellido]
 						.filter(Boolean)
 						.join(" ");

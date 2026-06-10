@@ -2,9 +2,7 @@
 
 import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { useDropzone } from "react-dropzone";
-import {
-	ChevronRight, ChevronLeft, Upload, FileText, X, AlertCircle, Loader2, Info
-} from "lucide-react";
+import { ChevronRight, ChevronLeft, Upload, FileText, X, AlertCircle, Loader2, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -53,7 +51,7 @@ function computarCuotas(
 	modalidad: "contado" | "credito",
 	primaTotal: number,
 	cuotaInicial: number,
-	cantidadCuotas: number
+	cantidadCuotas: number,
 ): CuotaPropia[] {
 	if (modalidad === "contado") {
 		return [{ numero_cuota: 1, monto: primaTotal, fecha_vencimiento: fechaDefault(0) }];
@@ -102,10 +100,16 @@ function SeccionPlanInclusion({
 		modalidad: "contado" | "credito",
 		primaTotal: number,
 		cuotaInicial: number,
-		cantidadCuotas: number
+		cantidadCuotas: number,
 	) => {
 		const cuotas = computarCuotas(modalidad, primaTotal, cuotaInicial, cantidadCuotas);
-		onChange({ modalidad, prima_total: primaTotal, cuota_inicial: cuotaInicial, cantidad_cuotas: cantidadCuotas, cuotas });
+		onChange({
+			modalidad,
+			prima_total: primaTotal,
+			cuota_inicial: cuotaInicial,
+			cantidad_cuotas: cantidadCuotas,
+			cuotas,
+		});
 	};
 
 	const handleModalidad = (m: "contado" | "credito") => {
@@ -127,16 +131,12 @@ function SeccionPlanInclusion({
 	};
 
 	const handleCuotaMonto = (idx: number, v: string) => {
-		const updated = plan.cuotas.map((c, i) =>
-			i === idx ? { ...c, monto: parseFloat(v) || 0 } : c
-		);
+		const updated = plan.cuotas.map((c, i) => (i === idx ? { ...c, monto: parseFloat(v) || 0 } : c));
 		onChange({ ...plan, cuotas: updated });
 	};
 
 	const handleCuotaFecha = (idx: number, v: string) => {
-		const updated = plan.cuotas.map((c, i) =>
-			i === idx ? { ...c, fecha_vencimiento: v } : c
-		);
+		const updated = plan.cuotas.map((c, i) => (i === idx ? { ...c, fecha_vencimiento: v } : c));
 		onChange({ ...plan, cuotas: updated });
 	};
 
@@ -212,9 +212,7 @@ function SeccionPlanInclusion({
 			{/* Tabla de cuotas */}
 			{plan.cuotas.length > 0 && (
 				<div>
-					<p className="text-xs text-gray-500 mb-2">
-						Edite montos y fechas individualmente si es necesario.
-					</p>
+					<p className="text-xs text-gray-500 mb-2">Edite montos y fechas individualmente si es necesario.</p>
 					<div className="border rounded-lg overflow-x-auto">
 						<table className="w-full text-sm">
 							<thead className="bg-gray-50">
@@ -255,7 +253,9 @@ function SeccionPlanInclusion({
 									<td colSpan={2} className="px-4 py-2 text-sm font-medium text-right text-gray-600">
 										Total cuotas:
 									</td>
-									<td className={`px-4 py-2 text-right font-bold ${diferencia > 0.01 ? "text-red-600" : "text-green-600"}`}>
+									<td
+										className={`px-4 py-2 text-right font-bold ${diferencia > 0.01 ? "text-red-600" : "text-green-600"}`}
+									>
 										{formatCurrency(totalCuotas, moneda)}
 									</td>
 								</tr>
@@ -293,14 +293,14 @@ function SeccionAjusteExclusion({
 	return (
 		<div className="space-y-3">
 			<p className="text-xs text-gray-500">
-				Ingrese el descuento <strong>negativo</strong> que corresponde a cada cuota afectada por la
-				exclusión. Puede aplicarse a cualquier cuota, incluso las ya pagadas.
+				Ingrese el descuento <strong>negativo</strong> que corresponde a cada cuota afectada por la exclusión.
+				Puede aplicarse a cualquier cuota, incluso las ya pagadas.
 			</p>
 
 			<div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 flex items-start gap-2 text-xs text-amber-700">
 				<Info className="h-3 w-3 mt-0.5 flex-shrink-0" />
-				Las cuotas ya pagadas se muestran con badge verde — el descuento se registra igualmente
-				para mantener los reportes de producción correctos.
+				Las cuotas ya pagadas se muestran con badge verde — el descuento se registra igualmente para mantener
+				los reportes de producción correctos.
 			</div>
 
 			<div className="border rounded-lg overflow-x-auto">
@@ -327,9 +327,7 @@ function SeccionAjusteExclusion({
 										className="w-36"
 									/>
 								</td>
-								<td className="px-4 py-2 text-right">
-									{formatCurrency(cuota.monto_original, moneda)}
-								</td>
+								<td className="px-4 py-2 text-right">{formatCurrency(cuota.monto_original, moneda)}</td>
 								<td className="px-4 py-2 text-right">
 									<Input
 										type="number"
@@ -473,25 +471,23 @@ export function PagosYDocumentos({
 				try {
 					const storagePath = generateTempStoragePath(userId, sessionIdRef.current, file.name);
 
-					const { error: uploadError } = await supabase.storage
-						.from(BUCKET)
-						.upload(storagePath, file);
+					const { error: uploadError } = await supabase.storage.from(BUCKET).upload(storagePath, file);
 
 					if (uploadError) {
 						onChangeDocumentos((prev) =>
 							prev.map((d) =>
 								(d as DocumentoPoliza & { _tempKey?: string })._tempKey === tempKey
 									? { ...d, upload_status: "error" as const, upload_error: uploadError.message }
-									: d
-							)
+									: d,
+							),
 						);
 					} else {
 						onChangeDocumentos((prev) =>
 							prev.map((d) =>
 								(d as DocumentoPoliza & { _tempKey?: string })._tempKey === tempKey
 									? { ...d, storage_path: storagePath, upload_status: "uploaded" as const }
-									: d
-							)
+									: d,
+							),
 						);
 					}
 				} catch {
@@ -499,13 +495,13 @@ export function PagosYDocumentos({
 						prev.map((d) =>
 							(d as DocumentoPoliza & { _tempKey?: string })._tempKey === tempKey
 								? { ...d, upload_status: "error" as const, upload_error: "Error de conexión" }
-								: d
-						)
+								: d,
+						),
 					);
 				}
 			}
 		},
-		[userId, onChangeDocumentos, supabase.storage]
+		[userId, onChangeDocumentos, supabase.storage],
 	);
 
 	const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -556,8 +552,8 @@ export function PagosYDocumentos({
 		tipoAnexo === "inclusion"
 			? "Plan de Pago del Anexo"
 			: tipoAnexo === "exclusion"
-			? "Descuento por Exclusión"
-			: "Vigencia Corrida y Documentos";
+				? "Descuento por Exclusión"
+				: "Vigencia Corrida y Documentos";
 
 	return (
 		<div className="bg-white border rounded-lg p-6 shadow-sm">
@@ -596,8 +592,8 @@ export function PagosYDocumentos({
 				<div className="mb-8">
 					<h3 className="text-sm font-medium mb-3">Cobro de Vigencia Corrida</h3>
 					<p className="text-xs text-gray-500 mb-4">
-						Ingrese el monto correspondiente a los días de vigencia corrida desde el último pago
-						hasta la fecha de anulación.
+						Ingrese el monto correspondiente a los días de vigencia corrida desde el último pago hasta la
+						fecha de anulación.
 					</p>
 
 					<div className="mb-4">
@@ -607,7 +603,9 @@ export function PagosYDocumentos({
 								.filter((c) => c.estado !== "pagado")
 								.map((c) => (
 									<div key={c.id} className="flex justify-between text-sm text-gray-500">
-										<span>Cuota {c.numero_cuota} — {formatDate(c.fecha_vencimiento)}</span>
+										<span>
+											Cuota {c.numero_cuota} — {formatDate(c.fecha_vencimiento)}
+										</span>
 										<span className="line-through">{formatCurrency(c.monto, moneda)}</span>
 									</div>
 								))}
@@ -679,16 +677,12 @@ export function PagosYDocumentos({
 				<div
 					{...getRootProps()}
 					className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
-						isDragActive
-							? "border-blue-400 bg-blue-50"
-							: "border-gray-300 hover:border-gray-400"
+						isDragActive ? "border-blue-400 bg-blue-50" : "border-gray-300 hover:border-gray-400"
 					}`}
 				>
 					<input {...getInputProps()} />
 					<Upload className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-					<p className="text-sm text-gray-600">
-						Arrastre archivos aquí o haga clic para seleccionar
-					</p>
+					<p className="text-sm text-gray-600">Arrastre archivos aquí o haga clic para seleccionar</p>
 					<p className="text-xs text-gray-400 mt-1">PDF, JPG, PNG — Máximo 20MB</p>
 				</div>
 

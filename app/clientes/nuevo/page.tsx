@@ -121,7 +121,7 @@ const COMMON_FIELD_LABELS: Record<string, string> = {
 function getErrorFieldLabels(
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	errors: Record<string, any>,
-	labelMap: Record<string, string> = COMMON_FIELD_LABELS
+	labelMap: Record<string, string> = COMMON_FIELD_LABELS,
 ): string[] {
 	const labels: string[] = [];
 
@@ -204,7 +204,9 @@ export default function NuevoClientePage() {
 	const [duplicadoDocumento, setDuplicadoDocumento] = useState<VerificarDocumentoResult | null>(null);
 	const [duplicadoNit, setDuplicadoNit] = useState<VerificarNitResult | null>(null);
 	const [duplicadoRegistroClub, setDuplicadoRegistroClub] = useState<VerificarRegistroClubResult | null>(null);
-	const [duplicadoPersoneriaAsoc, setDuplicadoPersoneriaAsoc] = useState<VerificarPersoneriaAsociacionResult | null>(null);
+	const [duplicadoPersoneriaAsoc, setDuplicadoPersoneriaAsoc] = useState<VerificarPersoneriaAsociacionResult | null>(
+		null,
+	);
 
 	// Watch documento fields for natural / unipersonal clients
 	const naturalTipoDoc = naturalForm.watch("tipo_documento");
@@ -238,7 +240,9 @@ export default function NuevoClientePage() {
 				setDuplicadoDocumento(null);
 			}
 		}, 600);
-		return () => { if (naturalDocTimerRef.current) clearTimeout(naturalDocTimerRef.current); };
+		return () => {
+			if (naturalDocTimerRef.current) clearTimeout(naturalDocTimerRef.current);
+		};
 	}, [naturalTipoDoc, naturalNumDoc, clientType]);
 
 	// Debounced duplicate check for unipersonal clients (documento)
@@ -258,19 +262,31 @@ export default function NuevoClientePage() {
 				setDuplicadoDocumento(null);
 			}
 		}, 600);
-		return () => { if (unipersonalDocTimerRef.current) clearTimeout(unipersonalDocTimerRef.current); };
+		return () => {
+			if (unipersonalDocTimerRef.current) clearTimeout(unipersonalDocTimerRef.current);
+		};
 	}, [unipersonalTipoDoc, unipersonalNumDoc, clientType]);
 
 	// Debounced duplicate check for NIT (juridic + unipersonal + club + asociacion_civil)
 	const nitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const activeNit =
-		clientType === "juridica" ? juridicNit
-		: clientType === "unipersonal" ? unipersonalNit
-		: clientType === "club" ? clubNit
-		: clientType === "asociacion_civil" ? asocNit
-		: undefined;
+		clientType === "juridica"
+			? juridicNit
+			: clientType === "unipersonal"
+				? unipersonalNit
+				: clientType === "club"
+					? clubNit
+					: clientType === "asociacion_civil"
+						? asocNit
+						: undefined;
 	useEffect(() => {
-		if (clientType !== "juridica" && clientType !== "unipersonal" && clientType !== "club" && clientType !== "asociacion_civil") return;
+		if (
+			clientType !== "juridica" &&
+			clientType !== "unipersonal" &&
+			clientType !== "club" &&
+			clientType !== "asociacion_civil"
+		)
+			return;
 		if (nitTimerRef.current) clearTimeout(nitTimerRef.current);
 		if (!activeNit || activeNit.length < 7) {
 			setDuplicadoNit(null);
@@ -284,7 +300,9 @@ export default function NuevoClientePage() {
 				setDuplicadoNit(null);
 			}
 		}, 600);
-		return () => { if (nitTimerRef.current) clearTimeout(nitTimerRef.current); };
+		return () => {
+			if (nitTimerRef.current) clearTimeout(nitTimerRef.current);
+		};
 	}, [activeNit, clientType]);
 
 	// Debounced duplicate check for club registro (tipo + entidad + numero)
@@ -292,19 +310,31 @@ export default function NuevoClientePage() {
 	useEffect(() => {
 		if (clientType !== "club") return;
 		if (registroClubTimerRef.current) clearTimeout(registroClubTimerRef.current);
-		if (!clubTipoRegistro || !clubEntidadRegistro || !clubNumeroRegistro || clubEntidadRegistro.length < 2 || clubNumeroRegistro.length < 2) {
+		if (
+			!clubTipoRegistro ||
+			!clubEntidadRegistro ||
+			!clubNumeroRegistro ||
+			clubEntidadRegistro.length < 2 ||
+			clubNumeroRegistro.length < 2
+		) {
 			setDuplicadoRegistroClub(null);
 			return;
 		}
 		registroClubTimerRef.current = setTimeout(async () => {
-			const result = await verificarRegistroClubExistente(clubTipoRegistro, clubEntidadRegistro, clubNumeroRegistro);
+			const result = await verificarRegistroClubExistente(
+				clubTipoRegistro,
+				clubEntidadRegistro,
+				clubNumeroRegistro,
+			);
 			if (result.success && result.data.existe) {
 				setDuplicadoRegistroClub(result.data);
 			} else {
 				setDuplicadoRegistroClub(null);
 			}
 		}, 600);
-		return () => { if (registroClubTimerRef.current) clearTimeout(registroClubTimerRef.current); };
+		return () => {
+			if (registroClubTimerRef.current) clearTimeout(registroClubTimerRef.current);
+		};
 	}, [clubTipoRegistro, clubEntidadRegistro, clubNumeroRegistro, clientType]);
 
 	// Debounced duplicate check for asociación civil personería (entidad + numero)
@@ -312,7 +342,12 @@ export default function NuevoClientePage() {
 	useEffect(() => {
 		if (clientType !== "asociacion_civil") return;
 		if (personeriaAsocTimerRef.current) clearTimeout(personeriaAsocTimerRef.current);
-		if (!asocEntidadPersoneria || !asocNumeroPersoneria || asocEntidadPersoneria.length < 2 || asocNumeroPersoneria.length < 2) {
+		if (
+			!asocEntidadPersoneria ||
+			!asocNumeroPersoneria ||
+			asocEntidadPersoneria.length < 2 ||
+			asocNumeroPersoneria.length < 2
+		) {
 			setDuplicadoPersoneriaAsoc(null);
 			return;
 		}
@@ -324,7 +359,9 @@ export default function NuevoClientePage() {
 				setDuplicadoPersoneriaAsoc(null);
 			}
 		}, 600);
-		return () => { if (personeriaAsocTimerRef.current) clearTimeout(personeriaAsocTimerRef.current); };
+		return () => {
+			if (personeriaAsocTimerRef.current) clearTimeout(personeriaAsocTimerRef.current);
+		};
 	}, [asocEntidadPersoneria, asocNumeroPersoneria, clientType]);
 
 	// Load user and check for draft on mount
@@ -356,7 +393,7 @@ export default function NuevoClientePage() {
 					if (draft && timestamp) {
 						const age = formatDraftAge(timestamp);
 						const shouldRestore = confirm(
-							`Se encontró un borrador guardado ${age}.\n\n¿Desea continuar con el borrador?`
+							`Se encontró un borrador guardado ${age}.\n\n¿Desea continuar con el borrador?`,
 						);
 
 						if (shouldRestore) {
@@ -384,7 +421,10 @@ export default function NuevoClientePage() {
 								});
 							} else if (draft.clientType === "asociacion_civil" && draft.asociacionCivilData) {
 								Object.entries(draft.asociacionCivilData).forEach(([key, value]) => {
-									asociacionCivilForm.setValue(key as keyof AsociacionCivilClientFormData, value as never);
+									asociacionCivilForm.setValue(
+										key as keyof AsociacionCivilClientFormData,
+										value as never,
+									);
 								});
 							}
 
@@ -453,7 +493,7 @@ export default function NuevoClientePage() {
 	// Upload client documents to Storage and database
 	const uploadClientDocuments = async (
 		clientId: string,
-		documentos: ClienteDocumentoFormState[] | undefined
+		documentos: ClienteDocumentoFormState[] | undefined,
 	): Promise<void> => {
 		if (!documentos || documentos.length === 0) {
 			return; // No documents to upload
@@ -531,7 +571,9 @@ export default function NuevoClientePage() {
 			.maybeSingle();
 
 		if (existingDoc) {
-			throw new Error(`Ya existe un cliente registrado con el documento ${normalized.tipo_documento.toUpperCase()} ${normalized.numero_documento}`);
+			throw new Error(
+				`Ya existe un cliente registrado con el documento ${normalized.tipo_documento.toUpperCase()} ${normalized.numero_documento}`,
+			);
 		}
 
 		// Validate and convert required date fields before submission
@@ -545,8 +587,7 @@ export default function NuevoClientePage() {
 		}
 
 		// anio_ingreso is an integer (year only) or null
-		const anioIngreso =
-			normalized.anio_ingreso && !isNaN(normalized.anio_ingreso) ? normalized.anio_ingreso : null;
+		const anioIngreso = normalized.anio_ingreso && !isNaN(normalized.anio_ingreso) ? normalized.anio_ingreso : null;
 
 		// 1. Insert into clients table
 		const { data: client, error: clientError } = await supabase
@@ -590,12 +631,16 @@ export default function NuevoClientePage() {
 			domicilio_comercial: normalized.domicilio_comercial || null,
 		});
 
-		if (naturalError) { await rollbackClient(client.id); throw naturalError; }
+		if (naturalError) {
+			await rollbackClient(client.id);
+			throw naturalError;
+		}
 
 		// 3. If married, insert partner data
 		if (normalized.estado_civil === "casado") {
 			const partnerData = partnerForm.getValues();
-			const hasPartnerData = partnerData && Object.values(partnerData).some(v => v && v !== partnerData.client_id);
+			const hasPartnerData =
+				partnerData && Object.values(partnerData).some((v) => v && v !== partnerData.client_id);
 			if (hasPartnerData) {
 				const normalizedPartner = normalizePartnerData(partnerData);
 
@@ -613,7 +658,10 @@ export default function NuevoClientePage() {
 					lugar_trabajo: normalizedPartner.lugar_trabajo || null,
 				});
 
-				if (partnerError) { await rollbackClient(client.id); throw partnerError; }
+				if (partnerError) {
+					await rollbackClient(client.id);
+					throw partnerError;
+				}
 			}
 		}
 
@@ -655,8 +703,7 @@ export default function NuevoClientePage() {
 		}
 
 		// anio_ingreso is an integer (year only) or null
-		const anioIngreso =
-			normalized.anio_ingreso && !isNaN(normalized.anio_ingreso) ? normalized.anio_ingreso : null;
+		const anioIngreso = normalized.anio_ingreso && !isNaN(normalized.anio_ingreso) ? normalized.anio_ingreso : null;
 
 		// 1. Insert into clients table
 		const { data: client, error: clientError } = await supabase
@@ -700,7 +747,10 @@ export default function NuevoClientePage() {
 			domicilio_comercial: normalized.domicilio_comercial || null,
 		});
 
-		if (naturalError) { await rollbackClient(client.id); throw naturalError; }
+		if (naturalError) {
+			await rollbackClient(client.id);
+			throw naturalError;
+		}
 
 		// 3. Insert into unipersonal_clients table (commercial data)
 		// Auto-fill propietario fields from personal data (unipersonal = same person)
@@ -728,12 +778,16 @@ export default function NuevoClientePage() {
 			extension_representante: normalized.extension_representante || null,
 		});
 
-		if (unipersonalError) { await rollbackClient(client.id); throw unipersonalError; }
+		if (unipersonalError) {
+			await rollbackClient(client.id);
+			throw unipersonalError;
+		}
 
 		// 4. If married, insert partner data
 		if (normalized.estado_civil === "casado") {
 			const partnerData = partnerForm.getValues();
-			const hasPartnerData = partnerData && Object.values(partnerData).some(v => v && v !== partnerData.client_id);
+			const hasPartnerData =
+				partnerData && Object.values(partnerData).some((v) => v && v !== partnerData.client_id);
 			if (hasPartnerData) {
 				const normalizedPartner = normalizePartnerData(partnerData);
 
@@ -751,7 +805,10 @@ export default function NuevoClientePage() {
 					lugar_trabajo: normalizedPartner.lugar_trabajo || null,
 				});
 
-				if (partnerError) { await rollbackClient(client.id); throw partnerError; }
+				if (partnerError) {
+					await rollbackClient(client.id);
+					throw partnerError;
+				}
 			}
 		}
 
@@ -811,15 +868,16 @@ export default function NuevoClientePage() {
 			telefono: normalized.telefono || null,
 		});
 
-		if (juridicError) { await rollbackClient(client.id); throw juridicError; }
+		if (juridicError) {
+			await rollbackClient(client.id);
+			throw juridicError;
+		}
 
 		// 3. Insert legal representatives
 		if (formData.legal_representatives && formData.legal_representatives.length > 0) {
 			const representatives = formData.legal_representatives.map((rep, index) => {
 				const normalizedRep = normalizeLegalRepresentativeData(rep);
-				const nombre = [normalizedRep.primer_nombre, normalizedRep.segundo_nombre]
-					.filter(Boolean)
-					.join(" ");
+				const nombre = [normalizedRep.primer_nombre, normalizedRep.segundo_nombre].filter(Boolean).join(" ");
 				return {
 					juridic_client_id: client.id,
 					nombre,
@@ -837,7 +895,10 @@ export default function NuevoClientePage() {
 
 			const { error: repsError } = await supabase.from("legal_representatives").insert(representatives);
 
-			if (repsError) { await rollbackClient(client.id); throw repsError; }
+			if (repsError) {
+				await rollbackClient(client.id);
+				throw repsError;
+			}
 		}
 
 		// 3. Upload client documents
@@ -889,7 +950,10 @@ export default function NuevoClientePage() {
 			extension_ci_representante: normalized.extension_ci_representante || null,
 		});
 
-		if (ongError) { await rollbackClient(client.id); throw ongError; }
+		if (ongError) {
+			await rollbackClient(client.id);
+			throw ongError;
+		}
 
 		// 3. Upload client documents
 		await uploadClientDocuments(client.id, formData.documentos);
@@ -974,7 +1038,10 @@ export default function NuevoClientePage() {
 			extension_ci_representante: normalized.extension_ci_representante || null,
 		});
 
-		if (clubError) { await rollbackClient(client.id); throw clubError; }
+		if (clubError) {
+			await rollbackClient(client.id);
+			throw clubError;
+		}
 
 		// 3. Upload client documents
 		await uploadClientDocuments(client.id, formData.documentos);
@@ -1004,7 +1071,9 @@ export default function NuevoClientePage() {
 			const nombre = existingPersoneria.sigla
 				? `${existingPersoneria.nombre_asociacion} (${existingPersoneria.sigla})`
 				: existingPersoneria.nombre_asociacion;
-			throw new Error(`Ya existe la asociación "${nombre}" con esa personería jurídica en la misma entidad otorgante`);
+			throw new Error(
+				`Ya existe la asociación "${nombre}" con esa personería jurídica en la misma entidad otorgante`,
+			);
 		}
 
 		// Check for duplicate NIT (when provided)
@@ -1057,7 +1126,10 @@ export default function NuevoClientePage() {
 			extension_ci_representante: normalized.extension_ci_representante || null,
 		});
 
-		if (asocError) { await rollbackClient(client.id); throw asocError; }
+		if (asocError) {
+			await rollbackClient(client.id);
+			throw asocError;
+		}
 
 		// 3. Upload client documents
 		await uploadClientDocuments(client.id, formData.documentos);
@@ -1073,7 +1145,7 @@ export default function NuevoClientePage() {
 	// Validate required documents before saving
 	const validateDocumentsBeforeSave = (
 		documentos: ClienteDocumentoFormState[] | undefined,
-		type: "natural" | "unipersonal" | "juridica" | "ong" | "club" | "asociacion_civil"
+		type: "natural" | "unipersonal" | "juridica" | "ong" | "club" | "asociacion_civil",
 	): boolean => {
 		const docs = documentos || [];
 		const validation = validateClientDocuments(docs, type, docExceptions);
@@ -1119,16 +1191,14 @@ export default function NuevoClientePage() {
 	// Determine which documents were skipped using exceptions (for consumption)
 	const getSkippedDocTypes = (
 		documentos: ClienteDocumentoFormState[] | undefined,
-		type: "natural" | "unipersonal" | "juridica" | "ong" | "club" | "asociacion_civil"
+		type: "natural" | "unipersonal" | "juridica" | "ong" | "club" | "asociacion_civil",
 	): TipoDocumentoCliente[] => {
 		const docs = documentos || [];
 		const uploadedTypes = docs.map((d) => d.tipo_documento);
 		const allRequired = REQUIRED_DOCUMENTS[type];
 		// Documents that are required, not uploaded, but allowed because of exception
 		return allRequired.filter(
-			(docType) =>
-				!uploadedTypes.includes(docType) &&
-				docExceptions.includes(docType as TipoDocumentoCliente)
+			(docType) => !uploadedTypes.includes(docType) && docExceptions.includes(docType as TipoDocumentoCliente),
 		) as TipoDocumentoCliente[];
 	};
 
@@ -1137,25 +1207,82 @@ export default function NuevoClientePage() {
 	// ---------------------------------------------------------------------------
 	const NATURAL_SECTION_FIELDS: string[][] = [
 		[], // 0: Tipo de Cliente (always valid when clientType is set)
-		["primer_nombre", "segundo_nombre", "primer_apellido", "segundo_apellido", "tipo_documento", "numero_documento", "extension_ci", "nacionalidad", "fecha_nacimiento", "estado_civil", "genero"],
+		[
+			"primer_nombre",
+			"segundo_nombre",
+			"primer_apellido",
+			"segundo_apellido",
+			"tipo_documento",
+			"numero_documento",
+			"extension_ci",
+			"nacionalidad",
+			"fecha_nacimiento",
+			"estado_civil",
+			"genero",
+		],
 		["direccion", "correo_electronico", "celular"],
-		["profesion_oficio", "actividad_economica", "lugar_trabajo", "pais_residencia", "nivel_ingresos", "cargo", "anio_ingreso", "nit", "domicilio_comercial"],
+		[
+			"profesion_oficio",
+			"actividad_economica",
+			"lugar_trabajo",
+			"pais_residencia",
+			"nivel_ingresos",
+			"cargo",
+			"anio_ingreso",
+			"nit",
+			"domicilio_comercial",
+		],
 		[], // 4: Documentos (validated separately)
 	];
 
 	const UNIPERSONAL_SECTION_FIELDS: string[][] = [
 		[], // 0: Tipo de Cliente
 		// Sidebar "Datos Personales" groups form sections: Datos Personales + Otros Datos Personales
-		["primer_nombre", "segundo_nombre", "primer_apellido", "segundo_apellido", "tipo_documento", "numero_documento", "extension_ci", "nacionalidad", "fecha_nacimiento", "estado_civil", "genero", "profesion_oficio", "actividad_economica", "lugar_trabajo", "pais_residencia", "cargo", "anio_ingreso"],
+		[
+			"primer_nombre",
+			"segundo_nombre",
+			"primer_apellido",
+			"segundo_apellido",
+			"tipo_documento",
+			"numero_documento",
+			"extension_ci",
+			"nacionalidad",
+			"fecha_nacimiento",
+			"estado_civil",
+			"genero",
+			"profesion_oficio",
+			"actividad_economica",
+			"lugar_trabajo",
+			"pais_residencia",
+			"cargo",
+			"anio_ingreso",
+		],
 		["direccion", "correo_electronico", "celular"],
-		["razon_social", "nit", "matricula_comercio", "domicilio_comercial", "telefono_comercial", "actividad_economica_comercial", "nivel_ingresos", "correo_electronico_comercial"],
+		[
+			"razon_social",
+			"nit",
+			"matricula_comercio",
+			"domicilio_comercial",
+			"telefono_comercial",
+			"actividad_economica_comercial",
+			"nivel_ingresos",
+			"correo_electronico_comercial",
+		],
 		["nombre_representante", "ci_representante", "extension_representante"],
 		[], // 5: Documentos
 	];
 
 	const JURIDIC_SECTION_FIELDS: string[][] = [
 		[], // 0: Tipo de Cliente
-		["razon_social", "tipo_sociedad", "tipo_documento", "nit", "matricula_comercio", "pais_constitucion", "actividad_economica"],
+		[
+			"razon_social",
+			"tipo_sociedad",
+			"tipo_documento",
+			"nit",
+			"matricula_comercio",
+			"pais_constitucion",
+			"actividad_economica",
+		],
 		["direccion_legal", "correo_electronico", "telefono"],
 		["legal_representatives"],
 		[], // 4: Documentos
@@ -1171,7 +1298,16 @@ export default function NuevoClientePage() {
 
 	const CLUB_SECTION_FIELDS: string[][] = [
 		[], // 0: Tipo de Cliente
-		["nombre_club", "sigla", "disciplina_principal", "nit", "numero_registro_vipfe", "tipo_registro", "entidad_registro", "numero_registro"],
+		[
+			"nombre_club",
+			"sigla",
+			"disciplina_principal",
+			"nit",
+			"numero_registro_vipfe",
+			"tipo_registro",
+			"entidad_registro",
+			"numero_registro",
+		],
 		["direccion", "correo_electronico", "telefono"],
 		["nombre_representante", "apellido_representante", "cargo_representante", "ci_representante"],
 		[], // 4: Documentos
@@ -1179,7 +1315,15 @@ export default function NuevoClientePage() {
 
 	const ASOCIACION_CIVIL_SECTION_FIELDS: string[][] = [
 		[], // 0: Tipo de Cliente
-		["nombre_asociacion", "sigla", "tipo_asociacion", "rubro_actividad", "nit", "numero_personeria_juridica", "entidad_otorgante_personeria"],
+		[
+			"nombre_asociacion",
+			"sigla",
+			"tipo_asociacion",
+			"rubro_actividad",
+			"nit",
+			"numero_personeria_juridica",
+			"entidad_otorgante_personeria",
+		],
 		["direccion", "correo_electronico", "telefono"],
 		["nombre_representante", "apellido_representante", "cargo_representante", "ci_representante"],
 		[], // 4: Documentos
@@ -1212,7 +1356,10 @@ export default function NuevoClientePage() {
 				if (!isValid) {
 					const fields = getErrorFieldLabels(naturalForm.formState.errors);
 					toast.error("Campos incompletos o inválidos", {
-						description: fields.length > 0 ? `Revisar: ${fields.join(", ")}` : "Por favor complete todos los campos requeridos",
+						description:
+							fields.length > 0
+								? `Revisar: ${fields.join(", ")}`
+								: "Por favor complete todos los campos requeridos",
 					});
 					setIsSaving(false);
 					return;
@@ -1220,7 +1367,11 @@ export default function NuevoClientePage() {
 
 				// Validate required documents
 				if (!validateDocumentsBeforeSave(naturalForm.getValues().documentos, "natural")) {
-					setValidatedSections(prev => { const copy = [...prev]; copy[copy.length - 1] = false; return copy; });
+					setValidatedSections((prev) => {
+						const copy = [...prev];
+						copy[copy.length - 1] = false;
+						return copy;
+					});
 					setIsSaving(false);
 					return;
 				}
@@ -1232,19 +1383,27 @@ export default function NuevoClientePage() {
 				// so Zod validation does not reject them as empty.
 				const personal = unipersonalForm.getValues();
 				const nombrePropietario = [personal.primer_nombre, personal.segundo_nombre].filter(Boolean).join(" ");
-				const apellidoPropietario = [personal.primer_apellido, personal.segundo_apellido].filter(Boolean).join(" ");
+				const apellidoPropietario = [personal.primer_apellido, personal.segundo_apellido]
+					.filter(Boolean)
+					.join(" ");
 				unipersonalForm.setValue("nombre_propietario", nombrePropietario);
 				unipersonalForm.setValue("apellido_propietario", apellidoPropietario);
 				unipersonalForm.setValue("documento_propietario", (personal.numero_documento ?? "").replace(/\D/g, ""));
 				unipersonalForm.setValue("nacionalidad_propietario", personal.nacionalidad ?? "");
 
 				const isValid = await unipersonalForm.trigger();
-				const sectionResults = computeSectionValidity(unipersonalForm.formState.errors, UNIPERSONAL_SECTION_FIELDS);
+				const sectionResults = computeSectionValidity(
+					unipersonalForm.formState.errors,
+					UNIPERSONAL_SECTION_FIELDS,
+				);
 				setValidatedSections(sectionResults);
 				if (!isValid) {
 					const fields = getErrorFieldLabels(unipersonalForm.formState.errors);
 					toast.error("Campos incompletos o inválidos", {
-						description: fields.length > 0 ? `Revisar: ${fields.join(", ")}` : "Por favor complete todos los campos requeridos",
+						description:
+							fields.length > 0
+								? `Revisar: ${fields.join(", ")}`
+								: "Por favor complete todos los campos requeridos",
 					});
 					setIsSaving(false);
 					return;
@@ -1252,7 +1411,11 @@ export default function NuevoClientePage() {
 
 				// Validate required documents
 				if (!validateDocumentsBeforeSave(unipersonalForm.getValues().documentos, "unipersonal")) {
-					setValidatedSections(prev => { const copy = [...prev]; copy[copy.length - 1] = false; return copy; });
+					setValidatedSections((prev) => {
+						const copy = [...prev];
+						copy[copy.length - 1] = false;
+						return copy;
+					});
 					setIsSaving(false);
 					return;
 				}
@@ -1266,7 +1429,10 @@ export default function NuevoClientePage() {
 				if (!isValid) {
 					const fields = getErrorFieldLabels(juridicForm.formState.errors);
 					toast.error("Campos incompletos o inválidos", {
-						description: fields.length > 0 ? `Revisar: ${fields.join(", ")}` : "Por favor complete todos los campos requeridos",
+						description:
+							fields.length > 0
+								? `Revisar: ${fields.join(", ")}`
+								: "Por favor complete todos los campos requeridos",
 					});
 					setIsSaving(false);
 					return;
@@ -1274,7 +1440,11 @@ export default function NuevoClientePage() {
 
 				// Validate required documents
 				if (!validateDocumentsBeforeSave(juridicForm.getValues().documentos, "juridica")) {
-					setValidatedSections(prev => { const copy = [...prev]; copy[copy.length - 1] = false; return copy; });
+					setValidatedSections((prev) => {
+						const copy = [...prev];
+						copy[copy.length - 1] = false;
+						return copy;
+					});
 					setIsSaving(false);
 					return;
 				}
@@ -1288,7 +1458,10 @@ export default function NuevoClientePage() {
 				if (!isValid) {
 					const fields = getErrorFieldLabels(ongForm.formState.errors);
 					toast.error("Campos incompletos o inválidos", {
-						description: fields.length > 0 ? `Revisar: ${fields.join(", ")}` : "Por favor complete todos los campos requeridos",
+						description:
+							fields.length > 0
+								? `Revisar: ${fields.join(", ")}`
+								: "Por favor complete todos los campos requeridos",
 					});
 					setIsSaving(false);
 					return;
@@ -1296,7 +1469,11 @@ export default function NuevoClientePage() {
 
 				// Validate required documents
 				if (!validateDocumentsBeforeSave(ongForm.getValues().documentos, "ong")) {
-					setValidatedSections(prev => { const copy = [...prev]; copy[copy.length - 1] = false; return copy; });
+					setValidatedSections((prev) => {
+						const copy = [...prev];
+						copy[copy.length - 1] = false;
+						return copy;
+					});
 					setIsSaving(false);
 					return;
 				}
@@ -1310,7 +1487,10 @@ export default function NuevoClientePage() {
 				if (!isValid) {
 					const fields = getErrorFieldLabels(clubForm.formState.errors);
 					toast.error("Campos incompletos o inválidos", {
-						description: fields.length > 0 ? `Revisar: ${fields.join(", ")}` : "Por favor complete todos los campos requeridos",
+						description:
+							fields.length > 0
+								? `Revisar: ${fields.join(", ")}`
+								: "Por favor complete todos los campos requeridos",
 					});
 					setIsSaving(false);
 					return;
@@ -1318,7 +1498,11 @@ export default function NuevoClientePage() {
 
 				// Validate required documents
 				if (!validateDocumentsBeforeSave(clubForm.getValues().documentos, "club")) {
-					setValidatedSections(prev => { const copy = [...prev]; copy[copy.length - 1] = false; return copy; });
+					setValidatedSections((prev) => {
+						const copy = [...prev];
+						copy[copy.length - 1] = false;
+						return copy;
+					});
 					setIsSaving(false);
 					return;
 				}
@@ -1327,12 +1511,18 @@ export default function NuevoClientePage() {
 				toast.success("Club deportivo registrado exitosamente");
 			} else if (clientType === "asociacion_civil") {
 				const isValid = await asociacionCivilForm.trigger();
-				const sectionResults = computeSectionValidity(asociacionCivilForm.formState.errors, ASOCIACION_CIVIL_SECTION_FIELDS);
+				const sectionResults = computeSectionValidity(
+					asociacionCivilForm.formState.errors,
+					ASOCIACION_CIVIL_SECTION_FIELDS,
+				);
 				setValidatedSections(sectionResults);
 				if (!isValid) {
 					const fields = getErrorFieldLabels(asociacionCivilForm.formState.errors);
 					toast.error("Campos incompletos o inválidos", {
-						description: fields.length > 0 ? `Revisar: ${fields.join(", ")}` : "Por favor complete todos los campos requeridos",
+						description:
+							fields.length > 0
+								? `Revisar: ${fields.join(", ")}`
+								: "Por favor complete todos los campos requeridos",
 					});
 					setIsSaving(false);
 					return;
@@ -1340,7 +1530,11 @@ export default function NuevoClientePage() {
 
 				// Validate required documents
 				if (!validateDocumentsBeforeSave(asociacionCivilForm.getValues().documentos, "asociacion_civil")) {
-					setValidatedSections(prev => { const copy = [...prev]; copy[copy.length - 1] = false; return copy; });
+					setValidatedSections((prev) => {
+						const copy = [...prev];
+						copy[copy.length - 1] = false;
+						return copy;
+					});
 					setIsSaving(false);
 					return;
 				}
@@ -1351,17 +1545,18 @@ export default function NuevoClientePage() {
 
 			// Consume used exceptions (if any documents were skipped)
 			if (createdClientId && clientType && docExceptions.length > 0) {
-				const formData = clientType === "natural"
-					? naturalForm.getValues()
-					: clientType === "unipersonal"
-						? unipersonalForm.getValues()
-						: clientType === "ong"
-							? ongForm.getValues()
-							: clientType === "club"
-								? clubForm.getValues()
-								: clientType === "asociacion_civil"
-									? asociacionCivilForm.getValues()
-									: juridicForm.getValues();
+				const formData =
+					clientType === "natural"
+						? naturalForm.getValues()
+						: clientType === "unipersonal"
+							? unipersonalForm.getValues()
+							: clientType === "ong"
+								? ongForm.getValues()
+								: clientType === "club"
+									? clubForm.getValues()
+									: clientType === "asociacion_civil"
+										? asociacionCivilForm.getValues()
+										: juridicForm.getValues();
 				const skipped = getSkippedDocTypes(formData.documentos, clientType);
 				if (skipped.length > 0) {
 					await consumirExcepciones(skipped, createdClientId);
@@ -1399,7 +1594,8 @@ export default function NuevoClientePage() {
 					const constraint = String(pgError.message ?? "");
 					if (constraint.includes("tipo_documento")) {
 						errorMessage = "El tipo de documento seleccionado no es válido";
-						errorDetail = "Valores permitidos: CI, Pasaporte, CEX. Contacte al administrador si el problema persiste.";
+						errorDetail =
+							"Valores permitidos: CI, Pasaporte, CEX. Contacte al administrador si el problema persiste.";
 					} else if (constraint.includes("estado_civil")) {
 						errorMessage = "El estado civil seleccionado no es válido";
 					} else if (constraint.includes("genero")) {
@@ -1433,56 +1629,57 @@ export default function NuevoClientePage() {
 	}
 
 	// Sidebar sections per client type
-	const sidebarSections: { label: string; detail?: string }[] = clientType === "natural"
-		? [
-			{ label: "Tipo de Cliente", detail: "Persona Natural" },
-			{ label: "Datos Personales" },
-			{ label: "Información de Contacto" },
-			{ label: "Otros Datos" },
-			{ label: "Documentos" },
-		]
-		: clientType === "unipersonal"
-		? [
-			{ label: "Tipo de Cliente", detail: "Unipersonal" },
-			{ label: "Datos Personales" },
-			{ label: "Información de Contacto" },
-			{ label: "Datos Comerciales" },
-			{ label: "Representante Legal" },
-			{ label: "Documentos" },
-		]
-		: clientType === "juridica"
-		? [
-			{ label: "Tipo de Cliente", detail: "Persona Jurídica" },
-			{ label: "Datos de la Empresa" },
-			{ label: "Información de Contacto" },
-			{ label: "Representantes Legales" },
-			{ label: "Documentos" },
-		]
-		: clientType === "ong"
-		? [
-			{ label: "Tipo de Cliente", detail: "ONG" },
-			{ label: "Datos de la ONG" },
-			{ label: "Información de Contacto" },
-			{ label: "Representante / MAE" },
-			{ label: "Documentos" },
-		]
-		: clientType === "club"
-		? [
-			{ label: "Tipo de Cliente", detail: "Club Deportivo" },
-			{ label: "Datos del Club" },
-			{ label: "Información de Contacto" },
-			{ label: "Representante Legal" },
-			{ label: "Documentos" },
-		]
-		: clientType === "asociacion_civil"
-		? [
-			{ label: "Tipo de Cliente", detail: "Asociación Civil" },
-			{ label: "Datos de la Asociación" },
-			{ label: "Información de Contacto" },
-			{ label: "Representante Legal" },
-			{ label: "Documentos" },
-		]
-		: [{ label: "Tipo de Cliente" }];
+	const sidebarSections: { label: string; detail?: string }[] =
+		clientType === "natural"
+			? [
+					{ label: "Tipo de Cliente", detail: "Persona Natural" },
+					{ label: "Datos Personales" },
+					{ label: "Información de Contacto" },
+					{ label: "Otros Datos" },
+					{ label: "Documentos" },
+				]
+			: clientType === "unipersonal"
+				? [
+						{ label: "Tipo de Cliente", detail: "Unipersonal" },
+						{ label: "Datos Personales" },
+						{ label: "Información de Contacto" },
+						{ label: "Datos Comerciales" },
+						{ label: "Representante Legal" },
+						{ label: "Documentos" },
+					]
+				: clientType === "juridica"
+					? [
+							{ label: "Tipo de Cliente", detail: "Persona Jurídica" },
+							{ label: "Datos de la Empresa" },
+							{ label: "Información de Contacto" },
+							{ label: "Representantes Legales" },
+							{ label: "Documentos" },
+						]
+					: clientType === "ong"
+						? [
+								{ label: "Tipo de Cliente", detail: "ONG" },
+								{ label: "Datos de la ONG" },
+								{ label: "Información de Contacto" },
+								{ label: "Representante / MAE" },
+								{ label: "Documentos" },
+							]
+						: clientType === "club"
+							? [
+									{ label: "Tipo de Cliente", detail: "Club Deportivo" },
+									{ label: "Datos del Club" },
+									{ label: "Información de Contacto" },
+									{ label: "Representante Legal" },
+									{ label: "Documentos" },
+								]
+							: clientType === "asociacion_civil"
+								? [
+										{ label: "Tipo de Cliente", detail: "Asociación Civil" },
+										{ label: "Datos de la Asociación" },
+										{ label: "Información de Contacto" },
+										{ label: "Representante Legal" },
+										{ label: "Documentos" },
+									]
+								: [{ label: "Tipo de Cliente" }];
 
 	return (
 		<div className="max-w-7xl mx-auto pt-6">
@@ -1508,20 +1705,26 @@ export default function NuevoClientePage() {
 									? clientType === "natural"
 										? "Persona Natural"
 										: clientType === "unipersonal"
-										? "Unipersonal"
-										: clientType === "ong"
-										? "ONG"
-										: clientType === "club"
-										? "Club Deportivo"
-										: clientType === "asociacion_civil"
-										? "Asociación Civil"
-										: "Persona Jurídica"
+											? "Unipersonal"
+											: clientType === "ong"
+												? "ONG"
+												: clientType === "club"
+													? "Club Deportivo"
+													: clientType === "asociacion_civil"
+														? "Asociación Civil"
+														: "Persona Jurídica"
 									: "Seleccione el tipo de cliente"}
 							</p>
 						</div>
 					</div>
 					<div className="flex items-center gap-2 shrink-0">
-						<Button variant="ghost" size="sm" onClick={handleCancel} disabled={isSaving} className="text-muted-foreground hover:text-destructive hover:bg-destructive/8">
+						<Button
+							variant="ghost"
+							size="sm"
+							onClick={handleCancel}
+							disabled={isSaving}
+							className="text-muted-foreground hover:text-destructive hover:bg-destructive/8"
+						>
 							<X className="h-4 w-4 mr-1.5" />
 							Cancelar
 						</Button>
@@ -1558,20 +1761,32 @@ export default function NuevoClientePage() {
 								return (
 									<div key={i} className="relative">
 										{i < sidebarSections.length - 1 && (
-											<div className={`absolute left-[15px] top-8 w-px h-3 ${isCompleted ? "bg-[#0D9488]/40" : hasFailed ? "bg-rose-300" : "bg-border"}`} />
+											<div
+												className={`absolute left-[15px] top-8 w-px h-3 ${isCompleted ? "bg-[#0D9488]/40" : hasFailed ? "bg-rose-300" : "bg-border"}`}
+											/>
 										)}
-										<div className={`flex items-start gap-2.5 px-2 py-2 rounded-md ${isCompleted || isActive ? "bg-primary/8" : hasFailed ? "bg-rose-50" : ""}`}>
-											<div className={`w-[22px] h-[22px] shrink-0 rounded-md flex items-center justify-center text-xs font-semibold mt-0.5 transition-colors ${
-												isCompleted ? "bg-[#0D9488] text-white"
-											: hasFailed ? "bg-rose-500 text-white"
-											: isActive ? "bg-primary text-primary-foreground"
-											: isPending ? "bg-primary/10 text-primary border border-primary/25"
-											: "border-2 border-border text-muted-foreground"
-											}`}>
+										<div
+											className={`flex items-start gap-2.5 px-2 py-2 rounded-md ${isCompleted || isActive ? "bg-primary/8" : hasFailed ? "bg-rose-50" : ""}`}
+										>
+											<div
+												className={`w-[22px] h-[22px] shrink-0 rounded-md flex items-center justify-center text-xs font-semibold mt-0.5 transition-colors ${
+													isCompleted
+														? "bg-[#0D9488] text-white"
+														: hasFailed
+															? "bg-rose-500 text-white"
+															: isActive
+																? "bg-primary text-primary-foreground"
+																: isPending
+																	? "bg-primary/10 text-primary border border-primary/25"
+																	: "border-2 border-border text-muted-foreground"
+												}`}
+											>
 												{isCompleted ? <Check className="h-3 w-3" /> : hasFailed ? "!" : i + 1}
 											</div>
 											<div className="flex-1 min-w-0">
-												<p className={`text-sm font-medium leading-tight ${isCompleted || isActive ? "text-primary" : hasFailed ? "text-rose-700" : isPending ? "text-foreground" : "text-muted-foreground"}`}>
+												<p
+													className={`text-sm font-medium leading-tight ${isCompleted || isActive ? "text-primary" : hasFailed ? "text-rose-700" : isPending ? "text-foreground" : "text-muted-foreground"}`}
+												>
 													{section.label}
 												</p>
 												{section.detail && isCompleted && (
@@ -1596,30 +1811,20 @@ export default function NuevoClientePage() {
 					{/* Form Content */}
 					{clientType === "natural" && (
 						<>
-							{duplicadoDocumento && (
-								<DuplicadoBanner
-									duplicado={duplicadoDocumento}
-									tipo="documento"
-								/>
-							)}
-							<NaturalClientForm form={naturalForm} partnerForm={partnerForm} onFieldBlur={handleAutoSave} exceptions={docExceptions} />
+							{duplicadoDocumento && <DuplicadoBanner duplicado={duplicadoDocumento} tipo="documento" />}
+							<NaturalClientForm
+								form={naturalForm}
+								partnerForm={partnerForm}
+								onFieldBlur={handleAutoSave}
+								exceptions={docExceptions}
+							/>
 						</>
 					)}
 
 					{clientType === "unipersonal" && (
 						<>
-							{duplicadoDocumento && (
-								<DuplicadoBanner
-									duplicado={duplicadoDocumento}
-									tipo="documento"
-								/>
-							)}
-							{duplicadoNit && (
-								<DuplicadoBanner
-									duplicado={duplicadoNit}
-									tipo="nit"
-								/>
-							)}
+							{duplicadoDocumento && <DuplicadoBanner duplicado={duplicadoDocumento} tipo="documento" />}
+							{duplicadoNit && <DuplicadoBanner duplicado={duplicadoNit} tipo="nit" />}
 							<UnipersonalClientForm
 								form={unipersonalForm}
 								partnerForm={partnerForm}
@@ -1631,13 +1836,12 @@ export default function NuevoClientePage() {
 
 					{clientType === "juridica" && (
 						<>
-							{duplicadoNit && (
-								<DuplicadoBanner
-									duplicado={duplicadoNit}
-									tipo="nit"
-								/>
-							)}
-							<JuridicClientForm form={juridicForm} onFieldBlur={handleAutoSave} exceptions={docExceptions} />
+							{duplicadoNit && <DuplicadoBanner duplicado={duplicadoNit} tipo="nit" />}
+							<JuridicClientForm
+								form={juridicForm}
+								onFieldBlur={handleAutoSave}
+								exceptions={docExceptions}
+							/>
 						</>
 					)}
 
@@ -1648,17 +1852,9 @@ export default function NuevoClientePage() {
 					{clientType === "club" && (
 						<>
 							{duplicadoRegistroClub && (
-								<DuplicadoBanner
-									duplicado={duplicadoRegistroClub}
-									tipo="registroClub"
-								/>
+								<DuplicadoBanner duplicado={duplicadoRegistroClub} tipo="registroClub" />
 							)}
-							{duplicadoNit && (
-								<DuplicadoBanner
-									duplicado={duplicadoNit}
-									tipo="nit"
-								/>
-							)}
+							{duplicadoNit && <DuplicadoBanner duplicado={duplicadoNit} tipo="nit" />}
 							<ClubClientForm form={clubForm} onFieldBlur={handleAutoSave} exceptions={docExceptions} />
 						</>
 					)}
@@ -1666,18 +1862,14 @@ export default function NuevoClientePage() {
 					{clientType === "asociacion_civil" && (
 						<>
 							{duplicadoPersoneriaAsoc && (
-								<DuplicadoBanner
-									duplicado={duplicadoPersoneriaAsoc}
-									tipo="personeriaAsoc"
-								/>
+								<DuplicadoBanner duplicado={duplicadoPersoneriaAsoc} tipo="personeriaAsoc" />
 							)}
-							{duplicadoNit && (
-								<DuplicadoBanner
-									duplicado={duplicadoNit}
-									tipo="nit"
-								/>
-							)}
-							<AsociacionCivilClientForm form={asociacionCivilForm} onFieldBlur={handleAutoSave} exceptions={docExceptions} />
+							{duplicadoNit && <DuplicadoBanner duplicado={duplicadoNit} tipo="nit" />}
+							<AsociacionCivilClientForm
+								form={asociacionCivilForm}
+								onFieldBlur={handleAutoSave}
+								exceptions={docExceptions}
+							/>
 						</>
 					)}
 				</div>
@@ -1699,16 +1891,22 @@ function DuplicadoBanner({ duplicado, tipo }: DuplicadoBannerProps) {
 	if (!duplicado.existe) return null;
 
 	const titulo =
-		tipo === "nit" ? "NIT ya registrado"
-		: tipo === "registroClub" ? "Club ya registrado"
-		: tipo === "personeriaAsoc" ? "Asociación ya registrada"
-		: "Documento ya registrado";
+		tipo === "nit"
+			? "NIT ya registrado"
+			: tipo === "registroClub"
+				? "Club ya registrado"
+				: tipo === "personeriaAsoc"
+					? "Asociación ya registrada"
+					: "Documento ya registrado";
 
 	const detalle =
-		tipo === "nit" ? "NIT"
-		: tipo === "registroClub" ? "número de registro en la misma entidad emisora"
-		: tipo === "personeriaAsoc" ? "número de personería jurídica en la misma entidad otorgante"
-		: "documento";
+		tipo === "nit"
+			? "NIT"
+			: tipo === "registroClub"
+				? "número de registro en la misma entidad emisora"
+				: tipo === "personeriaAsoc"
+					? "número de personería jurídica en la misma entidad otorgante"
+					: "documento";
 
 	return (
 		<div className="flex gap-3 p-4 rounded-lg border border-amber-200 bg-amber-50 text-amber-900">
@@ -1716,9 +1914,8 @@ function DuplicadoBanner({ duplicado, tipo }: DuplicadoBannerProps) {
 			<div className="text-sm space-y-1">
 				<p className="font-medium">{titulo}</p>
 				<p>
-					Ya existe <span className="font-semibold">{duplicado.nombre}</span> con este{" "}
-					{detalle} en el sistema.
-					Para crear una póliza, búscalo desde el módulo de Pólizas.
+					Ya existe <span className="font-semibold">{duplicado.nombre}</span> con este {detalle} en el
+					sistema. Para crear una póliza, búscalo desde el módulo de Pólizas.
 				</p>
 			</div>
 		</div>

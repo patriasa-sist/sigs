@@ -43,18 +43,14 @@ const uuidSchema = z.string().uuid();
 
 // Converts null values to undefined so Zod's .optional() fields accept DB-loaded data
 function nullsToUndefined<T extends Record<string, unknown>>(obj: T): T {
-	return Object.fromEntries(
-		Object.entries(obj).map(([k, v]) => [k, v === null ? undefined : v])
-	) as T;
+	return Object.fromEntries(Object.entries(obj).map(([k, v]) => [k, v === null ? undefined : v])) as T;
 }
 
 // ============================================
 // TYPES
 // ============================================
 
-export type ActionResult<T> =
-	| { success: true; data: T }
-	| { success: false; error: string };
+export type ActionResult<T> = { success: true; data: T } | { success: false; error: string };
 
 // ============================================
 // AUTHORIZATION
@@ -162,7 +158,7 @@ async function authorizeClientEdit(clientId: string) {
  */
 export async function updateNaturalClient(
 	clientId: string,
-	data: Partial<NaturalClientFormData>
+	data: Partial<NaturalClientFormData>,
 ): Promise<ActionResult<void>> {
 	if (!uuidSchema.safeParse(clientId).success) {
 		return { success: false, error: "ID de cliente inválido" };
@@ -231,7 +227,12 @@ export async function updateNaturalClient(
 
 		if (updateNaturalError) {
 			console.error("[updateNaturalClient] Natural client update error:", updateNaturalError);
-			await captureError(updateNaturalError, "updateNaturalClient:db", { clientId }, { feature: "guardar-cliente" });
+			await captureError(
+				updateNaturalError,
+				"updateNaturalClient:db",
+				{ clientId },
+				{ feature: "guardar-cliente" },
+			);
 			return { success: false, error: "Error al actualizar datos personales" };
 		}
 
@@ -257,7 +258,7 @@ export async function updateNaturalClient(
  */
 export async function updateJuridicClient(
 	clientId: string,
-	data: Partial<JuridicClientFormData>
+	data: Partial<JuridicClientFormData>,
 ): Promise<ActionResult<void>> {
 	if (!uuidSchema.safeParse(clientId).success) {
 		return { success: false, error: "ID de cliente inválido" };
@@ -314,7 +315,12 @@ export async function updateJuridicClient(
 
 		if (updateJuridicError) {
 			console.error("[updateJuridicClient] Juridic client update error:", updateJuridicError);
-			await captureError(updateJuridicError, "updateJuridicClient:db", { clientId }, { feature: "guardar-cliente" });
+			await captureError(
+				updateJuridicError,
+				"updateJuridicClient:db",
+				{ clientId },
+				{ feature: "guardar-cliente" },
+			);
 			return { success: false, error: "Error al actualizar datos de la empresa" };
 		}
 
@@ -340,7 +346,7 @@ export async function updateJuridicClient(
  */
 export async function updateUnipersonalClient(
 	clientId: string,
-	data: Partial<UnipersonalClientFormData>
+	data: Partial<UnipersonalClientFormData>,
 ): Promise<ActionResult<void>> {
 	if (!uuidSchema.safeParse(clientId).success) {
 		return { success: false, error: "ID de cliente inválido" };
@@ -406,7 +412,12 @@ export async function updateUnipersonalClient(
 
 		if (updateNaturalError) {
 			console.error("[updateUnipersonalClient] Natural client update error:", updateNaturalError);
-			await captureError(updateNaturalError, "updateUnipersonalClient:db-natural", { clientId }, { feature: "guardar-cliente" });
+			await captureError(
+				updateNaturalError,
+				"updateUnipersonalClient:db-natural",
+				{ clientId },
+				{ feature: "guardar-cliente" },
+			);
 			return { success: false, error: "Error al actualizar datos personales" };
 		}
 
@@ -435,7 +446,12 @@ export async function updateUnipersonalClient(
 
 		if (updateUnipersonalError) {
 			console.error("[updateUnipersonalClient] Unipersonal client update error:", updateUnipersonalError);
-			await captureError(updateUnipersonalError, "updateUnipersonalClient:db-comercial", { clientId }, { feature: "guardar-cliente" });
+			await captureError(
+				updateUnipersonalError,
+				"updateUnipersonalClient:db-comercial",
+				{ clientId },
+				{ feature: "guardar-cliente" },
+			);
 			return { success: false, error: "Error al actualizar datos comerciales" };
 		}
 
@@ -461,7 +477,7 @@ export async function updateUnipersonalClient(
  */
 export async function updatePartnerData(
 	clientId: string,
-	data: Partial<ClientPartnerData>
+	data: Partial<ClientPartnerData>,
 ): Promise<ActionResult<void>> {
 	if (!uuidSchema.safeParse(clientId).success) {
 		return { success: false, error: "ID de cliente inválido" };
@@ -514,30 +530,38 @@ export async function updatePartnerData(
 
 			if (updateError) {
 				console.error("[updatePartnerData] Update error:", updateError);
-				await captureError(updateError, "updatePartnerData:db-update", { clientId }, { feature: "guardar-cliente" });
+				await captureError(
+					updateError,
+					"updatePartnerData:db-update",
+					{ clientId },
+					{ feature: "guardar-cliente" },
+				);
 				return { success: false, error: "Error al actualizar datos del cónyuge" };
 			}
 		} else {
 			// Insert new partner
-			const { error: insertError } = await supabase
-				.from("client_partners")
-				.insert({
-					client_id: clientId,
-					primer_nombre: data.primer_nombre || null,
-					segundo_nombre: data.segundo_nombre || null,
-					primer_apellido: data.primer_apellido || null,
-					segundo_apellido: data.segundo_apellido || null,
-					direccion: data.direccion || null,
-					celular: data.celular || null,
-					correo_electronico: data.correo_electronico || null,
-					profesion_oficio: data.profesion_oficio || null,
-					actividad_economica: data.actividad_economica || null,
-					lugar_trabajo: data.lugar_trabajo || null,
-				});
+			const { error: insertError } = await supabase.from("client_partners").insert({
+				client_id: clientId,
+				primer_nombre: data.primer_nombre || null,
+				segundo_nombre: data.segundo_nombre || null,
+				primer_apellido: data.primer_apellido || null,
+				segundo_apellido: data.segundo_apellido || null,
+				direccion: data.direccion || null,
+				celular: data.celular || null,
+				correo_electronico: data.correo_electronico || null,
+				profesion_oficio: data.profesion_oficio || null,
+				actividad_economica: data.actividad_economica || null,
+				lugar_trabajo: data.lugar_trabajo || null,
+			});
 
 			if (insertError) {
 				console.error("[updatePartnerData] Insert error:", insertError);
-				await captureError(insertError, "updatePartnerData:db-insert", { clientId }, { feature: "guardar-cliente" });
+				await captureError(
+					insertError,
+					"updatePartnerData:db-insert",
+					{ clientId },
+					{ feature: "guardar-cliente" },
+				);
 				return { success: false, error: "Error al crear datos del cónyuge" };
 			}
 		}
@@ -565,7 +589,7 @@ export async function updatePartnerData(
  */
 export async function updateLegalRepresentatives(
 	clientId: string,
-	representatives: LegalRepresentativeData[]
+	representatives: LegalRepresentativeData[],
 ): Promise<ActionResult<void>> {
 	if (!uuidSchema.safeParse(clientId).success) {
 		return { success: false, error: "ID de cliente inválido" };
@@ -599,7 +623,12 @@ export async function updateLegalRepresentatives(
 
 		if (deleteError) {
 			console.error("[updateLegalRepresentatives] Delete error:", deleteError);
-			await captureError(deleteError, "updateLegalRepresentatives:db-delete", { clientId }, { feature: "guardar-cliente" });
+			await captureError(
+				deleteError,
+				"updateLegalRepresentatives:db-delete",
+				{ clientId },
+				{ feature: "guardar-cliente" },
+			);
 			return { success: false, error: "Error al eliminar representantes existentes" };
 		}
 
@@ -623,13 +652,16 @@ export async function updateLegalRepresentatives(
 				};
 			});
 
-			const { error: insertError } = await supabase
-				.from("legal_representatives")
-				.insert(repsToInsert);
+			const { error: insertError } = await supabase.from("legal_representatives").insert(repsToInsert);
 
 			if (insertError) {
 				console.error("[updateLegalRepresentatives] Insert error:", insertError);
-				await captureError(insertError, "updateLegalRepresentatives:db-insert", { clientId }, { feature: "guardar-cliente" });
+				await captureError(
+					insertError,
+					"updateLegalRepresentatives:db-insert",
+					{ clientId },
+					{ feature: "guardar-cliente" },
+				);
 				return { success: false, error: "Error al insertar representantes" };
 			}
 		}
@@ -654,9 +686,7 @@ export async function updateLegalRepresentatives(
 /**
  * Get list of executives for the director de cartera dropdown
  */
-export async function getExecutives(): Promise<
-	ActionResult<Array<{ id: string; full_name: string; email: string }>>
-> {
+export async function getExecutives(): Promise<ActionResult<Array<{ id: string; full_name: string; email: string }>>> {
 	try {
 		const supabase = await createClient();
 

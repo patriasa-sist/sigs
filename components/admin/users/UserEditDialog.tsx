@@ -40,8 +40,7 @@ export function UserEditDialog({ user }: { user: AdminUserRow }) {
 	});
 	const [firmaUrl, setFirmaUrl] = useState<string | null>(user.firma_url);
 
-	const setField = (key: keyof typeof form, value: string) =>
-		setForm((prev) => ({ ...prev, [key]: value }));
+	const setField = (key: keyof typeof form, value: string) => setForm((prev) => ({ ...prev, [key]: value }));
 
 	const handleSave = async () => {
 		const raw = form.porcentaje_comision.trim();

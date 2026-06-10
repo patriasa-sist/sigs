@@ -1,12 +1,6 @@
 "use client";
 
-import {
-	Dialog,
-	DialogContent,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, Loader2, ShieldCheck } from "lucide-react";
 
@@ -26,13 +20,7 @@ interface ValidarPolizaModalProps {
 	isLoading: boolean;
 }
 
-export function ValidarPolizaModal({
-	isOpen,
-	onClose,
-	onConfirm,
-	poliza,
-	isLoading,
-}: ValidarPolizaModalProps) {
+export function ValidarPolizaModal({ isOpen, onClose, onConfirm, poliza, isLoading }: ValidarPolizaModalProps) {
 	const formatCurrency = (amount: number, currency: string) =>
 		new Intl.NumberFormat("es-BO", {
 			style: "decimal",
@@ -61,7 +49,8 @@ export function ValidarPolizaModal({
 									Confirmar validación
 								</DialogTitle>
 								<p className="text-xs text-muted-foreground mt-0.5">
-									La póliza pasará a estado <span className="font-medium text-foreground">Activa</span>
+									La póliza pasará a estado{" "}
+									<span className="font-medium text-foreground">Activa</span>
 								</p>
 							</div>
 						</div>
@@ -92,19 +81,13 @@ export function ValidarPolizaModal({
 					</div>
 
 					<p className="text-xs text-muted-foreground leading-relaxed">
-						Esta acción quedará registrada con tu usuario y la fecha actual. No podrás
-						revertirla directamente.
+						Esta acción quedará registrada con tu usuario y la fecha actual. No podrás revertirla
+						directamente.
 					</p>
 				</div>
 
 				<DialogFooter className="px-6 pb-5 gap-2 flex-row justify-end">
-					<Button
-						variant="outline"
-						size="sm"
-						onClick={onClose}
-						disabled={isLoading}
-						className="min-w-[80px]"
-					>
+					<Button variant="outline" size="sm" onClick={onClose} disabled={isLoading} className="min-w-[80px]">
 						Cancelar
 					</Button>
 					<Button

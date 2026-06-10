@@ -55,7 +55,7 @@ export default function DetallePolizaSiniestro({ polizaId }: DetallePolizaSinies
 
 	useEffect(() => {
 		loadDetallePoliza();
-	// eslint-disable-next-line react-hooks/exhaustive-deps
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [polizaId]);
 
 	const loadDetallePoliza = async () => {
@@ -104,7 +104,10 @@ export default function DetallePolizaSiniestro({ polizaId }: DetallePolizaSinies
 	}
 
 	const formatEstado = (estado?: string) => {
-		const estadoMap: Record<string, { label: string; variant: "default" | "secondary" | "outline" | "destructive" }> = {
+		const estadoMap: Record<
+			string,
+			{ label: string; variant: "default" | "secondary" | "outline" | "destructive" }
+		> = {
 			activa: { label: "Activa", variant: "default" },
 			pendiente: { label: "Pendiente", variant: "secondary" },
 			vencida: { label: "Vencida", variant: "destructive" },
@@ -188,7 +191,8 @@ export default function DetallePolizaSiniestro({ polizaId }: DetallePolizaSinies
 								<div className="text-sm">
 									<span className="text-muted-foreground">Prima Total:</span>
 									<p className="font-medium">
-										{poliza.moneda || "Bs"} {poliza.prima_total.toLocaleString("es-BO", { minimumFractionDigits: 2 })}
+										{poliza.moneda || "Bs"}{" "}
+										{poliza.prima_total.toLocaleString("es-BO", { minimumFractionDigits: 2 })}
 									</p>
 								</div>
 							</div>
@@ -200,9 +204,7 @@ export default function DetallePolizaSiniestro({ polizaId }: DetallePolizaSinies
 								<Calendar className="h-4 w-4 text-muted-foreground" />
 								<div className="text-sm">
 									<span className="text-muted-foreground">F. Emisión:</span>
-									<p className="font-medium">
-										{formatDate(poliza.fecha_emision_compania)}
-									</p>
+									<p className="font-medium">{formatDate(poliza.fecha_emision_compania)}</p>
 								</div>
 							</div>
 						)}
@@ -328,9 +330,12 @@ export default function DetallePolizaSiniestro({ polizaId }: DetallePolizaSinies
 										<p className="text-sm text-muted-foreground">
 											{vehiculo.marca} {vehiculo.modelo} {vehiculo.ano ? `(${vehiculo.ano})` : ""}
 										</p>
-										{vehiculo.color && <p className="text-xs text-muted-foreground">Color: {vehiculo.color}</p>}
+										{vehiculo.color && (
+											<p className="text-xs text-muted-foreground">Color: {vehiculo.color}</p>
+										)}
 										<p className="text-sm font-medium mt-1">
-											Valor: {poliza?.moneda ?? "Bs"} {vehiculo.valor_asegurado.toLocaleString("es-BO")}
+											Valor: {poliza?.moneda ?? "Bs"}{" "}
+											{vehiculo.valor_asegurado.toLocaleString("es-BO")}
 										</p>
 									</div>
 								))}
@@ -339,7 +344,10 @@ export default function DetallePolizaSiniestro({ polizaId }: DetallePolizaSinies
 					)}
 
 					{/* Salud/Vida/AP/Sepelio */}
-					{(datosRamo.tipo === "salud" || datosRamo.tipo === "vida" || datosRamo.tipo === "ap" || datosRamo.tipo === "sepelio") && (
+					{(datosRamo.tipo === "salud" ||
+						datosRamo.tipo === "vida" ||
+						datosRamo.tipo === "ap" ||
+						datosRamo.tipo === "sepelio") && (
 						<>
 							{datosRamo.asegurados.length > 0 ? (
 								<>
@@ -350,11 +358,19 @@ export default function DetallePolizaSiniestro({ polizaId }: DetallePolizaSinies
 										{datosRamo.asegurados.map((asegurado, idx) => (
 											<div key={idx} className="bg-secondary/30 rounded-lg p-3 border">
 												<p className="font-medium">{asegurado.client_name}</p>
-												<p className="text-sm text-muted-foreground">CI: {asegurado.client_ci}</p>
+												<p className="text-sm text-muted-foreground">
+													CI: {asegurado.client_ci}
+												</p>
 												{asegurado.nivel_nombre && (
-													<p className="text-xs text-muted-foreground">Nivel: {asegurado.nivel_nombre}</p>
+													<p className="text-xs text-muted-foreground">
+														Nivel: {asegurado.nivel_nombre}
+													</p>
 												)}
-												{asegurado.cargo && <p className="text-xs text-muted-foreground">Cargo: {asegurado.cargo}</p>}
+												{asegurado.cargo && (
+													<p className="text-xs text-muted-foreground">
+														Cargo: {asegurado.cargo}
+													</p>
+												)}
 											</div>
 										))}
 									</div>
@@ -393,7 +409,11 @@ export default function DetallePolizaSiniestro({ polizaId }: DetallePolizaSinies
 					{/* Otros ramos: mostrar prima como referencia */}
 					{datosRamo.tipo === "otros" && poliza.prima_total !== undefined && (
 						<p className="text-sm text-muted-foreground">
-							Suma asegurada según prima total: <span className="font-medium">{poliza.moneda || "Bs"} {poliza.prima_total.toLocaleString("es-BO", { minimumFractionDigits: 2 })}</span>
+							Suma asegurada según prima total:{" "}
+							<span className="font-medium">
+								{poliza.moneda || "Bs"}{" "}
+								{poliza.prima_total.toLocaleString("es-BO", { minimumFractionDigits: 2 })}
+							</span>
 						</p>
 					)}
 				</CardContent>

@@ -75,18 +75,10 @@ export default function EditarPolizaPage() {
 			<div className="container mx-auto px-4 py-8 max-w-2xl">
 				<div className="text-center py-16 bg-white rounded-lg shadow-sm border">
 					<ShieldAlert className="h-16 w-16 text-yellow-500 mx-auto mb-4" />
-					<h2 className="text-2xl font-bold text-gray-900 mb-2">
-						Sin permiso de edición
-					</h2>
-					<p className="text-gray-600 mb-6">
-						{error || "No tienes permiso para editar esta póliza."}
-					</p>
-					<p className="text-sm text-gray-500 mb-6">
-						Contacta a un administrador para solicitar acceso.
-					</p>
-					<Button onClick={() => router.push(`/polizas/${polizaId}`)}>
-						Volver al detalle
-					</Button>
+					<h2 className="text-2xl font-bold text-gray-900 mb-2">Sin permiso de edición</h2>
+					<p className="text-gray-600 mb-6">{error || "No tienes permiso para editar esta póliza."}</p>
+					<p className="text-sm text-gray-500 mb-6">Contacta a un administrador para solicitar acceso.</p>
+					<Button onClick={() => router.push(`/polizas/${polizaId}`)}>Volver al detalle</Button>
 				</div>
 			</div>
 		);
@@ -98,13 +90,9 @@ export default function EditarPolizaPage() {
 			<div className="container mx-auto px-4 py-8 max-w-2xl">
 				<div className="text-center py-16 bg-white rounded-lg shadow-sm border">
 					<XCircle className="h-16 w-16 text-red-500 mx-auto mb-4" />
-					<h2 className="text-2xl font-bold text-gray-900 mb-2">
-						Error al cargar la póliza
-					</h2>
+					<h2 className="text-2xl font-bold text-gray-900 mb-2">Error al cargar la póliza</h2>
 					<p className="text-gray-600 mb-6">{error}</p>
-					<Button onClick={() => router.push("/polizas")}>
-						Volver a Pólizas
-					</Button>
+					<Button onClick={() => router.push("/polizas")}>Volver a Pólizas</Button>
 				</div>
 			</div>
 		);
@@ -113,11 +101,7 @@ export default function EditarPolizaPage() {
 	// Edit form
 	return (
 		<div className="container mx-auto px-4 py-8">
-			<NuevaPolizaForm
-				mode="edit"
-				polizaId={polizaId}
-				initialData={formState}
-			/>
+			<NuevaPolizaForm mode="edit" polizaId={polizaId} initialData={formState} />
 		</div>
 	);
 }

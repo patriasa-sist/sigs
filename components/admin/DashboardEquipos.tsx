@@ -64,7 +64,7 @@ export default function DashboardEquipos({ metricas }: Props) {
 			siniestros: acc.siniestros + m.total_siniestros_abiertos,
 			prima: acc.prima + m.prima_total,
 		}),
-		{ polizas: 0, polizasActivas: 0, clientes: 0, siniestros: 0, prima: 0 }
+		{ polizas: 0, polizasActivas: 0, clientes: 0, siniestros: 0, prima: 0 },
 	);
 
 	return (
@@ -134,11 +134,7 @@ export default function DashboardEquipos({ metricas }: Props) {
 									value={equipo.total_polizas}
 									sub={`${equipo.total_polizas_activas} activas`}
 								/>
-								<StatItem
-									icon={Users}
-									label="Clientes"
-									value={equipo.total_clientes}
-								/>
+								<StatItem icon={Users} label="Clientes" value={equipo.total_clientes} />
 								<StatItem
 									icon={AlertTriangle}
 									label="Siniestros"

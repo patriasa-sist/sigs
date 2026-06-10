@@ -1,7 +1,17 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ChevronRight, ChevronLeft, CheckCircle2, Plus, FileSpreadsheet, Car, Edit, Trash2, Download } from "lucide-react";
+import {
+	ChevronRight,
+	ChevronLeft,
+	CheckCircle2,
+	Plus,
+	FileSpreadsheet,
+	Car,
+	Edit,
+	Trash2,
+	Download,
+} from "lucide-react";
 import type { DatosAutomotor, VehiculoAutomotor, TipoVehiculo, MarcaVehiculo } from "@/types/poliza";
 import { validarPlacasUnicas } from "@/utils/polizaValidation";
 import { importarVehiculosDesdeExcel, generarTemplateExcel } from "@/utils/vehiculoExcelImport";
@@ -41,10 +51,11 @@ export function AutomotorForm({ datos, onChange, onSiguiente, onAnterior }: Prop
 		try {
 			const supabase = createClient();
 
-			const [{ data: tiposData, error: errorTipos }, { data: marcasData, error: errorMarcas }] = await Promise.all([
-				supabase.from("tipos_vehiculo").select("*").eq("activo", true).order("nombre"),
-				supabase.from("marcas_vehiculo").select("*").eq("activo", true).order("nombre"),
-			]);
+			const [{ data: tiposData, error: errorTipos }, { data: marcasData, error: errorMarcas }] =
+				await Promise.all([
+					supabase.from("tipos_vehiculo").select("*").eq("activo", true).order("nombre"),
+					supabase.from("marcas_vehiculo").select("*").eq("activo", true).order("nombre"),
+				]);
 
 			if (errorTipos) {
 				console.error("Error cargando tipos de vehículo:", errorTipos);
@@ -140,9 +151,7 @@ export function AutomotorForm({ datos, onChange, onSiguiente, onAnterior }: Prop
 
 			// Mostrar advertencias no bloqueantes (marca/tipo no reconocidos, etc.)
 			if (resultado.advertencias && resultado.advertencias.length > 0) {
-				setAdvertencias(
-					resultado.advertencias.map((a) => `Fila ${a.fila}: ${a.advertencias.join(" ")}`)
-				);
+				setAdvertencias(resultado.advertencias.map((a) => `Fila ${a.fila}: ${a.advertencias.join(" ")}`));
 			}
 
 			if (resultado.exito && resultado.vehiculos_validos.length > 0) {
@@ -162,13 +171,8 @@ export function AutomotorForm({ datos, onChange, onSiguiente, onAnterior }: Prop
 
 				// Mostrar errores si los hay (filas con problemas)
 				if (resultado.errores.length > 0) {
-					const mensajesError = resultado.errores.map(
-						(e) => `Fila ${e.fila}: ${e.errores.join(", ")}`
-					);
-					setErrores([
-						`Se importaron ${resultado.vehiculos_validos.length} vehículos.`,
-						...mensajesError,
-					]);
+					const mensajesError = resultado.errores.map((e) => `Fila ${e.fila}: ${e.errores.join(", ")}`);
+					setErrores([`Se importaron ${resultado.vehiculos_validos.length} vehículos.`, ...mensajesError]);
 				} else {
 					alert(`Se importaron ${resultado.vehiculos_validos.length} vehículos exitosamente.`);
 				}
@@ -176,7 +180,7 @@ export function AutomotorForm({ datos, onChange, onSiguiente, onAnterior }: Prop
 				setErrores(
 					resultado.errores.length > 0
 						? resultado.errores.map((e) => `Fila ${e.fila}: ${e.errores.join(", ")}`)
-						: ["No se pudieron importar vehículos del archivo."]
+						: ["No se pudieron importar vehículos del archivo."],
 				);
 			}
 		} catch (error) {
@@ -221,9 +225,7 @@ export function AutomotorForm({ datos, onChange, onSiguiente, onAnterior }: Prop
 		<div className="bg-white rounded-lg shadow-sm border p-6">
 			<div className="flex items-center justify-between mb-6">
 				<div>
-					<h2 className="text-xl font-semibold text-gray-900">
-						Paso 3: Vehículos Asegurados
-					</h2>
+					<h2 className="text-xl font-semibold text-gray-900">Paso 3: Vehículos Asegurados</h2>
 					<p className="text-sm text-gray-600 mt-1">
 						Agregue los vehículos que serán asegurados en esta póliza
 					</p>
@@ -301,12 +303,9 @@ export function AutomotorForm({ datos, onChange, onSiguiente, onAnterior }: Prop
 			{/* Advertencias (no bloqueantes) */}
 			{advertencias.length > 0 && (
 				<div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-					<h4 className="text-sm font-semibold text-amber-800 mb-2">
-						Advertencias de importación:
-					</h4>
+					<h4 className="text-sm font-semibold text-amber-800 mb-2">Advertencias de importación:</h4>
 					<p className="text-xs text-amber-700 mb-2">
-						Los vehículos se importaron, pero revise estos datos y complételos manualmente si
-						corresponde.
+						Los vehículos se importaron, pero revise estos datos y complételos manualmente si corresponde.
 					</p>
 					<ul className="text-sm text-amber-700 space-y-1">
 						{advertencias.map((adv, i) => (
@@ -321,9 +320,7 @@ export function AutomotorForm({ datos, onChange, onSiguiente, onAnterior }: Prop
 				<div className="text-center py-12 border-2 border-dashed rounded-lg">
 					<Car className="h-12 w-12 text-gray-400 mx-auto mb-4" />
 					<p className="text-gray-600 mb-2">No hay vehículos agregados</p>
-					<p className="text-sm text-gray-500">
-						Agregue vehículos manualmente o importe desde Excel
-					</p>
+					<p className="text-sm text-gray-500">Agregue vehículos manualmente o importe desde Excel</p>
 				</div>
 			) : (
 				<div className="overflow-x-auto border rounded-lg mb-6">
@@ -339,9 +336,7 @@ export function AutomotorForm({ datos, onChange, onSiguiente, onAnterior }: Prop
 								<th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">
 									Marca/Modelo
 								</th>
-								<th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">
-									Año
-								</th>
+								<th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">Año</th>
 								<th className="px-4 py-3 text-right text-xs font-medium text-gray-700 uppercase">
 									Valor Asegurado
 								</th>
@@ -362,9 +357,7 @@ export function AutomotorForm({ datos, onChange, onSiguiente, onAnterior }: Prop
 						<tbody className="divide-y">
 							{vehiculos.map((vehiculo, index) => (
 								<tr key={index} className="hover:bg-gray-50">
-									<td className="px-4 py-3 font-medium text-gray-900">
-										{vehiculo.placa}
-									</td>
+									<td className="px-4 py-3 font-medium text-gray-900">{vehiculo.placa}</td>
 									<td className="px-4 py-3 text-sm text-gray-600">
 										{obtenerNombreTipo(vehiculo.tipo_vehiculo_id)}
 									</td>
@@ -372,14 +365,18 @@ export function AutomotorForm({ datos, onChange, onSiguiente, onAnterior }: Prop
 										{obtenerNombreMarca(vehiculo.marca_id)}
 										{vehiculo.modelo ? ` ${vehiculo.modelo}` : ""}
 									</td>
-									<td className="px-4 py-3 text-sm text-gray-600">
-										{vehiculo.ano || "-"}
+									<td className="px-4 py-3 text-sm text-gray-600">{vehiculo.ano || "-"}</td>
+									<td className="px-4 py-3 text-sm text-gray-900 text-right">
+										{vehiculo.valor_asegurado.toLocaleString("es-BO", {
+											minimumFractionDigits: 2,
+											maximumFractionDigits: 2,
+										})}
 									</td>
 									<td className="px-4 py-3 text-sm text-gray-900 text-right">
-										{vehiculo.valor_asegurado.toLocaleString("es-BO", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-									</td>
-									<td className="px-4 py-3 text-sm text-gray-900 text-right">
-										{vehiculo.franquicia.toLocaleString("es-BO", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+										{vehiculo.franquicia.toLocaleString("es-BO", {
+											minimumFractionDigits: 2,
+											maximumFractionDigits: 2,
+										})}
 									</td>
 									<td className="px-4 py-3 text-center">
 										<span
@@ -393,7 +390,11 @@ export function AutomotorForm({ datos, onChange, onSiguiente, onAnterior }: Prop
 										</span>
 									</td>
 									<td className="px-4 py-3 text-center text-sm text-gray-900">
-										{vehiculo.coaseguro?.toLocaleString("es-BO", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%
+										{vehiculo.coaseguro?.toLocaleString("es-BO", {
+											minimumFractionDigits: 2,
+											maximumFractionDigits: 2,
+										})}
+										%
 									</td>
 									<td className="px-4 py-3 text-center">
 										<div className="flex items-center justify-center gap-2">

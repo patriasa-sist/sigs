@@ -113,9 +113,9 @@ export type CuotaPropia = {
 export type PlanPagoInclusion = {
 	modalidad: "contado" | "credito";
 	prima_total: number;
-	cuota_inicial: number;   // crédito: monto de la primera cuota (0 = todas iguales)
+	cuota_inicial: number; // crédito: monto de la primera cuota (0 = todas iguales)
 	cantidad_cuotas: number; // crédito: número total de cuotas
-	cuotas: CuotaPropia[];  // lista final de cuotas calculadas/editadas
+	cuotas: CuotaPropia[]; // lista final de cuotas calculadas/editadas
 };
 
 export type VigenciaCorrida = {
@@ -143,8 +143,8 @@ export type AnexoFormState = {
 
 	// Paso 4: Pagos y documentos
 	plan_pago_inclusion: PlanPagoInclusion | null; // para inclusión: plan propio
-	cuotas_ajuste: CuotaAjuste[];                  // para exclusión: descuentos a cuotas originales
-	vigencia_corrida: VigenciaCorrida | null;       // para anulación
+	cuotas_ajuste: CuotaAjuste[]; // para exclusión: descuentos a cuotas originales
+	vigencia_corrida: VigenciaCorrida | null; // para anulación
 	documentos: DocumentoPoliza[];
 
 	// Paso 5: Advertencias

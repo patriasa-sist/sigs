@@ -109,7 +109,7 @@ export async function POST(request: Request) {
 		// will redirect the user back to this path where we handle password setup.
 		const supabaseAdmin = createAdminClient(
 			process.env.NEXT_PUBLIC_SUPABASE_URL!,
-			process.env.SUPABASE_SERVICE_ROLE_KEY!
+			process.env.SUPABASE_SERVICE_ROLE_KEY!,
 		);
 
 		const { origin } = new URL(request.url);

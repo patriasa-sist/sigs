@@ -19,7 +19,10 @@ export async function marcarInvitacionUsada(email: string) {
 	try {
 		// Verify the authenticated user's email matches (this is called right after signup)
 		const supabase = await createClient();
-		const { data: { user }, error: authError } = await supabase.auth.getUser();
+		const {
+			data: { user },
+			error: authError,
+		} = await supabase.auth.getUser();
 
 		if (authError || !user) {
 			return { success: false, error: "No autenticado" };
@@ -31,7 +34,7 @@ export async function marcarInvitacionUsada(email: string) {
 
 		const supabaseAdmin = createAdminClient(
 			process.env.NEXT_PUBLIC_SUPABASE_URL!,
-			process.env.SUPABASE_SERVICE_ROLE_KEY!
+			process.env.SUPABASE_SERVICE_ROLE_KEY!,
 		);
 
 		const { error } = await supabaseAdmin
@@ -74,7 +77,7 @@ export async function deleteInvitationAndUser(invitationId: string, email: strin
 		// Use admin client to bypass RLS for deletion
 		const supabaseAdmin = createAdminClient(
 			process.env.NEXT_PUBLIC_SUPABASE_URL!,
-			process.env.SUPABASE_SERVICE_ROLE_KEY!
+			process.env.SUPABASE_SERVICE_ROLE_KEY!,
 		);
 
 		// First, check the invitation status
@@ -120,10 +123,7 @@ export async function deleteInvitationAndUser(invitationId: string, email: strin
 		}
 
 		// Delete the invitation record
-		const { error: invitationError } = await supabaseAdmin
-			.from("invitations")
-			.delete()
-			.eq("id", uuidResult.data);
+		const { error: invitationError } = await supabaseAdmin.from("invitations").delete().eq("id", uuidResult.data);
 
 		if (invitationError) {
 			console.error("Error deleting invitation:", invitationError);

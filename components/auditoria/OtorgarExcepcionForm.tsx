@@ -6,11 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import {
-	type TipoDocumentoCliente,
-	ALL_DOCUMENT_TYPES,
-	NON_EXCEPTABLE_DOCUMENTS,
-} from "@/types/clienteDocumento";
+import { type TipoDocumentoCliente, ALL_DOCUMENT_TYPES, NON_EXCEPTABLE_DOCUMENTS } from "@/types/clienteDocumento";
 import { otorgarExcepcion } from "@/app/auditoria/excepciones/actions";
 import { toast } from "sonner";
 
@@ -32,7 +28,7 @@ export function OtorgarExcepcionForm({ usuarios, onSuccess, onCancel }: Props) {
 	// Exceptable document types (exclude non-exceptable)
 	const exceptableDocTypes = useMemo(() => {
 		return Object.entries(ALL_DOCUMENT_TYPES).filter(
-			([key]) => !NON_EXCEPTABLE_DOCUMENTS.includes(key as TipoDocumentoCliente)
+			([key]) => !NON_EXCEPTABLE_DOCUMENTS.includes(key as TipoDocumentoCliente),
 		) as [TipoDocumentoCliente, string][];
 	}, []);
 
@@ -42,8 +38,7 @@ export function OtorgarExcepcionForm({ usuarios, onSuccess, onCancel }: Props) {
 		const search = userSearch.toLowerCase();
 		return usuarios.filter(
 			(u) =>
-				(u.full_name && u.full_name.toLowerCase().includes(search)) ||
-				u.email.toLowerCase().includes(search)
+				(u.full_name && u.full_name.toLowerCase().includes(search)) || u.email.toLowerCase().includes(search),
 		);
 	}, [usuarios, userSearch]);
 
@@ -81,9 +76,7 @@ export function OtorgarExcepcionForm({ usuarios, onSuccess, onCancel }: Props) {
 			if (result.success) {
 				const count = result.count || selectedDocs.size;
 				toast.success(
-					count === 1
-						? "Excepción otorgada exitosamente"
-						: `${count} excepciones otorgadas exitosamente`
+					count === 1 ? "Excepción otorgada exitosamente" : `${count} excepciones otorgadas exitosamente`,
 				);
 				onSuccess();
 			} else {
@@ -118,8 +111,8 @@ export function OtorgarExcepcionForm({ usuarios, onSuccess, onCancel }: Props) {
 			</div>
 
 			<p className="text-sm text-gray-600">
-				Esta excepción es de <strong>uso único</strong>. Se consumirá automáticamente cuando el
-				usuario cree su siguiente cliente. Puede ser revocada antes de ser usada.
+				Esta excepción es de <strong>uso único</strong>. Se consumirá automáticamente cuando el usuario cree su
+				siguiente cliente. Puede ser revocada antes de ser usada.
 			</p>
 
 			{/* User selector - searchable input with list */}
@@ -151,9 +144,7 @@ export function OtorgarExcepcionForm({ usuarios, onSuccess, onCancel }: Props) {
 				{isUserListOpen && !selectedUserId && (
 					<div className="border border-gray-200 rounded-lg bg-white max-h-48 overflow-y-auto shadow-sm">
 						{filteredUsers.length === 0 ? (
-							<div className="p-3 text-sm text-gray-500 text-center">
-								No se encontraron usuarios
-							</div>
+							<div className="p-3 text-sm text-gray-500 text-center">No se encontraron usuarios</div>
 						) : (
 							filteredUsers.map((user) => (
 								<button
@@ -163,7 +154,9 @@ export function OtorgarExcepcionForm({ usuarios, onSuccess, onCancel }: Props) {
 									className="w-full text-left px-3 py-2 text-sm hover:bg-blue-50 transition-colors flex items-center justify-between border-b border-gray-100 last:border-0"
 								>
 									<span className="text-gray-900">{user.full_name || user.email}</span>
-									<span className="text-xs text-gray-500 ml-2">{user.full_name ? user.email : user.role}</span>
+									<span className="text-xs text-gray-500 ml-2">
+										{user.full_name ? user.email : user.role}
+									</span>
 								</button>
 							))
 						)}
@@ -192,9 +185,10 @@ export function OtorgarExcepcionForm({ usuarios, onSuccess, onCancel }: Props) {
 								className={`
 									inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium
 									border transition-all duration-150 cursor-pointer
-									${isSelected
-										? "bg-purple-100 border-purple-400 text-purple-800 shadow-sm"
-										: "bg-white border-gray-300 text-gray-600 hover:border-purple-300 hover:bg-purple-50"
+									${
+										isSelected
+											? "bg-purple-100 border-purple-400 text-purple-800 shadow-sm"
+											: "bg-white border-gray-300 text-gray-600 hover:border-purple-300 hover:bg-purple-50"
 									}
 								`}
 							>
@@ -204,9 +198,7 @@ export function OtorgarExcepcionForm({ usuarios, onSuccess, onCancel }: Props) {
 						);
 					})}
 				</div>
-				<p className="text-xs text-gray-500">
-					Todos los documentos pueden ser exceptuados por UIF.
-				</p>
+				<p className="text-xs text-gray-500">Todos los documentos pueden ser exceptuados por UIF.</p>
 			</div>
 
 			{/* Motivo */}
@@ -236,8 +228,7 @@ export function OtorgarExcepcionForm({ usuarios, onSuccess, onCancel }: Props) {
 						? "Otorgando..."
 						: selectedDocs.size > 1
 							? `Otorgar ${selectedDocs.size} Excepciones`
-							: "Otorgar Excepción"
-					}
+							: "Otorgar Excepción"}
 				</Button>
 			</div>
 		</div>

@@ -25,15 +25,8 @@ import {
 	DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import {
-	obtenerAnexosPoliza,
-	obtenerDetalleAnexo,
-	type AnexoDetalle,
-} from "@/app/polizas/anexos/actions";
-import {
-	validarAnexo,
-	rechazarAnexo,
-} from "@/app/gerencia/validacion-anexos/actions";
+import { obtenerAnexosPoliza, obtenerDetalleAnexo, type AnexoDetalle } from "@/app/polizas/anexos/actions";
+import { validarAnexo, rechazarAnexo } from "@/app/gerencia/validacion-anexos/actions";
 import { formatDate, formatCurrency } from "@/utils/formatters";
 import type { AnexoResumen } from "@/types/anexo";
 
@@ -121,9 +114,10 @@ export default function AnexoDetalleSection({ polizaId, moneda, puedeValidar, on
 		const result = await validarAnexo(dialogAnexo.id);
 		if (result.success) {
 			toast.success("Anexo validado exitosamente", {
-				description: dialogAnexo.tipo_anexo === "anulacion"
-					? "La póliza ha sido anulada"
-					: `Anexo ${dialogAnexo.numero_anexo} activado`,
+				description:
+					dialogAnexo.tipo_anexo === "anulacion"
+						? "La póliza ha sido anulada"
+						: `Anexo ${dialogAnexo.numero_anexo} activado`,
 			});
 			// Clear cache and reload
 			setDetalleCache((prev) => {
@@ -181,9 +175,7 @@ export default function AnexoDetalleSection({ polizaId, moneda, puedeValidar, on
 				>
 					<div className="flex items-center gap-3">
 						<Package className="h-5 w-5 text-primary" />
-						<span className="text-lg font-semibold text-gray-900">
-							Anexos ({anexos.length})
-						</span>
+						<span className="text-lg font-semibold text-gray-900">Anexos ({anexos.length})</span>
 						{pendientes.length > 0 && (
 							<Badge variant="outline" className="bg-yellow-100 text-yellow-800 border-yellow-200">
 								{pendientes.length} pendiente{pendientes.length > 1 ? "s" : ""}
@@ -266,11 +258,7 @@ export default function AnexoDetalleSection({ polizaId, moneda, puedeValidar, on
 													</Button>
 												</>
 											)}
-											<Button
-												variant="outline"
-												size="sm"
-												onClick={() => toggleDetalle(anexo.id)}
-											>
+											<Button variant="outline" size="sm" onClick={() => toggleDetalle(anexo.id)}>
 												{isExpanded ? (
 													<>
 														<ChevronUp className="h-4 w-4 mr-1" />
@@ -293,7 +281,9 @@ export default function AnexoDetalleSection({ polizaId, moneda, puedeValidar, on
 												Ajuste:{" "}
 												<span
 													className={`font-semibold ${
-														(anexo.monto_ajuste_total ?? 0) >= 0 ? "text-green-600" : "text-red-600"
+														(anexo.monto_ajuste_total ?? 0) >= 0
+															? "text-green-600"
+															: "text-red-600"
 													}`}
 												>
 													{(anexo.monto_ajuste_total ?? 0) >= 0 ? "+" : ""}
@@ -302,7 +292,10 @@ export default function AnexoDetalleSection({ polizaId, moneda, puedeValidar, on
 											</span>
 										)}
 										{anexo.cantidad_documentos > 0 && (
-											<span>{anexo.cantidad_documentos} documento{anexo.cantidad_documentos > 1 ? "s" : ""}</span>
+											<span>
+												{anexo.cantidad_documentos} documento
+												{anexo.cantidad_documentos > 1 ? "s" : ""}
+											</span>
 										)}
 										{anexo.observaciones && (
 											<span className="italic text-gray-500 truncate max-w-md">
@@ -348,30 +341,44 @@ export default function AnexoDetalleSection({ polizaId, moneda, puedeValidar, on
 																					: "bg-orange-100 text-orange-700 border-orange-200"
 																			}
 																		>
-																			{item.accion === "inclusion" ? "Inclusión" : "Exclusión"}
+																			{item.accion === "inclusion"
+																				? "Inclusión"
+																				: "Exclusión"}
 																		</Badge>
 																		<span className="font-medium text-gray-900">
 																			{item.label}
 																		</span>
 																	</div>
 																	<div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-																		{Object.entries(item.detalles).map(([key, value]) => {
-																			if (value === null || value === undefined || value === "") return null;
-																			return (
-																				<div key={key}>
-																					<label className="text-xs font-medium text-gray-500">
-																						{key}
-																					</label>
-																					<p className="text-sm text-gray-900">
-																						{typeof value === "boolean"
-																							? value ? "Sí" : "No"
-																							: typeof value === "number"
-																								? value.toLocaleString("es-BO")
-																								: String(value)}
-																					</p>
-																				</div>
-																			);
-																		})}
+																		{Object.entries(item.detalles).map(
+																			([key, value]) => {
+																				if (
+																					value === null ||
+																					value === undefined ||
+																					value === ""
+																				)
+																					return null;
+																				return (
+																					<div key={key}>
+																						<label className="text-xs font-medium text-gray-500">
+																							{key}
+																						</label>
+																						<p className="text-sm text-gray-900">
+																							{typeof value === "boolean"
+																								? value
+																									? "Sí"
+																									: "No"
+																								: typeof value ===
+																									  "number"
+																									? value.toLocaleString(
+																											"es-BO",
+																										)
+																									: String(value)}
+																						</p>
+																					</div>
+																				);
+																			},
+																		)}
 																	</div>
 																</div>
 															))}
@@ -390,11 +397,21 @@ export default function AnexoDetalleSection({ polizaId, moneda, puedeValidar, on
 															<table className="w-full text-sm">
 																<thead className="bg-gray-50 border-b">
 																	<tr>
-																		<th className="px-4 py-2 text-left font-medium text-gray-600">Tipo</th>
-																		<th className="px-4 py-2 text-left font-medium text-gray-600">Cuota</th>
-																		<th className="px-4 py-2 text-right font-medium text-gray-600">Monto</th>
-																		<th className="px-4 py-2 text-left font-medium text-gray-600">Vencimiento</th>
-																		<th className="px-4 py-2 text-left font-medium text-gray-600">Observaciones</th>
+																		<th className="px-4 py-2 text-left font-medium text-gray-600">
+																			Tipo
+																		</th>
+																		<th className="px-4 py-2 text-left font-medium text-gray-600">
+																			Cuota
+																		</th>
+																		<th className="px-4 py-2 text-right font-medium text-gray-600">
+																			Monto
+																		</th>
+																		<th className="px-4 py-2 text-left font-medium text-gray-600">
+																			Vencimiento
+																		</th>
+																		<th className="px-4 py-2 text-left font-medium text-gray-600">
+																			Observaciones
+																		</th>
 																	</tr>
 																</thead>
 																<tbody className="divide-y">
@@ -409,20 +426,32 @@ export default function AnexoDetalleSection({ polizaId, moneda, puedeValidar, on
 																							: "bg-blue-100 text-blue-700 border-blue-200"
 																					}
 																				>
-																					{pago.tipo === "vigencia_corrida" ? "Vigencia Corrida" : "Ajuste"}
+																					{pago.tipo === "vigencia_corrida"
+																						? "Vigencia Corrida"
+																						: "Ajuste"}
 																				</Badge>
 																			</td>
 																			<td className="px-4 py-2">
-																				{pago.numero_cuota != null ? `Cuota ${pago.numero_cuota}` : "-"}
+																				{pago.numero_cuota != null
+																					? `Cuota ${pago.numero_cuota}`
+																					: "-"}
 																			</td>
 																			<td className="px-4 py-2 text-right font-semibold">
-																				<span className={pago.monto >= 0 ? "text-green-600" : "text-red-600"}>
+																				<span
+																					className={
+																						pago.monto >= 0
+																							? "text-green-600"
+																							: "text-red-600"
+																					}
+																				>
 																					{pago.monto >= 0 ? "+" : ""}
 																					{formatCurrency(pago.monto, moneda)}
 																				</span>
 																			</td>
 																			<td className="px-4 py-2">
-																				{pago.fecha_vencimiento ? formatDate(pago.fecha_vencimiento) : "-"}
+																				{pago.fecha_vencimiento
+																					? formatDate(pago.fecha_vencimiento)
+																					: "-"}
 																			</td>
 																			<td className="px-4 py-2 text-gray-600">
 																				{pago.observaciones || "-"}
@@ -455,7 +484,8 @@ export default function AnexoDetalleSection({ polizaId, moneda, puedeValidar, on
 																				{doc.nombre_archivo}
 																			</p>
 																			<p className="text-xs text-gray-600">
-																				{doc.tipo_documento} - {formatDate(doc.uploaded_at)}
+																				{doc.tipo_documento} -{" "}
+																				{formatDate(doc.uploaded_at)}
 																			</p>
 																		</div>
 																	</div>
@@ -463,12 +493,20 @@ export default function AnexoDetalleSection({ polizaId, moneda, puedeValidar, on
 																		variant="ghost"
 																		size="sm"
 																		onClick={async () => {
-																			const { createClient } = await import("@/utils/supabase/client");
+																			const { createClient } =
+																				await import("@/utils/supabase/client");
 																			const supabase = createClient();
-																			const { extractStoragePath } = await import("@/utils/storage");
-																			const path = extractStoragePath(doc.archivo_url, "polizas-documentos");
-																			const { data } = await supabase.storage.from("polizas-documentos").createSignedUrl(path, 3600);
-																			if (data?.signedUrl) window.open(data.signedUrl, "_blank");
+																			const { extractStoragePath } =
+																				await import("@/utils/storage");
+																			const path = extractStoragePath(
+																				doc.archivo_url,
+																				"polizas-documentos",
+																			);
+																			const { data } = await supabase.storage
+																				.from("polizas-documentos")
+																				.createSignedUrl(path, 3600);
+																			if (data?.signedUrl)
+																				window.open(data.signedUrl, "_blank");
 																		}}
 																	>
 																		<FileDown className="h-4 w-4" />
@@ -482,7 +520,9 @@ export default function AnexoDetalleSection({ polizaId, moneda, puedeValidar, on
 												{/* Rejection info */}
 												{detalle.estado === "rechazado" && detalle.motivo_rechazo && (
 													<div className="p-4 bg-orange-50 border border-orange-200 rounded-lg">
-														<p className="font-medium text-orange-800 mb-1">Anexo Rechazado</p>
+														<p className="font-medium text-orange-800 mb-1">
+															Anexo Rechazado
+														</p>
 														<p className="text-sm text-orange-900">
 															{detalle.fecha_rechazo && formatDate(detalle.fecha_rechazo)}
 															{detalle.rechazador_nombre && (
@@ -510,18 +550,18 @@ export default function AnexoDetalleSection({ polizaId, moneda, puedeValidar, on
 												)}
 
 												{/* Empty state */}
-												{detalle.items.length === 0 && detalle.pagos.length === 0 && detalle.documentos.length === 0 && (
-													<p className="text-center text-gray-500 py-4">
-														{detalle.tipo_anexo === "anulacion"
-															? "Anexo de anulación — no tiene datos específicos"
-															: "No se encontraron datos de detalle"}
-													</p>
-												)}
+												{detalle.items.length === 0 &&
+													detalle.pagos.length === 0 &&
+													detalle.documentos.length === 0 && (
+														<p className="text-center text-gray-500 py-4">
+															{detalle.tipo_anexo === "anulacion"
+																? "Anexo de anulación — no tiene datos específicos"
+																: "No se encontraron datos de detalle"}
+														</p>
+													)}
 											</>
 										) : (
-											<p className="text-center text-gray-500 py-4">
-												Error al cargar el detalle
-											</p>
+											<p className="text-center text-gray-500 py-4">Error al cargar el detalle</p>
 										)}
 									</div>
 								)}
@@ -535,14 +575,11 @@ export default function AnexoDetalleSection({ polizaId, moneda, puedeValidar, on
 			<Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
 				<DialogContent>
 					<DialogHeader>
-						<DialogTitle>
-							{dialogType === "validar" ? "Validar Anexo" : "Rechazar Anexo"}
-						</DialogTitle>
+						<DialogTitle>{dialogType === "validar" ? "Validar Anexo" : "Rechazar Anexo"}</DialogTitle>
 						<DialogDescription>
 							{dialogType === "validar" ? (
 								<>
-									¿Confirma la validación del anexo{" "}
-									<strong>{dialogAnexo?.numero_anexo}</strong>?
+									¿Confirma la validación del anexo <strong>{dialogAnexo?.numero_anexo}</strong>?
 									{dialogAnexo?.tipo_anexo === "anulacion" && (
 										<span className="block mt-2 text-red-600 font-medium">
 											<AlertTriangle className="h-4 w-4 inline mr-1" />
@@ -552,8 +589,7 @@ export default function AnexoDetalleSection({ polizaId, moneda, puedeValidar, on
 								</>
 							) : (
 								<>
-									Ingrese el motivo del rechazo del anexo{" "}
-									<strong>{dialogAnexo?.numero_anexo}</strong>
+									Ingrese el motivo del rechazo del anexo <strong>{dialogAnexo?.numero_anexo}</strong>
 								</>
 							)}
 						</DialogDescription>

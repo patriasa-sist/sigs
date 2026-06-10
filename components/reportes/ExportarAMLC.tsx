@@ -16,49 +16,106 @@ import JSZip from "jszip";
 // Pipe-delimited text generator
 function toPipeDelimited(data: Record<string, unknown>[], headers: string[]): string {
 	const dataRows = data.map((row) =>
-		headers.map((h) => {
-			const v = row[h];
-			if (v === null || v === undefined || v === "") return "";
-			return String(v);
-		}).join("|")
+		headers
+			.map((h) => {
+				const v = row[h];
+				if (v === null || v === undefined || v === "") return "";
+				return String(v);
+			})
+			.join("|"),
 	);
 	return [headers.join("|"), ...dataRows].join("\n");
 }
 
 const CLIENTES_HEADERS: (keyof AMLCCliente)[] = [
-	"suc_codigo", "tcli_codigo", "tpep_codigo", "tlis_codigo",
-	"aeco_codigo", "aeco_codigo2", "aeco_codigo3",
-	"nac_codigo", "pres_codigo", "rtie_codigo", "ring_codigo",
-	"reco_codigo", "ftra_codigo", "tdoc_codigo", "tgru_codigo", "est_codigo",
-	"codigo_cliente", "nro_documento", "extension",
-	"fecha_nacimiento", "edad", "monto_ingreso", "monto_ingreso2", "monto_ingreso3",
+	"suc_codigo",
+	"tcli_codigo",
+	"tpep_codigo",
+	"tlis_codigo",
+	"aeco_codigo",
+	"aeco_codigo2",
+	"aeco_codigo3",
+	"nac_codigo",
+	"pres_codigo",
+	"rtie_codigo",
+	"ring_codigo",
+	"reco_codigo",
+	"ftra_codigo",
+	"tdoc_codigo",
+	"tgru_codigo",
+	"est_codigo",
+	"codigo_cliente",
+	"nro_documento",
+	"extension",
+	"fecha_nacimiento",
+	"edad",
+	"monto_ingreso",
+	"monto_ingreso2",
+	"monto_ingreso3",
 	"fecha_registro",
 ];
 
 const DETALLES_HEADERS: (keyof AMLCDetalle)[] = [
-	"codigo_cliente", "gen_codigo", "eciv_codigo", "nedu_codigo", "tviv_codigo",
-	"nombre_razon", "apaterno", "amaterno", "direccion", "zona",
-	"telefono", "celular", "fax", "email", "apcasado",
-	"pais_residencia", "profesion", "lugar_trabajo", "cargo", "fecha_ingreso_trabajo",
-	"nit", "registro_comercio", "año_ingreso_trabajo", "direccion_comercial",
-	"lugar_nacimiento", "representante_nrodocumento", "representante_nombre_apellido",
-	"dempresa_nrodocumento", "dempresa_nombre_apellido", "codigo_tsociedad",
+	"codigo_cliente",
+	"gen_codigo",
+	"eciv_codigo",
+	"nedu_codigo",
+	"tviv_codigo",
+	"nombre_razon",
+	"apaterno",
+	"amaterno",
+	"direccion",
+	"zona",
+	"telefono",
+	"celular",
+	"fax",
+	"email",
+	"apcasado",
+	"pais_residencia",
+	"profesion",
+	"lugar_trabajo",
+	"cargo",
+	"fecha_ingreso_trabajo",
+	"nit",
+	"registro_comercio",
+	"año_ingreso_trabajo",
+	"direccion_comercial",
+	"lugar_nacimiento",
+	"representante_nrodocumento",
+	"representante_nombre_apellido",
+	"dempresa_nrodocumento",
+	"dempresa_nombre_apellido",
+	"codigo_tsociedad",
 ];
 
 const CUENTAS_HEADERS: (keyof AMLCCuenta)[] = [
-	"codigo_cliente", "suc_codigo", "pro_codigo", "mon_codigo",
-	"ofon_codigo", "pcue_codigo", "ring_codigo", "est_codigo",
-	"nrocuenta", "fecha_apertura", "monto_prima",
-	"monto_saldoprima", "fecha_saldoprima", "monto_asegurado",
-	"nro_debito", "monto_valorcomercial", "nro_credito",
-	"fecha_vencimiento", "can_codigo", "monto_asegurado_anterior",
+	"codigo_cliente",
+	"suc_codigo",
+	"pro_codigo",
+	"mon_codigo",
+	"ofon_codigo",
+	"pcue_codigo",
+	"ring_codigo",
+	"est_codigo",
+	"nrocuenta",
+	"fecha_apertura",
+	"monto_prima",
+	"monto_saldoprima",
+	"fecha_saldoprima",
+	"monto_asegurado",
+	"nro_debito",
+	"monto_valorcomercial",
+	"nro_credito",
+	"fecha_vencimiento",
+	"can_codigo",
+	"monto_asegurado_anterior",
 	"tipo_certificiado_codigo",
 ];
 
 async function buildExcelBuffer(
 	data: Record<string, unknown>[],
 	headers: string[],
-	sheetName: string
+	sheetName: string,
 ): Promise<ArrayBuffer> {
 	const wb = new ExcelJS.Workbook();
 	const ws = wb.addWorksheet(sheetName);
@@ -130,14 +187,35 @@ export default function ExportarAMLC() {
 
 			// Generate all 6 files in parallel
 			const [clientesXlsx, detallesXlsx, cuentasXlsx] = await Promise.all([
-				buildExcelBuffer(clientes as unknown as Record<string, unknown>[], CLIENTES_HEADERS as string[], "ConsolidadoClientes"),
-				buildExcelBuffer(clientes_detalles as unknown as Record<string, unknown>[], DETALLES_HEADERS as string[], "DetallesCliente"),
-				buildExcelBuffer(cuentas as unknown as Record<string, unknown>[], CUENTAS_HEADERS as string[], "Polizas"),
+				buildExcelBuffer(
+					clientes as unknown as Record<string, unknown>[],
+					CLIENTES_HEADERS as string[],
+					"ConsolidadoClientes",
+				),
+				buildExcelBuffer(
+					clientes_detalles as unknown as Record<string, unknown>[],
+					DETALLES_HEADERS as string[],
+					"DetallesCliente",
+				),
+				buildExcelBuffer(
+					cuentas as unknown as Record<string, unknown>[],
+					CUENTAS_HEADERS as string[],
+					"Polizas",
+				),
 			]);
 
-			const clientesTxt = toPipeDelimited(clientes as unknown as Record<string, unknown>[], CLIENTES_HEADERS as string[]);
-			const detallesTxt = toPipeDelimited(clientes_detalles as unknown as Record<string, unknown>[], DETALLES_HEADERS as string[]);
-			const cuentasTxt = toPipeDelimited(cuentas as unknown as Record<string, unknown>[], CUENTAS_HEADERS as string[]);
+			const clientesTxt = toPipeDelimited(
+				clientes as unknown as Record<string, unknown>[],
+				CLIENTES_HEADERS as string[],
+			);
+			const detallesTxt = toPipeDelimited(
+				clientes_detalles as unknown as Record<string, unknown>[],
+				DETALLES_HEADERS as string[],
+			);
+			const cuentasTxt = toPipeDelimited(
+				cuentas as unknown as Record<string, unknown>[],
+				CUENTAS_HEADERS as string[],
+			);
 
 			// Bundle into ZIP
 			const zip = new JSZip();
@@ -226,10 +304,7 @@ export default function ExportarAMLC() {
 
 						<div className="space-y-1.5">
 							<Label className="text-sm">Estado Póliza</Label>
-							<Select
-								value={estadoPoliza}
-								onValueChange={(v) => setEstadoPoliza(v as "activa" | "all")}
-							>
+							<Select value={estadoPoliza} onValueChange={(v) => setEstadoPoliza(v as "activa" | "all")}>
 								<SelectTrigger className="w-full">
 									<SelectValue />
 								</SelectTrigger>

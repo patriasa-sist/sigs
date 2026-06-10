@@ -42,9 +42,7 @@ export function BuscadorClientes({ onSeleccionar, onCancelar, clientesExcluidos 
 				}));
 
 				// Filtrar clientes ya seleccionados
-				const clientesFiltrados = clientesMapeados.filter(
-					(c) => !clientesExcluidos.includes(c.id)
-				);
+				const clientesFiltrados = clientesMapeados.filter((c) => !clientesExcluidos.includes(c.id));
 
 				setResultados(clientesFiltrados);
 			} else {

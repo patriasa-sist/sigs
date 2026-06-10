@@ -226,16 +226,14 @@ async function insertarDatosRamo(supabase: SupabaseClient, polizaId: string, for
 		// Niveles
 		const niveles = datosSalud.niveles || [];
 		if (niveles.length > 0) {
-			const { error: errorNiveles } = await supabase
-				.from("polizas_salud_niveles")
-				.insert(
-					niveles.map((nivel) => ({
-						id: nivel.id,
-						poliza_id: polizaId,
-						nombre: nivel.nombre,
-						monto: nivel.monto,
-					})),
-				);
+			const { error: errorNiveles } = await supabase.from("polizas_salud_niveles").insert(
+				niveles.map((nivel) => ({
+					id: nivel.id,
+					poliza_id: polizaId,
+					nombre: nivel.nombre,
+					monto: nivel.monto,
+				})),
+			);
 			throwIfError(errorNiveles, "Error al guardar los niveles de salud");
 		}
 

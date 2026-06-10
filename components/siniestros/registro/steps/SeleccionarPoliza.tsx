@@ -21,9 +21,7 @@ export default function SeleccionarPoliza({
 		<Card>
 			<CardHeader>
 				<CardTitle>Paso 1: Seleccionar Póliza</CardTitle>
-				<CardDescription>
-					Busca y selecciona la póliza activa en la que ocurrió el siniestro
-				</CardDescription>
+				<CardDescription>Busca y selecciona la póliza activa en la que ocurrió el siniestro</CardDescription>
 			</CardHeader>
 			<CardContent className="space-y-4">
 				{/* Instrucciones */}

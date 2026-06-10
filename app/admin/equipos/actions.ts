@@ -33,9 +33,7 @@ export interface UsuarioDisponible {
 	role: string;
 }
 
-type ActionResult<T> =
-	| { success: true; data: T }
-	| { success: false; error: string };
+type ActionResult<T> = { success: true; data: T } | { success: false; error: string };
 
 // ============================================
 // AUTHORIZATION
@@ -97,7 +95,7 @@ export async function obtenerEquipos(): Promise<ActionResult<Equipo[]>> {
 
 			if (profiles) {
 				profilesMap = Object.fromEntries(
-					profiles.map((p) => [p.id, { email: p.email, full_name: p.full_name, role: p.role }])
+					profiles.map((p) => [p.id, { email: p.email, full_name: p.full_name, role: p.role }]),
 				);
 			}
 		}
@@ -160,10 +158,7 @@ export async function obtenerUsuariosDisponibles(): Promise<ActionResult<Usuario
 /**
  * Crear un nuevo equipo
  */
-export async function crearEquipo(
-	nombre: string,
-	descripcion?: string
-): Promise<ActionResult<{ id: string }>> {
+export async function crearEquipo(nombre: string, descripcion?: string): Promise<ActionResult<{ id: string }>> {
 	try {
 		const profile = await requireAdminEquipos();
 		const supabase = await createClient();
@@ -230,7 +225,7 @@ export async function eliminarEquipo(equipoId: string): Promise<ActionResult<nul
 export async function agregarMiembro(
 	equipoId: string,
 	userId: string,
-	rolEquipo: "lider" | "miembro" = "miembro"
+	rolEquipo: "lider" | "miembro" = "miembro",
 ): Promise<ActionResult<null>> {
 	try {
 		const profile = await requireAdminEquipos();
@@ -263,10 +258,7 @@ export async function agregarMiembro(
 /**
  * Remover un miembro de un equipo
  */
-export async function removerMiembro(
-	equipoId: string,
-	userId: string
-): Promise<ActionResult<null>> {
+export async function removerMiembro(equipoId: string, userId: string): Promise<ActionResult<null>> {
 	try {
 		await requireAdminEquipos();
 		const supabase = await createClient();
@@ -297,7 +289,7 @@ export async function removerMiembro(
 export async function cambiarRolMiembro(
 	equipoId: string,
 	userId: string,
-	nuevoRol: "lider" | "miembro"
+	nuevoRol: "lider" | "miembro",
 ): Promise<ActionResult<null>> {
 	try {
 		await requireAdminEquipos();

@@ -158,15 +158,21 @@ function mapActividadEconomica(actividad: string | null | undefined): string {
 		upper.includes("COLEGIO")
 	)
 		return "EDU";
-	if (upper.includes("SALUD") || upper.includes("MEDICO") || upper.includes("MEDICA") || upper.includes("DOCTOR") || upper.includes("ENFERM"))
-		return "SAL";
 	if (
-		upper.includes("CONSTRUCCI") ||
-		upper.includes("ARQUITECT") ||
-		upper.includes("INGENI")
+		upper.includes("SALUD") ||
+		upper.includes("MEDICO") ||
+		upper.includes("MEDICA") ||
+		upper.includes("DOCTOR") ||
+		upper.includes("ENFERM")
 	)
-		return "CON";
-	if (upper.includes("TECNOLOG") || upper.includes("SOFTWARE") || upper.includes("INFORMAT") || upper.includes("SISTEM"))
+		return "SAL";
+	if (upper.includes("CONSTRUCCI") || upper.includes("ARQUITECT") || upper.includes("INGENI")) return "CON";
+	if (
+		upper.includes("TECNOLOG") ||
+		upper.includes("SOFTWARE") ||
+		upper.includes("INFORMAT") ||
+		upper.includes("SISTEM")
+	)
 		return "TIC";
 	if (upper.includes("EXPORTACI") || upper.includes("IMPORT") || upper.includes("EXTERIOR")) return "CEX";
 	if (upper.includes("ARTE") || upper.includes("ARTISTA")) return "ART";
@@ -205,7 +211,13 @@ function mapNacionalidad(nacionalidad: string | null | undefined): string {
 	if (lower.includes("ecuador")) return "ECU";
 	if (lower.includes("paraguay") || lower.includes("paraguayo")) return "PRY";
 	if (lower.includes("canad")) return "CAN";
-	if (lower.includes("estados unidos") || lower.includes("usa") || lower.includes("eeuu") || lower.includes("americano")) return "USA";
+	if (
+		lower.includes("estados unidos") ||
+		lower.includes("usa") ||
+		lower.includes("eeuu") ||
+		lower.includes("americano")
+	)
+		return "USA";
 	if (lower.includes("cuba")) return "CUB";
 	if (lower.includes("haiti")) return "HTI";
 	if (lower.includes("mexico") || lower.includes("mexicano")) return "MEX";
@@ -257,15 +269,15 @@ function getRangoTiempo(edad: number | null, tipoPersona: 1 | 2): number {
 }
 
 function getRangoIngreso(montoIngreso: number, tipoPersona: 1 | 2): number {
-	const rango = RANGOS_INGRESO.find(
-		(r) => r.tipo === tipoPersona && montoIngreso >= r.min && montoIngreso <= r.max
-	);
+	const rango = RANGOS_INGRESO.find((r) => r.tipo === tipoPersona && montoIngreso >= r.min && montoIngreso <= r.max);
 	return rango?.codigo ?? (tipoPersona === 1 ? 1 : 7);
 }
 
 function limpiarDoc(doc: string | null | undefined): string {
 	if (!doc) return "";
-	return String(doc).replace(/[\s.]/g, "").replace(/^0+(?=\d)/, "");
+	return String(doc)
+		.replace(/[\s.]/g, "")
+		.replace(/^0+(?=\d)/, "");
 }
 
 // ============================================================================
@@ -510,9 +522,7 @@ export async function exportarAMLC(filtros: AMLCFilters): Promise<AMLCResponse> 
 			const sucursal = clienteSucursalMap.get(clientId) ?? "0001";
 
 			// Document
-			const doc = isNatural
-				? limpiarDoc(nat?.numero_documento as string)
-				: limpiarDoc(jur?.nit as string);
+			const doc = isNatural ? limpiarDoc(nat?.numero_documento as string) : limpiarDoc(jur?.nit as string);
 			const codigoCliente = doc || clientId.slice(0, 8);
 
 			// Age and rango tiempo
@@ -520,16 +530,12 @@ export async function exportarAMLC(filtros: AMLCFilters): Promise<AMLCResponse> 
 			const rangoTiempo = getRangoTiempo(edad, tipoPersona);
 
 			// Income
-			const nivelIngresos = isNatural
-				? parseFloat((nat?.nivel_ingresos as string) || "0") || 0
-				: 0;
+			const nivelIngresos = isNatural ? parseFloat((nat?.nivel_ingresos as string) || "0") || 0 : 0;
 			const rangoIngreso = getRangoIngreso(nivelIngresos, tipoPersona);
 			clienteRingoMap.set(clientId, rangoIngreso);
 
 			// Activity
-			const actividad = isNatural
-				? (nat?.actividad_economica as string)
-				: (jur?.actividad_economica as string);
+			const actividad = isNatural ? (nat?.actividad_economica as string) : (jur?.actividad_economica as string);
 			const actCodigo = mapActividadEconomica(actividad);
 
 			// Estado del cliente
@@ -537,9 +543,7 @@ export async function exportarAMLC(filtros: AMLCFilters): Promise<AMLCResponse> 
 			const estCodigo = (client as any).status === "inactive" ? "NVG" : "VIG";
 
 			// Tipo documento
-			const tipoDoc = isNatural
-				? (nat?.tipo_documento as string)
-				: (jur?.tipo_documento as string);
+			const tipoDoc = isNatural ? (nat?.tipo_documento as string) : (jur?.tipo_documento as string);
 			const docCodigo = mapTipoDocumento(tipoDoc, !!doc);
 
 			// Nacionalidad y residencia (solo natural)
@@ -584,12 +588,7 @@ export async function exportarAMLC(filtros: AMLCFilters): Promise<AMLCResponse> 
 			const ecivCodigo = isNatural ? mapEstadoCivil(nat?.estado_civil as string) : "NA";
 
 			const nombreRazon = isNatural
-				? [
-						nat?.primer_nombre,
-						nat?.segundo_nombre,
-						nat?.primer_apellido,
-						nat?.segundo_apellido,
-					]
+				? [nat?.primer_nombre, nat?.segundo_nombre, nat?.primer_apellido, nat?.segundo_apellido]
 						.filter(Boolean)
 						.join(" ")
 						.trim()
@@ -609,18 +608,20 @@ export async function exportarAMLC(filtros: AMLCFilters): Promise<AMLCResponse> 
 					: ((jur?.direccion_legal as string) ?? "").replace(/[\r\n]+/g, " ").trim(),
 				zona: "",
 				telefono: "",
-				celular: isNatural ? ((nat?.celular as string) ?? "").replace(/\D/g, "") : ((jur?.telefono as string) ?? "").replace(/\D/g, ""),
+				celular: isNatural
+					? ((nat?.celular as string) ?? "").replace(/\D/g, "")
+					: ((jur?.telefono as string) ?? "").replace(/\D/g, ""),
 				fax: "",
-				email: isNatural ? ((nat?.correo_electronico as string) ?? "") : ((jur?.correo_electronico as string) ?? ""),
+				email: isNatural
+					? ((nat?.correo_electronico as string) ?? "")
+					: ((jur?.correo_electronico as string) ?? ""),
 				apcasado: "",
 				pais_residencia: isNatural ? ((nat?.pais_residencia as string) ?? "") : "",
 				profesion: isNatural ? ((nat?.profesion_oficio as string) ?? "") : "",
 				lugar_trabajo: isNatural ? ((nat?.lugar_trabajo as string) ?? "") : "",
 				cargo: isNatural ? ((nat?.cargo as string) ?? "") : "",
 				fecha_ingreso_trabajo: "",
-				nit: isNatural
-					? ((nat?.nit as string) ?? "")
-					: ((jur?.nit as string) ?? ""),
+				nit: isNatural ? ((nat?.nit as string) ?? "") : ((jur?.nit as string) ?? ""),
 				registro_comercio: isNatural ? "" : ((jur?.matricula_comercio as string) ?? ""),
 				año_ingreso_trabajo: isNatural && nat?.anio_ingreso ? String(nat.anio_ingreso) : "",
 				direccion_comercial: isNatural ? ((nat?.domicilio_comercial as string) ?? "") : "",
@@ -643,9 +644,7 @@ export async function exportarAMLC(filtros: AMLCFilters): Promise<AMLCResponse> 
 				const nat = client?.natural_clients as Record<string, unknown> | null;
 				const jur = client?.juridic_clients as Record<string, unknown> | null;
 
-				const doc = isNatural
-					? limpiarDoc(nat?.numero_documento as string)
-					: limpiarDoc(jur?.nit as string);
+				const doc = isNatural ? limpiarDoc(nat?.numero_documento as string) : limpiarDoc(jur?.nit as string);
 				const codigoCliente = doc || ((client?.id as string)?.slice(0, 8) ?? "SD");
 
 				// eslint-disable-next-line @typescript-eslint/no-explicit-any

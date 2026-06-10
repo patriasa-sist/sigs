@@ -57,7 +57,7 @@ export function VehiculoRCModal({ vehiculo, onGuardar, onCancelar }: Props) {
 			placa: "",
 			nro_chasis: "",
 			uso: "publico",
-		}
+		},
 	);
 
 	const [tiposVehiculo, setTiposVehiculo] = useState<TipoVehiculo[]>([]);
@@ -120,9 +120,7 @@ export function VehiculoRCModal({ vehiculo, onGuardar, onCancelar }: Props) {
 			<div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
 				{/* Header */}
 				<div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between">
-					<h2 className="text-xl font-semibold">
-						{vehiculo ? "Editar Vehículo" : "Agregar Vehículo"}
-					</h2>
+					<h2 className="text-xl font-semibold">{vehiculo ? "Editar Vehículo" : "Agregar Vehículo"}</h2>
 					<Button variant="ghost" size="icon" onClick={onCancelar} className="rounded-full">
 						<X className="h-5 w-5" />
 					</Button>
@@ -171,10 +169,7 @@ export function VehiculoRCModal({ vehiculo, onGuardar, onCancelar }: Props) {
 							<Label htmlFor="uso">
 								Uso <span className="text-red-500">*</span>
 							</Label>
-							<Select
-								value={form.uso ?? ""}
-								onValueChange={(v) => set("uso", v as VehiculoRC["uso"])}
-							>
+							<Select value={form.uso ?? ""} onValueChange={(v) => set("uso", v as VehiculoRC["uso"])}>
 								<SelectTrigger className={errores.uso ? "border-red-500" : ""}>
 									<SelectValue />
 								</SelectTrigger>
@@ -380,7 +375,9 @@ export function VehiculoRCModal({ vehiculo, onGuardar, onCancelar }: Props) {
 								type="number"
 								min={0}
 								value={form.cilindrada ?? ""}
-								onChange={(e) => set("cilindrada", e.target.value ? parseInt(e.target.value) : undefined)}
+								onChange={(e) =>
+									set("cilindrada", e.target.value ? parseInt(e.target.value) : undefined)
+								}
 								placeholder="Ej: 12800"
 								className={errores.cilindrada ? "border-red-500" : ""}
 							/>
@@ -394,9 +391,7 @@ export function VehiculoRCModal({ vehiculo, onGuardar, onCancelar }: Props) {
 					<Button variant="outline" onClick={onCancelar}>
 						Cancelar
 					</Button>
-					<Button onClick={handleGuardar}>
-						{vehiculo ? "Guardar Cambios" : "Agregar Vehículo"}
-					</Button>
+					<Button onClick={handleGuardar}>{vehiculo ? "Guardar Cambios" : "Agregar Vehículo"}</Button>
 				</div>
 			</div>
 		</div>

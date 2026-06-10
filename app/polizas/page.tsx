@@ -2,23 +2,12 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import {
-	obtenerPolizas,
-	obtenerFiltrosPolizas,
-	type PolizaListItem,
-	type FiltrosPolizasData,
-} from "./actions";
+import { obtenerPolizas, obtenerFiltrosPolizas, type PolizaListItem, type FiltrosPolizasData } from "./actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
 	FileText,
 	Plus,
@@ -60,7 +49,10 @@ function SkeletonTable() {
 				<thead>
 					<tr className="border-b border-border">
 						{["Nº Póliza", "Ramo", "Cliente", "Compañía", "Vigencia", "Prima", "Estado", ""].map((h) => (
-							<th key={h} className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">
+							<th
+								key={h}
+								className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide"
+							>
 								{h}
 							</th>
 						))}
@@ -108,7 +100,9 @@ export default function PolizasPage() {
 	useEffect(() => {
 		if (searchTimer.current) clearTimeout(searchTimer.current);
 		searchTimer.current = setTimeout(() => setDebouncedSearch(searchQuery), 350);
-		return () => { if (searchTimer.current) clearTimeout(searchTimer.current); };
+		return () => {
+			if (searchTimer.current) clearTimeout(searchTimer.current);
+		};
 	}, [searchQuery]);
 
 	// Cargar opciones de filtros una sola vez
@@ -142,8 +136,17 @@ export default function PolizasPage() {
 			setIsLoading(false);
 		});
 
-		return () => { cancelled = true; };
-	}, [debouncedSearch, filters.ramo, filters.compania_id, filters.estado, filters.responsable_id, filters.categoria_id]);
+		return () => {
+			cancelled = true;
+		};
+	}, [
+		debouncedSearch,
+		filters.ramo,
+		filters.compania_id,
+		filters.estado,
+		filters.responsable_id,
+		filters.categoria_id,
+	]);
 
 	const handlePageChange = async (page: number) => {
 		setCurrentPage(page);
@@ -173,10 +176,8 @@ export default function PolizasPage() {
 		setFilters(DEFAULT_FILTERS);
 	};
 
-	const hasActiveFilters =
-		searchQuery.trim() !== "" || Object.values(filters).some((v) => v !== ALL);
-	const activeFilterCount =
-		Object.values(filters).filter((v) => v !== ALL).length + (searchQuery.trim() ? 1 : 0);
+	const hasActiveFilters = searchQuery.trim() !== "" || Object.values(filters).some((v) => v !== ALL);
+	const activeFilterCount = Object.values(filters).filter((v) => v !== ALL).length + (searchQuery.trim() ? 1 : 0);
 
 	const totalPages = Math.ceil(totalRecords / PAGE_SIZE);
 	const startIndex = (currentPage - 1) * PAGE_SIZE;
@@ -188,7 +189,6 @@ export default function PolizasPage() {
 
 	return (
 		<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-10 space-y-5">
-
 			{/* ── Page Header ─────────────────────────────────────────── */}
 			<div className="flex items-start justify-between">
 				<div>
@@ -197,8 +197,8 @@ export default function PolizasPage() {
 						{isLoading
 							? "Cargando…"
 							: totalRecords > 0
-							? `${totalRecords} pólizas encontradas`
-							: "Gestión de pólizas de seguros"}
+								? `${totalRecords} pólizas encontradas`
+								: "Gestión de pólizas de seguros"}
 					</p>
 				</div>
 				<div className="flex items-center gap-2 shrink-0">
@@ -211,11 +211,7 @@ export default function PolizasPage() {
 						<Plus className="h-4 w-4" />
 						Nuevo Anexo
 					</Button>
-					<Button
-						onClick={() => router.push("/polizas/nueva")}
-						size="sm"
-						className="cursor-pointer"
-					>
+					<Button onClick={() => router.push("/polizas/nueva")} size="sm" className="cursor-pointer">
 						<Plus className="h-4 w-4" />
 						Nueva Póliza
 					</Button>
@@ -259,7 +255,9 @@ export default function PolizasPage() {
 							<SelectContent>
 								<SelectItem value={ALL}>Todos los ramos</SelectItem>
 								{filtrosData.ramos.map((r) => (
-									<SelectItem key={r} value={r}>{r}</SelectItem>
+									<SelectItem key={r} value={r}>
+										{r}
+									</SelectItem>
 								))}
 							</SelectContent>
 						</Select>
@@ -274,7 +272,9 @@ export default function PolizasPage() {
 							<SelectContent>
 								<SelectItem value={ALL}>Todas las compañías</SelectItem>
 								{filtrosData.companias.map((c) => (
-									<SelectItem key={c.id} value={c.id}>{c.nombre}</SelectItem>
+									<SelectItem key={c.id} value={c.id}>
+										{c.nombre}
+									</SelectItem>
 								))}
 							</SelectContent>
 						</Select>
@@ -289,7 +289,9 @@ export default function PolizasPage() {
 							<SelectContent>
 								<SelectItem value={ALL}>Todos los estados</SelectItem>
 								{filtrosData.estados.map((e) => (
-									<SelectItem key={e} value={e} className="capitalize">{e}</SelectItem>
+									<SelectItem key={e} value={e} className="capitalize">
+										{e}
+									</SelectItem>
 								))}
 							</SelectContent>
 						</Select>
@@ -304,7 +306,9 @@ export default function PolizasPage() {
 							<SelectContent>
 								<SelectItem value={ALL}>Todos los ejecutivos</SelectItem>
 								{filtrosData.ejecutivos.map((e) => (
-									<SelectItem key={e.id} value={e.id}>{e.nombre}</SelectItem>
+									<SelectItem key={e.id} value={e.id}>
+										{e.nombre}
+									</SelectItem>
 								))}
 							</SelectContent>
 						</Select>
@@ -319,7 +323,9 @@ export default function PolizasPage() {
 							<SelectContent>
 								<SelectItem value={ALL}>Todas las categorías</SelectItem>
 								{filtrosData.categorias.map((c) => (
-									<SelectItem key={c.id} value={c.id}>{c.nombre}</SelectItem>
+									<SelectItem key={c.id} value={c.id}>
+										{c.nombre}
+									</SelectItem>
 								))}
 							</SelectContent>
 						</Select>
@@ -328,8 +334,7 @@ export default function PolizasPage() {
 						<div className="ml-auto text-xs text-muted-foreground">
 							{!isLoading && (
 								<>
-									<span className="font-medium text-foreground">{totalRecords}</span>
-									{" "}pólizas
+									<span className="font-medium text-foreground">{totalRecords}</span> pólizas
 								</>
 							)}
 						</div>
@@ -396,7 +401,8 @@ export default function PolizasPage() {
 							{searchQuery.trim() && (
 								<span className="inline-flex items-center gap-1 pl-2.5 pr-1 py-0.5 rounded-md text-xs font-medium bg-primary/8 text-primary border border-primary/20">
 									<Search className="h-3 w-3 shrink-0" />
-									&ldquo;{searchQuery.length > 20 ? searchQuery.slice(0, 20) + "…" : searchQuery}&rdquo;
+									&ldquo;{searchQuery.length > 20 ? searchQuery.slice(0, 20) + "…" : searchQuery}
+									&rdquo;
 									<button
 										onClick={() => setSearchQuery("")}
 										className="ml-0.5 p-0.5 rounded hover:bg-primary/15 transition-colors"
@@ -437,107 +443,131 @@ export default function PolizasPage() {
 					</CardContent>
 				) : (
 					<>
-					{/* Tabla desktop (md+) */}
-					<div className="overflow-x-auto hidden md:block">
-						<table className="w-full">
-							<thead>
-								<tr className="border-b border-border">
-									<th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Nº Póliza</th>
-									<th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Ramo</th>
-									<th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Cliente</th>
-									<th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Compañía</th>
-									<th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Vigencia</th>
-									<th className="px-4 py-2.5 text-right text-xs font-medium text-muted-foreground uppercase tracking-wide">Prima</th>
-									<th className="px-4 py-2.5 text-center text-xs font-medium text-muted-foreground uppercase tracking-wide">Estado</th>
-									<th className="w-8" />
-								</tr>
-							</thead>
-							<tbody className="divide-y divide-border">
-								{polizas.map((poliza) => (
-									<tr
-										key={poliza.id}
-										onClick={() => setSelectedPoliza(poliza)}
-										className="group hover:bg-muted/40 cursor-pointer transition-colors duration-100"
-									>
-										<td className="px-4 py-3">
-											<span className="text-sm font-medium text-foreground font-mono">
-												{poliza.numero_poliza}
-											</span>
-										</td>
-										<td className="px-4 py-3">
-											<span className="text-sm text-muted-foreground">{poliza.ramo}</span>
-										</td>
-										<td className="px-4 py-3">
-											<div className="text-sm font-medium text-foreground leading-tight">{poliza.client_name}</div>
-											<div className="text-xs text-muted-foreground mt-0.5">{poliza.client_ci}</div>
-										</td>
-										<td className="px-4 py-3">
-											<span className="text-sm text-muted-foreground truncate max-w-36 block">
-												{poliza.compania_nombre}
-											</span>
-										</td>
-										<td className="px-4 py-3">
-											<div className="text-sm text-foreground tabular-nums">{formatDate(poliza.inicio_vigencia)}</div>
-											<div className="text-xs text-muted-foreground mt-0.5 tabular-nums">{formatDate(poliza.fin_vigencia)}</div>
-										</td>
-										<td className="px-4 py-3 text-right">
-											<div className="text-sm font-medium text-foreground tabular-nums">
-												{formatCurrency(poliza.prima_total, poliza.moneda)}
-											</div>
-											<div className="text-xs text-muted-foreground mt-0.5 capitalize">{poliza.modalidad_pago}</div>
-										</td>
-										<td className="px-4 py-3">
-											<div className="flex justify-center">
-												<StatusBadge status={poliza.estado} />
-											</div>
-										</td>
-										<td className="pr-3 py-3">
-											<ChevronRight className="h-4 w-4 text-muted-foreground/40 group-hover:text-muted-foreground transition-colors" />
-										</td>
+						{/* Tabla desktop (md+) */}
+						<div className="overflow-x-auto hidden md:block">
+							<table className="w-full">
+								<thead>
+									<tr className="border-b border-border">
+										<th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">
+											Nº Póliza
+										</th>
+										<th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">
+											Ramo
+										</th>
+										<th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">
+											Cliente
+										</th>
+										<th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">
+											Compañía
+										</th>
+										<th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">
+											Vigencia
+										</th>
+										<th className="px-4 py-2.5 text-right text-xs font-medium text-muted-foreground uppercase tracking-wide">
+											Prima
+										</th>
+										<th className="px-4 py-2.5 text-center text-xs font-medium text-muted-foreground uppercase tracking-wide">
+											Estado
+										</th>
+										<th className="w-8" />
 									</tr>
-								))}
-							</tbody>
-						</table>
-					</div>
+								</thead>
+								<tbody className="divide-y divide-border">
+									{polizas.map((poliza) => (
+										<tr
+											key={poliza.id}
+											onClick={() => setSelectedPoliza(poliza)}
+											className="group hover:bg-muted/40 cursor-pointer transition-colors duration-100"
+										>
+											<td className="px-4 py-3">
+												<span className="text-sm font-medium text-foreground font-mono">
+													{poliza.numero_poliza}
+												</span>
+											</td>
+											<td className="px-4 py-3">
+												<span className="text-sm text-muted-foreground">{poliza.ramo}</span>
+											</td>
+											<td className="px-4 py-3">
+												<div className="text-sm font-medium text-foreground leading-tight">
+													{poliza.client_name}
+												</div>
+												<div className="text-xs text-muted-foreground mt-0.5">
+													{poliza.client_ci}
+												</div>
+											</td>
+											<td className="px-4 py-3">
+												<span className="text-sm text-muted-foreground truncate max-w-36 block">
+													{poliza.compania_nombre}
+												</span>
+											</td>
+											<td className="px-4 py-3">
+												<div className="text-sm text-foreground tabular-nums">
+													{formatDate(poliza.inicio_vigencia)}
+												</div>
+												<div className="text-xs text-muted-foreground mt-0.5 tabular-nums">
+													{formatDate(poliza.fin_vigencia)}
+												</div>
+											</td>
+											<td className="px-4 py-3 text-right">
+												<div className="text-sm font-medium text-foreground tabular-nums">
+													{formatCurrency(poliza.prima_total, poliza.moneda)}
+												</div>
+												<div className="text-xs text-muted-foreground mt-0.5 capitalize">
+													{poliza.modalidad_pago}
+												</div>
+											</td>
+											<td className="px-4 py-3">
+												<div className="flex justify-center">
+													<StatusBadge status={poliza.estado} />
+												</div>
+											</td>
+											<td className="pr-3 py-3">
+												<ChevronRight className="h-4 w-4 text-muted-foreground/40 group-hover:text-muted-foreground transition-colors" />
+											</td>
+										</tr>
+									))}
+								</tbody>
+							</table>
+						</div>
 
-					{/* Tarjetas movil (< md) */}
-					<div className="md:hidden divide-y divide-border">
-						{polizas.map((poliza) => (
-							<button
-								key={poliza.id}
-								onClick={() => setSelectedPoliza(poliza)}
-								className="w-full text-left px-4 py-3 hover:bg-muted/40 active:bg-muted/40 transition-colors"
-							>
-								<div className="flex items-start justify-between gap-3">
-									<div className="min-w-0">
-										<div className="text-sm font-medium text-foreground font-mono">
-											{poliza.numero_poliza}
+						{/* Tarjetas movil (< md) */}
+						<div className="md:hidden divide-y divide-border">
+							{polizas.map((poliza) => (
+								<button
+									key={poliza.id}
+									onClick={() => setSelectedPoliza(poliza)}
+									className="w-full text-left px-4 py-3 hover:bg-muted/40 active:bg-muted/40 transition-colors"
+								>
+									<div className="flex items-start justify-between gap-3">
+										<div className="min-w-0">
+											<div className="text-sm font-medium text-foreground font-mono">
+												{poliza.numero_poliza}
+											</div>
+											<div className="text-xs text-muted-foreground mt-0.5">{poliza.ramo}</div>
 										</div>
-										<div className="text-xs text-muted-foreground mt-0.5">{poliza.ramo}</div>
+										<StatusBadge status={poliza.estado} />
 									</div>
-									<StatusBadge status={poliza.estado} />
-								</div>
-								<div className="mt-2 space-y-0.5">
-									<div className="text-sm text-foreground leading-tight">
-										{poliza.client_name}
+									<div className="mt-2 space-y-0.5">
+										<div className="text-sm text-foreground leading-tight">
+											{poliza.client_name}
+										</div>
+										<div className="text-xs text-muted-foreground">{poliza.client_ci}</div>
 									</div>
-									<div className="text-xs text-muted-foreground">{poliza.client_ci}</div>
-								</div>
-								<div className="mt-2 flex items-center justify-between gap-3">
-									<span className="text-xs text-muted-foreground truncate">
-										{poliza.compania_nombre}
-									</span>
-									<span className="text-sm font-medium text-foreground tabular-nums shrink-0">
-										{formatCurrency(poliza.prima_total, poliza.moneda)}
-									</span>
-								</div>
-								<div className="mt-1 text-xs text-muted-foreground tabular-nums">
-									{formatDate(poliza.inicio_vigencia)} → {formatDate(poliza.fin_vigencia)}
-								</div>
-							</button>
-						))}
-					</div>
-				</>
+									<div className="mt-2 flex items-center justify-between gap-3">
+										<span className="text-xs text-muted-foreground truncate">
+											{poliza.compania_nombre}
+										</span>
+										<span className="text-sm font-medium text-foreground tabular-nums shrink-0">
+											{formatCurrency(poliza.prima_total, poliza.moneda)}
+										</span>
+									</div>
+									<div className="mt-1 text-xs text-muted-foreground tabular-nums">
+										{formatDate(poliza.inicio_vigencia)} → {formatDate(poliza.fin_vigencia)}
+									</div>
+								</button>
+							))}
+						</div>
+					</>
 				)}
 
 				{/* Pagination */}
@@ -604,7 +634,12 @@ export default function PolizasPage() {
 							</div>
 							<div className="flex items-center gap-3">
 								<StatusBadge status={selectedPoliza.estado} />
-								<Button variant="ghost" size="icon" onClick={() => setSelectedPoliza(null)} className="h-8 w-8">
+								<Button
+									variant="ghost"
+									size="icon"
+									onClick={() => setSelectedPoliza(null)}
+									className="h-8 w-8"
+								>
 									<X className="h-4 w-4" />
 								</Button>
 							</div>
@@ -637,7 +672,9 @@ export default function PolizasPage() {
 								</div>
 								<div className="space-y-0.5">
 									<p className="text-xs font-medium text-muted-foreground">Director de cartera</p>
-									<p className="text-sm text-foreground">{selectedPoliza.director_cartera_nombre || "—"}</p>
+									<p className="text-sm text-foreground">
+										{selectedPoliza.director_cartera_nombre || "—"}
+									</p>
 								</div>
 								<div className="space-y-0.5">
 									<p className="text-xs font-medium text-muted-foreground">Ejecutivo comercial</p>
@@ -664,14 +701,13 @@ export default function PolizasPage() {
 									<p className="text-lg font-semibold text-foreground tabular-nums">
 										{formatCurrency(selectedPoliza.prima_total, selectedPoliza.moneda)}
 									</p>
-									<p className="text-xs text-muted-foreground capitalize">{selectedPoliza.modalidad_pago}</p>
+									<p className="text-xs text-muted-foreground capitalize">
+										{selectedPoliza.modalidad_pago}
+									</p>
 								</div>
 							</div>
 							<div className="pt-1">
-								<Button
-									onClick={() => router.push(`/polizas/${selectedPoliza.id}`)}
-									className="w-full"
-								>
+								<Button onClick={() => router.push(`/polizas/${selectedPoliza.id}`)} className="w-full">
 									Ver detalles completos
 								</Button>
 							</div>

@@ -3,13 +3,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Download, AlertCircle, Info } from "lucide-react";
@@ -114,18 +108,12 @@ export default function ExportarReporte() {
 					responsable: row.responsable,
 					regional: row.regional,
 					prima_total: row.prima_total,
-					inicio_vigencia: row.inicio_vigencia
-						? formatearFecha(row.inicio_vigencia)
-						: "",
-					fin_vigencia: row.fin_vigencia
-						? formatearFecha(row.fin_vigencia)
-						: "",
+					inicio_vigencia: row.inicio_vigencia ? formatearFecha(row.inicio_vigencia) : "",
+					fin_vigencia: row.fin_vigencia ? formatearFecha(row.fin_vigencia) : "",
 					numero_cuota: row.numero_cuota,
 					monto_cuota: row.monto_cuota,
 					moneda: row.moneda,
-					fecha_vencimiento: row.fecha_vencimiento
-						? formatearFecha(row.fecha_vencimiento)
-						: "",
+					fecha_vencimiento: row.fecha_vencimiento ? formatearFecha(row.fecha_vencimiento) : "",
 					fecha_vencimiento_original: row.fecha_vencimiento_original
 						? formatearFecha(row.fecha_vencimiento_original)
 						: "-",
@@ -191,7 +179,14 @@ export default function ExportarReporte() {
 
 			// Generate filename
 			const fecha = new Date().toISOString().split("T")[0];
-			const periodoNombre = periodo === "today" ? "hoy" : periodo === "week" ? "semana" : periodo === "month" ? "mes" : "personalizado";
+			const periodoNombre =
+				periodo === "today"
+					? "hoy"
+					: periodo === "week"
+						? "semana"
+						: periodo === "month"
+							? "mes"
+							: "personalizado";
 			link.download = `cobranzas_${periodoNombre}_${fecha}.xlsx`;
 
 			// Trigger download
@@ -253,7 +248,10 @@ export default function ExportarReporte() {
 				{periodo !== "today" && (
 					<div className="space-y-2">
 						<Label>Filtrar por Fecha</Label>
-						<Select value={tipoFiltroFecha} onValueChange={(value) => setTipoFiltroFecha(value as TipoFiltroFecha | "ninguno")}>
+						<Select
+							value={tipoFiltroFecha}
+							onValueChange={(value) => setTipoFiltroFecha(value as TipoFiltroFecha | "ninguno")}
+						>
 							<SelectTrigger>
 								<SelectValue />
 							</SelectTrigger>
@@ -270,11 +268,7 @@ export default function ExportarReporte() {
 				{periodo === "custom" && (
 					<div className="space-y-2">
 						<Label>Desde</Label>
-						<Input
-							type="date"
-							value={fechaDesde}
-							onChange={(e) => setFechaDesde(e.target.value)}
-						/>
+						<Input type="date" value={fechaDesde} onChange={(e) => setFechaDesde(e.target.value)} />
 					</div>
 				)}
 
@@ -282,11 +276,7 @@ export default function ExportarReporte() {
 				{periodo === "custom" && (
 					<div className="space-y-2">
 						<Label>Hasta</Label>
-						<Input
-							type="date"
-							value={fechaHasta}
-							onChange={(e) => setFechaHasta(e.target.value)}
-						/>
+						<Input type="date" value={fechaHasta} onChange={(e) => setFechaHasta(e.target.value)} />
 					</div>
 				)}
 			</div>
@@ -371,7 +361,8 @@ export default function ExportarReporte() {
 				<Alert>
 					<Info className="h-4 w-4" />
 					<AlertDescription>
-						Sin filtro de fecha: Se exportarán TODAS las cuotas según el estado seleccionado, incluyendo pólizas nuevas con cuotas futuras.
+						Sin filtro de fecha: Se exportarán TODAS las cuotas según el estado seleccionado, incluyendo
+						pólizas nuevas con cuotas futuras.
 					</AlertDescription>
 				</Alert>
 			)}

@@ -209,9 +209,13 @@ export default function AnexosPendientesTable({ anexos: initialAnexos }: Props) 
 							<div className="flex items-start justify-between gap-3">
 								<div className="min-w-0">
 									<div className="font-medium text-sm text-foreground">{anexo.numero_anexo}</div>
-									<div className="text-xs text-muted-foreground mt-0.5">Poliza {anexo.numero_poliza} · {anexo.ramo}</div>
+									<div className="text-xs text-muted-foreground mt-0.5">
+										Poliza {anexo.numero_poliza} · {anexo.ramo}
+									</div>
 								</div>
-								<Badge variant="outline" className={`${tipoBadge.className} shrink-0`}>{tipoBadge.label}</Badge>
+								<Badge variant="outline" className={`${tipoBadge.className} shrink-0`}>
+									{tipoBadge.label}
+								</Badge>
 							</div>
 							<div className="mt-2 flex items-center justify-between gap-3">
 								<div className="text-xs text-muted-foreground">
@@ -220,9 +224,15 @@ export default function AnexosPendientesTable({ anexos: initialAnexos }: Props) 
 								</div>
 								<div className="text-sm font-medium tabular-nums">
 									{anexo.monto_ajuste_total !== 0 ? (
-										<span className={anexo.monto_ajuste_total >= 0 ? "text-accent" : "text-destructive"}>
+										<span
+											className={
+												anexo.monto_ajuste_total >= 0 ? "text-accent" : "text-destructive"
+											}
+										>
 											{anexo.monto_ajuste_total >= 0 ? "+" : ""}
-											{anexo.monto_ajuste_total.toLocaleString("es-BO", { minimumFractionDigits: 2 })}
+											{anexo.monto_ajuste_total.toLocaleString("es-BO", {
+												minimumFractionDigits: 2,
+											})}
 										</span>
 									) : (
 										<span className="text-muted-foreground">-</span>
@@ -245,7 +255,13 @@ export default function AnexosPendientesTable({ anexos: initialAnexos }: Props) 
 									disabled={isLoading}
 									onClick={() => openDialog(anexo, "validar")}
 								>
-									{isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <><CheckCircle className="h-4 w-4 mr-1" /> Validar</>}
+									{isLoading ? (
+										<Loader2 className="h-4 w-4 animate-spin" />
+									) : (
+										<>
+											<CheckCircle className="h-4 w-4 mr-1" /> Validar
+										</>
+									)}
 								</Button>
 								<Button
 									variant="outline"

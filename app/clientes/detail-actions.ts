@@ -2,7 +2,14 @@
 
 import { createClient } from "@/utils/supabase/server";
 import type { ClienteDocumento } from "@/types/clienteDocumento";
-import type { NaturalClient, JuridicClient, UnipersonalClient, OngClient, ClubClient, AsociacionCivilClient } from "@/types/database/client";
+import type {
+	NaturalClient,
+	JuridicClient,
+	UnipersonalClient,
+	OngClient,
+	ClubClient,
+	AsociacionCivilClient,
+} from "@/types/database/client";
 import type { ExtraPhone } from "@/types/clientForm";
 
 // Database types for partner and legal representatives
@@ -105,9 +112,7 @@ export type ActionResult<T> = {
 /**
  * Get complete client details including all related data
  */
-export async function getClientDetailsComplete(
-	clientId: string
-): Promise<ActionResult<ClienteDetalleCompleto>> {
+export async function getClientDetailsComplete(clientId: string): Promise<ActionResult<ClienteDetalleCompleto>> {
 	try {
 		const supabase = await createClient();
 
@@ -141,7 +146,7 @@ export async function getClientDetailsComplete(
           full_name,
           email
         )
-      `
+      `,
 			)
 			.eq("id", clientId)
 			.single();
@@ -157,28 +162,28 @@ export async function getClientDetailsComplete(
 
 		// Handle Supabase returning either object or array for 1:1 relationships
 		const naturalData = Array.isArray(clientData.natural_clients)
-			? clientData.natural_clients[0] ?? null
-			: clientData.natural_clients ?? null;
+			? (clientData.natural_clients[0] ?? null)
+			: (clientData.natural_clients ?? null);
 
 		const juridicData = Array.isArray(clientData.juridic_clients)
-			? clientData.juridic_clients[0] ?? null
-			: clientData.juridic_clients ?? null;
+			? (clientData.juridic_clients[0] ?? null)
+			: (clientData.juridic_clients ?? null);
 
 		const unipersonalData = Array.isArray(clientData.unipersonal_clients)
-			? clientData.unipersonal_clients[0] ?? null
-			: clientData.unipersonal_clients ?? null;
+			? (clientData.unipersonal_clients[0] ?? null)
+			: (clientData.unipersonal_clients ?? null);
 
 		const ongData = Array.isArray(clientData.ong_clients)
-			? clientData.ong_clients[0] ?? null
-			: clientData.ong_clients ?? null;
+			? (clientData.ong_clients[0] ?? null)
+			: (clientData.ong_clients ?? null);
 
 		const clubData = Array.isArray(clientData.club_clients)
-			? clientData.club_clients[0] ?? null
-			: clientData.club_clients ?? null;
+			? (clientData.club_clients[0] ?? null)
+			: (clientData.club_clients ?? null);
 
 		const asociacionCivilData = Array.isArray(clientData.asociacion_civil_clients)
-			? clientData.asociacion_civil_clients[0] ?? null
-			: clientData.asociacion_civil_clients ?? null;
+			? (clientData.asociacion_civil_clients[0] ?? null)
+			: (clientData.asociacion_civil_clients ?? null);
 
 		console.log("[getClientDetailsComplete] Client data loaded:", {
 			id: clientData.id,
@@ -254,7 +259,7 @@ export async function getClientDetailsComplete(
         prima_total,
         moneda,
         companias_aseguradoras:compania_aseguradora_id (nombre)
-      `
+      `,
 			)
 			.eq("client_id", clientId)
 			.order("created_at", { ascending: false });
@@ -268,14 +273,14 @@ export async function getClientDetailsComplete(
 		const normalizedPolicies: PolicyData[] = (policies || []).map((policy) => ({
 			...policy,
 			companias_aseguradoras: Array.isArray(policy.companias_aseguradoras)
-				? policy.companias_aseguradoras[0] ?? null
-				: policy.companias_aseguradoras ?? null,
+				? (policy.companias_aseguradoras[0] ?? null)
+				: (policy.companias_aseguradoras ?? null),
 		}));
 
 		// Build result
 		const commercialOwnerData = Array.isArray(clientData.commercial_owner)
-			? clientData.commercial_owner[0] ?? null
-			: clientData.commercial_owner ?? null;
+			? (clientData.commercial_owner[0] ?? null)
+			: (clientData.commercial_owner ?? null);
 
 		const result: ClienteDetalleCompleto = {
 			id: clientData.id,

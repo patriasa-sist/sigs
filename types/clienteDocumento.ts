@@ -107,11 +107,45 @@ export type TipoDocumentoCliente = keyof typeof ALL_DOCUMENT_TYPES;
  */
 export const REQUIRED_DOCUMENTS = {
 	natural: ["documento_identidad", "certificacion_pep", "carta_nombramiento", "formulario_kyc"] as const,
-	unipersonal: ["documento_identidad", "certificacion_pep", "carta_nombramiento", "formulario_kyc", "nit", "matricula_comercio"] as const,
-	juridica: ["nit", "matricula_comercio", "testimonio_constitucion", "balance_estado_resultados", "poder_representacion", "documento_identidad_representante", "ci_representante_anverso", "certificacion_pep", "carta_nombramiento", "formulario_kyc"] as const,
-	ong: ["acreditacion_resolucion", "poder_representante_mae", "ci_representante_mae", "formulario_registro_ong"] as const,
-	club: ["registro_existencia_legal", "estatutos_o_reglamento", "ci_representante_club", "poder_representante_club", "formulario_d_club"] as const,
-	asociacion_civil: ["testimonio_constitucion_asociacion", "resolucion_personeria_juridica", "poder_representante_asociacion", "ci_representante_asociacion"] as const,
+	unipersonal: [
+		"documento_identidad",
+		"certificacion_pep",
+		"carta_nombramiento",
+		"formulario_kyc",
+		"nit",
+		"matricula_comercio",
+	] as const,
+	juridica: [
+		"nit",
+		"matricula_comercio",
+		"testimonio_constitucion",
+		"balance_estado_resultados",
+		"poder_representacion",
+		"documento_identidad_representante",
+		"ci_representante_anverso",
+		"certificacion_pep",
+		"carta_nombramiento",
+		"formulario_kyc",
+	] as const,
+	ong: [
+		"acreditacion_resolucion",
+		"poder_representante_mae",
+		"ci_representante_mae",
+		"formulario_registro_ong",
+	] as const,
+	club: [
+		"registro_existencia_legal",
+		"estatutos_o_reglamento",
+		"ci_representante_club",
+		"poder_representante_club",
+		"formulario_d_club",
+	] as const,
+	asociacion_civil: [
+		"testimonio_constitucion_asociacion",
+		"resolucion_personeria_juridica",
+		"poder_representante_asociacion",
+		"ci_representante_asociacion",
+	] as const,
 } as const;
 
 /**
@@ -123,7 +157,9 @@ export const NON_EXCEPTABLE_DOCUMENTS: readonly TipoDocumentoCliente[] = [] as c
 /**
  * Get document types for a specific client type
  */
-export function getDocumentTypesForClientType(clientType: "natural" | "unipersonal" | "juridica" | "ong" | "club" | "asociacion_civil") {
+export function getDocumentTypesForClientType(
+	clientType: "natural" | "unipersonal" | "juridica" | "ong" | "club" | "asociacion_civil",
+) {
 	switch (clientType) {
 		case "natural":
 			return NATURAL_DOCUMENT_TYPES;
@@ -147,7 +183,7 @@ export function getDocumentTypesForClientType(clientType: "natural" | "uniperson
  */
 export function isDocumentRequired(
 	documentType: TipoDocumentoCliente,
-	clientType: "natural" | "unipersonal" | "juridica" | "ong" | "club" | "asociacion_civil"
+	clientType: "natural" | "unipersonal" | "juridica" | "ong" | "club" | "asociacion_civil",
 ): boolean {
 	const required = REQUIRED_DOCUMENTS[clientType] as readonly string[];
 	return required.includes(documentType);
@@ -400,7 +436,7 @@ export type DocumentValidationResult = {
 export function validateClientDocuments(
 	uploadedDocuments: ClienteDocumentoFormState[],
 	clientType: "natural" | "unipersonal" | "juridica" | "ong" | "club" | "asociacion_civil",
-	exceptions: TipoDocumentoCliente[] = []
+	exceptions: TipoDocumentoCliente[] = [],
 ): DocumentValidationResult {
 	const allRequired = REQUIRED_DOCUMENTS[clientType];
 	const uploadedTypes = uploadedDocuments.map((d) => d.tipo_documento);
@@ -409,7 +445,7 @@ export function validateClientDocuments(
 	const effectiveRequired = allRequired.filter(
 		(docType) =>
 			NON_EXCEPTABLE_DOCUMENTS.includes(docType as TipoDocumentoCliente) ||
-			!exceptions.includes(docType as TipoDocumentoCliente)
+			!exceptions.includes(docType as TipoDocumentoCliente),
 	);
 
 	const missingDocuments = effectiveRequired.filter((docType) => !uploadedTypes.includes(docType));
@@ -431,7 +467,9 @@ export function isDocumentExceptable(documentType: TipoDocumentoCliente): boolea
 /**
  * Get exceptable document types for a client type (excludes NON_EXCEPTABLE)
  */
-export function getExceptableDocuments(clientType: "natural" | "unipersonal" | "juridica" | "ong" | "club" | "asociacion_civil"): TipoDocumentoCliente[] {
+export function getExceptableDocuments(
+	clientType: "natural" | "unipersonal" | "juridica" | "ong" | "club" | "asociacion_civil",
+): TipoDocumentoCliente[] {
 	const allDocs = Object.keys(getDocumentTypesForClientType(clientType)) as TipoDocumentoCliente[];
 	return allDocs.filter((doc) => isDocumentExceptable(doc));
 }

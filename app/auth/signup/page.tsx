@@ -28,7 +28,10 @@ const passwordSchema = z
 const formSchema = z
 	.object({
 		email: z.email("Formato de correo inválido."),
-		fullName: z.string().min(2, "El nombre debe tener al menos 2 caracteres.").max(100, "El nombre es demasiado largo."),
+		fullName: z
+			.string()
+			.min(2, "El nombre debe tener al menos 2 caracteres.")
+			.max(100, "El nombre es demasiado largo."),
 		password: passwordSchema,
 		confirmPassword: passwordSchema,
 	})
@@ -66,7 +69,9 @@ function BrandPanel() {
 					<span className="text-xs text-white/70 font-medium tracking-wide">Uso exclusivo interno</span>
 				</div>
 				<h2 className="text-3xl font-semibold text-white leading-snug tracking-tight">
-					Configura tu<br />acceso al sistema
+					Configura tu
+					<br />
+					acceso al sistema
 				</h2>
 				<p className="text-white/50 text-sm leading-relaxed max-w-xs">
 					Sigue las instrucciones para establecer tu contraseña y completar el registro de tu cuenta.
@@ -74,9 +79,7 @@ function BrandPanel() {
 			</div>
 
 			{/* Bottom: version */}
-			<p className="text-white/30 text-xs">
-				Patria S.A. · Acceso restringido
-			</p>
+			<p className="text-white/30 text-xs">Patria S.A. · Acceso restringido</p>
 		</div>
 	);
 }
@@ -86,9 +89,7 @@ function PageShell({ children }: { children: React.ReactNode }) {
 	return (
 		<div className="flex h-screen overflow-hidden">
 			<BrandPanel />
-			<div className="flex-1 flex items-center justify-center bg-background px-6 py-10">
-				{children}
-			</div>
+			<div className="flex-1 flex items-center justify-center bg-background px-6 py-10">{children}</div>
 		</div>
 	);
 }
@@ -99,8 +100,13 @@ function LoadingState() {
 		<PageShell>
 			<div className="w-full max-w-sm space-y-6">
 				<div className="lg:hidden flex justify-center">
-					<Image src="/patria-horizontal.png" alt="Patria S.A." width={180} height={46}
-						style={{ height: "2.75rem", width: "auto" }} />
+					<Image
+						src="/patria-horizontal.png"
+						alt="Patria S.A."
+						width={180}
+						height={46}
+						style={{ height: "2.75rem", width: "auto" }}
+					/>
 				</div>
 				<div className="flex flex-col items-center gap-3 text-center">
 					<Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -117,15 +123,18 @@ function InvalidInviteState({ onGoToLogin }: { onGoToLogin: () => void }) {
 		<PageShell>
 			<div className="w-full max-w-sm space-y-6">
 				<div className="lg:hidden flex justify-center">
-					<Image src="/patria-horizontal.png" alt="Patria S.A." width={180} height={46}
-						style={{ height: "2.75rem", width: "auto" }} />
+					<Image
+						src="/patria-horizontal.png"
+						alt="Patria S.A."
+						width={180}
+						height={46}
+						style={{ height: "2.75rem", width: "auto" }}
+					/>
 				</div>
 
 				<div className="space-y-1">
 					<h1 className="text-xl font-semibold text-foreground">Enlace inválido</h1>
-					<p className="text-sm text-muted-foreground">
-						No se pudo verificar la invitación.
-					</p>
+					<p className="text-sm text-muted-foreground">No se pudo verificar la invitación.</p>
 				</div>
 
 				<Card>
@@ -135,7 +144,8 @@ function InvalidInviteState({ onGoToLogin }: { onGoToLogin: () => void }) {
 							<div className="space-y-1">
 								<p className="text-sm font-medium text-destructive">Invitación no válida</p>
 								<p className="text-xs text-muted-foreground">
-									Este enlace de invitación es inválido, ha expirado o ya fue utilizado. Contacta al administrador del sistema para obtener una nueva invitación.
+									Este enlace de invitación es inválido, ha expirado o ya fue utilizado. Contacta al
+									administrador del sistema para obtener una nueva invitación.
 								</p>
 							</div>
 						</div>
@@ -223,7 +233,10 @@ function SignUpContent() {
 
 			if (error) {
 				// If password was already set on a prior attempt, treat as success
-				if (error.message?.toLowerCase().includes("same password") || error.message?.toLowerCase().includes("different from")) {
+				if (
+					error.message?.toLowerCase().includes("same password") ||
+					error.message?.toLowerCase().includes("different from")
+				) {
 					setIsSuccess(true);
 					return;
 				}
@@ -233,9 +246,7 @@ function SignUpContent() {
 			// Non-critical cleanup — each step isolated so it can't block success
 			if (data?.user) {
 				try {
-					await supabase.from("profiles")
-						.update({ full_name: values.fullName })
-						.eq("id", data.user.id);
+					await supabase.from("profiles").update({ full_name: values.fullName }).eq("id", data.user.id);
 				} catch (e) {
 					console.error("Profile update failed:", e);
 				}
@@ -258,7 +269,8 @@ function SignUpContent() {
 			setIsSuccess(true);
 		} catch (err: unknown) {
 			console.error("Failed to set password", err);
-			const errorMessage = err instanceof Error ? err.message : "Error al establecer la contraseña. Inténtalo de nuevo.";
+			const errorMessage =
+				err instanceof Error ? err.message : "Error al establecer la contraseña. Inténtalo de nuevo.";
 			toast.error(errorMessage);
 		} finally {
 			setIsSubmitting(false);
@@ -268,47 +280,63 @@ function SignUpContent() {
 	if (isLoading) return <LoadingState />;
 	if (!isValidInvite) return <InvalidInviteState onGoToLogin={() => router.push("/auth/login")} />;
 
-	if (isSuccess) return (
-		<PageShell>
-			<div className="w-full max-w-sm space-y-6">
-				<div className="lg:hidden flex justify-center">
-					<Image src="/patria-horizontal.png" alt="Patria S.A." width={180} height={46}
-						style={{ height: "2.75rem", width: "auto" }} />
-				</div>
-				<div className="space-y-1">
-					<h1 className="text-xl font-semibold text-foreground">¡Cuenta activada!</h1>
-					<p className="text-sm text-muted-foreground">
-						Tu contraseña fue configurada exitosamente.
-					</p>
-				</div>
-				<Card>
-					<CardContent className="p-6 space-y-4">
-						<div className="flex items-start gap-3 rounded-md border border-green-600/30 bg-green-50 dark:bg-green-950/30 px-4 py-3">
-							<CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5 shrink-0" />
-							<div className="space-y-1">
-								<p className="text-sm font-medium text-green-700 dark:text-green-400">Registro completo</p>
-								<p className="text-xs text-muted-foreground">
-									Ya puedes ingresar al sistema con tu correo y la contraseña que acabas de configurar.
-								</p>
+	if (isSuccess)
+		return (
+			<PageShell>
+				<div className="w-full max-w-sm space-y-6">
+					<div className="lg:hidden flex justify-center">
+						<Image
+							src="/patria-horizontal.png"
+							alt="Patria S.A."
+							width={180}
+							height={46}
+							style={{ height: "2.75rem", width: "auto" }}
+						/>
+					</div>
+					<div className="space-y-1">
+						<h1 className="text-xl font-semibold text-foreground">¡Cuenta activada!</h1>
+						<p className="text-sm text-muted-foreground">Tu contraseña fue configurada exitosamente.</p>
+					</div>
+					<Card>
+						<CardContent className="p-6 space-y-4">
+							<div className="flex items-start gap-3 rounded-md border border-green-600/30 bg-green-50 dark:bg-green-950/30 px-4 py-3">
+								<CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5 shrink-0" />
+								<div className="space-y-1">
+									<p className="text-sm font-medium text-green-700 dark:text-green-400">
+										Registro completo
+									</p>
+									<p className="text-xs text-muted-foreground">
+										Ya puedes ingresar al sistema con tu correo y la contraseña que acabas de
+										configurar.
+									</p>
+								</div>
 							</div>
-						</div>
-						<Button className="w-full" onClick={() => { window.location.href = "/auth/login"; }}>
-							Ir al inicio de sesión
-						</Button>
-					</CardContent>
-				</Card>
-			</div>
-		</PageShell>
-	);
+							<Button
+								className="w-full"
+								onClick={() => {
+									window.location.href = "/auth/login";
+								}}
+							>
+								Ir al inicio de sesión
+							</Button>
+						</CardContent>
+					</Card>
+				</div>
+			</PageShell>
+		);
 
 	return (
 		<PageShell>
 			<div className="w-full max-w-sm space-y-6">
-
 				{/* Mobile-only logo */}
 				<div className="lg:hidden flex justify-center">
-					<Image src="/patria-horizontal.png" alt="Patria S.A." width={180} height={46}
-						style={{ height: "2.75rem", width: "auto" }} />
+					<Image
+						src="/patria-horizontal.png"
+						alt="Patria S.A."
+						width={180}
+						height={46}
+						style={{ height: "2.75rem", width: "auto" }}
+					/>
 				</div>
 
 				{/* Heading */}
@@ -324,7 +352,6 @@ function SignUpContent() {
 					<CardContent className="p-6">
 						<Form {...form}>
 							<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
-
 								{/* Email (read-only) */}
 								<FormField
 									control={form.control}
@@ -415,12 +442,10 @@ function SignUpContent() {
 										</>
 									)}
 								</Button>
-
 							</form>
 						</Form>
 					</CardContent>
 				</Card>
-
 			</div>
 		</PageShell>
 	);

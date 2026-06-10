@@ -60,7 +60,7 @@ export default function CoberturaSelector({
 				nombre: cobertura.nombre,
 				descripcion: cobertura.descripcion,
 			},
-			checked
+			checked,
 		);
 	};
 
@@ -109,7 +109,9 @@ export default function CoberturaSelector({
 											{cobertura.nombre}
 										</Label>
 										{cobertura.descripcion && (
-											<p className="text-sm text-muted-foreground mt-1">{cobertura.descripcion}</p>
+											<p className="text-sm text-muted-foreground mt-1">
+												{cobertura.descripcion}
+											</p>
 										)}
 									</div>
 								</div>

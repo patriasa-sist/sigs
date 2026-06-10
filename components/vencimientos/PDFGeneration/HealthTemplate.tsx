@@ -149,7 +149,7 @@ export const HealthTemplate: React.FC<HealthTemplateProps> = ({ letterData, firm
 									<Text style={healthStyles.cellText}>
 										{formatMonetaryValue(
 											policy.manualFields?.insuredValue,
-											policy.manualFields?.insuredValueCurrency
+											policy.manualFields?.insuredValueCurrency,
 										)}
 									</Text>
 								</View>
@@ -166,12 +166,12 @@ export const HealthTemplate: React.FC<HealthTemplateProps> = ({ letterData, firm
 												• {member.name.toUpperCase()} -{" "}
 												{formatBeneficiaryType(member.beneficiaryType)}
 											</Text>
-									  ))
+										))
 									: legacyMembers.map((member, memberIndex) => (
 											<Text key={memberIndex} style={healthStyles.aseguradoName}>
 												• {member.toUpperCase()}
 											</Text>
-									  ))}
+										))}
 							</View>
 						)}
 					</View>

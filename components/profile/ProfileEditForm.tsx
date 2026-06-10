@@ -49,9 +49,7 @@ export function ProfileEditForm({ initialData }: ProfileEditFormProps) {
 						className="uppercase h-10 bg-card font-mono tracking-widest"
 						style={{ textTransform: "uppercase" }}
 					/>
-					<p className="text-xs text-muted-foreground">
-						Máx. 5 letras · se usa en firmas PDF
-					</p>
+					<p className="text-xs text-muted-foreground">Máx. 5 letras · se usa en firmas PDF</p>
 				</div>
 
 				{/* Cargo */}

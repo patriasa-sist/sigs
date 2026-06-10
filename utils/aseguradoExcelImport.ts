@@ -10,17 +10,20 @@ export interface AseguradoImportResult {
 const COLUMNAS_ESPERADAS = {
 	nombre_completo: ["nombre completo", "nombre", "name", "nombre_completo", "nombres y apellidos", "nombres"],
 	carnet: ["carnet", "ci", "carnet de identidad", "cedula", "cedula de identidad", "documento", "id"],
-	fecha_nacimiento: ["fecha nacimiento", "fecha de nacimiento", "fecha_nacimiento", "nacimiento", "birth date", "birthdate"],
+	fecha_nacimiento: [
+		"fecha nacimiento",
+		"fecha de nacimiento",
+		"fecha_nacimiento",
+		"nacimiento",
+		"birth date",
+		"birthdate",
+	],
 	genero: ["genero", "genero", "gender", "sexo"],
 	nivel: ["nivel", "nivel de cobertura", "cobertura", "nivel_cobertura", "level"],
 };
 
 function normalizarNombreColumna(nombre: string): string {
-	return nombre
-		.toLowerCase()
-		.trim()
-		.normalize("NFD")
-		.replace(/[̀-ͯ]/g, "");
+	return nombre.toLowerCase().trim().normalize("NFD").replace(/[̀-ͯ]/g, "");
 }
 
 function mapearColumnas(headers: string[]): Record<string, number> {
@@ -66,11 +69,7 @@ function parsearFecha(valor: unknown): string | undefined {
 
 function parsearGenero(valor: unknown): "M" | "F" | "Otro" | undefined {
 	if (valor === null || valor === undefined || valor === "") return undefined;
-	const str = String(valor)
-		.trim()
-		.toLowerCase()
-		.normalize("NFD")
-		.replace(/[̀-ͯ]/g, "");
+	const str = String(valor).trim().toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
 	if (["m", "masculino", "male", "hombre"].includes(str)) return "M";
 	if (["f", "femenino", "female", "mujer"].includes(str)) return "F";
 	if (str) return "Otro";
@@ -82,18 +81,8 @@ function resolverNivelId(valorNivel: unknown, niveles: NivelCobertura[]): string
 	if (valorNivel === null || valorNivel === undefined || String(valorNivel).trim() === "") {
 		return niveles[0].id;
 	}
-	const str = String(valorNivel)
-		.trim()
-		.toLowerCase()
-		.normalize("NFD")
-		.replace(/[̀-ͯ]/g, "");
-	const encontrado = niveles.find(
-		(n) =>
-			n.nombre
-				.toLowerCase()
-				.normalize("NFD")
-				.replace(/[̀-ͯ]/g, "") === str,
-	);
+	const str = String(valorNivel).trim().toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+	const encontrado = niveles.find((n) => n.nombre.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "") === str);
 	return encontrado ? encontrado.id : niveles[0].id;
 }
 
@@ -170,9 +159,11 @@ export async function importarAseguradosDesdeExcel(
 
 			const parcial: Partial<AseguradoAPVida> = {
 				id: crypto.randomUUID(),
-				nombre_completo: mapa.nombre_completo !== undefined ? convertirAString(valores[mapa.nombre_completo]) || "" : "",
+				nombre_completo:
+					mapa.nombre_completo !== undefined ? convertirAString(valores[mapa.nombre_completo]) || "" : "",
 				carnet: mapa.carnet !== undefined ? convertirAString(valores[mapa.carnet]) || "" : "",
-				fecha_nacimiento: mapa.fecha_nacimiento !== undefined ? parsearFecha(valores[mapa.fecha_nacimiento]) : undefined,
+				fecha_nacimiento:
+					mapa.fecha_nacimiento !== undefined ? parsearFecha(valores[mapa.fecha_nacimiento]) : undefined,
 				genero: mapa.genero !== undefined ? parsearGenero(valores[mapa.genero]) : undefined,
 				nivel_id: resolverNivelId(mapa.nivel !== undefined ? valores[mapa.nivel] : undefined, niveles),
 			};
@@ -194,7 +185,9 @@ export async function importarAseguradosDesdeExcel(
 			errores: [
 				{
 					fila: 0,
-					errores: [`Error procesando archivo: ${error instanceof Error ? error.message : "Error desconocido"}`],
+					errores: [
+						`Error procesando archivo: ${error instanceof Error ? error.message : "Error desconocido"}`,
+					],
 				},
 			],
 		};
@@ -202,18 +195,11 @@ export async function importarAseguradosDesdeExcel(
 }
 
 export async function generarTemplateAseguradosExcel(niveles: NivelCobertura[]): Promise<void> {
-	const nivelesLabel =
-		niveles.length > 0 ? `Nivel (${niveles.map((n) => n.nombre).join(" | ")})` : "Nivel";
+	const nivelesLabel = niveles.length > 0 ? `Nivel (${niveles.map((n) => n.nombre).join(" | ")})` : "Nivel";
 
 	const headers = ["Nombre Completo", "Carnet de Identidad", "Fecha de Nacimiento", "Género", nivelesLabel];
 
-	const ejemploFila = [
-		"Juan Carlos Pérez López",
-		"1234567 LP",
-		"01/01/1990",
-		"M",
-		niveles[0]?.nombre || "Nivel 1",
-	];
+	const ejemploFila = ["Juan Carlos Pérez López", "1234567 LP", "01/01/1990", "M", niveles[0]?.nombre || "Nivel 1"];
 
 	const workbook = new ExcelJS.Workbook();
 	const worksheet = workbook.addWorksheet("Asegurados");

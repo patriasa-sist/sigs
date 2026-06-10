@@ -172,8 +172,8 @@ export const BaseTemplate: React.FC<BaseTemplateProps> = ({ letterData, firmante
 						{letterData.client.name.includes("SRL") || letterData.client.name.includes("S.A.")
 							? "Señores"
 							: letterData.client.name.includes("BETTY")
-							? "Señor/a"
-							: "Señor/a"}
+								? "Señor/a"
+								: "Señor/a"}
 					</Text>
 					<Text style={styles.clientName}>{letterData.client.name.toUpperCase()}</Text>
 					{letterData.client.phone && (

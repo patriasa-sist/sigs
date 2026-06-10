@@ -57,9 +57,8 @@ export default function UltimoCambioSiniestro({ historial, onVerHistorialComplet
 					)}
 
 					<p className="text-xs text-muted-foreground mt-1">
-						Por: {ultimoCambio.usuario_nombre || "Sistema"} •{" "}
-						{formatFechaLaPaz(ultimoCambio.created_at)} a las{" "}
-						{formatHoraLaPaz(ultimoCambio.created_at)}
+						Por: {ultimoCambio.usuario_nombre || "Sistema"} • {formatFechaLaPaz(ultimoCambio.created_at)} a
+						las {formatHoraLaPaz(ultimoCambio.created_at)}
 					</p>
 				</div>
 

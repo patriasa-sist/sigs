@@ -18,7 +18,8 @@ export default async function AdminAnexosPage() {
 				<div>
 					<h1 className="text-3xl font-bold text-gray-900">Eliminar Anexos</h1>
 					<p className="text-gray-500">
-						Reversión de anexos creados por error. Si el anexo es una anulación validada, la póliza se reactiva automáticamente.
+						Reversión de anexos creados por error. Si el anexo es una anulación validada, la póliza se
+						reactiva automáticamente.
 					</p>
 				</div>
 			</div>
@@ -29,7 +30,9 @@ export default async function AdminAnexosPage() {
 				</CardHeader>
 				<CardContent className="text-sm text-destructive/90 space-y-1">
 					<p>• La eliminación borra el anexo, sus pagos, documentos y archivos físicos en Storage.</p>
-					<p>• Si el anexo es una anulación activa, la póliza vuelve al estado <strong>activa</strong>.</p>
+					<p>
+						• Si el anexo es una anulación activa, la póliza vuelve al estado <strong>activa</strong>.
+					</p>
 					<p>• La operación queda registrada en el historial de la póliza con tu usuario y el motivo.</p>
 					<p>• No hay deshacer — verificá bien antes de confirmar.</p>
 				</CardContent>

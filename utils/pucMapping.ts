@@ -120,7 +120,7 @@ export async function fetchRamoMappingData(): Promise<RamoMappingData[]> {
 			result
 				.slice(0, 5)
 				.map((r) => r.codigo)
-				.join(", ")
+				.join(", "),
 		);
 
 		return result;
@@ -188,7 +188,7 @@ export function mapPUCToRamo(puc: string, ramoMappingData: RamoMappingData[]): s
 			.map((r) => r.codigo)
 			.slice(0, 10)
 			.join(", "),
-		"..."
+		"...",
 	);
 	return null;
 }

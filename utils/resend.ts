@@ -138,9 +138,7 @@ export interface EnvioDocumentosIncorrectosParams {
 	notas?: string | null;
 }
 
-export async function enviarEmailDocumentosIncorrectos(
-	params: EnvioDocumentosIncorrectosParams
-): Promise<void> {
+export async function enviarEmailDocumentosIncorrectos(params: EnvioDocumentosIncorrectosParams): Promise<void> {
 	const { destinatario, cliente, auditor, documentosIncorrectos, documentosFaltantes, notas } = params;
 
 	const incorrectosHtml = documentosIncorrectos.length
@@ -149,7 +147,7 @@ export async function enviarEmailDocumentosIncorrectos(
 					(d) =>
 						`<li style="margin-bottom:4px;"><strong>${d.label}</strong>${
 							d.nota ? ` — ${d.nota}` : ""
-						}</li>`
+						}</li>`,
 				)
 				.join("")}</ul>`
 		: `<p style="margin:8px 0 0;color:#6b7280;">Ninguno.</p>`;

@@ -3,11 +3,7 @@
 import { useState } from "react";
 import { AlertCircle, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-	type ExcepcionDocumentoVista,
-	ALL_DOCUMENT_TYPES,
-	type TipoDocumentoCliente,
-} from "@/types/clienteDocumento";
+import { type ExcepcionDocumentoVista, ALL_DOCUMENT_TYPES, type TipoDocumentoCliente } from "@/types/clienteDocumento";
 import { revocarExcepcion } from "@/app/auditoria/excepciones/actions";
 import { toast } from "sonner";
 
@@ -63,9 +59,7 @@ export function ExcepcionesTable({ excepciones, isRefreshing, onRevoke }: Props)
 			<div className="text-center py-12 border border-dashed border-gray-300 rounded-lg">
 				<AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-3" />
 				<p className="text-gray-500">No hay excepciones registradas</p>
-				<p className="text-xs text-gray-400 mt-1">
-					Use el botón &quot;Otorgar Excepción&quot; para crear una
-				</p>
+				<p className="text-xs text-gray-400 mt-1">Use el botón &quot;Otorgar Excepción&quot; para crear una</p>
 			</div>
 		);
 	}
@@ -96,20 +90,18 @@ export function ExcepcionesTable({ excepciones, isRefreshing, onRevoke }: Props)
 											<p className="text-xs text-gray-500">{exc.user_role}</p>
 										</div>
 									</td>
-									<td className="px-4 py-3 text-gray-900">
-										{getDocLabel(exc.tipo_documento)}
-									</td>
+									<td className="px-4 py-3 text-gray-900">{getDocLabel(exc.tipo_documento)}</td>
 									<td className="px-4 py-3 text-gray-600 max-w-[200px] truncate" title={exc.motivo}>
 										{exc.motivo}
 									</td>
 									<td className="px-4 py-3">
-										<span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${badge.bg} ${badge.text}`}>
+										<span
+											className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${badge.bg} ${badge.text}`}
+										>
 											{badge.label}
 										</span>
 									</td>
-									<td className="px-4 py-3 text-gray-600">
-										{exc.otorgado_por_email}
-									</td>
+									<td className="px-4 py-3 text-gray-600">{exc.otorgado_por_email}</td>
 									<td className="px-4 py-3 text-gray-600 text-xs">
 										{formatDate(exc.fecha_otorgamiento)}
 										{exc.estado === "usada" && exc.fecha_uso && (
@@ -156,9 +148,7 @@ export function ExcepcionesTable({ excepciones, isRefreshing, onRevoke }: Props)
 											</>
 										)}
 										{exc.estado === "usada" && exc.usado_en_client_id && (
-											<span className="text-xs text-green-600">
-												Cliente registrado
-											</span>
+											<span className="text-xs text-green-600">Cliente registrado</span>
 										)}
 									</td>
 								</tr>
@@ -179,7 +169,9 @@ export function ExcepcionesTable({ excepciones, isRefreshing, onRevoke }: Props)
 									<p className="font-medium text-gray-900 truncate">{exc.user_email}</p>
 									<p className="text-xs text-gray-500">{exc.user_role}</p>
 								</div>
-								<span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium shrink-0 ${badge.bg} ${badge.text}`}>
+								<span
+									className={`inline-flex px-2 py-0.5 rounded text-xs font-medium shrink-0 ${badge.bg} ${badge.text}`}
+								>
 									{badge.label}
 								</span>
 							</div>

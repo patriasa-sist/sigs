@@ -67,9 +67,8 @@ export function SendResetPasswordDialog({ user }: SendResetPasswordDialogProps) 
 								<strong className="text-foreground">{user.email}</strong>
 							</span>
 							<span className="block text-sm bg-blue-50 p-3 rounded-md border border-blue-200 text-blue-800">
-								El usuario recibirá un enlace único que le permitirá establecer una
-								nueva contraseña. Este enlace solo puede usarse una vez y expira
-								después de un tiempo limitado.
+								El usuario recibirá un enlace único que le permitirá establecer una nueva contraseña.
+								Este enlace solo puede usarse una vez y expira después de un tiempo limitado.
 							</span>
 						</div>
 					</AlertDialogDescription>

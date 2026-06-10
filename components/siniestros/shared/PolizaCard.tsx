@@ -3,7 +3,28 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileText, X, User, Building, Calendar, DollarSign, File, CheckCircle, Clock, XCircle, Phone, Mail, AlertTriangle, Loader2, Car, Wrench, Plane, Package, Home, Users } from "lucide-react";
+import {
+	FileText,
+	X,
+	User,
+	Building,
+	Calendar,
+	DollarSign,
+	File,
+	CheckCircle,
+	Clock,
+	XCircle,
+	Phone,
+	Mail,
+	AlertTriangle,
+	Loader2,
+	Car,
+	Wrench,
+	Plane,
+	Package,
+	Home,
+	Users,
+} from "lucide-react";
 import DocumentosPolizaModal from "./DocumentosPolizaModal";
 import { obtenerAseguradosPoliza } from "@/app/siniestros/actions";
 import type { PolizaParaSiniestro, CuotaPago, AseguradoDetalle } from "@/types/siniestro";
@@ -65,8 +86,8 @@ export default function PolizaCard({ poliza, onDeselect, showDeselectButton = tr
 	}, [poliza.id, poliza.ramo, poliza.asegurados]);
 
 	// Conteos para la alerta de pagos atrasados (vencida = venció hace <=10 días; mora = >10 días)
-	const cuotasVencidas = poliza.cuotas?.filter(c => clasificarCuota(c) === "vencida").length || 0;
-	const cuotasEnMora = poliza.cuotas?.filter(c => clasificarCuota(c) === "mora").length || 0;
+	const cuotasVencidas = poliza.cuotas?.filter((c) => clasificarCuota(c) === "vencida").length || 0;
+	const cuotasEnMora = poliza.cuotas?.filter((c) => clasificarCuota(c) === "mora").length || 0;
 
 	return (
 		<>
@@ -154,8 +175,7 @@ export default function PolizaCard({ poliza, onDeselect, showDeselectButton = tr
 							<div>
 								<p className="text-sm text-muted-foreground">Vigencia</p>
 								<p className="font-medium text-sm">
-									{formatDate(poliza.inicio_vigencia)} -{" "}
-									{formatDate(poliza.fin_vigencia)}
+									{formatDate(poliza.inicio_vigencia)} - {formatDate(poliza.fin_vigencia)}
 								</p>
 							</div>
 						</div>
@@ -166,7 +186,8 @@ export default function PolizaCard({ poliza, onDeselect, showDeselectButton = tr
 							<div>
 								<p className="text-sm text-muted-foreground">Prima Total</p>
 								<p className="font-medium">
-									{poliza.moneda} {poliza.prima_total.toLocaleString("es-BO", { minimumFractionDigits: 2 })}
+									{poliza.moneda}{" "}
+									{poliza.prima_total.toLocaleString("es-BO", { minimumFractionDigits: 2 })}
 								</p>
 							</div>
 						</div>
@@ -233,15 +254,19 @@ export default function PolizaCard({ poliza, onDeselect, showDeselectButton = tr
 										<div className="text-xs mt-1 space-y-0.5">
 											{cuotasEnMora > 0 && (
 												<p className="font-semibold">
-													⚠️ {cuotasEnMora} cuota{cuotasEnMora > 1 ? "s" : ""} en MORA (más de 10 días vencida{cuotasEnMora > 1 ? "s" : ""})
+													⚠️ {cuotasEnMora} cuota{cuotasEnMora > 1 ? "s" : ""} en MORA (más de
+													10 días vencida{cuotasEnMora > 1 ? "s" : ""})
 												</p>
 											)}
 											{cuotasVencidas > 0 && (
 												<p>
-													{cuotasVencidas} cuota{cuotasVencidas > 1 ? "s" : ""} vencida{cuotasVencidas > 1 ? "s" : ""}
+													{cuotasVencidas} cuota{cuotasVencidas > 1 ? "s" : ""} vencida
+													{cuotasVencidas > 1 ? "s" : ""}
 												</p>
 											)}
-											<p className="mt-1 italic">Considerar esta información antes de registrar el siniestro.</p>
+											<p className="mt-1 italic">
+												Considerar esta información antes de registrar el siniestro.
+											</p>
 										</div>
 									</div>
 								</div>
@@ -273,9 +298,12 @@ export default function PolizaCard({ poliza, onDeselect, showDeselectButton = tr
 									</div>
 
 									{/* Lista de cuotas con scroll */}
-									<div className={`space-y-1 ${showAllCuotas ? "max-h-96 overflow-y-auto pr-1" : ""}`}>
+									<div
+										className={`space-y-1 ${showAllCuotas ? "max-h-96 overflow-y-auto pr-1" : ""}`}
+									>
 										{(showAllCuotas ? poliza.cuotas : poliza.cuotas.slice(0, 5)).map((cuota) => {
-											const tieneProrrogas = cuota.prorrogas_historial && cuota.prorrogas_historial.length > 0;
+											const tieneProrrogas =
+												cuota.prorrogas_historial && cuota.prorrogas_historial.length > 0;
 											const estadoCuota = clasificarCuota(cuota);
 											const esPagada = estadoCuota === "pagada";
 											const esVencida = estadoCuota === "vencida";
@@ -314,27 +342,37 @@ export default function PolizaCard({ poliza, onDeselect, showDeselectButton = tr
 														{esPagada ? (
 															<>
 																<CheckCircle className="h-3 w-3 text-green-600 dark:text-green-400 flex-shrink-0" />
-																<span className="text-green-700 dark:text-green-300">Pagada</span>
+																<span className="text-green-700 dark:text-green-300">
+																	Pagada
+																</span>
 															</>
 														) : enMora ? (
 															<>
 																<XCircle className="h-3 w-3 text-red-700 dark:text-red-300 flex-shrink-0" />
-																<span className="text-red-800 dark:text-red-200 font-bold">MORA</span>
+																<span className="text-red-800 dark:text-red-200 font-bold">
+																	MORA
+																</span>
 															</>
 														) : esVencida ? (
 															<>
 																<AlertTriangle className="h-3 w-3 text-amber-600 dark:text-amber-400 flex-shrink-0" />
-																<span className="text-amber-700 dark:text-amber-300 font-medium">Vencida</span>
+																<span className="text-amber-700 dark:text-amber-300 font-medium">
+																	Vencida
+																</span>
 															</>
 														) : estadoCuota === "parcial" ? (
 															<>
 																<Clock className="h-3 w-3 text-orange-600 dark:text-orange-400 flex-shrink-0" />
-																<span className="text-orange-700 dark:text-orange-300">Parcial</span>
+																<span className="text-orange-700 dark:text-orange-300">
+																	Parcial
+																</span>
 															</>
 														) : (
 															<>
 																<Calendar className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-																<span className="text-muted-foreground">Por cobrar</span>
+																<span className="text-muted-foreground">
+																	Por cobrar
+																</span>
 															</>
 														)}
 													</div>
@@ -342,14 +380,21 @@ export default function PolizaCard({ poliza, onDeselect, showDeselectButton = tr
 													{/* Monto */}
 													<div className="col-span-3 flex items-center justify-end">
 														<span className={`font-medium ${emphTextClass}`}>
-															{poliza.moneda} {cuota.monto.toLocaleString("es-BO", { minimumFractionDigits: 2 })}
+															{poliza.moneda}{" "}
+															{cuota.monto.toLocaleString("es-BO", {
+																minimumFractionDigits: 2,
+															})}
 														</span>
 													</div>
 
 													{/* Fecha vencimiento */}
 													<div className="col-span-4 flex flex-col items-end justify-center">
 														<div className="flex items-center gap-1">
-															<span className={emphTextClass ? `font-medium ${emphTextClass}` : ""}>
+															<span
+																className={
+																	emphTextClass ? `font-medium ${emphTextClass}` : ""
+																}
+															>
 																{formatDate(cuota.fecha_vencimiento)}
 															</span>
 															{tieneProrrogas && (
@@ -456,7 +501,9 @@ function AseguradoItem({ aseg, moneda }: { aseg: AseguradoDetalle; moneda: strin
 					<Package className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-0.5" />
 					<div className="min-w-0">
 						<p className="font-medium truncate">{aseg.descripcion || "Carga asegurada"}</p>
-						{aseg.identificador && <p className="text-xs text-muted-foreground">Factura: {aseg.identificador}</p>}
+						{aseg.identificador && (
+							<p className="text-xs text-muted-foreground">Factura: {aseg.identificador}</p>
+						)}
 						{valor && <p className="text-xs text-muted-foreground">Valor: {valor}</p>}
 					</div>
 				</div>

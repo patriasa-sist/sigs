@@ -87,7 +87,9 @@ function ResetPasswordForm() {
 				}
 			} else {
 				// Redirigido desde /auth/confirm — ya existe sesión en cookies
-				const { data: { session } } = await supabase.auth.getSession();
+				const {
+					data: { session },
+				} = await supabase.auth.getSession();
 				if (session) {
 					setSessionValid(true);
 				} else {

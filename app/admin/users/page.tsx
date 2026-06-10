@@ -10,7 +10,7 @@ export default async function ManageUsersPage() {
 	const { data: users, error } = await supabase
 		.from("profiles")
 		.select(
-			"id, email, role, full_name, cargo, telefono, acronimo, porcentaje_comision, firma_url, created_at, updated_at"
+			"id, email, role, full_name, cargo, telefono, acronimo, porcentaje_comision, firma_url, created_at, updated_at",
 		)
 		.order("created_at", { ascending: false });
 
@@ -29,9 +29,7 @@ export default async function ManageUsersPage() {
 			<div className="flex items-center gap-4">
 				<div>
 					<h1 className="text-2xl font-semibold text-foreground">Gestión de Usuarios</h1>
-					<p className="text-muted-foreground text-sm mt-1">
-						Administrar información de usuarios y firmas
-					</p>
+					<p className="text-muted-foreground text-sm mt-1">Administrar información de usuarios y firmas</p>
 				</div>
 			</div>
 

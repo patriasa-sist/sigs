@@ -25,7 +25,10 @@ export default function DocumentosInicialesStep({
 
 	// Agrupar documentos por tipo
 	const documentosPorTipo = useMemo(() => {
-		const grupos: Record<TipoDocumentoSiniestro, DocumentoSiniestro[]> = {} as Record<TipoDocumentoSiniestro, DocumentoSiniestro[]>;
+		const grupos: Record<TipoDocumentoSiniestro, DocumentoSiniestro[]> = {} as Record<
+			TipoDocumentoSiniestro,
+			DocumentoSiniestro[]
+		>;
 
 		TIPOS_DOCUMENTO_SINIESTRO.forEach((tipo) => {
 			grupos[tipo] = documentos.filter((doc) => doc.tipo_documento === tipo);
@@ -37,49 +40,53 @@ export default function DocumentosInicialesStep({
 	// Documentos del tipo seleccionado (memoizado)
 	const documentosFiltrados = useMemo(
 		() => documentosPorTipo[tipoSeleccionado] || [],
-		[documentosPorTipo, tipoSeleccionado]
+		[documentosPorTipo, tipoSeleccionado],
 	);
 
 	// Documentos temporales para el uploader (solo del tipo seleccionado)
 	const documentosTemporales: DocumentoSiniestro[] = [];
 
 	// Handler para agregar documento con el tipo seleccionado
-	const handleAgregarDocumento = useCallback((doc: DocumentoSiniestro) => {
-		// Asegurar que el documento tenga el tipo seleccionado
-		const documentoConTipo: DocumentoSiniestro = {
-			...doc,
-			tipo_documento: tipoSeleccionado,
-		};
-		onAgregarDocumento(documentoConTipo);
-	}, [tipoSeleccionado, onAgregarDocumento]);
+	const handleAgregarDocumento = useCallback(
+		(doc: DocumentoSiniestro) => {
+			// Asegurar que el documento tenga el tipo seleccionado
+			const documentoConTipo: DocumentoSiniestro = {
+				...doc,
+				tipo_documento: tipoSeleccionado,
+			};
+			onAgregarDocumento(documentoConTipo);
+		},
+		[tipoSeleccionado, onAgregarDocumento],
+	);
 
 	// Handler para eliminar documento (ajustado para encontrar el índice correcto)
-	const handleEliminarDocumento = useCallback((localIndex: number) => {
-		// Calcular documentos filtrados localmente para evitar dependencia
-		const docsDelTipo = documentosPorTipo[tipoSeleccionado] || [];
-		const docToRemove = docsDelTipo[localIndex];
-		if (!docToRemove) return;
+	const handleEliminarDocumento = useCallback(
+		(localIndex: number) => {
+			// Calcular documentos filtrados localmente para evitar dependencia
+			const docsDelTipo = documentosPorTipo[tipoSeleccionado] || [];
+			const docToRemove = docsDelTipo[localIndex];
+			if (!docToRemove) return;
 
-		// Encontrar el índice global
-		const globalIndex = documentos.findIndex(
-			doc => doc.nombre_archivo === docToRemove.nombre_archivo &&
-			       doc.tipo_documento === docToRemove.tipo_documento
-		);
+			// Encontrar el índice global
+			const globalIndex = documentos.findIndex(
+				(doc) =>
+					doc.nombre_archivo === docToRemove.nombre_archivo &&
+					doc.tipo_documento === docToRemove.tipo_documento,
+			);
 
-		if (globalIndex !== -1) {
-			onEliminarDocumento(globalIndex);
-			toast.success("Documento eliminado");
-		}
-	}, [documentosPorTipo, tipoSeleccionado, documentos, onEliminarDocumento]);
-
+			if (globalIndex !== -1) {
+				onEliminarDocumento(globalIndex);
+				toast.success("Documento eliminado");
+			}
+		},
+		[documentosPorTipo, tipoSeleccionado, documentos, onEliminarDocumento],
+	);
 
 	return (
 		<Card>
 			<CardHeader>
 				<CardTitle>Paso 4: Documentos Iniciales (Opcional)</CardTitle>
-				<CardDescription>
-					Adjunta los documentos relacionados al siniestro organizados por tipo
-				</CardDescription>
+				<CardDescription>Adjunta los documentos relacionados al siniestro organizados por tipo</CardDescription>
 			</CardHeader>
 			<CardContent className="space-y-4">
 				{/* Información */}
@@ -88,9 +95,9 @@ export default function DocumentosInicialesStep({
 					<div className="text-blue-900 dark:text-blue-100">
 						<p className="font-medium mb-1">Organiza tus documentos por tipo con Drag & Drop</p>
 						<p className="text-xs">
-							Selecciona un tipo de documento en el menú lateral. Luego arrastra y suelta archivos en el área
-							de carga, o haz click para seleccionar múltiples archivos. Los documentos se organizarán
-							automáticamente por categoría.
+							Selecciona un tipo de documento en el menú lateral. Luego arrastra y suelta archivos en el
+							área de carga, o haz click para seleccionar múltiples archivos. Los documentos se
+							organizarán automáticamente por categoría.
 						</p>
 					</div>
 				</div>
@@ -169,9 +176,13 @@ export default function DocumentosInicialesStep({
 													<div className="flex items-center gap-3">
 														<FileText className="h-5 w-5 text-muted-foreground flex-shrink-0" />
 														<div className="flex-1 min-w-0">
-															<p className="text-sm font-medium truncate">{doc.nombre_archivo}</p>
+															<p className="text-sm font-medium truncate">
+																{doc.nombre_archivo}
+															</p>
 															<p className="text-xs text-muted-foreground">
-																{doc.tamano_bytes ? `${(doc.tamano_bytes / 1024).toFixed(1)} KB` : ""}
+																{doc.tamano_bytes
+																	? `${(doc.tamano_bytes / 1024).toFixed(1)} KB`
+																	: ""}
 															</p>
 														</div>
 														<Button

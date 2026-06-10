@@ -1,36 +1,18 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import {
-	X,
-	Shield,
-	UserPlus,
-	Trash2,
-	Calendar,
-	Loader2,
-	AlertCircle,
-	AlertTriangle,
-} from "lucide-react";
+import { X, Shield, UserPlus, Trash2, Calendar, Loader2, AlertCircle, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
 	getPolicyPermissions,
 	grantPolicyEditPermission,
 	revokePolicyEditPermission,
 	getComercialUsers,
 } from "@/app/polizas/permisos/actions";
-import type {
-	PolicyEditPermissionViewModel,
-	ComercialUser,
-} from "@/types/policyPermission";
+import type { PolicyEditPermissionViewModel, ComercialUser } from "@/types/policyPermission";
 
 interface PolicyPermissionsModalProps {
 	polizaId: string;
@@ -39,12 +21,7 @@ interface PolicyPermissionsModalProps {
 	onClose: () => void;
 }
 
-export function PolicyPermissionsModal({
-	polizaId,
-	numeroPoliza,
-	isOpen,
-	onClose,
-}: PolicyPermissionsModalProps) {
+export function PolicyPermissionsModal({ polizaId, numeroPoliza, isOpen, onClose }: PolicyPermissionsModalProps) {
 	const [permissions, setPermissions] = useState<PolicyEditPermissionViewModel[]>([]);
 	const [comercialUsers, setComercialUsers] = useState<ComercialUser[]>([]);
 	const [isLoading, setIsLoading] = useState(true);
@@ -65,12 +42,15 @@ export function PolicyPermissionsModal({
 		setIsLoading(true);
 		setError(null);
 		try {
-			const [permResult, usersResult] = await Promise.all([
-				getPolicyPermissions(polizaId),
-				getComercialUsers(),
-			]);
-			if (!permResult.success) { setError(permResult.error); return; }
-			if (!usersResult.success) { setError(usersResult.error); return; }
+			const [permResult, usersResult] = await Promise.all([getPolicyPermissions(polizaId), getComercialUsers()]);
+			if (!permResult.success) {
+				setError(permResult.error);
+				return;
+			}
+			if (!usersResult.success) {
+				setError(usersResult.error);
+				return;
+			}
 			setPermissions(permResult.data);
 			setComercialUsers(usersResult.data);
 		} catch {
@@ -85,7 +65,10 @@ export function PolicyPermissionsModal({
 	}, [isOpen, loadData]);
 
 	const handleGrant = async () => {
-		if (!selectedUserId) { setGrantError("Selecciona un usuario"); return; }
+		if (!selectedUserId) {
+			setGrantError("Selecciona un usuario");
+			return;
+		}
 		setIsGranting(true);
 		setGrantError(null);
 		const result = await grantPolicyEditPermission({
@@ -128,7 +111,7 @@ export function PolicyPermissionsModal({
 		});
 
 	const availableUsers = comercialUsers.filter(
-		(user) => !permissions.some((p) => p.user_id === user.id && p.is_active)
+		(user) => !permissions.some((p) => p.user_id === user.id && p.is_active),
 	);
 
 	if (!isOpen) return null;
@@ -150,12 +133,8 @@ export function PolicyPermissionsModal({
 							<Shield className="h-4.5 w-4.5 text-primary" />
 						</span>
 						<div>
-							<h2 className="text-sm font-semibold text-foreground leading-tight">
-								Permisos de edición
-							</h2>
-							<p className="text-xs text-muted-foreground font-mono mt-0.5">
-								Póliza {numeroPoliza}
-							</p>
+							<h2 className="text-sm font-semibold text-foreground leading-tight">Permisos de edición</h2>
+							<p className="text-xs text-muted-foreground font-mono mt-0.5">Póliza {numeroPoliza}</p>
 						</div>
 					</div>
 					<Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8 rounded-lg">
@@ -232,7 +211,9 @@ export function PolicyPermissionsModal({
 														<div className="ml-3 shrink-0">
 															{confirmRevokeId === perm.id ? (
 																<div className="flex items-center gap-1.5">
-																	<span className="text-xs text-muted-foreground">¿Confirmar?</span>
+																	<span className="text-xs text-muted-foreground">
+																		¿Confirmar?
+																	</span>
 																	<Button
 																		variant="destructive"
 																		size="sm"
@@ -310,7 +291,9 @@ export function PolicyPermissionsModal({
 											<div className="space-y-1.5">
 												<Label className="text-xs">
 													Fecha de expiración{" "}
-													<span className="text-muted-foreground font-normal">(opcional)</span>
+													<span className="text-muted-foreground font-normal">
+														(opcional)
+													</span>
 												</Label>
 												<Input
 													type="datetime-local"
@@ -322,7 +305,9 @@ export function PolicyPermissionsModal({
 											<div className="space-y-1.5">
 												<Label className="text-xs">
 													Notas{" "}
-													<span className="text-muted-foreground font-normal">(opcional)</span>
+													<span className="text-muted-foreground font-normal">
+														(opcional)
+													</span>
 												</Label>
 												<Input
 													placeholder="Motivo del permiso…"

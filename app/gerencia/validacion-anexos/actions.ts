@@ -62,7 +62,9 @@ export async function obtenerAnexosPendientes(): Promise<{
 	const supabase = await createClient();
 
 	try {
-		const { data: { user } } = await supabase.auth.getUser();
+		const {
+			data: { user },
+		} = await supabase.auth.getUser();
 		if (!user) return { success: false, error: "No autenticado" };
 
 		const { allowed } = await checkPermission("polizas.validar");
@@ -84,7 +86,8 @@ export async function obtenerAnexosPendientes(): Promise<{
 
 		const query = supabase
 			.from("polizas_anexos")
-			.select(`
+			.select(
+				`
 				id, numero_anexo, tipo_anexo, fecha_anexo, fecha_efectiva,
 				observaciones, created_at,
 				poliza:polizas!poliza_id (
@@ -92,7 +95,8 @@ export async function obtenerAnexosPendientes(): Promise<{
 					companias_aseguradoras!compania_aseguradora_id (nombre)
 				),
 				creador:profiles!created_by (full_name, email)
-			`)
+			`,
+			)
 			.eq("estado", "pendiente")
 			.order("created_at", { ascending: false });
 
@@ -117,32 +121,25 @@ export async function obtenerAnexosPendientes(): Promise<{
 		}
 
 		// Obtener nombres de clientes de las pólizas
-		const polizaIds = [...new Set(
-			anexosFiltrados
-				.map((a) => (a.poliza as unknown as { id: string })?.id)
-				.filter(Boolean)
-		)];
+		const polizaIds = [
+			...new Set(anexosFiltrados.map((a) => (a.poliza as unknown as { id: string })?.id).filter(Boolean)),
+		];
 
 		// Obtener client_ids
-		const { data: polizasClients } = await supabase
-			.from("polizas")
-			.select("id, client_id")
-			.in("id", polizaIds);
+		const { data: polizasClients } = await supabase.from("polizas").select("id, client_id").in("id", polizaIds);
 
 		const clientIds = [...new Set((polizasClients || []).map((p) => p.client_id))];
 
-		const [{ data: clients }, { data: naturalClients }, { data: juridicClients }, { data: unipersonalClients }] = await Promise.all([
-			supabase.from("clients").select("id, client_type").in("id", clientIds),
-			supabase.from("natural_clients")
-				.select("client_id, primer_nombre, primer_apellido, numero_documento")
-				.in("client_id", clientIds),
-			supabase.from("juridic_clients")
-				.select("client_id, razon_social")
-				.in("client_id", clientIds),
-			supabase.from("unipersonal_clients")
-				.select("client_id, razon_social")
-				.in("client_id", clientIds),
-		]);
+		const [{ data: clients }, { data: naturalClients }, { data: juridicClients }, { data: unipersonalClients }] =
+			await Promise.all([
+				supabase.from("clients").select("id, client_type").in("id", clientIds),
+				supabase
+					.from("natural_clients")
+					.select("client_id, primer_nombre, primer_apellido, numero_documento")
+					.in("client_id", clientIds),
+				supabase.from("juridic_clients").select("client_id, razon_social").in("client_id", clientIds),
+				supabase.from("unipersonal_clients").select("client_id, razon_social").in("client_id", clientIds),
+			]);
 
 		const polizaClientMap = new Map((polizasClients || []).map((p) => [p.id, p.client_id]));
 		const clientsMap = new Map(clients?.map((c) => [c.id, c]) || []);
@@ -224,7 +221,9 @@ export async function validarAnexo(anexoId: string): Promise<{
 	const supabase = await createClient();
 
 	try {
-		const { data: { user } } = await supabase.auth.getUser();
+		const {
+			data: { user },
+		} = await supabase.auth.getUser();
 		if (!user) return { success: false, error: "No autenticado" };
 
 		const { allowed } = await checkPermission("polizas.validar");
@@ -245,9 +244,7 @@ export async function validarAnexo(anexoId: string): Promise<{
 
 		// Si no tiene permiso JWT, verificar si es líder de equipo para este anexo
 		if (!allowed) {
-			const esLider = responsableId
-				? await checkTeamLeaderForPolicy(supabase, user.id, responsableId)
-				: false;
+			const esLider = responsableId ? await checkTeamLeaderForPolicy(supabase, user.id, responsableId) : false;
 			if (!esLider) {
 				return { success: false, error: "No tiene permisos para validar" };
 			}
@@ -307,7 +304,10 @@ export async function validarAnexo(anexoId: string): Promise<{
 // 3. RECHAZAR ANEXO
 // ============================================
 
-export async function rechazarAnexo(anexoId: string, motivo: string): Promise<{
+export async function rechazarAnexo(
+	anexoId: string,
+	motivo: string,
+): Promise<{
 	success: boolean;
 	error?: string;
 }> {
@@ -318,7 +318,9 @@ export async function rechazarAnexo(anexoId: string, motivo: string): Promise<{
 			return { success: false, error: "El motivo del rechazo es obligatorio (mínimo 10 caracteres)" };
 		}
 
-		const { data: { user } } = await supabase.auth.getUser();
+		const {
+			data: { user },
+		} = await supabase.auth.getUser();
 		if (!user) return { success: false, error: "No autenticado" };
 
 		const { allowed } = await checkPermission("polizas.validar");
@@ -339,9 +341,7 @@ export async function rechazarAnexo(anexoId: string, motivo: string): Promise<{
 
 		// Si no tiene permiso JWT, verificar si es líder de equipo para este anexo
 		if (!allowed) {
-			const esLider = responsableId
-				? await checkTeamLeaderForPolicy(supabase, user.id, responsableId)
-				: false;
+			const esLider = responsableId ? await checkTeamLeaderForPolicy(supabase, user.id, responsableId) : false;
 			if (!esLider) {
 				return { success: false, error: "No tiene permisos para rechazar" };
 			}

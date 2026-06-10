@@ -5,7 +5,16 @@ import { createAdminClient } from "@/utils/supabase/admin";
 import { revalidatePath } from "next/cache";
 import { getDataScopeFilter } from "@/utils/auth/helpers";
 import { generateFinalStoragePath } from "@/utils/fileUpload";
-import type { AnexoFormState, PolizaResumenAnexo, DatosPolizaParaAnexo, CuotaConsolidada, CuotaVigenciaCorrida, CuotaAnexoPropia, AnexoResumen, PlanPagoInclusion } from "@/types/anexo";
+import type {
+	AnexoFormState,
+	PolizaResumenAnexo,
+	DatosPolizaParaAnexo,
+	CuotaConsolidada,
+	CuotaVigenciaCorrida,
+	CuotaAnexoPropia,
+	AnexoResumen,
+	PlanPagoInclusion,
+} from "@/types/anexo";
 
 // ============================================
 // HELPERS
@@ -13,7 +22,7 @@ import type { AnexoFormState, PolizaResumenAnexo, DatosPolizaParaAnexo, CuotaCon
 
 function mapAnexoError(
 	error: { code?: string; message?: string; details?: string; hint?: string } | null | undefined,
-	context: string
+	context: string,
 ): string {
 	if (!error) return context;
 	const code = error.code ?? "";
@@ -45,7 +54,7 @@ function mapAnexoError(
  */
 function throwIfAnexoError(
 	error: { code?: string; message?: string; details?: string; hint?: string } | null,
-	context: string
+	context: string,
 ) {
 	if (error) {
 		throw new Error(mapAnexoError(error, context));
@@ -89,9 +98,7 @@ async function limpiarAnexoFallido(anexoId: string): Promise<void> {
 		await supabaseAdmin.from("polizas_anexos").delete().eq("id", anexoId);
 
 		// Borrar archivos de Storage
-		const rutas = (docs || [])
-			.map((d) => d.archivo_url)
-			.filter(Boolean) as string[];
+		const rutas = (docs || []).map((d) => d.archivo_url).filter(Boolean) as string[];
 		if (rutas.length > 0) {
 			await supabaseAdmin.storage.from("polizas-documentos").remove(rutas);
 		}
@@ -114,7 +121,9 @@ export async function buscarPolizasParaAnexo(query: string): Promise<{
 	const supabase = await createClient();
 
 	try {
-		const { data: { user } } = await supabase.auth.getUser();
+		const {
+			data: { user },
+		} = await supabase.auth.getUser();
 		if (!user) return { success: false, error: "No autenticado" };
 
 		const scope = await getDataScopeFilter("polizas");
@@ -122,12 +131,14 @@ export async function buscarPolizasParaAnexo(query: string): Promise<{
 		// Buscar pólizas activas que coincidan con la query
 		let polizaQuery = supabase
 			.from("polizas")
-			.select(`
+			.select(
+				`
 				id, numero_poliza, ramo, client_id, prima_total, moneda,
 				inicio_vigencia, fin_vigencia, estado, modalidad_pago,
 				companias_aseguradoras!compania_aseguradora_id (nombre),
 				responsable_id
-			`)
+			`,
+			)
 			.eq("estado", "activa")
 			.order("created_at", { ascending: false })
 			.limit(20);
@@ -157,12 +168,11 @@ export async function buscarPolizasParaAnexo(query: string): Promise<{
 
 		const [{ data: clients }, { data: naturalClients }, { data: juridicClients }] = await Promise.all([
 			supabase.from("clients").select("id, client_type").in("id", clientIds),
-			supabase.from("natural_clients")
+			supabase
+				.from("natural_clients")
 				.select("client_id, primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, numero_documento")
 				.in("client_id", clientIds),
-			supabase.from("juridic_clients")
-				.select("client_id, razon_social, nit")
-				.in("client_id", clientIds),
+			supabase.from("juridic_clients").select("client_id, razon_social, nit").in("client_id", clientIds),
 		]);
 
 		const clientsMap = new Map(clients?.map((c) => [c.id, c]) || []);
@@ -189,7 +199,8 @@ export async function buscarPolizasParaAnexo(query: string): Promise<{
 				const nc = naturalMap.get(p.client_id);
 				if (nc) {
 					client_name = [nc.primer_nombre, nc.segundo_nombre, nc.primer_apellido, nc.segundo_apellido]
-						.filter(Boolean).join(" ");
+						.filter(Boolean)
+						.join(" ");
 					client_ci = nc.numero_documento || "-";
 				}
 			} else if (client?.client_type === "juridica") {
@@ -238,18 +249,22 @@ export async function obtenerDatosParaAnexo(polizaId: string): Promise<{
 	const supabase = await createClient();
 
 	try {
-		const { data: { user } } = await supabase.auth.getUser();
+		const {
+			data: { user },
+		} = await supabase.auth.getUser();
 		if (!user) return { success: false, error: "No autenticado" };
 
 		// Cargar póliza, cuotas, y anexos activos en paralelo
 		const [polizaResult, cuotasResult, anexosResult] = await Promise.all([
 			supabase
 				.from("polizas")
-				.select(`
+				.select(
+					`
 					id, numero_poliza, ramo, client_id, prima_total, moneda,
 					inicio_vigencia, fin_vigencia, estado, modalidad_pago,
 					companias_aseguradoras!compania_aseguradora_id (nombre)
-				`)
+				`,
+				)
 				.eq("id", polizaId)
 				.single(),
 			supabase
@@ -259,11 +274,13 @@ export async function obtenerDatosParaAnexo(polizaId: string): Promise<{
 				.order("numero_cuota", { ascending: true }),
 			supabase
 				.from("polizas_anexos")
-				.select(`
+				.select(
+					`
 					id, numero_anexo, tipo_anexo, fecha_anexo, fecha_efectiva,
 					estado, observaciones, created_by,
 					profiles:profiles!created_by (full_name)
-				`)
+				`,
+				)
 				.eq("poliza_id", polizaId)
 				.in("estado", ["pendiente", "activo"])
 				.order("created_at", { ascending: false }),
@@ -297,7 +314,8 @@ export async function obtenerDatosParaAnexo(polizaId: string): Promise<{
 				.single();
 			if (nc) {
 				client_name = [nc.primer_nombre, nc.segundo_nombre, nc.primer_apellido, nc.segundo_apellido]
-					.filter(Boolean).join(" ");
+					.filter(Boolean)
+					.join(" ");
 				client_ci = nc.numero_documento || "-";
 			}
 		} else if (client?.client_type === "juridica") {
@@ -314,7 +332,7 @@ export async function obtenerDatosParaAnexo(polizaId: string): Promise<{
 
 		// Verificar anulación pendiente/activa
 		const tieneAnulacion = (anexosResult.data || []).some(
-			(a) => a.tipo_anexo === "anulacion" && (a.estado === "pendiente" || a.estado === "activo")
+			(a) => a.tipo_anexo === "anulacion" && (a.estado === "pendiente" || a.estado === "activo"),
 		);
 
 		const compania = poliza.companias_aseguradoras as unknown as { nombre: string } | null;
@@ -380,18 +398,18 @@ async function cargarItemsActualesRamo(
 	supabase: Awaited<ReturnType<typeof createClient>>,
 	polizaId: string,
 	ramo: string,
-	anexosActivos: { id: string; tipo_anexo: string }[]
+	anexosActivos: { id: string; tipo_anexo: string }[],
 ) {
-	const ramoLower = ramo.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+	const ramoLower = ramo
+		.toLowerCase()
+		.normalize("NFD")
+		.replace(/[\u0300-\u036f]/g, "");
 
 	const inclusionIds = anexosActivos.filter((a) => a.tipo_anexo === "inclusion").map((a) => a.id);
 	const exclusionIds = anexosActivos.filter((a) => a.tipo_anexo === "exclusion").map((a) => a.id);
 
 	if (ramoLower.includes("automotor")) {
-		const { data } = await supabase
-			.from("polizas_automotor_vehiculos")
-			.select("*")
-			.eq("poliza_id", polizaId);
+		const { data } = await supabase.from("polizas_automotor_vehiculos").select("*").eq("poliza_id", polizaId);
 		let vehiculos = data || [];
 
 		// Agregar vehículos incluidos por anexos activos
@@ -434,17 +452,35 @@ async function cargarItemsActualesRamo(
 
 		if (inclusionIds.length > 0) {
 			const [{ data: asegInc }, { data: benInc }] = await Promise.all([
-				supabase.from("polizas_anexos_salud_asegurados").select("*").in("anexo_id", inclusionIds).eq("accion", "inclusion"),
-				supabase.from("polizas_anexos_salud_beneficiarios").select("*").in("anexo_id", inclusionIds).eq("accion", "inclusion"),
+				supabase
+					.from("polizas_anexos_salud_asegurados")
+					.select("*")
+					.in("anexo_id", inclusionIds)
+					.eq("accion", "inclusion"),
+				supabase
+					.from("polizas_anexos_salud_beneficiarios")
+					.select("*")
+					.in("anexo_id", inclusionIds)
+					.eq("accion", "inclusion"),
 			]);
-			if (asegInc) aseguradosList = [...aseguradosList, ...asegInc.map((a) => ({ ...a, _origen_anexo: a.anexo_id }))];
-			if (benInc) beneficiariosList = [...beneficiariosList, ...benInc.map((b) => ({ ...b, _origen_anexo: b.anexo_id }))];
+			if (asegInc)
+				aseguradosList = [...aseguradosList, ...asegInc.map((a) => ({ ...a, _origen_anexo: a.anexo_id }))];
+			if (benInc)
+				beneficiariosList = [...beneficiariosList, ...benInc.map((b) => ({ ...b, _origen_anexo: b.anexo_id }))];
 		}
 
 		if (exclusionIds.length > 0) {
 			const [{ data: asegExc }, { data: benExc }] = await Promise.all([
-				supabase.from("polizas_anexos_salud_asegurados").select("original_item_id").in("anexo_id", exclusionIds).eq("accion", "exclusion"),
-				supabase.from("polizas_anexos_salud_beneficiarios").select("original_item_id").in("anexo_id", exclusionIds).eq("accion", "exclusion"),
+				supabase
+					.from("polizas_anexos_salud_asegurados")
+					.select("original_item_id")
+					.in("anexo_id", exclusionIds)
+					.eq("accion", "exclusion"),
+				supabase
+					.from("polizas_anexos_salud_beneficiarios")
+					.select("original_item_id")
+					.in("anexo_id", exclusionIds)
+					.eq("accion", "exclusion"),
 			]);
 			if (asegExc) {
 				const ids = new Set(asegExc.map((e) => e.original_item_id));
@@ -464,10 +500,7 @@ async function cargarItemsActualesRamo(
 	}
 
 	if (ramoLower.includes("tecnicos") || ramoLower.includes("técnicos")) {
-		const { data } = await supabase
-			.from("polizas_ramos_tecnicos_equipos")
-			.select("*")
-			.eq("poliza_id", polizaId);
+		const { data } = await supabase.from("polizas_ramos_tecnicos_equipos").select("*").eq("poliza_id", polizaId);
 		let equipos = data || [];
 
 		if (inclusionIds.length > 0) {
@@ -496,13 +529,11 @@ async function cargarItemsActualesRamo(
 	}
 
 	if (ramoLower.includes("aeronavegacion") || ramoLower.includes("naves") || ramoLower.includes("embarcacion")) {
-		const { data } = await supabase
-			.from("polizas_aeronavegacion_naves")
-			.select("*")
-			.eq("poliza_id", polizaId);
-		const tipoRamo = ramoLower.includes("naves") || ramoLower.includes("embarcacion")
-			? "Naves o embarcaciones" as const
-			: "Aeronavegación" as const;
+		const { data } = await supabase.from("polizas_aeronavegacion_naves").select("*").eq("poliza_id", polizaId);
+		const tipoRamo =
+			ramoLower.includes("naves") || ramoLower.includes("embarcacion")
+				? ("Naves o embarcaciones" as const)
+				: ("Aeronavegación" as const);
 		let naves = data || [];
 
 		if (inclusionIds.length > 0) {
@@ -531,10 +562,7 @@ async function cargarItemsActualesRamo(
 	}
 
 	if (ramoLower.includes("incendio")) {
-		const { data } = await supabase
-			.from("polizas_incendio_bienes")
-			.select("*")
-			.eq("poliza_id", polizaId);
+		const { data } = await supabase.from("polizas_incendio_bienes").select("*").eq("poliza_id", polizaId);
 		let bienes = data || [];
 
 		if (inclusionIds.length > 0) {
@@ -563,10 +591,7 @@ async function cargarItemsActualesRamo(
 	}
 
 	if (ramoLower.includes("riesgos varios") || ramoLower.includes("miscelaneos")) {
-		const { data } = await supabase
-			.from("polizas_riesgos_varios_bienes")
-			.select("*")
-			.eq("poliza_id", polizaId);
+		const { data } = await supabase.from("polizas_riesgos_varios_bienes").select("*").eq("poliza_id", polizaId);
 		let bienes = data || [];
 
 		if (inclusionIds.length > 0) {
@@ -595,10 +620,7 @@ async function cargarItemsActualesRamo(
 	}
 
 	if (ramoLower.includes("accidentes personales") || ramoLower.includes("vida") || ramoLower.includes("sepelio")) {
-		const { data } = await supabase
-			.from("polizas_asegurados_nivel")
-			.select("*")
-			.eq("poliza_id", polizaId);
+		const { data } = await supabase.from("polizas_asegurados_nivel").select("*").eq("poliza_id", polizaId);
 		let tipoRamo: "Accidentes Personales" | "Vida" | "Sepelio" = "Accidentes Personales";
 		if (ramoLower.includes("vida")) tipoRamo = "Vida";
 		else if (ramoLower.includes("sepelio")) tipoRamo = "Sepelio";
@@ -644,7 +666,9 @@ export async function guardarAnexo(formState: AnexoFormState): Promise<{
 	const supabase = await createClient();
 
 	try {
-		const { data: { user } } = await supabase.auth.getUser();
+		const {
+			data: { user },
+		} = await supabase.auth.getUser();
 		if (!user) return { success: false, error: "No autenticado" };
 
 		// Validaciones básicas
@@ -685,9 +709,7 @@ export async function guardarAnexo(formState: AnexoFormState): Promise<{
 		}
 
 		// Verificar documento obligatorio
-		const docsValidos = formState.documentos.filter(
-			(d) => d.storage_path && d.upload_status === "uploaded"
-		);
+		const docsValidos = formState.documentos.filter((d) => d.storage_path && d.upload_status === "uploaded");
 		if (docsValidos.length === 0) {
 			return { success: false, error: "El documento de anexo es obligatorio" };
 		}
@@ -717,18 +739,16 @@ export async function guardarAnexo(formState: AnexoFormState): Promise<{
 			// Pagos del anexo
 			if (formState.config.tipo_anexo === "anulacion") {
 				if (formState.vigencia_corrida && formState.vigencia_corrida.monto > 0) {
-					const { error: pagoError } = await supabase
-						.from("polizas_anexos_pagos")
-						.insert({
-							anexo_id: anexo.id,
-							cuota_original_id: null,
-							tipo: "vigencia_corrida",
-							numero_cuota: 0,
-							monto: formState.vigencia_corrida.monto,
-							fecha_vencimiento: formState.vigencia_corrida.fecha_vencimiento,
-							estado: "pendiente",
-							observaciones: formState.vigencia_corrida.observaciones?.trim() || "Cobro vigencia corrida",
-						});
+					const { error: pagoError } = await supabase.from("polizas_anexos_pagos").insert({
+						anexo_id: anexo.id,
+						cuota_original_id: null,
+						tipo: "vigencia_corrida",
+						numero_cuota: 0,
+						monto: formState.vigencia_corrida.monto,
+						fecha_vencimiento: formState.vigencia_corrida.fecha_vencimiento,
+						estado: "pendiente",
+						observaciones: formState.vigencia_corrida.observaciones?.trim() || "Cobro vigencia corrida",
+					});
 
 					throwIfAnexoError(pagoError, "Error al guardar vigencia corrida");
 				}
@@ -750,9 +770,7 @@ export async function guardarAnexo(formState: AnexoFormState): Promise<{
 						observaciones: "Descuento por exclusión",
 					}));
 
-					const { error: pagosError } = await supabase
-						.from("polizas_anexos_pagos")
-						.insert(pagosInsert);
+					const { error: pagosError } = await supabase.from("polizas_anexos_pagos").insert(pagosInsert);
 
 					throwIfAnexoError(pagosError, "Error al guardar descuentos de exclusión");
 				}
@@ -767,23 +785,19 @@ export async function guardarAnexo(formState: AnexoFormState): Promise<{
 			await limpiarAnexoFallido(anexo.id);
 			return {
 				success: false,
-				error: insertError instanceof Error
-					? insertError.message
-					: "Error guardando datos del anexo. Los datos parciales fueron limpiados automáticamente.",
+				error:
+					insertError instanceof Error
+						? insertError.message
+						: "Error guardando datos del anexo. Los datos parciales fueron limpiados automáticamente.",
 			};
 		}
 
 		// --- MOVER DOCUMENTOS (best-effort, fuera del boundary transaccional) ---
 		for (const doc of docsValidos) {
 			const tempPath = doc.storage_path!;
-			const finalPath = generateFinalStoragePath(
-				`anexos/${anexo.id}`,
-				doc.nombre_archivo
-			);
+			const finalPath = generateFinalStoragePath(`anexos/${anexo.id}`, doc.nombre_archivo);
 
-			const { error: moveError } = await supabase.storage
-				.from("polizas-documentos")
-				.move(tempPath, finalPath);
+			const { error: moveError } = await supabase.storage.from("polizas-documentos").move(tempPath, finalPath);
 
 			const usedPath = moveError ? tempPath : finalPath;
 
@@ -815,7 +829,7 @@ export async function guardarAnexo(formState: AnexoFormState): Promise<{
 async function guardarCuotasInclusion(
 	supabase: Awaited<ReturnType<typeof createClient>>,
 	anexoId: string,
-	plan: PlanPagoInclusion
+	plan: PlanPagoInclusion,
 ) {
 	if (plan.cuotas.length === 0) return;
 
@@ -827,7 +841,10 @@ async function guardarCuotasInclusion(
 		monto: c.monto,
 		fecha_vencimiento: c.fecha_vencimiento,
 		estado: "pendiente" as const,
-		observaciones: plan.modalidad === "contado" ? "Pago contado por inclusión" : `Cuota ${c.numero_cuota} de ${plan.cuotas.length} por inclusión`,
+		observaciones:
+			plan.modalidad === "contado"
+				? "Pago contado por inclusión"
+				: `Cuota ${c.numero_cuota} de ${plan.cuotas.length} por inclusión`,
 	}));
 
 	const { error } = await supabase.from("polizas_anexos_pagos").insert(rows);
@@ -840,7 +857,7 @@ async function guardarCuotasInclusion(
 async function insertarItemsRamo(
 	supabase: Awaited<ReturnType<typeof createClient>>,
 	anexoId: string,
-	itemsCambio: NonNullable<AnexoFormState["items_cambio"]>
+	itemsCambio: NonNullable<AnexoFormState["items_cambio"]>,
 ) {
 	switch (itemsCambio.tipo_ramo) {
 		case "Automotores": {
@@ -1023,17 +1040,21 @@ export async function obtenerAnexosPoliza(polizaId: string): Promise<{
 	const supabase = await createClient();
 
 	try {
-		const { data: { user } } = await supabase.auth.getUser();
+		const {
+			data: { user },
+		} = await supabase.auth.getUser();
 		if (!user) return { success: false, error: "No autenticado" };
 
 		const { data: anexos, error } = await supabase
 			.from("polizas_anexos")
-			.select(`
+			.select(
+				`
 				id, numero_anexo, tipo_anexo, fecha_anexo, fecha_efectiva,
 				estado, observaciones, fecha_validacion,
 				creador:profiles!created_by (full_name),
 				validador:profiles!validado_por (full_name)
-			`)
+			`,
+			)
 			.eq("poliza_id", polizaId)
 			.order("created_at", { ascending: false });
 
@@ -1043,12 +1064,10 @@ export async function obtenerAnexosPoliza(polizaId: string): Promise<{
 
 		// Contar documentos por anexo
 		const anexoIds = (anexos || []).map((a) => a.id);
-		const { data: docCounts } = anexoIds.length > 0
-			? await supabase
-				.from("polizas_anexos_documentos")
-				.select("anexo_id")
-				.in("anexo_id", anexoIds)
-			: { data: [] };
+		const { data: docCounts } =
+			anexoIds.length > 0
+				? await supabase.from("polizas_anexos_documentos").select("anexo_id").in("anexo_id", anexoIds)
+				: { data: [] };
 
 		const docCountMap = new Map<string, number>();
 		(docCounts || []).forEach((d) => {
@@ -1056,12 +1075,10 @@ export async function obtenerAnexosPoliza(polizaId: string): Promise<{
 		});
 
 		// Obtener montos de ajuste por anexo
-		const { data: pagosAnexos } = anexoIds.length > 0
-			? await supabase
-				.from("polizas_anexos_pagos")
-				.select("anexo_id, monto")
-				.in("anexo_id", anexoIds)
-			: { data: [] };
+		const { data: pagosAnexos } =
+			anexoIds.length > 0
+				? await supabase.from("polizas_anexos_pagos").select("anexo_id, monto").in("anexo_id", anexoIds)
+				: { data: [] };
 
 		const montoAjusteMap = new Map<string, number>();
 		(pagosAnexos || []).forEach((p) => {
@@ -1109,7 +1126,9 @@ export async function obtenerCuotasConsolidadas(polizaId: string): Promise<{
 	const supabase = await createClient();
 
 	try {
-		const { data: { user } } = await supabase.auth.getUser();
+		const {
+			data: { user },
+		} = await supabase.auth.getUser();
 		if (!user) return { success: false, error: "No autenticado" };
 
 		const [cuotasResult, anexosPagosResult] = await Promise.all([
@@ -1120,11 +1139,13 @@ export async function obtenerCuotasConsolidadas(polizaId: string): Promise<{
 				.order("numero_cuota", { ascending: true }),
 			supabase
 				.from("polizas_anexos_pagos")
-				.select(`
+				.select(
+					`
 					id, anexo_id, cuota_original_id, tipo, numero_cuota,
 					monto, fecha_vencimiento, estado, observaciones,
 					polizas_anexos!inner (id, numero_anexo, tipo_anexo, estado)
-				`)
+				`,
+				)
 				.eq("polizas_anexos.poliza_id", polizaId)
 				.eq("polizas_anexos.estado", "activo"),
 		]);
@@ -1160,7 +1181,11 @@ export async function obtenerCuotasConsolidadas(polizaId: string): Promise<{
 				estado: cuota.estado || "pendiente",
 				fecha_pago: cuota.fecha_pago || undefined,
 				ajustes: ajustesCuota.map((a) => {
-					const info = a.polizas_anexos as unknown as { id: string; numero_anexo: string; tipo_anexo: string };
+					const info = a.polizas_anexos as unknown as {
+						id: string;
+						numero_anexo: string;
+						tipo_anexo: string;
+					};
 					return {
 						anexo_id: info.id,
 						numero_anexo: info.numero_anexo,
@@ -1172,22 +1197,24 @@ export async function obtenerCuotasConsolidadas(polizaId: string): Promise<{
 		});
 
 		// Cuotas propias de anexos de inclusión (independientes de la póliza madre)
-		const inclusion: CuotaAnexoPropia[] = cuotasPropias.map((p) => {
-			const info = p.polizas_anexos as unknown as { id: string; numero_anexo: string };
-			return {
-				id: p.id,
-				anexo_id: info.id,
-				numero_anexo: info.numero_anexo,
-				numero_cuota: p.numero_cuota ?? 0,
-				monto: Number(p.monto),
-				fecha_vencimiento: p.fecha_vencimiento || "",
-				estado: p.estado || "pendiente",
-				observaciones: p.observaciones || undefined,
-			};
-		}).sort((a, b) => {
-			if (a.numero_anexo !== b.numero_anexo) return a.numero_anexo.localeCompare(b.numero_anexo);
-			return a.numero_cuota - b.numero_cuota;
-		});
+		const inclusion: CuotaAnexoPropia[] = cuotasPropias
+			.map((p) => {
+				const info = p.polizas_anexos as unknown as { id: string; numero_anexo: string };
+				return {
+					id: p.id,
+					anexo_id: info.id,
+					numero_anexo: info.numero_anexo,
+					numero_cuota: p.numero_cuota ?? 0,
+					monto: Number(p.monto),
+					fecha_vencimiento: p.fecha_vencimiento || "",
+					estado: p.estado || "pendiente",
+					observaciones: p.observaciones || undefined,
+				};
+			})
+			.sort((a, b) => {
+				if (a.numero_anexo !== b.numero_anexo) return a.numero_anexo.localeCompare(b.numero_anexo);
+				return a.numero_cuota - b.numero_cuota;
+			});
 
 		// Vigencia corrida de anulaciones
 		const vc: CuotaVigenciaCorrida[] = vigenciaCorrida.map((p) => {
@@ -1267,19 +1294,23 @@ export async function obtenerDetalleAnexo(anexoId: string): Promise<{
 	const supabase = await createClient();
 
 	try {
-		const { data: { user } } = await supabase.auth.getUser();
+		const {
+			data: { user },
+		} = await supabase.auth.getUser();
 		if (!user) return { success: false, error: "No autenticado" };
 
 		// Fetch anexo base + poliza ramo
 		const { data: anexo, error: anexoError } = await supabase
 			.from("polizas_anexos")
-			.select(`
+			.select(
+				`
 				id, numero_anexo, tipo_anexo, fecha_anexo, fecha_efectiva,
 				estado, observaciones, created_at,
 				fecha_validacion, motivo_rechazo, fecha_rechazo,
 				created_by, validado_por, rechazado_por,
 				polizas!poliza_id ( ramo )
-			`)
+			`,
+			)
 			.eq("id", anexoId)
 			.single();
 
@@ -1361,9 +1392,12 @@ export async function obtenerDetalleAnexo(anexoId: string): Promise<{
 async function cargarItemsAnexoRamo(
 	supabase: Awaited<ReturnType<typeof createClient>>,
 	anexoId: string,
-	ramo: string
+	ramo: string,
 ): Promise<AnexoDetalleItem[]> {
-	const ramoNorm = ramo.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+	const ramoNorm = ramo
+		.toLowerCase()
+		.normalize("NFD")
+		.replace(/[\u0300-\u036f]/g, "");
 
 	if (ramoNorm.includes("automotor")) {
 		const { data } = await supabase
@@ -1381,7 +1415,7 @@ async function cargarItemsAnexoRamo(
 				"Nro. Chasis": v.nro_chasis,
 				Uso: v.uso,
 				Modelo: v.modelo,
-				"Año": v.ano,
+				Año: v.ano,
 				Color: v.color,
 			},
 		}));
@@ -1403,7 +1437,7 @@ async function cargarItemsAnexoRamo(
 				Franquicia: Number(e.franquicia),
 				Uso: e.uso,
 				Modelo: e.modelo,
-				"Año": e.ano,
+				Año: e.ano,
 			},
 		}));
 	}
@@ -1411,17 +1445,19 @@ async function cargarItemsAnexoRamo(
 	if (ramoNorm.includes("aeronavegacion") || ramoNorm.includes("nave") || ramoNorm.includes("embarcacion")) {
 		const { data } = await supabase
 			.from("polizas_anexos_aeronavegacion_naves")
-			.select("id, accion, matricula, marca, modelo, ano, serie, uso, nro_pasajeros, nro_tripulantes, valor_casco, valor_responsabilidad_civil")
+			.select(
+				"id, accion, matricula, marca, modelo, ano, serie, uso, nro_pasajeros, nro_tripulantes, valor_casco, valor_responsabilidad_civil",
+			)
 			.eq("anexo_id", anexoId);
 		return (data || []).map((n) => ({
 			id: n.id,
 			accion: n.accion as "inclusion" | "exclusion",
 			label: `${n.matricula} - ${n.marca} ${n.modelo}`.trim(),
 			detalles: {
-				"Matrícula": n.matricula,
+				Matrícula: n.matricula,
 				Marca: n.marca,
 				Modelo: n.modelo,
-				"Año": n.ano,
+				Año: n.ano,
 				Serie: n.serie,
 				Uso: n.uso,
 				Pasajeros: n.nro_pasajeros,
@@ -1462,7 +1498,7 @@ async function cargarItemsAnexoRamo(
 					Nombre: b.nombre_completo,
 					Carnet: b.carnet,
 					"Fecha Nac.": b.fecha_nacimiento,
-					"Género": b.genero,
+					Género: b.genero,
 					Nivel: b.nivel_id,
 					Rol: b.rol,
 				},
@@ -1481,7 +1517,7 @@ async function cargarItemsAnexoRamo(
 			accion: b.accion as "inclusion" | "exclusion",
 			label: b.direccion,
 			detalles: {
-				"Dirección": b.direccion,
+				Dirección: b.direccion,
 				"Valor Total": Number(b.valor_total_declarado),
 				"Primer Riesgo": b.es_primer_riesgo,
 			},
@@ -1498,14 +1534,19 @@ async function cargarItemsAnexoRamo(
 			accion: b.accion as "inclusion" | "exclusion",
 			label: b.direccion,
 			detalles: {
-				"Dirección": b.direccion,
+				Dirección: b.direccion,
 				"Valor Total": Number(b.valor_total_declarado),
 				"Primer Riesgo": b.es_primer_riesgo,
 			},
 		}));
 	}
 
-	if (ramoNorm.includes("vida") || ramoNorm.includes("sepelio") || ramoNorm.includes("defuncion") || (ramoNorm.includes("accidente") && ramoNorm.includes("personal"))) {
+	if (
+		ramoNorm.includes("vida") ||
+		ramoNorm.includes("sepelio") ||
+		ramoNorm.includes("defuncion") ||
+		(ramoNorm.includes("accidente") && ramoNorm.includes("personal"))
+	) {
 		const { data } = await supabase
 			.from("polizas_anexos_asegurados_nivel")
 			.select("id, accion, client_id, nivel_id, cargo")

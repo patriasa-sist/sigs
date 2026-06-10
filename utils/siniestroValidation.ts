@@ -166,7 +166,7 @@ export function validarDocumentosIniciales(documentos: DocumentoSiniestro[]): Va
 
 	if (!documentos || documentos.length === 0) {
 		advertencias.push(
-			"No se agregaron documentos iniciales. Se recomienda subir al menos fotografías o formulario de denuncia"
+			"No se agregaron documentos iniciales. Se recomienda subir al menos fotografías o formulario de denuncia",
 		);
 	}
 
@@ -339,7 +339,7 @@ export function validarCierreIndemnizacion(datos: DatosCierreIndemnizacion): Val
 		const montoNeto = datos.monto_reclamado - datos.deducible;
 		if (datos.monto_pagado !== undefined && Math.abs(datos.monto_pagado - montoNeto) > 0.01) {
 			advertencias.push(
-				`El monto pagado (${datos.monto_pagado}) no coincide con el monto neto esperado (${montoNeto.toFixed(2)} = reclamado - deducible). Verifique los cálculos`
+				`El monto pagado (${datos.monto_pagado}) no coincide con el monto neto esperado (${montoNeto.toFixed(2)} = reclamado - deducible). Verifique los cálculos`,
 			);
 		}
 	}

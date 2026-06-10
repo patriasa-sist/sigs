@@ -117,7 +117,7 @@ export function generateMockClients(): Client[] {
 			executiveInCharge: executives[Math.floor(Math.random() * executives.length)],
 			policies: generateMockPolicies(
 				`CLIENT-${String(i + 1).padStart(3, "0")}`,
-				Math.floor(1 + Math.random() * 4)
+				Math.floor(1 + Math.random() * 4),
 			),
 			createdAt,
 			updatedAt: createdAt,

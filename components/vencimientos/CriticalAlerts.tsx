@@ -21,12 +21,15 @@ export default function CriticalAlerts({ data, onBack }: CriticalAlertsProps) {
 	const expiredRecords = data.filter((r) => r.status === "expired");
 
 	// Agrupar por días restantes
-	const groupedByDays = criticalRecords.reduce((acc, record) => {
-		const days = record.daysUntilExpiry;
-		if (!acc[days]) acc[days] = [];
-		acc[days].push(record);
-		return acc;
-	}, {} as Record<number, ProcessedInsuranceRecord[]>);
+	const groupedByDays = criticalRecords.reduce(
+		(acc, record) => {
+			const days = record.daysUntilExpiry;
+			if (!acc[days]) acc[days] = [];
+			acc[days].push(record);
+			return acc;
+		},
+		{} as Record<number, ProcessedInsuranceRecord[]>,
+	);
 
 	// Estadísticas de urgencia
 	const urgencyStats = {

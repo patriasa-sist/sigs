@@ -2,24 +2,13 @@
 
 import React from "react";
 import { Controller, UseFormReturn } from "react-hook-form";
-import {
-	ClubClientFormData,
-	SPORTS_DISCIPLINES,
-	CLUB_REGISTRY_TYPES,
-	type ExtraPhone,
-} from "@/types/clientForm";
+import { ClubClientFormData, SPORTS_DISCIPLINES, CLUB_REGISTRY_TYPES, type ExtraPhone } from "@/types/clientForm";
 import type { ClienteDocumentoFormState, TipoDocumentoCliente } from "@/types/clienteDocumento";
 import { FormSection } from "./FormSection";
 import { ExtraPhonesInput } from "./ExtraPhonesInput";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ClienteDocumentUpload } from "./ClienteDocumentUpload";
 import { cn } from "@/lib/utils";
 
@@ -99,12 +88,7 @@ export function ClubClientForm({ form, onFieldBlur, exceptions = [] }: ClubClien
 
 					<div>
 						<Label htmlFor="sigla">Sigla / Acrónimo</Label>
-						<Input
-							id="sigla"
-							{...ur("sigla")}
-							onBlur={onFieldBlur}
-							placeholder="CDB"
-						/>
+						<Input id="sigla" {...ur("sigla")} onBlur={onFieldBlur} placeholder="CDB" />
 					</div>
 
 					<div>
@@ -138,12 +122,7 @@ export function ClubClientForm({ form, onFieldBlur, exceptions = [] }: ClubClien
 						<Label htmlFor="nit">
 							NIT <span className="text-muted-foreground text-xs">(opcional)</span>
 						</Label>
-						<Input
-							id="nit"
-							{...register("nit")}
-							onBlur={onFieldBlur}
-							placeholder="123456789"
-						/>
+						<Input id="nit" {...register("nit")} onBlur={onFieldBlur} placeholder="123456789" />
 					</div>
 
 					<div>
@@ -262,9 +241,7 @@ export function ClubClientForm({ form, onFieldBlur, exceptions = [] }: ClubClien
 							placeholder="22123456"
 							className={eb(!!errors.telefono)}
 						/>
-						{errors.telefono && (
-							<p className="text-sm text-destructive mt-1">{errors.telefono.message}</p>
-						)}
+						{errors.telefono && <p className="text-sm text-destructive mt-1">{errors.telefono.message}</p>}
 					</div>
 
 					<div className="md:col-span-2">

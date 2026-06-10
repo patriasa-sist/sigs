@@ -4,16 +4,12 @@ import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
 import type { ExtraPhone } from "@/types/clientForm";
 
-type ActionResult<T> =
-	| { success: true; data: T }
-	| { success: false; error: string };
+type ActionResult<T> = { success: true; data: T } | { success: false; error: string };
 
 /**
  * Get extra phones for a client
  */
-export async function getExtraPhones(
-	clientId: string
-): Promise<ActionResult<ExtraPhone[]>> {
+export async function getExtraPhones(clientId: string): Promise<ActionResult<ExtraPhone[]>> {
 	try {
 		const supabase = await createClient();
 		const {
@@ -46,10 +42,7 @@ export async function getExtraPhones(
  * Save extra phones for a client (replaces all existing)
  * Used during client creation and editing
  */
-export async function saveExtraPhones(
-	clientId: string,
-	phones: ExtraPhone[]
-): Promise<ActionResult<void>> {
+export async function saveExtraPhones(clientId: string, phones: ExtraPhone[]): Promise<ActionResult<void>> {
 	try {
 		const supabase = await createClient();
 		const {
@@ -58,10 +51,7 @@ export async function saveExtraPhones(
 		if (!user) return { success: false, error: "No autenticado" };
 
 		// Delete existing extra phones
-		const { error: deleteError } = await supabase
-			.from("client_extra_phones")
-			.delete()
-			.eq("client_id", clientId);
+		const { error: deleteError } = await supabase.from("client_extra_phones").delete().eq("client_id", clientId);
 
 		if (deleteError) {
 			console.error("[saveExtraPhones] Delete error:", deleteError);
@@ -79,9 +69,7 @@ export async function saveExtraPhones(
 				}));
 
 			if (phonesToInsert.length > 0) {
-				const { error: insertError } = await supabase
-					.from("client_extra_phones")
-					.insert(phonesToInsert);
+				const { error: insertError } = await supabase.from("client_extra_phones").insert(phonesToInsert);
 
 				if (insertError) {
 					console.error("[saveExtraPhones] Insert error:", insertError);

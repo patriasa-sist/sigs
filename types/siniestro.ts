@@ -607,13 +607,15 @@ export type EstadoActualSiniestro = {
 };
 
 // Siniestro con flag de atención (sin actualizaciones en 10+ días)
-export type SiniestroConEstado = Siniestro & EstadoActualSiniestro & {
-	requiere_atencion: boolean;
-};
+export type SiniestroConEstado = Siniestro &
+	EstadoActualSiniestro & {
+		requiere_atencion: boolean;
+	};
 
-export type SiniestroVistaConEstado = SiniestroVista & EstadoActualSiniestro & {
-	requiere_atencion: boolean;
-};
+export type SiniestroVistaConEstado = SiniestroVista &
+	EstadoActualSiniestro & {
+		requiere_atencion: boolean;
+	};
 
 // ============================================
 // CONTACTO PARA WHATSAPP (NUEVO)

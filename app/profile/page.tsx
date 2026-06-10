@@ -2,18 +2,7 @@ import { createClient } from "@/utils/supabase/server";
 import { redirect } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import {
-	User,
-	Mail,
-	Shield,
-	Phone,
-	Briefcase,
-	Calendar,
-	PenLine,
-	Tag,
-	ImageIcon,
-	Percent,
-} from "lucide-react";
+import { User, Mail, Shield, Phone, Briefcase, Calendar, PenLine, Tag, ImageIcon, Percent } from "lucide-react";
 import { ProfileEditForm } from "@/components/profile/ProfileEditForm";
 import Image from "next/image";
 
@@ -128,7 +117,11 @@ export default async function ProfilePage() {
 							<InfoRow
 								icon={User}
 								label="Nombre completo"
-								value={profile?.full_name || <span className="text-muted-foreground italic">No especificado</span>}
+								value={
+									profile?.full_name || (
+										<span className="text-muted-foreground italic">No especificado</span>
+									)
+								}
 							/>
 							<InfoRow icon={Mail} label="Correo electrónico" value={profile?.email} />
 							<InfoRow
@@ -185,9 +178,7 @@ export default async function ProfilePage() {
 								icon={Tag}
 								label="Acrónimo en PDFs"
 								value={
-									<span className="font-mono font-semibold tracking-widest">
-										{displayAcronimo}
-									</span>
+									<span className="font-mono font-semibold tracking-widest">{displayAcronimo}</span>
 								}
 							/>
 							<InfoRow
@@ -278,15 +269,7 @@ export default async function ProfilePage() {
 }
 
 // ── Helper component ──────────────────────────────────────────────────────────
-function InfoRow({
-	icon: Icon,
-	label,
-	value,
-}: {
-	icon: React.ElementType;
-	label: string;
-	value: React.ReactNode;
-}) {
+function InfoRow({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value: React.ReactNode }) {
 	return (
 		<div className="flex items-start gap-3 py-3 first:pt-1 last:pb-1">
 			<Icon className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />

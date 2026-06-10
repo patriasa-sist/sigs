@@ -2,23 +2,13 @@
 
 import React from "react";
 import { Controller, UseFormReturn } from "react-hook-form";
-import {
-	AsociacionCivilClientFormData,
-	ASOCIACION_CIVIL_TYPES,
-	type ExtraPhone,
-} from "@/types/clientForm";
+import { AsociacionCivilClientFormData, ASOCIACION_CIVIL_TYPES, type ExtraPhone } from "@/types/clientForm";
 import type { ClienteDocumentoFormState, TipoDocumentoCliente } from "@/types/clienteDocumento";
 import { FormSection } from "./FormSection";
 import { ExtraPhonesInput } from "./ExtraPhonesInput";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ClienteDocumentUpload } from "./ClienteDocumentUpload";
 import { cn } from "@/lib/utils";
 
@@ -66,7 +56,11 @@ export function AsociacionCivilClientForm({ form, onFieldBlur, exceptions = [] }
 	return (
 		<div className="space-y-6">
 			{/* SECCIÓN 1: DATOS DE LA ASOCIACIÓN */}
-			<FormSection title="Datos de la Asociación" description="Identificación de la asociación civil sin fines de lucro" required>
+			<FormSection
+				title="Datos de la Asociación"
+				description="Identificación de la asociación civil sin fines de lucro"
+				required
+			>
 				<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 					<div className="md:col-span-2">
 						<Label htmlFor="nombre_asociacion">
@@ -86,12 +80,7 @@ export function AsociacionCivilClientForm({ form, onFieldBlur, exceptions = [] }
 
 					<div>
 						<Label htmlFor="sigla">Sigla / Acrónimo</Label>
-						<Input
-							id="sigla"
-							{...ur("sigla")}
-							onBlur={onFieldBlur}
-							placeholder="SALP"
-						/>
+						<Input id="sigla" {...ur("sigla")} onBlur={onFieldBlur} placeholder="SALP" />
 					</div>
 
 					<div>
@@ -141,12 +130,7 @@ export function AsociacionCivilClientForm({ form, onFieldBlur, exceptions = [] }
 						<Label htmlFor="nit">
 							NIT <span className="text-muted-foreground text-xs">(cuando corresponda)</span>
 						</Label>
-						<Input
-							id="nit"
-							{...register("nit")}
-							onBlur={onFieldBlur}
-							placeholder="123456789"
-						/>
+						<Input id="nit" {...register("nit")} onBlur={onFieldBlur} placeholder="123456789" />
 					</div>
 
 					<div>
@@ -177,7 +161,9 @@ export function AsociacionCivilClientForm({ form, onFieldBlur, exceptions = [] }
 							className={eb(!!errors.entidad_otorgante_personeria)}
 						/>
 						{errors.entidad_otorgante_personeria && (
-							<p className="text-sm text-destructive mt-1">{errors.entidad_otorgante_personeria.message}</p>
+							<p className="text-sm text-destructive mt-1">
+								{errors.entidad_otorgante_personeria.message}
+							</p>
 						)}
 					</div>
 				</div>
@@ -226,9 +212,7 @@ export function AsociacionCivilClientForm({ form, onFieldBlur, exceptions = [] }
 							placeholder="22123456"
 							className={eb(!!errors.telefono)}
 						/>
-						{errors.telefono && (
-							<p className="text-sm text-destructive mt-1">{errors.telefono.message}</p>
-						)}
+						{errors.telefono && <p className="text-sm text-destructive mt-1">{errors.telefono.message}</p>}
 					</div>
 
 					<div className="md:col-span-2">

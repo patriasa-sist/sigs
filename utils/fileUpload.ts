@@ -30,11 +30,7 @@ export function sanitizarNombreArchivo(nombreArchivo: string): string {
  * Genera una ruta temporal en Storage para un archivo antes de conocer el poliza_id.
  * Formato: temp/{userId}/{sessionId}/{timestamp}-{nombre_sanitizado}
  */
-export function generateTempStoragePath(
-	userId: string,
-	sessionId: string,
-	fileName: string
-): string {
+export function generateTempStoragePath(userId: string, sessionId: string, fileName: string): string {
 	const sanitized = sanitizarNombreArchivo(fileName);
 	const timestamp = Date.now();
 	return `temp/${userId}/${sessionId}/${timestamp}-${sanitized}`;
@@ -44,10 +40,7 @@ export function generateTempStoragePath(
  * Genera la ruta final en Storage una vez se conoce el poliza_id.
  * Formato: {polizaId}/{timestamp}-{nombre_sanitizado}
  */
-export function generateFinalStoragePath(
-	polizaId: string,
-	fileName: string
-): string {
+export function generateFinalStoragePath(polizaId: string, fileName: string): string {
 	const sanitized = sanitizarNombreArchivo(fileName);
 	const timestamp = Date.now();
 	return `${polizaId}/${timestamp}-${sanitized}`;

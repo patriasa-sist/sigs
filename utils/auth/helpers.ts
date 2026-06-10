@@ -3,7 +3,17 @@ import { createClient as createBrowserClient } from "@/utils/supabase/client";
 import { redirect } from "next/navigation";
 import { cache } from "react";
 
-export type UserRole = "admin" | "usuario" | "agente" | "comercial" | "cobranza" | "siniestros" | "uif" | "rrhh" | "invitado" | "desactivado";
+export type UserRole =
+	| "admin"
+	| "usuario"
+	| "agente"
+	| "comercial"
+	| "cobranza"
+	| "siniestros"
+	| "uif"
+	| "rrhh"
+	| "invitado"
+	| "desactivado";
 
 /**
  * Permisos granulares del sistema.
@@ -85,34 +95,36 @@ export const getCurrentUser = cache(async () => {
  *   - user_permissions: permisos efectivos
  *   - team_member_ids: IDs de compañeros de equipo (Fase 4)
  */
-const getJWTClaimsServer = cache(async (): Promise<{
-	user_role: string;
-	user_permissions: string[];
-	team_member_ids: string[];
-}> => {
-	const supabase = await createClient();
-	const { data: { session } } = await supabase.auth.getSession();
-	if (!session?.access_token) {
-		return { user_role: "invitado", user_permissions: [], team_member_ids: [] };
-	}
-	try {
-		const payload = JSON.parse(
-			Buffer.from(
-				session.access_token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/"),
-				"base64"
-			).toString("utf-8")
-		);
-		return {
-			user_role: payload.user_role || "invitado",
-			user_permissions: Array.isArray(payload.user_permissions) ? payload.user_permissions : [],
-			team_member_ids: Array.isArray(payload.team_member_ids)
-				? payload.team_member_ids.map(String)
-				: [],
-		};
-	} catch {
-		return { user_role: "invitado", user_permissions: [], team_member_ids: [] };
-	}
-});
+const getJWTClaimsServer = cache(
+	async (): Promise<{
+		user_role: string;
+		user_permissions: string[];
+		team_member_ids: string[];
+	}> => {
+		const supabase = await createClient();
+		const {
+			data: { session },
+		} = await supabase.auth.getSession();
+		if (!session?.access_token) {
+			return { user_role: "invitado", user_permissions: [], team_member_ids: [] };
+		}
+		try {
+			const payload = JSON.parse(
+				Buffer.from(
+					session.access_token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/"),
+					"base64",
+				).toString("utf-8"),
+			);
+			return {
+				user_role: payload.user_role || "invitado",
+				user_permissions: Array.isArray(payload.user_permissions) ? payload.user_permissions : [],
+				team_member_ids: Array.isArray(payload.team_member_ids) ? payload.team_member_ids.map(String) : [],
+			};
+		} catch {
+			return { user_role: "invitado", user_permissions: [], team_member_ids: [] };
+		}
+	},
+);
 
 export async function getCurrentUserProfile(): Promise<UserProfile | null> {
 	const user = await getCurrentUser();
@@ -157,13 +169,15 @@ export async function getDisplayProfile(): Promise<UserProfile> {
 	}
 
 	// Return profile data if available, otherwise fallback to user data
-	return profile || {
-		id: user.id,
-		email: user.email!,
-		role: "usuario" as const, // Default role, actual role verified by middleware for protected routes
-		created_at: user.created_at,
-		updated_at: user.updated_at || user.created_at,
-	};
+	return (
+		profile || {
+			id: user.id,
+			email: user.email!,
+			role: "usuario" as const, // Default role, actual role verified by middleware for protected routes
+			created_at: user.created_at,
+			updated_at: user.updated_at || user.created_at,
+		}
+	);
 }
 
 export async function requireAuth() {
@@ -270,7 +284,9 @@ export async function requirePermission(permission: Permission): Promise<UserPro
  * Útil en server actions donde se quiere retornar error en vez de redirect.
  * Fase 4: Lee permisos del JWT, sin consultas a BD.
  */
-export async function checkPermission(permission: Permission): Promise<{ allowed: boolean; profile: UserProfile | null }> {
+export async function checkPermission(
+	permission: Permission,
+): Promise<{ allowed: boolean; profile: UserProfile | null }> {
 	const user = await getCurrentUser();
 	if (!user) return { allowed: false, profile: null };
 	const claims = await getJWTClaimsServer();
@@ -295,14 +311,14 @@ export async function checkPermission(permission: Permission): Promise<{ allowed
  */
 export async function getPermissionsFromSession(): Promise<string[]> {
 	const supabase = createBrowserClient();
-	const { data: { session } } = await supabase.auth.getSession();
+	const {
+		data: { session },
+	} = await supabase.auth.getSession();
 	if (!session?.access_token) return [];
 
 	try {
 		const payload = session.access_token.split(".")[1];
-		const decoded = JSON.parse(
-			atob(payload.replace(/-/g, "+").replace(/_/g, "/"))
-		);
+		const decoded = JSON.parse(atob(payload.replace(/-/g, "+").replace(/_/g, "/")));
 		return decoded.user_permissions || [];
 	} catch {
 		return [];
@@ -326,7 +342,7 @@ export async function getPermissionsFromSession(): Promise<string[]> {
  * Fase 4: Lee rol y team_member_ids del JWT, sin consultas a BD.
  * Fallback al RPC get_team_member_ids() si el JWT es anterior a la migración Fase 4.
  */
-export async function getDataScopeFilter(module?: 'polizas' | 'clientes' | 'siniestros'): Promise<{
+export async function getDataScopeFilter(module?: "polizas" | "clientes" | "siniestros"): Promise<{
 	needsScoping: boolean;
 	teamMemberIds: string[];
 	userId: string;
@@ -374,14 +390,14 @@ export async function getDataScopeFilter(module?: 'polizas' | 'clientes' | 'sini
 
 export async function hasPermissionClient(permission: Permission): Promise<boolean> {
 	const supabase = createBrowserClient();
-	const { data: { session } } = await supabase.auth.getSession();
+	const {
+		data: { session },
+	} = await supabase.auth.getSession();
 	if (!session?.access_token) return false;
 
 	try {
 		const payload = session.access_token.split(".")[1];
-		const decoded = JSON.parse(
-			atob(payload.replace(/-/g, "+").replace(/_/g, "/"))
-		);
+		const decoded = JSON.parse(atob(payload.replace(/-/g, "+").replace(/_/g, "/")));
 		if (decoded.user_role === "admin") return true;
 		const permissions: string[] = decoded.user_permissions || [];
 		return permissions.includes(permission);

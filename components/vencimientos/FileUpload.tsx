@@ -61,7 +61,7 @@ export default function FileUpload({ onDataLoaded, onError, disabled = false }: 
 				setTimeout(() => setUploadProgress(0), 2000);
 			}
 		},
-		[onDataLoaded, onError, disabled]
+		[onDataLoaded, onError, disabled],
 	);
 
 	const { getRootProps, getInputProps, isDragActive, isDragReject } = useDropzone({
@@ -110,8 +110,15 @@ export default function FileUpload({ onDataLoaded, onError, disabled = false }: 
 								<>
 									<Upload className="h-12 w-12 text-patria-blue" />
 									<div className="text-center">
-										<p className="text-lg font-medium text-gray-700">{isDragActive ? "Suelta el archivo aquí" : "Arrastra tu archivo Excel o haz clic para seleccionar"}</p>
-										<p className="text-sm text-gray-500 mt-2">Archivos soportados: .xlsx, .xls (máx. ${SYSTEM_CONSTANTS.MAX_UPLOAD_SIZE / 1024 / 1024}MB)</p>
+										<p className="text-lg font-medium text-gray-700">
+											{isDragActive
+												? "Suelta el archivo aquí"
+												: "Arrastra tu archivo Excel o haz clic para seleccionar"}
+										</p>
+										<p className="text-sm text-gray-500 mt-2">
+											Archivos soportados: .xlsx, .xls (máx. $
+											{SYSTEM_CONSTANTS.MAX_UPLOAD_SIZE / 1024 / 1024}MB)
+										</p>
 									</div>
 
 									{!isDragActive && (
@@ -142,7 +149,9 @@ export default function FileUpload({ onDataLoaded, onError, disabled = false }: 
 												<div className="text-sm space-y-1">
 													<p>• Total de registros: {uploadResult.totalRecords}</p>
 													<p>• Registros válidos: {uploadResult.validRecords}</p>
-													{uploadResult.warnings && uploadResult.warnings.length > 0 && <p>• Advertencias: {uploadResult.warnings.length}</p>}
+													{uploadResult.warnings && uploadResult.warnings.length > 0 && (
+														<p>• Advertencias: {uploadResult.warnings.length}</p>
+													)}
 												</div>
 											</div>
 										</AlertDescription>
@@ -176,7 +185,11 @@ export default function FileUpload({ onDataLoaded, onError, disabled = false }: 
 													{uploadResult.warnings.slice(0, 10).map((warning, index) => (
 														<li key={index}>{warning}</li>
 													))}
-													{uploadResult.warnings.length > 10 && <li className="font-medium">... y {uploadResult.warnings.length - 10} advertencias más</li>}
+													{uploadResult.warnings.length > 10 && (
+														<li className="font-medium">
+															... y {uploadResult.warnings.length - 10} advertencias más
+														</li>
+													)}
 												</ul>
 											</div>
 										</AlertDescription>

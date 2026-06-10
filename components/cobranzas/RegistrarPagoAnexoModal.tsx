@@ -2,13 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import Image from "next/image";
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogHeader,
-	DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -109,18 +103,27 @@ export default function RegistrarPagoAnexoModal({
 	}, []);
 
 	const handleDragOver = useCallback((e: React.DragEvent) => {
-		e.preventDefault(); e.stopPropagation(); setIsDragging(true);
+		e.preventDefault();
+		e.stopPropagation();
+		setIsDragging(true);
 	}, []);
 
 	const handleDragLeave = useCallback((e: React.DragEvent) => {
-		e.preventDefault(); e.stopPropagation(); setIsDragging(false);
+		e.preventDefault();
+		e.stopPropagation();
+		setIsDragging(false);
 	}, []);
 
-	const handleDrop = useCallback((e: React.DragEvent) => {
-		e.preventDefault(); e.stopPropagation(); setIsDragging(false);
-		const file = e.dataTransfer.files?.[0];
-		if (file) processFile(file);
-	}, [processFile]);
+	const handleDrop = useCallback(
+		(e: React.DragEvent) => {
+			e.preventDefault();
+			e.stopPropagation();
+			setIsDragging(false);
+			const file = e.dataTransfer.files?.[0];
+			if (file) processFile(file);
+		},
+		[processFile],
+	);
 
 	useEffect(() => {
 		if (!open || selectedFile) return;
@@ -130,7 +133,11 @@ export default function RegistrarPagoAnexoModal({
 			for (const item of items) {
 				if (item.kind === "file") {
 					const file = item.getAsFile();
-					if (file) { e.preventDefault(); processFile(file); return; }
+					if (file) {
+						e.preventDefault();
+						processFile(file);
+						return;
+					}
 				}
 			}
 		};
@@ -329,11 +336,21 @@ export default function RegistrarPagoAnexoModal({
 									<div className="flex items-center gap-2 min-w-0">
 										<FileText className="h-4 w-4 text-primary shrink-0" />
 										<div className="min-w-0">
-											<p className="text-sm font-medium truncate max-w-[220px]">{selectedFile.name}</p>
-											<p className="text-xs text-muted-foreground">{formatearTamanoArchivo(selectedFile.size)}</p>
+											<p className="text-sm font-medium truncate max-w-[220px]">
+												{selectedFile.name}
+											</p>
+											<p className="text-xs text-muted-foreground">
+												{formatearTamanoArchivo(selectedFile.size)}
+											</p>
 										</div>
 									</div>
-									<Button type="button" variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={handleRemoveFile}>
+									<Button
+										type="button"
+										variant="ghost"
+										size="icon"
+										className="h-7 w-7 shrink-0"
+										onClick={handleRemoveFile}
+									>
 										<X className="h-4 w-4" />
 									</Button>
 								</div>

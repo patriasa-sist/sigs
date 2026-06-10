@@ -48,7 +48,17 @@ type ErroresBeneficiario = {
 	rol?: string;
 };
 
-export function BeneficiarioModal({ beneficiario, moneda = "Bs", niveles, roles = ROLES_DEFAULT, hideRol = false, titulo, descripcionRoles, onGuardar, onCancelar }: Props) {
+export function BeneficiarioModal({
+	beneficiario,
+	moneda = "Bs",
+	niveles,
+	roles = ROLES_DEFAULT,
+	hideRol = false,
+	titulo,
+	descripcionRoles,
+	onGuardar,
+	onCancelar,
+}: Props) {
 	const [formData, setFormData] = useState<Partial<DatosPersonaMinima>>(
 		beneficiario || {
 			id: crypto.randomUUID(),
@@ -57,7 +67,7 @@ export function BeneficiarioModal({ beneficiario, moneda = "Bs", niveles, roles 
 			fecha_nacimiento: undefined,
 			genero: undefined,
 			nivel_id: niveles[0]?.id || "",
-			rol: hideRol ? undefined : (roles[0]?.value || "conyugue"),
+			rol: hideRol ? undefined : roles[0]?.value || "conyugue",
 		},
 	);
 
@@ -272,13 +282,18 @@ export function BeneficiarioModal({ beneficiario, moneda = "Bs", niveles, roles 
 									<Label htmlFor="rol">
 										Rol <span className="text-red-500">*</span>
 									</Label>
-									<Select value={formData.rol ?? ""} onValueChange={(value) => handleChange("rol", value)}>
+									<Select
+										value={formData.rol ?? ""}
+										onValueChange={(value) => handleChange("rol", value)}
+									>
 										<SelectTrigger className={errores.rol ? "border-red-500" : ""}>
 											<SelectValue placeholder="Seleccione un rol" />
 										</SelectTrigger>
 										<SelectContent>
 											{roles.map((r) => (
-												<SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
+												<SelectItem key={r.value} value={r.value}>
+													{r.label}
+												</SelectItem>
 											))}
 										</SelectContent>
 									</Select>

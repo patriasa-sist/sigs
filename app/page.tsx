@@ -62,9 +62,7 @@ const Dashboard = () => {
 			description: "Herramientas de análisis y gestión gerencial",
 			icon: BarChart3,
 			link: "/gerencia",
-			sections: [
-				{ name: "Dashboard Estadístico", icon: BarChart3 },
-			],
+			sections: [{ name: "Dashboard Estadístico", icon: BarChart3 }],
 		},
 		{
 			id: "reportes",

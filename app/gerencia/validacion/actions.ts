@@ -237,9 +237,7 @@ export async function obtenerDetallePolizaParaValidacion(polizaId: string) {
 
 		// Ordenar cuotas por numero_cuota en el cliente (evita .order con referencedTable)
 		if (Array.isArray(poliza.pagos)) {
-			(poliza.pagos as Array<{ numero_cuota: number }>).sort(
-				(a, b) => a.numero_cuota - b.numero_cuota,
-			);
+			(poliza.pagos as Array<{ numero_cuota: number }>).sort((a, b) => a.numero_cuota - b.numero_cuota);
 		}
 
 		// Resolver nombre del cliente según su tipo

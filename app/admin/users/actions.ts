@@ -63,10 +63,7 @@ export async function deleteUser(userId: string) {
 		}
 
 		// Delete from profiles table first (due to foreign key constraint)
-		const { error: deleteProfileError } = await supabase
-			.from("profiles")
-			.delete()
-			.eq("id", userId);
+		const { error: deleteProfileError } = await supabase.from("profiles").delete().eq("id", userId);
 
 		if (deleteProfileError) {
 			return { success: false, error: "Failed to delete user profile" };
@@ -79,20 +76,19 @@ export async function deleteUser(userId: string) {
 			// If auth deletion fails, we should try to restore the profile
 			// But for simplicity, we'll just log the error and continue
 			console.error("Failed to delete auth user:", deleteAuthError);
-			return { 
-				success: false, 
-				error: "Failed to delete authentication record. Profile was deleted." 
+			return {
+				success: false,
+				error: "Failed to delete authentication record. Profile was deleted.",
 			};
 		}
 
 		// Revalidate the users page to show updated list
 		revalidatePath("/admin/users");
 
-		return { 
-			success: true, 
-			message: `User ${userToDelete.email} has been successfully deleted` 
+		return {
+			success: true,
+			message: `User ${userToDelete.email} has been successfully deleted`,
 		};
-
 	} catch (error) {
 		console.error("Error deleting user:", error);
 		return { success: false, error: "An unexpected error occurred" };
@@ -143,12 +139,9 @@ export async function sendPasswordResetEmail(userId: string) {
 		const baseUrl = origin.startsWith("http") ? origin : `${protocol}://${origin}`;
 
 		// Send password reset email via Supabase
-		const { error: resetError } = await supabase.auth.resetPasswordForEmail(
-			targetUser.email,
-			{
-				redirectTo: `${baseUrl}/auth/confirm`,
-			}
-		);
+		const { error: resetError } = await supabase.auth.resetPasswordForEmail(targetUser.email, {
+			redirectTo: `${baseUrl}/auth/confirm`,
+		});
 
 		if (resetError) {
 			console.error("Error sending reset email:", resetError);

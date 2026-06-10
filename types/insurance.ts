@@ -49,12 +49,12 @@ export type InsuranceStatus =
 	| "sent"; // Carta ya enviada
 
 export interface RamoMappingData {
-  id: number;
-  codigo: string;
-  nombre: string;
-  es_ramo_padre: boolean;
-  ramo_padre_id?: number;
-  activo: boolean;
+	id: number;
+	codigo: string;
+	nombre: string;
+	es_ramo_padre: boolean;
+	ramo_padre_id?: number;
+	activo: boolean;
 }
 
 export interface ExcelUploadResult {

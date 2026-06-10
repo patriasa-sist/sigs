@@ -7,11 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DeleteUserDialog } from "@/components/ui/delete-user-dialog";
 import { SendResetPasswordDialog } from "@/components/admin/send-reset-password-dialog";
@@ -62,10 +58,7 @@ export function UsersTable({ users }: { users: AdminUserRow[] }) {
 	const filtered = useMemo(() => {
 		const q = query.trim().toLowerCase();
 		if (!q) return users;
-		return users.filter(
-			(u) =>
-				(u.full_name || "").toLowerCase().includes(q) || u.email.toLowerCase().includes(q)
-		);
+		return users.filter((u) => (u.full_name || "").toLowerCase().includes(q) || u.email.toLowerCase().includes(q));
 	}, [users, query]);
 
 	return (

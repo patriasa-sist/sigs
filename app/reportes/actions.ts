@@ -19,8 +19,7 @@ import type {
  * Verifica que el usuario tenga permiso gerencia.exportar
  */
 async function verificarPermisoExportar(): Promise<
-	| { authorized: true; userId: string; email: string }
-	| { authorized: false; error: string }
+	{ authorized: true; userId: string; email: string } | { authorized: false; error: string }
 > {
 	const { allowed, profile } = await checkPermission("gerencia.exportar");
 
@@ -59,7 +58,7 @@ type ClientQueryResult = {
  * Aplica data scoping: comercial/agente solo ven datos de su equipo.
  */
 export async function exportarProduccion(
-	filtros: ExportProduccionFilters
+	filtros: ExportProduccionFilters,
 ): Promise<ProduccionServerResponse<ExportProduccionContableResponse>> {
 	const permiso = await verificarPermisoExportar();
 	if (!permiso.authorized) {
@@ -229,13 +228,15 @@ export async function exportarProduccion(
 						if (clientData.client_type === "natural") {
 							const natural = clientData.natural_clients;
 							if (natural) {
-								cliente = `${natural.primer_nombre || ""} ${natural.segundo_nombre || ""} ${natural.primer_apellido || ""} ${natural.segundo_apellido || ""}`.trim();
+								cliente =
+									`${natural.primer_nombre || ""} ${natural.segundo_nombre || ""} ${natural.primer_apellido || ""} ${natural.segundo_apellido || ""}`.trim();
 								ciNit = natural.numero_documento || "N/A";
 							}
 						} else {
-							const empresa = clientData.client_type === "unipersonal"
-								? clientData.unipersonal_clients
-								: clientData.juridic_clients;
+							const empresa =
+								clientData.client_type === "unipersonal"
+									? clientData.unipersonal_clients
+									: clientData.juridic_clients;
 							if (empresa) {
 								cliente = empresa.razon_social || "N/A";
 								ciNit = empresa.nit || "N/A";
@@ -245,15 +246,19 @@ export async function exportarProduccion(
 
 					// Datos financieros: leer de la DB (no recalcular)
 					const primaNeta = poliza.prima_neta != null ? Number(poliza.prima_neta) : null;
-					const comisionEmpresa = poliza.comision_empresa != null
-						? Number(poliza.comision_empresa)
-						: poliza.comision != null ? Number(poliza.comision) : null;
+					const comisionEmpresa =
+						poliza.comision_empresa != null
+							? Number(poliza.comision_empresa)
+							: poliza.comision != null
+								? Number(poliza.comision)
+								: null;
 
 					// Factor y porcentaje de comisión: referencia del producto
 					let factorPrimaNeta: number | null = null;
 					let porcentajeComision: number | null = null;
 					if (producto) {
-						const usarContado = poliza.modalidad_pago === "contado" || poliza.usar_factores_contado === true;
+						const usarContado =
+							poliza.modalidad_pago === "contado" || poliza.usar_factores_contado === true;
 						factorPrimaNeta = Number(usarContado ? producto.factor_contado : producto.factor_credito);
 						porcentajeComision = Number(producto.porcentaje_comision) * 100;
 					}
@@ -295,7 +300,7 @@ export async function exportarProduccion(
 						estado_cuota: pago.estado,
 						modalidad_pago: poliza?.modalidad_pago || "N/A",
 					};
-				}
+				},
 			);
 
 		// Ordenar por número de póliza y luego por número de cuota
@@ -329,9 +334,7 @@ export async function exportarProduccion(
  * Obtiene la lista de equipos para el filtro de reportes.
  * Agentes/comerciales solo ven los equipos a los que pertenecen.
  */
-export async function obtenerEquiposParaFiltro(): Promise<
-	ProduccionServerResponse<{ id: string; nombre: string }[]>
-> {
+export async function obtenerEquiposParaFiltro(): Promise<ProduccionServerResponse<{ id: string; nombre: string }[]>> {
 	const permiso = await verificarPermisoExportar();
 	if (!permiso.authorized) {
 		return { success: false, error: permiso.error };
@@ -359,10 +362,7 @@ export async function obtenerEquiposParaFiltro(): Promise<
 		return { success: true, data: equipos };
 	}
 
-	const { data, error } = await supabase
-		.from("equipos")
-		.select("id, nombre")
-		.order("nombre");
+	const { data, error } = await supabase.from("equipos").select("id, nombre").order("nombre");
 
 	if (error) {
 		return { success: false, error: "Error al obtener equipos" };
@@ -374,9 +374,7 @@ export async function obtenerEquiposParaFiltro(): Promise<
 /**
  * Obtiene la lista de regionales para el filtro
  */
-export async function obtenerRegionales(): Promise<
-	ProduccionServerResponse<{ id: string; nombre: string }[]>
-> {
+export async function obtenerRegionales(): Promise<ProduccionServerResponse<{ id: string; nombre: string }[]>> {
 	const permiso = await verificarPermisoExportar();
 	if (!permiso.authorized) {
 		return { success: false, error: permiso.error };
@@ -384,11 +382,7 @@ export async function obtenerRegionales(): Promise<
 
 	const supabase = await createClient();
 
-	const { data, error } = await supabase
-		.from("regionales")
-		.select("id, nombre")
-		.eq("activo", true)
-		.order("nombre");
+	const { data, error } = await supabase.from("regionales").select("id, nombre").eq("activo", true).order("nombre");
 
 	if (error) {
 		return { success: false, error: "Error al obtener regionales" };
@@ -400,9 +394,7 @@ export async function obtenerRegionales(): Promise<
 /**
  * Obtiene la lista de compañías aseguradoras para el filtro
  */
-export async function obtenerCompanias(): Promise<
-	ProduccionServerResponse<{ id: string; nombre: string }[]>
-> {
+export async function obtenerCompanias(): Promise<ProduccionServerResponse<{ id: string; nombre: string }[]>> {
 	const permiso = await verificarPermisoExportar();
 	if (!permiso.authorized) {
 		return { success: false, error: permiso.error };
@@ -428,10 +420,7 @@ export async function obtenerCompanias(): Promise<
 // ============================================
 
 // Mapeo de ramos a sus tablas de valor asegurado
-const RAMO_VALOR_ASEGURADO_MAP: Record<
-	string,
-	{ table: string; sumColumn: string } | null
-> = {
+const RAMO_VALOR_ASEGURADO_MAP: Record<string, { table: string; sumColumn: string } | null> = {
 	Automotores: {
 		table: "polizas_automotor_vehiculos",
 		sumColumn: "valor_asegurado",
@@ -465,7 +454,7 @@ const RAMO_VALOR_ASEGURADO_MAP: Record<
 async function obtenerValoresAsegurados(
 	supabase: Awaited<ReturnType<typeof createClient>>,
 	polizaIds: string[],
-	ramos: Set<string>
+	ramos: Set<string>,
 ): Promise<Map<string, number>> {
 	const valorMap = new Map<string, number>();
 	if (polizaIds.length === 0) return valorMap;
@@ -479,10 +468,7 @@ async function obtenerValoresAsegurados(
 
 	// Consultar cada tabla en paralelo
 	const queries = Array.from(tablesToQuery).map(async ({ table, sumColumn }) => {
-		const { data } = await supabase
-			.from(table)
-			.select("*")
-			.in("poliza_id", polizaIds);
+		const { data } = await supabase.from(table).select("*").in("poliza_id", polizaIds);
 
 		if (data) {
 			for (const row of data) {
@@ -517,9 +503,7 @@ function extraerDatosCliente(clientData: ClientQueryResult | null): {
 		};
 	}
 
-	const j = clientData.client_type === "unipersonal"
-		? clientData.unipersonal_clients
-		: clientData.juridic_clients;
+	const j = clientData.client_type === "unipersonal" ? clientData.unipersonal_clients : clientData.juridic_clients;
 	if (!j) return { cliente: "N/A", ciNit: "N/A" };
 	return {
 		cliente: j.razon_social || "N/A",
@@ -532,7 +516,7 @@ function extraerDatosCliente(clientData: ClientQueryResult | null): {
  * Aplica data scoping: comercial/agente solo ven datos de su equipo.
  */
 export async function exportarProduccionNuevo(
-	filtros: ExportProduccionFilters
+	filtros: ExportProduccionFilters,
 ): Promise<ProduccionServerResponse<ExportProduccionNuevoResponse>> {
 	const permiso = await verificarPermisoExportar();
 	if (!permiso.authorized) {
@@ -640,7 +624,7 @@ export async function exportarProduccionNuevo(
 		const hastaTs = `${fechaHasta}T23:59:59`;
 		polizaQuery = polizaQuery.or(
 			`and(fecha_validacion.gte.${desdeTs},fecha_validacion.lte.${hastaTs}),` +
-				`and(fecha_validacion.is.null,created_at.gte.${desdeTs},created_at.lte.${hastaTs})`
+				`and(fecha_validacion.is.null,created_at.gte.${desdeTs},created_at.lte.${hastaTs})`,
 		);
 
 		// Data scoping: comercial/agente solo ven datos de su equipo
@@ -655,10 +639,7 @@ export async function exportarProduccionNuevo(
 			polizaQuery = polizaQuery.eq("regional_id", filtros.regional_id);
 		}
 		if (filtros.compania_id) {
-			polizaQuery = polizaQuery.eq(
-				"compania_aseguradora_id",
-				filtros.compania_id
-			);
+			polizaQuery = polizaQuery.eq("compania_aseguradora_id", filtros.compania_id);
 		}
 		if (filtros.excluir_retroactivas) {
 			polizaQuery = polizaQuery.eq("es_retroactiva", false);
@@ -752,10 +733,7 @@ export async function exportarProduccionNuevo(
 			anexoQuery = anexoQuery.eq("poliza.regional_id", filtros.regional_id);
 		}
 		if (filtros.compania_id) {
-			anexoQuery = anexoQuery.eq(
-				"poliza.compania_aseguradora_id",
-				filtros.compania_id
-			);
+			anexoQuery = anexoQuery.eq("poliza.compania_aseguradora_id", filtros.compania_id);
 		}
 		if (memberIds) {
 			anexoQuery = anexoQuery.in("poliza.responsable_id", memberIds);
@@ -784,11 +762,7 @@ export async function exportarProduccionNuevo(
 		// Obtener valores asegurados para las pólizas
 		const polizaIds = polizas.map((p: { id: string }) => p.id);
 		const ramosSet = new Set(polizas.map((p: { ramo: string }) => p.ramo));
-		const valorAseguradoMap = await obtenerValoresAsegurados(
-			supabase,
-			polizaIds,
-			ramosSet
-		);
+		const valorAseguradoMap = await obtenerValoresAsegurados(supabase, polizaIds, ramosSet);
 
 		// Obtener cantidad de cuotas y cuota inicial por póliza
 		const cuotasMap = new Map<string, { cantidad: number; cuota_inicial: number | null }>();
@@ -830,19 +804,23 @@ export async function exportarProduccionNuevo(
 				factor_contado: number;
 				factor_credito: number;
 				porcentaje_comision: number;
-			} | null
+			} | null,
 		) {
 			// Prima neta y comisión: directamente de la DB
 			const primaNeta = polizaData.prima_neta != null ? Number(polizaData.prima_neta) : null;
-			const comisionEmpresa = polizaData.comision_empresa != null
-				? Number(polizaData.comision_empresa)
-				: polizaData.comision != null ? Number(polizaData.comision) : null;
+			const comisionEmpresa =
+				polizaData.comision_empresa != null
+					? Number(polizaData.comision_empresa)
+					: polizaData.comision != null
+						? Number(polizaData.comision)
+						: null;
 
 			// Factor y porcentaje: referencia del producto
 			let factorPrimaNeta: number | null = null;
 			let porcentajeComision: number | null = null;
 			if (producto) {
-				const usarContado = polizaData.modalidad_pago === "contado" || polizaData.usar_factores_contado === true;
+				const usarContado =
+					polizaData.modalidad_pago === "contado" || polizaData.usar_factores_contado === true;
 				factorPrimaNeta = Number(usarContado ? producto.factor_contado : producto.factor_credito);
 				porcentajeComision = Number(producto.porcentaje_comision) * 100;
 			}
@@ -891,9 +869,7 @@ export async function exportarProduccionNuevo(
 				responsable?: { full_name?: string } | null;
 				regional?: { nombre?: string } | null;
 			}) => {
-				const { cliente, ciNit } = extraerDatosCliente(
-					p.client as ClientQueryResult | null
-				);
+				const { cliente, ciNit } = extraerDatosCliente(p.client as ClientQueryResult | null);
 				const dc = p.director_cartera;
 				const financieros = extraerFinancieros(p, p.producto);
 
@@ -904,17 +880,11 @@ export async function exportarProduccionNuevo(
 				return {
 					numero_poliza: p.numero_poliza,
 					numero_anexo: null,
-					tipo_poliza: (p.es_renovacion
-						? "Renovada"
-						: "Nueva") as TipoPolizaReporte,
-					validacion: p.fecha_validacion
-						? ("Validado" as const)
-						: ("Por validar" as const),
+					tipo_poliza: (p.es_renovacion ? "Renovada" : "Nueva") as TipoPolizaReporte,
+					validacion: p.fecha_validacion ? ("Validado" as const) : ("Por validar" as const),
 					cliente,
 					ci_nit: ciNit,
-					director_cartera: dc
-						? `${dc.nombre} ${dc.apellidos}`.trim()
-						: "N/A",
+					director_cartera: dc ? `${dc.nombre} ${dc.apellidos}`.trim() : "N/A",
 					compania: p.compania?.nombre || "N/A",
 					cod_aps: p.compania?.codigo ?? null,
 					ramo: p.ramo,
@@ -923,9 +893,7 @@ export async function exportarProduccionNuevo(
 					prima_total: Number(p.prima_total),
 					...financieros,
 					moneda: p.moneda || "Bs",
-					valor_asegurado: ramoTieneTabla
-						? valorAseg
-						: Number(p.prima_total),
+					valor_asegurado: ramoTieneTabla ? valorAseg : Number(p.prima_total),
 					cantidad_cuotas: cuotasInfo?.cantidad ?? 1,
 					cuota_inicial: cuotasInfo?.cuota_inicial ?? null,
 					inicio_vigencia: p.inicio_vigencia || "",
@@ -936,7 +904,7 @@ export async function exportarProduccionNuevo(
 					categoria: p.categoria?.nombre || "N/A",
 					producto: p.producto?.nombre_producto || "N/A",
 				};
-			}
+			},
 		);
 
 		// Construir filas de anexos
@@ -950,9 +918,7 @@ export async function exportarProduccionNuevo(
 			const pol = anexo.poliza;
 			if (!pol) continue;
 
-			const { cliente, ciNit } = extraerDatosCliente(
-				pol.client as ClientQueryResult | null
-			);
+			const { cliente, ciNit } = extraerDatosCliente(pol.client as ClientQueryResult | null);
 			const dc = pol.director_cartera;
 			const financieros = extraerFinancieros(pol, pol.producto);
 
@@ -967,9 +933,7 @@ export async function exportarProduccionNuevo(
 				validacion: "Validado" as const,
 				cliente,
 				ci_nit: ciNit,
-				director_cartera: dc
-					? `${dc.nombre} ${dc.apellidos}`.trim()
-					: "N/A",
+				director_cartera: dc ? `${dc.nombre} ${dc.apellidos}`.trim() : "N/A",
 				compania: pol.compania?.nombre || "N/A",
 				cod_aps: pol.compania?.codigo ?? null,
 				ramo: pol.ramo,
@@ -978,9 +942,7 @@ export async function exportarProduccionNuevo(
 				prima_total: Number(pol.prima_total),
 				...financieros,
 				moneda: pol.moneda || "Bs",
-				valor_asegurado: ramoTieneTabla
-					? valorAseg
-					: Number(pol.prima_total),
+				valor_asegurado: ramoTieneTabla ? valorAseg : Number(pol.prima_total),
 				cantidad_cuotas: cuotasInfo?.cantidad ?? 1,
 				cuota_inicial: cuotasInfo?.cuota_inicial ?? null,
 				inicio_vigencia: pol.inicio_vigencia || "",
@@ -1052,7 +1014,7 @@ export async function obtenerDirectoresParaFiltro(): Promise<
  * Ordenado por director, póliza, número de cuota.
  */
 export async function exportarComisionesDirector(
-	filtros: ExportComisionesDirectorFilters
+	filtros: ExportComisionesDirectorFilters,
 ): Promise<ProduccionServerResponse<ExportComisionesDirectorResponse>> {
 	const permiso = await verificarPermisoExportar();
 	if (!permiso.authorized) {
@@ -1126,7 +1088,9 @@ export async function exportarComisionesDirector(
 		// Query 1: cuotas pagadas (completas, no prorrogadas) con fecha_pago en el rango
 		let pagadasQuery = supabase
 			.from("polizas_pagos")
-			.select(`numero_cuota, monto, fecha_pago, fecha_vencimiento, estado, poliza:polizas!poliza_id (${polizaSelect})`)
+			.select(
+				`numero_cuota, monto, fecha_pago, fecha_vencimiento, estado, poliza:polizas!poliza_id (${polizaSelect})`,
+			)
 			.eq("estado", "pagado")
 			.is("fecha_vencimiento_original", null) // excluye cuotas prorrogadas
 			.gte("fecha_pago", filtros.fecha_desde)
@@ -1143,7 +1107,9 @@ export async function exportarComisionesDirector(
 		// Query 2: cuotas por cobrar (sin parciales ni prorrogadas) con fecha_vencimiento en el rango
 		let porCobrarQuery = supabase
 			.from("polizas_pagos")
-			.select(`numero_cuota, monto, fecha_pago, fecha_vencimiento, estado, poliza:polizas!poliza_id (${polizaSelect})`)
+			.select(
+				`numero_cuota, monto, fecha_pago, fecha_vencimiento, estado, poliza:polizas!poliza_id (${polizaSelect})`,
+			)
 			.in("estado", ["pendiente", "vencido"]) // excluye 'parcial'
 			.is("fecha_vencimiento_original", null) // excluye cuotas prorrogadas
 			.gte("fecha_vencimiento", filtros.fecha_desde)
@@ -1153,7 +1119,8 @@ export async function exportarComisionesDirector(
 			porCobrarQuery = porCobrarQuery.in("poliza.responsable_id", scope.teamMemberIds);
 		}
 		if (filtros.regional_id) porCobrarQuery = porCobrarQuery.eq("poliza.regional_id", filtros.regional_id);
-		if (filtros.compania_id) porCobrarQuery = porCobrarQuery.eq("poliza.compania_aseguradora_id", filtros.compania_id);
+		if (filtros.compania_id)
+			porCobrarQuery = porCobrarQuery.eq("poliza.compania_aseguradora_id", filtros.compania_id);
 		if (filtros.director_id) porCobrarQuery = porCobrarQuery.eq("poliza.director_cartera_id", filtros.director_id);
 		if (memberIds) porCobrarQuery = porCobrarQuery.in("poliza.responsable_id", memberIds);
 
@@ -1191,28 +1158,21 @@ export async function exportarComisionesDirector(
 
 			const pctDirector = dc?.porcentaje_comision != null ? Number(dc.porcentaje_comision) : null;
 			const montoComisionDirector =
-				pctDirector != null && montoCuotaComision != null
-					? montoCuotaComision * (pctDirector / 100)
-					: null;
+				pctDirector != null && montoCuotaComision != null ? montoCuotaComision * (pctDirector / 100) : null;
 
 			// % comisión del producto/compañía (informativo)
 			const porcentajeCompania =
-				poliza.producto?.porcentaje_comision != null
-					? Number(poliza.producto.porcentaje_comision) * 100
-					: null;
+				poliza.producto?.porcentaje_comision != null ? Number(poliza.producto.porcentaje_comision) * 100 : null;
 
 			// Desglose fiscal sobre la comisión del director
 			const facturaDirector = dc?.factura === true; // true = presenta factura fiscal
 			const it3 = montoComisionDirector != null ? montoComisionDirector * 0.03 : null;
-			const totalImporte =
-				montoComisionDirector != null ? montoComisionDirector - (it3 ?? 0) : null;
+			const totalImporte = montoComisionDirector != null ? montoComisionDirector - (it3 ?? 0) : null;
 			const aplicaRetencion = !facturaDirector && totalImporte != null;
 			const retencionRcIva = aplicaRetencion ? totalImporte! * 0.13 : null;
 			const retencionIt = aplicaRetencion ? totalImporte! * 0.03 : null;
 			const totalComision =
-				totalImporte != null
-					? totalImporte - (retencionRcIva ?? 0) - (retencionIt ?? 0)
-					: null;
+				totalImporte != null ? totalImporte - (retencionRcIva ?? 0) - (retencionIt ?? 0) : null;
 
 			return {
 				director_cartera: dc ? `${dc.nombre} ${dc.apellidos || ""}`.trim() : "Sin director",

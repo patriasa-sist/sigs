@@ -183,7 +183,7 @@ export const IncendiosTemplate: React.FC<IncendiosTemplateProps> = ({ letterData
 							• Valor Asegurado:{" "}
 							{formatMonetaryValue(
 								policy.manualFields?.insuredValue,
-								policy.manualFields?.insuredValueCurrency
+								policy.manualFields?.insuredValueCurrency,
 							)}
 						</Text>
 

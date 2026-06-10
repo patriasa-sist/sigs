@@ -6,13 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
 	Search,
@@ -82,7 +76,13 @@ function SortIcon({
 	);
 }
 
-export default function Dashboard({ polizasIniciales, statsIniciales, totalInicial, filtrosOptions, isAdmin = false }: DashboardProps) {
+export default function Dashboard({
+	polizasIniciales,
+	statsIniciales,
+	totalInicial,
+	filtrosOptions,
+	isAdmin = false,
+}: DashboardProps) {
 	// ── Data ──────────────────────────────────────────────────────────
 	const [polizas, setPolizas] = useState<PolizaConPagos[]>(polizasIniciales);
 	const [total, setTotal] = useState(totalInicial);
@@ -133,36 +133,37 @@ export default function Dashboard({ polizasIniciales, statsIniciales, totalInici
 	}, [searchTerm]);
 
 	// ── Fetch server-side ─────────────────────────────────────────────
-	const fetchPolizas = useCallback(async (page: number, resetPage = false) => {
-		const targetPage = resetPage ? 1 : page;
-		if (resetPage) setCurrentPage(1);
+	const fetchPolizas = useCallback(
+		async (page: number, resetPage = false) => {
+			const targetPage = resetPage ? 1 : page;
+			if (resetPage) setCurrentPage(1);
 
-		const serverSort = SERVER_SORT_FIELDS.has(sortField)
-			? (sortField as CobranzaSortField)
-			: "cuotas_vencidas";
-		const serverDir = SERVER_SORT_FIELDS.has(sortField) ? sortDirection : "desc";
+			const serverSort = SERVER_SORT_FIELDS.has(sortField) ? (sortField as CobranzaSortField) : "cuotas_vencidas";
+			const serverDir = SERVER_SORT_FIELDS.has(sortField) ? sortDirection : "desc";
 
-		setIsRefetching(true);
-		const result = await obtenerCobranzasPaginadas({
-			page: targetPage,
-			pageSize,
-			search: debouncedSearch || undefined,
-			ramo: filters.ramo !== ALL ? filters.ramo : undefined,
-			compania_id: filters.compania_id !== ALL ? filters.compania_id : undefined,
-			responsable_id: filters.responsable_id !== ALL ? filters.responsable_id : undefined,
-			regional_id: filters.regional_id !== ALL ? filters.regional_id : undefined,
-			soloVencidas,
-			incluirPagadas,
-			sortField: serverSort,
-			sortDirection: serverDir,
-		});
-		setIsRefetching(false);
+			setIsRefetching(true);
+			const result = await obtenerCobranzasPaginadas({
+				page: targetPage,
+				pageSize,
+				search: debouncedSearch || undefined,
+				ramo: filters.ramo !== ALL ? filters.ramo : undefined,
+				compania_id: filters.compania_id !== ALL ? filters.compania_id : undefined,
+				responsable_id: filters.responsable_id !== ALL ? filters.responsable_id : undefined,
+				regional_id: filters.regional_id !== ALL ? filters.regional_id : undefined,
+				soloVencidas,
+				incluirPagadas,
+				sortField: serverSort,
+				sortDirection: serverDir,
+			});
+			setIsRefetching(false);
 
-		if (result.success && result.data) {
-			setPolizas(result.data.polizas);
-			setTotal(result.data.total);
-		}
-	}, [debouncedSearch, filters, soloVencidas, incluirPagadas, sortField, sortDirection, pageSize]);
+			if (result.success && result.data) {
+				setPolizas(result.data.polizas);
+				setTotal(result.data.total);
+			}
+		},
+		[debouncedSearch, filters, soloVencidas, incluirPagadas, sortField, sortDirection, pageSize],
+	);
 
 	// Re-fetch when filter/sort/page changes (debouncedSearch already debounced)
 	useEffect(() => {
@@ -171,10 +172,13 @@ export default function Dashboard({ polizasIniciales, statsIniciales, totalInici
 	}, [debouncedSearch, filters, soloVencidas, incluirPagadas, sortField, sortDirection]);
 
 	// Page navigation
-	const goToPage = useCallback((page: number) => {
-		setCurrentPage(page);
-		fetchPolizas(page);
-	}, [fetchPolizas]);
+	const goToPage = useCallback(
+		(page: number) => {
+			setCurrentPage(page);
+			fetchPolizas(page);
+		},
+		[fetchPolizas],
+	);
 
 	// ── Sort handler ──────────────────────────────────────────────────
 	const handleSort = (field: AnySort) => {
@@ -191,33 +195,31 @@ export default function Dashboard({ polizasIniciales, statsIniciales, totalInici
 	const displayPolizas = useMemo(() => {
 		if (sortField !== "cliente" && sortField !== "compania") return polizas;
 		return [...polizas].sort((a, b) => {
-			const valA = sortField === "cliente"
-				? a.client.nombre_completo.toLowerCase()
-				: a.compania.nombre.toLowerCase();
-			const valB = sortField === "cliente"
-				? b.client.nombre_completo.toLowerCase()
-				: b.compania.nombre.toLowerCase();
+			const valA =
+				sortField === "cliente" ? a.client.nombre_completo.toLowerCase() : a.compania.nombre.toLowerCase();
+			const valB =
+				sortField === "cliente" ? b.client.nombre_completo.toLowerCase() : b.compania.nombre.toLowerCase();
 			return sortDirection === "asc" ? valA.localeCompare(valB) : valB.localeCompare(valA);
 		});
 	}, [polizas, sortField, sortDirection]);
 
 	// ── Filter helpers ────────────────────────────────────────────────
-	const hasActiveFilters =
-		searchTerm.trim() !== "" ||
-		Object.values(filters).some((v) => v !== ALL) ||
-		soloVencidas;
+	const hasActiveFilters = searchTerm.trim() !== "" || Object.values(filters).some((v) => v !== ALL) || soloVencidas;
 
 	// Active filter chips (for display — resolve names from options)
 	const activeFilterLabels: { key: string; label: string; value: string }[] = [];
-	if (filters.ramo !== ALL)
-		activeFilterLabels.push({ key: "ramo", label: "Ramo", value: filters.ramo });
+	if (filters.ramo !== ALL) activeFilterLabels.push({ key: "ramo", label: "Ramo", value: filters.ramo });
 	if (filters.compania_id !== ALL) {
 		const comp = filtrosOptions.companias.find((c) => c.id === filters.compania_id);
 		activeFilterLabels.push({ key: "compania_id", label: "Compañía", value: comp?.nombre ?? filters.compania_id });
 	}
 	if (filters.responsable_id !== ALL) {
 		const resp = filtrosOptions.responsables.find((r) => r.id === filters.responsable_id);
-		activeFilterLabels.push({ key: "responsable_id", label: "Ejecutivo", value: resp?.full_name ?? filters.responsable_id });
+		activeFilterLabels.push({
+			key: "responsable_id",
+			label: "Ejecutivo",
+			value: resp?.full_name ?? filters.responsable_id,
+		});
 	}
 	if (filters.regional_id !== ALL) {
 		const reg = filtrosOptions.regionales.find((r) => r.id === filters.regional_id);
@@ -274,18 +276,11 @@ export default function Dashboard({ polizasIniciales, statsIniciales, totalInici
 
 			{/* Export toggle */}
 			<div>
-				<Button
-					variant="outline"
-					size="sm"
-					onClick={() => setShowExport((v) => !v)}
-					className="gap-2"
-				>
+				<Button variant="outline" size="sm" onClick={() => setShowExport((v) => !v)} className="gap-2">
 					<Download className="h-4 w-4" />
 					Exportar Reporte
 					<ChevronDown
-						className={`h-4 w-4 transition-transform duration-200 ${
-							showExport ? "rotate-180" : ""
-						}`}
+						className={`h-4 w-4 transition-transform duration-200 ${showExport ? "rotate-180" : ""}`}
 					/>
 				</Button>
 			</div>
@@ -341,7 +336,9 @@ export default function Dashboard({ polizasIniciales, statsIniciales, totalInici
 							<SelectContent>
 								<SelectItem value={ALL}>Todos los ramos</SelectItem>
 								{filtrosOptions.ramos.map((r) => (
-									<SelectItem key={r} value={r}>{r}</SelectItem>
+									<SelectItem key={r} value={r}>
+										{r}
+									</SelectItem>
 								))}
 							</SelectContent>
 						</Select>
@@ -359,7 +356,9 @@ export default function Dashboard({ polizasIniciales, statsIniciales, totalInici
 							<SelectContent>
 								<SelectItem value={ALL}>Todas las compañías</SelectItem>
 								{filtrosOptions.companias.map((c) => (
-									<SelectItem key={c.id} value={c.id}>{c.nombre}</SelectItem>
+									<SelectItem key={c.id} value={c.id}>
+										{c.nombre}
+									</SelectItem>
 								))}
 							</SelectContent>
 						</Select>
@@ -377,7 +376,9 @@ export default function Dashboard({ polizasIniciales, statsIniciales, totalInici
 							<SelectContent>
 								<SelectItem value={ALL}>Todos los ejecutivos</SelectItem>
 								{filtrosOptions.responsables.map((r) => (
-									<SelectItem key={r.id} value={r.id}>{r.full_name}</SelectItem>
+									<SelectItem key={r.id} value={r.id}>
+										{r.full_name}
+									</SelectItem>
 								))}
 							</SelectContent>
 						</Select>
@@ -395,7 +396,9 @@ export default function Dashboard({ polizasIniciales, statsIniciales, totalInici
 							<SelectContent>
 								<SelectItem value={ALL}>Todas las regionales</SelectItem>
 								{filtrosOptions.regionales.map((r) => (
-									<SelectItem key={r.id} value={r.id}>{r.nombre}</SelectItem>
+									<SelectItem key={r.id} value={r.id}>
+										{r.nombre}
+									</SelectItem>
 								))}
 							</SelectContent>
 						</Select>
@@ -447,9 +450,7 @@ export default function Dashboard({ polizasIniciales, statsIniciales, totalInici
 							))}
 						</div>
 						<div className="flex items-center gap-2 ml-auto">
-							{isRefetching && (
-								<Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-							)}
+							{isRefetching && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
 							<Switch
 								id="mostrar-pagadas"
 								checked={incluirPagadas}
@@ -459,10 +460,7 @@ export default function Dashboard({ polizasIniciales, statsIniciales, totalInici
 								}}
 								disabled={isRefetching}
 							/>
-							<Label
-								htmlFor="mostrar-pagadas"
-								className="text-sm cursor-pointer text-muted-foreground"
-							>
+							<Label htmlFor="mostrar-pagadas" className="text-sm cursor-pointer text-muted-foreground">
 								Incluir pagadas
 							</Label>
 						</div>
@@ -475,9 +473,7 @@ export default function Dashboard({ polizasIniciales, statsIniciales, totalInici
 				<CardHeader className="pb-0">
 					<CardTitle className="text-base font-medium text-foreground">
 						{incluirPagadas ? "Todas las Pólizas" : "Pólizas con Cuotas Pendientes"}
-						<span className="ml-2 text-sm font-normal text-muted-foreground">
-							({total})
-						</span>
+						<span className="ml-2 text-sm font-normal text-muted-foreground">({total})</span>
 					</CardTitle>
 				</CardHeader>
 
@@ -494,7 +490,11 @@ export default function Dashboard({ polizasIniciales, statsIniciales, totalInici
 													className="flex items-center gap-1.5 hover:text-primary transition-colors"
 												>
 													Cliente
-													<SortIcon field="cliente" currentField={sortField} direction={sortDirection} />
+													<SortIcon
+														field="cliente"
+														currentField={sortField}
+														direction={sortDirection}
+													/>
 												</button>
 											</th>
 											<th className="px-4 py-3 text-left text-sm font-medium">
@@ -503,7 +503,11 @@ export default function Dashboard({ polizasIniciales, statsIniciales, totalInici
 													className="flex items-center gap-1.5 hover:text-primary transition-colors"
 												>
 													Póliza
-													<SortIcon field="numero_poliza" currentField={sortField} direction={sortDirection} />
+													<SortIcon
+														field="numero_poliza"
+														currentField={sortField}
+														direction={sortDirection}
+													/>
 												</button>
 											</th>
 											<th className="px-4 py-3 text-left text-sm font-medium">
@@ -512,7 +516,11 @@ export default function Dashboard({ polizasIniciales, statsIniciales, totalInici
 													className="flex items-center gap-1.5 hover:text-primary transition-colors"
 												>
 													Compañía
-													<SortIcon field="compania" currentField={sortField} direction={sortDirection} />
+													<SortIcon
+														field="compania"
+														currentField={sortField}
+														direction={sortDirection}
+													/>
 												</button>
 											</th>
 											<th className="px-4 py-3 text-left text-sm font-medium">
@@ -521,7 +529,11 @@ export default function Dashboard({ polizasIniciales, statsIniciales, totalInici
 													className="flex items-center gap-1.5 hover:text-primary transition-colors"
 												>
 													Cuotas
-													<SortIcon field="cuotas_vencidas" currentField={sortField} direction={sortDirection} />
+													<SortIcon
+														field="cuotas_vencidas"
+														currentField={sortField}
+														direction={sortDirection}
+													/>
 												</button>
 											</th>
 											<th className="px-4 py-3 text-left text-sm font-medium">
@@ -530,12 +542,14 @@ export default function Dashboard({ polizasIniciales, statsIniciales, totalInici
 													className="flex items-center gap-1.5 hover:text-primary transition-colors"
 												>
 													Pendiente
-													<SortIcon field="monto_pendiente" currentField={sortField} direction={sortDirection} />
+													<SortIcon
+														field="monto_pendiente"
+														currentField={sortField}
+														direction={sortDirection}
+													/>
 												</button>
 											</th>
-											<th className="px-4 py-3 text-right text-sm font-medium">
-												Acciones
-											</th>
+											<th className="px-4 py-3 text-right text-sm font-medium">Acciones</th>
 										</tr>
 									</thead>
 									<tbody>
@@ -589,9 +603,12 @@ export default function Dashboard({ polizasIniciales, statsIniciales, totalInici
 																{poliza.cuotas_pendientes} pend.
 															</span>
 														)}
-														{poliza.cuotas_vencidas === 0 && poliza.cuotas_pendientes === 0 && (
-															<span className="text-xs text-muted-foreground">Al día</span>
-														)}
+														{poliza.cuotas_vencidas === 0 &&
+															poliza.cuotas_pendientes === 0 && (
+																<span className="text-xs text-muted-foreground">
+																	Al día
+																</span>
+															)}
 													</div>
 												</td>
 
@@ -630,7 +647,9 @@ export default function Dashboard({ polizasIniciales, statsIniciales, totalInici
 												<div className="font-medium text-sm text-foreground truncate">
 													{poliza.client.nombre_completo}
 												</div>
-												<div className="text-xs text-muted-foreground mt-0.5">{poliza.client.documento}</div>
+												<div className="text-xs text-muted-foreground mt-0.5">
+													{poliza.client.documento}
+												</div>
 											</div>
 											<span className="inline-block text-xs bg-secondary text-secondary-foreground px-1.5 py-0.5 rounded-md shrink-0">
 												{poliza.ramo}
@@ -663,7 +682,12 @@ export default function Dashboard({ polizasIniciales, statsIniciales, totalInici
 											</div>
 										</div>
 										<div className="mt-2.5">
-											<Button size="sm" variant="default" className="w-full" onClick={() => handleVerCuotas(poliza)}>
+											<Button
+												size="sm"
+												variant="default"
+												className="w-full"
+												onClick={() => handleVerCuotas(poliza)}
+											>
 												Ver Cuotas
 											</Button>
 										</div>

@@ -98,7 +98,10 @@ export default function CerrarSiniestro({ siniestroId, numeroPoliza }: CerrarSin
 
 	// Handler de archivo: sube client-side a Storage (temp/) y guarda solo la metadata
 	const handleFileUpload = useCallback(
-		async (e: React.ChangeEvent<HTMLInputElement>, tipo: "carta_rechazo" | "carta_respaldo" | "archivo_uif" | "archivo_pep") => {
+		async (
+			e: React.ChangeEvent<HTMLInputElement>,
+			tipo: "carta_rechazo" | "carta_respaldo" | "archivo_uif" | "archivo_pep",
+		) => {
 			const file = e.target.files?.[0];
 			if (!file) return;
 
@@ -166,7 +169,7 @@ export default function CerrarSiniestro({ siniestroId, numeroPoliza }: CerrarSin
 					break;
 			}
 		},
-		[userId, supabase]
+		[userId, supabase],
 	);
 
 	// Limpiar archivo
@@ -289,10 +292,7 @@ export default function CerrarSiniestro({ siniestroId, numeroPoliza }: CerrarSin
 		setErrores([]);
 
 		try {
-			let datosCierre:
-				| DatosCierreRechazo
-				| DatosCierreDeclinacion
-				| DatosCierreIndemnizacion;
+			let datosCierre: DatosCierreRechazo | DatosCierreDeclinacion | DatosCierreIndemnizacion;
 
 			if (activeTab === "rechazo") {
 				datosCierre = {
@@ -348,9 +348,7 @@ export default function CerrarSiniestro({ siniestroId, numeroPoliza }: CerrarSin
 			router.push("/siniestros");
 			router.refresh();
 		} catch (error) {
-			setErrores([
-				error instanceof Error ? error.message : "Error desconocido al cerrar el siniestro",
-			]);
+			setErrores([error instanceof Error ? error.message : "Error desconocido al cerrar el siniestro"]);
 		} finally {
 			setLoading(false);
 		}
@@ -408,7 +406,10 @@ export default function CerrarSiniestro({ siniestroId, numeroPoliza }: CerrarSin
 						? "border-primary bg-primary/5"
 						: "border-border hover:border-primary/50 hover:bg-secondary/30"
 				}`}
-				onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+				onDragOver={(e) => {
+					e.preventDefault();
+					setDragging(true);
+				}}
 				onDragLeave={() => setDragging(false)}
 				onDrop={handleDrop}
 			>
@@ -417,17 +418,10 @@ export default function CerrarSiniestro({ siniestroId, numeroPoliza }: CerrarSin
 					<p className="text-sm font-medium text-foreground">Arrastra aquí o haz clic para seleccionar</p>
 					<p className="text-xs text-muted-foreground mt-0.5">{hint}</p>
 				</div>
-				<input
-					id={id}
-					type="file"
-					accept={accept}
-					className="sr-only"
-					onChange={onFile}
-				/>
+				<input id={id} type="file" accept={accept} className="sr-only" onChange={onFile} />
 			</label>
 		);
 	};
-
 
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>
@@ -442,8 +436,7 @@ export default function CerrarSiniestro({ siniestroId, numeroPoliza }: CerrarSin
 				<DialogHeader>
 					<DialogTitle>Cerrar Siniestro - Póliza {numeroPoliza}</DialogTitle>
 					<DialogDescription>
-						Seleccione el tipo de cierre y complete la información requerida. Esta acción es
-						irreversible.
+						Seleccione el tipo de cierre y complete la información requerida. Esta acción es irreversible.
 					</DialogDescription>
 				</DialogHeader>
 
@@ -523,7 +516,10 @@ export default function CerrarSiniestro({ siniestroId, numeroPoliza }: CerrarSin
 							<Label htmlFor="motivo-declinacion">
 								Motivo de Declinación <span className="text-red-500">*</span>
 							</Label>
-							<Select value={motivoDeclinacion} onValueChange={(v) => setMotivoDeclinacion(v as MotivoDeclinacion)}>
+							<Select
+								value={motivoDeclinacion}
+								onValueChange={(v) => setMotivoDeclinacion(v as MotivoDeclinacion)}
+							>
 								<SelectTrigger id="motivo-declinacion">
 									<SelectValue placeholder="Seleccione un motivo" />
 								</SelectTrigger>

@@ -54,7 +54,7 @@ import type { ActionResult } from "@/types/policyPermission";
  */
 async function resolverClienteNombreCI(
 	supabase: SupabaseClient,
-	clientId: string
+	clientId: string,
 ): Promise<{ client_name: string; client_ci: string }> {
 	const { data: naturalClient } = await supabase
 		.from("natural_clients")
@@ -64,7 +64,12 @@ async function resolverClienteNombreCI(
 
 	if (naturalClient) {
 		return {
-			client_name: [naturalClient.primer_nombre, naturalClient.segundo_nombre, naturalClient.primer_apellido, naturalClient.segundo_apellido]
+			client_name: [
+				naturalClient.primer_nombre,
+				naturalClient.segundo_nombre,
+				naturalClient.primer_apellido,
+				naturalClient.segundo_apellido,
+			]
 				.filter(Boolean)
 				.join(" "),
 			client_ci: naturalClient.numero_documento || "-",
@@ -90,19 +95,21 @@ async function resolverClienteNombreCI(
  */
 export async function cargarPolizaFormState(
 	supabase: SupabaseClient,
-	polizaId: string
+	polizaId: string,
 ): Promise<ActionResult<PolizaFormState>> {
 	try {
 		// 1. Get main policy data
 		const { data: poliza, error: errorPoliza } = await supabase
 			.from("polizas")
-			.select(`
+			.select(
+				`
 				*,
 				companias_aseguradoras (id, nombre),
 				regionales!polizas_regional_id_fkey (id, nombre),
 				categorias (id, nombre),
 				profiles!polizas_responsable_id_fkey (id, full_name)
-			`)
+			`,
+			)
 			.eq("id", polizaId)
 			.single();
 
@@ -134,12 +141,8 @@ export async function cargarPolizaFormState(
 				return { success: false, error: "Datos del cliente no encontrados" };
 			}
 
-			const nombres = [naturalClient.primer_nombre, naturalClient.segundo_nombre]
-				.filter(Boolean)
-				.join(" ");
-			const apellidos = [naturalClient.primer_apellido, naturalClient.segundo_apellido]
-				.filter(Boolean)
-				.join(" ");
+			const nombres = [naturalClient.primer_nombre, naturalClient.segundo_nombre].filter(Boolean).join(" ");
+			const apellidos = [naturalClient.primer_apellido, naturalClient.segundo_apellido].filter(Boolean).join(" ");
 
 			let nombre_completo = `${nombres} ${apellidos}`.trim();
 			let documento = naturalClient.numero_documento || "-";
@@ -365,8 +368,14 @@ export async function cargarPolizaFormState(
 					.eq("client_id", contratanteRecord.client_id)
 					.single();
 				const nombre = clientData
-					? [clientData.primer_nombre, clientData.segundo_nombre, clientData.primer_apellido, clientData.segundo_apellido]
-							.filter(Boolean).join(" ")
+					? [
+							clientData.primer_nombre,
+							clientData.segundo_nombre,
+							clientData.primer_apellido,
+							clientData.segundo_apellido,
+						]
+							.filter(Boolean)
+							.join(" ")
 					: "Cliente";
 				const familiaresDelContratante: FamiliarSalud[] = (beneficiariosDB || [])
 					.filter((b) => b.titular_id === null && b.rol !== "titular")
@@ -420,7 +429,8 @@ export async function cargarPolizaFormState(
 				tipo_ramo: "Salud",
 				datos: {
 					niveles: nivelesFormateados,
-					tipo_poliza: titulares.length > 0 || contratanteSalud?.rol === "contratante" ? "corporativo" : "individual",
+					tipo_poliza:
+						titulares.length > 0 || contratanteSalud?.rol === "contratante" ? "corporativo" : "individual",
 					regional_asegurado_id: poliza.regional_asegurado_id || "",
 					tiene_maternidad: poliza.tiene_maternidad ?? false,
 					contratante: contratanteSalud,
@@ -434,7 +444,8 @@ export async function cargarPolizaFormState(
 		if (
 			ramoLower.includes("vida") ||
 			ramoLower.includes("accidente") ||
-			ramoLower.includes("sepelio") || ramoLower.includes("defuncion")
+			ramoLower.includes("sepelio") ||
+			ramoLower.includes("defuncion")
 		) {
 			const { data: niveles, error: errorNiveles } = await supabase
 				.from("polizas_niveles")
@@ -464,7 +475,12 @@ export async function cargarPolizaFormState(
 					.single();
 
 				const nombre = naturalClient
-					? [naturalClient.primer_nombre, naturalClient.segundo_nombre, naturalClient.primer_apellido, naturalClient.segundo_apellido]
+					? [
+							naturalClient.primer_nombre,
+							naturalClient.segundo_nombre,
+							naturalClient.primer_apellido,
+							naturalClient.segundo_apellido,
+						]
 							.filter(Boolean)
 							.join(" ")
 					: "Cliente";
@@ -574,7 +590,10 @@ export async function cargarPolizaFormState(
 					direccion: bien.direccion,
 					valor_total_declarado: Number(bien.valor_total_declarado),
 					es_primer_riesgo: bien.es_primer_riesgo,
-					items: (itemsDB || []).map((i) => ({ nombre: i.nombre as ItemIncendio["nombre"], monto: Number(i.monto) })),
+					items: (itemsDB || []).map((i) => ({
+						nombre: i.nombre as ItemIncendio["nombre"],
+						monto: Number(i.monto),
+					})),
 				});
 			}
 
@@ -598,7 +617,12 @@ export async function cargarPolizaFormState(
 				if (naturalClient) {
 					aseguradosIncendioFormateados.push({
 						client_id: a.client_id,
-						client_name: [naturalClient.primer_nombre, naturalClient.segundo_nombre, naturalClient.primer_apellido, naturalClient.segundo_apellido]
+						client_name: [
+							naturalClient.primer_nombre,
+							naturalClient.segundo_nombre,
+							naturalClient.primer_apellido,
+							naturalClient.segundo_apellido,
+						]
 							.filter(Boolean)
 							.join(" "),
 						client_ci: naturalClient.numero_documento || "-",
@@ -675,7 +699,9 @@ export async function cargarPolizaFormState(
 		if (ramoLower.includes("transporte")) {
 			const { data: transporte, error: errorTransporte } = await supabase
 				.from("polizas_transporte")
-				.select("materia_asegurada, tipo_embalaje, fecha_embarque, tipo_transporte, pais_origen_id, ciudad_origen, pais_destino_id, ciudad_destino, valor_asegurado, factura, fecha_factura, cobertura_a, cobertura_c, modalidad")
+				.select(
+					"materia_asegurada, tipo_embalaje, fecha_embarque, tipo_transporte, pais_origen_id, ciudad_origen, pais_destino_id, ciudad_destino, valor_asegurado, factura, fecha_factura, cobertura_a, cobertura_c, modalidad",
+				)
 				.eq("poliza_id", polizaId)
 				.maybeSingle();
 
@@ -718,7 +744,9 @@ export async function cargarPolizaFormState(
 
 			const { data: navesDB } = await supabase
 				.from("polizas_aeronavegacion_naves")
-				.select("id, matricula, marca, modelo, ano, serie, uso, nro_pasajeros, nro_tripulantes, valor_casco, valor_responsabilidad_civil, nivel_ap_id")
+				.select(
+					"id, matricula, marca, modelo, ano, serie, uso, nro_pasajeros, nro_tripulantes, valor_casco, valor_responsabilidad_civil, nivel_ap_id",
+				)
 				.eq("poliza_id", polizaId);
 
 			const { data: aseguradosAeroDB } = await supabase
@@ -779,7 +807,9 @@ export async function cargarPolizaFormState(
 
 			const { data: equiposDB } = await supabase
 				.from("polizas_ramos_tecnicos_equipos")
-				.select("id, nro_serie, valor_asegurado, franquicia, nro_chasis, uso, coaseguro, placa, tipo_equipo_id, marca_equipo_id, modelo, ano, color, nro_motor, plaza_circulacion")
+				.select(
+					"id, nro_serie, valor_asegurado, franquicia, nro_chasis, uso, coaseguro, placa, tipo_equipo_id, marca_equipo_id, modelo, ano, color, nro_motor, plaza_circulacion",
+				)
 				.eq("poliza_id", polizaId);
 
 			const equipos: EquipoIndustrial[] = (equiposDB || []).map((e) => ({
@@ -832,7 +862,10 @@ export async function cargarPolizaFormState(
 					direccion: bien.direccion,
 					valor_total_declarado: Number(bien.valor_total_declarado),
 					es_primer_riesgo: bien.es_primer_riesgo,
-					items: (itemsDB || []).map((i) => ({ nombre: i.nombre as ItemRiesgosVarios["nombre"], monto: Number(i.monto) })),
+					items: (itemsDB || []).map((i) => ({
+						nombre: i.nombre as ItemRiesgosVarios["nombre"],
+						monto: Number(i.monto),
+					})),
 				});
 			}
 

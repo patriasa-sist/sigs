@@ -3,13 +3,7 @@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
 	CIVIL_STATUS,
 	DOCUMENT_TYPES,
@@ -96,9 +90,10 @@ export function EditableTextField({
 				type={type}
 				value={value ?? ""}
 				onChange={(e) => {
-					const v = (type === "email" || type === "tel" || type === "date" || type === "number")
-						? e.target.value
-						: e.target.value.toUpperCase();
+					const v =
+						type === "email" || type === "tel" || type === "date" || type === "number"
+							? e.target.value
+							: e.target.value.toUpperCase();
 					onChange?.(v);
 				}}
 				placeholder={placeholder}
@@ -131,15 +126,11 @@ export function EditableSelectField({
 	});
 
 	if (!isEditing) {
-		const selectedOption = normalizedOptions.find(
-			(opt) => opt.value === value
-		);
+		const selectedOption = normalizedOptions.find((opt) => opt.value === value);
 		return (
 			<div className="grid grid-cols-3 gap-4">
 				<p className="text-sm text-gray-600">{label}:</p>
-				<p className="col-span-2 font-medium">
-					{selectedOption?.label || formatDisplayValue(value)}
-				</p>
+				<p className="col-span-2 font-medium">{selectedOption?.label || formatDisplayValue(value)}</p>
 			</div>
 		);
 	}
@@ -170,21 +161,12 @@ export function EditableSelectField({
 // EDITABLE TEXTAREA FIELD
 // ============================================
 
-export function EditableTextareaField({
-	isEditing,
-	label,
-	value,
-	onChange,
-	rows = 2,
-	maxLength,
-}: TextareaFieldProps) {
+export function EditableTextareaField({ isEditing, label, value, onChange, rows = 2, maxLength }: TextareaFieldProps) {
 	if (!isEditing) {
 		return (
 			<div className="grid grid-cols-3 gap-4">
 				<p className="text-sm text-gray-600">{label}:</p>
-				<p className="col-span-2 font-medium whitespace-pre-wrap">
-					{formatDisplayValue(value)}
-				</p>
+				<p className="col-span-2 font-medium whitespace-pre-wrap">{formatDisplayValue(value)}</p>
 			</div>
 		);
 	}
@@ -262,11 +244,7 @@ export function EditableSection({ title, children, isEditing }: EditableSectionP
 		<div className="border rounded-lg p-4">
 			<h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
 				{title}
-				{isEditing && (
-					<span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">
-						Editando
-					</span>
-				)}
+				{isEditing && <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">Editando</span>}
 			</h3>
 			<div className={isEditing ? "space-y-4" : "space-y-3"}>{children}</div>
 		</div>
@@ -277,10 +255,4 @@ export function EditableSection({ title, children, isEditing }: EditableSectionP
 // EXPORTS FOR CONVENIENCE
 // ============================================
 
-export {
-	CIVIL_STATUS,
-	DOCUMENT_TYPES,
-	CI_EXTENSIONS,
-	GENDER_OPTIONS,
-	COMPANY_TYPES,
-};
+export { CIVIL_STATUS, DOCUMENT_TYPES, CI_EXTENSIONS, GENDER_OPTIONS, COMPANY_TYPES };

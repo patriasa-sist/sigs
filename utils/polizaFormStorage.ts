@@ -21,9 +21,7 @@ export function savePolizaDraft(formState: PolizaFormState): void {
 	try {
 		const stateToSave = {
 			...formState,
-			documentos: formState.documentos.filter(
-				(d) => d.upload_status === "uploaded" && d.storage_path
-			),
+			documentos: formState.documentos.filter((d) => d.upload_status === "uploaded" && d.storage_path),
 		};
 
 		const serialized = JSON.stringify(stateToSave, (_key, value) => {

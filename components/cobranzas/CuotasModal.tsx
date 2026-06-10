@@ -1,12 +1,7 @@
 "use client";
 
 import { useState, useEffect, Fragment } from "react";
-import {
-	Dialog,
-	DialogContent,
-	DialogHeader,
-	DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import {
 	Phone,
@@ -61,9 +56,9 @@ interface CuotasModalProps {
 function EstadoBadge({ estado }: { estado: string }) {
 	const styles: Record<string, string> = {
 		pendiente: "bg-amber-50 text-amber-800 border-amber-200",
-		vencido:   "bg-rose-50  text-rose-800  border-rose-200",
-		parcial:   "bg-orange-50 text-orange-800 border-orange-200",
-		pagado:    "bg-teal-50  text-teal-800  border-teal-200",
+		vencido: "bg-rose-50  text-rose-800  border-rose-200",
+		parcial: "bg-orange-50 text-orange-800 border-orange-200",
+		pagado: "bg-teal-50  text-teal-800  border-teal-200",
 	};
 	return (
 		<span
@@ -76,13 +71,7 @@ function EstadoBadge({ estado }: { estado: string }) {
 	);
 }
 
-export default function CuotasModal({
-	poliza,
-	open,
-	onClose,
-	onSelectQuota,
-	isAdmin = false,
-}: CuotasModalProps) {
+export default function CuotasModal({ poliza, open, onClose, onSelectQuota, isAdmin = false }: CuotasModalProps) {
 	const [polizaExtendida, setPolizaExtendida] = useState<PolizaConPagosExtendida | null>(null);
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
@@ -137,8 +126,7 @@ export default function CuotasModal({
 					description: "El documento se ha descargado correctamente",
 				});
 				const mensaje = `Estimado/a cliente, se ha generado un aviso de mora para su póliza ${poliza.numero_poliza}. Tiene ${avisoData.cuotas_vencidas.length} cuotas vencidas por un total de ${formatearMonto(avisoData.total_adeudado, poliza.moneda)}. Por favor, regularice su situación a la brevedad. Adjunto encontrará el documento detallado.`;
-				const telefono =
-					polizaExtendida?.contacto?.celular || polizaExtendida?.contacto?.telefono;
+				const telefono = polizaExtendida?.contacto?.celular || polizaExtendida?.contacto?.telefono;
 				if (telefono) {
 					window.open(generarURLWhatsApp(telefono, mensaje), "_blank");
 				} else {
@@ -168,7 +156,7 @@ export default function CuotasModal({
 			cuota,
 			polizaExtendida,
 			polizaExtendida.contacto,
-			polizaExtendida.client.nombre_completo
+			polizaExtendida.client.nombre_completo,
 		);
 	};
 
@@ -178,33 +166,33 @@ export default function CuotasModal({
 			cuota,
 			polizaExtendida,
 			polizaExtendida.contacto,
-			polizaExtendida.client.nombre_completo
+			polizaExtendida.client.nombre_completo,
 		);
 	};
 
 	const handleConsolidadoWhatsApp = () => {
 		if (!polizaExtendida) return;
 		const cuotasVencidasLista = cuotasToRender.filter(
-			(c) => obtenerEstadoReal(c) === "vencido" || obtenerEstadoReal(c) === "parcial"
+			(c) => obtenerEstadoReal(c) === "vencido" || obtenerEstadoReal(c) === "parcial",
 		);
 		enviarRecordatorioConsolidadoWhatsApp(
 			cuotasVencidasLista,
 			polizaExtendida,
 			polizaExtendida.contacto,
-			polizaExtendida.client.nombre_completo
+			polizaExtendida.client.nombre_completo,
 		);
 	};
 
 	const handleConsolidadoEmail = () => {
 		if (!polizaExtendida) return;
 		const cuotasVencidasLista = cuotasToRender.filter(
-			(c) => obtenerEstadoReal(c) === "vencido" || obtenerEstadoReal(c) === "parcial"
+			(c) => obtenerEstadoReal(c) === "vencido" || obtenerEstadoReal(c) === "parcial",
 		);
 		enviarRecordatorioConsolidadoEmail(
 			cuotasVencidasLista,
 			polizaExtendida,
 			polizaExtendida.contacto,
-			polizaExtendida.client.nombre_completo
+			polizaExtendida.client.nombre_completo,
 		);
 	};
 
@@ -266,20 +254,18 @@ export default function CuotasModal({
 	const puedeRegistrarPago = (estado: string) =>
 		estado === "pendiente" || estado === "vencido" || estado === "parcial";
 
-	const puedeProrroga = (estado: string) =>
-		estado === "pendiente" || estado === "vencido" || estado === "parcial";
+	const puedeProrroga = (estado: string) => estado === "pendiente" || estado === "vencido" || estado === "parcial";
 
 	// cuotas se obtienen del detalle extendido (cargado al abrir el modal)
 	const cuotasToRender = polizaExtendida?.cuotas ?? [];
 	const cuotasVencidas = contarCuotasVencidas(cuotasToRender);
 	const puedeGenerarAvisoMora = cuotasVencidas >= 3;
 	const cuotasPendientesNotif = cuotasToRender.filter(
-		(c) => obtenerEstadoReal(c) === "vencido" || obtenerEstadoReal(c) === "parcial"
+		(c) => obtenerEstadoReal(c) === "vencido" || obtenerEstadoReal(c) === "parcial",
 	);
 	const puedeNotificarConsolidado = cuotasPendientesNotif.length >= 2;
 
-	const telefono =
-		polizaExtendida?.contacto?.celular || polizaExtendida?.contacto?.telefono;
+	const telefono = polizaExtendida?.contacto?.celular || polizaExtendida?.contacto?.telefono;
 	const correo = polizaExtendida?.contacto?.correo;
 
 	return (
@@ -288,8 +274,7 @@ export default function CuotasModal({
 				<DialogContent className="sm:max-w-5xl max-h-[90vh] overflow-y-auto">
 					<DialogHeader>
 						<DialogTitle className="text-xl font-semibold">
-							Cuotas de Póliza{" "}
-							<span className="text-primary">{poliza.numero_poliza}</span>
+							Cuotas de Póliza <span className="text-primary">{poliza.numero_poliza}</span>
 						</DialogTitle>
 					</DialogHeader>
 
@@ -413,10 +398,7 @@ export default function CuotasModal({
 
 							{/* Ramo-specific data */}
 							{polizaExtendida.datos_ramo && (
-								<RamoDetalle
-									datos={polizaExtendida.datos_ramo}
-									moneda={polizaExtendida.moneda}
-								/>
+								<RamoDetalle datos={polizaExtendida.datos_ramo} moneda={polizaExtendida.moneda} />
 							)}
 
 							{/* Notificación consolidada para 2+ cuotas vencidas */}
@@ -469,9 +451,7 @@ export default function CuotasModal({
 										<div className="flex items-start gap-3">
 											<FileWarning className="h-5 w-5 text-destructive mt-0.5 shrink-0" />
 											<div>
-												<p className="text-sm font-semibold text-destructive">
-													Mora Detectada
-												</p>
+												<p className="text-sm font-semibold text-destructive">Mora Detectada</p>
 												<p className="text-xs text-muted-foreground mt-0.5">
 													{cuotasVencidas} cuotas vencidas — requiere aviso formal
 												</p>
@@ -533,217 +513,249 @@ export default function CuotasModal({
 
 											return (
 												<Fragment key={cuota.id}>
-												<tr
-													className={`border-b border-border hover:bg-secondary/50 transition-colors duration-150 border-l-2 ${
-														estadoReal === "vencido"
-															? "border-l-destructive"
-															: "border-l-transparent"
-													}`}
-												>
-													{/* N° + expand de abonos */}
-													<td className="px-4 py-3 text-sm font-medium">
-														<div className="flex items-center gap-1">
-															{abonos.length > 0 ? (
-																<button
-																	onClick={() => toggleExpand(cuota.id)}
-																	className="text-muted-foreground hover:text-foreground"
-																	title={isExpanded ? "Ocultar abonos" : `Ver ${abonos.length} abono(s)`}
-																>
-																	{isExpanded ? (
-																		<ChevronDown className="h-4 w-4" />
-																	) : (
-																		<ChevronRight className="h-4 w-4" />
-																	)}
-																</button>
-															) : (
-																<span className="inline-block w-4" />
-															)}
-															{cuota.numero_cuota}
-														</div>
-													</td>
-
-													{/* Monto */}
-													<td className="px-4 py-3 text-sm font-medium tabular-nums whitespace-nowrap">
-														{poliza.moneda} {formatCurrency(cuota.monto)}
-														{abonado > 0.01 && abonado < cuota.monto - 0.01 && (
-															<div className="text-xs font-normal text-muted-foreground">
-																abonado {formatCurrency(abonado)}
-															</div>
-														)}
-													</td>
-
-													{/* Vencimiento */}
-													<td className="px-4 py-3 text-sm">
-														<div>
-															{formatearFecha(cuota.fecha_vencimiento, "corto")}
-														</div>
-														{cuota.fecha_vencimiento_original && (
-															<div className="mt-0.5">
-																<span className="inline-block text-xs bg-sky-50 text-sky-800 border border-sky-200 px-1.5 py-0.5 rounded-md">
-																	Prorrogada
-																</span>
-															</div>
-														)}
-													</td>
-
-													{/* Fecha de pago */}
-													<td className="px-4 py-3 text-sm text-muted-foreground">
-														{cuota.fecha_pago
-															? formatearFecha(cuota.fecha_pago, "corto")
-															: "—"}
-													</td>
-
-													{/* Estado */}
-													<td className="px-4 py-3">
-														<EstadoBadge estado={estadoReal} />
-													</td>
-
-													{/* Acciones */}
-													<td className="px-4 py-3">
-														<div className="flex items-center justify-end gap-1.5 flex-wrap">
-															{/* Primary: Registrar Pago */}
-															{puedeRegistrarPago(estadoReal) && (
-																<Button
-																	size="sm"
-																	variant="default"
-																	onClick={() => {
-																		onSelectQuota(cuota);
-																		onClose();
-																	}}
-																>
-																	Registrar Pago
-																</Button>
-															)}
-
-															{/* Secondary: Prórroga */}
-															{puedeProrroga(estadoReal) && (
-																<Button
-																	size="sm"
-																	variant="outline"
-																	onClick={() => handleOpenProrroga(cuota)}
-																>
-																	Prórroga
-																</Button>
-															)}
-
-															{/* Ghost: WhatsApp */}
-															{polizaExtendida && hasPhone && (
-																<Button
-																	size="icon"
-																	variant="ghost"
-																	className="h-8 w-8"
-																	onClick={() => handleWhatsAppReminder(cuota)}
-																	title="Enviar recordatorio por WhatsApp"
-																>
-																	<MessageCircle className="h-4 w-4 text-success" />
-																</Button>
-															)}
-
-															{/* Ghost: Email */}
-															{polizaExtendida && hasEmail && (
-																<Button
-																	size="icon"
-																	variant="ghost"
-																	className="h-8 w-8"
-																	onClick={() => handleEmailReminder(cuota)}
-																	title="Enviar recordatorio por Email"
-																>
-																	<Send className="h-4 w-4 text-info" />
-																</Button>
-															)}
-
-															{/* Notas */}
-															{polizaExtendida && (
-																<Button
-																	size="icon"
-																	variant="ghost"
-																	className="h-8 w-8 relative"
-																	onClick={() => {
-																		setNotasTarget({
-																			pagoId: cuota.id,
-																			label: `Cuota #${cuota.numero_cuota}`,
-																		});
-																		setNotasOpen(true);
-																	}}
-																	title="Notas de la cuota"
-																>
-																	<StickyNote className="h-4 w-4 text-muted-foreground" />
-																	{(polizaExtendida.notas_por_cuota?.[cuota.id]?.length ?? 0) > 0 && (
-																		<span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-[10px] leading-none rounded-full h-4 min-w-4 px-1 flex items-center justify-center">
-																			{polizaExtendida.notas_por_cuota![cuota.id].length}
-																		</span>
-																	)}
-																</Button>
-															)}
-
-															{/* Comprobantes: ver en la sub-fila expandible de abonos (chevron en col. N°) */}
-														</div>
-													</td>
-												</tr>
-
-												{/* Sub-fila: abonos de la cuota, cada uno con su comprobante */}
-												{isExpanded && abonos.length > 0 && (
-													<tr className="bg-secondary/30">
-														<td colSpan={6} className="px-4 py-2">
-															<div className="pl-6 space-y-1.5">
-																<p className="text-xs font-medium text-muted-foreground">
-																	Abonos ({abonos.length}) — {poliza.moneda} {formatCurrency(abonado)} de {formatCurrency(cuota.monto)}
-																</p>
-																{abonos.map((abono, idx) => (
-																	<div
-																		key={abono.id}
-																		className="flex items-center gap-3 text-sm bg-card border border-border rounded-md px-3 py-1.5"
+													<tr
+														className={`border-b border-border hover:bg-secondary/50 transition-colors duration-150 border-l-2 ${
+															estadoReal === "vencido"
+																? "border-l-destructive"
+																: "border-l-transparent"
+														}`}
+													>
+														{/* N° + expand de abonos */}
+														<td className="px-4 py-3 text-sm font-medium">
+															<div className="flex items-center gap-1">
+																{abonos.length > 0 ? (
+																	<button
+																		onClick={() => toggleExpand(cuota.id)}
+																		className="text-muted-foreground hover:text-foreground"
+																		title={
+																			isExpanded
+																				? "Ocultar abonos"
+																				: `Ver ${abonos.length} abono(s)`
+																		}
 																	>
-																		<span className="text-xs text-muted-foreground w-6">#{idx + 1}</span>
-																		<span className="font-medium tabular-nums">
-																			{poliza.moneda} {formatCurrency(abono.monto)}
-																		</span>
-																		<span className="text-xs text-muted-foreground">
-																			{formatearFecha(abono.fecha_pago, "corto")}
-																		</span>
-																		{abono.autor && (
-																			<span className="text-xs text-muted-foreground truncate hidden sm:inline">
-																				· {abono.autor}
+																		{isExpanded ? (
+																			<ChevronDown className="h-4 w-4" />
+																		) : (
+																			<ChevronRight className="h-4 w-4" />
+																		)}
+																	</button>
+																) : (
+																	<span className="inline-block w-4" />
+																)}
+																{cuota.numero_cuota}
+															</div>
+														</td>
+
+														{/* Monto */}
+														<td className="px-4 py-3 text-sm font-medium tabular-nums whitespace-nowrap">
+															{poliza.moneda} {formatCurrency(cuota.monto)}
+															{abonado > 0.01 && abonado < cuota.monto - 0.01 && (
+																<div className="text-xs font-normal text-muted-foreground">
+																	abonado {formatCurrency(abonado)}
+																</div>
+															)}
+														</td>
+
+														{/* Vencimiento */}
+														<td className="px-4 py-3 text-sm">
+															<div>
+																{formatearFecha(cuota.fecha_vencimiento, "corto")}
+															</div>
+															{cuota.fecha_vencimiento_original && (
+																<div className="mt-0.5">
+																	<span className="inline-block text-xs bg-sky-50 text-sky-800 border border-sky-200 px-1.5 py-0.5 rounded-md">
+																		Prorrogada
+																	</span>
+																</div>
+															)}
+														</td>
+
+														{/* Fecha de pago */}
+														<td className="px-4 py-3 text-sm text-muted-foreground">
+															{cuota.fecha_pago
+																? formatearFecha(cuota.fecha_pago, "corto")
+																: "—"}
+														</td>
+
+														{/* Estado */}
+														<td className="px-4 py-3">
+															<EstadoBadge estado={estadoReal} />
+														</td>
+
+														{/* Acciones */}
+														<td className="px-4 py-3">
+															<div className="flex items-center justify-end gap-1.5 flex-wrap">
+																{/* Primary: Registrar Pago */}
+																{puedeRegistrarPago(estadoReal) && (
+																	<Button
+																		size="sm"
+																		variant="default"
+																		onClick={() => {
+																			onSelectQuota(cuota);
+																			onClose();
+																		}}
+																	>
+																		Registrar Pago
+																	</Button>
+																)}
+
+																{/* Secondary: Prórroga */}
+																{puedeProrroga(estadoReal) && (
+																	<Button
+																		size="sm"
+																		variant="outline"
+																		onClick={() => handleOpenProrroga(cuota)}
+																	>
+																		Prórroga
+																	</Button>
+																)}
+
+																{/* Ghost: WhatsApp */}
+																{polizaExtendida && hasPhone && (
+																	<Button
+																		size="icon"
+																		variant="ghost"
+																		className="h-8 w-8"
+																		onClick={() => handleWhatsAppReminder(cuota)}
+																		title="Enviar recordatorio por WhatsApp"
+																	>
+																		<MessageCircle className="h-4 w-4 text-success" />
+																	</Button>
+																)}
+
+																{/* Ghost: Email */}
+																{polizaExtendida && hasEmail && (
+																	<Button
+																		size="icon"
+																		variant="ghost"
+																		className="h-8 w-8"
+																		onClick={() => handleEmailReminder(cuota)}
+																		title="Enviar recordatorio por Email"
+																	>
+																		<Send className="h-4 w-4 text-info" />
+																	</Button>
+																)}
+
+																{/* Notas */}
+																{polizaExtendida && (
+																	<Button
+																		size="icon"
+																		variant="ghost"
+																		className="h-8 w-8 relative"
+																		onClick={() => {
+																			setNotasTarget({
+																				pagoId: cuota.id,
+																				label: `Cuota #${cuota.numero_cuota}`,
+																			});
+																			setNotasOpen(true);
+																		}}
+																		title="Notas de la cuota"
+																	>
+																		<StickyNote className="h-4 w-4 text-muted-foreground" />
+																		{(polizaExtendida.notas_por_cuota?.[cuota.id]
+																			?.length ?? 0) > 0 && (
+																			<span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-[10px] leading-none rounded-full h-4 min-w-4 px-1 flex items-center justify-center">
+																				{
+																					polizaExtendida.notas_por_cuota![
+																						cuota.id
+																					].length
+																				}
 																			</span>
 																		)}
-																		<div className="ml-auto flex items-center gap-1">
-																			{abono.tiene_comprobante ? (
-																				<Button
-																					size="sm"
-																					variant="ghost"
-																					className="gap-1 h-7"
-																					onClick={() => handleVerComprobanteAbono(abono.id)}
-																					disabled={loadingComprobante === abono.id}
-																					title="Ver comprobante"
-																				>
-																					{loadingComprobante === abono.id ? (
-																						<Loader2 className="h-4 w-4 animate-spin" />
-																					) : (
-																						<Paperclip className="h-4 w-4" />
-																					)}
-																					Comprobante
-																				</Button>
-																			) : (
-																				<span className="text-xs text-muted-foreground">Sin comprobante</span>
-																			)}
-																			{isAdmin && (
-																				<Button
-																					size="icon"
-																					variant="ghost"
-																					className="h-7 w-7"
-																					onClick={() => handleSustituirAbono(abono.id, cuota.numero_cuota)}
-																					title="Sustituir comprobante del abono"
-																				>
-																					<RefreshCw className="h-4 w-4 text-muted-foreground" />
-																				</Button>
-																			)}
-																		</div>
-																	</div>
-																))}
+																	</Button>
+																)}
+
+																{/* Comprobantes: ver en la sub-fila expandible de abonos (chevron en col. N°) */}
 															</div>
 														</td>
 													</tr>
-												)}
+
+													{/* Sub-fila: abonos de la cuota, cada uno con su comprobante */}
+													{isExpanded && abonos.length > 0 && (
+														<tr className="bg-secondary/30">
+															<td colSpan={6} className="px-4 py-2">
+																<div className="pl-6 space-y-1.5">
+																	<p className="text-xs font-medium text-muted-foreground">
+																		Abonos ({abonos.length}) — {poliza.moneda}{" "}
+																		{formatCurrency(abonado)} de{" "}
+																		{formatCurrency(cuota.monto)}
+																	</p>
+																	{abonos.map((abono, idx) => (
+																		<div
+																			key={abono.id}
+																			className="flex items-center gap-3 text-sm bg-card border border-border rounded-md px-3 py-1.5"
+																		>
+																			<span className="text-xs text-muted-foreground w-6">
+																				#{idx + 1}
+																			</span>
+																			<span className="font-medium tabular-nums">
+																				{poliza.moneda}{" "}
+																				{formatCurrency(abono.monto)}
+																			</span>
+																			<span className="text-xs text-muted-foreground">
+																				{formatearFecha(
+																					abono.fecha_pago,
+																					"corto",
+																				)}
+																			</span>
+																			{abono.autor && (
+																				<span className="text-xs text-muted-foreground truncate hidden sm:inline">
+																					· {abono.autor}
+																				</span>
+																			)}
+																			<div className="ml-auto flex items-center gap-1">
+																				{abono.tiene_comprobante ? (
+																					<Button
+																						size="sm"
+																						variant="ghost"
+																						className="gap-1 h-7"
+																						onClick={() =>
+																							handleVerComprobanteAbono(
+																								abono.id,
+																							)
+																						}
+																						disabled={
+																							loadingComprobante ===
+																							abono.id
+																						}
+																						title="Ver comprobante"
+																					>
+																						{loadingComprobante ===
+																						abono.id ? (
+																							<Loader2 className="h-4 w-4 animate-spin" />
+																						) : (
+																							<Paperclip className="h-4 w-4" />
+																						)}
+																						Comprobante
+																					</Button>
+																				) : (
+																					<span className="text-xs text-muted-foreground">
+																						Sin comprobante
+																					</span>
+																				)}
+																				{isAdmin && (
+																					<Button
+																						size="icon"
+																						variant="ghost"
+																						className="h-7 w-7"
+																						onClick={() =>
+																							handleSustituirAbono(
+																								abono.id,
+																								cuota.numero_cuota,
+																							)
+																						}
+																						title="Sustituir comprobante del abono"
+																					>
+																						<RefreshCw className="h-4 w-4 text-muted-foreground" />
+																					</Button>
+																				)}
+																			</div>
+																		</div>
+																	))}
+																</div>
+															</td>
+														</tr>
+													)}
 												</Fragment>
 											);
 										})}
@@ -768,12 +780,24 @@ export default function CuotasModal({
 								<table className="w-full text-sm">
 									<thead className="bg-green-50">
 										<tr>
-											<th className="px-4 py-2 text-left text-xs font-medium text-green-700">Anexo</th>
-											<th className="px-4 py-2 text-left text-xs font-medium text-green-700">N° Cuota</th>
-											<th className="px-4 py-2 text-left text-xs font-medium text-green-700">Monto</th>
-											<th className="px-4 py-2 text-left text-xs font-medium text-green-700">Vencimiento</th>
-											<th className="px-4 py-2 text-left text-xs font-medium text-green-700">Estado</th>
-											<th className="px-4 py-2 text-right text-xs font-medium text-green-700">Acciones</th>
+											<th className="px-4 py-2 text-left text-xs font-medium text-green-700">
+												Anexo
+											</th>
+											<th className="px-4 py-2 text-left text-xs font-medium text-green-700">
+												N° Cuota
+											</th>
+											<th className="px-4 py-2 text-left text-xs font-medium text-green-700">
+												Monto
+											</th>
+											<th className="px-4 py-2 text-left text-xs font-medium text-green-700">
+												Vencimiento
+											</th>
+											<th className="px-4 py-2 text-left text-xs font-medium text-green-700">
+												Estado
+											</th>
+											<th className="px-4 py-2 text-right text-xs font-medium text-green-700">
+												Acciones
+											</th>
 										</tr>
 									</thead>
 									<tbody className="divide-y divide-green-100">
@@ -784,83 +808,97 @@ export default function CuotasModal({
 											const comprobanteAbono = abonosAnexo.find((a) => a.tiene_comprobante);
 											const pagable = ci.estado !== "pagado";
 											return (
-											<tr key={ci.id} className="hover:bg-green-50/50">
-												<td className="px-4 py-2 text-xs font-medium text-green-800">
-													{ci.numero_anexo}
-												</td>
-												<td className="px-4 py-2 text-xs">{ci.numero_cuota}</td>
-												<td className="px-4 py-2 text-xs font-medium tabular-nums">
-													{poliza.moneda} {formatCurrency(ci.monto)}
-													{abonadoAnexo > 0.01 && abonadoAnexo < ci.monto - 0.01 && (
-														<span className="block text-[11px] font-normal text-muted-foreground">
-															abonado {formatCurrency(abonadoAnexo)}
-														</span>
-													)}
-												</td>
-												<td className="px-4 py-2 text-xs">
-													{ci.fecha_vencimiento ? formatearFecha(ci.fecha_vencimiento, "corto") : "—"}
-												</td>
-												<td className="px-4 py-2">
-													<EstadoBadge estado={ci.estado as "pendiente" | "pagado" | "vencido" | "parcial"} />
-												</td>
-												<td className="px-4 py-2">
-													<div className="flex items-center justify-end gap-1.5">
-														{pagable && (
-															<Button
-																size="sm"
-																variant="default"
-																onClick={() => {
-																	setPagoAnexoTarget({
-																		id: ci.id,
-																		numero_anexo: ci.numero_anexo,
-																		numero_cuota: ci.numero_cuota,
-																		monto: ci.monto,
-																	});
-																	setPagoAnexoOpen(true);
-																}}
-															>
-																Registrar Pago
-															</Button>
+												<tr key={ci.id} className="hover:bg-green-50/50">
+													<td className="px-4 py-2 text-xs font-medium text-green-800">
+														{ci.numero_anexo}
+													</td>
+													<td className="px-4 py-2 text-xs">{ci.numero_cuota}</td>
+													<td className="px-4 py-2 text-xs font-medium tabular-nums">
+														{poliza.moneda} {formatCurrency(ci.monto)}
+														{abonadoAnexo > 0.01 && abonadoAnexo < ci.monto - 0.01 && (
+															<span className="block text-[11px] font-normal text-muted-foreground">
+																abonado {formatCurrency(abonadoAnexo)}
+															</span>
 														)}
-														{comprobanteAbono && (
+													</td>
+													<td className="px-4 py-2 text-xs">
+														{ci.fecha_vencimiento
+															? formatearFecha(ci.fecha_vencimiento, "corto")
+															: "—"}
+													</td>
+													<td className="px-4 py-2">
+														<EstadoBadge
+															estado={
+																ci.estado as
+																	| "pendiente"
+																	| "pagado"
+																	| "vencido"
+																	| "parcial"
+															}
+														/>
+													</td>
+													<td className="px-4 py-2">
+														<div className="flex items-center justify-end gap-1.5">
+															{pagable && (
+																<Button
+																	size="sm"
+																	variant="default"
+																	onClick={() => {
+																		setPagoAnexoTarget({
+																			id: ci.id,
+																			numero_anexo: ci.numero_anexo,
+																			numero_cuota: ci.numero_cuota,
+																			monto: ci.monto,
+																		});
+																		setPagoAnexoOpen(true);
+																	}}
+																>
+																	Registrar Pago
+																</Button>
+															)}
+															{comprobanteAbono && (
+																<Button
+																	size="icon"
+																	variant="ghost"
+																	className="h-8 w-8"
+																	title="Ver comprobante"
+																	onClick={() =>
+																		handleVerComprobanteAbono(comprobanteAbono.id)
+																	}
+																	disabled={
+																		loadingComprobante === comprobanteAbono.id
+																	}
+																>
+																	{loadingComprobante === comprobanteAbono.id ? (
+																		<Loader2 className="h-4 w-4 animate-spin" />
+																	) : (
+																		<Paperclip className="h-4 w-4" />
+																	)}
+																</Button>
+															)}
 															<Button
 																size="icon"
 																variant="ghost"
-																className="h-8 w-8"
-																title="Ver comprobante"
-																onClick={() => handleVerComprobanteAbono(comprobanteAbono.id)}
-																disabled={loadingComprobante === comprobanteAbono.id}
+																className="h-8 w-8 relative"
+																title="Notas de la cuota"
+																onClick={() => {
+																	setNotasTarget({
+																		anexoPagoId: ci.id,
+																		label: `Anexo ${ci.numero_anexo} · Cuota ${ci.numero_cuota}`,
+																	});
+																	setNotasOpen(true);
+																}}
 															>
-																{loadingComprobante === comprobanteAbono.id ? (
-																	<Loader2 className="h-4 w-4 animate-spin" />
-																) : (
-																	<Paperclip className="h-4 w-4" />
+																<StickyNote className="h-4 w-4 text-muted-foreground" />
+																{notasCount > 0 && (
+																	<span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-[10px] leading-none rounded-full h-4 min-w-4 px-1 flex items-center justify-center">
+																		{notasCount}
+																	</span>
 																)}
 															</Button>
-														)}
-														<Button
-															size="icon"
-															variant="ghost"
-															className="h-8 w-8 relative"
-															title="Notas de la cuota"
-															onClick={() => {
-																setNotasTarget({
-																	anexoPagoId: ci.id,
-																	label: `Anexo ${ci.numero_anexo} · Cuota ${ci.numero_cuota}`,
-																});
-																setNotasOpen(true);
-															}}
-														>
-															<StickyNote className="h-4 w-4 text-muted-foreground" />
-															{notasCount > 0 && (
-																<span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-[10px] leading-none rounded-full h-4 min-w-4 px-1 flex items-center justify-center">
-																	{notasCount}
-																</span>
-															)}
-														</Button>
-													</div>
-												</td>
-											</tr>
+														</div>
+													</td>
+												</tr>
 											);
 										})}
 									</tbody>
@@ -904,11 +942,11 @@ export default function CuotasModal({
 				target={notasTarget}
 				notasIniciales={
 					notasTarget
-						? (notasTarget.pagoId
+						? ((notasTarget.pagoId
 								? polizaExtendida?.notas_por_cuota?.[notasTarget.pagoId]
 								: notasTarget.anexoPagoId
-								? polizaExtendida?.notas_por_cuota?.[notasTarget.anexoPagoId]
-								: undefined) ?? []
+									? polizaExtendida?.notas_por_cuota?.[notasTarget.anexoPagoId]
+									: undefined) ?? [])
 						: []
 				}
 				open={notasOpen}

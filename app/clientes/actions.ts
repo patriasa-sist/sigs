@@ -27,24 +27,24 @@ import { ZodError } from "zod";
 // ERROR HANDLING TYPES
 // ============================================
 
-export type ActionResult<T> =
-	| { success: true; data: T }
-	| { success: false; error: string; details?: unknown };
+export type ActionResult<T> = { success: true; data: T } | { success: false; error: string; details?: unknown };
 
-export type PaginatedResult<T> = {
-	success: true;
-	data: T[];
-	pagination: {
-		page: number;
-		pageSize: number;
-		totalRecords: number;
-		totalPages: number;
-	};
-} | {
-	success: false;
-	error: string;
-	details?: unknown;
-};
+export type PaginatedResult<T> =
+	| {
+			success: true;
+			data: T[];
+			pagination: {
+				page: number;
+				pageSize: number;
+				totalRecords: number;
+				totalPages: number;
+			};
+	  }
+	| {
+			success: false;
+			error: string;
+			details?: unknown;
+	  };
 
 // ============================================
 // HELPER FUNCTIONS
@@ -110,31 +110,21 @@ function getValueAtPath(obj: unknown, path: ReadonlyArray<PropertyKey>): unknown
  * @param issue - A single Zod issue
  * @param data - The original data passed to `.parse()` / `.safeParse()`
  */
-function describeZodIssue(
-	issue: ZodError["issues"][number],
-	data: unknown,
-): { expected: string; received: string } {
+function describeZodIssue(issue: ZodError["issues"][number], data: unknown): { expected: string; received: string } {
 	let expected = "N/A";
 	if ("expected" in issue && issue.expected != null) {
 		expected = String(issue.expected);
-	} else if (
-		"values" in issue &&
-		Array.isArray((issue as { values?: unknown[] }).values)
-	) {
+	} else if ("values" in issue && Array.isArray((issue as { values?: unknown[] }).values)) {
 		expected = (issue as { values: unknown[] }).values.map(String).join(" | ");
 	}
 
-	const format = (value: unknown): string =>
-		typeof value === "string" ? `"${value}"` : String(value);
+	const format = (value: unknown): string => (typeof value === "string" ? `"${value}"` : String(value));
 
 	let received = "N/A";
 	const actual = getValueAtPath(data, issue.path);
 	if (actual !== undefined) {
 		received = format(actual);
-	} else if (
-		"input" in issue &&
-		(issue as { input?: unknown }).input !== undefined
-	) {
+	} else if ("input" in issue && (issue as { input?: unknown }).input !== undefined) {
 		received = format((issue as { input?: unknown }).input);
 	}
 
@@ -196,7 +186,7 @@ export async function getAllClients(options?: {
 				club_clients (*),
 				asociacion_civil_clients (*)
 			`,
-				{ count: "exact" }
+				{ count: "exact" },
 			)
 			.order("created_at", { ascending: false })
 			.range(offset, offset + pageSize - 1);
@@ -234,11 +224,9 @@ export async function getAllClients(options?: {
 		const clientIds = clientsData.map((c) => c.id);
 
 		// Extract unique executive IDs for profiles_public query
-		const executiveIds = [...new Set(
-			clientsData
-				.map((c) => c.commercial_owner_id)
-				.filter((id): id is string => id !== null)
-		)];
+		const executiveIds = [
+			...new Set(clientsData.map((c) => c.commercial_owner_id).filter((id): id is string => id !== null)),
+		];
 
 		// Query executives from profiles_public view (restricted public access)
 		const executivesMap = new Map<string, { id: string; full_name: string; email: string }>();
@@ -270,7 +258,7 @@ export async function getAllClients(options?: {
 					activo,
 					created_at
 				)
-			`
+			`,
 			)
 			.in("client_id", clientIds);
 
@@ -301,29 +289,29 @@ export async function getAllClients(options?: {
 				// Prepare query result structure
 				// Handle Supabase returning either object or array for 1:1 relationships
 				const executiveData = clientData.commercial_owner_id
-					? executivesMap.get(clientData.commercial_owner_id) ?? null
+					? (executivesMap.get(clientData.commercial_owner_id) ?? null)
 					: null;
 
 				queryResult = {
 					clients: clientData,
 					natural_clients: Array.isArray(clientData.natural_clients)
-						? clientData.natural_clients[0] ?? null
-						: clientData.natural_clients ?? null,
+						? (clientData.natural_clients[0] ?? null)
+						: (clientData.natural_clients ?? null),
 					juridic_clients: Array.isArray(clientData.juridic_clients)
-						? clientData.juridic_clients[0] ?? null
-						: clientData.juridic_clients ?? null,
+						? (clientData.juridic_clients[0] ?? null)
+						: (clientData.juridic_clients ?? null),
 					unipersonal_clients: Array.isArray(clientData.unipersonal_clients)
-						? clientData.unipersonal_clients[0] ?? null
-						: clientData.unipersonal_clients ?? null,
+						? (clientData.unipersonal_clients[0] ?? null)
+						: (clientData.unipersonal_clients ?? null),
 					ong_clients: Array.isArray(clientData.ong_clients)
-						? clientData.ong_clients[0] ?? null
-						: clientData.ong_clients ?? null,
+						? (clientData.ong_clients[0] ?? null)
+						: (clientData.ong_clients ?? null),
 					club_clients: Array.isArray(clientData.club_clients)
-						? clientData.club_clients[0] ?? null
-						: clientData.club_clients ?? null,
+						? (clientData.club_clients[0] ?? null)
+						: (clientData.club_clients ?? null),
 					asociacion_civil_clients: Array.isArray(clientData.asociacion_civil_clients)
-						? clientData.asociacion_civil_clients[0] ?? null
-						: clientData.asociacion_civil_clients ?? null,
+						? (clientData.asociacion_civil_clients[0] ?? null)
+						: (clientData.asociacion_civil_clients ?? null),
 					executive: executiveData,
 					policies: policiesByClient.get(clientData.id) ?? [],
 				};
@@ -341,18 +329,16 @@ export async function getAllClients(options?: {
 				if (validationError instanceof ZodError) {
 					// Build detailed error message with field paths
 					const detailedErrors = validationError.issues.map((issue) => {
-						const fieldPath = issue.path.length > 0
-							? issue.path.join('.')
-							: 'root';
+						const fieldPath = issue.path.length > 0 ? issue.path.join(".") : "root";
 						const { expected, received } = describeZodIssue(issue, queryResult);
 						return `[${fieldPath}] ${issue.message} (expected: ${expected}, received: ${received})`;
 					});
-					errorMsg = detailedErrors.join(' | ');
+					errorMsg = detailedErrors.join(" | ");
 
 					// Log each issue separately for clarity
 					console.error(`[getAllClients] Validation error for client ${clientData.id}:`);
 					for (const issue of validationError.issues) {
-						const fieldPath = issue.path.length > 0 ? issue.path.join('.') : 'root';
+						const fieldPath = issue.path.length > 0 ? issue.path.join(".") : "root";
 						const { expected, received } = describeZodIssue(issue, queryResult);
 						console.error(`  - Field "${fieldPath}": ${issue.message}`);
 						console.error(`    Expected: ${expected}, Received: ${received}`);
@@ -372,7 +358,9 @@ export async function getAllClients(options?: {
 
 		const totalPages = Math.ceil((totalRecords ?? 0) / pageSize);
 
-		console.log(`[getAllClients] Successfully fetched ${validatedClients.length} clients (page ${page}/${totalPages})`);
+		console.log(
+			`[getAllClients] Successfully fetched ${validatedClients.length} clients (page ${page}/${totalPages})`,
+		);
 
 		return {
 			success: true,
@@ -436,7 +424,7 @@ export async function getClientById(clientId: string): Promise<ActionResult<Clie
 				ong_clients (*),
 				club_clients (*),
 				asociacion_civil_clients (*)
-			`
+			`,
 			)
 			.eq("id", clientId)
 			.single();
@@ -486,7 +474,7 @@ export async function getClientById(clientId: string): Promise<ActionResult<Clie
 					activo,
 					created_at
 				)
-			`
+			`,
 			)
 			.eq("client_id", clientId);
 
@@ -500,23 +488,23 @@ export async function getClientById(clientId: string): Promise<ActionResult<Clie
 		const queryResult: ClientQueryResult = {
 			clients: clientData,
 			natural_clients: Array.isArray(clientData.natural_clients)
-				? clientData.natural_clients[0] ?? null
-				: clientData.natural_clients ?? null,
+				? (clientData.natural_clients[0] ?? null)
+				: (clientData.natural_clients ?? null),
 			juridic_clients: Array.isArray(clientData.juridic_clients)
-				? clientData.juridic_clients[0] ?? null
-				: clientData.juridic_clients ?? null,
+				? (clientData.juridic_clients[0] ?? null)
+				: (clientData.juridic_clients ?? null),
 			unipersonal_clients: Array.isArray(clientData.unipersonal_clients)
-				? clientData.unipersonal_clients[0] ?? null
-				: clientData.unipersonal_clients ?? null,
+				? (clientData.unipersonal_clients[0] ?? null)
+				: (clientData.unipersonal_clients ?? null),
 			ong_clients: Array.isArray(clientData.ong_clients)
-				? clientData.ong_clients[0] ?? null
-				: clientData.ong_clients ?? null,
+				? (clientData.ong_clients[0] ?? null)
+				: (clientData.ong_clients ?? null),
 			club_clients: Array.isArray(clientData.club_clients)
-				? clientData.club_clients[0] ?? null
-				: clientData.club_clients ?? null,
+				? (clientData.club_clients[0] ?? null)
+				: (clientData.club_clients ?? null),
 			asociacion_civil_clients: Array.isArray(clientData.asociacion_civil_clients)
-				? clientData.asociacion_civil_clients[0] ?? null
-				: clientData.asociacion_civil_clients ?? null,
+				? (clientData.asociacion_civil_clients[0] ?? null)
+				: (clientData.asociacion_civil_clients ?? null),
 			executive: executiveData,
 			policies: policiesData ?? [],
 		};
@@ -573,13 +561,20 @@ export async function getClientById(clientId: string): Promise<ActionResult<Clie
  * }
  * ```
  */
-export async function searchClients(query: string, filters?: { commercial_owner_id?: string }): Promise<ActionResult<ClientViewModel[]>> {
+export async function searchClients(
+	query: string,
+	filters?: { commercial_owner_id?: string },
+): Promise<ActionResult<ClientViewModel[]>> {
 	try {
 		const { supabase, user } = await getAuthenticatedClient();
 
 		const trimmedQuery = query.trim().substring(0, 100);
 		if (!trimmedQuery) {
-			const result = await getAllClients({ page: 1, pageSize: 20, commercial_owner_id: filters?.commercial_owner_id });
+			const result = await getAllClients({
+				page: 1,
+				pageSize: 20,
+				commercial_owner_id: filters?.commercial_owner_id,
+			});
 			if (!result.success) return result;
 			return { success: true, data: result.data };
 		}
@@ -593,31 +588,41 @@ export async function searchClients(query: string, filters?: { commercial_owner_
 		let natQuery = supabase.from("natural_clients").select("client_id");
 		for (const p of palabras) {
 			natQuery = natQuery.or(
-				`primer_nombre.ilike.%${p}%,segundo_nombre.ilike.%${p}%,primer_apellido.ilike.%${p}%,segundo_apellido.ilike.%${p}%,numero_documento.ilike.%${p}%`
+				`primer_nombre.ilike.%${p}%,segundo_nombre.ilike.%${p}%,primer_apellido.ilike.%${p}%,segundo_apellido.ilike.%${p}%,numero_documento.ilike.%${p}%`,
 			);
 		}
 
 		// Buscar en todas las tablas relevantes en paralelo
-		const [natRes, jurRes, uniRes, ongRes, clubRes, asocRes, clientsRes, polizasRes, vehiculosRes] = await Promise.all([
-			natQuery,
-			supabase.from("juridic_clients").select("client_id")
-				.or(`razon_social.ilike.%${q}%,nit.ilike.%${q}%`),
-			supabase.from("unipersonal_clients").select("client_id")
-				.or(`razon_social.ilike.%${q}%,nit.ilike.%${q}%`),
-			supabase.from("ong_clients").select("client_id")
-				.or(`nombre_ong.ilike.%${q}%,sigla.ilike.%${q}%,nit.ilike.%${q}%`),
-			supabase.from("club_clients").select("client_id")
-				.or(`nombre_club.ilike.%${q}%,sigla.ilike.%${q}%,nit.ilike.%${q}%,numero_registro.ilike.%${q}%`),
-			supabase.from("asociacion_civil_clients").select("client_id")
-				.or(`nombre_asociacion.ilike.%${q}%,sigla.ilike.%${q}%,nit.ilike.%${q}%,numero_personeria_juridica.ilike.%${q}%,rubro_actividad.ilike.%${q}%`),
-			supabase.from("clients").select("id")
-				.or(`email.ilike.%${q}%,phone.ilike.%${q}%`),
-			supabase.from("polizas").select("client_id")
-				.ilike("numero_poliza", `%${q}%`),
-			supabase.from("polizas_automotor_vehiculos").select("poliza_id, polizas(client_id)")
-				.ilike("placa", `%${q}%`)
-				.limit(20),
-		]);
+		const [natRes, jurRes, uniRes, ongRes, clubRes, asocRes, clientsRes, polizasRes, vehiculosRes] =
+			await Promise.all([
+				natQuery,
+				supabase.from("juridic_clients").select("client_id").or(`razon_social.ilike.%${q}%,nit.ilike.%${q}%`),
+				supabase
+					.from("unipersonal_clients")
+					.select("client_id")
+					.or(`razon_social.ilike.%${q}%,nit.ilike.%${q}%`),
+				supabase
+					.from("ong_clients")
+					.select("client_id")
+					.or(`nombre_ong.ilike.%${q}%,sigla.ilike.%${q}%,nit.ilike.%${q}%`),
+				supabase
+					.from("club_clients")
+					.select("client_id")
+					.or(`nombre_club.ilike.%${q}%,sigla.ilike.%${q}%,nit.ilike.%${q}%,numero_registro.ilike.%${q}%`),
+				supabase
+					.from("asociacion_civil_clients")
+					.select("client_id")
+					.or(
+						`nombre_asociacion.ilike.%${q}%,sigla.ilike.%${q}%,nit.ilike.%${q}%,numero_personeria_juridica.ilike.%${q}%,rubro_actividad.ilike.%${q}%`,
+					),
+				supabase.from("clients").select("id").or(`email.ilike.%${q}%,phone.ilike.%${q}%`),
+				supabase.from("polizas").select("client_id").ilike("numero_poliza", `%${q}%`),
+				supabase
+					.from("polizas_automotor_vehiculos")
+					.select("poliza_id, polizas(client_id)")
+					.ilike("placa", `%${q}%`)
+					.limit(20),
+			]);
 
 		const vehiculoClientIds = (vehiculosRes.data ?? [])
 			// eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -646,7 +651,9 @@ export async function searchClients(query: string, filters?: { commercial_owner_
 		// Obtener clientes coincidentes con sus datos relacionados
 		let clientsMatchQuery = supabase
 			.from("clients")
-			.select(`*, natural_clients (*), juridic_clients (*), unipersonal_clients (*), ong_clients (*), club_clients (*), asociacion_civil_clients (*)`)
+			.select(
+				`*, natural_clients (*), juridic_clients (*), unipersonal_clients (*), ong_clients (*), club_clients (*), asociacion_civil_clients (*)`,
+			)
 			.in("id", ids)
 			.order("created_at", { ascending: false })
 			.limit(100);
@@ -665,23 +672,22 @@ export async function searchClients(query: string, filters?: { commercial_owner_
 		if (!clientsData?.length) return { success: true, data: [] };
 
 		// Obtener ejecutivos y pólizas para los resultados
-		const executiveIds = [...new Set(
-			clientsData.map((c) => c.commercial_owner_id).filter((id): id is string => id !== null)
-		)];
+		const executiveIds = [
+			...new Set(clientsData.map((c) => c.commercial_owner_id).filter((id): id is string => id !== null)),
+		];
 		const clientIds = clientsData.map((c) => c.id);
 
 		const [executivesRes, policiesRes] = await Promise.all([
 			executiveIds.length > 0
 				? supabase.from("profiles_public").select("id, full_name, email").in("id", executiveIds)
 				: Promise.resolve({ data: [] }),
-			supabase.from("polizas")
+			supabase
+				.from("polizas")
 				.select(`*, companias_aseguradoras (id, nombre, activo, created_at)`)
 				.in("client_id", clientIds),
 		]);
 
-		const executivesMap = new Map(
-			(executivesRes.data ?? []).map((e) => [e.id, e])
-		);
+		const executivesMap = new Map((executivesRes.data ?? []).map((e) => [e.id, e]));
 		const policiesByClient = new Map<string, typeof policiesRes.data>();
 		for (const policy of policiesRes.data ?? []) {
 			const existing = policiesByClient.get(policy.client_id) ?? [];
@@ -695,25 +701,25 @@ export async function searchClients(query: string, filters?: { commercial_owner_
 				const queryResult: ClientQueryResult = {
 					clients: clientData,
 					natural_clients: Array.isArray(clientData.natural_clients)
-						? clientData.natural_clients[0] ?? null
-						: clientData.natural_clients ?? null,
+						? (clientData.natural_clients[0] ?? null)
+						: (clientData.natural_clients ?? null),
 					juridic_clients: Array.isArray(clientData.juridic_clients)
-						? clientData.juridic_clients[0] ?? null
-						: clientData.juridic_clients ?? null,
+						? (clientData.juridic_clients[0] ?? null)
+						: (clientData.juridic_clients ?? null),
 					unipersonal_clients: Array.isArray(clientData.unipersonal_clients)
-						? clientData.unipersonal_clients[0] ?? null
-						: clientData.unipersonal_clients ?? null,
+						? (clientData.unipersonal_clients[0] ?? null)
+						: (clientData.unipersonal_clients ?? null),
 					ong_clients: Array.isArray(clientData.ong_clients)
-						? clientData.ong_clients[0] ?? null
-						: clientData.ong_clients ?? null,
+						? (clientData.ong_clients[0] ?? null)
+						: (clientData.ong_clients ?? null),
 					club_clients: Array.isArray(clientData.club_clients)
-						? clientData.club_clients[0] ?? null
-						: clientData.club_clients ?? null,
+						? (clientData.club_clients[0] ?? null)
+						: (clientData.club_clients ?? null),
 					asociacion_civil_clients: Array.isArray(clientData.asociacion_civil_clients)
-						? clientData.asociacion_civil_clients[0] ?? null
-						: clientData.asociacion_civil_clients ?? null,
+						? (clientData.asociacion_civil_clients[0] ?? null)
+						: (clientData.asociacion_civil_clients ?? null),
 					executive: clientData.commercial_owner_id
-						? executivesMap.get(clientData.commercial_owner_id) ?? null
+						? (executivesMap.get(clientData.commercial_owner_id) ?? null)
 						: null,
 					policies: policiesByClient.get(clientData.id) ?? [],
 				};
@@ -936,9 +942,7 @@ export async function verificarPersoneriaAsociacionExistente(
  * Check if a juridic or unipersonal client with the given NIT already exists.
  * Used for early duplicate detection during client creation.
  */
-export async function verificarNitExistente(
-	nit: string,
-): Promise<ActionResult<VerificarNitResult>> {
+export async function verificarNitExistente(nit: string): Promise<ActionResult<VerificarNitResult>> {
 	try {
 		const { supabase } = await getAuthenticatedClient();
 

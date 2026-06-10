@@ -23,9 +23,7 @@ export interface AnexoAdminRow {
 	cantidad_pagos: number;
 }
 
-type ActionResult<T> =
-	| { success: true; data: T }
-	| { success: false; error: string };
+type ActionResult<T> = { success: true; data: T } | { success: false; error: string };
 
 export async function buscarAnexosParaAdmin(query: string): Promise<ActionResult<AnexoAdminRow[]>> {
 	await requirePermission("anexos.eliminar");
@@ -38,7 +36,8 @@ export async function buscarAnexosParaAdmin(query: string): Promise<ActionResult
 
 	const { data, error } = await supabase
 		.from("polizas_anexos")
-		.select(`
+		.select(
+			`
 			id,
 			numero_anexo,
 			tipo_anexo,
@@ -56,14 +55,16 @@ export async function buscarAnexosParaAdmin(query: string): Promise<ActionResult
 			),
 			creado:profiles!polizas_anexos_created_by_fkey (full_name, email),
 			validado:profiles!polizas_anexos_validado_por_fkey (full_name, email)
-		`)
+		`,
+		)
 		.or(`numero_anexo.ilike.%${trimmed}%`)
 		.order("created_at", { ascending: false })
 		.limit(50);
 
 	const { data: dataPorPoliza } = await supabase
 		.from("polizas_anexos")
-		.select(`
+		.select(
+			`
 			id,
 			numero_anexo,
 			tipo_anexo,
@@ -81,7 +82,8 @@ export async function buscarAnexosParaAdmin(query: string): Promise<ActionResult
 			),
 			creado:profiles!polizas_anexos_created_by_fkey (full_name, email),
 			validado:profiles!polizas_anexos_validado_por_fkey (full_name, email)
-		`)
+		`,
+		)
 		.ilike("polizas.numero_poliza", `%${trimmed}%`)
 		.order("created_at", { ascending: false })
 		.limit(50);
@@ -92,7 +94,7 @@ export async function buscarAnexosParaAdmin(query: string): Promise<ActionResult
 	}
 
 	const combinados = [...(data ?? []), ...(dataPorPoliza ?? [])];
-	const unicos = new Map<string, typeof combinados[number]>();
+	const unicos = new Map<string, (typeof combinados)[number]>();
 	for (const row of combinados) unicos.set(row.id, row);
 	const filas = Array.from(unicos.values());
 
@@ -146,7 +148,7 @@ export async function buscarAnexosParaAdmin(query: string): Promise<ActionResult
 
 export async function eliminarAnexoCompleto(
 	anexoId: string,
-	motivo: string
+	motivo: string,
 ): Promise<ActionResult<{ poliza_id: string; reactivada: boolean }>> {
 	const profile = await requirePermission("anexos.eliminar");
 
@@ -172,14 +174,9 @@ export async function eliminarAnexoCompleto(
 		.select("archivo_url")
 		.eq("anexo_id", anexoId);
 
-	const rutasStorage = (documentos ?? [])
-		.map((d) => d.archivo_url)
-		.filter((u): u is string => Boolean(u));
+	const rutasStorage = (documentos ?? []).map((d) => d.archivo_url).filter((u): u is string => Boolean(u));
 
-	const { error: deleteAnexoError } = await admin
-		.from("polizas_anexos")
-		.delete()
-		.eq("id", anexoId);
+	const { error: deleteAnexoError } = await admin.from("polizas_anexos").delete().eq("id", anexoId);
 
 	if (deleteAnexoError) {
 		console.error("[admin/anexos] Error eliminando anexo:", deleteAnexoError);
@@ -188,11 +185,7 @@ export async function eliminarAnexoCompleto(
 
 	let reactivada = false;
 	if (anexo.tipo_anexo === "anulacion" && anexo.estado === "activo") {
-		const { data: polizaActual } = await admin
-			.from("polizas")
-			.select("estado")
-			.eq("id", anexo.poliza_id)
-			.single();
+		const { data: polizaActual } = await admin.from("polizas").select("estado").eq("id", anexo.poliza_id).single();
 
 		if (polizaActual?.estado === "anulada") {
 			const { error: updateError } = await admin
@@ -203,16 +196,17 @@ export async function eliminarAnexoCompleto(
 
 			if (updateError) {
 				console.error("[admin/anexos] Error reactivando póliza:", updateError);
-				return { success: false, error: "Anexo eliminado pero falló reactivación de póliza. Revisar manualmente." };
+				return {
+					success: false,
+					error: "Anexo eliminado pero falló reactivación de póliza. Revisar manualmente.",
+				};
 			}
 			reactivada = true;
 		}
 	}
 
 	if (rutasStorage.length > 0) {
-		const { error: storageError } = await admin.storage
-			.from("polizas-documentos")
-			.remove(rutasStorage);
+		const { error: storageError } = await admin.storage.from("polizas-documentos").remove(rutasStorage);
 		if (storageError) {
 			console.error("[admin/anexos] Error borrando archivos de Storage:", storageError);
 		}

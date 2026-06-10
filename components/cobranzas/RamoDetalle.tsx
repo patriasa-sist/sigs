@@ -1,16 +1,6 @@
 "use client";
 
-import {
-	Car,
-	Users,
-	MapPin,
-	Plane,
-	Ship,
-	Truck,
-	Wrench,
-	ShieldCheck,
-	Package,
-} from "lucide-react";
+import { Car, Users, MapPin, Plane, Ship, Truck, Wrench, ShieldCheck, Package } from "lucide-react";
 import type { DatosEspecificosRamo, AseguradoPoliza, BienResumen, Moneda } from "@/types/cobranza";
 import { formatearMonto } from "@/utils/cobranza";
 
@@ -188,7 +178,9 @@ export default function RamoDetalle({ datos, moneda }: RamoDetalleProps) {
 					<Header icon={ShieldCheck}>Responsabilidad Civil</Header>
 					<div className="text-sm mb-2">
 						<span className="text-muted-foreground">Valor asegurado:</span>{" "}
-						<span className="font-medium tabular-nums">{formatearMonto(datos.valor_asegurado, moneda)}</span>
+						<span className="font-medium tabular-nums">
+							{formatearMonto(datos.valor_asegurado, moneda)}
+						</span>
 						{datos.tipo_poliza && (
 							<span className="ml-2 text-xs text-muted-foreground">({datos.tipo_poliza})</span>
 						)}

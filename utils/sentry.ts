@@ -21,7 +21,7 @@ export async function captureError(
 	error: unknown,
 	context?: string,
 	extra?: Record<string, unknown>,
-	tags?: Record<string, string>
+	tags?: Record<string, string>,
 ) {
 	// Identificar usuario en el scope del error
 	try {
@@ -32,7 +32,9 @@ export async function captureError(
 				email: user.email,
 			});
 		}
-	} catch { /* no bloquear el reporte si falla obtener el usuario */ }
+	} catch {
+		/* no bloquear el reporte si falla obtener el usuario */
+	}
 
 	Sentry.captureException(error, {
 		...(context || extra

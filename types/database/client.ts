@@ -381,18 +381,22 @@ export const ClientQueryResultSchema = z.object({
 	asociacion_civil_clients: AsociacionCivilClientSchema.nullable(),
 
 	// Executive information (from profiles table)
-	executive: z.object({
-		id: z.string().uuid(),
-		full_name: z.string(),
-		email: z.string().email(),
-	}).nullable(),
+	executive: z
+		.object({
+			id: z.string().uuid(),
+			full_name: z.string(),
+			email: z.string().email(),
+		})
+		.nullable(),
 
 	// Related policies with company info
-	policies: z.array(
-		PolicySchema.extend({
-			companias_aseguradoras: InsuranceCompanySchema.nullable(),
-		})
-	).optional(),
+	policies: z
+		.array(
+			PolicySchema.extend({
+				companias_aseguradoras: InsuranceCompanySchema.nullable(),
+			}),
+		)
+		.optional(),
 });
 
 export type ClientQueryResult = z.infer<typeof ClientQueryResultSchema>;
@@ -408,7 +412,17 @@ export type ClientQueryResult = z.infer<typeof ClientQueryResultSchema>;
  * @throws ZodError if validation fails
  */
 export function transformClientToViewModel(queryResult: ClientQueryResult): ClientViewModel {
-	const { clients, natural_clients, juridic_clients, unipersonal_clients, ong_clients, club_clients, asociacion_civil_clients, executive, policies } = queryResult;
+	const {
+		clients,
+		natural_clients,
+		juridic_clients,
+		unipersonal_clients,
+		ong_clients,
+		club_clients,
+		asociacion_civil_clients,
+		executive,
+		policies,
+	} = queryResult;
 
 	// Build full name and identification based on client type
 	let fullName = "";
@@ -468,9 +482,7 @@ export function transformClientToViewModel(queryResult: ClientQueryResult): Clie
 			if (!ong_clients) {
 				throw new Error(`ONG client data missing for client ${clients.id}`);
 			}
-			fullName = ong_clients.sigla
-				? `${ong_clients.nombre_ong} (${ong_clients.sigla})`
-				: ong_clients.nombre_ong;
+			fullName = ong_clients.sigla ? `${ong_clients.nombre_ong} (${ong_clients.sigla})` : ong_clients.nombre_ong;
 			idNumber = ong_clients.nit ?? ong_clients.numero_registro_vipfe ?? "ONG";
 			nit = ong_clients.nit ?? undefined;
 			email = ong_clients.correo_electronico ?? undefined;

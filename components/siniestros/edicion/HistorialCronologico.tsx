@@ -124,8 +124,7 @@ export default function HistorialCronologico({ historial }: HistorialCronologico
 										<div className="flex items-center gap-1 text-xs text-muted-foreground">
 											<Calendar className="h-3 w-3" />
 											<span>
-												{formatFechaLaPaz(item.created_at)} -{" "}
-												{formatHoraLaPaz(item.created_at)}
+												{formatFechaLaPaz(item.created_at)} - {formatHoraLaPaz(item.created_at)}
 											</span>
 										</div>
 									</div>

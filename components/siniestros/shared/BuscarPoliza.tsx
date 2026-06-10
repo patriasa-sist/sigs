@@ -64,7 +64,7 @@ export default function BuscarPoliza({ onPolizaSelect, polizaSeleccionada }: Bus
 			setQuery("");
 			setResultados([]);
 		},
-		[onPolizaSelect]
+		[onPolizaSelect],
 	);
 
 	// Si ya hay una póliza seleccionada, no mostrar el input
@@ -87,11 +87,7 @@ export default function BuscarPoliza({ onPolizaSelect, polizaSeleccionada }: Bus
 							disabled={loading}
 						/>
 					</div>
-					<Button
-						onClick={handleBuscar}
-						disabled={loading || query.length < 3}
-						className="px-6"
-					>
+					<Button onClick={handleBuscar} disabled={loading || query.length < 3} className="px-6">
 						{loading ? (
 							<>
 								<Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -106,7 +102,8 @@ export default function BuscarPoliza({ onPolizaSelect, polizaSeleccionada }: Bus
 					</Button>
 				</div>
 				<p className="text-xs text-muted-foreground px-1">
-					Ingrese al menos 3 caracteres y presione &quot;Buscar&quot; o Enter. Puede buscar por: número de póliza, CI, NIT, nombre, apellido o razón social.
+					Ingrese al menos 3 caracteres y presione &quot;Buscar&quot; o Enter. Puede buscar por: número de
+					póliza, CI, NIT, nombre, apellido o razón social.
 				</p>
 			</div>
 
@@ -132,7 +129,9 @@ export default function BuscarPoliza({ onPolizaSelect, polizaSeleccionada }: Bus
 									<FileText className="h-5 w-5 text-primary mt-1 flex-shrink-0" />
 									<div className="flex-1 min-w-0">
 										<div className="flex items-center justify-between gap-2 mb-2">
-											<h4 className="font-semibold text-base">Póliza N° {poliza.numero_poliza}</h4>
+											<h4 className="font-semibold text-base">
+												Póliza N° {poliza.numero_poliza}
+											</h4>
 											<span className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 px-2 py-1 rounded">
 												{poliza.ramo}
 											</span>

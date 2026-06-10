@@ -19,8 +19,8 @@ export async function GET(request: NextRequest) {
 		});
 		if (!error) {
 			// Special handling for password recovery
-			if (type === 'recovery') {
-				redirect('/auth/reset-password');
+			if (type === "recovery") {
+				redirect("/auth/reset-password");
 			} else {
 				// redirect user to specified redirect URL or root of app
 				redirect(next);

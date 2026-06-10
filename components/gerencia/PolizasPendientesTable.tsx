@@ -195,7 +195,9 @@ export default function PolizasPendientesTable({ polizas: initialPolizas }: Prop
 			{/* Tarjetas movil (< md) */}
 			<div className="md:hidden space-y-3">
 				{polizas.map((poliza) => {
-					const dias = Math.floor((Date.now() - new Date(poliza.created_at).getTime()) / (1000 * 60 * 60 * 24));
+					const dias = Math.floor(
+						(Date.now() - new Date(poliza.created_at).getTime()) / (1000 * 60 * 60 * 24),
+					);
 					return (
 						<button
 							key={poliza.id}
@@ -204,20 +206,32 @@ export default function PolizasPendientesTable({ polizas: initialPolizas }: Prop
 						>
 							<div className="flex items-start justify-between gap-3">
 								<div className="min-w-0">
-									<div className="font-mono text-sm font-medium text-foreground">{poliza.numero_poliza}</div>
+									<div className="font-mono text-sm font-medium text-foreground">
+										{poliza.numero_poliza}
+									</div>
 									<div className="mt-1">
-										<Badge variant="secondary" className="text-xs rounded-md">{poliza.ramo}</Badge>
+										<Badge variant="secondary" className="text-xs rounded-md">
+											{poliza.ramo}
+										</Badge>
 									</div>
 								</div>
-								<span className={`text-xs font-medium shrink-0 ${dias >= 3 ? "text-amber-700" : "text-muted-foreground"}`}>
+								<span
+									className={`text-xs font-medium shrink-0 ${dias >= 3 ? "text-amber-700" : "text-muted-foreground"}`}
+								>
 									{tiempoTranscurrido(poliza.created_at)}
 								</span>
 							</div>
-							<div className="mt-2 text-sm text-foreground truncate">{poliza.compania?.nombre ?? "—"}</div>
+							<div className="mt-2 text-sm text-foreground truncate">
+								{poliza.compania?.nombre ?? "—"}
+							</div>
 							<div className="mt-2 flex items-end justify-between gap-3">
 								<div className="min-w-0">
-									<div className="text-sm text-foreground truncate">{poliza.responsable?.full_name ?? "—"}</div>
-									<div className="text-xs text-muted-foreground truncate">Creo: {poliza.created_by_user?.full_name ?? "—"}</div>
+									<div className="text-sm text-foreground truncate">
+										{poliza.responsable?.full_name ?? "—"}
+									</div>
+									<div className="text-xs text-muted-foreground truncate">
+										Creo: {poliza.created_by_user?.full_name ?? "—"}
+									</div>
 								</div>
 								<div className="text-sm font-medium text-foreground tabular-nums shrink-0">
 									{formatCurrency(poliza.prima_total, poliza.moneda)}

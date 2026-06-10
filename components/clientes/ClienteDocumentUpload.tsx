@@ -5,13 +5,7 @@ import { useDropzone } from "react-dropzone";
 import { Upload, FileText, X, AlertCircle, CheckCircle2, Circle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import {
 	type ClienteDocumentoFormState,
@@ -54,7 +48,7 @@ export function ClienteDocumentUpload({ clientType, documentos, onDocumentosChan
 
 	// All required doc types for the checklist (includes excepted ones)
 	const allRequiredDocTypes = (Object.keys(documentTypes) as TipoDocumentoCliente[]).filter((key) =>
-		isDocumentRequired(key, clientType)
+		isDocumentRequired(key, clientType),
 	);
 
 	const onDrop = useCallback(
@@ -101,7 +95,7 @@ export function ClienteDocumentUpload({ clientType, documentos, onDocumentosChan
 				setSelectedDocType("");
 			}
 		},
-		[selectedDocType, documentos, documentTypes, onDocumentosChange]
+		[selectedDocType, documentos, documentTypes, onDocumentosChange],
 	);
 
 	const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -123,7 +117,7 @@ export function ClienteDocumentUpload({ clientType, documentos, onDocumentosChan
 	};
 
 	const availableDocTypes = Object.entries(documentTypes).filter(
-		([key]) => !documentos.some((d) => d.tipo_documento === key)
+		([key]) => !documentos.some((d) => d.tipo_documento === key),
 	);
 
 	const pendingCount = validation.missingDocuments.length;
@@ -160,7 +154,7 @@ export function ClienteDocumentUpload({ clientType, documentos, onDocumentosChan
 									key={docType}
 									className={cn(
 										"flex items-center gap-2 text-sm",
-										done ? "text-accent" : "text-muted-foreground"
+										done ? "text-accent" : "text-muted-foreground",
 									)}
 								>
 									{done ? (
@@ -169,9 +163,7 @@ export function ClienteDocumentUpload({ clientType, documentos, onDocumentosChan
 										<Circle className="h-3.5 w-3.5 flex-shrink-0" />
 									)}
 									<span className={cn(uploaded && "line-through decoration-accent/60")}>{label}</span>
-									{excepted && (
-										<span className="text-xs text-primary/70">(exceptuado)</span>
-									)}
+									{excepted && <span className="text-xs text-primary/70">(exceptuado)</span>}
 								</div>
 							);
 						})}
@@ -185,9 +177,7 @@ export function ClienteDocumentUpload({ clientType, documentos, onDocumentosChan
 					<div className="flex gap-3">
 						<AlertCircle className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
 						<div>
-							<p className="text-sm font-medium text-primary">
-								Excepciones UIF activas (uso único)
-							</p>
+							<p className="text-sm font-medium text-primary">Excepciones UIF activas (uso único)</p>
 							<ul className="mt-1.5 space-y-0.5">
 								{exceptions.map((docType) => {
 									const docLabel = (documentTypes as Record<string, string>)[docType] || docType;
@@ -199,7 +189,8 @@ export function ClienteDocumentUpload({ clientType, documentos, onDocumentosChan
 								})}
 							</ul>
 							<p className="text-xs text-muted-foreground mt-2">
-								Estos documentos son opcionales para este registro. La excepción se consumirá al guardar.
+								Estos documentos son opcionales para este registro. La excepción se consumirá al
+								guardar.
 							</p>
 						</div>
 					</div>
@@ -246,10 +237,8 @@ export function ClienteDocumentUpload({ clientType, documentos, onDocumentosChan
 					{...getRootProps()}
 					className={cn(
 						"border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors",
-						isDragActive
-							? "border-primary bg-primary/5"
-							: "border-input hover:border-primary/50",
-						!selectedDocType && "opacity-50 cursor-not-allowed"
+						isDragActive ? "border-primary bg-primary/5" : "border-input hover:border-primary/50",
+						!selectedDocType && "opacity-50 cursor-not-allowed",
 					)}
 				>
 					<input {...getInputProps()} disabled={!selectedDocType} />
@@ -277,23 +266,24 @@ export function ClienteDocumentUpload({ clientType, documentos, onDocumentosChan
 			{/* Uploaded Documents List — always rendered to avoid layout shift */}
 			<div className="rounded-lg border">
 				<div className="px-4 py-3 bg-secondary/40 border-b">
-					<h4 className="text-sm font-medium text-foreground">
-						Documentos Cargados ({documentos.length})
-					</h4>
+					<h4 className="text-sm font-medium text-foreground">Documentos Cargados ({documentos.length})</h4>
 				</div>
 
 				{documentos.length === 0 ? (
 					<div className="text-center py-8 text-muted-foreground">
 						<FileText className="h-10 w-10 text-muted-foreground/40 mx-auto mb-2" />
 						<p className="text-sm">No se han cargado documentos todavía</p>
-						<p className="text-xs mt-1 text-muted-foreground/70">Seleccione el tipo de documento y suba archivos</p>
+						<p className="text-xs mt-1 text-muted-foreground/70">
+							Seleccione el tipo de documento y suba archivos
+						</p>
 					</div>
 				) : (
 					<div className="divide-y">
 						{documentos.map((doc, index) => {
 							const effectivelyRequired = isEffectivelyRequired(doc.tipo_documento);
 							const excepted = isExcepted(doc.tipo_documento);
-							const docLabel = (documentTypes as Record<string, string>)[doc.tipo_documento] || doc.tipo_documento;
+							const docLabel =
+								(documentTypes as Record<string, string>)[doc.tipo_documento] || doc.tipo_documento;
 
 							return (
 								<div key={index} className="p-4 hover:bg-secondary/30 transition-colors">
@@ -315,7 +305,9 @@ export function ClienteDocumentUpload({ clientType, documentos, onDocumentosChan
 															</span>
 														)}
 													</p>
-													<p className="text-sm text-muted-foreground truncate mt-0.5">{doc.nombre_archivo}</p>
+													<p className="text-sm text-muted-foreground truncate mt-0.5">
+														{doc.nombre_archivo}
+													</p>
 													<p className="text-xs text-muted-foreground/70 mt-0.5">
 														{formatFileSize(doc.tamano_bytes)}
 													</p>

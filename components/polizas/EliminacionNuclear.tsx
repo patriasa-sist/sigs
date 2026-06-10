@@ -2,13 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -19,10 +13,7 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
-import {
-	eliminarPolizaNuclear,
-	previsualizarEliminacion,
-} from "@/app/polizas/nuclear/actions";
+import { eliminarPolizaNuclear, previsualizarEliminacion } from "@/app/polizas/nuclear/actions";
 
 type PreviewData = {
 	puede_eliminar?: boolean;
@@ -99,13 +90,7 @@ export default function EliminacionNuclear() {
 	const detalles = preview?.detalles ?? {};
 	const numeroPoliza = (detalles.numero_poliza as string) ?? "";
 	const totalRegistros = Object.entries(detalles)
-		.filter(
-			([k]) =>
-				k !== "numero_poliza" &&
-				k !== "ramo" &&
-				k !== "estado" &&
-				k !== "advertencia"
-		)
+		.filter(([k]) => k !== "numero_poliza" && k !== "ramo" && k !== "estado" && k !== "advertencia")
 		.reduce((sum, [, v]) => sum + (typeof v === "number" ? v : 0), 0);
 
 	return (
@@ -150,16 +135,8 @@ export default function EliminacionNuclear() {
 							<div>
 								<CardTitle className="flex items-center gap-3">
 									Póliza: {numeroPoliza}
-									<Badge variant="outline">
-										{detalles.ramo as string}
-									</Badge>
-									<Badge
-										variant={
-											detalles.estado === "activa"
-												? "default"
-												: "secondary"
-										}
-									>
+									<Badge variant="outline">{detalles.ramo as string}</Badge>
+									<Badge variant={detalles.estado === "activa" ? "default" : "secondary"}>
 										{detalles.estado as string}
 									</Badge>
 								</CardTitle>
@@ -178,29 +155,20 @@ export default function EliminacionNuclear() {
 									<div
 										key={key}
 										className={`flex items-center justify-between rounded-lg border p-3 ${
-											count > 0
-												? "border-destructive/30 bg-destructive/5"
-												: "opacity-50"
+											count > 0 ? "border-destructive/30 bg-destructive/5" : "opacity-50"
 										}`}
 									>
 										<span className="text-sm">{label}</span>
-										<Badge
-											variant={count > 0 ? "destructive" : "secondary"}
-										>
-											{count}
-										</Badge>
+										<Badge variant={count > 0 ? "destructive" : "secondary"}>{count}</Badge>
 									</div>
 								);
 							})}
 						</div>
 
 						<div className="mt-6 p-4 rounded-lg bg-destructive/10 border border-destructive/30">
-							<p className="text-sm font-medium text-destructive">
-								{detalles.advertencia as string}
-							</p>
+							<p className="text-sm font-medium text-destructive">{detalles.advertencia as string}</p>
 							<p className="text-sm text-muted-foreground mt-1">
-								También se eliminarán los archivos físicos de Storage
-								(documentos, comprobantes).
+								También se eliminarán los archivos físicos de Storage (documentos, comprobantes).
 							</p>
 						</div>
 
@@ -220,20 +188,10 @@ export default function EliminacionNuclear() {
 
 			{/* Resultado */}
 			{result && (
-				<Card
-					className={
-						result.eliminado ? "border-green-500" : "border-destructive"
-					}
-				>
+				<Card className={result.eliminado ? "border-green-500" : "border-destructive"}>
 					<CardHeader>
-						<CardTitle
-							className={
-								result.eliminado ? "text-green-600" : "text-destructive"
-							}
-						>
-							{result.eliminado
-								? "Póliza eliminada exitosamente"
-								: "Error al eliminar"}
+						<CardTitle className={result.eliminado ? "text-green-600" : "text-destructive"}>
+							{result.eliminado ? "Póliza eliminada exitosamente" : "Error al eliminar"}
 						</CardTitle>
 						<CardDescription>{result.mensaje}</CardDescription>
 					</CardHeader>
@@ -242,24 +200,19 @@ export default function EliminacionNuclear() {
 							<div className="flex gap-4 text-sm">
 								<span>
 									Archivos de storage eliminados:{" "}
-									<strong>
-										{result.archivos_storage_resultado.exitosos}
-									</strong>
+									<strong>{result.archivos_storage_resultado.exitosos}</strong>
 								</span>
 								{result.archivos_storage_resultado.fallidos > 0 && (
 									<span className="text-destructive">
-										Fallidos:{" "}
-										{result.archivos_storage_resultado.fallidos}
+										Fallidos: {result.archivos_storage_resultado.fallidos}
 									</span>
 								)}
 							</div>
 							{result.archivos_storage_resultado.errores.length > 0 && (
 								<div className="text-sm text-destructive">
-									{result.archivos_storage_resultado.errores.map(
-										(err, i) => (
-											<p key={i}>{err}</p>
-										)
-									)}
+									{result.archivos_storage_resultado.errores.map((err, i) => (
+										<p key={i}>{err}</p>
+									))}
 								</div>
 							)}
 							<details className="mt-4">
@@ -279,14 +232,10 @@ export default function EliminacionNuclear() {
 			<Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
 				<DialogContent>
 					<DialogHeader>
-						<DialogTitle className="text-destructive">
-							Confirmar Eliminación Nuclear
-						</DialogTitle>
+						<DialogTitle className="text-destructive">Confirmar Eliminación Nuclear</DialogTitle>
 						<DialogDescription>
-							Estás a punto de eliminar permanentemente la póliza{" "}
-							<strong>{numeroPoliza}</strong> y{" "}
-							<strong>{totalRegistros} registros</strong> asociados. Esta
-							acción NO se puede deshacer.
+							Estás a punto de eliminar permanentemente la póliza <strong>{numeroPoliza}</strong> y{" "}
+							<strong>{totalRegistros} registros</strong> asociados. Esta acción NO se puede deshacer.
 						</DialogDescription>
 					</DialogHeader>
 					<div className="py-4">

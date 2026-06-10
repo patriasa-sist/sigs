@@ -138,8 +138,7 @@ export default function AgregarObservacion({
 										<div className="flex items-center gap-1 text-xs text-muted-foreground">
 											<Calendar className="h-3 w-3" />
 											<span>
-												{formatFechaLaPaz(obs.created_at)} -{" "}
-												{formatHoraLaPaz(obs.created_at)}
+												{formatFechaLaPaz(obs.created_at)} - {formatHoraLaPaz(obs.created_at)}
 											</span>
 										</div>
 									</div>

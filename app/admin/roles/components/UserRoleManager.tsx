@@ -2,13 +2,7 @@
 "use client";
 
 import { updateUserRole } from "@/app/admin/actions";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -81,11 +75,7 @@ export function UserRoleManager({ userId, currentRole, userEmail, isCurrentUser 
 				{isUpdating ? (
 					<Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
 				) : (
-					<Select
-						value={pendingRole ?? currentRole}
-						onValueChange={handleSelect}
-						disabled={isDisabled}
-					>
+					<Select value={pendingRole ?? currentRole} onValueChange={handleSelect} disabled={isDisabled}>
 						<SelectTrigger className="w-36 h-8 text-sm">
 							<SelectValue />
 						</SelectTrigger>
@@ -116,15 +106,13 @@ export function UserRoleManager({ userId, currentRole, userEmail, isCurrentUser 
 						<AlertDialogDescription>
 							Esto cambiará el rol de <strong>{userEmail}</strong> de{" "}
 							<strong>{getRoleLabel(currentRole)}</strong> a{" "}
-							<strong>{pendingRole ? getRoleLabel(pendingRole) : ""}</strong>. El cambio
-							se aplica inmediatamente y queda registrado en la auditoría.
+							<strong>{pendingRole ? getRoleLabel(pendingRole) : ""}</strong>. El cambio se aplica
+							inmediatamente y queda registrado en la auditoría.
 						</AlertDialogDescription>
 					</AlertDialogHeader>
 					<AlertDialogFooter>
 						<AlertDialogCancel>Cancelar</AlertDialogCancel>
-						<AlertDialogAction onClick={handleConfirm}>
-							Confirmar cambio
-						</AlertDialogAction>
+						<AlertDialogAction onClick={handleConfirm}>Confirmar cambio</AlertDialogAction>
 					</AlertDialogFooter>
 				</AlertDialogContent>
 			</AlertDialog>

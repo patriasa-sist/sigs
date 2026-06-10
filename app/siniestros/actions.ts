@@ -71,12 +71,9 @@ export async function obtenerSiniestros(): Promise<ObtenerSiniestrosResponse> {
 
 	try {
 		// Aplicar scoping por equipo
-		const scope = await getDataScopeFilter('siniestros');
+		const scope = await getDataScopeFilter("siniestros");
 
-		let query = supabase
-			.from("siniestros_vista")
-			.select("*")
-			.order("fecha_siniestro", { ascending: false });
+		let query = supabase.from("siniestros_vista").select("*").order("fecha_siniestro", { ascending: false });
 
 		if (scope.needsScoping) {
 			if (scope.role === "siniestros") {
@@ -156,7 +153,7 @@ async function moverDocSiniestroAStorageFinal(
 	supabase: SupabaseClient,
 	siniestroId: string,
 	doc: DocumentoSiniestro,
-	prefijoTipo?: string
+	prefijoTipo?: string,
 ): Promise<string | null> {
 	const tempPath = doc.storage_path;
 	if (!tempPath) return null;
@@ -165,9 +162,7 @@ async function moverDocSiniestroAStorageFinal(
 	const finalPath = generateFinalStoragePath(siniestroId, nombreFinal);
 
 	let usedPath = finalPath;
-	const { error: moveError } = await supabase.storage
-		.from("siniestros-documentos")
-		.move(tempPath, finalPath);
+	const { error: moveError } = await supabase.storage.from("siniestros-documentos").move(tempPath, finalPath);
 
 	if (moveError) {
 		console.error("[DOCS] Error moviendo documento de siniestro, usando ruta temporal:", moveError);
@@ -277,10 +272,15 @@ export async function guardarSiniestro(formState: RegistroSiniestroFormState): P
 		};
 	} catch (error) {
 		console.error("Error guardando siniestro:", error);
-		await captureError(error, "guardarSiniestro", {
-			poliza_id: formState.poliza_seleccionada?.id,
-			num_documentos: formState.documentos_iniciales?.length ?? 0,
-		}, { feature: "siniestros" });
+		await captureError(
+			error,
+			"guardarSiniestro",
+			{
+				poliza_id: formState.poliza_seleccionada?.id,
+				num_documentos: formState.documentos_iniciales?.length ?? 0,
+			},
+			{ feature: "siniestros" },
+		);
 		return {
 			success: false,
 			error: error instanceof Error ? error.message : "Error desconocido",
@@ -310,11 +310,12 @@ export async function obtenerSiniestroDetalle(siniestroId: string): Promise<Obte
 		if (siniestroError) throw siniestroError;
 
 		// Verificar scoping por equipo
-		const scope = await getDataScopeFilter('siniestros');
+		const scope = await getDataScopeFilter("siniestros");
 		if (scope.needsScoping) {
-			const hasAccess = scope.role === "siniestros"
-				? scope.teamMemberIds.includes(siniestroRaw.responsable_id)
-				: scope.teamMemberIds.includes(siniestroRaw.poliza_responsable_id);
+			const hasAccess =
+				scope.role === "siniestros"
+					? scope.teamMemberIds.includes(siniestroRaw.responsable_id)
+					: scope.teamMemberIds.includes(siniestroRaw.poliza_responsable_id);
 			if (!hasAccess) {
 				return { success: false, error: "No tiene acceso a este siniestro" };
 			}
@@ -344,7 +345,7 @@ export async function obtenerSiniestroDetalle(siniestroId: string): Promise<Obte
           es_custom,
           activo
         )
-      `
+      `,
 			)
 			.eq("siniestro_id", siniestroId);
 
@@ -373,7 +374,7 @@ export async function obtenerSiniestroDetalle(siniestroId: string): Promise<Obte
         usuario:profiles!siniestros_documentos_uploaded_by_fkey (
           full_name
         )
-      `
+      `,
 			)
 			.eq("siniestro_id", siniestroId)
 			.eq("estado", "activo")
@@ -407,7 +408,7 @@ export async function obtenerSiniestroDetalle(siniestroId: string): Promise<Obte
 						uploaded_by: d.uploaded_by ?? undefined,
 						usuario_nombre: usuarioNombre,
 					};
-				}
+				},
 			) || [];
 
 		// Obtener observaciones
@@ -448,8 +449,8 @@ export async function obtenerSiniestroDetalle(siniestroId: string): Promise<Obte
 						created_by: o.created_by ?? undefined,
 						usuario_nombre: usuario?.full_name || "Usuario",
 					};
-				}
-			)
+				},
+			),
 		);
 
 		// Obtener historial
@@ -483,7 +484,7 @@ export async function obtenerSiniestroDetalle(siniestroId: string): Promise<Obte
 					created_by: h.created_by ?? undefined,
 					usuario_nombre: usuario?.full_name || "Sistema",
 				};
-			})
+			}),
 		);
 
 		return {
@@ -510,7 +511,7 @@ export async function obtenerSiniestroDetalle(siniestroId: string): Promise<Obte
  */
 export async function agregarObservacion(
 	siniestroId: string,
-	observacion: string
+	observacion: string,
 ): Promise<AgregarObservacionResponse> {
 	const permiso = await verificarPermisoSiniestros();
 	if (!permiso.authorized) {
@@ -560,7 +561,7 @@ export async function agregarObservacion(
  */
 export async function agregarDocumentosSiniestro(
 	siniestroId: string,
-	documentos: DocumentoSiniestro[]
+	documentos: DocumentoSiniestro[],
 ): Promise<AgregarDocumentosResponse> {
 	const permiso = await verificarPermisoSiniestros();
 	if (!permiso.authorized) {
@@ -617,10 +618,15 @@ export async function agregarDocumentosSiniestro(
 		};
 	} catch (error) {
 		console.error("Error agregando documentos:", error);
-		await captureError(error, "agregarDocumentosSiniestro", {
-			siniestro_id: siniestroId,
-			num_documentos: documentos?.length ?? 0,
-		}, { feature: "siniestros" });
+		await captureError(
+			error,
+			"agregarDocumentosSiniestro",
+			{
+				siniestro_id: siniestroId,
+				num_documentos: documentos?.length ?? 0,
+			},
+			{ feature: "siniestros" },
+		);
 		return {
 			success: false,
 			error: error instanceof Error ? error.message : "Error desconocido",
@@ -633,7 +639,7 @@ export async function agregarDocumentosSiniestro(
  */
 export async function cerrarSiniestro(
 	siniestroId: string,
-	datosCierre: DatosCierreRechazo | DatosCierreDeclinacion | DatosCierreIndemnizacion
+	datosCierre: DatosCierreRechazo | DatosCierreDeclinacion | DatosCierreIndemnizacion,
 ): Promise<CerrarSiniestroResponse> {
 	const permiso = await verificarPermisoSiniestros();
 	if (!permiso.authorized) {
@@ -660,7 +666,7 @@ export async function cerrarSiniestro(
 					supabase,
 					siniestroId,
 					datosCierre.carta_rechazo,
-					"carta_rechazo"
+					"carta_rechazo",
 				);
 				if (usedPath) {
 					await supabase.from("siniestros_documentos").insert({
@@ -683,7 +689,7 @@ export async function cerrarSiniestro(
 					supabase,
 					siniestroId,
 					datosCierre.carta_respaldo,
-					"carta_respaldo"
+					"carta_respaldo",
 				);
 				if (usedPath) {
 					await supabase.from("siniestros_documentos").insert({
@@ -742,10 +748,15 @@ export async function cerrarSiniestro(
 		};
 	} catch (error) {
 		console.error("Error cerrando siniestro:", error);
-		await captureError(error, "cerrarSiniestro", {
-			siniestro_id: siniestroId,
-			tipo_cierre: datosCierre?.tipo,
-		}, { feature: "siniestros" });
+		await captureError(
+			error,
+			"cerrarSiniestro",
+			{
+				siniestro_id: siniestroId,
+				tipo_cierre: datosCierre?.tipo,
+			},
+			{ feature: "siniestros" },
+		);
 		return {
 			success: false,
 			error: error instanceof Error ? error.message : "Error desconocido",
@@ -763,7 +774,10 @@ export async function cerrarSiniestro(
  * Si el valor no tiene alfanuméricos, cae al patrón simple para no generar un comodín que matchee todo.
  */
 function patronFlexibleIlike(value: string): string {
-	const chars = value.toLowerCase().replace(/[^a-z0-9]/g, "").split("");
+	const chars = value
+		.toLowerCase()
+		.replace(/[^a-z0-9]/g, "")
+		.split("");
 	if (chars.length === 0) return `%${value}%`;
 	return `%${chars.join("%")}%`;
 }
@@ -786,7 +800,7 @@ export async function buscarPolizasActivas(query: string): Promise<BusquedaPoliz
 		let natClientesQuery = supabase.from("natural_clients").select("client_id");
 		for (const p of palabras) {
 			natClientesQuery = natClientesQuery.or(
-				`numero_documento.ilike.%${p}%,primer_nombre.ilike.%${p}%,segundo_nombre.ilike.%${p}%,primer_apellido.ilike.%${p}%,segundo_apellido.ilike.%${p}%`
+				`numero_documento.ilike.%${p}%,primer_nombre.ilike.%${p}%,segundo_nombre.ilike.%${p}%,primer_apellido.ilike.%${p}%,segundo_apellido.ilike.%${p}%`,
 			);
 		}
 
@@ -840,11 +854,7 @@ export async function buscarPolizasActivas(query: string): Promise<BusquedaPoliz
 				.or(`nombre_completo.ilike.%${query}%,carnet.ilike.%${query}%`)
 				.limit(30),
 			// Incendio: dirección del bien
-			supabase
-				.from("polizas_incendio_bienes")
-				.select("poliza_id")
-				.ilike("direccion", `%${query}%`)
-				.limit(30),
+			supabase.from("polizas_incendio_bienes").select("poliza_id").ilike("direccion", `%${query}%`).limit(30),
 			// Riesgos Varios: dirección del bien
 			supabase
 				.from("polizas_riesgos_varios_bienes")
@@ -900,11 +910,31 @@ export async function buscarPolizasActivas(query: string): Promise<BusquedaPoliz
 				{ data: aseguradosNivel },
 				{ data: riesgosVariosAsegurados },
 			] = await Promise.all([
-				supabase.from("polizas_salud_asegurados").select("poliza_id").in("client_id", clientIdsEncontrados).limit(30),
-				supabase.from("polizas_incendio_asegurados").select("poliza_id").in("client_id", clientIdsEncontrados).limit(30),
-				supabase.from("polizas_aeronavegacion_asegurados").select("poliza_id").in("client_id", clientIdsEncontrados).limit(30),
-				supabase.from("polizas_asegurados_nivel").select("poliza_id").in("client_id", clientIdsEncontrados).limit(30),
-				supabase.from("polizas_riesgos_varios_asegurados").select("poliza_id").in("client_id", clientIdsEncontrados).limit(30),
+				supabase
+					.from("polizas_salud_asegurados")
+					.select("poliza_id")
+					.in("client_id", clientIdsEncontrados)
+					.limit(30),
+				supabase
+					.from("polizas_incendio_asegurados")
+					.select("poliza_id")
+					.in("client_id", clientIdsEncontrados)
+					.limit(30),
+				supabase
+					.from("polizas_aeronavegacion_asegurados")
+					.select("poliza_id")
+					.in("client_id", clientIdsEncontrados)
+					.limit(30),
+				supabase
+					.from("polizas_asegurados_nivel")
+					.select("poliza_id")
+					.in("client_id", clientIdsEncontrados)
+					.limit(30),
+				supabase
+					.from("polizas_riesgos_varios_asegurados")
+					.select("poliza_id")
+					.in("client_id", clientIdsEncontrados)
+					.limit(30),
 			]);
 
 			polizaIdsEspecificos.push(
@@ -912,7 +942,7 @@ export async function buscarPolizasActivas(query: string): Promise<BusquedaPoliz
 				...(incendioAsegurados?.map((a) => a.poliza_id) || []),
 				...(aeronavAsegurados?.map((a) => a.poliza_id) || []),
 				...(aseguradosNivel?.map((a) => a.poliza_id) || []),
-				...(riesgosVariosAsegurados?.map((a) => a.poliza_id) || [])
+				...(riesgosVariosAsegurados?.map((a) => a.poliza_id) || []),
 			);
 		}
 
@@ -922,7 +952,7 @@ export async function buscarPolizasActivas(query: string): Promise<BusquedaPoliz
 		let polizasQuery = supabase
 			.from("polizas")
 			.select(
-				`id, numero_poliza, ramo, inicio_vigencia, fin_vigencia, prima_total, moneda, client_id, responsable_id, compania_aseguradora_id`
+				`id, numero_poliza, ramo, inicio_vigencia, fin_vigencia, prima_total, moneda, client_id, responsable_id, compania_aseguradora_id`,
 			)
 			.eq("estado", "activa");
 
@@ -937,7 +967,16 @@ export async function buscarPolizasActivas(query: string): Promise<BusquedaPoliz
 
 		const { data: polizasRaw, error: polizasError } = await polizasQuery.limit(20);
 
-		console.log("[buscarPolizas] query:", query, "| clientes:", clientIdsEncontrados.length, "| especificos:", uniquePolizaIds.length, "| resultados:", polizasRaw?.length);
+		console.log(
+			"[buscarPolizas] query:",
+			query,
+			"| clientes:",
+			clientIdsEncontrados.length,
+			"| especificos:",
+			uniquePolizaIds.length,
+			"| resultados:",
+			polizasRaw?.length,
+		);
 
 		if (polizasError) throw polizasError;
 
@@ -1014,7 +1053,7 @@ export async function buscarPolizasActivas(query: string): Promise<BusquedaPoliz
 			const { data: cuotasRaw } = await supabase
 				.from("polizas_pagos")
 				.select(
-					"id, numero_cuota, monto, fecha_vencimiento, estado, fecha_pago, fecha_vencimiento_original, prorrogas_historial, observaciones"
+					"id, numero_cuota, monto, fecha_vencimiento, estado, fecha_pago, fecha_vencimiento_original, prorrogas_historial, observaciones",
 				)
 				.eq("poliza_id", pol.id)
 				.order("numero_cuota");
@@ -1085,7 +1124,7 @@ export async function buscarPolizasActivas(query: string): Promise<BusquedaPoliz
  */
 async function resolverClientesParaDesglose(
 	supabase: SupabaseClient,
-	clientIds: string[]
+	clientIds: string[],
 ): Promise<Map<string, { nombre: string; documento: string }>> {
 	const map = new Map<string, { nombre: string; documento: string }>();
 	const unique = [...new Set(clientIds.filter(Boolean))];
@@ -1124,10 +1163,7 @@ async function resolverClientesParaDesglose(
  * para mantener liviana la búsqueda. Mapeo de tablas espejo del cargador canónico en
  * app/polizas/actions.ts (obtenerPolizaDetalle).
  */
-export async function obtenerAseguradosPoliza(
-	polizaId: string,
-	ramo: string
-): Promise<ObtenerAseguradosResponse> {
+export async function obtenerAseguradosPoliza(polizaId: string, ramo: string): Promise<ObtenerAseguradosResponse> {
 	const permiso = await verificarPermisoSiniestros();
 	if (!permiso.authorized) {
 		return { success: false, error: permiso.error };
@@ -1206,7 +1242,10 @@ export async function obtenerAseguradosPoliza(
 				.from("polizas_salud_asegurados")
 				.select("client_id, rol")
 				.eq("poliza_id", polizaId);
-			const clientMap = await resolverClientesParaDesglose(supabase, (aseg || []).map((a) => a.client_id));
+			const clientMap = await resolverClientesParaDesglose(
+				supabase,
+				(aseg || []).map((a) => a.client_id),
+			);
 			for (const a of aseg || []) {
 				const c = clientMap.get(a.client_id);
 				asegurados.push({
@@ -1232,12 +1271,19 @@ export async function obtenerAseguradosPoliza(
 		}
 
 		// --- VIDA / ACCIDENTES PERSONALES / SEPELIO (personas) ---
-		if (ramoLower.includes("vida") || ramoLower.includes("accidentes personales") || ramoLower.includes("sepelio")) {
+		if (
+			ramoLower.includes("vida") ||
+			ramoLower.includes("accidentes personales") ||
+			ramoLower.includes("sepelio")
+		) {
 			const { data: aseg } = await supabase
 				.from("polizas_asegurados_nivel")
 				.select("client_id, cargo, rol")
 				.eq("poliza_id", polizaId);
-			const clientMap = await resolverClientesParaDesglose(supabase, (aseg || []).map((a) => a.client_id));
+			const clientMap = await resolverClientesParaDesglose(
+				supabase,
+				(aseg || []).map((a) => a.client_id),
+			);
 			for (const a of aseg || []) {
 				const c = clientMap.get(a.client_id);
 				asegurados.push({
@@ -1280,10 +1326,18 @@ export async function obtenerAseguradosPoliza(
 				.from("polizas_incendio_asegurados")
 				.select("client_id")
 				.eq("poliza_id", polizaId);
-			const clientMap = await resolverClientesParaDesglose(supabase, (aseg || []).map((a) => a.client_id));
+			const clientMap = await resolverClientesParaDesglose(
+				supabase,
+				(aseg || []).map((a) => a.client_id),
+			);
 			for (const a of aseg || []) {
 				const c = clientMap.get(a.client_id);
-				asegurados.push({ tipo: "persona", nombre: c?.nombre || "Desconocido", documento: c?.documento, relacion: "Asegurado adicional" });
+				asegurados.push({
+					tipo: "persona",
+					nombre: c?.nombre || "Desconocido",
+					documento: c?.documento,
+					relacion: "Asegurado adicional",
+				});
 			}
 		}
 
@@ -1305,10 +1359,18 @@ export async function obtenerAseguradosPoliza(
 				.from("polizas_riesgos_varios_asegurados")
 				.select("client_id")
 				.eq("poliza_id", polizaId);
-			const clientMap = await resolverClientesParaDesglose(supabase, (aseg || []).map((a) => a.client_id));
+			const clientMap = await resolverClientesParaDesglose(
+				supabase,
+				(aseg || []).map((a) => a.client_id),
+			);
 			for (const a of aseg || []) {
 				const c = clientMap.get(a.client_id);
-				asegurados.push({ tipo: "persona", nombre: c?.nombre || "Desconocido", documento: c?.documento, relacion: "Asegurado adicional" });
+				asegurados.push({
+					tipo: "persona",
+					nombre: c?.nombre || "Desconocido",
+					documento: c?.documento,
+					relacion: "Asegurado adicional",
+				});
 			}
 		}
 
@@ -1329,7 +1391,12 @@ export async function obtenerAseguradosPoliza(
 		}
 
 		// --- AERONAVEGACIÓN (naves + asegurados) ---
-		if (ramoLower.includes("aeronavegacion") || ramoLower.includes("aeronavegación") || ramoLower.includes("naves") || ramoLower.includes("embarcacion")) {
+		if (
+			ramoLower.includes("aeronavegacion") ||
+			ramoLower.includes("aeronavegación") ||
+			ramoLower.includes("naves") ||
+			ramoLower.includes("embarcacion")
+		) {
 			const { data: naves } = await supabase
 				.from("polizas_aeronavegacion_naves")
 				.select("matricula, marca, modelo, ano, serie, valor_casco")
@@ -1349,10 +1416,18 @@ export async function obtenerAseguradosPoliza(
 				.from("polizas_aeronavegacion_asegurados")
 				.select("client_id")
 				.eq("poliza_id", polizaId);
-			const clientMap = await resolverClientesParaDesglose(supabase, (aseg || []).map((a) => a.client_id));
+			const clientMap = await resolverClientesParaDesglose(
+				supabase,
+				(aseg || []).map((a) => a.client_id),
+			);
 			for (const a of aseg || []) {
 				const c = clientMap.get(a.client_id);
-				asegurados.push({ tipo: "persona", nombre: c?.nombre || "Desconocido", documento: c?.documento, relacion: "Asegurado" });
+				asegurados.push({
+					tipo: "persona",
+					nombre: c?.nombre || "Desconocido",
+					documento: c?.documento,
+					relacion: "Asegurado",
+				});
 			}
 		}
 
@@ -1414,7 +1489,7 @@ export async function obtenerUsuariosResponsables(): Promise<ObtenerUsuariosResp
 
 	try {
 		// Aplicar scoping: rol siniestros solo ve miembros de su equipo
-		const scope = await getDataScopeFilter('siniestros');
+		const scope = await getDataScopeFilter("siniestros");
 
 		let query = supabase
 			.from("profiles")
@@ -1456,7 +1531,7 @@ export async function obtenerUsuariosResponsables(): Promise<ObtenerUsuariosResp
  */
 export async function cambiarResponsableSiniestro(
 	siniestroId: string,
-	nuevoResponsableId: string
+	nuevoResponsableId: string,
 ): Promise<CambiarResponsableResponse> {
 	const permiso = await verificarPermisoSiniestros();
 	if (!permiso.authorized) {
@@ -1570,7 +1645,7 @@ export async function obtenerHistorialEstados(siniestroId: string): Promise<Obte
 				*,
 				estado:siniestros_estados_catalogo(*),
 				perfil:profiles(full_name)
-			`
+			`,
 			)
 			.eq("siniestro_id", siniestroId)
 			.order("created_at", { ascending: false });
@@ -1607,7 +1682,7 @@ export async function obtenerHistorialEstados(siniestroId: string): Promise<Obte
  */
 export async function cambiarEstadoSiniestro(
 	siniestroId: string,
-	estadoId: string
+	estadoId: string,
 ): Promise<CambiarEstadoSiniestroResponse> {
 	const permiso = await verificarPermisoSiniestros();
 	if (!permiso.authorized) {
@@ -1646,7 +1721,7 @@ export async function cambiarEstadoSiniestro(
 				`
 				estado_id,
 				siniestros_estados_catalogo(nombre)
-			`
+			`,
 			)
 			.eq("siniestro_id", siniestroId)
 			.order("created_at", { ascending: false })
@@ -1820,10 +1895,13 @@ export async function obtenerSiniestrosConAtencion(): Promise<ObtenerSiniestrosR
 				concluido: siniestros.filter((s) => s.estado === "concluido").length,
 			},
 			siniestros_por_ramo: Object.entries(
-				siniestros.reduce((acc, s) => {
-					acc[s.ramo] = (acc[s.ramo] || 0) + 1;
-					return acc;
-				}, {} as Record<string, number>)
+				siniestros.reduce(
+					(acc, s) => {
+						acc[s.ramo] = (acc[s.ramo] || 0) + 1;
+						return acc;
+					},
+					{} as Record<string, number>,
+				),
 			).map(([ramo, cantidad]) => ({ ramo, cantidad })),
 		};
 
@@ -1851,7 +1929,7 @@ export async function obtenerSiniestrosConAtencion(): Promise<ObtenerSiniestrosR
  * Obtener contacto del cliente para WhatsApp
  */
 export async function obtenerContactoParaWhatsApp(
-	siniestroId: string
+	siniestroId: string,
 ): Promise<{ success: boolean; data?: ContactoClienteSiniestro; error?: string }> {
 	const permiso = await verificarPermisoSiniestros();
 	if (!permiso.authorized) {
@@ -1922,7 +2000,7 @@ export async function generarWhatsAppRegistroSiniestro(siniestroId: string): Pro
 					numero_poliza,
 					ramo
 				)
-			`
+			`,
 			)
 			.eq("id", siniestroId)
 			.single();
@@ -1980,7 +2058,7 @@ Saludos cordiales,
  */
 export async function generarWhatsAppCierreSiniestro(
 	siniestroId: string,
-	tipoCierre: "rechazado" | "declinado" | "concluido"
+	tipoCierre: "rechazado" | "declinado" | "concluido",
 ): Promise<EnviarWhatsAppSiniestroResponse> {
 	const permiso = await verificarPermisoSiniestros();
 	if (!permiso.authorized) {
@@ -2000,7 +2078,7 @@ export async function generarWhatsAppCierreSiniestro(
 					numero_poliza,
 					ramo
 				)
-			`
+			`,
 			)
 			.eq("id", siniestroId)
 			.single();
@@ -2105,7 +2183,7 @@ export async function obtenerDetalleCompletoPoliza(polizaId: string): Promise<{
 				compania:companias_aseguradoras(nombre),
 				regional:regionales(nombre),
 				responsable:profiles!polizas_responsable_id_fkey(full_name)
-			`
+			`,
 			)
 			.eq("id", polizaId)
 			.single();
@@ -2138,7 +2216,7 @@ export async function obtenerDetalleCompletoPoliza(polizaId: string): Promise<{
 					const { data: naturalClient } = await supabase
 						.from("natural_clients")
 						.select(
-							"primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, numero_documento, celular, correo_electronico"
+							"primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, numero_documento, celular, correo_electronico",
 						)
 						.eq("client_id", clientId)
 						.single();
@@ -2173,7 +2251,9 @@ export async function obtenerDetalleCompletoPoliza(polizaId: string): Promise<{
 				} else if (client.client_type === "unipersonal") {
 					const { data: unipersonalClient } = await supabase
 						.from("unipersonal_clients")
-						.select("razon_social, nit, telefono_comercial, correo_electronico_comercial, nombre_propietario, apellido_propietario")
+						.select(
+							"razon_social, nit, telefono_comercial, correo_electronico_comercial, nombre_propietario, apellido_propietario",
+						)
 						.eq("client_id", clientId)
 						.single();
 
@@ -2208,7 +2288,7 @@ export async function obtenerDetalleCompletoPoliza(polizaId: string): Promise<{
 					modelo,
 					ano,
 					color
-				`
+				`,
 				)
 				.eq("poliza_id", polizaId);
 

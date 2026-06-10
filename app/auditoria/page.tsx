@@ -17,9 +17,7 @@ export default async function AuditoriaPage() {
 		<div className="container mx-auto py-8 px-4 max-w-7xl">
 			<div className="mb-8">
 				<h1 className="text-2xl font-bold text-gray-900">Auditoría</h1>
-				<p className="text-gray-600 mt-1">
-					Gestión de excepciones de documentos y control de cumplimiento
-				</p>
+				<p className="text-gray-600 mt-1">Gestión de excepciones de documentos y control de cumplimiento</p>
 			</div>
 
 			<AuditoriaContent

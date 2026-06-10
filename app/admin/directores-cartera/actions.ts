@@ -9,34 +9,34 @@ import { z } from "zod";
 // ============================================
 
 export type DirectorCarteraDB = {
-  id: string;
-  nombre: string;
-  apellidos: string | null;
-  porcentaje_comision: number | null;
-  factura: boolean;
-  activo: boolean;
-  created_at: string;
-  created_by: string | null;
+	id: string;
+	nombre: string;
+	apellidos: string | null;
+	porcentaje_comision: number | null;
+	factura: boolean;
+	activo: boolean;
+	created_at: string;
+	created_by: string | null;
 };
 
 export type DirectorCarteraForm = {
-  nombre: string;
-  apellidos?: string | null;
-  porcentaje_comision?: number | null;
-  factura?: boolean;
+	nombre: string;
+	apellidos?: string | null;
+	porcentaje_comision?: number | null;
+	factura?: boolean;
 };
 
 export type DirectorActionResult<T = undefined> = {
-  success: boolean;
-  message?: string;
-  error?: string;
-  data?: T;
+	success: boolean;
+	message?: string;
+	error?: string;
+	data?: T;
 };
 
 export type DirectorStats = {
-  total: number;
-  activos: number;
-  inactivos: number;
+	total: number;
+	activos: number;
+	inactivos: number;
 };
 
 // ============================================
@@ -44,70 +44,56 @@ export type DirectorStats = {
 // ============================================
 
 const directorSchema = z.object({
-  nombre: z
-    .string()
-    .min(2, "El nombre debe tener al menos 2 caracteres")
-    .max(100, "El nombre no puede exceder 100 caracteres"),
-  apellidos: z
-    .string()
-    .max(100, "Los apellidos no pueden exceder 100 caracteres")
-    .optional()
-    .nullable(),
-  porcentaje_comision: z
-    .number()
-    .min(0, "El porcentaje no puede ser negativo")
-    .max(100, "El porcentaje no puede superar 100")
-    .optional()
-    .nullable(),
-  factura: z.boolean().optional(),
+	nombre: z
+		.string()
+		.min(2, "El nombre debe tener al menos 2 caracteres")
+		.max(100, "El nombre no puede exceder 100 caracteres"),
+	apellidos: z.string().max(100, "Los apellidos no pueden exceder 100 caracteres").optional().nullable(),
+	porcentaje_comision: z
+		.number()
+		.min(0, "El porcentaje no puede ser negativo")
+		.max(100, "El porcentaje no puede superar 100")
+		.optional()
+		.nullable(),
+	factura: z.boolean().optional(),
 });
 
 // ============================================
 // READ Operations
 // ============================================
 
-export async function obtenerDirectoresCartera(
-  includeInactive: boolean = false
-): Promise<DirectorCarteraDB[]> {
-  const supabase = await createClient();
+export async function obtenerDirectoresCartera(includeInactive: boolean = false): Promise<DirectorCarteraDB[]> {
+	const supabase = await createClient();
 
-  let query = supabase
-    .from("directores_cartera")
-    .select("*")
-    .order("nombre", { ascending: true });
+	let query = supabase.from("directores_cartera").select("*").order("nombre", { ascending: true });
 
-  if (!includeInactive) {
-    query = query.eq("activo", true);
-  }
+	if (!includeInactive) {
+		query = query.eq("activo", true);
+	}
 
-  const { data, error } = await query;
+	const { data, error } = await query;
 
-  if (error) {
-    console.error("Error fetching directores de cartera:", error);
-    return [];
-  }
+	if (error) {
+		console.error("Error fetching directores de cartera:", error);
+		return [];
+	}
 
-  return data || [];
+	return data || [];
 }
 
 export async function obtenerDirectoresStats(): Promise<DirectorStats> {
-  const supabase = await createClient();
+	const supabase = await createClient();
 
-  const [{ count: total }, { count: activos }] = await Promise.all([
-    supabase
-      .from("directores_cartera")
-      .select("*", { count: "exact", head: true }),
-    supabase
-      .from("directores_cartera")
-      .select("*", { count: "exact", head: true })
-      .eq("activo", true),
-  ]);
+	const [{ count: total }, { count: activos }] = await Promise.all([
+		supabase.from("directores_cartera").select("*", { count: "exact", head: true }),
+		supabase.from("directores_cartera").select("*", { count: "exact", head: true }).eq("activo", true),
+	]);
 
-  return {
-    total: total || 0,
-    activos: activos || 0,
-    inactivos: (total || 0) - (activos || 0),
-  };
+	return {
+		total: total || 0,
+		activos: activos || 0,
+		inactivos: (total || 0) - (activos || 0),
+	};
 }
 
 // ============================================
@@ -115,53 +101,53 @@ export async function obtenerDirectoresStats(): Promise<DirectorStats> {
 // ============================================
 
 export async function crearDirectorCartera(
-  data: DirectorCarteraForm
+	data: DirectorCarteraForm,
 ): Promise<DirectorActionResult<DirectorCarteraDB>> {
-  const supabase = await createClient();
+	const supabase = await createClient();
 
-  const validation = directorSchema.safeParse(data);
-  if (!validation.success) {
-    return { success: false, error: validation.error.issues[0].message };
-  }
+	const validation = directorSchema.safeParse(data);
+	if (!validation.success) {
+		return { success: false, error: validation.error.issues[0].message };
+	}
 
-  const nombreTrim = data.nombre.trim();
-  const apellidosTrim = data.apellidos?.trim() || null;
+	const nombreTrim = data.nombre.trim();
+	const apellidosTrim = data.apellidos?.trim() || null;
 
-  // Check duplicate
-  const { data: existing } = await supabase
-    .from("directores_cartera")
-    .select("id")
-    .ilike("nombre", nombreTrim)
-    .single();
+	// Check duplicate
+	const { data: existing } = await supabase
+		.from("directores_cartera")
+		.select("id")
+		.ilike("nombre", nombreTrim)
+		.single();
 
-  if (existing) {
-    return { success: false, error: "Ya existe un director con ese nombre" };
-  }
+	if (existing) {
+		return { success: false, error: "Ya existe un director con ese nombre" };
+	}
 
-  const { data: newDirector, error } = await supabase
-    .from("directores_cartera")
-    .insert({
-      nombre: nombreTrim,
-      apellidos: apellidosTrim,
-      porcentaje_comision: data.porcentaje_comision ?? 0,
-      factura: data.factura ?? false,
-      activo: true,
-    })
-    .select()
-    .single();
+	const { data: newDirector, error } = await supabase
+		.from("directores_cartera")
+		.insert({
+			nombre: nombreTrim,
+			apellidos: apellidosTrim,
+			porcentaje_comision: data.porcentaje_comision ?? 0,
+			factura: data.factura ?? false,
+			activo: true,
+		})
+		.select()
+		.single();
 
-  if (error) {
-    console.error("Error creating director:", error);
-    return { success: false, error: "Error al crear el director" };
-  }
+	if (error) {
+		console.error("Error creating director:", error);
+		return { success: false, error: "Error al crear el director" };
+	}
 
-  revalidatePath("/admin/directores-cartera");
+	revalidatePath("/admin/directores-cartera");
 
-  return {
-    success: true,
-    message: "Director creado correctamente",
-    data: newDirector,
-  };
+	return {
+		success: true,
+		message: "Director creado correctamente",
+		data: newDirector,
+	};
 }
 
 // ============================================
@@ -169,118 +155,108 @@ export async function crearDirectorCartera(
 // ============================================
 
 export async function actualizarDirectorCartera(
-  id: string,
-  data: DirectorCarteraForm
+	id: string,
+	data: DirectorCarteraForm,
 ): Promise<DirectorActionResult<DirectorCarteraDB>> {
-  const supabase = await createClient();
+	const supabase = await createClient();
 
-  const validation = directorSchema.safeParse(data);
-  if (!validation.success) {
-    return { success: false, error: validation.error.issues[0].message };
-  }
+	const validation = directorSchema.safeParse(data);
+	if (!validation.success) {
+		return { success: false, error: validation.error.issues[0].message };
+	}
 
-  const nombreTrim = data.nombre.trim();
-  const apellidosTrim = data.apellidos?.trim() || null;
+	const nombreTrim = data.nombre.trim();
+	const apellidosTrim = data.apellidos?.trim() || null;
 
-  // Check duplicate (excluding current)
-  const { data: existing } = await supabase
-    .from("directores_cartera")
-    .select("id")
-    .ilike("nombre", nombreTrim)
-    .neq("id", id)
-    .single();
+	// Check duplicate (excluding current)
+	const { data: existing } = await supabase
+		.from("directores_cartera")
+		.select("id")
+		.ilike("nombre", nombreTrim)
+		.neq("id", id)
+		.single();
 
-  if (existing) {
-    return {
-      success: false,
-      error: "Ya existe otro director con ese nombre",
-    };
-  }
+	if (existing) {
+		return {
+			success: false,
+			error: "Ya existe otro director con ese nombre",
+		};
+	}
 
-  const { data: updated, error } = await supabase
-    .from("directores_cartera")
-    .update({
-      nombre: nombreTrim,
-      apellidos: apellidosTrim,
-      porcentaje_comision: data.porcentaje_comision ?? 0,
-      factura: data.factura ?? false,
-    })
-    .eq("id", id)
-    .select()
-    .single();
+	const { data: updated, error } = await supabase
+		.from("directores_cartera")
+		.update({
+			nombre: nombreTrim,
+			apellidos: apellidosTrim,
+			porcentaje_comision: data.porcentaje_comision ?? 0,
+			factura: data.factura ?? false,
+		})
+		.eq("id", id)
+		.select()
+		.single();
 
-  if (error) {
-    console.error("Error updating director:", error);
-    return { success: false, error: "Error al actualizar el director" };
-  }
+	if (error) {
+		console.error("Error updating director:", error);
+		return { success: false, error: "Error al actualizar el director" };
+	}
 
-  revalidatePath("/admin/directores-cartera");
+	revalidatePath("/admin/directores-cartera");
 
-  return {
-    success: true,
-    message: "Director actualizado correctamente",
-    data: updated,
-  };
+	return {
+		success: true,
+		message: "Director actualizado correctamente",
+		data: updated,
+	};
 }
 
 // ============================================
 // SOFT DELETE Operation
 // ============================================
 
-export async function desactivarDirectorCartera(
-  id: string
-): Promise<DirectorActionResult> {
-  const supabase = await createClient();
+export async function desactivarDirectorCartera(id: string): Promise<DirectorActionResult> {
+	const supabase = await createClient();
 
-  // Check if director has active polizas
-  const { count: polizasCount } = await supabase
-    .from("polizas")
-    .select("*", { count: "exact", head: true })
-    .eq("director_cartera_id", id)
-    .in("estado", ["pendiente", "activa"]);
+	// Check if director has active polizas
+	const { count: polizasCount } = await supabase
+		.from("polizas")
+		.select("*", { count: "exact", head: true })
+		.eq("director_cartera_id", id)
+		.in("estado", ["pendiente", "activa"]);
 
-  if (polizasCount && polizasCount > 0) {
-    return {
-      success: false,
-      error: `Este director tiene ${polizasCount} póliza(s) activa(s) asignada(s). Reasígnalas antes de desactivar.`,
-    };
-  }
+	if (polizasCount && polizasCount > 0) {
+		return {
+			success: false,
+			error: `Este director tiene ${polizasCount} póliza(s) activa(s) asignada(s). Reasígnalas antes de desactivar.`,
+		};
+	}
 
-  const { error } = await supabase
-    .from("directores_cartera")
-    .update({ activo: false })
-    .eq("id", id);
+	const { error } = await supabase.from("directores_cartera").update({ activo: false }).eq("id", id);
 
-  if (error) {
-    console.error("Error deactivating director:", error);
-    return { success: false, error: "Error al desactivar el director" };
-  }
+	if (error) {
+		console.error("Error deactivating director:", error);
+		return { success: false, error: "Error al desactivar el director" };
+	}
 
-  revalidatePath("/admin/directores-cartera");
+	revalidatePath("/admin/directores-cartera");
 
-  return { success: true, message: "Director desactivado correctamente" };
+	return { success: true, message: "Director desactivado correctamente" };
 }
 
 // ============================================
 // REACTIVATE Operation
 // ============================================
 
-export async function reactivarDirectorCartera(
-  id: string
-): Promise<DirectorActionResult> {
-  const supabase = await createClient();
+export async function reactivarDirectorCartera(id: string): Promise<DirectorActionResult> {
+	const supabase = await createClient();
 
-  const { error } = await supabase
-    .from("directores_cartera")
-    .update({ activo: true })
-    .eq("id", id);
+	const { error } = await supabase.from("directores_cartera").update({ activo: true }).eq("id", id);
 
-  if (error) {
-    console.error("Error reactivating director:", error);
-    return { success: false, error: "Error al reactivar el director" };
-  }
+	if (error) {
+		console.error("Error reactivating director:", error);
+		return { success: false, error: "Error al reactivar el director" };
+	}
 
-  revalidatePath("/admin/directores-cartera");
+	revalidatePath("/admin/directores-cartera");
 
-  return { success: true, message: "Director reactivado correctamente" };
+	return { success: true, message: "Director reactivado correctamente" };
 }

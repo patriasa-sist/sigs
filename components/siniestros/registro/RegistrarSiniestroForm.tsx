@@ -33,10 +33,10 @@ import type {
 
 // ── Step metadata ──────────────────────────────────────────────
 const STEP_CONFIG = [
-	{ label: "Póliza",      description: "Buscar y seleccionar póliza activa" },
-	{ label: "Detalles",    description: "Fecha, lugar, monto y contactos" },
-	{ label: "Coberturas",  description: "Coberturas afectadas" },
-	{ label: "Documentos",  description: "Adjuntar documentos iniciales" },
+	{ label: "Póliza", description: "Buscar y seleccionar póliza activa" },
+	{ label: "Detalles", description: "Fecha, lugar, monto y contactos" },
+	{ label: "Coberturas", description: "Coberturas afectadas" },
+	{ label: "Documentos", description: "Adjuntar documentos iniciales" },
 ];
 
 function getStepSummary(paso: number, state: RegistroSiniestroFormState): string | null {
@@ -183,9 +183,7 @@ export default function RegistrarSiniestroForm() {
 							<CheckCircle2 className="h-10 w-10 text-teal-700" />
 						</div>
 						<div>
-							<h2 className="text-xl font-semibold text-foreground">
-								Siniestro registrado
-							</h2>
+							<h2 className="text-xl font-semibold text-foreground">Siniestro registrado</h2>
 							<p className="text-sm text-muted-foreground mt-1">
 								El siniestro fue registrado correctamente en el sistema.
 							</p>
@@ -198,11 +196,7 @@ export default function RegistrarSiniestroForm() {
 							>
 								Ver siniestro
 							</Button>
-							<Button
-								variant="outline"
-								onClick={() => router.push("/siniestros")}
-								className="flex-1"
-							>
+							<Button variant="outline" onClick={() => router.push("/siniestros")} className="flex-1">
 								Volver al dashboard
 							</Button>
 						</div>
@@ -229,9 +223,7 @@ export default function RegistrarSiniestroForm() {
 						<span className="text-[#CBD5E1]">/</span>
 						<FileWarning className="h-5 w-5 text-primary shrink-0" />
 						<div className="min-w-0">
-							<h1 className="text-xl font-semibold text-foreground leading-tight">
-								Registrar Siniestro
-							</h1>
+							<h1 className="text-xl font-semibold text-foreground leading-tight">Registrar Siniestro</h1>
 							<p className="text-sm text-muted-foreground leading-tight">
 								{STEP_CONFIG[formState.paso_actual - 1]?.label} — Paso {formState.paso_actual} de 4
 							</p>
@@ -378,9 +370,7 @@ export default function RegistrarSiniestroForm() {
 							onPolizaSelect={(poliza: PolizaParaSiniestro) =>
 								setFormState((prev) => ({ ...prev, poliza_seleccionada: poliza }))
 							}
-							onPolizaDeselect={() =>
-								setFormState((prev) => ({ ...prev, poliza_seleccionada: null }))
-							}
+							onPolizaDeselect={() => setFormState((prev) => ({ ...prev, poliza_seleccionada: null }))}
 						/>
 					)}
 

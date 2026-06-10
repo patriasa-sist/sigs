@@ -20,9 +20,7 @@ export default async function TransferenciasPage() {
 				<ArrowRightLeft className="h-8 w-8 text-primary" />
 				<div>
 					<h1 className="text-3xl font-bold text-gray-900">Transferencia de Datos</h1>
-					<p className="text-gray-500">
-						Transfiere pólizas y clientes entre usuarios o equipos
-					</p>
+					<p className="text-gray-500">Transfiere pólizas y clientes entre usuarios o equipos</p>
 				</div>
 			</div>
 

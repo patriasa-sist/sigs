@@ -16,22 +16,10 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogHeader,
-	DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -192,7 +180,7 @@ export function ClienteDocumentUploadEdit({ clientId, clientType, isAdmin = fals
 
 			setIsUploading(false);
 		},
-		[clientId, selectedDocType, descripcion, loadDocuments, onDocumentChange, supabase]
+		[clientId, selectedDocType, descripcion, loadDocuments, onDocumentChange, supabase],
 	);
 
 	const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -286,9 +274,7 @@ export function ClienteDocumentUploadEdit({ clientId, clientType, isAdmin = fals
 	// Handle download document
 	const handleDownload = async (storagePath: string) => {
 		try {
-			const { data } = await supabase.storage
-				.from("clientes-documentos")
-				.createSignedUrl(storagePath, 3600);
+			const { data } = await supabase.storage.from("clientes-documentos").createSignedUrl(storagePath, 3600);
 
 			if (data?.signedUrl) {
 				window.open(data.signedUrl, "_blank");
@@ -300,7 +286,7 @@ export function ClienteDocumentUploadEdit({ clientId, clientType, isAdmin = fals
 
 	// Get available document types (exclude already uploaded)
 	const availableDocTypes = Object.entries(documentTypes).filter(
-		([key]) => !documents.some((d) => d.tipo_documento === key)
+		([key]) => !documents.some((d) => d.tipo_documento === key),
 	);
 
 	if (isLoading) {
@@ -329,9 +315,7 @@ export function ClienteDocumentUploadEdit({ clientId, clientType, isAdmin = fals
 			<div className="flex items-start justify-between">
 				<div>
 					<h3 className="text-lg font-semibold text-gray-900">Documentos del Cliente</h3>
-					<p className="text-sm text-gray-600 mt-1">
-						Suba nuevos documentos o actualice los existentes
-					</p>
+					<p className="text-sm text-gray-600 mt-1">Suba nuevos documentos o actualice los existentes</p>
 				</div>
 
 				{validation.hasAllRequired ? (
@@ -443,15 +427,17 @@ export function ClienteDocumentUploadEdit({ clientId, clientType, isAdmin = fals
 			{documents.length > 0 && (
 				<div className="border border-gray-200 rounded-lg">
 					<div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
-						<h4 className="text-sm font-medium text-gray-900">
-							Documentos Cargados ({documents.length})
-						</h4>
+						<h4 className="text-sm font-medium text-gray-900">Documentos Cargados ({documents.length})</h4>
 					</div>
 
 					<div className="divide-y divide-gray-200">
 						{documents.map((doc) => {
-							const isRequired = isDocumentRequired(doc.tipo_documento as TipoDocumentoCliente, clientType);
-							const docLabel = (documentTypes as Record<string, string>)[doc.tipo_documento] || doc.tipo_documento;
+							const isRequired = isDocumentRequired(
+								doc.tipo_documento as TipoDocumentoCliente,
+								clientType,
+							);
+							const docLabel =
+								(documentTypes as Record<string, string>)[doc.tipo_documento] || doc.tipo_documento;
 
 							return (
 								<div key={doc.id} className="p-4 hover:bg-gray-50 transition-colors">
@@ -474,7 +460,9 @@ export function ClienteDocumentUploadEdit({ clientId, clientType, isAdmin = fals
 															</Badge>
 														)}
 													</p>
-													<p className="text-sm text-gray-600 truncate">{doc.nombre_archivo}</p>
+													<p className="text-sm text-gray-600 truncate">
+														{doc.nombre_archivo}
+													</p>
 													<p className="text-xs text-gray-500 mt-1">
 														{formatFileSize(doc.tamano_bytes)}
 														{doc.descripcion && ` • ${doc.descripcion}`}
@@ -510,7 +498,11 @@ export function ClienteDocumentUploadEdit({ clientId, clientType, isAdmin = fals
 														<Button
 															variant="ghost"
 															size="sm"
-															onClick={() => handleViewHistory(doc.tipo_documento as TipoDocumentoCliente)}
+															onClick={() =>
+																handleViewHistory(
+																	doc.tipo_documento as TipoDocumentoCliente,
+																)
+															}
 															title="Ver historial"
 														>
 															<History className="h-4 w-4" />
@@ -560,8 +552,8 @@ export function ClienteDocumentUploadEdit({ clientId, clientType, isAdmin = fals
 					<DialogHeader>
 						<DialogTitle>Reemplazar Documento</DialogTitle>
 						<DialogDescription>
-							Seleccione un nuevo archivo para reemplazar el documento actual.
-							El documento anterior se guardará en el historial.
+							Seleccione un nuevo archivo para reemplazar el documento actual. El documento anterior se
+							guardará en el historial.
 						</DialogDescription>
 					</DialogHeader>
 
@@ -596,9 +588,7 @@ export function ClienteDocumentUploadEdit({ clientId, clientType, isAdmin = fals
 								) : (
 									<>
 										<Upload className="h-10 w-10 text-gray-400 mx-auto mb-2" />
-										<p className="text-sm text-gray-600">
-											Haga clic para seleccionar un archivo
-										</p>
+										<p className="text-sm text-gray-600">Haga clic para seleccionar un archivo</p>
 									</>
 								)}
 							</label>
@@ -664,7 +654,10 @@ export function ClienteDocumentUploadEdit({ clientId, clientType, isAdmin = fals
 													v{item.version}
 												</Badge>
 												{item.estado === "activo" && (
-													<Badge variant="outline" className="text-green-600 border-green-600">
+													<Badge
+														variant="outline"
+														className="text-green-600 border-green-600"
+													>
 														Actual
 													</Badge>
 												)}

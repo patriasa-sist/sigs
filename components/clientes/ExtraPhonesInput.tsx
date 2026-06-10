@@ -31,9 +31,7 @@ export function ExtraPhonesInput({ phones, onChange, disabled = false }: ExtraPh
 	};
 
 	const updatePhone = (index: number, field: keyof ExtraPhone, value: string) => {
-		const updated = phones.map((p, i) =>
-			i === index ? { ...p, [field]: value } : p
-		);
+		const updated = phones.map((p, i) => (i === index ? { ...p, [field]: value } : p));
 		onChange(updated);
 	};
 
@@ -41,22 +39,14 @@ export function ExtraPhonesInput({ phones, onChange, disabled = false }: ExtraPh
 		<div className="space-y-3">
 			<div className="flex items-center justify-between">
 				<Label className="text-sm font-medium">Celulares Adicionales</Label>
-				<Button
-					type="button"
-					variant="outline"
-					size="sm"
-					onClick={addPhone}
-					disabled={disabled}
-				>
+				<Button type="button" variant="outline" size="sm" onClick={addPhone} disabled={disabled}>
 					<Plus className="h-3.5 w-3.5 mr-1" />
 					Agregar
 				</Button>
 			</div>
 
 			{phones.length === 0 && (
-				<p className="text-sm text-muted-foreground">
-					No hay celulares adicionales registrados.
-				</p>
+				<p className="text-sm text-muted-foreground">No hay celulares adicionales registrados.</p>
 			)}
 
 			{phones.map((phone, index) => (

@@ -44,7 +44,7 @@ export function BuscarPolizaAnexo({ polizaSeleccionada, onSeleccionar, visible, 
 			const timer = setTimeout(() => buscar(value), 400);
 			return () => clearTimeout(timer);
 		},
-		[buscar]
+		[buscar],
 	);
 
 	if (!visible) return null;
@@ -56,9 +56,7 @@ export function BuscarPolizaAnexo({ polizaSeleccionada, onSeleccionar, visible, 
 					1
 				</div>
 				<h2 className="text-lg font-semibold">Buscar Póliza</h2>
-				{polizaSeleccionada && (
-					<CheckCircle2 className="h-5 w-5 text-green-500 ml-auto" />
-				)}
+				{polizaSeleccionada && <CheckCircle2 className="h-5 w-5 text-green-500 ml-auto" />}
 			</div>
 
 			{/* Póliza ya seleccionada */}
@@ -73,7 +71,10 @@ export function BuscarPolizaAnexo({ polizaSeleccionada, onSeleccionar, visible, 
 						<span>Asegurado: {polizaSeleccionada.client_name}</span>
 						<span>Compañía: {polizaSeleccionada.compania_nombre}</span>
 						<span>Prima: {formatCurrency(polizaSeleccionada.prima_total, polizaSeleccionada.moneda)}</span>
-						<span>Vigencia: {formatDate(polizaSeleccionada.inicio_vigencia)} - {formatDate(polizaSeleccionada.fin_vigencia)}</span>
+						<span>
+							Vigencia: {formatDate(polizaSeleccionada.inicio_vigencia)} -{" "}
+							{formatDate(polizaSeleccionada.fin_vigencia)}
+						</span>
 					</div>
 				</div>
 			) : (
@@ -91,9 +92,7 @@ export function BuscarPolizaAnexo({ polizaSeleccionada, onSeleccionar, visible, 
 					</div>
 
 					{/* Resultados */}
-					{isSearching && (
-						<p className="text-gray-500 text-sm text-center py-4">Buscando...</p>
-					)}
+					{isSearching && <p className="text-gray-500 text-sm text-center py-4">Buscando...</p>}
 
 					{!isSearching && searched && resultados.length === 0 && (
 						<p className="text-gray-500 text-sm text-center py-4">

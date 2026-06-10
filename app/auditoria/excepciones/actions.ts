@@ -59,7 +59,9 @@ export async function otorgarExcepcion(data: {
 		.eq("estado", "activa");
 
 	if (existing && existing.length > 0) {
-		const dupes = existing.map((e) => ALL_DOCUMENT_TYPES[e.tipo_documento as TipoDocumentoCliente] || e.tipo_documento);
+		const dupes = existing.map(
+			(e) => ALL_DOCUMENT_TYPES[e.tipo_documento as TipoDocumentoCliente] || e.tipo_documento,
+		);
 		return {
 			success: false,
 			error: `Ya existen excepciones activas para: ${dupes.join(", ")}`,
@@ -89,9 +91,7 @@ export async function otorgarExcepcion(data: {
 // Revocar excepción (UIF/Admin only)
 // ============================================================================
 
-export async function revocarExcepcion(
-	exceptionId: string
-): Promise<{ success: boolean; error?: string }> {
+export async function revocarExcepcion(exceptionId: string): Promise<{ success: boolean; error?: string }> {
 	const profile = await requirePermission("auditoria.excepciones");
 	const supabase = await createClient();
 
@@ -188,7 +188,7 @@ export async function obtenerMisExcepciones(): Promise<ExcepcionDocumento[]> {
 
 export async function consumirExcepciones(
 	documentosFaltantes: TipoDocumentoCliente[],
-	clientId: string
+	clientId: string,
 ): Promise<{ success: boolean; error?: string }> {
 	const user = await getCurrentUser();
 	if (!user) return { success: false, error: "No autenticado." };

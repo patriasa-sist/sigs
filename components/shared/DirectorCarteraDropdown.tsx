@@ -85,16 +85,15 @@ export function DirectorCarteraDropdown({
 			>
 				<SelectTrigger className={error ? "border-red-500" : ""}>
 					<SelectValue
-						placeholder={
-							isLoading ? "Cargando..." : loadError ? "Error al cargar" : resolvedPlaceholder
-						}
+						placeholder={isLoading ? "Cargando..." : loadError ? "Error al cargar" : resolvedPlaceholder}
 					/>
 				</SelectTrigger>
 				<SelectContent>
 					{!required && <SelectItem value="none">{resolvedPlaceholder}</SelectItem>}
 					{directores.map((d) => (
 						<SelectItem key={d.id} value={d.id}>
-							{d.nombre}{d.apellidos ? ` ${d.apellidos}` : ""}
+							{d.nombre}
+							{d.apellidos ? ` ${d.apellidos}` : ""}
 						</SelectItem>
 					))}
 					{directores.length === 0 && !isLoading && !loadError && (

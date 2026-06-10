@@ -23,9 +23,7 @@ import type { PolizaFormState } from "@/types/poliza";
  * - Verifica autenticación, alcance por equipo y que el estado sea renovable.
  * - Descarta cuotas/documentos y marca la nueva póliza como renovación.
  */
-export async function obtenerPolizaParaRenovacion(
-	polizaId: string
-): Promise<ActionResult<PolizaFormState>> {
+export async function obtenerPolizaParaRenovacion(polizaId: string): Promise<ActionResult<PolizaFormState>> {
 	try {
 		const supabase = await createClient();
 

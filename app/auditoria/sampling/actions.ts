@@ -9,13 +9,7 @@ import { REQUIRED_DOCUMENTS } from "@/types/clienteDocumento";
 // TYPES
 // ================================================
 
-export type ClienteTypeSampling =
-	| "natural"
-	| "juridica"
-	| "unipersonal"
-	| "ong"
-	| "club"
-	| "asociacion_civil";
+export type ClienteTypeSampling = "natural" | "juridica" | "unipersonal" | "ong" | "club" | "asociacion_civil";
 
 export type ClienteSampling = {
 	id: string;
@@ -60,7 +54,7 @@ export async function obtenerMuestraAleatoria(): Promise<ClienteSampling[]> {
 			natural_clients (primer_nombre, primer_apellido),
 			juridic_clients (razon_social),
 			unipersonal_clients (nombre_propietario, apellido_propietario, razon_social)
-		`
+		`,
 		)
 		.eq("status", "active")
 		.order("id") // needed before limit with random workaround
@@ -76,15 +70,9 @@ export async function obtenerMuestraAleatoria(): Promise<ClienteSampling[]> {
 	const sample = shuffled.slice(0, Math.min(3, shuffled.length));
 
 	return sample.map((c) => {
-		const natural = Array.isArray(c.natural_clients)
-			? c.natural_clients[0]
-			: c.natural_clients;
-		const juridic = Array.isArray(c.juridic_clients)
-			? c.juridic_clients[0]
-			: c.juridic_clients;
-		const unipersonal = Array.isArray(c.unipersonal_clients)
-			? c.unipersonal_clients[0]
-			: c.unipersonal_clients;
+		const natural = Array.isArray(c.natural_clients) ? c.natural_clients[0] : c.natural_clients;
+		const juridic = Array.isArray(c.juridic_clients) ? c.juridic_clients[0] : c.juridic_clients;
+		const unipersonal = Array.isArray(c.unipersonal_clients) ? c.unipersonal_clients[0] : c.unipersonal_clients;
 
 		let nombre_display = "Sin nombre";
 		if (c.client_type === "natural" && natural) {
@@ -92,7 +80,8 @@ export async function obtenerMuestraAleatoria(): Promise<ClienteSampling[]> {
 		} else if (c.client_type === "juridica" && juridic) {
 			nombre_display = juridic.razon_social;
 		} else if (c.client_type === "unipersonal" && unipersonal) {
-			nombre_display = unipersonal.razon_social || `${unipersonal.nombre_propietario} ${unipersonal.apellido_propietario}`;
+			nombre_display =
+				unipersonal.razon_social || `${unipersonal.nombre_propietario} ${unipersonal.apellido_propietario}`;
 		}
 
 		return {
@@ -110,9 +99,7 @@ export async function obtenerMuestraAleatoria(): Promise<ClienteSampling[]> {
  * Fetch complete document details for a specific client for sampling audit.
  * Returns documents uploaded vs required, with storage paths for preview.
  */
-export async function obtenerDetalleSampling(
-	clientId: string
-): Promise<ClienteSamplingDetalle | null> {
+export async function obtenerDetalleSampling(clientId: string): Promise<ClienteSamplingDetalle | null> {
 	await requirePermission("auditoria.ver");
 
 	const supabase = await createClient();
@@ -130,7 +117,7 @@ export async function obtenerDetalleSampling(
 			natural_clients (primer_nombre, primer_apellido),
 			juridic_clients (razon_social),
 			unipersonal_clients (nombre_propietario, apellido_propietario, razon_social)
-		`
+		`,
 		)
 		.eq("id", clientId)
 		.single();
@@ -153,12 +140,8 @@ export async function obtenerDetalleSampling(
 	}
 
 	// Build display name
-	const natural = Array.isArray(client.natural_clients)
-		? client.natural_clients[0]
-		: client.natural_clients;
-	const juridic = Array.isArray(client.juridic_clients)
-		? client.juridic_clients[0]
-		: client.juridic_clients;
+	const natural = Array.isArray(client.natural_clients) ? client.natural_clients[0] : client.natural_clients;
+	const juridic = Array.isArray(client.juridic_clients) ? client.juridic_clients[0] : client.juridic_clients;
 	const unipersonal = Array.isArray(client.unipersonal_clients)
 		? client.unipersonal_clients[0]
 		: client.unipersonal_clients;
@@ -170,7 +153,8 @@ export async function obtenerDetalleSampling(
 	} else if (clientType === "juridica" && juridic) {
 		nombre_display = juridic.razon_social;
 	} else if (clientType === "unipersonal" && unipersonal) {
-		nombre_display = unipersonal.razon_social || `${unipersonal.nombre_propietario} ${unipersonal.apellido_propietario}`;
+		nombre_display =
+			unipersonal.razon_social || `${unipersonal.nombre_propietario} ${unipersonal.apellido_propietario}`;
 	}
 
 	const docs = (documentos || []) as ClienteDocumento[];
@@ -178,9 +162,7 @@ export async function obtenerDetalleSampling(
 	const requeridos = REQUIRED_DOCUMENTS[clientType as keyof typeof REQUIRED_DOCUMENTS] ?? [];
 	const documentos_requeridos = [...requeridos] as TipoDocumentoCliente[];
 	const documentos_subidos = docs.map((d) => d.tipo_documento);
-	const documentos_faltantes = documentos_requeridos.filter(
-		(req) => !documentos_subidos.includes(req)
-	);
+	const documentos_faltantes = documentos_requeridos.filter((req) => !documentos_subidos.includes(req));
 
 	return {
 		id: client.id,

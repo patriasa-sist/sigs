@@ -113,7 +113,7 @@ async function parsearExcelAsegurados(archivoBuffer: ArrayBuffer): Promise<Sepel
  */
 async function validarAsegurados(
 	filas: SepelioExcelRow[],
-	nivelesConfigurados: NivelCobertura[]
+	nivelesConfigurados: NivelCobertura[],
 ): Promise<SepelioExcelImportResult> {
 	const supabase = createClient();
 	const asegurados_validos: AseguradoConNivel[] = [];
@@ -144,7 +144,9 @@ async function validarAsegurados(
 		// Buscar cliente por CI en la base de datos
 		const { data: clientes, error: errorClientes } = await supabase
 			.from("clients")
-			.select("id, client_type, natural_persons(primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, numero_documento), juridic_persons(razon_social, nit)")
+			.select(
+				"id, client_type, natural_persons(primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, numero_documento), juridic_persons(razon_social, nit)",
+			)
 			.or(`natural_persons.numero_documento.eq.${fila.ci},juridic_persons.nit.eq.${fila.ci}`)
 			.limit(1);
 
@@ -168,9 +170,14 @@ async function validarAsegurados(
 
 		if (cliente.client_type === "natural" && cliente.natural_persons && cliente.natural_persons.length > 0) {
 			const np = cliente.natural_persons[0];
-			nombre_completo = `${np.primer_nombre} ${np.segundo_nombre || ""} ${np.primer_apellido} ${np.segundo_apellido || ""}`.trim();
+			nombre_completo =
+				`${np.primer_nombre} ${np.segundo_nombre || ""} ${np.primer_apellido} ${np.segundo_apellido || ""}`.trim();
 			ci_encontrado = np.numero_documento;
-		} else if (cliente.client_type === "juridica" && cliente.juridic_persons && cliente.juridic_persons.length > 0) {
+		} else if (
+			cliente.client_type === "juridica" &&
+			cliente.juridic_persons &&
+			cliente.juridic_persons.length > 0
+		) {
 			const jp = cliente.juridic_persons[0];
 			nombre_completo = jp.razon_social;
 			ci_encontrado = jp.nit;
@@ -178,12 +185,12 @@ async function validarAsegurados(
 
 		// Buscar nivel por nombre (case-insensitive)
 		const nivelEncontrado = nivelesConfigurados.find(
-			(n) => n.nombre.toLowerCase() === fila.nivel_nombre.toLowerCase()
+			(n) => n.nombre.toLowerCase() === fila.nivel_nombre.toLowerCase(),
 		);
 
 		if (!nivelEncontrado) {
 			erroresFila.push(
-				`Nivel "${fila.nivel_nombre}" no encontrado. Niveles disponibles: ${nivelesConfigurados.map((n) => n.nombre).join(", ")}`
+				`Nivel "${fila.nivel_nombre}" no encontrado. Niveles disponibles: ${nivelesConfigurados.map((n) => n.nombre).join(", ")}`,
 			);
 			errores.push({ fila: numeroFila, errores: erroresFila });
 			continue;
@@ -210,7 +217,7 @@ async function validarAsegurados(
  */
 export async function importarAseguradosDesdeExcel(
 	archivo: File,
-	nivelesConfigurados: NivelCobertura[]
+	nivelesConfigurados: NivelCobertura[],
 ): Promise<SepelioExcelImportResult> {
 	try {
 		// Validar que hay niveles configurados

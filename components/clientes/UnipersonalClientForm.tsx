@@ -90,7 +90,12 @@ export function UnipersonalClientForm({ form, partnerForm, onFieldBlur, exceptio
 						<Label htmlFor="primer_nombre">
 							Primer Nombre <span className="text-destructive">*</span>
 						</Label>
-						<Input id="primer_nombre" {...ur("primer_nombre")} onBlur={onFieldBlur} className={eb(!!errors.primer_nombre)} />
+						<Input
+							id="primer_nombre"
+							{...ur("primer_nombre")}
+							onBlur={onFieldBlur}
+							className={eb(!!errors.primer_nombre)}
+						/>
 						{errors.primer_nombre && (
 							<p className="text-sm text-destructive mt-1">{errors.primer_nombre.message}</p>
 						)}
@@ -105,7 +110,12 @@ export function UnipersonalClientForm({ form, partnerForm, onFieldBlur, exceptio
 						<Label htmlFor="primer_apellido">
 							Primer Apellido <span className="text-destructive">*</span>
 						</Label>
-						<Input id="primer_apellido" {...ur("primer_apellido")} onBlur={onFieldBlur} className={eb(!!errors.primer_apellido)} />
+						<Input
+							id="primer_apellido"
+							{...ur("primer_apellido")}
+							onBlur={onFieldBlur}
+							className={eb(!!errors.primer_apellido)}
+						/>
 						{errors.primer_apellido && (
 							<p className="text-sm text-destructive mt-1">{errors.primer_apellido.message}</p>
 						)}
@@ -238,8 +248,15 @@ export function UnipersonalClientForm({ form, partnerForm, onFieldBlur, exceptio
 						<Label htmlFor="direccion">
 							Dirección <span className="text-destructive">*</span>
 						</Label>
-						<Input id="direccion" {...ur("direccion")} onBlur={onFieldBlur} className={eb(!!errors.direccion)} />
-						{errors.direccion && <p className="text-sm text-destructive mt-1">{errors.direccion.message}</p>}
+						<Input
+							id="direccion"
+							{...ur("direccion")}
+							onBlur={onFieldBlur}
+							className={eb(!!errors.direccion)}
+						/>
+						{errors.direccion && (
+							<p className="text-sm text-destructive mt-1">{errors.direccion.message}</p>
+						)}
 					</div>
 
 					<div>
@@ -292,7 +309,12 @@ export function UnipersonalClientForm({ form, partnerForm, onFieldBlur, exceptio
 						<Label htmlFor="profesion_oficio">
 							Profesión u Oficio <span className="text-destructive">*</span>
 						</Label>
-						<Input id="profesion_oficio" {...ur("profesion_oficio")} onBlur={onFieldBlur} className={eb(!!errors.profesion_oficio)} />
+						<Input
+							id="profesion_oficio"
+							{...ur("profesion_oficio")}
+							onBlur={onFieldBlur}
+							className={eb(!!errors.profesion_oficio)}
+						/>
 						{errors.profesion_oficio && (
 							<p className="text-sm text-destructive mt-1">{errors.profesion_oficio.message}</p>
 						)}
@@ -371,7 +393,13 @@ export function UnipersonalClientForm({ form, partnerForm, onFieldBlur, exceptio
 
 					<div>
 						<Label htmlFor="nit">NIT de Facturación</Label>
-						<Input id="nit" {...register("nit")} onBlur={onFieldBlur} placeholder="Min. 7 dígitos" className={eb(!!errors.nit)} />
+						<Input
+							id="nit"
+							{...register("nit")}
+							onBlur={onFieldBlur}
+							placeholder="Min. 7 dígitos"
+							className={eb(!!errors.nit)}
+						/>
 						{errors.nit && <p className="text-sm text-destructive mt-1">{errors.nit.message}</p>}
 					</div>
 
@@ -404,7 +432,12 @@ export function UnipersonalClientForm({ form, partnerForm, onFieldBlur, exceptio
 						<Label htmlFor="razon_social">
 							Razón Social <span className="text-destructive">*</span>
 						</Label>
-						<Input id="razon_social" {...ur("razon_social")} onBlur={onFieldBlur} className={eb(!!errors.razon_social)} />
+						<Input
+							id="razon_social"
+							{...ur("razon_social")}
+							onBlur={onFieldBlur}
+							className={eb(!!errors.razon_social)}
+						/>
 						{errors.razon_social && (
 							<p className="text-sm text-destructive mt-1">{errors.razon_social.message}</p>
 						)}
@@ -494,7 +527,9 @@ export function UnipersonalClientForm({ form, partnerForm, onFieldBlur, exceptio
 							className={eb(!!errors.actividad_economica_comercial)}
 						/>
 						{errors.actividad_economica_comercial && (
-							<p className="text-sm text-destructive mt-1">{errors.actividad_economica_comercial.message}</p>
+							<p className="text-sm text-destructive mt-1">
+								{errors.actividad_economica_comercial.message}
+							</p>
 						)}
 					</div>
 
@@ -543,7 +578,9 @@ export function UnipersonalClientForm({ form, partnerForm, onFieldBlur, exceptio
 							className={eb(!!errors.correo_electronico_comercial)}
 						/>
 						{errors.correo_electronico_comercial && (
-							<p className="text-sm text-destructive mt-1">{errors.correo_electronico_comercial.message}</p>
+							<p className="text-sm text-destructive mt-1">
+								{errors.correo_electronico_comercial.message}
+							</p>
 						)}
 						<div className="mt-2">
 							<SameAsCheckbox
@@ -687,7 +724,9 @@ function PartnerFields({ form, onFieldBlur }: { form: UseFormReturn<ClientPartne
 					Primer Nombre <span className="text-destructive">*</span>
 				</Label>
 				<Input id="partner_primer_nombre" {...ur("primer_nombre")} onBlur={onFieldBlur} />
-				{errors.primer_nombre && <p className="text-sm text-destructive mt-1">{errors.primer_nombre.message}</p>}
+				{errors.primer_nombre && (
+					<p className="text-sm text-destructive mt-1">{errors.primer_nombre.message}</p>
+				)}
 			</div>
 
 			<div>
@@ -762,7 +801,9 @@ function PartnerFields({ form, onFieldBlur }: { form: UseFormReturn<ClientPartne
 			<div>
 				<Label htmlFor="partner_lugar_trabajo">Lugar de Trabajo</Label>
 				<Input id="partner_lugar_trabajo" {...ur("lugar_trabajo")} onBlur={onFieldBlur} />
-				{errors.lugar_trabajo && <p className="text-sm text-destructive mt-1">{errors.lugar_trabajo.message}</p>}
+				{errors.lugar_trabajo && (
+					<p className="text-sm text-destructive mt-1">{errors.lugar_trabajo.message}</p>
+				)}
 			</div>
 		</div>
 	);

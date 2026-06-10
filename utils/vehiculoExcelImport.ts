@@ -139,7 +139,7 @@ function parsearFilaVehiculo(
 	fila: unknown[],
 	mapa: Record<string, number>,
 	resolverTipo: ResolverCatalogo,
-	resolverMarca: ResolverCatalogo
+	resolverMarca: ResolverCatalogo,
 ): { vehiculo: Partial<VehiculoAutomotor>; advertencias: string[] } {
 	const vehiculo: Partial<VehiculoAutomotor> = {};
 	const advertencias: string[] = [];
@@ -232,7 +232,7 @@ function parsearFilaVehiculo(
  */
 export async function importarVehiculosDesdeExcel(
 	archivo: File,
-	catalogos: CatalogosVehiculo = {}
+	catalogos: CatalogosVehiculo = {},
 ): Promise<ExcelImportResult> {
 	try {
 		// Resolvers nombre → UUID para campos que son FK a catálogos
@@ -262,7 +262,9 @@ export async function importarVehiculosDesdeExcel(
 			return {
 				exito: false,
 				vehiculos_validos: [],
-				errores: [{ fila: 0, errores: ["El archivo debe tener al menos una fila de encabezados y una de datos"] }],
+				errores: [
+					{ fila: 0, errores: ["El archivo debe tener al menos una fila de encabezados y una de datos"] },
+				],
 			};
 		}
 
@@ -323,7 +325,7 @@ export async function importarVehiculosDesdeExcel(
 				valores,
 				mapa,
 				resolverTipo,
-				resolverMarca
+				resolverMarca,
 			);
 
 			// Validar vehículo
@@ -357,7 +359,9 @@ export async function importarVehiculosDesdeExcel(
 			errores: [
 				{
 					fila: 0,
-					errores: [`Error procesando archivo: ${error instanceof Error ? error.message : "Error desconocido"}`],
+					errores: [
+						`Error procesando archivo: ${error instanceof Error ? error.message : "Error desconocido"}`,
+					],
 				},
 			],
 		};

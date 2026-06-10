@@ -654,8 +654,8 @@ export type CobranzaSortField =
 	| "numero_poliza"
 	| "cuotas_vencidas"
 	| "cuotas_pendientes"
-	| "monto_pendiente"    // → total_pendiente en la vista
-	| "fecha_vencimiento"  // → proxima_fecha_vencimiento en la vista
+	| "monto_pendiente" // → total_pendiente en la vista
+	| "fecha_vencimiento" // → proxima_fecha_vencimiento en la vista
 	| "prima_total"
 	| "inicio_vigencia";
 

@@ -31,7 +31,6 @@ export default async function ManageInvitationsPage() {
 		profile_role: emailToRole.get(inv.email) || null,
 	}));
 
-
 	const getStatusInfo = (invitation: { used_at: string | null; expires_at: string; profile_role: string | null }) => {
 		if (invitation.used_at || invitation.profile_role) {
 			return {
@@ -75,9 +74,7 @@ export default async function ManageInvitationsPage() {
 				<div className="flex gap-3 items-start">
 					<AlertCircle className="h-5 w-5 text-muted-foreground mt-0.5 shrink-0" />
 					<div className="flex-1">
-						<h3 className="text-sm font-medium text-foreground">
-							Acerca de la Gestión de Invitaciones
-						</h3>
+						<h3 className="text-sm font-medium text-foreground">Acerca de la Gestión de Invitaciones</h3>
 						<p className="text-sm text-muted-foreground mt-1">
 							Eliminar una invitación removerá tanto el registro de invitación como el perfil de usuario
 							asociado si el usuario no ha completado su registro. Esta acción no se puede deshacer.

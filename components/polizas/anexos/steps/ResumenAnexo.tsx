@@ -48,7 +48,10 @@ export function ResumenAnexo({ formState, onGuardar, isSaving, onEditarPaso, onA
 	if (config.tipo_anexo === "exclusion") {
 		const tieneDeltas = formState.cuotas_ajuste.some((c) => c.monto_delta !== 0);
 		if (!tieneDeltas && !formState.items_cambio) {
-			advertencias.push({ tipo: "warning", mensaje: "No se registraron cambios en items ni descuentos de pago." });
+			advertencias.push({
+				tipo: "warning",
+				mensaje: "No se registraron cambios en items ni descuentos de pago.",
+			});
 		}
 	}
 
@@ -73,8 +76,8 @@ export function ResumenAnexo({ formState, onGuardar, isSaving, onEditarPaso, onA
 								adv.tipo === "error"
 									? "bg-red-50 border border-red-200 text-red-700"
 									: adv.tipo === "warning"
-									? "bg-yellow-50 border border-yellow-200 text-yellow-700"
-									: "bg-blue-50 border border-blue-200 text-blue-700"
+										? "bg-yellow-50 border border-yellow-200 text-yellow-700"
+										: "bg-blue-50 border border-blue-200 text-blue-700"
 							}`}
 						>
 							{adv.tipo === "error" ? (
@@ -108,8 +111,7 @@ export function ResumenAnexo({ formState, onGuardar, isSaving, onEditarPaso, onA
 						<span className="text-gray-500">Asegurado:</span> {poliza.client_name}
 					</div>
 					<div>
-						<span className="text-gray-500">Prima:</span>{" "}
-						{formatCurrency(poliza.prima_total, moneda)}
+						<span className="text-gray-500">Prima:</span> {formatCurrency(poliza.prima_total, moneda)}
 					</div>
 				</div>
 			</div>
@@ -132,8 +134,7 @@ export function ResumenAnexo({ formState, onGuardar, isSaving, onEditarPaso, onA
 						<span className="font-medium">{config.numero_anexo}</span>
 					</div>
 					<div>
-						<span className="text-gray-500">Fecha Efectiva:</span>{" "}
-						{formatDate(config.fecha_efectiva)}
+						<span className="text-gray-500">Fecha Efectiva:</span> {formatDate(config.fecha_efectiva)}
 					</div>
 					{config.observaciones && (
 						<div className="col-span-2 md:col-span-4">
@@ -158,13 +159,14 @@ export function ResumenAnexo({ formState, onGuardar, isSaving, onEditarPaso, onA
 						</p>
 						{formState.items_cambio.tipo_ramo === "Automotores" && (
 							<p className="mt-1">
-								Vehículos: {formState.items_cambio.items.length} {config.tipo_anexo === "inclusion" ? "a incluir" : "a excluir"}
+								Vehículos: {formState.items_cambio.items.length}{" "}
+								{config.tipo_anexo === "inclusion" ? "a incluir" : "a excluir"}
 							</p>
 						)}
 						{formState.items_cambio.tipo_ramo === "Salud" && (
 							<p className="mt-1">
-								Asegurados: {formState.items_cambio.items_asegurados.length} |
-								Beneficiarios: {formState.items_cambio.items_beneficiarios.length}
+								Asegurados: {formState.items_cambio.items_asegurados.length} | Beneficiarios:{" "}
+								{formState.items_cambio.items_beneficiarios.length}
 							</p>
 						)}
 					</div>
@@ -178,8 +180,8 @@ export function ResumenAnexo({ formState, onGuardar, isSaving, onEditarPaso, onA
 						{config.tipo_anexo === "inclusion"
 							? "Plan de Pago del Anexo"
 							: config.tipo_anexo === "exclusion"
-							? "Descuento por Exclusión"
-							: "Vigencia Corrida"}
+								? "Descuento por Exclusión"
+								: "Vigencia Corrida"}
 					</h3>
 					<button onClick={() => onEditarPaso(4)} className="text-blue-500 hover:text-blue-700">
 						<Edit className="h-4 w-4" />
@@ -204,14 +206,17 @@ export function ResumenAnexo({ formState, onGuardar, isSaving, onEditarPaso, onA
 								</p>
 								<p>
 									Cuotas:{" "}
-									<span className="font-medium">
-										{formState.plan_pago_inclusion.cuotas.length}
-									</span>
+									<span className="font-medium">{formState.plan_pago_inclusion.cuotas.length}</span>
 								</p>
 								<div className="mt-2 space-y-1">
 									{formState.plan_pago_inclusion.cuotas.map((c) => (
-										<div key={c.numero_cuota} className="flex justify-between text-xs text-gray-600">
-											<span>Cuota {c.numero_cuota} — {formatDate(c.fecha_vencimiento)}</span>
+										<div
+											key={c.numero_cuota}
+											className="flex justify-between text-xs text-gray-600"
+										>
+											<span>
+												Cuota {c.numero_cuota} — {formatDate(c.fecha_vencimiento)}
+											</span>
 											<span>{formatCurrency(c.monto, moneda)}</span>
 										</div>
 									))}
@@ -235,7 +240,7 @@ export function ResumenAnexo({ formState, onGuardar, isSaving, onEditarPaso, onA
 									<span className="text-red-600">
 										{formatCurrency(
 											formState.cuotas_ajuste.reduce((s, c) => s + c.monto_delta, 0),
-											moneda
+											moneda,
 										)}
 									</span>
 								</p>
@@ -292,11 +297,12 @@ export function ResumenAnexo({ formState, onGuardar, isSaving, onEditarPaso, onA
 			<div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-6">
 				<p className="text-sm text-blue-700">
 					<Info className="h-4 w-4 inline mr-1" />
-					El anexo se creará en estado <strong>pendiente</strong> y requerirá validación gerencial
-					para activarse.
+					El anexo se creará en estado <strong>pendiente</strong> y requerirá validación gerencial para
+					activarse.
 					{config.tipo_anexo === "anulacion" && (
 						<span className="text-red-600 font-medium">
-							{" "}Una vez validado, la póliza quedará anulada permanentemente.
+							{" "}
+							Una vez validado, la póliza quedará anulada permanentemente.
 						</span>
 					)}
 				</p>

@@ -4,7 +4,12 @@ import { useState, useCallback, useMemo, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FileText, Trash2, ExternalLink, Loader2, RotateCcw } from "lucide-react";
-import { TIPOS_DOCUMENTO_SINIESTRO, type TipoDocumentoSiniestro, type DocumentoSiniestroConUsuario, type DocumentoSiniestro } from "@/types/siniestro";
+import {
+	TIPOS_DOCUMENTO_SINIESTRO,
+	type TipoDocumentoSiniestro,
+	type DocumentoSiniestroConUsuario,
+	type DocumentoSiniestro,
+} from "@/types/siniestro";
 import { agregarDocumentosSiniestro } from "@/app/siniestros/actions";
 import { formatFechaLaPaz } from "@/utils/formatters";
 import {
@@ -40,7 +45,10 @@ export default function DocumentosPorTipo({
 
 	// Agrupar documentos por tipo
 	const documentosPorTipo = useMemo(() => {
-		const grupos: Record<TipoDocumentoSiniestro, DocumentoSiniestroConUsuario[]> = {} as Record<TipoDocumentoSiniestro, DocumentoSiniestroConUsuario[]>;
+		const grupos: Record<TipoDocumentoSiniestro, DocumentoSiniestroConUsuario[]> = {} as Record<
+			TipoDocumentoSiniestro,
+			DocumentoSiniestroConUsuario[]
+		>;
 
 		TIPOS_DOCUMENTO_SINIESTRO.forEach((tipo) => {
 			grupos[tipo] = documentos.filter((doc) => doc.tipo_documento === tipo);
@@ -52,22 +60,25 @@ export default function DocumentosPorTipo({
 	// Documentos del tipo seleccionado (memoizado)
 	const documentosFiltrados = useMemo(
 		() => documentosPorTipo[tipoSeleccionado] || [],
-		[documentosPorTipo, tipoSeleccionado]
+		[documentosPorTipo, tipoSeleccionado],
 	);
 
 	// Handler para agregar documento temporal
-	const handleAgregarDocumento = useCallback((doc: DocumentoSiniestro) => {
-		// Asegurar que el documento tenga el tipo seleccionado
-		const documentoConTipo: DocumentoSiniestro = {
-			...doc,
-			tipo_documento: tipoSeleccionado,
-		};
-		setDocumentosTemporales(prev => [...prev, documentoConTipo]);
-	}, [tipoSeleccionado]);
+	const handleAgregarDocumento = useCallback(
+		(doc: DocumentoSiniestro) => {
+			// Asegurar que el documento tenga el tipo seleccionado
+			const documentoConTipo: DocumentoSiniestro = {
+				...doc,
+				tipo_documento: tipoSeleccionado,
+			};
+			setDocumentosTemporales((prev) => [...prev, documentoConTipo]);
+		},
+		[tipoSeleccionado],
+	);
 
 	// Handler para eliminar documento temporal
 	const handleEliminarDocumentoTemporal = useCallback((index: number) => {
-		setDocumentosTemporales(prev => prev.filter((_, i) => i !== index));
+		setDocumentosTemporales((prev) => prev.filter((_, i) => i !== index));
 	}, []);
 
 	// Handler para subir documentos temporales
@@ -118,7 +129,7 @@ export default function DocumentosPorTipo({
 				setOperationLoading(null);
 			}
 		},
-		[siniestroId, onDocumentosChange]
+		[siniestroId, onDocumentosChange],
 	);
 
 	// Handler para restaurar (solo admin)
@@ -142,7 +153,7 @@ export default function DocumentosPorTipo({
 				setOperationLoading(null);
 			}
 		},
-		[siniestroId, onDocumentosChange]
+		[siniestroId, onDocumentosChange],
 	);
 
 	// Handler para eliminar permanentemente (solo admin)
@@ -168,7 +179,7 @@ export default function DocumentosPorTipo({
 				setOperationLoading(null);
 			}
 		},
-		[siniestroId, onDocumentosChange]
+		[siniestroId, onDocumentosChange],
 	);
 
 	// Verificar si es imagen
@@ -182,22 +193,16 @@ export default function DocumentosPorTipo({
 
 	useEffect(() => {
 		const loadSignedUrls = async () => {
-			const docsToLoad = documentosFiltrados.filter(
-				(doc) => doc.archivo_url && !signedUrls[doc.archivo_url]
-			);
+			const docsToLoad = documentosFiltrados.filter((doc) => doc.archivo_url && !signedUrls[doc.archivo_url]);
 			if (docsToLoad.length === 0) return;
 
 			const { createClient } = await import("@/utils/supabase/client");
 			const supabase = createClient();
 			const { extractStoragePath } = await import("@/utils/storage");
 
-			const paths = docsToLoad.map((doc) =>
-				extractStoragePath(doc.archivo_url!, "siniestros-documentos")
-			);
+			const paths = docsToLoad.map((doc) => extractStoragePath(doc.archivo_url!, "siniestros-documentos"));
 
-			const { data } = await supabase.storage
-				.from("siniestros-documentos")
-				.createSignedUrls(paths, 3600);
+			const { data } = await supabase.storage.from("siniestros-documentos").createSignedUrls(paths, 3600);
 
 			if (data) {
 				const newUrls: Record<string, string> = {};
@@ -210,7 +215,7 @@ export default function DocumentosPorTipo({
 			}
 		};
 		loadSignedUrls();
-	// eslint-disable-next-line react-hooks/exhaustive-deps
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [documentosFiltrados]);
 
 	const obtenerUrlArchivo = (archivoUrl: string | undefined) => {
@@ -286,7 +291,11 @@ export default function DocumentosPorTipo({
 							{/* Botón para subir los documentos temporales */}
 							{documentosTemporales.length > 0 && (
 								<div className="flex justify-end gap-2 mt-4 pt-4 border-t">
-									<Button variant="outline" onClick={() => setDocumentosTemporales([])} disabled={uploading}>
+									<Button
+										variant="outline"
+										onClick={() => setDocumentosTemporales([])}
+										disabled={uploading}
+									>
 										Cancelar
 									</Button>
 									<Button onClick={handleSubirDocumentos} disabled={uploading || subiendoArchivos}>
@@ -317,7 +326,11 @@ export default function DocumentosPorTipo({
 										<div className="aspect-video bg-secondary rounded-md flex items-center justify-center overflow-hidden">
 											{esImagen(doc.nombre_archivo) && obtenerUrlArchivo(doc.archivo_url) ? (
 												// eslint-disable-next-line @next/next/no-img-element
-											<img src={obtenerUrlArchivo(doc.archivo_url)} alt={doc.nombre_archivo} className="w-full h-full object-cover" />
+												<img
+													src={obtenerUrlArchivo(doc.archivo_url)}
+													alt={doc.nombre_archivo}
+													className="w-full h-full object-cover"
+												/>
 											) : (
 												<FileText className="h-12 w-12 text-muted-foreground" />
 											)}
@@ -340,7 +353,11 @@ export default function DocumentosPorTipo({
 										{/* Acciones */}
 										<div className="flex gap-2">
 											<Button variant="outline" size="sm" asChild className="flex-1">
-												<a href={obtenerUrlArchivo(doc.archivo_url)} target="_blank" rel="noopener noreferrer">
+												<a
+													href={obtenerUrlArchivo(doc.archivo_url)}
+													target="_blank"
+													rel="noopener noreferrer"
+												>
 													<ExternalLink className="mr-1 h-3 w-3" />
 													Ver
 												</a>
@@ -378,7 +395,11 @@ export default function DocumentosPorTipo({
 													<Button
 														variant="destructive"
 														size="sm"
-														onClick={() => doc.id && doc.archivo_url && handleEliminarPermanente(doc.id, doc.archivo_url)}
+														onClick={() =>
+															doc.id &&
+															doc.archivo_url &&
+															handleEliminarPermanente(doc.id, doc.archivo_url)
+														}
 														disabled={operationLoading === doc.id}
 													>
 														<Trash2 className="h-3 w-3" />

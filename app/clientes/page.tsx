@@ -3,7 +3,12 @@
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Client, ClientSearchResult } from "@/types/client";
-import { getAllClients, searchClients as searchClientsAction, obtenerFiltrosClientes, FiltrosClientesOptions } from "./actions";
+import {
+	getAllClients,
+	searchClients as searchClientsAction,
+	obtenerFiltrosClientes,
+	FiltrosClientesOptions,
+} from "./actions";
 import { SearchBar } from "@/components/clientes/SearchBar";
 import { ClientList } from "@/components/clientes/ClientList";
 import { ClientTable } from "@/components/clientes/ClientTable";
@@ -76,7 +81,11 @@ function ClientesContent() {
 			setIsLoading(true);
 			setError(null);
 			try {
-				const result = await getAllClients({ page: currentPage, pageSize, commercial_owner_id: activeEjecutivoId });
+				const result = await getAllClients({
+					page: currentPage,
+					pageSize,
+					commercial_owner_id: activeEjecutivoId,
+				});
 				if (result.success) {
 					setDisplayedClients(result.data);
 					setTotalRecords(result.pagination.totalRecords);
@@ -164,7 +173,11 @@ function ClientesContent() {
 				<div>
 					<h1 className="text-2xl font-semibold text-foreground tracking-tight">Clientes</h1>
 					<p className="text-sm text-muted-foreground mt-0.5">
-						{isLoading ? "Cargando…" : totalRecords > 0 ? `${totalRecords} clientes registrados` : "Gestión de clientes"}
+						{isLoading
+							? "Cargando…"
+							: totalRecords > 0
+								? `${totalRecords} clientes registrados`
+								: "Gestión de clientes"}
 					</p>
 				</div>
 				<Button size="sm" onClick={() => router.push("/clientes/nuevo")} className="shrink-0 cursor-pointer">
@@ -196,7 +209,9 @@ function ClientesContent() {
 								<SelectContent>
 									<SelectItem value={ALL}>Todos los ejecutivos</SelectItem>
 									{filtrosOptions.ejecutivos.map((e) => (
-										<SelectItem key={e.id} value={e.id}>{e.full_name}</SelectItem>
+										<SelectItem key={e.id} value={e.id}>
+											{e.full_name}
+										</SelectItem>
 									))}
 								</SelectContent>
 							</Select>
@@ -217,7 +232,8 @@ function ClientesContent() {
 					{ejecutivoId !== ALL && (
 						<div className="flex flex-wrap gap-2">
 							<span className="inline-flex items-center gap-1.5 bg-primary/10 text-primary text-xs px-2.5 py-1 rounded-full">
-								Ejecutivo: {filtrosOptions.ejecutivos.find((e) => e.id === ejecutivoId)?.full_name ?? ejecutivoId}
+								Ejecutivo:{" "}
+								{filtrosOptions.ejecutivos.find((e) => e.id === ejecutivoId)?.full_name ?? ejecutivoId}
 								<button
 									onClick={() => setEjecutivoId(ALL)}
 									className="hover:text-primary/70"
@@ -239,7 +255,10 @@ function ClientesContent() {
 							<thead>
 								<tr className="border-b border-border">
 									{["Nombre", "CI / NIT", "Tipo", "Teléfono", ""].map((h) => (
-										<th key={h} className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">
+										<th
+											key={h}
+											className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide"
+										>
 											{h}
 										</th>
 									))}
@@ -250,7 +269,10 @@ function ClientesContent() {
 									<tr key={i}>
 										{[140, 80, 56, 72, 16].map((w, j) => (
 											<td key={j} className="px-4 py-3">
-												<div className="h-4 bg-muted rounded animate-pulse" style={{ width: w }} />
+												<div
+													className="h-4 bg-muted rounded animate-pulse"
+													style={{ width: w }}
+												/>
 											</td>
 										))}
 									</tr>

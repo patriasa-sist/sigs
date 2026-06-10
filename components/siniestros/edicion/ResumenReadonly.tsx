@@ -27,9 +27,7 @@ export default function ResumenReadonly({ siniestro, coberturas }: ResumenReadon
 							<Calendar className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-0.5" />
 							<div>
 								<p className="text-sm text-muted-foreground">Fecha de Reporte</p>
-								<p className="font-medium">
-									{formatDate(siniestro.fecha_reporte)}
-								</p>
+								<p className="font-medium">{formatDate(siniestro.fecha_reporte)}</p>
 							</div>
 						</div>
 
@@ -50,25 +48,40 @@ export default function ResumenReadonly({ siniestro, coberturas }: ResumenReadon
 						<div className="pt-2 border-t">
 							<p className="text-sm text-muted-foreground mb-2">Contactos</p>
 							<div className="space-y-1.5">
-								{siniestro.contactos.filter(c => c).map((contacto, idx) => {
-									// Normalizar: puede venir como string JSON o como objeto
-									let c: { nombre?: string; telefono?: string; correo?: string } = {};
-									if (typeof contacto === "string") {
-										try { c = JSON.parse(contacto); } catch { c = { nombre: contacto }; }
-									} else {
-										c = contacto as { nombre?: string; telefono?: string; correo?: string };
-									}
-									return (
-										<div key={`contacto-${idx}`} className="text-sm bg-secondary/30 rounded px-3 py-2">
-											{c.nombre && <span className="font-medium">{c.nombre}</span>}
-											{c.telefono && <span className="text-muted-foreground"> · {c.telefono}</span>}
-											{c.correo && <span className="text-muted-foreground"> · {c.correo}</span>}
-											{!c.nombre && !c.telefono && !c.correo && (
-												<span className="text-muted-foreground italic">Contacto sin datos</span>
-											)}
-										</div>
-									);
-								})}
+								{siniestro.contactos
+									.filter((c) => c)
+									.map((contacto, idx) => {
+										// Normalizar: puede venir como string JSON o como objeto
+										let c: { nombre?: string; telefono?: string; correo?: string } = {};
+										if (typeof contacto === "string") {
+											try {
+												c = JSON.parse(contacto);
+											} catch {
+												c = { nombre: contacto };
+											}
+										} else {
+											c = contacto as { nombre?: string; telefono?: string; correo?: string };
+										}
+										return (
+											<div
+												key={`contacto-${idx}`}
+												className="text-sm bg-secondary/30 rounded px-3 py-2"
+											>
+												{c.nombre && <span className="font-medium">{c.nombre}</span>}
+												{c.telefono && (
+													<span className="text-muted-foreground"> · {c.telefono}</span>
+												)}
+												{c.correo && (
+													<span className="text-muted-foreground"> · {c.correo}</span>
+												)}
+												{!c.nombre && !c.telefono && !c.correo && (
+													<span className="text-muted-foreground italic">
+														Contacto sin datos
+													</span>
+												)}
+											</div>
+										);
+									})}
 							</div>
 						</div>
 					)}
@@ -95,9 +108,7 @@ export default function ResumenReadonly({ siniestro, coberturas }: ResumenReadon
 								>
 									<p className="font-medium text-sm">{cobertura.nombre}</p>
 									{cobertura.descripcion && (
-										<p className="text-xs text-muted-foreground mt-1">
-											{cobertura.descripcion}
-										</p>
+										<p className="text-xs text-muted-foreground mt-1">{cobertura.descripcion}</p>
 									)}
 								</div>
 							))}
@@ -105,7 +116,6 @@ export default function ResumenReadonly({ siniestro, coberturas }: ResumenReadon
 					)}
 				</CardContent>
 			</Card>
-
 		</div>
 	);
 }

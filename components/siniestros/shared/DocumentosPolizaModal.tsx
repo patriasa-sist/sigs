@@ -1,12 +1,6 @@
 "use client";
 
-import {
-	Dialog,
-	DialogContent,
-	DialogHeader,
-	DialogTitle,
-	DialogDescription,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { FileText, Image, File, ExternalLink, AlertCircle } from "lucide-react";
@@ -25,7 +19,6 @@ export default function DocumentosPolizaModal({
 	open,
 	onOpenChange,
 }: DocumentosPolizaModalProps) {
-
 	const getFileIcon = (filename: string) => {
 		const ext = filename.split(".").pop()?.toLowerCase();
 		if (["jpg", "jpeg", "png"].includes(ext || "")) {
@@ -53,9 +46,7 @@ export default function DocumentosPolizaModal({
 		const { extractStoragePath } = await import("@/utils/storage");
 
 		const storagePath = extractStoragePath(doc.archivo_url, "polizas-documentos");
-		const { data } = await supabase.storage
-			.from("polizas-documentos")
-			.createSignedUrl(storagePath, 3600);
+		const { data } = await supabase.storage.from("polizas-documentos").createSignedUrl(storagePath, 3600);
 
 		if (data?.signedUrl) {
 			window.open(data.signedUrl, "_blank");
@@ -99,7 +90,9 @@ export default function DocumentosPolizaModal({
 											<div className="flex-1 min-w-0">
 												<p className="font-medium text-sm break-words">{doc.nombre_archivo}</p>
 												<div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-xs text-muted-foreground">
-													<span className="bg-secondary px-2 py-0.5 rounded">{doc.tipo_documento}</span>
+													<span className="bg-secondary px-2 py-0.5 rounded">
+														{doc.tipo_documento}
+													</span>
 													<span>{formatFileSize(doc.tamano_bytes)}</span>
 												</div>
 											</div>

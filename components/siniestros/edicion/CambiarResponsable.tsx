@@ -11,13 +11,7 @@ import {
 	DialogTitle,
 	DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { UserCog, Loader2, AlertCircle } from "lucide-react";
 import { obtenerUsuariosResponsables, cambiarResponsableSiniestro } from "@/app/siniestros/actions";

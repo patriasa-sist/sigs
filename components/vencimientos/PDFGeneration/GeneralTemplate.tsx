@@ -137,7 +137,7 @@ export const GeneralTemplate: React.FC<GeneralTemplateProps> = ({ letterData, fi
 							• Valor Asegurado:{" "}
 							{formatMonetaryValue(
 								policy.manualFields?.insuredValue,
-								policy.manualFields?.insuredValueCurrency
+								policy.manualFields?.insuredValueCurrency,
 							)}
 						</Text>
 						{policy.manualFields?.specificConditions && (

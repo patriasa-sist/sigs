@@ -57,12 +57,7 @@ export type ExportProduccionRow = {
 // REPORTE DE PRODUCCIÓN (nuevo)
 // ============================================
 
-export type TipoPolizaReporte =
-	| "Nueva"
-	| "Renovada"
-	| "Exclusión"
-	| "Inclusión"
-	| "Anulación";
+export type TipoPolizaReporte = "Nueva" | "Renovada" | "Exclusión" | "Inclusión" | "Anulación";
 
 export type ExportProduccionNuevoRow = {
 	numero_poliza: string;
@@ -105,39 +100,39 @@ export type ExportProduccionNuevoRow = {
 // ============================================
 
 export type ExportComisionesDirectorFilters = {
-  fecha_desde: string; // YYYY-MM-DD
-  fecha_hasta: string; // YYYY-MM-DD
-  director_id?: string;
-  regional_id?: string;
-  compania_id?: string;
-  equipo_id?: string;
+	fecha_desde: string; // YYYY-MM-DD
+	fecha_hasta: string; // YYYY-MM-DD
+	director_id?: string;
+	regional_id?: string;
+	compania_id?: string;
+	equipo_id?: string;
 };
 
 export type ExportComisionesDirectorRow = {
-  director_cartera: string;
-  numero_poliza: string;
-  cliente: string;
-  ci_nit: string;
-  compania: string;
-  ramo: string;
-  regional: string;
-  responsable: string;
-  numero_cuota: number;
-  estado_cuota: "pagada" | "por_cobrar";
-  monto_cuota_pt: number;
-  monto_cuota_pn: number | null;
-  porcentaje_compania: number | null; // % comisión del producto/compañía (informativo)
-  monto_cuota_comision: number | null;
-  porcentaje_comision_director: number | null;
-  monto_comision_director: number | null;
-  it_3pct: number | null; // 3% IT sobre monto_comision_director
-  total_importe: number | null; // monto_comision_director - it_3pct
-  retencion_rciva: number | null; // 13% sobre total_importe, solo si director no factura
-  retencion_it: number | null; // 3% sobre total_importe, solo si director no factura
-  total_comision: number | null; // total_importe - retenciones
-  director_factura: boolean; // true = presenta factura fiscal
-  moneda: string;
-  fecha: string; // fecha_pago si pagada, fecha_vencimiento si por cobrar
+	director_cartera: string;
+	numero_poliza: string;
+	cliente: string;
+	ci_nit: string;
+	compania: string;
+	ramo: string;
+	regional: string;
+	responsable: string;
+	numero_cuota: number;
+	estado_cuota: "pagada" | "por_cobrar";
+	monto_cuota_pt: number;
+	monto_cuota_pn: number | null;
+	porcentaje_compania: number | null; // % comisión del producto/compañía (informativo)
+	monto_cuota_comision: number | null;
+	porcentaje_comision_director: number | null;
+	monto_comision_director: number | null;
+	it_3pct: number | null; // 3% IT sobre monto_comision_director
+	total_importe: number | null; // monto_comision_director - it_3pct
+	retencion_rciva: number | null; // 13% sobre total_importe, solo si director no factura
+	retencion_it: number | null; // 3% sobre total_importe, solo si director no factura
+	total_comision: number | null; // total_importe - retenciones
+	director_factura: boolean; // true = presenta factura fiscal
+	moneda: string;
+	fecha: string; // fecha_pago si pagada, fecha_vencimiento si por cobrar
 };
 
 // ============================================
@@ -145,18 +140,16 @@ export type ExportComisionesDirectorRow = {
 // ============================================
 
 export type FilterData = {
-  regionales: { id: string; nombre: string }[];
-  companias: { id: string; nombre: string }[];
-  equipos: { id: string; nombre: string }[];
+	regionales: { id: string; nombre: string }[];
+	companias: { id: string; nombre: string }[];
+	equipos: { id: string; nombre: string }[];
 };
 
 // ============================================
 // RESPUESTA GENÉRICA
 // ============================================
 
-export type ProduccionServerResponse<T> =
-	| { success: true; data: T }
-	| { success: false; error: string };
+export type ProduccionServerResponse<T> = { success: true; data: T } | { success: false; error: string };
 
 export type ExportProduccionNuevoResponse = {
 	data: ExportProduccionNuevoRow[];

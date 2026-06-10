@@ -120,7 +120,7 @@ export function findExecutiveByName(executiveName: string): Executive | null {
 
 	// Try partial match with user field (for cases like "Tamara" matching "tamara")
 	const partialUserMatch = excecutives.find(
-		(exec) => searchName.includes(exec.user.toLowerCase()) || exec.user.toLowerCase().includes(searchName)
+		(exec) => searchName.includes(exec.user.toLowerCase()) || exec.user.toLowerCase().includes(searchName),
 	);
 	if (partialUserMatch) return partialUserMatch;
 
@@ -131,7 +131,7 @@ export function findExecutiveByName(executiveName: string): Executive | null {
 
 		// Check if search name contains any part of the executive's name
 		return execNameParts.some(
-			(part) => part.length > 2 && (searchName.includes(part) || part.includes(searchName))
+			(part) => part.length > 2 && (searchName.includes(part) || part.includes(searchName)),
 		);
 	});
 

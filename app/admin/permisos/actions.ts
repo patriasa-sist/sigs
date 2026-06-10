@@ -46,9 +46,7 @@ export interface UserWithPermissions {
 	extraPermissions: UserPermissionRow[];
 }
 
-type ActionResult<T> =
-	| { success: true; data: T }
-	| { success: false; error: string };
+type ActionResult<T> = { success: true; data: T } | { success: false; error: string };
 
 // ============================================
 // AUTHORIZATION
@@ -182,13 +180,16 @@ export async function obtenerUsuariosConPermisos(): Promise<ActionResult<UserWit
 export async function actualizarPermisoRol(
 	role: UserRole,
 	permissionId: Permission,
-	enabled: boolean
+	enabled: boolean,
 ): Promise<ActionResult<null>> {
 	try {
 		await requireAdminPermisos();
 
 		if (role === "admin") {
-			return { success: false, error: "No se pueden modificar los permisos del rol admin (tiene bypass permanente)" };
+			return {
+				success: false,
+				error: "No se pueden modificar los permisos del rol admin (tiene bypass permanente)",
+			};
 		}
 
 		const supabase = await createClient();
@@ -229,24 +230,22 @@ export async function actualizarPermisoRol(
 export async function asignarPermisoUsuario(
 	userId: string,
 	permissionId: Permission,
-	expiresAt?: string
+	expiresAt?: string,
 ): Promise<ActionResult<null>> {
 	try {
 		const adminProfile = await requireAdminPermisos();
 		const supabase = await createClient();
 
-		const { error } = await supabase
-			.from("user_permissions")
-			.upsert(
-				{
-					user_id: userId,
-					permission_id: permissionId,
-					granted_by: adminProfile.id,
-					granted_at: new Date().toISOString(),
-					expires_at: expiresAt || null,
-				},
-				{ onConflict: "user_id,permission_id" }
-			);
+		const { error } = await supabase.from("user_permissions").upsert(
+			{
+				user_id: userId,
+				permission_id: permissionId,
+				granted_by: adminProfile.id,
+				granted_at: new Date().toISOString(),
+				expires_at: expiresAt || null,
+			},
+			{ onConflict: "user_id,permission_id" },
+		);
 
 		if (error) {
 			return { success: false, error: error.message };
@@ -265,10 +264,7 @@ export async function asignarPermisoUsuario(
 /**
  * Revocar permiso extra de un usuario
  */
-export async function revocarPermisoUsuario(
-	userId: string,
-	permissionId: Permission
-): Promise<ActionResult<null>> {
+export async function revocarPermisoUsuario(userId: string, permissionId: Permission): Promise<ActionResult<null>> {
 	try {
 		await requireAdminPermisos();
 		const supabase = await createClient();

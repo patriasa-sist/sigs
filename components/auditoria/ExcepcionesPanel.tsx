@@ -3,13 +3,7 @@
 import { useState } from "react";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { ExcepcionDocumentoVista, EstadoExcepcion } from "@/types/clienteDocumento";
 import { ExcepcionesTable } from "./ExcepcionesTable";
 import { OtorgarExcepcionForm } from "./OtorgarExcepcionForm";
@@ -117,11 +111,7 @@ export function ExcepcionesPanel({ excepcionesIniciales, usuarios }: Props) {
 			)}
 
 			{/* Table */}
-			<ExcepcionesTable
-				excepciones={excepciones}
-				isRefreshing={isRefreshing}
-				onRevoke={handleExcepcionRevoked}
-			/>
+			<ExcepcionesTable excepciones={excepciones} isRefreshing={isRefreshing} onRevoke={handleExcepcionRevoked} />
 		</div>
 	);
 }

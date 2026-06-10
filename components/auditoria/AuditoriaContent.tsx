@@ -34,10 +34,7 @@ export function AuditoriaContent({ excepcionesIniciales, usuarios, isAdmin, audi
 			</TabsList>
 
 			<TabsContent value="excepciones">
-				<ExcepcionesPanel
-					excepcionesIniciales={excepcionesIniciales}
-					usuarios={usuarios}
-				/>
+				<ExcepcionesPanel excepcionesIniciales={excepcionesIniciales} usuarios={usuarios} />
 			</TabsContent>
 
 			<TabsContent value="sampling">

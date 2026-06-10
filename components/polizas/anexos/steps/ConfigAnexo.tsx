@@ -46,7 +46,9 @@ const TIPOS_ANEXO = [
 export function ConfigAnexo({ config, tieneAnulacionPendiente, onChange, onSiguiente, onAnterior }: Props) {
 	const [tipoAnexo, setTipoAnexo] = useState(config?.tipo_anexo || "");
 	const [numeroAnexo, setNumeroAnexo] = useState(config?.numero_anexo || "");
-	const [fechaEfectiva, setFechaEfectiva] = useState(config?.fecha_efectiva || new Date().toISOString().split("T")[0]);
+	const [fechaEfectiva, setFechaEfectiva] = useState(
+		config?.fecha_efectiva || new Date().toISOString().split("T")[0],
+	);
 	const [observaciones, setObservaciones] = useState(config?.observaciones || "");
 	const [errores, setErrores] = useState<string[]>([]);
 
@@ -108,8 +110,8 @@ export function ConfigAnexo({ config, tieneAnulacionPendiente, onChange, onSigui
 									isDisabled
 										? "opacity-50 cursor-not-allowed border-gray-200 bg-gray-50"
 										: isSelected
-										? tipo.selectedColor
-										: `${tipo.color} hover:shadow-md cursor-pointer`
+											? tipo.selectedColor
+											: `${tipo.color} hover:shadow-md cursor-pointer`
 								}`}
 							>
 								<div className="flex items-center gap-2 mb-2">
@@ -133,8 +135,8 @@ export function ConfigAnexo({ config, tieneAnulacionPendiente, onChange, onSigui
 					<div>
 						<p className="text-sm font-medium text-red-800">Atención: Anulación de póliza</p>
 						<p className="text-xs text-red-600 mt-1">
-							Al validarse este anexo, la póliza quedará permanentemente anulada.
-							No se podrán crear más anexos ni editar la póliza.
+							Al validarse este anexo, la póliza quedará permanentemente anulada. No se podrán crear más
+							anexos ni editar la póliza.
 						</p>
 					</div>
 				</div>
@@ -178,7 +180,9 @@ export function ConfigAnexo({ config, tieneAnulacionPendiente, onChange, onSigui
 			{errores.length > 0 && (
 				<div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
 					{errores.map((err, i) => (
-						<p key={i} className="text-sm text-red-700">{err}</p>
+						<p key={i} className="text-sm text-red-700">
+							{err}
+						</p>
 					))}
 				</div>
 			)}

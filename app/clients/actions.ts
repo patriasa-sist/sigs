@@ -42,11 +42,13 @@ export async function buscarClientes(termino: string) {
 		// 1. natural_clients: búsqueda multi-palabra (AND por palabra, OR por campo)
 		let naturalQuery = supabase
 			.from("natural_clients")
-			.select("client_id, primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, numero_documento, clients!inner(status, client_type)")
+			.select(
+				"client_id, primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, numero_documento, clients!inner(status, client_type)",
+			)
 			.eq("clients.status", "active");
 		for (const p of palabras) {
 			naturalQuery = naturalQuery.or(
-				`primer_nombre.ilike.%${p}%,segundo_nombre.ilike.%${p}%,primer_apellido.ilike.%${p}%,segundo_apellido.ilike.%${p}%,numero_documento.ilike.%${p}%`
+				`primer_nombre.ilike.%${p}%,segundo_nombre.ilike.%${p}%,primer_apellido.ilike.%${p}%,segundo_apellido.ilike.%${p}%,numero_documento.ilike.%${p}%`,
 			);
 		}
 
@@ -58,17 +60,20 @@ export async function buscarClientes(termino: string) {
 			{ data: vehiculosData },
 		] = await Promise.all([
 			naturalQuery.limit(20),
-			supabase.from("unipersonal_clients")
+			supabase
+				.from("unipersonal_clients")
 				.select("client_id, razon_social, nit, clients!inner(status)")
 				.eq("clients.status", "active")
 				.or(`razon_social.ilike.${patronCompleto},nit.ilike.${patronCompleto}`)
 				.limit(20),
-			supabase.from("juridic_clients")
+			supabase
+				.from("juridic_clients")
 				.select("client_id, razon_social, nit, clients!inner(status)")
 				.eq("clients.status", "active")
 				.or(`razon_social.ilike.${patronCompleto},nit.ilike.${patronCompleto}`)
 				.limit(20),
-			supabase.from("polizas_automotor_vehiculos")
+			supabase
+				.from("polizas_automotor_vehiculos")
 				.select("poliza_id, polizas(client_id)")
 				.ilike("placa", patronCompleto)
 				.limit(10),
@@ -142,13 +147,18 @@ export async function buscarClientes(termino: string) {
 		const idsNuevosDeVehiculos = clientIdsDeVehiculos.filter((id) => !vistos.has(id));
 		if (idsNuevosDeVehiculos.length > 0) {
 			const [{ data: natVeh }, { data: uniVeh }, { data: jurVeh }] = await Promise.all([
-				supabase.from("natural_clients")
-					.select("client_id, primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, numero_documento, clients!inner(status, client_type)")
+				supabase
+					.from("natural_clients")
+					.select(
+						"client_id, primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, numero_documento, clients!inner(status, client_type)",
+					)
 					.in("client_id", idsNuevosDeVehiculos),
-				supabase.from("unipersonal_clients")
+				supabase
+					.from("unipersonal_clients")
 					.select("client_id, razon_social, nit")
 					.in("client_id", idsNuevosDeVehiculos),
-				supabase.from("juridic_clients")
+				supabase
+					.from("juridic_clients")
 					.select("client_id, razon_social, nit")
 					.in("client_id", idsNuevosDeVehiculos),
 			]);
@@ -170,12 +180,22 @@ export async function buscarClientes(termino: string) {
 			for (const uc of uniVeh ?? []) {
 				if (vistos.has(uc.client_id)) continue;
 				vistos.add(uc.client_id);
-				resultados.push({ id: uc.client_id, razon_social: uc.razon_social, nit: uc.nit || undefined, tipo: "unipersonal" });
+				resultados.push({
+					id: uc.client_id,
+					razon_social: uc.razon_social,
+					nit: uc.nit || undefined,
+					tipo: "unipersonal",
+				});
 			}
 			for (const jc of jurVeh ?? []) {
 				if (vistos.has(jc.client_id)) continue;
 				vistos.add(jc.client_id);
-				resultados.push({ id: jc.client_id, razon_social: jc.razon_social, nit: jc.nit || undefined, tipo: "juridica" });
+				resultados.push({
+					id: jc.client_id,
+					razon_social: jc.razon_social,
+					nit: jc.nit || undefined,
+					tipo: "juridica",
+				});
 			}
 		}
 

@@ -62,9 +62,7 @@ export async function getSignedUrl(
 	const cleanPath = extractStoragePath(storagePath, bucket);
 	if (!cleanPath) return "";
 
-	const { data, error } = await supabase.storage
-		.from(bucket)
-		.createSignedUrl(cleanPath, expiresIn);
+	const { data, error } = await supabase.storage.from(bucket).createSignedUrl(cleanPath, expiresIn);
 
 	if (error) {
 		console.error(`[storage] Error creating signed URL for ${bucket}/${cleanPath}:`, error);
@@ -94,9 +92,7 @@ export async function getSignedUrls(
 
 	const cleanPaths = storagePaths.map((p) => extractStoragePath(p, bucket));
 
-	const { data, error } = await supabase.storage
-		.from(bucket)
-		.createSignedUrls(cleanPaths, expiresIn);
+	const { data, error } = await supabase.storage.from(bucket).createSignedUrls(cleanPaths, expiresIn);
 
 	if (error) {
 		console.error(`[storage] Error creating signed URLs for ${bucket}:`, error);

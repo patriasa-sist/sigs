@@ -16,12 +16,7 @@ import { createClient } from "@/utils/supabase/server";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { revalidatePath } from "next/cache";
 import { generateFinalStoragePath } from "@/utils/fileUpload";
-import type {
-	PolizaFormState,
-	FamiliarSalud,
-	DatosSepelio,
-	DatosVida,
-} from "@/types/poliza";
+import type { PolizaFormState, FamiliarSalud, DatosSepelio, DatosVida } from "@/types/poliza";
 import type { ActionResult } from "@/types/policyPermission";
 import { cargarPolizaFormState } from "@/utils/polizas/cargarFormState";
 
@@ -30,7 +25,7 @@ import { cargarPolizaFormState } from "@/utils/polizas/cargarFormState";
  */
 function mapSupabaseError(
 	error: { code?: string; message?: string; details?: string; hint?: string } | null | undefined,
-	context: string
+	context: string,
 ): string {
 	if (!error) return context;
 
@@ -67,7 +62,7 @@ function mapSupabaseError(
 async function isTeamLeaderForResponsable(
 	supabase: Awaited<ReturnType<typeof createClient>>,
 	userId: string,
-	responsableId: string
+	responsableId: string,
 ): Promise<boolean> {
 	const { data: leaderTeams } = await supabase
 		.from("equipo_miembros")
@@ -200,9 +195,7 @@ async function verifyEditPermission(polizaId: string) {
  * Loads a policy with all its data and transforms it to PolizaFormState format
  * for use in the edit form
  */
-export async function obtenerPolizaParaEdicion(
-	polizaId: string
-): Promise<ActionResult<PolizaFormState>> {
+export async function obtenerPolizaParaEdicion(polizaId: string): Promise<ActionResult<PolizaFormState>> {
 	try {
 		const { supabase } = await verifyEditPermission(polizaId);
 		return await cargarPolizaFormState(supabase, polizaId);
@@ -227,7 +220,7 @@ export async function obtenerPolizaParaEdicion(
  */
 export async function actualizarPoliza(
 	polizaId: string,
-	formState: PolizaFormState
+	formState: PolizaFormState,
 ): Promise<ActionResult<{ id: string }>> {
 	try {
 		const { supabase } = await verifyEditPermission(polizaId);
@@ -245,24 +238,33 @@ export async function actualizarPoliza(
 
 		// Validar datos_especificos para ramos que lo requieren
 		const ramoNorm = formState.datos_basicos.ramo
-			.toLowerCase().trim()
-			.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+			.toLowerCase()
+			.trim()
+			.normalize("NFD")
+			.replace(/[\u0300-\u036f]/g, "");
 		const requiereDatosEspecificos =
 			ramoNorm.includes("automotor") ||
-			ramoNorm.includes("salud") || ramoNorm.includes("enfermedad") ||
+			ramoNorm.includes("salud") ||
+			ramoNorm.includes("enfermedad") ||
 			ramoNorm.includes("incendio") ||
-			ramoNorm.includes("responsabilidad") || ramoNorm.includes("civil") ||
+			ramoNorm.includes("responsabilidad") ||
+			ramoNorm.includes("civil") ||
 			ramoNorm.includes("transporte") ||
 			ramoNorm.includes("aeronavegacion") ||
-			ramoNorm.includes("nave") || ramoNorm.includes("embarcacion") ||
+			ramoNorm.includes("nave") ||
+			ramoNorm.includes("embarcacion") ||
 			ramoNorm.includes("accidente") ||
 			ramoNorm.includes("vida") ||
-			ramoNorm.includes("sepelio") || ramoNorm.includes("defuncion") ||
+			ramoNorm.includes("sepelio") ||
+			ramoNorm.includes("defuncion") ||
 			(ramoNorm.includes("riesgo") && ramoNorm.includes("vario")) ||
 			(ramoNorm.includes("ramo") && ramoNorm.includes("tecnico"));
 
 		if (requiereDatosEspecificos && !formState.datos_especificos) {
-			return { success: false, error: `Datos específicos del ramo "${formState.datos_basicos.ramo}" son obligatorios` };
+			return {
+				success: false,
+				error: `Datos específicos del ramo "${formState.datos_basicos.ramo}" son obligatorios`,
+			};
 		}
 
 		// Get current policy state
@@ -282,14 +284,14 @@ export async function actualizarPoliza(
 			.select("id, estado, monto, numero_cuota, observaciones")
 			.eq("poliza_id", polizaId);
 
-		const cuotasPagadas = currentPagos?.filter(p => p.estado === "pagado") || [];
+		const cuotasPagadas = currentPagos?.filter((p) => p.estado === "pagado") || [];
 		const tienePagos = cuotasPagadas.length > 0;
 
 		// Block modality change if there are paid cuotas
 		if (tienePagos && currentPoliza.modalidad_pago !== formState.modalidad_pago.tipo) {
 			return {
 				success: false,
-				error: "No se puede cambiar la modalidad de pago porque hay cuotas ya pagadas"
+				error: "No se puede cambiar la modalidad de pago porque hay cuotas ya pagadas",
 			};
 		}
 
@@ -308,14 +310,16 @@ export async function actualizarPoliza(
 		// Extraer campos ramo-específicos que se guardan en la tabla polizas
 		const datosEsp = formState.datos_especificos?.datos;
 		const ramosConRegionalAsegurado = ["Salud", "Vida", "Accidentes Personales", "Sepelio"];
-		const regionalAseguradoId = ramosConRegionalAsegurado.includes(formState.datos_especificos?.tipo_ramo ?? "")
-			&& datosEsp && "regional_asegurado_id" in datosEsp
-			? (datosEsp as { regional_asegurado_id: string }).regional_asegurado_id || null
-			: null;
-		const tieneMaternidad = formState.datos_especificos?.tipo_ramo === "Salud"
-			&& datosEsp && "tiene_maternidad" in datosEsp
-			? (datosEsp as { tiene_maternidad: boolean }).tiene_maternidad
-			: false;
+		const regionalAseguradoId =
+			ramosConRegionalAsegurado.includes(formState.datos_especificos?.tipo_ramo ?? "") &&
+			datosEsp &&
+			"regional_asegurado_id" in datosEsp
+				? (datosEsp as { regional_asegurado_id: string }).regional_asegurado_id || null
+				: null;
+		const tieneMaternidad =
+			formState.datos_especificos?.tipo_ramo === "Salud" && datosEsp && "tiene_maternidad" in datosEsp
+				? (datosEsp as { tiene_maternidad: boolean }).tiene_maternidad
+				: false;
 
 		const updatePayload: Record<string, unknown> = {
 			client_id: formState.asegurado.id,
@@ -338,11 +342,14 @@ export async function actualizarPoliza(
 			comision: sinPrimaPropia ? null : pagoData.comision_empresa || pagoData.comision || null,
 			comision_empresa: sinPrimaPropia ? null : pagoData.comision_empresa || null,
 			comision_encargado: sinPrimaPropia ? null : pagoData.comision_encargado || null,
-			usar_factores_contado: formState.modalidad_pago.tipo === "credito" && formState.modalidad_pago.usar_factores_contado === true,
+			usar_factores_contado:
+				formState.modalidad_pago.tipo === "credito" && formState.modalidad_pago.usar_factores_contado === true,
 			tipo_prima: formState.datos_basicos.tipo_prima ?? "directa",
 			es_retroactiva: formState.datos_basicos.es_retroactiva ?? false,
 			es_renovacion: formState.datos_basicos.es_renovacion || false,
-			nro_poliza_anterior: formState.datos_basicos.es_renovacion ? (formState.datos_basicos.nro_poliza_anterior || null) : null,
+			nro_poliza_anterior: formState.datos_basicos.es_renovacion
+				? formState.datos_basicos.nro_poliza_anterior || null
+				: null,
 			regional_asegurado_id: regionalAseguradoId,
 			tiene_maternidad: tieneMaternidad,
 		};
@@ -362,10 +369,7 @@ export async function actualizarPoliza(
 		}
 
 		// 1. Update main policy
-		const { error: updateError } = await supabase
-			.from("polizas")
-			.update(updatePayload)
-			.eq("id", polizaId);
+		const { error: updateError } = await supabase.from("polizas").update(updatePayload).eq("id", polizaId);
 
 		if (updateError) {
 			console.error("[actualizarPoliza] Update error:", updateError);
@@ -374,14 +378,12 @@ export async function actualizarPoliza(
 
 		// 2. Update payments - usar UPDATE para cuotas existentes (evita problemas de constraint único)
 		// Map de cuotas pagadas por id para verificación rápida
-		const idsCuotasPagadas = new Set(cuotasPagadas.map(p => p.id));
+		const idsCuotasPagadas = new Set(cuotasPagadas.map((p) => p.id));
 
 		if (sinPrimaPropia) {
 			// Póliza madre / open-cover: no debe tener cuotas propias.
 			// Eliminar cuotas no pagadas existentes (la prima llega por anexos).
-			const idsNoPagadas = (currentPagos || [])
-				.filter(p => p.estado !== "pagado")
-				.map(p => p.id);
+			const idsNoPagadas = (currentPagos || []).filter((p) => p.estado !== "pagado").map((p) => p.id);
 			if (idsNoPagadas.length > 0) {
 				const supabaseAdmin = createAdminClient();
 				const { error: deleteError } = await supabaseAdmin
@@ -390,7 +392,10 @@ export async function actualizarPoliza(
 					.in("id", idsNoPagadas);
 				if (deleteError) {
 					console.error("[actualizarPoliza] Error deleting cuotas (sin_prima_propia):", deleteError);
-					return { success: false, error: mapSupabaseError(deleteError, "Error al limpiar cuotas anteriores") };
+					return {
+						success: false,
+						error: mapSupabaseError(deleteError, "Error al limpiar cuotas anteriores"),
+					};
 				}
 			}
 		} else if (formState.modalidad_pago.tipo === "contado") {
@@ -398,14 +403,14 @@ export async function actualizarPoliza(
 			// Retroactiva sin prima registrada (cuota 0): no crear cuota (CHECK monto > 0)
 			if (!cuotaUnica || cuotaUnica <= 0) {
 				// Si quedó una cuota previa no pagada, eliminarla
-				const cuotaPrevia = currentPagos?.find(p => p.numero_cuota === 1 && p.estado !== "pagado");
+				const cuotaPrevia = currentPagos?.find((p) => p.numero_cuota === 1 && p.estado !== "pagado");
 				if (cuotaPrevia) {
 					const supabaseAdmin = createAdminClient();
 					await supabaseAdmin.from("polizas_pagos").delete().eq("id", cuotaPrevia.id);
 				}
 			} else {
 				// Buscar la cuota existente para contado
-				const cuotaExistente = currentPagos?.find(p => p.numero_cuota === 1);
+				const cuotaExistente = currentPagos?.find((p) => p.numero_cuota === 1);
 
 				if (cuotaExistente) {
 					// Solo actualizar si no está pagada
@@ -449,9 +454,7 @@ export async function actualizarPoliza(
 			const supabaseAdmin = createAdminClient();
 
 			// 1. Eliminar cuotas no pagadas (las pagadas se preservan intactas)
-			const idsNoPagadas = (currentPagos || [])
-				.filter(p => p.estado !== "pagado")
-				.map(p => p.id);
+			const idsNoPagadas = (currentPagos || []).filter((p) => p.estado !== "pagado").map((p) => p.id);
 
 			if (idsNoPagadas.length > 0) {
 				const { error: deleteError } = await supabaseAdmin
@@ -461,7 +464,10 @@ export async function actualizarPoliza(
 
 				if (deleteError) {
 					console.error("[actualizarPoliza] Error deleting old cuotas:", deleteError);
-					return { success: false, error: mapSupabaseError(deleteError, "Error al limpiar cuotas anteriores") };
+					return {
+						success: false,
+						error: mapSupabaseError(deleteError, "Error al limpiar cuotas anteriores"),
+					};
 				}
 			}
 
@@ -478,8 +484,8 @@ export async function actualizarPoliza(
 
 			// Cuota inicial
 			if (formState.modalidad_pago.cuota_inicial > 0) {
-				const cuotaInicialPagada = cuotasPagadas.some(
-					p => p.observaciones?.toLowerCase().includes("inicial")
+				const cuotaInicialPagada = cuotasPagadas.some((p) =>
+					p.observaciones?.toLowerCase().includes("inicial"),
 				);
 
 				if (!cuotaInicialPagada) {
@@ -497,8 +503,7 @@ export async function actualizarPoliza(
 
 			// Cuotas regulares
 			for (const cuota of formState.modalidad_pago.cuotas) {
-				const estaPagada = cuota.estado === "pagado" ||
-					(cuota.id && idsCuotasPagadas.has(cuota.id));
+				const estaPagada = cuota.estado === "pagado" || (cuota.id && idsCuotasPagadas.has(cuota.id));
 
 				if (!estaPagada) {
 					nuevasCuotas.push({
@@ -514,9 +519,7 @@ export async function actualizarPoliza(
 
 			// 3. Insertar todas las cuotas nuevas en una sola operación
 			if (nuevasCuotas.length > 0) {
-				const { error: insertError } = await supabase
-					.from("polizas_pagos")
-					.insert(nuevasCuotas);
+				const { error: insertError } = await supabase.from("polizas_pagos").insert(nuevasCuotas);
 
 				if (insertError) {
 					console.error("[actualizarPoliza] Error inserting cuotas:", insertError);
@@ -541,26 +544,24 @@ export async function actualizarPoliza(
 			}
 
 			// Insert new vehicles
-			const vehiculos = formState.datos_especificos.datos.vehiculos.map(
-				(vehiculo) => ({
-					poliza_id: polizaId,
-					placa: vehiculo.placa,
-					valor_asegurado: vehiculo.valor_asegurado,
-					franquicia: vehiculo.franquicia,
-					nro_chasis: vehiculo.nro_chasis,
-					uso: vehiculo.uso,
-					coaseguro: vehiculo.coaseguro || 0,
-					tipo_vehiculo_id: vehiculo.tipo_vehiculo_id || null,
-					marca_id: vehiculo.marca_id || null,
-					modelo: vehiculo.modelo || null,
-					ano: vehiculo.ano || null,
-					color: vehiculo.color || null,
-					ejes: vehiculo.ejes || null,
-					nro_motor: vehiculo.nro_motor || null,
-					nro_asientos: vehiculo.nro_asientos || null,
-					plaza_circulacion: vehiculo.plaza_circulacion || null,
-				})
-			);
+			const vehiculos = formState.datos_especificos.datos.vehiculos.map((vehiculo) => ({
+				poliza_id: polizaId,
+				placa: vehiculo.placa,
+				valor_asegurado: vehiculo.valor_asegurado,
+				franquicia: vehiculo.franquicia,
+				nro_chasis: vehiculo.nro_chasis,
+				uso: vehiculo.uso,
+				coaseguro: vehiculo.coaseguro || 0,
+				tipo_vehiculo_id: vehiculo.tipo_vehiculo_id || null,
+				marca_id: vehiculo.marca_id || null,
+				modelo: vehiculo.modelo || null,
+				ano: vehiculo.ano || null,
+				color: vehiculo.color || null,
+				ejes: vehiculo.ejes || null,
+				nro_motor: vehiculo.nro_motor || null,
+				nro_asientos: vehiculo.nro_asientos || null,
+				plaza_circulacion: vehiculo.plaza_circulacion || null,
+			}));
 
 			if (vehiculos.length > 0) {
 				const { error: insVehError } = await supabaseAdmin
@@ -606,14 +607,14 @@ export async function actualizarPoliza(
 
 			// Insert new niveles
 			if (datosSalud.niveles.length > 0) {
-				const { error: errNiveles } = await supabase
-					.from("polizas_salud_niveles")
-					.insert(datosSalud.niveles.map(n => ({
+				const { error: errNiveles } = await supabase.from("polizas_salud_niveles").insert(
+					datosSalud.niveles.map((n) => ({
 						id: n.id,
 						poliza_id: polizaId,
 						nombre: n.nombre,
 						monto: n.monto,
-					})));
+					})),
+				);
 				if (errNiveles) {
 					return { success: false, error: `Error al guardar niveles de salud: ${errNiveles.message}` };
 				}
@@ -621,14 +622,12 @@ export async function actualizarPoliza(
 
 			// Insert contratante
 			if (datosSalud.contratante) {
-				const { error: errAseg } = await supabase
-					.from("polizas_salud_asegurados")
-					.insert({
-						poliza_id: polizaId,
-						client_id: datosSalud.contratante.client_id,
-						nivel_id: datosSalud.contratante.nivel_id,
-						rol: datosSalud.contratante.rol,
-					});
+				const { error: errAseg } = await supabase.from("polizas_salud_asegurados").insert({
+					poliza_id: polizaId,
+					client_id: datosSalud.contratante.client_id,
+					nivel_id: datosSalud.contratante.nivel_id,
+					rol: datosSalud.contratante.rol,
+				});
 				if (errAseg) {
 					return { success: false, error: `Error al guardar contratante de salud: ${errAseg.message}` };
 				}
@@ -658,18 +657,16 @@ export async function actualizarPoliza(
 					...(titular.descendientes || []),
 				];
 				for (const familiar of familiaresTitular) {
-					const { error: errFam } = await supabase
-						.from("polizas_salud_beneficiarios")
-						.insert({
-							poliza_id: polizaId,
-							nombre_completo: familiar.nombre_completo,
-							carnet: familiar.carnet,
-							fecha_nacimiento: familiar.fecha_nacimiento || null,
-							genero: familiar.genero || null,
-							nivel_id: familiar.nivel_id,
-							rol: familiar.rol,
-							titular_id: titularDB?.id || null,
-						});
+					const { error: errFam } = await supabase.from("polizas_salud_beneficiarios").insert({
+						poliza_id: polizaId,
+						nombre_completo: familiar.nombre_completo,
+						carnet: familiar.carnet,
+						fecha_nacimiento: familiar.fecha_nacimiento || null,
+						genero: familiar.genero || null,
+						nivel_id: familiar.nivel_id,
+						rol: familiar.rol,
+						titular_id: titularDB?.id || null,
+					});
 					if (errFam) {
 						return { success: false, error: `Error al guardar familiar del titular: ${errFam.message}` };
 					}
@@ -683,20 +680,21 @@ export async function actualizarPoliza(
 					...(datosSalud.contratante.descendientes || []),
 				];
 				for (const familiar of familiaresContratante) {
-					const { error: errFam } = await supabase
-						.from("polizas_salud_beneficiarios")
-						.insert({
-							poliza_id: polizaId,
-							nombre_completo: familiar.nombre_completo,
-							carnet: familiar.carnet,
-							fecha_nacimiento: familiar.fecha_nacimiento || null,
-							genero: familiar.genero || null,
-							nivel_id: familiar.nivel_id,
-							rol: familiar.rol,
-							titular_id: null,
-						});
+					const { error: errFam } = await supabase.from("polizas_salud_beneficiarios").insert({
+						poliza_id: polizaId,
+						nombre_completo: familiar.nombre_completo,
+						carnet: familiar.carnet,
+						fecha_nacimiento: familiar.fecha_nacimiento || null,
+						genero: familiar.genero || null,
+						nivel_id: familiar.nivel_id,
+						rol: familiar.rol,
+						titular_id: null,
+					});
 					if (errFam) {
-						return { success: false, error: `Error al guardar familiar del contratante: ${errFam.message}` };
+						return {
+							success: false,
+							error: `Error al guardar familiar del contratante: ${errFam.message}`,
+						};
 					}
 				}
 			}
@@ -731,10 +729,7 @@ export async function actualizarPoliza(
 				return { success: false, error: `Error al limpiar asegurados: ${delAseg.message}` };
 			}
 
-			const { error: delNiv } = await supabaseAdmin
-				.from("polizas_niveles")
-				.delete()
-				.eq("poliza_id", polizaId);
+			const { error: delNiv } = await supabaseAdmin.from("polizas_niveles").delete().eq("poliza_id", polizaId);
 			if (delNiv) {
 				return { success: false, error: `Error al limpiar niveles: ${delNiv.message}` };
 			}
@@ -767,8 +762,8 @@ export async function actualizarPoliza(
 				const aseguradosSep = sepData.asegurados || [];
 				if (aseguradosSep.length > 0) {
 					const insertData = aseguradosSep
-						.filter(a => nivelIdMap.has(a.nivel_id))
-						.map(a => ({
+						.filter((a) => nivelIdMap.has(a.nivel_id))
+						.map((a) => ({
 							poliza_id: polizaId,
 							client_id: a.client_id,
 							nivel_id: nivelIdMap.get(a.nivel_id)!,
@@ -776,9 +771,7 @@ export async function actualizarPoliza(
 							rol: a.rol || null,
 						}));
 					if (insertData.length > 0) {
-						const { error: errAseg } = await supabase
-							.from("polizas_asegurados_nivel")
-							.insert(insertData);
+						const { error: errAseg } = await supabase.from("polizas_asegurados_nivel").insert(insertData);
 						if (errAseg) {
 							return { success: false, error: `Error al guardar asegurados: ${errAseg.message}` };
 						}
@@ -788,15 +781,13 @@ export async function actualizarPoliza(
 				// Vida / Accidentes Personales: contratante in polizas_asegurados_nivel, asegurados (minimal) in polizas_beneficiarios
 				const apVidaData = datosNivel as DatosVida;
 				if (apVidaData.contratante && nivelIdMap.has(apVidaData.contratante.nivel_id)) {
-					const { error: errAseg } = await supabase
-						.from("polizas_asegurados_nivel")
-						.insert({
-							poliza_id: polizaId,
-							client_id: apVidaData.contratante.client_id,
-							nivel_id: nivelIdMap.get(apVidaData.contratante.nivel_id)!,
-							rol: apVidaData.contratante.rol,
-							cargo: null,
-						});
+					const { error: errAseg } = await supabase.from("polizas_asegurados_nivel").insert({
+						poliza_id: polizaId,
+						client_id: apVidaData.contratante.client_id,
+						nivel_id: nivelIdMap.get(apVidaData.contratante.nivel_id)!,
+						rol: apVidaData.contratante.rol,
+						cargo: null,
+					});
 					if (errAseg) {
 						return { success: false, error: `Error al guardar contratante: ${errAseg.message}` };
 					}
@@ -804,8 +795,8 @@ export async function actualizarPoliza(
 				const aseguradosMin = apVidaData.asegurados || [];
 				if (aseguradosMin.length > 0) {
 					const insertData = aseguradosMin
-						.filter(a => nivelIdMap.has(a.nivel_id))
-						.map(a => ({
+						.filter((a) => nivelIdMap.has(a.nivel_id))
+						.map((a) => ({
 							poliza_id: polizaId,
 							nombre_completo: a.nombre_completo,
 							carnet: a.carnet,
@@ -815,9 +806,7 @@ export async function actualizarPoliza(
 							rol: "asegurado",
 						}));
 					if (insertData.length > 0) {
-						const { error: errBenef } = await supabase
-							.from("polizas_beneficiarios")
-							.insert(insertData);
+						const { error: errBenef } = await supabase.from("polizas_beneficiarios").insert(insertData);
 						if (errBenef) {
 							return { success: false, error: `Error al guardar asegurados: ${errBenef.message}` };
 						}
@@ -827,402 +816,421 @@ export async function actualizarPoliza(
 		}
 
 		// 3d. Update Incendio y Aliados data
-	if (formState.datos_especificos?.tipo_ramo === "Incendio y Aliados") {
-		const datosIncendio = formState.datos_especificos.datos;
+		if (formState.datos_especificos?.tipo_ramo === "Incendio y Aliados") {
+			const datosIncendio = formState.datos_especificos.datos;
 
-		// Delete existing bienes (items cascade automatically via FK)
-		const { error: delBienes } = await supabase
-			.from("polizas_incendio_bienes")
-			.delete()
-			.eq("poliza_id", polizaId);
-		if (delBienes) {
-			return { success: false, error: `Error al limpiar bienes de incendio: ${delBienes.message}` };
-		}
-
-		// Delete existing asegurados
-		const { error: delAsegIncendio } = await supabase
-			.from("polizas_incendio_asegurados")
-			.delete()
-			.eq("poliza_id", polizaId);
-		if (delAsegIncendio) {
-			return { success: false, error: `Error al limpiar asegurados de incendio: ${delAsegIncendio.message}` };
-		}
-
-		// Insert new bienes and their items
-		for (const bien of datosIncendio.bienes) {
-			const { data: bienDB, error: errBien } = await supabase
+			// Delete existing bienes (items cascade automatically via FK)
+			const { error: delBienes } = await supabase
 				.from("polizas_incendio_bienes")
-				.insert({
-					poliza_id: polizaId,
-					direccion: bien.direccion,
-					valor_total_declarado: bien.valor_total_declarado,
-					es_primer_riesgo: bien.es_primer_riesgo,
-				})
-				.select("id")
-				.single();
-
-			if (errBien || !bienDB) {
-				return { success: false, error: `Error al guardar bien de incendio: ${errBien?.message}` };
+				.delete()
+				.eq("poliza_id", polizaId);
+			if (delBienes) {
+				return { success: false, error: `Error al limpiar bienes de incendio: ${delBienes.message}` };
 			}
 
-			if (bien.items.length > 0) {
-				const { error: errItems } = await supabase
-					.from("polizas_incendio_items")
-					.insert(bien.items.map(item => ({
-						bien_id: bienDB.id,
-						nombre: item.nombre,
-						monto: item.monto,
-					})));
-				if (errItems) {
-					return { success: false, error: `Error al guardar items de incendio: ${errItems.message}` };
+			// Delete existing asegurados
+			const { error: delAsegIncendio } = await supabase
+				.from("polizas_incendio_asegurados")
+				.delete()
+				.eq("poliza_id", polizaId);
+			if (delAsegIncendio) {
+				return { success: false, error: `Error al limpiar asegurados de incendio: ${delAsegIncendio.message}` };
+			}
+
+			// Insert new bienes and their items
+			for (const bien of datosIncendio.bienes) {
+				const { data: bienDB, error: errBien } = await supabase
+					.from("polizas_incendio_bienes")
+					.insert({
+						poliza_id: polizaId,
+						direccion: bien.direccion,
+						valor_total_declarado: bien.valor_total_declarado,
+						es_primer_riesgo: bien.es_primer_riesgo,
+					})
+					.select("id")
+					.single();
+
+				if (errBien || !bienDB) {
+					return { success: false, error: `Error al guardar bien de incendio: ${errBien?.message}` };
+				}
+
+				if (bien.items.length > 0) {
+					const { error: errItems } = await supabase.from("polizas_incendio_items").insert(
+						bien.items.map((item) => ({
+							bien_id: bienDB.id,
+							nombre: item.nombre,
+							monto: item.monto,
+						})),
+					);
+					if (errItems) {
+						return { success: false, error: `Error al guardar items de incendio: ${errItems.message}` };
+					}
+				}
+			}
+
+			// Insert new asegurados
+			const aseguradosIncendio = datosIncendio.asegurados || [];
+			if (aseguradosIncendio.length > 0) {
+				const { error: errAsegIncendio } = await supabase.from("polizas_incendio_asegurados").insert(
+					aseguradosIncendio.map((a) => ({
+						poliza_id: polizaId,
+						client_id: a.client_id,
+					})),
+				);
+				if (errAsegIncendio) {
+					return {
+						success: false,
+						error: `Error al guardar asegurados de incendio: ${errAsegIncendio.message}`,
+					};
 				}
 			}
 		}
 
-		// Insert new asegurados
-		const aseguradosIncendio = datosIncendio.asegurados || [];
-		if (aseguradosIncendio.length > 0) {
-			const { error: errAsegIncendio } = await supabase
-				.from("polizas_incendio_asegurados")
-				.insert(aseguradosIncendio.map(a => ({
-					poliza_id: polizaId,
-					client_id: a.client_id,
-				})));
-			if (errAsegIncendio) {
-				return { success: false, error: `Error al guardar asegurados de incendio: ${errAsegIncendio.message}` };
-			}
-		}
-	}
+		// 3e. Update Responsabilidad Civil vehicles
+		if (formState.datos_especificos?.tipo_ramo === "Responsabilidad Civil") {
+			const datosRC = formState.datos_especificos.datos;
 
-	// 3e. Update Responsabilidad Civil vehicles
-	if (formState.datos_especificos?.tipo_ramo === "Responsabilidad Civil") {
-		const datosRC = formState.datos_especificos.datos;
-
-		// Update main RC record
-		const { error: errRC } = await supabase
-			.from("polizas_responsabilidad_civil")
-			.update({
-				tipo_poliza: datosRC.tipo_poliza,
-				valor_asegurado: datosRC.valor_asegurado,
-			})
-			.eq("poliza_id", polizaId);
-		if (errRC) {
-			return { success: false, error: `Error al actualizar datos de responsabilidad civil: ${errRC.message}` };
-		}
-
-		// Replace vehicles: delete all and re-insert
-		const { error: delVehiculos } = await supabase
-			.from("polizas_rc_vehiculos")
-			.delete()
-			.eq("poliza_id", polizaId);
-		if (delVehiculos) {
-			return { success: false, error: `Error al limpiar vehículos RC: ${delVehiculos.message}` };
-		}
-
-		if (datosRC.vehiculos && datosRC.vehiculos.length > 0) {
-			const { error: insVehiculos } = await supabase
-				.from("polizas_rc_vehiculos")
-				.insert(datosRC.vehiculos.map((v) => ({
-					poliza_id: polizaId,
-					placa: v.placa,
-					nro_chasis: v.nro_chasis,
-					uso: v.uso,
-					tipo_vehiculo_id: v.tipo_vehiculo_id ?? null,
-					marca_vehiculo_id: v.marca_vehiculo_id ?? null,
-					modelo: v.modelo ?? null,
-					ano: v.ano ?? null,
-					color: v.color ?? null,
-					nro_motor: v.nro_motor ?? null,
-					servicio: v.servicio ?? null,
-					capacidad: v.capacidad ?? null,
-					region_uso: v.region_uso ?? null,
-					tipo_carroceria: v.tipo_carroceria ?? null,
-					propiedad: v.propiedad ?? null,
-					ejes: v.ejes ?? null,
-					asientos: v.asientos ?? null,
-					cilindrada: v.cilindrada ?? null,
-				})));
-			if (insVehiculos) {
-				return { success: false, error: `Error al guardar vehículos RC: ${insVehiculos.message}` };
-			}
-		}
-	}
-
-	// 3f. Update Transporte data (fila 1:1 — UPDATE si existe, si no INSERT; sin política DELETE)
-	if (formState.datos_especificos?.tipo_ramo === "Transportes") {
-		const datosTransporte = formState.datos_especificos.datos;
-
-		const payloadTransporte = {
-			materia_asegurada: datosTransporte.materia_asegurada,
-			tipo_embalaje: datosTransporte.tipo_embalaje,
-			fecha_embarque: datosTransporte.fecha_embarque,
-			tipo_transporte: datosTransporte.tipo_transporte,
-			pais_origen_id: datosTransporte.pais_origen_id,
-			ciudad_origen: datosTransporte.ciudad_origen,
-			pais_destino_id: datosTransporte.pais_destino_id,
-			ciudad_destino: datosTransporte.ciudad_destino,
-			valor_asegurado: datosTransporte.valor_asegurado,
-			factura: datosTransporte.factura,
-			fecha_factura: datosTransporte.fecha_factura,
-			cobertura_a: datosTransporte.cobertura_a,
-			cobertura_c: datosTransporte.cobertura_c,
-			modalidad: datosTransporte.modalidad,
-		};
-
-		const { data: existeTransporte } = await supabase
-			.from("polizas_transporte")
-			.select("id")
-			.eq("poliza_id", polizaId)
-			.maybeSingle();
-
-		if (existeTransporte) {
-			const { error: errTransporte } = await supabase
-				.from("polizas_transporte")
-				.update(payloadTransporte)
-				.eq("poliza_id", polizaId);
-			if (errTransporte) {
-				return { success: false, error: `Error al actualizar datos de transporte: ${errTransporte.message}` };
-			}
-		} else {
-			const { error: errTransporte } = await supabase
-				.from("polizas_transporte")
-				.insert({ poliza_id: polizaId, ...payloadTransporte });
-			if (errTransporte) {
-				return { success: false, error: `Error al guardar datos de transporte: ${errTransporte.message}` };
-			}
-		}
-	}
-
-	// 3g. Update Aeronavegación / Naves o embarcaciones data (niveles + naves + asegurados por reemplazo)
-	if (
-		formState.datos_especificos?.tipo_ramo === "Aeronavegación" ||
-		formState.datos_especificos?.tipo_ramo === "Naves o embarcaciones"
-	) {
-		const datosAero = formState.datos_especificos.datos;
-
-		// Borrar naves antes que niveles (FK nivel_ap_id es ON DELETE SET NULL), luego asegurados
-		const { error: delNaves } = await supabase
-			.from("polizas_aeronavegacion_naves")
-			.delete()
-			.eq("poliza_id", polizaId);
-		if (delNaves) {
-			return { success: false, error: `Error al limpiar naves: ${delNaves.message}` };
-		}
-
-		const { error: delNiveles } = await supabase
-			.from("polizas_aeronavegacion_niveles_ap")
-			.delete()
-			.eq("poliza_id", polizaId);
-		if (delNiveles) {
-			return { success: false, error: `Error al limpiar niveles AP: ${delNiveles.message}` };
-		}
-
-		const { error: delAsegAero } = await supabase
-			.from("polizas_aeronavegacion_asegurados")
-			.delete()
-			.eq("poliza_id", polizaId);
-		if (delAsegAero) {
-			return { success: false, error: `Error al limpiar asegurados de aeronavegación: ${delAsegAero.message}` };
-		}
-
-		// Reinsertar niveles AP y mapear id de cliente -> id de BD para las naves
-		const nivelApIdMap = new Map<string, string>();
-		for (const nivel of datosAero.niveles_ap || []) {
-			const { data: nivelDB, error: errNivel } = await supabase
-				.from("polizas_aeronavegacion_niveles_ap")
-				.insert({
-					poliza_id: polizaId,
-					nombre: nivel.nombre,
-					monto_muerte_accidental: nivel.monto_muerte_accidental,
-					monto_invalidez: nivel.monto_invalidez,
-					monto_gastos_medicos: nivel.monto_gastos_medicos,
-				})
-				.select("id")
-				.single();
-			if (errNivel) {
-				return { success: false, error: `Error al guardar nivel de AP: ${errNivel.message}` };
-			}
-			if (nivelDB) {
-				nivelApIdMap.set(nivel.id, nivelDB.id);
-			}
-		}
-
-		const naves = datosAero.naves || [];
-		if (naves.length > 0) {
-			const { error: errNaves } = await supabase
-				.from("polizas_aeronavegacion_naves")
-				.insert(naves.map((nave) => ({
-					poliza_id: polizaId,
-					matricula: nave.matricula,
-					marca: nave.marca,
-					modelo: nave.modelo,
-					ano: nave.ano,
-					serie: nave.serie || "",
-					uso: nave.uso,
-					nro_pasajeros: nave.nro_pasajeros,
-					nro_tripulantes: nave.nro_tripulantes,
-					valor_casco: nave.valor_casco,
-					valor_responsabilidad_civil: nave.valor_responsabilidad_civil,
-					nivel_ap_id: nave.nivel_ap_id ? (nivelApIdMap.get(nave.nivel_ap_id) || null) : null,
-				})));
-			if (errNaves) {
-				return { success: false, error: `Error al guardar naves/embarcaciones: ${errNaves.message}` };
-			}
-		}
-
-		const aseguradosAero = datosAero.asegurados_adicionales || [];
-		if (aseguradosAero.length > 0) {
-			const { error: errAsegAero } = await supabase
-				.from("polizas_aeronavegacion_asegurados")
-				.insert(aseguradosAero.map((a) => ({
-					poliza_id: polizaId,
-					client_id: a.client_id,
-				})));
-			if (errAsegAero) {
-				return { success: false, error: `Error al guardar asegurados de aeronavegación: ${errAsegAero.message}` };
-			}
-		}
-	}
-
-	// 3h. Update Ramos técnicos data (fila 1:1 principal sin DELETE + equipos por reemplazo)
-	if (formState.datos_especificos?.tipo_ramo === "Ramos técnicos") {
-		const datosRT = formState.datos_especificos.datos;
-
-		const { data: existeRT } = await supabase
-			.from("polizas_ramos_tecnicos")
-			.select("id")
-			.eq("poliza_id", polizaId)
-			.maybeSingle();
-
-		if (existeRT) {
-			const { error: errRT } = await supabase
-				.from("polizas_ramos_tecnicos")
+			// Update main RC record
+			const { error: errRC } = await supabase
+				.from("polizas_responsabilidad_civil")
 				.update({
-					valor_asegurado: datosRT.valor_asegurado,
-					tipo_poliza: datosRT.tipo_poliza,
+					tipo_poliza: datosRC.tipo_poliza,
+					valor_asegurado: datosRC.valor_asegurado,
 				})
 				.eq("poliza_id", polizaId);
-			if (errRT) {
-				return { success: false, error: `Error al actualizar datos de ramos técnicos: ${errRT.message}` };
+			if (errRC) {
+				return {
+					success: false,
+					error: `Error al actualizar datos de responsabilidad civil: ${errRC.message}`,
+				};
 			}
-		} else {
-			const { error: errRT } = await supabase
+
+			// Replace vehicles: delete all and re-insert
+			const { error: delVehiculos } = await supabase
+				.from("polizas_rc_vehiculos")
+				.delete()
+				.eq("poliza_id", polizaId);
+			if (delVehiculos) {
+				return { success: false, error: `Error al limpiar vehículos RC: ${delVehiculos.message}` };
+			}
+
+			if (datosRC.vehiculos && datosRC.vehiculos.length > 0) {
+				const { error: insVehiculos } = await supabase.from("polizas_rc_vehiculos").insert(
+					datosRC.vehiculos.map((v) => ({
+						poliza_id: polizaId,
+						placa: v.placa,
+						nro_chasis: v.nro_chasis,
+						uso: v.uso,
+						tipo_vehiculo_id: v.tipo_vehiculo_id ?? null,
+						marca_vehiculo_id: v.marca_vehiculo_id ?? null,
+						modelo: v.modelo ?? null,
+						ano: v.ano ?? null,
+						color: v.color ?? null,
+						nro_motor: v.nro_motor ?? null,
+						servicio: v.servicio ?? null,
+						capacidad: v.capacidad ?? null,
+						region_uso: v.region_uso ?? null,
+						tipo_carroceria: v.tipo_carroceria ?? null,
+						propiedad: v.propiedad ?? null,
+						ejes: v.ejes ?? null,
+						asientos: v.asientos ?? null,
+						cilindrada: v.cilindrada ?? null,
+					})),
+				);
+				if (insVehiculos) {
+					return { success: false, error: `Error al guardar vehículos RC: ${insVehiculos.message}` };
+				}
+			}
+		}
+
+		// 3f. Update Transporte data (fila 1:1 — UPDATE si existe, si no INSERT; sin política DELETE)
+		if (formState.datos_especificos?.tipo_ramo === "Transportes") {
+			const datosTransporte = formState.datos_especificos.datos;
+
+			const payloadTransporte = {
+				materia_asegurada: datosTransporte.materia_asegurada,
+				tipo_embalaje: datosTransporte.tipo_embalaje,
+				fecha_embarque: datosTransporte.fecha_embarque,
+				tipo_transporte: datosTransporte.tipo_transporte,
+				pais_origen_id: datosTransporte.pais_origen_id,
+				ciudad_origen: datosTransporte.ciudad_origen,
+				pais_destino_id: datosTransporte.pais_destino_id,
+				ciudad_destino: datosTransporte.ciudad_destino,
+				valor_asegurado: datosTransporte.valor_asegurado,
+				factura: datosTransporte.factura,
+				fecha_factura: datosTransporte.fecha_factura,
+				cobertura_a: datosTransporte.cobertura_a,
+				cobertura_c: datosTransporte.cobertura_c,
+				modalidad: datosTransporte.modalidad,
+			};
+
+			const { data: existeTransporte } = await supabase
+				.from("polizas_transporte")
+				.select("id")
+				.eq("poliza_id", polizaId)
+				.maybeSingle();
+
+			if (existeTransporte) {
+				const { error: errTransporte } = await supabase
+					.from("polizas_transporte")
+					.update(payloadTransporte)
+					.eq("poliza_id", polizaId);
+				if (errTransporte) {
+					return {
+						success: false,
+						error: `Error al actualizar datos de transporte: ${errTransporte.message}`,
+					};
+				}
+			} else {
+				const { error: errTransporte } = await supabase
+					.from("polizas_transporte")
+					.insert({ poliza_id: polizaId, ...payloadTransporte });
+				if (errTransporte) {
+					return { success: false, error: `Error al guardar datos de transporte: ${errTransporte.message}` };
+				}
+			}
+		}
+
+		// 3g. Update Aeronavegación / Naves o embarcaciones data (niveles + naves + asegurados por reemplazo)
+		if (
+			formState.datos_especificos?.tipo_ramo === "Aeronavegación" ||
+			formState.datos_especificos?.tipo_ramo === "Naves o embarcaciones"
+		) {
+			const datosAero = formState.datos_especificos.datos;
+
+			// Borrar naves antes que niveles (FK nivel_ap_id es ON DELETE SET NULL), luego asegurados
+			const { error: delNaves } = await supabase
+				.from("polizas_aeronavegacion_naves")
+				.delete()
+				.eq("poliza_id", polizaId);
+			if (delNaves) {
+				return { success: false, error: `Error al limpiar naves: ${delNaves.message}` };
+			}
+
+			const { error: delNiveles } = await supabase
+				.from("polizas_aeronavegacion_niveles_ap")
+				.delete()
+				.eq("poliza_id", polizaId);
+			if (delNiveles) {
+				return { success: false, error: `Error al limpiar niveles AP: ${delNiveles.message}` };
+			}
+
+			const { error: delAsegAero } = await supabase
+				.from("polizas_aeronavegacion_asegurados")
+				.delete()
+				.eq("poliza_id", polizaId);
+			if (delAsegAero) {
+				return {
+					success: false,
+					error: `Error al limpiar asegurados de aeronavegación: ${delAsegAero.message}`,
+				};
+			}
+
+			// Reinsertar niveles AP y mapear id de cliente -> id de BD para las naves
+			const nivelApIdMap = new Map<string, string>();
+			for (const nivel of datosAero.niveles_ap || []) {
+				const { data: nivelDB, error: errNivel } = await supabase
+					.from("polizas_aeronavegacion_niveles_ap")
+					.insert({
+						poliza_id: polizaId,
+						nombre: nivel.nombre,
+						monto_muerte_accidental: nivel.monto_muerte_accidental,
+						monto_invalidez: nivel.monto_invalidez,
+						monto_gastos_medicos: nivel.monto_gastos_medicos,
+					})
+					.select("id")
+					.single();
+				if (errNivel) {
+					return { success: false, error: `Error al guardar nivel de AP: ${errNivel.message}` };
+				}
+				if (nivelDB) {
+					nivelApIdMap.set(nivel.id, nivelDB.id);
+				}
+			}
+
+			const naves = datosAero.naves || [];
+			if (naves.length > 0) {
+				const { error: errNaves } = await supabase.from("polizas_aeronavegacion_naves").insert(
+					naves.map((nave) => ({
+						poliza_id: polizaId,
+						matricula: nave.matricula,
+						marca: nave.marca,
+						modelo: nave.modelo,
+						ano: nave.ano,
+						serie: nave.serie || "",
+						uso: nave.uso,
+						nro_pasajeros: nave.nro_pasajeros,
+						nro_tripulantes: nave.nro_tripulantes,
+						valor_casco: nave.valor_casco,
+						valor_responsabilidad_civil: nave.valor_responsabilidad_civil,
+						nivel_ap_id: nave.nivel_ap_id ? nivelApIdMap.get(nave.nivel_ap_id) || null : null,
+					})),
+				);
+				if (errNaves) {
+					return { success: false, error: `Error al guardar naves/embarcaciones: ${errNaves.message}` };
+				}
+			}
+
+			const aseguradosAero = datosAero.asegurados_adicionales || [];
+			if (aseguradosAero.length > 0) {
+				const { error: errAsegAero } = await supabase.from("polizas_aeronavegacion_asegurados").insert(
+					aseguradosAero.map((a) => ({
+						poliza_id: polizaId,
+						client_id: a.client_id,
+					})),
+				);
+				if (errAsegAero) {
+					return {
+						success: false,
+						error: `Error al guardar asegurados de aeronavegación: ${errAsegAero.message}`,
+					};
+				}
+			}
+		}
+
+		// 3h. Update Ramos técnicos data (fila 1:1 principal sin DELETE + equipos por reemplazo)
+		if (formState.datos_especificos?.tipo_ramo === "Ramos técnicos") {
+			const datosRT = formState.datos_especificos.datos;
+
+			const { data: existeRT } = await supabase
 				.from("polizas_ramos_tecnicos")
-				.insert({
+				.select("id")
+				.eq("poliza_id", polizaId)
+				.maybeSingle();
+
+			if (existeRT) {
+				const { error: errRT } = await supabase
+					.from("polizas_ramos_tecnicos")
+					.update({
+						valor_asegurado: datosRT.valor_asegurado,
+						tipo_poliza: datosRT.tipo_poliza,
+					})
+					.eq("poliza_id", polizaId);
+				if (errRT) {
+					return { success: false, error: `Error al actualizar datos de ramos técnicos: ${errRT.message}` };
+				}
+			} else {
+				const { error: errRT } = await supabase.from("polizas_ramos_tecnicos").insert({
 					poliza_id: polizaId,
 					valor_asegurado: datosRT.valor_asegurado,
 					tipo_poliza: datosRT.tipo_poliza,
 				});
-			if (errRT) {
-				return { success: false, error: `Error al guardar datos de ramos técnicos: ${errRT.message}` };
+				if (errRT) {
+					return { success: false, error: `Error al guardar datos de ramos técnicos: ${errRT.message}` };
+				}
 			}
-		}
 
-		// Reemplazar equipos: borrar todos y reinsertar
-		const { error: delEquipos } = await supabase
-			.from("polizas_ramos_tecnicos_equipos")
-			.delete()
-			.eq("poliza_id", polizaId);
-		if (delEquipos) {
-			return { success: false, error: `Error al limpiar equipos: ${delEquipos.message}` };
-		}
-
-		const equipos = datosRT.equipos || [];
-		if (equipos.length > 0) {
-			const { error: insEquipos } = await supabase
+			// Reemplazar equipos: borrar todos y reinsertar
+			const { error: delEquipos } = await supabase
 				.from("polizas_ramos_tecnicos_equipos")
-				.insert(equipos.map((equipo) => ({
-					poliza_id: polizaId,
-					nro_serie: equipo.nro_serie,
-					valor_asegurado: equipo.valor_asegurado,
-					franquicia: equipo.franquicia,
-					nro_chasis: equipo.nro_chasis,
-					uso: equipo.uso,
-					coaseguro: equipo.coaseguro,
-					placa: equipo.placa || null,
-					tipo_equipo_id: equipo.tipo_equipo_id || null,
-					marca_equipo_id: equipo.marca_equipo_id || null,
-					modelo: equipo.modelo || null,
-					ano: equipo.ano || null,
-					color: equipo.color || null,
-					nro_motor: equipo.nro_motor || null,
-					plaza_circulacion: equipo.plaza_circulacion || null,
-				})));
-			if (insEquipos) {
-				return { success: false, error: `Error al guardar equipos: ${insEquipos.message}` };
-			}
-		}
-	}
-
-	// 3i. Update Riesgos Varios Misceláneos data (bienes con items en cascada + asegurados)
-	if (formState.datos_especificos?.tipo_ramo === "Riesgos Varios Misceláneos") {
-		const datosRV = formState.datos_especificos.datos;
-
-		// Borrar bienes (items se eliminan en cascada por FK) y asegurados
-		const { error: delBienesRV } = await supabase
-			.from("polizas_riesgos_varios_bienes")
-			.delete()
-			.eq("poliza_id", polizaId);
-		if (delBienesRV) {
-			return { success: false, error: `Error al limpiar bienes de riesgos varios: ${delBienesRV.message}` };
-		}
-
-		const { error: delAsegRV } = await supabase
-			.from("polizas_riesgos_varios_asegurados")
-			.delete()
-			.eq("poliza_id", polizaId);
-		if (delAsegRV) {
-			return { success: false, error: `Error al limpiar asegurados de riesgos varios: ${delAsegRV.message}` };
-		}
-
-		// Reinsertar bienes y sus items
-		for (const bien of datosRV.bienes) {
-			const { data: bienDB, error: errBien } = await supabase
-				.from("polizas_riesgos_varios_bienes")
-				.insert({
-					poliza_id: polizaId,
-					direccion: bien.direccion,
-					valor_total_declarado: bien.valor_total_declarado,
-					es_primer_riesgo: bien.es_primer_riesgo,
-				})
-				.select("id")
-				.single();
-			if (errBien || !bienDB) {
-				return { success: false, error: `Error al guardar bien de riesgos varios: ${errBien?.message}` };
+				.delete()
+				.eq("poliza_id", polizaId);
+			if (delEquipos) {
+				return { success: false, error: `Error al limpiar equipos: ${delEquipos.message}` };
 			}
 
-			if (bien.items.length > 0) {
-				const { error: errItems } = await supabase
-					.from("polizas_riesgos_varios_items")
-					.insert(bien.items.map((item) => ({
-						bien_id: bienDB.id,
-						nombre: item.nombre,
-						monto: item.monto,
-					})));
-				if (errItems) {
-					return { success: false, error: `Error al guardar items de riesgos varios: ${errItems.message}` };
+			const equipos = datosRT.equipos || [];
+			if (equipos.length > 0) {
+				const { error: insEquipos } = await supabase.from("polizas_ramos_tecnicos_equipos").insert(
+					equipos.map((equipo) => ({
+						poliza_id: polizaId,
+						nro_serie: equipo.nro_serie,
+						valor_asegurado: equipo.valor_asegurado,
+						franquicia: equipo.franquicia,
+						nro_chasis: equipo.nro_chasis,
+						uso: equipo.uso,
+						coaseguro: equipo.coaseguro,
+						placa: equipo.placa || null,
+						tipo_equipo_id: equipo.tipo_equipo_id || null,
+						marca_equipo_id: equipo.marca_equipo_id || null,
+						modelo: equipo.modelo || null,
+						ano: equipo.ano || null,
+						color: equipo.color || null,
+						nro_motor: equipo.nro_motor || null,
+						plaza_circulacion: equipo.plaza_circulacion || null,
+					})),
+				);
+				if (insEquipos) {
+					return { success: false, error: `Error al guardar equipos: ${insEquipos.message}` };
 				}
 			}
 		}
 
-		// Reinsertar asegurados
-		const aseguradosRV = datosRV.asegurados || [];
-		if (aseguradosRV.length > 0) {
-			const { error: errAsegRV } = await supabase
+		// 3i. Update Riesgos Varios Misceláneos data (bienes con items en cascada + asegurados)
+		if (formState.datos_especificos?.tipo_ramo === "Riesgos Varios Misceláneos") {
+			const datosRV = formState.datos_especificos.datos;
+
+			// Borrar bienes (items se eliminan en cascada por FK) y asegurados
+			const { error: delBienesRV } = await supabase
+				.from("polizas_riesgos_varios_bienes")
+				.delete()
+				.eq("poliza_id", polizaId);
+			if (delBienesRV) {
+				return { success: false, error: `Error al limpiar bienes de riesgos varios: ${delBienesRV.message}` };
+			}
+
+			const { error: delAsegRV } = await supabase
 				.from("polizas_riesgos_varios_asegurados")
-				.insert(aseguradosRV.map((a) => ({
-					poliza_id: polizaId,
-					client_id: a.client_id,
-				})));
-			if (errAsegRV) {
-				return { success: false, error: `Error al guardar asegurados de riesgos varios: ${errAsegRV.message}` };
+				.delete()
+				.eq("poliza_id", polizaId);
+			if (delAsegRV) {
+				return { success: false, error: `Error al limpiar asegurados de riesgos varios: ${delAsegRV.message}` };
+			}
+
+			// Reinsertar bienes y sus items
+			for (const bien of datosRV.bienes) {
+				const { data: bienDB, error: errBien } = await supabase
+					.from("polizas_riesgos_varios_bienes")
+					.insert({
+						poliza_id: polizaId,
+						direccion: bien.direccion,
+						valor_total_declarado: bien.valor_total_declarado,
+						es_primer_riesgo: bien.es_primer_riesgo,
+					})
+					.select("id")
+					.single();
+				if (errBien || !bienDB) {
+					return { success: false, error: `Error al guardar bien de riesgos varios: ${errBien?.message}` };
+				}
+
+				if (bien.items.length > 0) {
+					const { error: errItems } = await supabase.from("polizas_riesgos_varios_items").insert(
+						bien.items.map((item) => ({
+							bien_id: bienDB.id,
+							nombre: item.nombre,
+							monto: item.monto,
+						})),
+					);
+					if (errItems) {
+						return {
+							success: false,
+							error: `Error al guardar items de riesgos varios: ${errItems.message}`,
+						};
+					}
+				}
+			}
+
+			// Reinsertar asegurados
+			const aseguradosRV = datosRV.asegurados || [];
+			if (aseguradosRV.length > 0) {
+				const { error: errAsegRV } = await supabase.from("polizas_riesgos_varios_asegurados").insert(
+					aseguradosRV.map((a) => ({
+						poliza_id: polizaId,
+						client_id: a.client_id,
+					})),
+				);
+				if (errAsegRV) {
+					return {
+						success: false,
+						error: `Error al guardar asegurados de riesgos varios: ${errAsegRV.message}`,
+					};
+				}
 			}
 		}
-	}
 
-	// 4. Handle new documents (uploaded client-side to temp/)
+		// 4. Handle new documents (uploaded client-side to temp/)
 		const newDocuments = formState.documentos.filter(
-			(d) => d.storage_path && d.upload_status === "uploaded" && !d.id
+			(d) => d.storage_path && d.upload_status === "uploaded" && !d.id,
 		);
 
 		for (const documento of newDocuments) {
@@ -1231,9 +1239,7 @@ export async function actualizarPoliza(
 
 			// Mover archivo de temp/ a {polizaId}/
 			let usedPath = finalPath;
-			const { error: moveError } = await supabase.storage
-				.from("polizas-documentos")
-				.move(tempPath, finalPath);
+			const { error: moveError } = await supabase.storage.from("polizas-documentos").move(tempPath, finalPath);
 
 			if (moveError) {
 				console.error("[actualizarPoliza] Error moviendo documento, usando ruta temporal:", moveError);
@@ -1253,9 +1259,7 @@ export async function actualizarPoliza(
 		// 4b. Soft-delete documentos existentes que el usuario quitó durante la edición.
 		// Los documentos que se conservan llegan en formState con su `id` de BD; cualquier
 		// documento activo en BD cuyo id ya no esté presente fue removido en la UI.
-		const idsConservados = new Set(
-			formState.documentos.filter((d) => d.id).map((d) => d.id),
-		);
+		const idsConservados = new Set(formState.documentos.filter((d) => d.id).map((d) => d.id));
 
 		const { data: docsActuales } = await supabase
 			.from("polizas_documentos")
@@ -1270,10 +1274,7 @@ export async function actualizarPoliza(
 				documento_id: doc.id,
 			});
 			if (descartarError) {
-				console.error(
-					"[actualizarPoliza] Error descartando documento removido:",
-					descartarError,
-				);
+				console.error("[actualizarPoliza] Error descartando documento removido:", descartarError);
 			}
 		}
 
@@ -1289,18 +1290,20 @@ export async function actualizarPoliza(
 
 		// Comparar cuotas antiguas vs nuevas
 		const cuotasOriginales = (currentPagos || [])
-			.filter(p => p.estado !== "pagado")
-			.map(p => `${p.numero_cuota}:${p.monto}`)
+			.filter((p) => p.estado !== "pagado")
+			.map((p) => `${p.numero_cuota}:${p.monto}`)
 			.sort()
 			.join(",");
 		const cuotasNuevas = (newPagos || [])
-			.filter(p => !cuotasPagadas.some(cp => cp.numero_cuota === p.numero_cuota))
-			.map(p => `${p.numero_cuota}:${p.monto}`)
+			.filter((p) => !cuotasPagadas.some((cp) => cp.numero_cuota === p.numero_cuota))
+			.map((p) => `${p.numero_cuota}:${p.monto}`)
 			.sort()
 			.join(",");
 
 		if (cuotasOriginales !== cuotasNuevas) {
-			const { data: { user } } = await supabase.auth.getUser();
+			const {
+				data: { user },
+			} = await supabase.auth.getUser();
 			await supabase.from("polizas_historial_ediciones").insert({
 				poliza_id: polizaId,
 				accion: "edicion",

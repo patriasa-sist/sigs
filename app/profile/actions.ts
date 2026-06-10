@@ -10,7 +10,7 @@ export interface UpdateProfileResult {
 
 export async function updateCommercialProfile(
 	_prevState: UpdateProfileResult,
-	formData: FormData
+	formData: FormData,
 ): Promise<UpdateProfileResult> {
 	const supabase = await createClient();
 
@@ -27,10 +27,7 @@ export async function updateCommercialProfile(
 	const cargo = ((formData.get("cargo") as string) || "").trim();
 	const telefono = ((formData.get("telefono") as string) || "").trim();
 
-	const { error } = await supabase
-		.from("profiles")
-		.update({ acronimo, cargo, telefono })
-		.eq("id", user.id);
+	const { error } = await supabase.from("profiles").update({ acronimo, cargo, telefono }).eq("id", user.id);
 
 	if (error) return { error: error.message };
 

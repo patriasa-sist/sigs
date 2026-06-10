@@ -54,10 +54,8 @@ export default function LoginPage() {
 
 	return (
 		<div className="flex h-screen overflow-hidden">
-
 			{/* ── Brand panel (desktop only) ──────────────────────────── */}
 			<div className="hidden lg:flex lg:w-[42%] bg-primary flex-col justify-between p-10 relative overflow-hidden select-none">
-
 				{/* Decorative geometry */}
 				<div className="absolute -top-24 -right-24 w-96 h-96 rounded-full bg-white/[0.04]" />
 				<div className="absolute top-1/3 -right-16 w-56 h-56 rounded-full bg-white/[0.04]" />
@@ -83,7 +81,11 @@ export default function LoginPage() {
 						<span className="text-xs text-white/70 font-medium tracking-wide">Uso exclusivo interno</span>
 					</div>
 					<h2 className="text-3xl font-semibold text-white leading-snug tracking-tight">
-						Sistema Integral<br />de Gestión<br />de Seguros
+						Sistema Integral
+						<br />
+						de Gestión
+						<br />
+						de Seguros
 					</h2>
 					<p className="text-white/50 text-sm leading-relaxed max-w-xs">
 						Plataforma unificada para la gestión de pólizas, clientes, cobranzas y reportes gerenciales.
@@ -91,15 +93,12 @@ export default function LoginPage() {
 				</div>
 
 				{/* Bottom: version */}
-				<p className="text-white/30 text-xs">
-					Patria S.A. · Acceso restringido
-				</p>
+				<p className="text-white/30 text-xs">Patria S.A. · Acceso restringido</p>
 			</div>
 
 			{/* ── Form panel ──────────────────────────────────────────── */}
 			<div className="flex-1 flex items-center justify-center bg-background px-6 py-10">
 				<div className="w-full max-w-sm space-y-6">
-
 					{/* Mobile-only logo */}
 					<div className="lg:hidden flex justify-center">
 						<Image
@@ -124,7 +123,6 @@ export default function LoginPage() {
 						<CardContent className="p-6">
 							<Form {...form}>
 								<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
-
 									{/* Email */}
 									<FormField
 										control={form.control}
@@ -199,11 +197,7 @@ export default function LoginPage() {
 									)}
 
 									{/* Submit */}
-									<Button
-										type="submit"
-										disabled={isLoading}
-										className="w-full mt-1"
-									>
+									<Button type="submit" disabled={isLoading} className="w-full mt-1">
 										{isLoading ? (
 											<>
 												<Loader2 className="h-4 w-4 animate-spin" />
@@ -213,15 +207,12 @@ export default function LoginPage() {
 											"Iniciar sesión"
 										)}
 									</Button>
-
 								</form>
 							</Form>
 						</CardContent>
 					</Card>
-
 				</div>
 			</div>
-
 		</div>
 	);
 }

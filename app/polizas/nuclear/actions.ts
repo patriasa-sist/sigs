@@ -28,9 +28,7 @@ type ResultadoEliminacion = {
  *         los registros de BD y retorna las rutas de archivos de Storage.
  * Paso 2: Usa la Storage API para borrar los archivos físicos.
  */
-export async function eliminarPolizaNuclear(
-	polizaId: string
-): Promise<ResultadoEliminacion> {
+export async function eliminarPolizaNuclear(polizaId: string): Promise<ResultadoEliminacion> {
 	// Verificar que el usuario es admin
 	const supabase = await createClient();
 	const {
@@ -47,11 +45,7 @@ export async function eliminarPolizaNuclear(
 		};
 	}
 
-	const { data: profile } = await supabase
-		.from("profiles")
-		.select("role")
-		.eq("id", user.id)
-		.single();
+	const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
 
 	if (profile?.role !== "admin") {
 		return {
@@ -95,8 +89,7 @@ export async function eliminarPolizaNuclear(
 	}
 
 	// Paso 2: Borrar archivos de Storage via API
-	const archivos: ArchivoStorage[] =
-		resultado.detalles?.archivos_storage ?? [];
+	const archivos: ArchivoStorage[] = resultado.detalles?.archivos_storage ?? [];
 	let exitosos = 0;
 	let fallidos = 0;
 	const errores: string[] = [];
@@ -114,9 +107,7 @@ export async function eliminarPolizaNuclear(
 
 	// Borrar por bucket (Storage API soporta borrado en lote)
 	for (const [bucket, paths] of Object.entries(porBucket)) {
-		const { data: removeData, error: removeError } = await supabaseAdmin.storage
-			.from(bucket)
-			.remove(paths);
+		const { data: removeData, error: removeError } = await supabaseAdmin.storage.from(bucket).remove(paths);
 
 		if (removeError) {
 			fallidos += paths.length;
@@ -151,10 +142,7 @@ export async function previsualizarEliminacion(polizaId: string) {
 
 	const supabaseAdmin = createAdminClient();
 
-	const { data, error } = await supabaseAdmin.rpc(
-		"puede_eliminar_poliza_v2",
-		{ p_poliza_id: polizaId }
-	);
+	const { data, error } = await supabaseAdmin.rpc("puede_eliminar_poliza_v2", { p_poliza_id: polizaId });
 
 	if (error) {
 		return { error: error.message };

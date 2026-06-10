@@ -1,12 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import {
-	Dialog,
-	DialogContent,
-	DialogHeader,
-	DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2, StickyNote, AlertCircle } from "lucide-react";
@@ -31,13 +26,7 @@ interface NotasCuotaModalProps {
 	onAdded: () => void;
 }
 
-export default function NotasCuotaModal({
-	target,
-	notasIniciales,
-	open,
-	onClose,
-	onAdded,
-}: NotasCuotaModalProps) {
+export default function NotasCuotaModal({ target, notasIniciales, open, onClose, onAdded }: NotasCuotaModalProps) {
 	const [notas, setNotas] = useState<CuotaNota[]>(notasIniciales);
 	const [texto, setTexto] = useState("");
 	const [loading, setLoading] = useState(false);

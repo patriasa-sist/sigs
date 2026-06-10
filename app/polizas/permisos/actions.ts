@@ -33,7 +33,7 @@ import type {
 async function isUserTeamLeaderForResponsable(
 	supabase: Awaited<ReturnType<typeof import("@/utils/supabase/server").createClient>>,
 	userId: string,
-	responsableId: string
+	responsableId: string,
 ): Promise<boolean> {
 	// Get all teams where current user is a leader
 	const { data: leaderTeams } = await supabase
@@ -105,11 +105,7 @@ async function requireAdminOrTeamLeaderForPolicy(polizaId: string) {
 	}
 
 	// Check if team leader for this policy
-	const { data: poliza } = await supabase
-		.from("polizas")
-		.select("responsable_id")
-		.eq("id", polizaId)
-		.single();
+	const { data: poliza } = await supabase.from("polizas").select("responsable_id").eq("id", polizaId).single();
 
 	if (poliza?.responsable_id) {
 		const isLeader = await isUserTeamLeaderForResponsable(supabase, user.id, poliza.responsable_id);
@@ -131,9 +127,7 @@ async function requireAdminOrTeamLeaderForPolicy(polizaId: string) {
  * @param polizaId - UUID of the policy to check
  * @returns Permission check result with canEdit flag and reason
  */
-export async function checkPolicyEditPermission(
-	polizaId: string
-): Promise<ActionResult<PolicyPermissionCheckResult>> {
+export async function checkPolicyEditPermission(polizaId: string): Promise<ActionResult<PolicyPermissionCheckResult>> {
 	try {
 		const { supabase, user, profile } = await getAuthenticatedUserWithRole();
 
@@ -186,11 +180,7 @@ export async function checkPolicyEditPermission(
 
 		// Check if user is a team leader for this policy
 		if (polizaData?.responsable_id) {
-			const teamLeader = await isUserTeamLeaderForResponsable(
-				supabase,
-				user.id,
-				polizaData.responsable_id
-			);
+			const teamLeader = await isUserTeamLeaderForResponsable(supabase, user.id, polizaData.responsable_id);
 			if (teamLeader) {
 				return {
 					success: true,
@@ -226,7 +216,7 @@ export async function checkPolicyEditPermission(
 				expires_at,
 				granted_by,
 				granter:profiles!granted_by (full_name)
-			`
+			`,
 			)
 			.eq("poliza_id", polizaId)
 			.eq("user_id", user.id)
@@ -298,7 +288,7 @@ export async function checkPolicyEditPermission(
  * @returns Result with the new permission ID
  */
 export async function grantPolicyEditPermission(
-	input: GrantPolicyPermissionInput
+	input: GrantPolicyPermissionInput,
 ): Promise<ActionResult<{ id: string }>> {
 	try {
 		const { supabase, user, isTeamLeader } = await requireAdminOrTeamLeaderForPolicy(input.poliza_id);
@@ -414,10 +404,7 @@ export async function grantPolicyEditPermission(
  * @param notes - Optional reason for revocation
  * @returns Success/failure result
  */
-export async function revokePolicyEditPermission(
-	permissionId: string,
-	notes?: string
-): Promise<ActionResult<void>> {
+export async function revokePolicyEditPermission(permissionId: string, notes?: string): Promise<ActionResult<void>> {
 	try {
 		const { supabase, user, profile } = await getAuthenticatedUserWithRole();
 
@@ -464,9 +451,7 @@ export async function revokePolicyEditPermission(
 			.update({
 				revoked_at: new Date().toISOString(),
 				revoked_by: user.id,
-				notes: notes
-					? `Revocado: ${notes}`
-					: "Revocado",
+				notes: notes ? `Revocado: ${notes}` : "Revocado",
 			})
 			.eq("id", permissionId);
 
@@ -497,9 +482,7 @@ export async function revokePolicyEditPermission(
  * @param polizaId - UUID of the policy
  * @returns List of active permissions with user info
  */
-export async function getPolicyPermissions(
-	polizaId: string
-): Promise<ActionResult<PolicyEditPermissionViewModel[]>> {
+export async function getPolicyPermissions(polizaId: string): Promise<ActionResult<PolicyEditPermissionViewModel[]>> {
 	try {
 		const { supabase } = await requireAdminOrTeamLeaderForPolicy(polizaId);
 
@@ -516,7 +499,7 @@ export async function getPolicyPermissions(
 				notes,
 				user:profiles!user_id (full_name, email),
 				granter:profiles!granted_by (full_name)
-			`
+			`,
 			)
 			.eq("poliza_id", polizaId)
 			.is("revoked_at", null)
@@ -528,32 +511,29 @@ export async function getPolicyPermissions(
 		}
 
 		// Transform to view model - handle both array and object forms from Supabase
-		const permissions: PolicyEditPermissionViewModel[] = (data || []).map(
-			(p) => {
-				const userRaw = p.user;
-				const granterRaw = p.granter;
-				const userData = Array.isArray(userRaw) ? userRaw[0] : userRaw;
-				const granterData = Array.isArray(granterRaw) ? granterRaw[0] : granterRaw;
+		const permissions: PolicyEditPermissionViewModel[] = (data || []).map((p) => {
+			const userRaw = p.user;
+			const granterRaw = p.granter;
+			const userData = Array.isArray(userRaw) ? userRaw[0] : userRaw;
+			const granterData = Array.isArray(granterRaw) ? granterRaw[0] : granterRaw;
 
-				// Calculate if active (not expired)
-				const isActive =
-					!p.expires_at || new Date(p.expires_at) > new Date();
+			// Calculate if active (not expired)
+			const isActive = !p.expires_at || new Date(p.expires_at) > new Date();
 
-				return {
-					id: p.id,
-					poliza_id: p.poliza_id,
-					user_id: p.user_id,
-					user_name: userData?.full_name || "Desconocido",
-					user_email: userData?.email || "",
-					granted_by: p.granted_by,
-					granted_by_name: granterData?.full_name || "Desconocido",
-					granted_at: p.granted_at,
-					expires_at: p.expires_at,
-					is_active: isActive,
-					notes: p.notes,
-				};
-			}
-		);
+			return {
+				id: p.id,
+				poliza_id: p.poliza_id,
+				user_id: p.user_id,
+				user_name: userData?.full_name || "Desconocido",
+				user_email: userData?.email || "",
+				granted_by: p.granted_by,
+				granted_by_name: granterData?.full_name || "Desconocido",
+				granted_at: p.granted_at,
+				expires_at: p.expires_at,
+				is_active: isActive,
+				notes: p.notes,
+			};
+		});
 
 		return { success: true, data: permissions };
 	} catch (error) {
@@ -576,9 +556,7 @@ export async function getPolicyPermissions(
  *
  * @returns List of comercial users
  */
-export async function getComercialUsers(): Promise<
-	ActionResult<ComercialUser[]>
-> {
+export async function getComercialUsers(): Promise<ActionResult<ComercialUser[]>> {
 	try {
 		const { supabase, user, profile } = await getAuthenticatedUserWithRole();
 
@@ -620,10 +598,7 @@ export async function getComercialUsers(): Promise<
 
 		const teamIds = leaderTeams.map((t: { equipo_id: string }) => t.equipo_id);
 
-		const { data: teamMembers } = await supabase
-			.from("equipo_miembros")
-			.select("user_id")
-			.in("equipo_id", teamIds);
+		const { data: teamMembers } = await supabase.from("equipo_miembros").select("user_id").in("equipo_id", teamIds);
 
 		const memberIds = (teamMembers ?? []).map((m: { user_id: string }) => m.user_id);
 
@@ -694,9 +669,7 @@ export async function getMyPolicyEditPermissions(): Promise<
 		}
 
 		// Filter out expired permissions
-		const activePermissions = (data || []).filter(
-			(p) => !p.expires_at || new Date(p.expires_at) > new Date()
-		);
+		const activePermissions = (data || []).filter((p) => !p.expires_at || new Date(p.expires_at) > new Date());
 
 		return { success: true, data: activePermissions };
 	} catch (error) {

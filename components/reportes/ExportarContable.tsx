@@ -165,7 +165,14 @@ export default function ExportarContable({ regionales, companias, equipos }: Fil
 
 			const greenColumnIndices = columns
 				.map((col, i) =>
-					["prima_neta", "comision_empresa", "factor_prima_neta", "porcentaje_comision", "monto_cuota_pn", "monto_cuota_comision"].includes(col.key)
+					[
+						"prima_neta",
+						"comision_empresa",
+						"factor_prima_neta",
+						"porcentaje_comision",
+						"monto_cuota_pn",
+						"monto_cuota_comision",
+					].includes(col.key)
 						? i + 1
 						: -1,
 				)
@@ -206,7 +213,14 @@ export default function ExportarContable({ regionales, companias, equipos }: Fil
 			}
 
 			// Formato numérico
-			const numericKeys = ["prima_total", "prima_neta", "comision_empresa", "monto_cuota_pt", "monto_cuota_pn", "monto_cuota_comision"];
+			const numericKeys = [
+				"prima_total",
+				"prima_neta",
+				"comision_empresa",
+				"monto_cuota_pt",
+				"monto_cuota_pn",
+				"monto_cuota_comision",
+			];
 			numericKeys.forEach((key) => {
 				const colIdx = columns.findIndex((c) => c.key === key) + 1;
 				if (colIdx > 0) {

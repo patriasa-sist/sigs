@@ -118,7 +118,13 @@ export function JuridicClientForm({ form, onFieldBlur, exceptions = [] }: Juridi
 						<Label htmlFor="nit">
 							NIT <span className="text-destructive">*</span>
 						</Label>
-						<Input id="nit" {...register("nit")} onBlur={onFieldBlur} placeholder="Min. 7 dígitos" className={eb(!!errors.nit)} />
+						<Input
+							id="nit"
+							{...register("nit")}
+							onBlur={onFieldBlur}
+							placeholder="Min. 7 dígitos"
+							className={eb(!!errors.nit)}
+						/>
 						{errors.nit && <p className="text-sm text-destructive mt-1">{errors.nit.message}</p>}
 					</div>
 
@@ -325,7 +331,12 @@ export function JuridicClientForm({ form, onFieldBlur, exceptions = [] }: Juridi
 										control={control}
 										render={({ field }) => (
 											<Select value={field.value} onValueChange={field.onChange}>
-												<SelectTrigger className={cn("w-full", eb(!!errors.legal_representatives?.[index]?.tipo_documento))}>
+												<SelectTrigger
+													className={cn(
+														"w-full",
+														eb(!!errors.legal_representatives?.[index]?.tipo_documento),
+													)}
+												>
 													<SelectValue placeholder="Seleccionar" />
 												</SelectTrigger>
 												<SelectContent>

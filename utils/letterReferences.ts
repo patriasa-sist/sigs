@@ -32,11 +32,7 @@ export async function generateLetterReference(): Promise<string> {
 		// El glyph (acrónimo) del número de referencia proviene del PERFIL del usuario logueado.
 		let glyph = "ADM"; // Fallback por defecto
 
-		const { data: profile } = await supabase
-			.from("profiles")
-			.select("acronimo")
-			.eq("id", user.id)
-			.single();
+		const { data: profile } = await supabase.from("profiles").select("acronimo").eq("id", user.id).single();
 
 		if (profile?.acronimo) {
 			glyph = profile.acronimo;
@@ -73,9 +69,7 @@ export async function generateLetterReference(): Promise<string> {
 
 			if (sequentialNumber > 99999) {
 				throw new Error(
-					`Maximum letter count (99999) reached for ${glyph} in ${year}-${month
-						.toString()
-						.padStart(2, "0")}`
+					`Maximum letter count (99999) reached for ${glyph} in ${year}-${month.toString().padStart(2, "0")}`,
 				);
 			}
 

@@ -91,9 +91,7 @@ export default function EditarSiniestroForm({
 								<span className="text-border">·</span>
 								<span>{siniestro.ramo}</span>
 								<span className="text-border">·</span>
-								<span>
-									{formatDate(siniestro.fecha_siniestro)}
-								</span>
+								<span>{formatDate(siniestro.fecha_siniestro)}</span>
 							</div>
 						</div>
 					</div>
@@ -111,9 +109,7 @@ export default function EditarSiniestroForm({
 						</div>
 						<div>
 							<p className="text-xs text-muted-foreground">Compañía</p>
-							<p className="text-sm font-medium text-foreground mt-0.5">
-								{siniestro.compania_nombre}
-							</p>
+							<p className="text-sm font-medium text-foreground mt-0.5">{siniestro.compania_nombre}</p>
 						</div>
 						<div>
 							<p className="text-xs text-muted-foreground">Departamento</p>
@@ -219,12 +215,10 @@ export default function EditarSiniestroForm({
 									Cerrar siniestro
 								</p>
 								<p className="text-xs text-muted-foreground leading-relaxed">
-									Registra el resultado final: rechazo, declinación o indemnización. Acción irreversible.
+									Registra el resultado final: rechazo, declinación o indemnización. Acción
+									irreversible.
 								</p>
-								<CerrarSiniestro
-									siniestroId={siniestro.id}
-									numeroPoliza={siniestro.numero_poliza}
-								/>
+								<CerrarSiniestro siniestroId={siniestro.id} numeroPoliza={siniestro.numero_poliza} />
 							</CardContent>
 						</Card>
 					)}
@@ -233,9 +227,7 @@ export default function EditarSiniestroForm({
 					{!estaAbierto && (
 						<Card className="shadow-sm">
 							<CardContent className="p-5 space-y-2">
-								<p className="text-sm font-medium text-foreground">
-									Siniestro cerrado
-								</p>
+								<p className="text-sm font-medium text-foreground">Siniestro cerrado</p>
 								{siniestro.motivo_cierre_tipo && (
 									<p className="text-xs text-muted-foreground capitalize">
 										Tipo: {siniestro.motivo_cierre_tipo}
@@ -243,14 +235,11 @@ export default function EditarSiniestroForm({
 								)}
 								{siniestro.fecha_cierre && (
 									<p className="text-xs text-muted-foreground">
-										Fecha:{" "}
-										{formatFechaLaPaz(siniestro.fecha_cierre)}
+										Fecha: {formatFechaLaPaz(siniestro.fecha_cierre)}
 									</p>
 								)}
 								{siniestro.cerrado_por_nombre && (
-									<p className="text-xs text-muted-foreground">
-										Por: {siniestro.cerrado_por_nombre}
-									</p>
+									<p className="text-xs text-muted-foreground">Por: {siniestro.cerrado_por_nombre}</p>
 								)}
 							</CardContent>
 						</Card>

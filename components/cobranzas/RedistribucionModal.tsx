@@ -69,14 +69,14 @@ export default function RedistribucionModal({ excessData, open, onClose, onSucce
 		if (seleccionadas.size === distribuciones.length) {
 			setSeleccionadas(new Set());
 		} else {
-			setSeleccionadas(new Set(distribuciones.map(d => d.cuota_id)));
+			setSeleccionadas(new Set(distribuciones.map((d) => d.cuota_id)));
 		}
 	};
 
 	const handleMontoChange = (cuotaId: string, value: string) => {
 		const monto = parseFloat(value) || 0;
-		setDistribuciones(prev =>
-			prev.map(d => {
+		setDistribuciones((prev) =>
+			prev.map((d) => {
 				if (d.cuota_id === cuotaId) {
 					const montoAplicar = Math.min(monto, d.monto_original);
 					return {
@@ -86,7 +86,7 @@ export default function RedistribucionModal({ excessData, open, onClose, onSucce
 					};
 				}
 				return d;
-			})
+			}),
 		);
 	};
 
@@ -98,8 +98,8 @@ export default function RedistribucionModal({ excessData, open, onClose, onSucce
 
 		// Greedy: fill quotas completely one by one until excess runs out
 		let remaining = excessData.monto_exceso;
-		setDistribuciones(prev =>
-			prev.map(d => {
+		setDistribuciones((prev) =>
+			prev.map((d) => {
 				if (!seleccionadas.has(d.cuota_id)) {
 					return { ...d, monto_a_aplicar: 0, nuevo_saldo: d.monto_original };
 				}
@@ -113,7 +113,7 @@ export default function RedistribucionModal({ excessData, open, onClose, onSucce
 					monto_a_aplicar: montoAplicar,
 					nuevo_saldo: parseFloat((d.monto_original - montoAplicar).toFixed(2)),
 				};
-			})
+			}),
 		);
 
 		setError(null);
@@ -128,7 +128,7 @@ export default function RedistribucionModal({ excessData, open, onClose, onSucce
 		}
 
 		// Filter only distributions with monto_a_aplicar > 0
-		const distribucionesValidas = distribuciones.filter(d => d.monto_a_aplicar > 0);
+		const distribucionesValidas = distribuciones.filter((d) => d.monto_a_aplicar > 0);
 
 		if (distribucionesValidas.length === 0) {
 			setError("Debes aplicar el exceso a al menos una cuota");
@@ -170,7 +170,8 @@ export default function RedistribucionModal({ excessData, open, onClose, onSucce
 						Redistribuir Exceso de Bs {formatCurrency(excessData.monto_exceso)}
 					</DialogTitle>
 					<DialogDescription>
-						Distribuye el exceso entre las cuotas pendientes de la póliza. El total distribuido debe ser igual al exceso.
+						Distribuye el exceso entre las cuotas pendientes de la póliza. El total distribuido debe ser
+						igual al exceso.
 					</DialogDescription>
 				</DialogHeader>
 
@@ -178,16 +179,14 @@ export default function RedistribucionModal({ excessData, open, onClose, onSucce
 					{/* Auto-distribuir button */}
 					<div className="flex justify-between items-center gap-3">
 						<p className="text-sm text-muted-foreground">
-							Selecciona las cuotas y usa &quot;Auto-distribuir&quot; (llena cuotas completas hasta agotar el exceso) o ingresa los montos manualmente
+							Selecciona las cuotas y usa &quot;Auto-distribuir&quot; (llena cuotas completas hasta agotar
+							el exceso) o ingresa los montos manualmente
 						</p>
 						<div className="flex gap-2 shrink-0">
-							<Button
-								type="button"
-								variant="outline"
-								size="sm"
-								onClick={handleSeleccionarTodo}
-							>
-								{seleccionadas.size === distribuciones.length ? "Deseleccionar todo" : "Seleccionar todo"}
+							<Button type="button" variant="outline" size="sm" onClick={handleSeleccionarTodo}>
+								{seleccionadas.size === distribuciones.length
+									? "Deseleccionar todo"
+									: "Seleccionar todo"}
 							</Button>
 							<Button
 								type="button"
@@ -239,7 +238,9 @@ export default function RedistribucionModal({ excessData, open, onClose, onSucce
 											/>
 										</td>
 										<td className="p-3 text-sm">
-											<span className={dist.nuevo_saldo === 0 ? "text-green-600 font-medium" : ""}>
+											<span
+												className={dist.nuevo_saldo === 0 ? "text-green-600 font-medium" : ""}
+											>
 												Bs {formatCurrency(dist.nuevo_saldo)}
 											</span>
 										</td>
@@ -264,13 +265,13 @@ export default function RedistribucionModal({ excessData, open, onClose, onSucce
 							</div>
 							<div>
 								<p className="text-sm text-muted-foreground">Total Distribuido</p>
-								<p className="text-lg font-bold text-blue-600">
-									Bs {formatCurrency(totalDistribuido)}
-								</p>
+								<p className="text-lg font-bold text-blue-600">Bs {formatCurrency(totalDistribuido)}</p>
 							</div>
 							<div>
 								<p className="text-sm text-muted-foreground">Saldo Restante</p>
-								<p className={`text-lg font-bold ${Math.abs(saldoRestante) < 0.01 ? "text-green-600" : "text-red-600"}`}>
+								<p
+									className={`text-lg font-bold ${Math.abs(saldoRestante) < 0.01 ? "text-green-600" : "text-red-600"}`}
+								>
 									Bs {formatCurrency(saldoRestante)}
 								</p>
 							</div>
@@ -282,7 +283,8 @@ export default function RedistribucionModal({ excessData, open, onClose, onSucce
 						<Alert variant="destructive">
 							<AlertCircle className="h-4 w-4" />
 							<AlertDescription>
-								El monto distribuido (Bs {formatCurrency(totalDistribuido)}) supera el exceso disponible (Bs {formatCurrency(excessData.monto_exceso)})
+								El monto distribuido (Bs {formatCurrency(totalDistribuido)}) supera el exceso disponible
+								(Bs {formatCurrency(excessData.monto_exceso)})
 							</AlertDescription>
 						</Alert>
 					)}
@@ -292,7 +294,8 @@ export default function RedistribucionModal({ excessData, open, onClose, onSucce
 							<CheckCircle className="h-4 w-4" />
 							<AlertDescription>
 								Distribución válida.
-								{saldoRestante > 0.01 && ` El saldo restante de Bs ${formatCurrency(saldoRestante)} queda como crédito.`}
+								{saldoRestante > 0.01 &&
+									` El saldo restante de Bs ${formatCurrency(saldoRestante)} queda como crédito.`}
 							</AlertDescription>
 						</Alert>
 					)}

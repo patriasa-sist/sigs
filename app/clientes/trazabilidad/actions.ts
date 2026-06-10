@@ -19,9 +19,7 @@ import { checkPermission } from "@/utils/auth/helpers";
 // TYPES
 // ============================================
 
-export type ActionResult<T> =
-	| { success: true; data: T }
-	| { success: false; error: string };
+export type ActionResult<T> = { success: true; data: T } | { success: false; error: string };
 
 export type AuditEventType =
 	| "client_created"
@@ -104,9 +102,7 @@ const FIELD_TRANSLATIONS: Record<string, string> = {
 /**
  * Get complete audit trail for a client
  */
-export async function getClientAuditTrail(
-	clientId: string
-): Promise<ActionResult<ClientAuditTrail>> {
+export async function getClientAuditTrail(clientId: string): Promise<ActionResult<ClientAuditTrail>> {
 	try {
 		const supabase = await createClient();
 
@@ -133,13 +129,13 @@ export async function getClientAuditTrail(
 			if (!clientCheck?.commercial_owner_id) {
 				return { success: false, error: "Cliente no encontrado" };
 			}
-
 		}
 
 		// 1. Get base client data with creator info
 		const { data: clientData, error: clientError } = await supabase
 			.from("clients")
-			.select(`
+			.select(
+				`
 				id,
 				client_type,
 				status,
@@ -150,7 +146,8 @@ export async function getClientAuditTrail(
 				natural_clients (primer_nombre, primer_apellido),
 				juridic_clients (razon_social),
 				unipersonal_clients (razon_social)
-			`)
+			`,
+			)
 			.eq("id", clientId)
 			.single();
 
@@ -216,11 +213,7 @@ export async function getClientAuditTrail(
 		});
 
 		// 3. Add last modification event (if different from creation)
-		if (
-			clientData.updated_at &&
-			clientData.updated_at !== clientData.created_at &&
-			clientData.updated_by
-		) {
+		if (clientData.updated_at && clientData.updated_at !== clientData.created_at && clientData.updated_by) {
 			events.push({
 				id: `modification-${clientData.id}`,
 				type: "client_modified",
@@ -235,7 +228,8 @@ export async function getClientAuditTrail(
 		// 4. Get permission history
 		const { data: permissionHistory } = await supabase
 			.from("client_edit_permissions")
-			.select(`
+			.select(
+				`
 				id,
 				granted_at,
 				granted_by,
@@ -246,7 +240,8 @@ export async function getClientAuditTrail(
 				user:profiles!user_id (full_name, email),
 				granter:profiles!granted_by (full_name, email),
 				revoker:profiles!revoked_by (full_name, email)
-			`)
+			`,
+			)
 			.eq("client_id", clientId)
 			.order("granted_at", { ascending: false });
 
@@ -318,7 +313,8 @@ export async function getClientAuditTrail(
 		// 5. Get document history
 		const { data: documentHistory } = await supabase
 			.from("clientes_documentos")
-			.select(`
+			.select(
+				`
 				id,
 				tipo_documento,
 				nombre_archivo,
@@ -331,7 +327,8 @@ export async function getClientAuditTrail(
 				descartado_por,
 				uploader:profiles!subido_por (full_name, email),
 				discarder:profiles!descartado_por (full_name, email)
-			`)
+			`,
+			)
 			.eq("client_id", clientId)
 			.order("fecha_subida", { ascending: false });
 
@@ -401,7 +398,8 @@ export async function getClientAuditTrail(
 		let totalFieldChanges = 0;
 		const { data: fieldHistory } = await supabase
 			.from("clientes_historial_ediciones")
-			.select(`
+			.select(
+				`
 				id,
 				tabla_modificada,
 				tipo_cambio,
@@ -411,7 +409,8 @@ export async function getClientAuditTrail(
 				fecha_modificacion,
 				modificado_por,
 				modifier:profiles!modificado_por (full_name, email)
-			`)
+			`,
+			)
 			.eq("client_id", clientId)
 			.eq("tipo_cambio", "modificacion")
 			.order("fecha_modificacion", { ascending: false });

@@ -86,7 +86,6 @@ export const AccidentesTemplate: React.FC<AccidentesTemplateProps> = ({ letterDa
 		return value.toString(); // Fallback
 	};
 
-
 	return (
 		<BaseTemplate letterData={letterData} firmantes={firmantes}>
 			{letterData.policies.map((policy, policyIndex) => {
@@ -136,7 +135,7 @@ export const AccidentesTemplate: React.FC<AccidentesTemplateProps> = ({ letterDa
 									<Text style={accidentesStyles.cellText}>
 										{formatMonetaryValue(
 											policy.manualFields?.insuredValue,
-											policy.manualFields?.insuredValueCurrency
+											policy.manualFields?.insuredValueCurrency,
 										)}
 									</Text>
 								</View>
@@ -152,12 +151,12 @@ export const AccidentesTemplate: React.FC<AccidentesTemplateProps> = ({ letterDa
 											<Text key={memberIndex} style={accidentesStyles.aseguradoName}>
 												• {member.name.toUpperCase()}
 											</Text>
-									  ))
+										))
 									: legacyMembers.map((member, memberIndex) => (
 											<Text key={memberIndex} style={accidentesStyles.aseguradoName}>
 												• {member.toUpperCase()}
 											</Text>
-									  ))}
+										))}
 							</View>
 						)}
 					</View>

@@ -2,28 +2,19 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import Image from "next/image";
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogHeader,
-	DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { AlertCircle, CheckCircle, DollarSign, Upload, FileText, X, CreditCard } from "lucide-react";
 import {
-	AlertCircle,
-	CheckCircle,
-	DollarSign,
-	Upload,
-	FileText,
-	X,
-	CreditCard,
-} from "lucide-react";
-import { registrarPago, obtenerCuotasPendientesPorPoliza, subirComprobantePago, obtenerAbonosCuota } from "@/app/cobranzas/actions";
+	registrarPago,
+	obtenerCuotasPendientesPorPoliza,
+	subirComprobantePago,
+	obtenerAbonosCuota,
+} from "@/app/cobranzas/actions";
 import type { CuotaPago, PolizaConPagos, ExcessPaymentDistribution, TipoComprobante } from "@/types/cobranza";
 import { validarTamanoArchivo, validarTipoArchivo, formatearTamanoArchivo, formatearFecha } from "@/utils/cobranza";
 
@@ -35,13 +26,7 @@ interface RegistrarPagoModalProps {
 	onSuccess: (excessData?: ExcessPaymentDistribution) => void;
 }
 
-export default function RegistrarPagoModal({
-	cuota,
-	poliza,
-	open,
-	onClose,
-	onSuccess,
-}: RegistrarPagoModalProps) {
+export default function RegistrarPagoModal({ cuota, poliza, open, onClose, onSuccess }: RegistrarPagoModalProps) {
 	const [montoPagado, setMontoPagado] = useState<string>("");
 	const [fechaPago, setFechaPago] = useState<string>("");
 	const [observaciones, setObservaciones] = useState<string>("");
@@ -141,23 +126,36 @@ export default function RegistrarPagoModal({
 
 	const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const file = e.target.files?.[0];
-		if (!file) { setSelectedFile(null); setFileError(null); return; }
+		if (!file) {
+			setSelectedFile(null);
+			setFileError(null);
+			return;
+		}
 		processFile(file);
 	};
 
 	const handleDragOver = useCallback((e: React.DragEvent) => {
-		e.preventDefault(); e.stopPropagation(); setIsDragging(true);
+		e.preventDefault();
+		e.stopPropagation();
+		setIsDragging(true);
 	}, []);
 
 	const handleDragLeave = useCallback((e: React.DragEvent) => {
-		e.preventDefault(); e.stopPropagation(); setIsDragging(false);
+		e.preventDefault();
+		e.stopPropagation();
+		setIsDragging(false);
 	}, []);
 
-	const handleDrop = useCallback((e: React.DragEvent) => {
-		e.preventDefault(); e.stopPropagation(); setIsDragging(false);
-		const file = e.dataTransfer.files?.[0];
-		if (file) processFile(file);
-	}, [processFile]);
+	const handleDrop = useCallback(
+		(e: React.DragEvent) => {
+			e.preventDefault();
+			e.stopPropagation();
+			setIsDragging(false);
+			const file = e.dataTransfer.files?.[0];
+			if (file) processFile(file);
+		},
+		[processFile],
+	);
 
 	useEffect(() => {
 		if (!open || selectedFile) return;
@@ -167,7 +165,11 @@ export default function RegistrarPagoModal({
 			for (const item of items) {
 				if (item.kind === "file") {
 					const file = item.getAsFile();
-					if (file) { e.preventDefault(); processFile(file); return; }
+					if (file) {
+						e.preventDefault();
+						processFile(file);
+						return;
+					}
 				}
 			}
 		};
@@ -291,7 +293,8 @@ export default function RegistrarPagoModal({
 							</p>
 							{saldoInfo && saldoInfo.abonado > 0 && (
 								<p className="text-xs text-muted-foreground mt-0.5">
-									Cuota {formatCurrency(saldoInfo.monto)} · abonado {formatCurrency(saldoInfo.abonado)}
+									Cuota {formatCurrency(saldoInfo.monto)} · abonado{" "}
+									{formatCurrency(saldoInfo.abonado)}
 								</p>
 							)}
 						</div>
@@ -323,8 +326,8 @@ export default function RegistrarPagoModal({
 									tipoPago === "exacto"
 										? "border-teal-200 bg-teal-50 text-teal-800"
 										: tipoPago === "parcial"
-										? "border-amber-200 bg-amber-50 text-amber-800"
-										: "border-sky-200 bg-sky-50 text-sky-800"
+											? "border-amber-200 bg-amber-50 text-amber-800"
+											: "border-sky-200 bg-sky-50 text-sky-800"
 								}`}
 							>
 								<div className="flex items-center gap-1.5 font-medium">
@@ -334,14 +337,13 @@ export default function RegistrarPagoModal({
 									{tipoPago === "exacto"
 										? "Pago Completo"
 										: tipoPago === "parcial"
-										? "Pago Parcial"
-										: "Pago con Exceso"}
+											? "Pago Parcial"
+											: "Pago con Exceso"}
 								</div>
 								<span className="text-xs tabular-nums">
 									{tipoPago === "parcial" &&
 										`Saldo: ${poliza.moneda} ${formatCurrency(saldoPendiente)}`}
-									{tipoPago === "exceso" &&
-										`Exceso: ${poliza.moneda} ${formatCurrency(exceso)}`}
+									{tipoPago === "exceso" && `Exceso: ${poliza.moneda} ${formatCurrency(exceso)}`}
 									{tipoPago === "exacto" && "La cuota quedará pagada"}
 								</span>
 							</div>
@@ -363,9 +365,7 @@ export default function RegistrarPagoModal({
 
 					{/* Comprobante */}
 					<div className="space-y-2">
-						<Label>
-							Comprobante de Pago *
-						</Label>
+						<Label>Comprobante de Pago *</Label>
 
 						{/* Tipo de comprobante */}
 						<Select
@@ -398,16 +398,12 @@ export default function RegistrarPagoModal({
 								}`}
 							>
 								<Upload
-									className={`h-7 w-7 ${
-										isDragging ? "text-primary" : "text-muted-foreground"
-									}`}
+									className={`h-7 w-7 ${isDragging ? "text-primary" : "text-muted-foreground"}`}
 								/>
 								<p className="text-sm text-muted-foreground text-center">
 									Arrastra un archivo, pega con Ctrl+V o haz clic aquí
 								</p>
-								<p className="text-xs text-muted-foreground">
-									JPG, PNG, WebP o PDF (máx. 10 MB)
-								</p>
+								<p className="text-xs text-muted-foreground">JPG, PNG, WebP o PDF (máx. 10 MB)</p>
 								<input
 									ref={fileInputRef}
 									type="file"
@@ -469,16 +465,13 @@ export default function RegistrarPagoModal({
 							</div>
 						)}
 
-						{fileError && (
-							<p className="text-xs text-destructive">{fileError}</p>
-						)}
+						{fileError && <p className="text-xs text-destructive">{fileError}</p>}
 					</div>
 
 					{/* Observaciones (optional) */}
 					<div className="space-y-1.5">
 						<Label htmlFor="observaciones">
-							Observaciones{" "}
-							<span className="text-muted-foreground font-normal">(opcional)</span>
+							Observaciones <span className="text-muted-foreground font-normal">(opcional)</span>
 						</Label>
 						<Textarea
 							id="observaciones"

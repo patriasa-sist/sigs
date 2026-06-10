@@ -14,9 +14,7 @@ export interface EquipoMetricas {
 	prima_total: number;
 }
 
-type ActionResult<T> =
-	| { success: true; data: T }
-	| { success: false; error: string };
+type ActionResult<T> = { success: true; data: T } | { success: false; error: string };
 
 export async function obtenerMetricasPorEquipo(): Promise<ActionResult<EquipoMetricas[]>> {
 	await requirePermission("admin.equipos");
@@ -68,42 +66,35 @@ export async function obtenerMetricasPorEquipo(): Promise<ActionResult<EquipoMet
 			}
 
 			// Obtener metricas en paralelo
-			const [
-				polizasCount,
-				polizasActivasResult,
-				clientesCount,
-				siniestrosCount,
-				primaResult,
-			] = await Promise.all([
-				supabase
-					.from("polizas")
-					.select("id", { count: "exact", head: true })
-					.in("responsable_id", memberIds),
-				supabase
-					.from("polizas")
-					.select("id", { count: "exact", head: true })
-					.in("responsable_id", memberIds)
-					.eq("estado", "activa"),
-				supabase
-					.from("clients")
-					.select("id", { count: "exact", head: true })
-					.in("commercial_owner_id", memberIds),
-				supabase
-					.from("siniestros")
-					.select("id", { count: "exact", head: true })
-					.in("responsable_id", memberIds)
-					.eq("estado", "abierto"),
-				supabase
-					.from("polizas")
-					.select("prima_total")
-					.in("responsable_id", memberIds)
-					.eq("estado", "activa"),
-			]);
-
-			const primaTotal = (primaResult.data || []).reduce(
-				(sum, p) => sum + (Number(p.prima_total) || 0),
-				0
+			const [polizasCount, polizasActivasResult, clientesCount, siniestrosCount, primaResult] = await Promise.all(
+				[
+					supabase
+						.from("polizas")
+						.select("id", { count: "exact", head: true })
+						.in("responsable_id", memberIds),
+					supabase
+						.from("polizas")
+						.select("id", { count: "exact", head: true })
+						.in("responsable_id", memberIds)
+						.eq("estado", "activa"),
+					supabase
+						.from("clients")
+						.select("id", { count: "exact", head: true })
+						.in("commercial_owner_id", memberIds),
+					supabase
+						.from("siniestros")
+						.select("id", { count: "exact", head: true })
+						.in("responsable_id", memberIds)
+						.eq("estado", "abierto"),
+					supabase
+						.from("polizas")
+						.select("prima_total")
+						.in("responsable_id", memberIds)
+						.eq("estado", "activa"),
+				],
 			);
+
+			const primaTotal = (primaResult.data || []).reduce((sum, p) => sum + (Number(p.prima_total) || 0), 0);
 
 			metricas.push({
 				equipo_id: equipo.id,

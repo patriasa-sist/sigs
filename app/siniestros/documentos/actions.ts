@@ -88,7 +88,7 @@ export async function restaurarDocumentoSiniestro(documentoId: string, siniestro
 export async function eliminarDocumentoSiniestroPermanente(
 	documentoId: string,
 	archivoUrl: string,
-	siniestroId: string
+	siniestroId: string,
 ) {
 	const supabase = await createClient();
 
@@ -117,9 +117,7 @@ export async function eliminarDocumentoSiniestroPermanente(
 			const { extractStoragePath } = await import("@/utils/storage");
 			const storagePath = extractStoragePath(archivoUrl, "siniestros-documentos");
 
-			const { error: storageError } = await supabase.storage
-				.from("siniestros-documentos")
-				.remove([storagePath]);
+			const { error: storageError } = await supabase.storage.from("siniestros-documentos").remove([storagePath]);
 
 			if (storageError) {
 				console.error("Error eliminando archivo de Storage:", storageError);
@@ -160,31 +158,33 @@ export async function obtenerDocumentosActivos(siniestroId: string) {
 
 		// Enriquecer con nombres de usuario
 		const documentosEnriquecidos = await Promise.all(
-			(documentos || []).map(async (doc: {
-			id: string;
-			siniestro_id: string;
-			tipo_documento: string;
-			nombre_archivo: string;
-			archivo_url: string;
-			estado: string;
-			uploaded_at: string;
-			uploaded_by: string | null;
-		}) => {
-				if (!doc.uploaded_by) {
-					return { ...doc, usuario_nombre: "Sistema" };
-				}
+			(documentos || []).map(
+				async (doc: {
+					id: string;
+					siniestro_id: string;
+					tipo_documento: string;
+					nombre_archivo: string;
+					archivo_url: string;
+					estado: string;
+					uploaded_at: string;
+					uploaded_by: string | null;
+				}) => {
+					if (!doc.uploaded_by) {
+						return { ...doc, usuario_nombre: "Sistema" };
+					}
 
-				const { data: usuario } = await supabase
-					.from("profiles")
-					.select("full_name")
-					.eq("id", doc.uploaded_by)
-					.single();
+					const { data: usuario } = await supabase
+						.from("profiles")
+						.select("full_name")
+						.eq("id", doc.uploaded_by)
+						.single();
 
-				return {
-					...doc,
-					usuario_nombre: usuario?.full_name || "Usuario",
-				};
-			})
+					return {
+						...doc,
+						usuario_nombre: usuario?.full_name || "Usuario",
+					};
+				},
+			),
 		);
 
 		return { success: true, data: documentosEnriquecidos };
@@ -230,31 +230,33 @@ export async function obtenerTodosDocumentos(siniestroId: string) {
 
 		// Enriquecer con nombres de usuario
 		const documentosEnriquecidos = await Promise.all(
-			(documentos || []).map(async (doc: {
-			id: string;
-			siniestro_id: string;
-			tipo_documento: string;
-			nombre_archivo: string;
-			archivo_url: string;
-			estado: string;
-			uploaded_at: string;
-			uploaded_by: string | null;
-		}) => {
-				if (!doc.uploaded_by) {
-					return { ...doc, usuario_nombre: "Sistema" };
-				}
+			(documentos || []).map(
+				async (doc: {
+					id: string;
+					siniestro_id: string;
+					tipo_documento: string;
+					nombre_archivo: string;
+					archivo_url: string;
+					estado: string;
+					uploaded_at: string;
+					uploaded_by: string | null;
+				}) => {
+					if (!doc.uploaded_by) {
+						return { ...doc, usuario_nombre: "Sistema" };
+					}
 
-				const { data: usuario } = await supabase
-					.from("profiles")
-					.select("full_name")
-					.eq("id", doc.uploaded_by)
-					.single();
+					const { data: usuario } = await supabase
+						.from("profiles")
+						.select("full_name")
+						.eq("id", doc.uploaded_by)
+						.single();
 
-				return {
-					...doc,
-					usuario_nombre: usuario?.full_name || "Usuario",
-				};
-			})
+					return {
+						...doc,
+						usuario_nombre: usuario?.full_name || "Usuario",
+					};
+				},
+			),
 		);
 
 		return { success: true, data: documentosEnriquecidos };

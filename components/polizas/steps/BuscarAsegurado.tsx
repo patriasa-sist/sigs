@@ -39,10 +39,10 @@ export function BuscarAsegurado({ asegurado, onAseguradoSeleccionado, onSiguient
 					.eq("clients.status", "active")
 					.or(
 						`primer_nombre.ilike.%${q}%,` +
-						`segundo_nombre.ilike.%${q}%,` +
-						`primer_apellido.ilike.%${q}%,` +
-						`segundo_apellido.ilike.%${q}%,` +
-						`numero_documento.ilike.%${q}%`,
+							`segundo_nombre.ilike.%${q}%,` +
+							`primer_apellido.ilike.%${q}%,` +
+							`segundo_apellido.ilike.%${q}%,` +
+							`numero_documento.ilike.%${q}%`,
 					)
 					.order("created_at", { referencedTable: "clients", ascending: false })
 					.limit(15),
@@ -180,16 +180,20 @@ export function BuscarAsegurado({ asegurado, onAseguradoSeleccionado, onSiguient
 										: "NIT"}
 									: {asegurado.documento}
 								</p>
-								{asegurado.detalles && "direccion" in asegurado.detalles && asegurado.detalles.direccion && (
-									<p className="text-sm text-muted-foreground mt-1">
-										{asegurado.detalles.direccion}
-									</p>
-								)}
-								{asegurado.detalles && "direccion_legal" in asegurado.detalles && asegurado.detalles.direccion_legal && (
-									<p className="text-sm text-muted-foreground mt-1">
-										{asegurado.detalles.direccion_legal}
-									</p>
-								)}
+								{asegurado.detalles &&
+									"direccion" in asegurado.detalles &&
+									asegurado.detalles.direccion && (
+										<p className="text-sm text-muted-foreground mt-1">
+											{asegurado.detalles.direccion}
+										</p>
+									)}
+								{asegurado.detalles &&
+									"direccion_legal" in asegurado.detalles &&
+									asegurado.detalles.direccion_legal && (
+										<p className="text-sm text-muted-foreground mt-1">
+											{asegurado.detalles.direccion_legal}
+										</p>
+									)}
 							</div>
 						</div>
 						<Button variant="outline" size="sm" onClick={() => onAseguradoSeleccionado(null!)}>
@@ -228,7 +232,9 @@ export function BuscarAsegurado({ asegurado, onAseguradoSeleccionado, onSiguient
 										<div className="flex-1">
 											<p className="font-medium">{cliente.nombre_completo}</p>
 											<p className="text-sm text-muted-foreground">
-												{cliente.client_type === "natural" ? "Persona Natural" : "Persona Jurídica"}
+												{cliente.client_type === "natural"
+													? "Persona Natural"
+													: "Persona Jurídica"}
 												{" · "}
 												{cliente.documento}
 											</p>

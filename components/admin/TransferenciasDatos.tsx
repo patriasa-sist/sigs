@@ -137,7 +137,7 @@ export default function TransferenciasDatos({ usuarios }: Props) {
 				const result = await transferirPolizas(
 					Array.from(polizasSeleccionadas),
 					destinoId,
-					motivo || undefined
+					motivo || undefined,
 				);
 				if (result.success) {
 					toast.success(`${result.data.transferidos} pólizas transferidas exitosamente`);
@@ -150,7 +150,7 @@ export default function TransferenciasDatos({ usuarios }: Props) {
 				const result = await transferirClientes(
 					Array.from(clientesSeleccionados),
 					destinoId,
-					motivo || undefined
+					motivo || undefined,
 				);
 				if (result.success) {
 					toast.success(`${result.data.transferidos} clientes transferidos exitosamente`);
@@ -216,12 +216,8 @@ export default function TransferenciasDatos({ usuarios }: Props) {
 			{origenId && (
 				<Tabs defaultValue="polizas">
 					<TabsList>
-						<TabsTrigger value="polizas">
-							Pólizas ({polizas.length})
-						</TabsTrigger>
-						<TabsTrigger value="clientes">
-							Clientes ({clientes.length})
-						</TabsTrigger>
+						<TabsTrigger value="polizas">Pólizas ({polizas.length})</TabsTrigger>
+						<TabsTrigger value="clientes">Clientes ({clientes.length})</TabsTrigger>
 					</TabsList>
 
 					<TabsContent value="polizas" className="space-y-4">
@@ -279,7 +275,9 @@ export default function TransferenciasDatos({ usuarios }: Props) {
 													<td className="p-2">{p.ramo}</td>
 													<td className="p-2">{p.compania_nombre}</td>
 													<td className="p-2">
-														<Badge variant={p.estado === "activa" ? "default" : "secondary"}>
+														<Badge
+															variant={p.estado === "activa" ? "default" : "secondary"}
+														>
 															{p.estado}
 														</Badge>
 													</td>
@@ -351,7 +349,9 @@ export default function TransferenciasDatos({ usuarios }: Props) {
 													</td>
 													<td className="p-2 font-mono">{c.documento}</td>
 													<td className="p-2">
-														<Badge variant={c.status === "active" ? "default" : "secondary"}>
+														<Badge
+															variant={c.status === "active" ? "default" : "secondary"}
+														>
 															{c.status}
 														</Badge>
 													</td>
@@ -401,10 +401,7 @@ export default function TransferenciasDatos({ usuarios }: Props) {
 					</div>
 					<AlertDialogFooter>
 						<AlertDialogCancel disabled={transfiriendo}>Cancelar</AlertDialogCancel>
-						<AlertDialogAction
-							onClick={ejecutarTransferencia}
-							disabled={transfiriendo}
-						>
+						<AlertDialogAction onClick={ejecutarTransferencia} disabled={transfiriendo}>
 							{transfiriendo ? (
 								<>
 									<Loader2 className="h-4 w-4 animate-spin mr-2" />

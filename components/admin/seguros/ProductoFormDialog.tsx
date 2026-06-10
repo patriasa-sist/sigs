@@ -84,7 +84,7 @@ export function ProductoFormDialog({
 				value: a.id,
 				label: a.codigo != null ? `${a.codigo} - ${a.nombre}` : a.nombre,
 			})),
-		[aseguradoras]
+		[aseguradoras],
 	);
 
 	const ramoOptions = useMemo<ComboboxOption[]>(
@@ -93,7 +93,7 @@ export function ProductoFormDialog({
 				value: r.id.toString(),
 				label: r.codigo ? `${r.codigo} - ${r.nombre}` : r.nombre,
 			})),
-		[ramos]
+		[ramos],
 	);
 
 	// Load aseguradoras and ramos when dialog opens

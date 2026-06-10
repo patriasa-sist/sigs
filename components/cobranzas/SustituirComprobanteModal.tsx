@@ -1,30 +1,15 @@
 "use client";
 
 import { useState, useRef } from "react";
-import {
-	Dialog,
-	DialogContent,
-	DialogHeader,
-	DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Upload, X, FileText, Loader2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import type { TipoComprobante } from "@/types/cobranza";
 import { sustituirComprobantePago } from "@/app/cobranzas/actions";
-import {
-	validarTamanoArchivo,
-	validarTipoArchivo,
-	formatearTamanoArchivo,
-} from "@/utils/cobranza";
+import { validarTamanoArchivo, validarTipoArchivo, formatearTamanoArchivo } from "@/utils/cobranza";
 
 interface SustituirComprobanteModalProps {
 	abonoId: string | null;
@@ -50,9 +35,15 @@ export default function SustituirComprobanteModal({
 
 	const handleFile = (f: File) => {
 		const sizeResult = validarTamanoArchivo(f);
-		if (!sizeResult.valid) { setError(sizeResult.error ?? "Archivo inválido"); return; }
+		if (!sizeResult.valid) {
+			setError(sizeResult.error ?? "Archivo inválido");
+			return;
+		}
 		const typeResult = validarTipoArchivo(f);
-		if (!typeResult.valid) { setError(typeResult.error ?? "Tipo no permitido"); return; }
+		if (!typeResult.valid) {
+			setError(typeResult.error ?? "Tipo no permitido");
+			return;
+		}
 		setFile(f);
 		setError(null);
 	};
@@ -127,10 +118,13 @@ export default function SustituirComprobanteModal({
 								isDragOver
 									? "border-primary bg-primary/5"
 									: file
-									? "border-teal-300 bg-teal-50"
-									: "border-border hover:border-primary/50 hover:bg-secondary/50"
+										? "border-teal-300 bg-teal-50"
+										: "border-border hover:border-primary/50 hover:bg-secondary/50"
 							}`}
-							onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
+							onDragOver={(e) => {
+								e.preventDefault();
+								setIsDragOver(true);
+							}}
 							onDragLeave={() => setIsDragOver(false)}
 							onDrop={handleDrop}
 							onClick={() => inputRef.current?.click()}
@@ -149,7 +143,10 @@ export default function SustituirComprobanteModal({
 									<button
 										type="button"
 										className="ml-2 text-muted-foreground hover:text-destructive transition-colors"
-										onClick={(e) => { e.stopPropagation(); setFile(null); }}
+										onClick={(e) => {
+											e.stopPropagation();
+											setFile(null);
+										}}
 									>
 										<X className="h-4 w-4" />
 									</button>
@@ -183,10 +180,7 @@ export default function SustituirComprobanteModal({
 					{/* Tipo de comprobante */}
 					<div>
 						<Label className="text-sm font-medium mb-1.5 block">Tipo de comprobante</Label>
-						<Select
-							value={tipoArchivo}
-							onValueChange={(v) => setTipoArchivo(v as TipoComprobante)}
-						>
+						<Select value={tipoArchivo} onValueChange={(v) => setTipoArchivo(v as TipoComprobante)}>
 							<SelectTrigger>
 								<SelectValue />
 							</SelectTrigger>

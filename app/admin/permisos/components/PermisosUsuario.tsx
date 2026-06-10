@@ -21,18 +21,18 @@ export default function PermisosUsuario({ users, permissions }: Props) {
 	const [selectedPermission, setSelectedPermission] = useState<string>("");
 	const [userPerms, setUserPerms] = useState<Record<string, string[]>>(() => {
 		const map: Record<string, string[]> = {};
-		users.forEach(u => {
-			map[u.id] = u.extraPermissions.map(ep => ep.permission_id);
+		users.forEach((u) => {
+			map[u.id] = u.extraPermissions.map((ep) => ep.permission_id);
 		});
 		return map;
 	});
 	const [isPending, startTransition] = useTransition();
 
 	// Filter out admins (they don't need extra permissions)
-	const eligibleUsers = users.filter(u => u.role !== "admin" && u.role !== "invitado" && u.role !== "desactivado");
+	const eligibleUsers = users.filter((u) => u.role !== "admin" && u.role !== "invitado" && u.role !== "desactivado");
 
-	const selectedUser = eligibleUsers.find(u => u.id === selectedUserId);
-	const currentExtraPerms = selectedUserId ? (userPerms[selectedUserId] || []) : [];
+	const selectedUser = eligibleUsers.find((u) => u.id === selectedUserId);
+	const currentExtraPerms = selectedUserId ? userPerms[selectedUserId] || [] : [];
 
 	// Group permissions by module for the select
 	const permissionsByModule = permissions.reduce<Record<string, PermissionRow[]>>((acc, p) => {
@@ -45,7 +45,7 @@ export default function PermisosUsuario({ users, permissions }: Props) {
 		if (!selectedUserId || !selectedPermission) return;
 
 		// Optimistic
-		setUserPerms(prev => ({
+		setUserPerms((prev) => ({
 			...prev,
 			[selectedUserId]: [...(prev[selectedUserId] || []), selectedPermission],
 		}));
@@ -55,9 +55,9 @@ export default function PermisosUsuario({ users, permissions }: Props) {
 			if (!result.success) {
 				toast.error(result.error);
 				// Revert
-				setUserPerms(prev => ({
+				setUserPerms((prev) => ({
 					...prev,
-					[selectedUserId]: (prev[selectedUserId] || []).filter(p => p !== selectedPermission),
+					[selectedUserId]: (prev[selectedUserId] || []).filter((p) => p !== selectedPermission),
 				}));
 			} else {
 				toast.success("Permiso asignado");
@@ -68,9 +68,9 @@ export default function PermisosUsuario({ users, permissions }: Props) {
 
 	const handleRevoke = (userId: string, permissionId: string) => {
 		// Optimistic
-		setUserPerms(prev => ({
+		setUserPerms((prev) => ({
 			...prev,
-			[userId]: (prev[userId] || []).filter(p => p !== permissionId),
+			[userId]: (prev[userId] || []).filter((p) => p !== permissionId),
 		}));
 
 		startTransition(async () => {
@@ -78,7 +78,7 @@ export default function PermisosUsuario({ users, permissions }: Props) {
 			if (!result.success) {
 				toast.error(result.error);
 				// Revert
-				setUserPerms(prev => ({
+				setUserPerms((prev) => ({
 					...prev,
 					[userId]: [...(prev[userId] || []), permissionId],
 				}));
@@ -91,7 +91,8 @@ export default function PermisosUsuario({ users, permissions }: Props) {
 	return (
 		<div className="space-y-6">
 			<p className="text-sm text-gray-500">
-				Asigna permisos adicionales a usuarios individuales, mas alla de los que hereda su rol. Util para sub-administradores o casos especiales.
+				Asigna permisos adicionales a usuarios individuales, mas alla de los que hereda su rol. Util para
+				sub-administradores o casos especiales.
 			</p>
 
 			{/* User selector */}
@@ -103,10 +104,12 @@ export default function PermisosUsuario({ users, permissions }: Props) {
 							<SelectValue placeholder="Elegir usuario..." />
 						</SelectTrigger>
 						<SelectContent>
-							{eligibleUsers.map(user => (
+							{eligibleUsers.map((user) => (
 								<SelectItem key={user.id} value={user.id}>
 									<span>{user.full_name || user.email}</span>
-									<span className="ml-2 text-xs text-gray-400">({getRoleLabel(user.role as Parameters<typeof getRoleLabel>[0])})</span>
+									<span className="ml-2 text-xs text-gray-400">
+										({getRoleLabel(user.role as Parameters<typeof getRoleLabel>[0])})
+									</span>
 								</SelectItem>
 							))}
 						</SelectContent>
@@ -128,8 +131,8 @@ export default function PermisosUsuario({ users, permissions }: Props) {
 												{PERMISSION_MODULES[module] || module}
 											</div>
 											{perms
-												.filter(p => !currentExtraPerms.includes(p.id))
-												.map(p => (
+												.filter((p) => !currentExtraPerms.includes(p.id))
+												.map((p) => (
 													<SelectItem key={p.id} value={p.id}>
 														{getPermissionLabel(p.id as Permission)}
 													</SelectItem>
@@ -140,11 +143,7 @@ export default function PermisosUsuario({ users, permissions }: Props) {
 							</Select>
 						</div>
 
-						<Button
-							onClick={handleAssign}
-							disabled={!selectedPermission || isPending}
-							size="sm"
-						>
+						<Button onClick={handleAssign} disabled={!selectedPermission || isPending} size="sm">
 							<Plus className="h-4 w-4 mr-1" />
 							Asignar
 						</Button>
@@ -166,7 +165,7 @@ export default function PermisosUsuario({ users, permissions }: Props) {
 						<p className="text-sm text-gray-400">Sin permisos extra asignados</p>
 					) : (
 						<div className="flex flex-wrap gap-2">
-							{currentExtraPerms.map(permId => (
+							{currentExtraPerms.map((permId) => (
 								<Badge key={permId} variant="secondary" className="flex items-center gap-1">
 									{getPermissionLabel(permId as Permission)}
 									<button
@@ -186,14 +185,17 @@ export default function PermisosUsuario({ users, permissions }: Props) {
 			{/* Summary: all users with extra permissions */}
 			<div>
 				<h4 className="font-medium mb-3 text-gray-700">Usuarios con permisos extra</h4>
-				{eligibleUsers.filter(u => (userPerms[u.id] || []).length > 0).length === 0 ? (
+				{eligibleUsers.filter((u) => (userPerms[u.id] || []).length > 0).length === 0 ? (
 					<p className="text-sm text-gray-400">Ningun usuario tiene permisos extra asignados</p>
 				) : (
 					<div className="space-y-2">
 						{eligibleUsers
-							.filter(u => (userPerms[u.id] || []).length > 0)
-							.map(user => (
-								<div key={user.id} className="flex flex-wrap items-center gap-3 py-2 border-b border-gray-100">
+							.filter((u) => (userPerms[u.id] || []).length > 0)
+							.map((user) => (
+								<div
+									key={user.id}
+									className="flex flex-wrap items-center gap-3 py-2 border-b border-gray-100"
+								>
 									<span className="text-sm font-medium sm:min-w-[200px]">
 										{user.full_name || user.email}
 									</span>
@@ -201,7 +203,7 @@ export default function PermisosUsuario({ users, permissions }: Props) {
 										{getRoleLabel(user.role as Parameters<typeof getRoleLabel>[0])}
 									</Badge>
 									<div className="flex flex-wrap gap-1">
-										{(userPerms[user.id] || []).map(permId => (
+										{(userPerms[user.id] || []).map((permId) => (
 											<Badge key={permId} variant="secondary" className="text-xs">
 												{getPermissionLabel(permId as Permission)}
 											</Badge>

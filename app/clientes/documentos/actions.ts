@@ -21,9 +21,7 @@ import { captureError } from "@/utils/sentry";
 // TYPES
 // ============================================
 
-export type ActionResult<T> =
-	| { success: true; data: T }
-	| { success: false; error: string };
+export type ActionResult<T> = { success: true; data: T } | { success: false; error: string };
 
 export interface DocumentHistoryItem {
 	id: string;
@@ -179,9 +177,7 @@ async function authorizeClientDocumentEdit(clientId: string) {
 /**
  * Upload a new document for a client
  */
-export async function uploadClientDocument(
-	input: UploadDocumentInput
-): Promise<ActionResult<{ id: string }>> {
+export async function uploadClientDocument(input: UploadDocumentInput): Promise<ActionResult<{ id: string }>> {
 	try {
 		const { supabase, user } = await authorizeClientDocumentEdit(input.client_id);
 
@@ -203,7 +199,12 @@ export async function uploadClientDocument(
 
 		if (uploadError) {
 			console.error("[uploadClientDocument] Storage error:", uploadError);
-			await captureError(uploadError, "uploadClientDocument:storage", { clientId: input.client_id, tipo: input.tipo_documento }, { feature: "documentos-cliente" });
+			await captureError(
+				uploadError,
+				"uploadClientDocument:storage",
+				{ clientId: input.client_id, tipo: input.tipo_documento },
+				{ feature: "documentos-cliente" },
+			);
 			return { success: false, error: "Error al subir archivo" };
 		}
 
@@ -253,7 +254,12 @@ export async function uploadClientDocument(
 
 		if (insertError) {
 			console.error("[uploadClientDocument] Insert error:", insertError);
-			await captureError(insertError, "uploadClientDocument:insert", { clientId: input.client_id, tipo: input.tipo_documento }, { feature: "documentos-cliente" });
+			await captureError(
+				insertError,
+				"uploadClientDocument:insert",
+				{ clientId: input.client_id, tipo: input.tipo_documento },
+				{ feature: "documentos-cliente" },
+			);
 			// Try to clean up uploaded file
 			await supabase.storage.from("clientes-documentos").remove([storagePath]);
 			return { success: false, error: "Error al registrar documento" };
@@ -261,17 +267,19 @@ export async function uploadClientDocument(
 
 		// Update replaced_by on the old document if exists
 		if (existingDoc) {
-			await supabase
-				.from("clientes_documentos")
-				.update({ replaced_by: docData.id })
-				.eq("id", existingDoc.id);
+			await supabase.from("clientes_documentos").update({ replaced_by: docData.id }).eq("id", existingDoc.id);
 		}
 
 		revalidatePath("/clientes");
 		return { success: true, data: { id: docData.id } };
 	} catch (error) {
 		console.error("[uploadClientDocument] Error:", error);
-		await captureError(error, "uploadClientDocument", { clientId: input.client_id }, { feature: "documentos-cliente" });
+		await captureError(
+			error,
+			"uploadClientDocument",
+			{ clientId: input.client_id },
+			{ feature: "documentos-cliente" },
+		);
 		return {
 			success: false,
 			error: error instanceof Error ? error.message : "Error desconocido",
@@ -286,9 +294,7 @@ export async function uploadClientDocument(
 /**
  * Replace an existing document with a new version
  */
-export async function replaceClientDocument(
-	input: ReplaceDocumentInput
-): Promise<ActionResult<{ id: string }>> {
+export async function replaceClientDocument(input: ReplaceDocumentInput): Promise<ActionResult<{ id: string }>> {
 	try {
 		const supabase = await createClient();
 
@@ -333,7 +339,12 @@ export async function replaceClientDocument(
 
 		if (uploadError) {
 			console.error("[replaceClientDocument] Storage error:", uploadError);
-			await captureError(uploadError, "replaceClientDocument:storage", { documentId: input.document_id, clientId: existingDoc.client_id }, { feature: "documentos-cliente" });
+			await captureError(
+				uploadError,
+				"replaceClientDocument:storage",
+				{ documentId: input.document_id, clientId: existingDoc.client_id },
+				{ feature: "documentos-cliente" },
+			);
 			return { success: false, error: "Error al subir archivo" };
 		}
 
@@ -359,7 +370,12 @@ export async function replaceClientDocument(
 
 		if (insertError) {
 			console.error("[replaceClientDocument] Insert error:", insertError);
-			await captureError(insertError, "replaceClientDocument:insert", { documentId: input.document_id, clientId: existingDoc.client_id }, { feature: "documentos-cliente" });
+			await captureError(
+				insertError,
+				"replaceClientDocument:insert",
+				{ documentId: input.document_id, clientId: existingDoc.client_id },
+				{ feature: "documentos-cliente" },
+			);
 			// Clean up uploaded file
 			await supabase.storage.from("clientes-documentos").remove([storagePath]);
 			return { success: false, error: "Error al registrar documento" };
@@ -379,14 +395,24 @@ export async function replaceClientDocument(
 		if (updateError) {
 			console.error("[replaceClientDocument] Update error:", updateError);
 			// The new document is created but old one isn't marked - log for manual fix
-			await captureError(updateError, "replaceClientDocument:update-old", { documentId: input.document_id, newDocId: newDoc.id, clientId: existingDoc.client_id }, { feature: "documentos-cliente" });
+			await captureError(
+				updateError,
+				"replaceClientDocument:update-old",
+				{ documentId: input.document_id, newDocId: newDoc.id, clientId: existingDoc.client_id },
+				{ feature: "documentos-cliente" },
+			);
 		}
 
 		revalidatePath("/clientes");
 		return { success: true, data: { id: newDoc.id } };
 	} catch (error) {
 		console.error("[replaceClientDocument] Error:", error);
-		await captureError(error, "replaceClientDocument", { documentId: input.document_id }, { feature: "documentos-cliente" });
+		await captureError(
+			error,
+			"replaceClientDocument",
+			{ documentId: input.document_id },
+			{ feature: "documentos-cliente" },
+		);
 		return {
 			success: false,
 			error: error instanceof Error ? error.message : "Error desconocido",
@@ -403,7 +429,7 @@ export async function replaceClientDocument(
  */
 export async function getDocumentHistory(
 	clientId: string,
-	tipoDocumento: TipoDocumentoCliente
+	tipoDocumento: TipoDocumentoCliente,
 ): Promise<ActionResult<DocumentHistoryItem[]>> {
 	try {
 		const supabase = await createClient();
@@ -417,11 +443,7 @@ export async function getDocumentHistory(
 		}
 
 		// Only admin can see full history
-		const { data: profile } = await supabase
-			.from("profiles")
-			.select("role")
-			.eq("id", user.id)
-			.single();
+		const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
 
 		if (!profile || profile.role !== "admin") {
 			return { success: false, error: "Solo administradores pueden ver el historial" };
@@ -429,7 +451,8 @@ export async function getDocumentHistory(
 
 		const { data, error } = await supabase
 			.from("clientes_documentos")
-			.select(`
+			.select(
+				`
 				id,
 				version,
 				nombre_archivo,
@@ -439,7 +462,8 @@ export async function getDocumentHistory(
 				replaced_at,
 				subido_por,
 				profiles:subido_por (full_name)
-			`)
+			`,
+			)
 			.eq("client_id", clientId)
 			.eq("tipo_documento", tipoDocumento)
 			.order("version", { ascending: false });
@@ -484,9 +508,7 @@ export async function getDocumentHistory(
 /**
  * Get all active documents for a client
  */
-export async function getActiveDocuments(
-	clientId: string
-): Promise<ActionResult<ClienteDocumento[]>> {
+export async function getActiveDocuments(clientId: string): Promise<ActionResult<ClienteDocumento[]>> {
 	try {
 		const supabase = await createClient();
 
@@ -527,9 +549,7 @@ export async function getActiveDocuments(
 /**
  * Discard (soft delete) a document
  */
-export async function discardClientDocument(
-	documentId: string
-): Promise<ActionResult<void>> {
+export async function discardClientDocument(documentId: string): Promise<ActionResult<void>> {
 	try {
 		const supabase = await createClient();
 
@@ -572,7 +592,12 @@ export async function discardClientDocument(
 
 		if (updateError) {
 			console.error("[discardClientDocument] Update error:", updateError);
-			await captureError(updateError, "discardClientDocument:update", { documentId, clientId: doc.client_id }, { feature: "documentos-cliente" });
+			await captureError(
+				updateError,
+				"discardClientDocument:update",
+				{ documentId, clientId: doc.client_id },
+				{ feature: "documentos-cliente" },
+			);
 			return { success: false, error: "Error al descartar documento" };
 		}
 
@@ -596,9 +621,7 @@ export async function discardClientDocument(
  * Register a document that was already uploaded client-side to Supabase Storage.
  * Only receives metadata — no file binary — to stay within the 2MB server action limit.
  */
-export async function registerClientDocument(
-	input: RegisterDocumentInput
-): Promise<ActionResult<{ id: string }>> {
+export async function registerClientDocument(input: RegisterDocumentInput): Promise<ActionResult<{ id: string }>> {
 	try {
 		const { supabase, user } = await authorizeClientDocumentEdit(input.client_id);
 
@@ -646,22 +669,29 @@ export async function registerClientDocument(
 
 		if (insertError) {
 			console.error("[registerClientDocument] Insert error:", insertError);
-			await captureError(insertError, "registerClientDocument:insert", { clientId: input.client_id, tipo: input.tipo_documento }, { feature: "documentos-cliente" });
+			await captureError(
+				insertError,
+				"registerClientDocument:insert",
+				{ clientId: input.client_id, tipo: input.tipo_documento },
+				{ feature: "documentos-cliente" },
+			);
 			return { success: false, error: "Error al registrar documento" };
 		}
 
 		if (existingDoc) {
-			await supabase
-				.from("clientes_documentos")
-				.update({ replaced_by: docData.id })
-				.eq("id", existingDoc.id);
+			await supabase.from("clientes_documentos").update({ replaced_by: docData.id }).eq("id", existingDoc.id);
 		}
 
 		revalidatePath("/clientes");
 		return { success: true, data: { id: docData.id } };
 	} catch (error) {
 		console.error("[registerClientDocument] Error:", error);
-		await captureError(error, "registerClientDocument", { clientId: input.client_id }, { feature: "documentos-cliente" });
+		await captureError(
+			error,
+			"registerClientDocument",
+			{ clientId: input.client_id },
+			{ feature: "documentos-cliente" },
+		);
 		return {
 			success: false,
 			error: error instanceof Error ? error.message : "Error desconocido",
@@ -678,7 +708,7 @@ export async function registerClientDocument(
  * client-side to Supabase Storage.
  */
 export async function registerClientDocumentReplace(
-	input: RegisterReplaceInput
+	input: RegisterReplaceInput,
 ): Promise<ActionResult<{ id: string }>> {
 	try {
 		const supabase = await createClient();
@@ -725,7 +755,12 @@ export async function registerClientDocumentReplace(
 
 		if (insertError) {
 			console.error("[registerClientDocumentReplace] Insert error:", insertError);
-			await captureError(insertError, "registerClientDocumentReplace:insert", { documentId: input.document_id, clientId: existingDoc.client_id }, { feature: "documentos-cliente" });
+			await captureError(
+				insertError,
+				"registerClientDocumentReplace:insert",
+				{ documentId: input.document_id, clientId: existingDoc.client_id },
+				{ feature: "documentos-cliente" },
+			);
 			return { success: false, error: "Error al registrar documento" };
 		}
 
@@ -743,7 +778,12 @@ export async function registerClientDocumentReplace(
 		return { success: true, data: { id: newDoc.id } };
 	} catch (error) {
 		console.error("[registerClientDocumentReplace] Error:", error);
-		await captureError(error, "registerClientDocumentReplace", { documentId: input.document_id }, { feature: "documentos-cliente" });
+		await captureError(
+			error,
+			"registerClientDocumentReplace",
+			{ documentId: input.document_id },
+			{ feature: "documentos-cliente" },
+		);
 		return {
 			success: false,
 			error: error instanceof Error ? error.message : "Error desconocido",

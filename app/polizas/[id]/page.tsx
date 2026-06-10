@@ -1018,7 +1018,9 @@ export default function PolizaDetallePage() {
 									</p>
 								</div>
 								<div>
-									<label className="text-xs font-medium text-muted-foreground">Límite de Cobertura</label>
+									<label className="text-xs font-medium text-muted-foreground">
+										Límite de Cobertura
+									</label>
 									<p className="text-sm font-semibold text-foreground mt-1">
 										{formatCurrency(poliza.responsabilidad_civil.valor_asegurado, poliza.moneda)}
 									</p>
@@ -1037,20 +1039,28 @@ export default function PolizaDetallePage() {
 											<div key={idx} className="border border-border rounded-lg p-4 bg-muted/30">
 												{/* Fila principal: identidad del vehículo */}
 												<div className="flex items-center gap-3 mb-3">
-													<span className="font-semibold text-foreground text-sm">{v.placa}</span>
+													<span className="font-semibold text-foreground text-sm">
+														{v.placa}
+													</span>
 													{v.tipo_vehiculo_nombre && (
 														<span className="text-xs bg-secondary text-secondary-foreground px-2 py-0.5 rounded-full">
 															{v.tipo_vehiculo_nombre}
 														</span>
 													)}
-													<span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-														v.uso === "publico"
-															? "bg-blue-100 text-blue-800"
+													<span
+														className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+															v.uso === "publico"
+																? "bg-blue-100 text-blue-800"
+																: v.uso === "privado"
+																	? "bg-purple-100 text-purple-800"
+																	: "bg-green-100 text-green-800"
+														}`}
+													>
+														{v.uso === "publico"
+															? "Público"
 															: v.uso === "privado"
-															? "bg-purple-100 text-purple-800"
-															: "bg-green-100 text-green-800"
-													}`}>
-														{v.uso === "publico" ? "Público" : v.uso === "privado" ? "Privado" : "Particular"}
+																? "Privado"
+																: "Particular"}
 													</span>
 												</div>
 
@@ -1058,80 +1068,128 @@ export default function PolizaDetallePage() {
 												<div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-2">
 													<div>
 														<label className="text-xs text-muted-foreground">Chasis</label>
-														<p className="text-xs font-medium text-foreground">{v.nro_chasis}</p>
+														<p className="text-xs font-medium text-foreground">
+															{v.nro_chasis}
+														</p>
 													</div>
 													{(v.marca_vehiculo_nombre || v.modelo) && (
 														<div>
-															<label className="text-xs text-muted-foreground">Marca / Modelo</label>
+															<label className="text-xs text-muted-foreground">
+																Marca / Modelo
+															</label>
 															<p className="text-xs font-medium text-foreground">
-																{[v.marca_vehiculo_nombre, v.modelo].filter(Boolean).join(" ")}
+																{[v.marca_vehiculo_nombre, v.modelo]
+																	.filter(Boolean)
+																	.join(" ")}
 															</p>
 														</div>
 													)}
 													{v.ano && (
 														<div>
 															<label className="text-xs text-muted-foreground">Año</label>
-															<p className="text-xs font-medium text-foreground">{v.ano}</p>
+															<p className="text-xs font-medium text-foreground">
+																{v.ano}
+															</p>
 														</div>
 													)}
 													{v.color && (
 														<div>
-															<label className="text-xs text-muted-foreground">Color</label>
-															<p className="text-xs font-medium text-foreground">{v.color}</p>
+															<label className="text-xs text-muted-foreground">
+																Color
+															</label>
+															<p className="text-xs font-medium text-foreground">
+																{v.color}
+															</p>
 														</div>
 													)}
 													{v.nro_motor && (
 														<div>
-															<label className="text-xs text-muted-foreground">Nº Motor</label>
-															<p className="text-xs font-medium text-foreground">{v.nro_motor}</p>
+															<label className="text-xs text-muted-foreground">
+																Nº Motor
+															</label>
+															<p className="text-xs font-medium text-foreground">
+																{v.nro_motor}
+															</p>
 														</div>
 													)}
 													{v.servicio && (
 														<div>
-															<label className="text-xs text-muted-foreground">Servicio</label>
-															<p className="text-xs font-medium text-foreground">{v.servicio}</p>
+															<label className="text-xs text-muted-foreground">
+																Servicio
+															</label>
+															<p className="text-xs font-medium text-foreground">
+																{v.servicio}
+															</p>
 														</div>
 													)}
 													{v.capacidad && (
 														<div>
-															<label className="text-xs text-muted-foreground">Capacidad</label>
-															<p className="text-xs font-medium text-foreground">{v.capacidad}</p>
+															<label className="text-xs text-muted-foreground">
+																Capacidad
+															</label>
+															<p className="text-xs font-medium text-foreground">
+																{v.capacidad}
+															</p>
 														</div>
 													)}
 													{v.region_uso && (
 														<div>
-															<label className="text-xs text-muted-foreground">Región de Uso</label>
-															<p className="text-xs font-medium text-foreground">{v.region_uso}</p>
+															<label className="text-xs text-muted-foreground">
+																Región de Uso
+															</label>
+															<p className="text-xs font-medium text-foreground">
+																{v.region_uso}
+															</p>
 														</div>
 													)}
 													{v.tipo_carroceria && (
 														<div>
-															<label className="text-xs text-muted-foreground">Carrocería</label>
-															<p className="text-xs font-medium text-foreground">{v.tipo_carroceria}</p>
+															<label className="text-xs text-muted-foreground">
+																Carrocería
+															</label>
+															<p className="text-xs font-medium text-foreground">
+																{v.tipo_carroceria}
+															</p>
 														</div>
 													)}
 													{v.propiedad && (
 														<div>
-															<label className="text-xs text-muted-foreground">Propiedad</label>
-															<p className="text-xs font-medium text-foreground capitalize">{v.propiedad}</p>
+															<label className="text-xs text-muted-foreground">
+																Propiedad
+															</label>
+															<p className="text-xs font-medium text-foreground capitalize">
+																{v.propiedad}
+															</p>
 														</div>
 													)}
 													{v.ejes !== undefined && (
 														<div>
-															<label className="text-xs text-muted-foreground">Ejes</label>
-															<p className="text-xs font-medium text-foreground">{v.ejes}</p>
+															<label className="text-xs text-muted-foreground">
+																Ejes
+															</label>
+															<p className="text-xs font-medium text-foreground">
+																{v.ejes}
+															</p>
 														</div>
 													)}
 													{v.asientos !== undefined && (
 														<div>
-															<label className="text-xs text-muted-foreground">Asientos</label>
-															<p className="text-xs font-medium text-foreground">{v.asientos}</p>
+															<label className="text-xs text-muted-foreground">
+																Asientos
+															</label>
+															<p className="text-xs font-medium text-foreground">
+																{v.asientos}
+															</p>
 														</div>
 													)}
 													{v.cilindrada !== undefined && (
 														<div>
-															<label className="text-xs text-muted-foreground">Cilindrada</label>
-															<p className="text-xs font-medium text-foreground">{v.cilindrada}</p>
+															<label className="text-xs text-muted-foreground">
+																Cilindrada
+															</label>
+															<p className="text-xs font-medium text-foreground">
+																{v.cilindrada}
+															</p>
 														</div>
 													)}
 												</div>
@@ -1879,10 +1937,7 @@ export default function PolizaDetallePage() {
 											})}
 											{/* Cuotas propias de inclusiones */}
 											{poliza.cuotas_inclusion?.map((ci) => (
-												<tr
-													key={`inc-${ci.id}`}
-													className="bg-green-50/50 hover:bg-green-50"
-												>
+												<tr key={`inc-${ci.id}`} className="bg-green-50/50 hover:bg-green-50">
 													<td className="px-4 py-3 text-sm font-medium text-green-800">
 														<span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-700 border border-green-200 mr-2">
 															Inclusión {ci.numero_anexo}
@@ -2250,7 +2305,6 @@ export default function PolizaDetallePage() {
 						</CardContent>
 					</Card>
 				</div>
-
 			</div>
 
 			{/* ── Anexos (full width, outside sticky grid) ──────── */}

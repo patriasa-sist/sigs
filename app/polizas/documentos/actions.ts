@@ -116,9 +116,7 @@ export async function eliminarDocumentoPermanente(documentoId: string, archivoUr
 		}
 
 		// Eliminar archivo del Storage
-		const { error: errorStorage } = await supabase.storage
-			.from("polizas-documentos")
-			.remove([filePath]);
+		const { error: errorStorage } = await supabase.storage.from("polizas-documentos").remove([filePath]);
 
 		if (errorStorage) {
 			console.error("Error eliminando archivo del Storage:", errorStorage);

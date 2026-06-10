@@ -42,7 +42,9 @@ export function NuevoAnexoForm() {
 	useEffect(() => {
 		const loadUser = async () => {
 			const supabase = createClient();
-			const { data: { user } } = await supabase.auth.getUser();
+			const {
+				data: { user },
+			} = await supabase.auth.getUser();
 			if (user) setUserId(user.id);
 		};
 		loadUser();
@@ -101,15 +103,15 @@ export function NuevoAnexoForm() {
 	// Callbacks estables para PagosYDocumentos (evitar re-renders infinitos en useEffect)
 	const handleChangePlanPagoInclusion = useCallback(
 		(plan: PlanPagoInclusion | null) => setFormState((prev) => ({ ...prev, plan_pago_inclusion: plan })),
-		[]
+		[],
 	);
 	const handleChangeCuotas = useCallback(
 		(cuotas: AnexoFormState["cuotas_ajuste"]) => setFormState((prev) => ({ ...prev, cuotas_ajuste: cuotas })),
-		[]
+		[],
 	);
 	const handleChangeVigenciaCorrida = useCallback(
 		(vc: AnexoFormState["vigencia_corrida"]) => setFormState((prev) => ({ ...prev, vigencia_corrida: vc })),
-		[]
+		[],
 	);
 
 	const handleCancelar = () => {
@@ -135,10 +137,7 @@ export function NuevoAnexoForm() {
 						</p>
 					</div>
 				</div>
-				<button
-					onClick={handleCancelar}
-					className="text-gray-500 hover:text-gray-700 text-sm underline"
-				>
+				<button onClick={handleCancelar} className="text-gray-500 hover:text-gray-700 text-sm underline">
 					Cancelar
 				</button>
 			</div>
@@ -201,11 +200,11 @@ export function NuevoAnexoForm() {
 					onChangeCuotas={handleChangeCuotas}
 					onChangeVigenciaCorrida={handleChangeVigenciaCorrida}
 					onChangeDocumentos={(docs) =>
-					setFormState((prev) => ({
-						...prev,
-						documentos: typeof docs === "function" ? docs(prev.documentos) : docs,
-					}))
-				}
+						setFormState((prev) => ({
+							...prev,
+							documentos: typeof docs === "function" ? docs(prev.documentos) : docs,
+						}))
+					}
 					onSiguiente={() => setFormState((prev) => ({ ...prev, paso_actual: 5 }))}
 					onAnterior={() => {
 						const pasoAnterior = formState.config?.tipo_anexo === "anulacion" ? 2 : 3;

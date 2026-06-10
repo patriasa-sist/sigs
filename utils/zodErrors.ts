@@ -6,7 +6,7 @@ import type { z } from "zod";
  */
 const MENSAJES_ES: Record<string, string> = {
 	"Invalid input": "Valor inválido",
-	"Required": "Campo requerido",
+	Required: "Campo requerido",
 	"Invalid email": "Correo electrónico inválido",
 	"Invalid url": "URL inválida",
 	"Invalid date": "Fecha inválida",

@@ -378,7 +378,9 @@ export default function ExportarProduccion({ regionales, companias, equipos }: F
 							checked={excluirRetroactivas}
 							onChange={(e) => setExcluirRetroactivas(e.target.checked)}
 						/>
-						<span className="text-muted-foreground">Excluir pólizas cargadas retroactivamente (históricas)</span>
+						<span className="text-muted-foreground">
+							Excluir pólizas cargadas retroactivamente (históricas)
+						</span>
 					</label>
 				</div>
 

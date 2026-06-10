@@ -34,11 +34,11 @@ export default function AgregarDocumentos({
 	const [operationLoading, setOperationLoading] = useState<string | null>(null);
 
 	const handleAgregarDocumento = useCallback((doc: DocumentoSiniestro) => {
-		setDocumentos(prev => [...prev, doc]);
+		setDocumentos((prev) => [...prev, doc]);
 	}, []);
 
 	const handleEliminarDocumento = useCallback((index: number) => {
-		setDocumentos(prev => prev.filter((_, i) => i !== index));
+		setDocumentos((prev) => prev.filter((_, i) => i !== index));
 	}, []);
 
 	const handleUpload = useCallback(async () => {
@@ -89,7 +89,7 @@ export default function AgregarDocumentos({
 				setOperationLoading(null);
 			}
 		},
-		[siniestroId]
+		[siniestroId],
 	);
 
 	const handleRestaurar = useCallback(
@@ -112,12 +112,14 @@ export default function AgregarDocumentos({
 				setOperationLoading(null);
 			}
 		},
-		[siniestroId]
+		[siniestroId],
 	);
 
 	const handleEliminarPermanente = useCallback(
 		async (documentoId: string, archivoUrl: string) => {
-			if (!confirm("¿Estás seguro de eliminar este documento permanentemente? Esta acción NO se puede deshacer.")) {
+			if (
+				!confirm("¿Estás seguro de eliminar este documento permanentemente? Esta acción NO se puede deshacer.")
+			) {
 				return;
 			}
 
@@ -139,7 +141,7 @@ export default function AgregarDocumentos({
 				setOperationLoading(null);
 			}
 		},
-		[siniestroId]
+		[siniestroId],
 	);
 
 	const getFileIcon = (filename: string) => {
@@ -170,9 +172,7 @@ export default function AgregarDocumentos({
 		const { extractStoragePath } = await import("@/utils/storage");
 
 		const storagePath = extractStoragePath(doc.archivo_url, "siniestros-documentos");
-		const { data } = await supabase.storage
-			.from("siniestros-documentos")
-			.createSignedUrl(storagePath, 3600);
+		const { data } = await supabase.storage.from("siniestros-documentos").createSignedUrl(storagePath, 3600);
 
 		if (data?.signedUrl) {
 			window.open(data.signedUrl, "_blank");
@@ -192,10 +192,10 @@ export default function AgregarDocumentos({
 					</CardHeader>
 					<CardContent className="space-y-4">
 						<DocumentUploader
-						documentos={documentos}
-						onAgregarDocumento={handleAgregarDocumento}
-						onEliminarDocumento={handleEliminarDocumento}
-					/>
+							documentos={documentos}
+							onAgregarDocumento={handleAgregarDocumento}
+							onEliminarDocumento={handleEliminarDocumento}
+						/>
 
 						{documentos.length > 0 && (
 							<div className="flex justify-end gap-2 pt-2 border-t">
@@ -249,7 +249,9 @@ export default function AgregarDocumentos({
 									<CardContent className="p-4">
 										<div className="flex items-start gap-4">
 											{/* Icono del archivo */}
-											<div className="flex-shrink-0 text-3xl">{getFileIcon(doc.nombre_archivo)}</div>
+											<div className="flex-shrink-0 text-3xl">
+												{getFileIcon(doc.nombre_archivo)}
+											</div>
 
 											{/* Información del documento */}
 											<div className="flex-1 min-w-0">
@@ -260,9 +262,7 @@ export default function AgregarDocumentos({
 													</span>
 													<span>{formatFileSize(doc.tamano_bytes)}</span>
 													{doc.uploaded_at && (
-														<span>
-															{formatFechaLaPaz(doc.uploaded_at)}
-														</span>
+														<span>{formatFechaLaPaz(doc.uploaded_at)}</span>
 													)}
 												</div>
 												{doc.usuario_nombre && (
@@ -317,7 +317,9 @@ export default function AgregarDocumentos({
 														<Button
 															variant="destructive"
 															size="sm"
-															onClick={() => handleEliminarPermanente(doc.id!, doc.archivo_url!)}
+															onClick={() =>
+																handleEliminarPermanente(doc.id!, doc.archivo_url!)
+															}
 															disabled={operationLoading === doc.id}
 															title="Eliminar permanentemente"
 														>

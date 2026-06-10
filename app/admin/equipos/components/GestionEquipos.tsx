@@ -5,14 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-	Dialog,
-	DialogContent,
-	DialogHeader,
-	DialogTitle,
-	DialogTrigger,
-	DialogFooter,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -24,22 +17,10 @@ import {
 	AlertDialogTitle,
 	AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Trash2, UserPlus, Crown, User, X } from "lucide-react";
 import { toast } from "sonner";
-import {
-	crearEquipo,
-	eliminarEquipo,
-	agregarMiembro,
-	removerMiembro,
-	cambiarRolMiembro,
-} from "../actions";
+import { crearEquipo, eliminarEquipo, agregarMiembro, removerMiembro, cambiarRolMiembro } from "../actions";
 import type { Equipo, UsuarioDisponible } from "../actions";
 
 interface Props {
@@ -115,8 +96,8 @@ export default function GestionEquipos({ equiposIniciales, usuariosDisponibles }
 										},
 									],
 								}
-							: e
-					)
+							: e,
+					),
 				);
 			}
 			toast.success("Miembro agregado");
@@ -131,10 +112,8 @@ export default function GestionEquipos({ equiposIniciales, usuariosDisponibles }
 		if (result.success) {
 			setEquipos((prev) =>
 				prev.map((e) =>
-					e.id === equipoId
-						? { ...e, miembros: e.miembros.filter((m) => m.user_id !== userId) }
-						: e
-				)
+					e.id === equipoId ? { ...e, miembros: e.miembros.filter((m) => m.user_id !== userId) } : e,
+				),
 			);
 			toast.success("Miembro removido");
 		} else {
@@ -143,11 +122,7 @@ export default function GestionEquipos({ equiposIniciales, usuariosDisponibles }
 	}
 
 	// ========== CAMBIAR ROL ==========
-	async function handleCambiarRol(
-		equipoId: string,
-		userId: string,
-		nuevoRol: "lider" | "miembro"
-	) {
+	async function handleCambiarRol(equipoId: string, userId: string, nuevoRol: "lider" | "miembro") {
 		const result = await cambiarRolMiembro(equipoId, userId, nuevoRol);
 		if (result.success) {
 			setEquipos((prev) =>
@@ -156,11 +131,11 @@ export default function GestionEquipos({ equiposIniciales, usuariosDisponibles }
 						? {
 								...e,
 								miembros: e.miembros.map((m) =>
-									m.user_id === userId ? { ...m, rol_equipo: nuevoRol } : m
+									m.user_id === userId ? { ...m, rol_equipo: nuevoRol } : m,
 								),
 							}
-						: e
-				)
+						: e,
+				),
 			);
 			toast.success(`Rol cambiado a ${nuevoRol}`);
 		} else {
@@ -275,9 +250,7 @@ function EquipoCard({
 				<div className="flex items-center justify-between">
 					<div>
 						<CardTitle className="text-lg">{equipo.nombre}</CardTitle>
-						{equipo.descripcion && (
-							<p className="text-sm text-gray-500 mt-1">{equipo.descripcion}</p>
-						)}
+						{equipo.descripcion && <p className="text-sm text-gray-500 mt-1">{equipo.descripcion}</p>}
 					</div>
 					<div className="flex items-center gap-2">
 						<Badge variant="outline">{equipo.miembros.length} miembros</Badge>
@@ -291,8 +264,8 @@ function EquipoCard({
 								<AlertDialogHeader>
 									<AlertDialogTitle>Eliminar equipo</AlertDialogTitle>
 									<AlertDialogDescription>
-										Se eliminara el equipo &quot;{equipo.nombre}&quot; y todos sus miembros seran removidos.
-										Los datos (polizas, clientes) no se eliminan.
+										Se eliminara el equipo &quot;{equipo.nombre}&quot; y todos sus miembros seran
+										removidos. Los datos (polizas, clientes) no se eliminan.
 									</AlertDialogDescription>
 								</AlertDialogHeader>
 								<AlertDialogFooter>
@@ -325,9 +298,7 @@ function EquipoCard({
 										<User className="h-4 w-4 text-gray-400" />
 									)}
 									<div>
-										<span className="font-medium text-sm">
-											{m.user_full_name || m.user_email}
-										</span>
+										<span className="font-medium text-sm">{m.user_full_name || m.user_email}</span>
 										{m.user_full_name && (
 											<span className="text-xs text-gray-500 ml-2">{m.user_email}</span>
 										)}

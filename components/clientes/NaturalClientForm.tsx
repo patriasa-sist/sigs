@@ -67,18 +67,19 @@ export function NaturalClientForm({ form, partnerForm, onFieldBlur, exceptions =
 	return (
 		<div className="space-y-6">
 			{/* SECCIÓN 1: DATOS PERSONALES */}
-			<FormSection
-				title="Datos Personales"
-				description="Información personal del cliente"
-				required
-			>
+			<FormSection title="Datos Personales" description="Información personal del cliente" required>
 				{/* Nombres y apellidos — grid 2 columnas */}
 				<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 					<div>
 						<Label htmlFor="primer_nombre">
 							Primer Nombre <span className="text-destructive">*</span>
 						</Label>
-						<Input id="primer_nombre" {...ur("primer_nombre")} onBlur={onFieldBlur} className={eb(!!errors.primer_nombre)} />
+						<Input
+							id="primer_nombre"
+							{...ur("primer_nombre")}
+							onBlur={onFieldBlur}
+							className={eb(!!errors.primer_nombre)}
+						/>
 						{errors.primer_nombre && (
 							<p className="text-sm text-destructive mt-1">{errors.primer_nombre.message}</p>
 						)}
@@ -93,7 +94,12 @@ export function NaturalClientForm({ form, partnerForm, onFieldBlur, exceptions =
 						<Label htmlFor="primer_apellido">
 							Primer Apellido <span className="text-destructive">*</span>
 						</Label>
-						<Input id="primer_apellido" {...ur("primer_apellido")} onBlur={onFieldBlur} className={eb(!!errors.primer_apellido)} />
+						<Input
+							id="primer_apellido"
+							{...ur("primer_apellido")}
+							onBlur={onFieldBlur}
+							className={eb(!!errors.primer_apellido)}
+						/>
 						{errors.primer_apellido && (
 							<p className="text-sm text-destructive mt-1">{errors.primer_apellido.message}</p>
 						)}
@@ -248,18 +254,21 @@ export function NaturalClientForm({ form, partnerForm, onFieldBlur, exceptions =
 			</FormSection>
 
 			{/* SECCIÓN 2: INFORMACIÓN DE CONTACTO */}
-			<FormSection
-				title="Información de Contacto"
-				description="Datos de contacto del cliente"
-				required
-			>
+			<FormSection title="Información de Contacto" description="Datos de contacto del cliente" required>
 				<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 					<div className="md:col-span-2">
 						<Label htmlFor="direccion">
 							Dirección <span className="text-destructive">*</span>
 						</Label>
-						<Input id="direccion" {...ur("direccion")} onBlur={onFieldBlur} className={eb(!!errors.direccion)} />
-						{errors.direccion && <p className="text-sm text-destructive mt-1">{errors.direccion.message}</p>}
+						<Input
+							id="direccion"
+							{...ur("direccion")}
+							onBlur={onFieldBlur}
+							className={eb(!!errors.direccion)}
+						/>
+						{errors.direccion && (
+							<p className="text-sm text-destructive mt-1">{errors.direccion.message}</p>
+						)}
 					</div>
 
 					<div>
@@ -313,7 +322,12 @@ export function NaturalClientForm({ form, partnerForm, onFieldBlur, exceptions =
 						<Label htmlFor="profesion_oficio">
 							Profesión u Oficio <span className="text-destructive">*</span>
 						</Label>
-						<Input id="profesion_oficio" {...ur("profesion_oficio")} onBlur={onFieldBlur} className={eb(!!errors.profesion_oficio)} />
+						<Input
+							id="profesion_oficio"
+							{...ur("profesion_oficio")}
+							onBlur={onFieldBlur}
+							className={eb(!!errors.profesion_oficio)}
+						/>
 						{errors.profesion_oficio && (
 							<p className="text-sm text-destructive mt-1">{errors.profesion_oficio.message}</p>
 						)}
@@ -399,7 +413,13 @@ export function NaturalClientForm({ form, partnerForm, onFieldBlur, exceptions =
 				<div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
 					<div>
 						<Label htmlFor="nit">NIT de Facturación</Label>
-						<Input id="nit" {...register("nit")} onBlur={onFieldBlur} placeholder="Mín. 7 dígitos" className={eb(!!errors.nit)} />
+						<Input
+							id="nit"
+							{...register("nit")}
+							onBlur={onFieldBlur}
+							placeholder="Mín. 7 dígitos"
+							className={eb(!!errors.nit)}
+						/>
 						{errors.nit && <p className="text-sm text-destructive mt-1">{errors.nit.message}</p>}
 					</div>
 
@@ -484,7 +504,9 @@ function PartnerFields({ form, onFieldBlur }: { form: UseFormReturn<ClientPartne
 			<div>
 				<Label htmlFor="partner_primer_nombre">Primer Nombre</Label>
 				<Input id="partner_primer_nombre" {...ur("primer_nombre")} onBlur={onFieldBlur} />
-				{errors.primer_nombre && <p className="text-sm text-destructive mt-1">{errors.primer_nombre.message}</p>}
+				{errors.primer_nombre && (
+					<p className="text-sm text-destructive mt-1">{errors.primer_nombre.message}</p>
+				)}
 			</div>
 
 			<div>
@@ -562,7 +584,9 @@ function PartnerFields({ form, onFieldBlur }: { form: UseFormReturn<ClientPartne
 			<div>
 				<Label htmlFor="partner_lugar_trabajo">Lugar de Trabajo</Label>
 				<Input id="partner_lugar_trabajo" {...ur("lugar_trabajo")} onBlur={onFieldBlur} />
-				{errors.lugar_trabajo && <p className="text-sm text-destructive mt-1">{errors.lugar_trabajo.message}</p>}
+				{errors.lugar_trabajo && (
+					<p className="text-sm text-destructive mt-1">{errors.lugar_trabajo.message}</p>
+				)}
 			</div>
 		</div>
 	);

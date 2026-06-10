@@ -102,7 +102,7 @@ type SupaClient = Awaited<ReturnType<typeof createClient>>;
 async function recomputarEstadoCuotaPoliza(
 	supabase: SupaClient,
 	cuotaId: string,
-	fechaUltimoPago: string
+	fechaUltimoPago: string,
 ): Promise<void> {
 	const { data: cuota } = await supabase.from("polizas_pagos").select("monto").eq("id", cuotaId).single();
 	if (!cuota) return;
@@ -135,13 +135,9 @@ async function recomputarEstadoCuotaAnexo(
 	supabase: SupaClient,
 	anexoPagoId: string,
 	fechaUltimoPago: string,
-	usuarioId: string | null
+	usuarioId: string | null,
 ): Promise<void> {
-	const { data: cuota } = await supabase
-		.from("polizas_anexos_pagos")
-		.select("monto")
-		.eq("id", anexoPagoId)
-		.single();
+	const { data: cuota } = await supabase.from("polizas_anexos_pagos").select("monto").eq("id", anexoPagoId).single();
 	if (!cuota) return;
 	const { data: abonos } = await supabase
 		.from("polizas_pagos_abonos")
@@ -174,7 +170,9 @@ async function recomputarEstadoCuotaAnexo(
  * Por defecto solo incluye pólizas con cuotas pendientes.
  * Con incluirPagadas=true, incluye también pólizas completamente pagadas.
  */
-export async function obtenerPolizasConPendientes(incluirPagadas: boolean = false): Promise<ObtenerPolizasConPagosResponse> {
+export async function obtenerPolizasConPendientes(
+	incluirPagadas: boolean = false,
+): Promise<ObtenerPolizasConPagosResponse> {
 	const permiso = await verificarPermisoCobranza();
 	if (!permiso.authorized) {
 		return { success: false, error: permiso.error };
@@ -205,7 +203,7 @@ export async function obtenerPolizasConPendientes(incluirPagadas: boolean = fals
 				),
 				compania:companias_aseguradoras!compania_aseguradora_id (id, nombre),
 				responsable:profiles!responsable_id (id, full_name),
-				regional:regionales!regional_id (id, nombre)`
+				regional:regionales!regional_id (id, nombre)`,
 			)
 			.eq("estado", "activa")
 			.order("numero_poliza", { ascending: true });
@@ -237,15 +235,23 @@ export async function obtenerPolizasConPendientes(incluirPagadas: boolean = fals
 		const polizaIds = (polizas || []).map((p) => p.id);
 
 		// ── Round 2: resumen de cuotas (solo campos necesarios, sin JSONB) ───
-		const { data: cuotaRows } = polizaIds.length > 0
-			? await supabase
-				.from("polizas_pagos")
-				.select("poliza_id, estado, estado_real, fecha_pago, fecha_vencimiento, monto")
-				.in("poliza_id", polizaIds)
-			: { data: [] };
+		const { data: cuotaRows } =
+			polizaIds.length > 0
+				? await supabase
+						.from("polizas_pagos")
+						.select("poliza_id, estado, estado_real, fecha_pago, fecha_vencimiento, monto")
+						.in("poliza_id", polizaIds)
+				: { data: [] };
 
 		// Función equivalente a obtenerEstadoReal pero sobre los campos mínimos
-		type CuotaRow = { poliza_id: string; estado: string; estado_real: string | null; fecha_pago: string | null; fecha_vencimiento: string; monto: number };
+		type CuotaRow = {
+			poliza_id: string;
+			estado: string;
+			estado_real: string | null;
+			fecha_pago: string | null;
+			fecha_vencimiento: string;
+			monto: number;
+		};
 		const estadoEfectivo = (c: CuotaRow): string => {
 			if (c.estado_real) return c.estado_real;
 			if (c.fecha_pago) return "pagado";
@@ -264,7 +270,13 @@ export async function obtenerPolizasConPendientes(incluirPagadas: boolean = fals
 		const cuotasByPoliza = new Map<string, CuotaSummary>();
 		for (const c of (cuotaRows as CuotaRow[] | null) || []) {
 			if (!cuotasByPoliza.has(c.poliza_id)) {
-				cuotasByPoliza.set(c.poliza_id, { cuotas_pendientes: 0, cuotas_vencidas: 0, total_pendiente: 0, total_pagado: 0, proxima_fecha: null });
+				cuotasByPoliza.set(c.poliza_id, {
+					cuotas_pendientes: 0,
+					cuotas_vencidas: 0,
+					total_pendiente: 0,
+					total_pagado: 0,
+					proxima_fecha: null,
+				});
 			}
 			const s = cuotasByPoliza.get(c.poliza_id)!;
 			const estado = estadoEfectivo(c);
@@ -288,7 +300,13 @@ export async function obtenerPolizasConPendientes(incluirPagadas: boolean = fals
 		const polizasConPagos: PolizaConPagos[] = [];
 
 		for (const poliza of polizas || []) {
-			const s = cuotasByPoliza.get(poliza.id) ?? { cuotas_pendientes: 0, cuotas_vencidas: 0, total_pendiente: 0, total_pagado: 0, proxima_fecha: null };
+			const s = cuotasByPoliza.get(poliza.id) ?? {
+				cuotas_pendientes: 0,
+				cuotas_vencidas: 0,
+				total_pendiente: 0,
+				total_pagado: 0,
+				proxima_fecha: null,
+			};
 
 			// Omitir pólizas sin cuotas pendientes (a menos que se pidan pagadas)
 			if (!incluirPagadas && s.cuotas_pendientes === 0 && s.cuotas_vencidas === 0) continue;
@@ -368,7 +386,10 @@ export async function obtenerPolizasConPendientes(incluirPagadas: boolean = fals
 		let cuotasPorVencer10dias = 0;
 
 		for (const poliza of polizasConPagos) {
-			pendientesPorMoneda.set(poliza.moneda, (pendientesPorMoneda.get(poliza.moneda) || 0) + poliza.total_pendiente);
+			pendientesPorMoneda.set(
+				poliza.moneda,
+				(pendientesPorMoneda.get(poliza.moneda) || 0) + poliza.total_pendiente,
+			);
 			totalCuotasPendientes += poliza.cuotas_pendientes;
 			totalCuotasVencidas += poliza.cuotas_vencidas;
 		}
@@ -708,7 +729,10 @@ export async function exportarReporte(filtros: ExportFilters): Promise<CobranzaS
 		const scope = await getDataScopeFilter("polizas");
 
 		// Query starts from polizas (left join to pagos) to include policies without payment records
-		let query = supabase.from("polizas").select(`
+		let query = supabase
+			.from("polizas")
+			.select(
+				`
 			id,
 			numero_poliza,
 			ramo,
@@ -748,8 +772,9 @@ export async function exportarReporte(filtros: ExportFilters): Promise<CobranzaS
 				nombre
 			),
 			cuotas:polizas_pagos (*)
-		`)
-		.eq("estado", "activa");
+		`,
+			)
+			.eq("estado", "activa");
 
 		// Apply entity filters directly on polizas
 		if (filtros.compania_id && filtros.compania_id !== "all") {
@@ -812,16 +837,18 @@ export async function exportarReporte(filtros: ExportFilters): Promise<CobranzaS
 				}
 			}
 
-			const cuotas = ((poliza.cuotas || []) as Array<{
-				numero_cuota: number;
-				monto: number;
-				fecha_vencimiento: string;
-				fecha_vencimiento_original: string | null;
-				fecha_pago: string | null;
-				estado: EstadoPago;
-				observaciones: string | null;
-				prorrogas_historial: unknown;
-			}>).sort((a, b) => a.numero_cuota - b.numero_cuota);
+			const cuotas = (
+				(poliza.cuotas || []) as Array<{
+					numero_cuota: number;
+					monto: number;
+					fecha_vencimiento: string;
+					fecha_vencimiento_original: string | null;
+					fecha_pago: string | null;
+					estado: EstadoPago;
+					observaciones: string | null;
+					prorrogas_historial: unknown;
+				}>
+			).sort((a, b) => a.numero_cuota - b.numero_cuota);
 
 			// Apply quota-level filters
 			let cuotasFiltradas = cuotas;
@@ -877,9 +904,9 @@ export async function exportarReporte(filtros: ExportFilters): Promise<CobranzaS
 						? Math.max(
 								0,
 								Math.floor(
-									(Date.now() - new Date(pago.fecha_vencimiento).getTime()) / (24 * 60 * 60 * 1000)
-								)
-						  )
+									(Date.now() - new Date(pago.fecha_vencimiento).getTime()) / (24 * 60 * 60 * 1000),
+								),
+							)
 						: 0;
 
 				const tieneProrroga = Array.isArray(pago.prorrogas_historial) && pago.prorrogas_historial.length > 0;
@@ -942,10 +969,7 @@ export async function obtenerOpcionesFiltroExport(): Promise<CobranzaServerRespo
 		]);
 
 		// Ramos: derivados de las pólizas activas visibles (respetando scope).
-		let polizasQuery = supabase
-			.from("polizas")
-			.select("ramo")
-			.eq("estado", "activa");
+		let polizasQuery = supabase.from("polizas").select("ramo").eq("estado", "activa");
 
 		if (scope.needsScoping) {
 			polizasQuery = polizasQuery.in("responsable_id", scope.teamMemberIds);
@@ -953,10 +977,7 @@ export async function obtenerOpcionesFiltroExport(): Promise<CobranzaServerRespo
 
 		// Responsables: roster completo de ejecutivos activos (no solo los que ya tienen
 		// pólizas activas), respetando scoping de equipo. Ver utils/ejecutivos.ts.
-		const [{ data: polizasData }, responsables] = await Promise.all([
-			polizasQuery,
-			obtenerEjecutivosFiltro(scope),
-		]);
+		const [{ data: polizasData }, responsables] = await Promise.all([polizasQuery, obtenerEjecutivosFiltro(scope)]);
 
 		// Extraer ramos únicos
 		const ramosSet = new Set<string>();
@@ -1021,7 +1042,7 @@ export async function obtenerDetallePolizaParaCuotas(polizaId: string): Promise<
 				regional:regionales!regional_id(id, nombre),
 				director_cartera:directores_cartera!director_cartera_id(nombre, apellidos),
 				cuotas:polizas_pagos(*)
-			`
+			`,
 			)
 			.eq("id", polizaId)
 			.single();
@@ -1030,8 +1051,6 @@ export async function obtenerDetallePolizaParaCuotas(polizaId: string): Promise<
 			console.error("Error fetching poliza:", polizaError);
 			return { success: false, error: "Póliza no encontrada" };
 		}
-
-
 
 		// Extract contact info based on client type
 		let contacto: ContactoCliente = {
@@ -1086,42 +1105,49 @@ export async function obtenerDetallePolizaParaCuotas(polizaId: string): Promise<
 			.reduce((sum: number, c: CuotaPago) => sum + c.monto, 0);
 		const cuotas_pendientes = cuotas.filter((c: CuotaPago) => c.estado === "pendiente").length;
 		const cuotas_vencidas = cuotas.filter((c: CuotaPago) => obtenerEstadoReal(c) === "vencido").length;
-		const proxima_fecha_vencimiento = cuotas
-			.filter((c: CuotaPago) => obtenerEstadoReal(c) !== "pagado" && c.fecha_vencimiento >= todayStr)
-			.sort((a, b) => a.fecha_vencimiento.localeCompare(b.fecha_vencimiento))[0]?.fecha_vencimiento ?? null;
+		const proxima_fecha_vencimiento =
+			cuotas
+				.filter((c: CuotaPago) => obtenerEstadoReal(c) !== "pagado" && c.fecha_vencimiento >= todayStr)
+				.sort((a, b) => a.fecha_vencimiento.localeCompare(b.fecha_vencimiento))[0]?.fecha_vencimiento ?? null;
 
 		// Cuotas propias de anexos de inclusión activos
 		let cuotas_inclusion: CuotaAnexoPropia[] | undefined;
 		const { data: anexosPagosInclusion } = await supabase
 			.from("polizas_anexos_pagos")
-			.select(`
+			.select(
+				`
 				id, anexo_id, numero_cuota, monto, fecha_vencimiento, estado, observaciones,
 				polizas_anexos!inner (id, numero_anexo, estado)
-			`)
+			`,
+			)
 			.eq("polizas_anexos.poliza_id", polizaId)
 			.eq("polizas_anexos.estado", "activo")
 			.eq("tipo", "cuota_propia");
 
 		if (anexosPagosInclusion && anexosPagosInclusion.length > 0) {
-			cuotas_inclusion = anexosPagosInclusion.map((p) => {
-				const info = p.polizas_anexos as unknown as { id: string; numero_anexo: string };
-				return {
-					id: p.id,
-					anexo_id: info.id,
-					numero_anexo: info.numero_anexo,
-					numero_cuota: p.numero_cuota ?? 0,
-					monto: Number(p.monto),
-					fecha_vencimiento: p.fecha_vencimiento || "",
-					estado:
-						(p.estado || "pendiente") === "pendiente" && p.fecha_vencimiento && p.fecha_vencimiento < todayStr
-							? "vencido"
-							: p.estado || "pendiente",
-					observaciones: p.observaciones || undefined,
-				};
-			}).sort((a, b) => {
-				if (a.numero_anexo !== b.numero_anexo) return a.numero_anexo.localeCompare(b.numero_anexo);
-				return a.numero_cuota - b.numero_cuota;
-			});
+			cuotas_inclusion = anexosPagosInclusion
+				.map((p) => {
+					const info = p.polizas_anexos as unknown as { id: string; numero_anexo: string };
+					return {
+						id: p.id,
+						anexo_id: info.id,
+						numero_anexo: info.numero_anexo,
+						numero_cuota: p.numero_cuota ?? 0,
+						monto: Number(p.monto),
+						fecha_vencimiento: p.fecha_vencimiento || "",
+						estado:
+							(p.estado || "pendiente") === "pendiente" &&
+							p.fecha_vencimiento &&
+							p.fecha_vencimiento < todayStr
+								? "vencido"
+								: p.estado || "pendiente",
+						observaciones: p.observaciones || undefined,
+					};
+				})
+				.sort((a, b) => {
+					if (a.numero_anexo !== b.numero_anexo) return a.numero_anexo.localeCompare(b.numero_anexo);
+					return a.numero_cuota - b.numero_cuota;
+				});
 		}
 
 		// Notas estructuradas por cuota (Mejora #1): cuotas de póliza y de anexo
@@ -1163,7 +1189,9 @@ export async function obtenerDetallePolizaParaCuotas(polizaId: string): Promise<
 			if (orParts.length > 0) {
 				const { data: abonosRows } = await supabase
 					.from("polizas_pagos_abonos")
-					.select("id, pago_id, anexo_pago_id, monto, fecha_pago, observaciones, created_at, autor:profiles!created_by(full_name)")
+					.select(
+						"id, pago_id, anexo_pago_id, monto, fecha_pago, observaciones, created_at, autor:profiles!created_by(full_name)",
+					)
 					.or(orParts.join(","))
 					.order("created_at", { ascending: true });
 
@@ -1211,13 +1239,20 @@ export async function obtenerDetallePolizaParaCuotas(polizaId: string): Promise<
 				client_type: poliza.client.client_type as "natural" | "juridica",
 				nombre_completo: (() => {
 					if (poliza.client.client_type === "natural" || poliza.client.client_type === "unipersonal") {
-						const nombre = [
-							poliza.client.natural_clients?.primer_nombre,
-							poliza.client.natural_clients?.segundo_nombre,
-							poliza.client.natural_clients?.primer_apellido,
-							poliza.client.natural_clients?.segundo_apellido,
-						].filter(Boolean).join(" ").trim() || "N/A";
-						if (poliza.client.client_type === "unipersonal" && poliza.client.unipersonal_clients?.razon_social) {
+						const nombre =
+							[
+								poliza.client.natural_clients?.primer_nombre,
+								poliza.client.natural_clients?.segundo_nombre,
+								poliza.client.natural_clients?.primer_apellido,
+								poliza.client.natural_clients?.segundo_apellido,
+							]
+								.filter(Boolean)
+								.join(" ")
+								.trim() || "N/A";
+						if (
+							poliza.client.client_type === "unipersonal" &&
+							poliza.client.unipersonal_clients?.razon_social
+						) {
 							return `${nombre} (${poliza.client.unipersonal_clients.razon_social})`;
 						}
 						return nombre;
@@ -1229,7 +1264,11 @@ export async function obtenerDetallePolizaParaCuotas(polizaId: string): Promise<
 						return poliza.client.natural_clients?.numero_documento || "N/A";
 					}
 					if (poliza.client.client_type === "unipersonal") {
-						return poliza.client.unipersonal_clients?.nit || poliza.client.natural_clients?.numero_documento || "N/A";
+						return (
+							poliza.client.unipersonal_clients?.nit ||
+							poliza.client.natural_clients?.numero_documento ||
+							"N/A"
+						);
 					}
 					return poliza.client.juridic_clients?.nit || "N/A";
 				})(),
@@ -1316,11 +1355,7 @@ export async function agregarNotaCuota(registro: RegistroNotaCuota): Promise<Cob
 		}
 
 		// Resolver nombre del autor para mostrarlo de inmediato
-		const { data: prof } = await supabase
-			.from("profiles")
-			.select("full_name")
-			.eq("id", permiso.userId)
-			.single();
+		const { data: prof } = await supabase.from("profiles").select("full_name").eq("id", permiso.userId).single();
 
 		revalidatePath("/cobranzas");
 		return {
@@ -1571,7 +1606,7 @@ export async function prepararDatosAvisoMora(polizaId: string): Promise<Preparar
 			const fechaVencimiento = new Date(cuota.fecha_vencimiento);
 			const diasMora = Math.max(
 				0,
-				Math.floor((hoy.getTime() - fechaVencimiento.getTime()) / (1000 * 60 * 60 * 24))
+				Math.floor((hoy.getTime() - fechaVencimiento.getTime()) / (1000 * 60 * 60 * 24)),
 			);
 
 			return {
@@ -1613,7 +1648,7 @@ export async function prepararDatosAvisoMora(polizaId: string): Promise<Preparar
  * El bucket pagos-comprobantes es privado, por lo que se usa createSignedUrl.
  */
 export async function obtenerComprobanteAbono(
-	abonoId: string
+	abonoId: string,
 ): Promise<CobranzaServerResponse<{ comprobante: Comprobante; publicUrl: string }>> {
 	const permiso = await verificarPermisoCobranza();
 	if (!permiso.authorized) {
@@ -1984,13 +2019,13 @@ export async function sustituirComprobantePago(abonoId: string, fileData: FormDa
 
 /** Mapeo de CobranzaSortField → columna en la vista */
 const SORT_COLUMN_MAP: Record<CobranzaSortField, string> = {
-	numero_poliza:    "numero_poliza",
-	cuotas_vencidas:  "cuotas_vencidas",
-	cuotas_pendientes:"cuotas_pendientes",
-	monto_pendiente:  "total_pendiente",
-	fecha_vencimiento:"proxima_fecha_vencimiento",
-	prima_total:      "prima_total",
-	inicio_vigencia:  "inicio_vigencia",
+	numero_poliza: "numero_poliza",
+	cuotas_vencidas: "cuotas_vencidas",
+	cuotas_pendientes: "cuotas_pendientes",
+	monto_pendiente: "total_pendiente",
+	fecha_vencimiento: "proxima_fecha_vencimiento",
+	prima_total: "prima_total",
+	inicio_vigencia: "inicio_vigencia",
 };
 
 /**
@@ -1998,9 +2033,9 @@ const SORT_COLUMN_MAP: Record<CobranzaSortField, string> = {
  * Round 1: filtra/ordena/pagina sobre la vista (computed cuota fields).
  * Round 2: enriquece los ≤20 IDs con cliente/compañía/responsable/regional.
  */
-export async function obtenerCobranzasPaginadas(params: CobranzaFiltros = {}): Promise<
-	CobranzaServerResponse<{ polizas: PolizaConPagos[]; total: number }>
-> {
+export async function obtenerCobranzasPaginadas(
+	params: CobranzaFiltros = {},
+): Promise<CobranzaServerResponse<{ polizas: PolizaConPagos[]; total: number }>> {
 	const permiso = await verificarPermisoCobranza();
 	if (!permiso.authorized) return { success: false, error: permiso.error };
 
@@ -2034,40 +2069,40 @@ export async function obtenerCobranzasPaginadas(params: CobranzaFiltros = {}): P
 			let natQuery = supabase.from("natural_clients").select("client_id");
 			for (const p of palabras) {
 				natQuery = natQuery.or(
-					`primer_nombre.ilike.%${p}%,segundo_nombre.ilike.%${p}%,primer_apellido.ilike.%${p}%,segundo_apellido.ilike.%${p}%,numero_documento.ilike.%${p}%`
+					`primer_nombre.ilike.%${p}%,segundo_nombre.ilike.%${p}%,primer_apellido.ilike.%${p}%,segundo_apellido.ilike.%${p}%,numero_documento.ilike.%${p}%`,
 				);
 			}
 
 			const [natRes, jurRes, uniRes, anexoRes] = await Promise.all([
 				natQuery,
-				supabase.from("juridic_clients")
-					.select("client_id")
-					.or(`razon_social.ilike.%${q}%,nit.ilike.%${q}%`),
-				supabase.from("unipersonal_clients")
+				supabase.from("juridic_clients").select("client_id").or(`razon_social.ilike.%${q}%,nit.ilike.%${q}%`),
+				supabase
+					.from("unipersonal_clients")
 					.select("client_id")
 					.or(`razon_social.ilike.%${q}%,nit.ilike.%${q}%`),
 				// Mejora #3: buscar por número de anexo → devuelve la póliza madre
-				supabase.from("polizas_anexos")
-					.select("poliza_id")
-					.ilike("numero_anexo", `%${q}%`),
+				supabase.from("polizas_anexos").select("poliza_id").ilike("numero_anexo", `%${q}%`),
 			]);
 			searchClientIds = [
 				...(natRes.data?.map((r) => r.client_id) ?? []),
 				...(jurRes.data?.map((r) => r.client_id) ?? []),
 				...(uniRes.data?.map((r) => r.client_id) ?? []),
 			];
-			searchAnexoPolizaIds = [...new Set((anexoRes.data?.map((r) => r.poliza_id) ?? []))];
+			searchAnexoPolizaIds = [...new Set(anexoRes.data?.map((r) => r.poliza_id) ?? [])];
 		}
 
 		// ── Round 1: vista con filtros, orden y paginación ─────────────────
 		const from = (page - 1) * pageSize;
-		const to   = from + pageSize - 1;
+		const to = from + pageSize - 1;
 		const sortCol = SORT_COLUMN_MAP[sortField];
 		const ascending = sortDirection === "asc";
 
 		let query = supabase
 			.from("cobranzas_polizas_resumen")
-			.select("id,numero_poliza,ramo,prima_total,moneda,estado,inicio_vigencia,fin_vigencia,modalidad_pago,client_id,compania_aseguradora_id,responsable_id,regional_id,cuotas_vencidas,cuotas_pendientes,total_pendiente,total_pagado,proxima_fecha_vencimiento", { count: "exact" });
+			.select(
+				"id,numero_poliza,ramo,prima_total,moneda,estado,inicio_vigencia,fin_vigencia,modalidad_pago,client_id,compania_aseguradora_id,responsable_id,regional_id,cuotas_vencidas,cuotas_pendientes,total_pendiente,total_pagado,proxima_fecha_vencimiento",
+				{ count: "exact" },
+			);
 
 		// Data scoping
 		if (scope.needsScoping) {
@@ -2075,10 +2110,10 @@ export async function obtenerCobranzasPaginadas(params: CobranzaFiltros = {}): P
 		}
 
 		// Filtros opcionales
-		if (ramo)         query = query.eq("ramo", ramo);
-		if (compania_id)  query = query.eq("compania_aseguradora_id", compania_id);
+		if (ramo) query = query.eq("ramo", ramo);
+		if (compania_id) query = query.eq("compania_aseguradora_id", compania_id);
 		if (responsable_id) query = query.eq("responsable_id", responsable_id);
-		if (regional_id)  query = query.eq("regional_id", regional_id);
+		if (regional_id) query = query.eq("regional_id", regional_id);
 		if (soloVencidas) query = query.gt("cuotas_vencidas", 0);
 
 		// Solo sin cuotas pendientes/vencidas → excluir las totalmente pagadas
@@ -2098,9 +2133,7 @@ export async function obtenerCobranzasPaginadas(params: CobranzaFiltros = {}): P
 		// proxima_fecha_vencimiento puede ser null (pólizas sin cuotas pendientes)
 		// NULLs al final en ascendente, al inicio en descendente
 		const nullsFirst = sortField === "fecha_vencimiento" && sortDirection === "desc";
-		query = query
-			.order(sortCol, { ascending, nullsFirst })
-			.range(from, to);
+		query = query.order(sortCol, { ascending, nullsFirst }).range(from, to);
 
 		const { data: resumen, error: resumenError, count } = await query;
 
@@ -2117,7 +2150,8 @@ export async function obtenerCobranzasPaginadas(params: CobranzaFiltros = {}): P
 
 		const { data: detalle } = await supabase
 			.from("polizas")
-			.select(`
+			.select(
+				`
 				id,
 				client:clients!client_id (
 					id, client_type,
@@ -2128,7 +2162,8 @@ export async function obtenerCobranzasPaginadas(params: CobranzaFiltros = {}): P
 				compania:companias_aseguradoras!compania_aseguradora_id (id, nombre),
 				responsable:profiles!responsable_id (id, full_name),
 				regional:regionales!regional_id (id, nombre)
-			`)
+			`,
+			)
 			.in("id", polizaIds);
 
 		// Indexar por id para O(1) lookup
@@ -2146,7 +2181,8 @@ export async function obtenerCobranzasPaginadas(params: CobranzaFiltros = {}): P
 				if (clientData.client_type === "natural" || clientData.client_type === "unipersonal") {
 					const natural = clientData.natural_clients;
 					if (natural) {
-						nombreCompleto = `${natural.primer_nombre || ""} ${natural.segundo_nombre || ""} ${natural.primer_apellido || ""} ${natural.segundo_apellido || ""}`.trim();
+						nombreCompleto =
+							`${natural.primer_nombre || ""} ${natural.segundo_nombre || ""} ${natural.primer_apellido || ""} ${natural.segundo_apellido || ""}`.trim();
 						documento = natural.numero_documento || "N/A";
 					}
 					if (clientData.client_type === "unipersonal" && clientData.unipersonal_clients) {
@@ -2218,9 +2254,9 @@ export async function obtenerCobranzaStats(): Promise<CobranzaServerResponse<Cob
 		const scope = await getDataScopeFilter("polizas");
 		const today = new Date().toISOString().split("T")[0];
 		const firstDayOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1)
-			.toISOString().split("T")[0];
-		const tenDaysFromNow = new Date(Date.now() + 10 * 24 * 60 * 60 * 1000)
-			.toISOString().split("T")[0];
+			.toISOString()
+			.split("T")[0];
+		const tenDaysFromNow = new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
 
 		// ── Paralelo: vista (agregados) + cuotas próximas + cobrados del mes ──
 		let vistaQuery = supabase
@@ -2235,10 +2271,7 @@ export async function obtenerCobranzaStats(): Promise<CobranzaServerResponse<Cob
 			.gte("fecha_pago", firstDayOfMonth);
 		// scoping en cobrados via join filter no soportado directamente; filtrar post-fetch
 
-		const [{ data: vistaRows }, { data: cuotasCobradas }] = await Promise.all([
-			vistaQuery,
-			cobradosQuery,
-		]);
+		const [{ data: vistaRows }, { data: cuotasCobradas }] = await Promise.all([vistaQuery, cobradosQuery]);
 
 		type VistaRow = {
 			moneda: string;
@@ -2261,15 +2294,15 @@ export async function obtenerCobranzaStats(): Promise<CobranzaServerResponse<Cob
 		for (const r of rowsActivas) {
 			pendientesPorMoneda.set(r.moneda, (pendientesPorMoneda.get(r.moneda) || 0) + r.total_pendiente);
 			totalCuotasPendientes += r.cuotas_pendientes;
-			totalCuotasVencidas   += r.cuotas_vencidas;
+			totalCuotasVencidas += r.cuotas_vencidas;
 			if (r.proxima_fecha_vencimiento && r.proxima_fecha_vencimiento <= tenDaysFromNow) {
 				cuotasPorVencer10dias++;
 			}
 		}
 
 		// Cobrados hoy/mes (con scoping aplicado post-fetch)
-		const cobradosHoyPorMoneda  = new Map<string, number>();
-		const cobradosMesPorMoneda  = new Map<string, number>();
+		const cobradosHoyPorMoneda = new Map<string, number>();
+		const cobradosMesPorMoneda = new Map<string, number>();
 
 		for (const cuota of cuotasCobradas ?? []) {
 			const polizaData = cuota.poliza as unknown as { moneda: string; responsable_id: string } | null;
@@ -2290,10 +2323,10 @@ export async function obtenerCobranzaStats(): Promise<CobranzaServerResponse<Cob
 		const stats: CobranzaStats = {
 			total_polizas: rowsActivas.length,
 			total_cuotas_pendientes: totalCuotasPendientes,
-			total_cuotas_vencidas:   totalCuotasVencidas,
-			montos_pendientes:    toMontoPorMoneda(pendientesPorMoneda),
-			montos_cobrados_hoy:  toMontoPorMoneda(cobradosHoyPorMoneda),
-			montos_cobrados_mes:  toMontoPorMoneda(cobradosMesPorMoneda),
+			total_cuotas_vencidas: totalCuotasVencidas,
+			montos_pendientes: toMontoPorMoneda(pendientesPorMoneda),
+			montos_cobrados_hoy: toMontoPorMoneda(cobradosHoyPorMoneda),
+			montos_cobrados_mes: toMontoPorMoneda(cobradosMesPorMoneda),
 			cuotas_por_vencer_10dias: cuotasPorVencer10dias,
 		};
 
@@ -2320,11 +2353,13 @@ export async function obtenerFiltrosCobranza(): Promise<CobranzaServerResponse<F
 		// Ramos, compañías y regionales: derivados de las pólizas activas visibles.
 		let polizasQuery = supabase
 			.from("polizas")
-			.select(`
+			.select(
+				`
 				ramo,
 				compania:companias_aseguradoras!compania_aseguradora_id (id, nombre),
 				regional:regionales!regional_id (id, nombre)
-			`)
+			`,
+			)
 			.eq("estado", "activa");
 
 		if (scope.needsScoping) {
@@ -2333,12 +2368,9 @@ export async function obtenerFiltrosCobranza(): Promise<CobranzaServerResponse<F
 
 		// Responsables: roster completo de ejecutivos activos (no solo los que ya tienen
 		// pólizas activas), respetando scoping de equipo. Ver utils/ejecutivos.ts.
-		const [{ data: rows }, ejecutivos] = await Promise.all([
-			polizasQuery,
-			obtenerEjecutivosFiltro(scope),
-		]);
+		const [{ data: rows }, ejecutivos] = await Promise.all([polizasQuery, obtenerEjecutivosFiltro(scope)]);
 
-		const ramos       = [...new Set((rows ?? []).map((r) => r.ramo).filter(Boolean))].sort();
+		const ramos = [...new Set((rows ?? []).map((r) => r.ramo).filter(Boolean))].sort();
 		const companiaMap = new Map<string, string>();
 		const regionalMap = new Map<string, string>();
 
@@ -2353,9 +2385,13 @@ export async function obtenerFiltrosCobranza(): Promise<CobranzaServerResponse<F
 			success: true,
 			data: {
 				ramos,
-				companias:    [...companiaMap.entries()].map(([id, nombre]) => ({ id, nombre })).sort((a, b) => a.nombre.localeCompare(b.nombre)),
+				companias: [...companiaMap.entries()]
+					.map(([id, nombre]) => ({ id, nombre }))
+					.sort((a, b) => a.nombre.localeCompare(b.nombre)),
 				responsables: ejecutivos,
-				regionales:   [...regionalMap.entries()].map(([id, nombre]) => ({ id, nombre })).sort((a, b) => a.nombre.localeCompare(b.nombre)),
+				regionales: [...regionalMap.entries()]
+					.map(([id, nombre]) => ({ id, nombre }))
+					.sort((a, b) => a.nombre.localeCompare(b.nombre)),
 			},
 		};
 	} catch (error) {

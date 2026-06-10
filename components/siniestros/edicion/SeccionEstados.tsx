@@ -167,7 +167,10 @@ export default function SeccionEstados({ siniestroId, estadoActual, estadoSinies
 									Nueva etapa
 								</Label>
 								<Select value={estadoSeleccionado} onValueChange={setEstadoSeleccionado}>
-									<SelectTrigger id="estado-select" className="mt-1 h-auto min-h-9 py-4 px-3 text-sm [&>span]:whitespace-normal [&>span]:text-left [&>span]:leading-snug [&>span]:pr-2">
+									<SelectTrigger
+										id="estado-select"
+										className="mt-1 h-auto min-h-9 py-4 px-3 text-sm [&>span]:whitespace-normal [&>span]:text-left [&>span]:leading-snug [&>span]:pr-2"
+									>
 										<SelectValue placeholder="Seleccionar etapa..." />
 									</SelectTrigger>
 									<SelectContent>

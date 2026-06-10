@@ -32,7 +32,10 @@ function CobranzasSkeleton() {
 					<thead>
 						<tr className="border-b border-border">
 							{["Cliente", "Póliza", "Compañía", "Cuotas", "Pendiente", ""].map((h) => (
-								<th key={h} className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">
+								<th
+									key={h}
+									className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide"
+								>
 									{h}
 								</th>
 							))}
@@ -91,9 +94,7 @@ export default async function CobranzasPage() {
 		<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-8">
 			<div className="mb-6">
 				<h1 className="text-2xl font-semibold text-foreground">Cobranzas</h1>
-				<p className="text-sm text-muted-foreground mt-1">
-					Gestión de pagos y cuotas de pólizas activas
-				</p>
+				<p className="text-sm text-muted-foreground mt-1">Gestión de pagos y cuotas de pólizas activas</p>
 			</div>
 			<Suspense fallback={<CobranzasSkeleton />}>
 				<CobranzasData isAdmin={isAdmin} />

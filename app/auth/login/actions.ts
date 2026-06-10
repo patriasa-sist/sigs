@@ -28,7 +28,7 @@ function getUserRoleFromToken(accessToken: string): string | null {
 		if (!payload) return null;
 
 		const decodedPayload = JSON.parse(
-			Buffer.from(payload.replace(/-/g, "+").replace(/_/g, "/"), "base64").toString("utf-8")
+			Buffer.from(payload.replace(/-/g, "+").replace(/_/g, "/"), "base64").toString("utf-8"),
 		);
 
 		return decodedPayload.user_role || null;
@@ -76,7 +76,7 @@ export async function login(formData: FormData): Promise<{ error: string } | voi
 	if (!userRole) {
 		const supabaseAdmin = createAdminClient(
 			process.env.NEXT_PUBLIC_SUPABASE_URL!,
-			process.env.SUPABASE_SERVICE_ROLE_KEY!
+			process.env.SUPABASE_SERVICE_ROLE_KEY!,
 		);
 
 		const { error: upsertProfileError } = await supabaseAdmin.from("profiles").upsert(
@@ -87,7 +87,7 @@ export async function login(formData: FormData): Promise<{ error: string } | voi
 			},
 			{
 				onConflict: "id",
-			}
+			},
 		);
 
 		if (upsertProfileError) {

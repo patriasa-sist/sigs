@@ -41,7 +41,7 @@ function normalizar(texto: string): string {
  */
 async function resolverNombresClientes(
 	supabase: SupabaseClient,
-	clientIds: string[]
+	clientIds: string[],
 ): Promise<Map<string, { nombre: string; ci: string }>> {
 	const map = new Map<string, { nombre: string; ci: string }>();
 	const ids = [...new Set(clientIds.filter(Boolean))];
@@ -55,9 +55,8 @@ async function resolverNombresClientes(
 	for (const n of naturals || []) {
 		map.set(n.client_id, {
 			nombre:
-				[n.primer_nombre, n.segundo_nombre, n.primer_apellido, n.segundo_apellido]
-					.filter(Boolean)
-					.join(" ") || "Cliente",
+				[n.primer_nombre, n.segundo_nombre, n.primer_apellido, n.segundo_apellido].filter(Boolean).join(" ") ||
+				"Cliente",
 			ci: n.numero_documento || "-",
 		});
 	}
@@ -101,7 +100,7 @@ function etiquetaRol(rol: string | null | undefined): string {
 export async function obtenerDetalleRamo(
 	supabase: SupabaseClient,
 	polizaId: string,
-	ramo: string
+	ramo: string,
 ): Promise<DatosEspecificosRamo> {
 	const r = normalizar(ramo);
 
@@ -120,7 +119,7 @@ export async function obtenerDetalleRamo(
 		const { data } = await supabase
 			.from("polizas_automotor_vehiculos")
 			.select(
-				"id, placa, valor_asegurado, modelo, ano, color, tipo_vehiculo:tipos_vehiculo(nombre), marca:marcas_vehiculo(nombre)"
+				"id, placa, valor_asegurado, modelo, ano, color, tipo_vehiculo:tipos_vehiculo(nombre), marca:marcas_vehiculo(nombre)",
 			)
 			.eq("poliza_id", polizaId);
 
@@ -151,7 +150,7 @@ export async function obtenerDetalleRamo(
 		const nivelNombre = new Map((niveles || []).map((n) => [String(n.id), n.nombre as string]));
 		const nombres = await resolverNombresClientes(
 			supabase,
-			(asegurados || []).map((a) => a.client_id)
+			(asegurados || []).map((a) => a.client_id),
 		);
 
 		const lista: AseguradoPoliza[] = [];
@@ -188,12 +187,15 @@ export async function obtenerDetalleRamo(
 		const tipo: "vida" | "ap" | "sepelio" = r.includes("accidente")
 			? "ap"
 			: r.includes("sepelio") || r.includes("defuncion")
-			? "sepelio"
-			: "vida";
+				? "sepelio"
+				: "vida";
 
 		const [{ data: niveles }, { data: aseguradosNivel }, { data: beneficiarios }] = await Promise.all([
 			supabase.from("polizas_niveles").select("id, nombre").eq("poliza_id", polizaId),
-			supabase.from("polizas_asegurados_nivel").select("client_id, nivel_id, cargo, rol").eq("poliza_id", polizaId),
+			supabase
+				.from("polizas_asegurados_nivel")
+				.select("client_id, nivel_id, cargo, rol")
+				.eq("poliza_id", polizaId),
 			supabase
 				.from("polizas_beneficiarios")
 				.select("nombre_completo, carnet, nivel_id, rol")
@@ -204,7 +206,7 @@ export async function obtenerDetalleRamo(
 		const nivelNombre = new Map((niveles || []).map((n) => [String(n.id), n.nombre as string]));
 		const nombres = await resolverNombresClientes(
 			supabase,
-			(aseguradosNivel || []).map((a) => a.client_id)
+			(aseguradosNivel || []).map((a) => a.client_id),
 		);
 
 		const lista: AseguradoPoliza[] = [];
@@ -240,7 +242,7 @@ export async function obtenerDetalleRamo(
 			polizaId,
 			"polizas_incendio_bienes",
 			"polizas_incendio_items",
-			"polizas_incendio_asegurados"
+			"polizas_incendio_asegurados",
 		);
 		return { tipo: "incendio", ubicaciones, bienes, asegurados };
 	}
@@ -256,7 +258,11 @@ export async function obtenerDetalleRamo(
 			marca: { nombre: string } | null;
 		};
 		const [{ data: rc }, { data: vehiculos }] = await Promise.all([
-			supabase.from("polizas_responsabilidad_civil").select("tipo_poliza, valor_asegurado").eq("poliza_id", polizaId).maybeSingle(),
+			supabase
+				.from("polizas_responsabilidad_civil")
+				.select("tipo_poliza, valor_asegurado")
+				.eq("poliza_id", polizaId)
+				.maybeSingle(),
 			supabase
 				.from("polizas_rc_vehiculos")
 				.select("placa, modelo, ano, uso, tipo_vehiculo:tipos_vehiculo(nombre), marca:marcas_vehiculo(nombre)")
@@ -295,7 +301,7 @@ export async function obtenerDetalleRamo(
 		const { data } = await supabase
 			.from("polizas_transporte")
 			.select(
-				"materia_asegurada, tipo_transporte, ciudad_origen, ciudad_destino, valor_asegurado, modalidad, pais_origen:paises!pais_origen_id(nombre), pais_destino:paises!pais_destino_id(nombre)"
+				"materia_asegurada, tipo_transporte, ciudad_origen, ciudad_destino, valor_asegurado, modalidad, pais_origen:paises!pais_origen_id(nombre), pais_destino:paises!pais_destino_id(nombre)",
 			)
 			.eq("poliza_id", polizaId)
 			.maybeSingle();
@@ -349,7 +355,9 @@ export async function obtenerDetalleRamo(
 			supabase.from("polizas_ramos_tecnicos").select("valor_asegurado").eq("poliza_id", polizaId).maybeSingle(),
 			supabase
 				.from("polizas_ramos_tecnicos_equipos")
-				.select("nro_serie, valor_asegurado, modelo, ano, tipo_equipo:tipos_equipo(nombre), marca:marcas_equipo(nombre)")
+				.select(
+					"nro_serie, valor_asegurado, modelo, ano, tipo_equipo:tipos_equipo(nombre), marca:marcas_equipo(nombre)",
+				)
 				.eq("poliza_id", polizaId),
 		]);
 
@@ -376,7 +384,7 @@ export async function obtenerDetalleRamo(
 			polizaId,
 			"polizas_riesgos_varios_bienes",
 			"polizas_riesgos_varios_items",
-			"polizas_riesgos_varios_asegurados"
+			"polizas_riesgos_varios_asegurados",
 		);
 		return { tipo: "riesgos_varios", bienes, asegurados };
 	}
@@ -394,7 +402,7 @@ async function cargarBienes(
 	polizaId: string,
 	tablaBienes: string,
 	tablaItems: string,
-	tablaAsegurados: string
+	tablaAsegurados: string,
 ): Promise<{ bienes: BienResumen[]; ubicaciones: string[]; asegurados: AseguradoPoliza[] }> {
 	const [{ data: bienesDB }, { data: aseguradosDB }] = await Promise.all([
 		supabase.from(tablaBienes).select("id, direccion, valor_total_declarado").eq("poliza_id", polizaId),
@@ -423,7 +431,7 @@ async function cargarBienes(
 
 	const nombres = await resolverNombresClientes(
 		supabase,
-		(aseguradosDB || []).map((a) => a.client_id)
+		(aseguradosDB || []).map((a) => a.client_id),
 	);
 	const asegurados: AseguradoPoliza[] = (aseguradosDB || []).map((a) => {
 		const c = nombres.get(a.client_id);

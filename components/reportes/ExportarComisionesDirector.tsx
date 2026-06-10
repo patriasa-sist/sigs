@@ -4,21 +4,8 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/ui/select";
-import {
-	Card,
-	CardHeader,
-	CardTitle,
-	CardDescription,
-	CardContent,
-	CardFooter,
-} from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Download, AlertCircle, Percent } from "lucide-react";
 import { exportarComisionesDirector } from "@/app/reportes/actions";
@@ -97,7 +84,10 @@ export default function ExportarComisionesDirector({
 			// Construir lista de filtros aplicados
 			const filtrosAplicados: string[] = [];
 			const director = directores.find((d) => d.id === directorId);
-			if (director) filtrosAplicados.push(`Director: ${director.nombre}${director.apellidos ? ` ${director.apellidos}` : ""}`);
+			if (director)
+				filtrosAplicados.push(
+					`Director: ${director.nombre}${director.apellidos ? ` ${director.apellidos}` : ""}`,
+				);
 			const regionalNombre = regionales.find((r) => r.id === regionalId)?.nombre;
 			if (regionalNombre) filtrosAplicados.push(`Regional: ${regionalNombre}`);
 			const companiaNombre = companias.find((c) => c.id === companiaId)?.nombre;
@@ -225,8 +215,7 @@ export default function ExportarComisionesDirector({
 			const redColumns = ["retencion_rciva", "retencion_it"];
 
 			// Helper para obtener la letra de columna Excel por key (robusto al reordenar)
-			const colLetter = (key: string) =>
-				worksheet.getColumn(columns.findIndex((c) => c.key === key) + 1).letter;
+			const colLetter = (key: string) => worksheet.getColumn(columns.findIndex((c) => c.key === key) + 1).letter;
 
 			rows.forEach((row) => {
 				if (row.director_cartera !== lastDirector) {
@@ -297,11 +286,7 @@ export default function ExportarComisionesDirector({
 				}
 
 				// Fondo base: naranja para "por cobrar", verde/blanco alternado para "pagada"
-				const baseFg = esPorCobrar
-					? "FFFCE4D6"
-					: rowColorToggle
-					? "FFF0F7EE"
-					: "FFFFFFFF";
+				const baseFg = esPorCobrar ? "FFFCE4D6" : rowColorToggle ? "FFF0F7EE" : "FFFFFFFF";
 
 				excelRow.eachCell((cell, colNumber) => {
 					cell.fill = {
@@ -399,7 +384,8 @@ export default function ExportarComisionesDirector({
 					<div>
 						<CardTitle className="text-lg">Reporte de Comisiones por Director</CardTitle>
 						<CardDescription>
-							Exporta las cuotas pagadas en el período seleccionado con la comisión de cada director de cartera
+							Exporta las cuotas pagadas en el período seleccionado con la comisión de cada director de
+							cartera
 						</CardDescription>
 					</div>
 				</div>
@@ -407,26 +393,16 @@ export default function ExportarComisionesDirector({
 
 			<CardContent className="space-y-5">
 				<div>
-					<p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
-						Filtros
-					</p>
+					<p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">Filtros</p>
 					<div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
 						<div className="space-y-1.5">
 							<Label className="text-sm">Fecha Desde</Label>
-							<Input
-								type="date"
-								value={fechaDesde}
-								onChange={(e) => setFechaDesde(e.target.value)}
-							/>
+							<Input type="date" value={fechaDesde} onChange={(e) => setFechaDesde(e.target.value)} />
 						</div>
 
 						<div className="space-y-1.5">
 							<Label className="text-sm">Fecha Hasta</Label>
-							<Input
-								type="date"
-								value={fechaHasta}
-								onChange={(e) => setFechaHasta(e.target.value)}
-							/>
+							<Input type="date" value={fechaHasta} onChange={(e) => setFechaHasta(e.target.value)} />
 						</div>
 
 						<div className="space-y-1.5">
@@ -491,10 +467,7 @@ export default function ExportarComisionesDirector({
 
 						<div className="space-y-1.5">
 							<Label className="text-sm">Equipo</Label>
-							<Select
-								value={equipoId || "all"}
-								onValueChange={(v) => setEquipoId(v === "all" ? "" : v)}
-							>
+							<Select value={equipoId || "all"} onValueChange={(v) => setEquipoId(v === "all" ? "" : v)}>
 								<SelectTrigger className="w-full truncate">
 									<SelectValue placeholder="Todos" />
 								</SelectTrigger>

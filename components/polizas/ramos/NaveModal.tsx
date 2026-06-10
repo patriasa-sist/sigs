@@ -33,7 +33,7 @@ export function NaveModal({ nave, nivelesAP, tipoNave, onGuardar, onCancelar }: 
 			valor_casco: 0,
 			valor_responsabilidad_civil: 0,
 			nivel_ap_id: undefined,
-		}
+		},
 	);
 
 	const [errores, setErrores] = useState<Record<string, string>>({});
@@ -104,9 +104,7 @@ export function NaveModal({ nave, nivelesAP, tipoNave, onGuardar, onCancelar }: 
 			<div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
 				{/* Header */}
 				<div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between">
-					<h2 className="text-xl font-semibold">
-						{nave ? `Editar ${tipoLabel}` : `Agregar ${tipoLabel}`}
-					</h2>
+					<h2 className="text-xl font-semibold">{nave ? `Editar ${tipoLabel}` : `Agregar ${tipoLabel}`}</h2>
 					<Button variant="ghost" size="icon" onClick={onCancelar} className="rounded-full">
 						<X className="h-5 w-5" />
 					</Button>
@@ -117,9 +115,7 @@ export function NaveModal({ nave, nivelesAP, tipoNave, onGuardar, onCancelar }: 
 					<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 						{/* DATOS DE IDENTIFICACIÓN */}
 						<div className="md:col-span-2">
-							<h3 className="text-sm font-semibold text-gray-900 mb-4">
-								Datos de Identificación
-							</h3>
+							<h3 className="text-sm font-semibold text-gray-900 mb-4">Datos de Identificación</h3>
 						</div>
 
 						{/* Matrícula */}
@@ -207,7 +203,9 @@ export function NaveModal({ nave, nivelesAP, tipoNave, onGuardar, onCancelar }: 
 							</Label>
 							<Select
 								value={formData.uso}
-								onValueChange={(value) => handleChange("uso", value as "privado" | "publico" | "recreacion")}
+								onValueChange={(value) =>
+									handleChange("uso", value as "privado" | "publico" | "recreacion")
+								}
 							>
 								<SelectTrigger className={errores.uso ? "border-red-500" : ""}>
 									<SelectValue />
@@ -240,9 +238,7 @@ export function NaveModal({ nave, nivelesAP, tipoNave, onGuardar, onCancelar }: 
 								placeholder="4"
 								className={errores.nro_pasajeros ? "border-red-500" : ""}
 							/>
-							{errores.nro_pasajeros && (
-								<p className="text-sm text-red-600">{errores.nro_pasajeros}</p>
-							)}
+							{errores.nro_pasajeros && <p className="text-sm text-red-600">{errores.nro_pasajeros}</p>}
 						</div>
 
 						{/* Número de Tripulantes */}
@@ -299,7 +295,9 @@ export function NaveModal({ nave, nivelesAP, tipoNave, onGuardar, onCancelar }: 
 								min="0"
 								step="0.01"
 								value={formData.valor_responsabilidad_civil ?? ""}
-								onChange={(e) => handleChange("valor_responsabilidad_civil", parseFloat(e.target.value) || 0)}
+								onChange={(e) =>
+									handleChange("valor_responsabilidad_civil", parseFloat(e.target.value) || 0)
+								}
 								placeholder="50000"
 								className={errores.valor_responsabilidad_civil ? "border-red-500" : ""}
 							/>
@@ -311,12 +309,12 @@ export function NaveModal({ nave, nivelesAP, tipoNave, onGuardar, onCancelar }: 
 
 						{/* Nivel de Accidentes Personales */}
 						<div className="md:col-span-2 space-y-2">
-							<Label htmlFor="nivel_ap">
-								Nivel de Accidentes Personales (opcional)
-							</Label>
+							<Label htmlFor="nivel_ap">Nivel de Accidentes Personales (opcional)</Label>
 							<Select
 								value={formData.nivel_ap_id || "none"}
-								onValueChange={(value) => handleChange("nivel_ap_id", value === "none" ? undefined : value)}
+								onValueChange={(value) =>
+									handleChange("nivel_ap_id", value === "none" ? undefined : value)
+								}
 							>
 								<SelectTrigger>
 									<SelectValue placeholder="Seleccione un nivel de AP" />
@@ -325,9 +323,10 @@ export function NaveModal({ nave, nivelesAP, tipoNave, onGuardar, onCancelar }: 
 									<SelectItem value="none">Sin cobertura de AP</SelectItem>
 									{nivelesAP.map((nivel) => (
 										<SelectItem key={nivel.id} value={nivel.id}>
-											{nivel.nombre} - Muerte: {nivel.monto_muerte_accidental.toLocaleString("es-BO")},
-											Invalidez: {nivel.monto_invalidez.toLocaleString("es-BO")},
-											G.Médicos: {nivel.monto_gastos_medicos.toLocaleString("es-BO")}
+											{nivel.nombre} - Muerte:{" "}
+											{nivel.monto_muerte_accidental.toLocaleString("es-BO")}, Invalidez:{" "}
+											{nivel.monto_invalidez.toLocaleString("es-BO")}, G.Médicos:{" "}
+											{nivel.monto_gastos_medicos.toLocaleString("es-BO")}
 										</SelectItem>
 									))}
 								</SelectContent>
@@ -337,7 +336,8 @@ export function NaveModal({ nave, nivelesAP, tipoNave, onGuardar, onCancelar }: 
 							</p>
 							{nivelesAP.length === 0 && (
 								<p className="text-xs text-amber-600">
-									No hay niveles de AP configurados. Configure niveles en la sección superior para asignarlos.
+									No hay niveles de AP configurados. Configure niveles en la sección superior para
+									asignarlos.
 								</p>
 							)}
 						</div>
@@ -349,9 +349,7 @@ export function NaveModal({ nave, nivelesAP, tipoNave, onGuardar, onCancelar }: 
 					<Button variant="outline" onClick={onCancelar}>
 						Cancelar
 					</Button>
-					<Button onClick={handleGuardar}>
-						{nave ? "Guardar Cambios" : `Agregar ${tipoLabel}`}
-					</Button>
+					<Button onClick={handleGuardar}>{nave ? "Guardar Cambios" : `Agregar ${tipoLabel}`}</Button>
 				</div>
 			</div>
 		</div>

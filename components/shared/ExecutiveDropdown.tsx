@@ -48,7 +48,9 @@ export function ExecutiveDropdown({
 				const supabase = createClient();
 
 				// Obtener usuario actual y su rol
-				const { data: { user } } = await supabase.auth.getUser();
+				const {
+					data: { user },
+				} = await supabase.auth.getUser();
 				let userRole = "";
 				let userId = "";
 				if (user) {
@@ -80,7 +82,7 @@ export function ExecutiveDropdown({
 							.from("profiles")
 							.select("id, full_name, email, role")
 							.in("role", ["comercial", "admin", "agente", "usuario"])
-							.order("full_name")
+							.order("full_name"),
 				);
 
 				const { data: usersData, error: usersError } = result;
@@ -118,7 +120,7 @@ export function ExecutiveDropdown({
 		}
 
 		loadExecutives();
-	// eslint-disable-next-line react-hooks/exhaustive-deps
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
 
 	return (
@@ -131,9 +133,7 @@ export function ExecutiveDropdown({
 			<Select value={value} onValueChange={onValueChange} disabled={disabled || isLoading}>
 				<SelectTrigger className={error ? "border-red-500" : ""}>
 					<SelectValue
-						placeholder={
-							isLoading ? "Cargando ejecutivos..." : loadError ? "Error al cargar" : placeholder
-						}
+						placeholder={isLoading ? "Cargando ejecutivos..." : loadError ? "Error al cargar" : placeholder}
 					/>
 				</SelectTrigger>
 				<SelectContent>

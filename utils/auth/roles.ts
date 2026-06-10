@@ -111,7 +111,7 @@ export const VALID_ROLES: readonly UserRole[] = [
 	"uif",
 	"rrhh",
 	"invitado",
-	"desactivado"
+	"desactivado",
 ] as const;
 
 /**
@@ -128,7 +128,7 @@ export const ASSIGNABLE_ROLES: readonly UserRole[] = [
 	"uif",
 	"rrhh",
 	"invitado",
-	"desactivado"
+	"desactivado",
 ] as const;
 
 /**
@@ -142,7 +142,7 @@ export const OPERATIONAL_ROLES: readonly UserRole[] = [
 	"comercial",
 	"cobranza",
 	"siniestros",
-	"uif"
+	"uif",
 ] as const;
 
 /**
@@ -155,17 +155,19 @@ export const ROLE_CONFIG = {
 	admin: {
 		label: "Administrator",
 		labelEs: "Administrador",
-		description: "Full administrative privileges including user management, invitations, and access to all features",
-		descriptionEs: "Privilegios administrativos completos incluyendo gestión de usuarios, invitaciones y acceso a todas las funcionalidades",
+		description:
+			"Full administrative privileges including user management, invitations, and access to all features",
+		descriptionEs:
+			"Privilegios administrativos completos incluyendo gestión de usuarios, invitaciones y acceso a todas las funcionalidades",
 		color: "orange",
 		icon: Crown,
 		colorClasses: {
 			bg: "bg-orange-50",
 			text: "text-orange-600",
 			border: "border-orange-200",
-			gradient: "from-orange-50 to-white"
+			gradient: "from-orange-50 to-white",
 		},
-		defaultPermissions: [...ALL_PERMISSIONS] as Permission[]
+		defaultPermissions: [...ALL_PERMISSIONS] as Permission[],
 	},
 	usuario: {
 		label: "Usuario",
@@ -178,7 +180,7 @@ export const ROLE_CONFIG = {
 			bg: "bg-blue-50",
 			text: "text-blue-600",
 			border: "border-blue-200",
-			gradient: "from-blue-50 to-white"
+			gradient: "from-blue-50 to-white",
 		},
 		defaultPermissions: [
 			"polizas.ver",
@@ -189,7 +191,7 @@ export const ROLE_CONFIG = {
 			"cobranzas.ver",
 			"siniestros.ver",
 			"vencimientos.ver",
-		] as Permission[]
+		] as Permission[],
 	},
 	agente: {
 		label: "Agente",
@@ -202,7 +204,7 @@ export const ROLE_CONFIG = {
 			bg: "bg-green-50",
 			text: "text-green-600",
 			border: "border-green-200",
-			gradient: "from-green-50 to-white"
+			gradient: "from-green-50 to-white",
 		},
 		defaultPermissions: [
 			"polizas.ver",
@@ -215,7 +217,7 @@ export const ROLE_CONFIG = {
 			"vencimientos.generar",
 			"cobranzas.ver",
 			"documentos.descartar",
-		] as Permission[]
+		] as Permission[],
 	},
 	comercial: {
 		label: "Comercial",
@@ -228,7 +230,7 @@ export const ROLE_CONFIG = {
 			bg: "bg-cyan-50",
 			text: "text-cyan-600",
 			border: "border-cyan-200",
-			gradient: "from-cyan-50 to-white"
+			gradient: "from-cyan-50 to-white",
 		},
 		defaultPermissions: [
 			"polizas.ver",
@@ -244,7 +246,7 @@ export const ROLE_CONFIG = {
 			"siniestros.crear",
 			"siniestros.editar",
 			"documentos.descartar",
-		] as Permission[]
+		] as Permission[],
 	},
 	cobranza: {
 		label: "Cobranza",
@@ -257,14 +259,9 @@ export const ROLE_CONFIG = {
 			bg: "bg-violet-50",
 			text: "text-violet-600",
 			border: "border-violet-200",
-			gradient: "from-violet-50 to-white"
+			gradient: "from-violet-50 to-white",
 		},
-		defaultPermissions: [
-			"cobranzas.ver",
-			"cobranzas.gestionar",
-			"polizas.ver",
-			"clientes.ver",
-		] as Permission[]
+		defaultPermissions: ["cobranzas.ver", "cobranzas.gestionar", "polizas.ver", "clientes.ver"] as Permission[],
 	},
 	siniestros: {
 		label: "Siniestros",
@@ -277,7 +274,7 @@ export const ROLE_CONFIG = {
 			bg: "bg-amber-50",
 			text: "text-amber-600",
 			border: "border-amber-200",
-			gradient: "from-amber-50 to-white"
+			gradient: "from-amber-50 to-white",
 		},
 		defaultPermissions: [
 			"siniestros.ver",
@@ -286,7 +283,7 @@ export const ROLE_CONFIG = {
 			"polizas.ver",
 			"clientes.ver",
 			"cobranzas.ver",
-		] as Permission[]
+		] as Permission[],
 	},
 	uif: {
 		label: "UIF",
@@ -299,7 +296,7 @@ export const ROLE_CONFIG = {
 			bg: "bg-rose-50",
 			text: "text-rose-600",
 			border: "border-rose-200",
-			gradient: "from-rose-50 to-white"
+			gradient: "from-rose-50 to-white",
 		},
 		defaultPermissions: [
 			"auditoria.ver",
@@ -307,7 +304,7 @@ export const ROLE_CONFIG = {
 			"clientes.ver",
 			"gerencia.ver",
 			"gerencia.amlc",
-		] as Permission[]
+		] as Permission[],
 	},
 	invitado: {
 		label: "Invitado",
@@ -320,9 +317,9 @@ export const ROLE_CONFIG = {
 			bg: "bg-yellow-50",
 			text: "text-yellow-600",
 			border: "border-yellow-200",
-			gradient: "from-yellow-50 to-white"
+			gradient: "from-yellow-50 to-white",
 		},
-		defaultPermissions: [] as Permission[]
+		defaultPermissions: [] as Permission[],
 	},
 	rrhh: {
 		label: "RRHH",
@@ -335,14 +332,9 @@ export const ROLE_CONFIG = {
 			bg: "bg-teal-50",
 			text: "text-teal-600",
 			border: "border-teal-200",
-			gradient: "from-teal-50 to-white"
+			gradient: "from-teal-50 to-white",
 		},
-		defaultPermissions: [
-			"rrhh.ver",
-			"rrhh.crear",
-			"rrhh.editar",
-			"rrhh.documentos",
-		] as Permission[]
+		defaultPermissions: ["rrhh.ver", "rrhh.crear", "rrhh.editar", "rrhh.documentos"] as Permission[],
 	},
 	desactivado: {
 		label: "Desactivado",
@@ -355,10 +347,10 @@ export const ROLE_CONFIG = {
 			bg: "bg-gray-50",
 			text: "text-gray-600",
 			border: "border-gray-200",
-			gradient: "from-gray-50 to-white"
+			gradient: "from-gray-50 to-white",
 		},
-		defaultPermissions: [] as Permission[]
-	}
+		defaultPermissions: [] as Permission[],
+	},
 } as const;
 
 /**

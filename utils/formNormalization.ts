@@ -12,8 +12,8 @@
  * @returns Normalized text (uppercase, trimmed) or empty string if null/undefined
  */
 export function normalizeText(value: string | null | undefined): string {
-  if (!value) return '';
-  return value.trim().toUpperCase();
+	if (!value) return "";
+	return value.trim().toUpperCase();
 }
 
 /**
@@ -22,8 +22,8 @@ export function normalizeText(value: string | null | undefined): string {
  * @returns Normalized email (lowercase, trimmed) or empty string if null/undefined
  */
 export function normalizeEmail(value: string | null | undefined): string {
-  if (!value) return '';
-  return value.trim().toLowerCase();
+	if (!value) return "";
+	return value.trim().toLowerCase();
 }
 
 /**
@@ -33,8 +33,8 @@ export function normalizeEmail(value: string | null | undefined): string {
  * @returns String with only numeric digits or empty string if null/undefined
  */
 export function cleanPhone(value: string | null | undefined): string {
-  if (!value) return '';
-  return value.replace(/[^0-9]/g, '');
+	if (!value) return "";
+	return value.replace(/[^0-9]/g, "");
 }
 
 /**
@@ -43,8 +43,11 @@ export function cleanPhone(value: string | null | undefined): string {
  * @returns Normalized document number or empty string if null/undefined
  */
 export function normalizeDocument(value: string | null | undefined): string {
-  if (!value) return '';
-  return value.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+	if (!value) return "";
+	return value
+		.trim()
+		.toUpperCase()
+		.replace(/[^A-Z0-9]/g, "");
 }
 
 /**
@@ -53,9 +56,9 @@ export function normalizeDocument(value: string | null | undefined): string {
  * @returns true if valid email format, false otherwise
  */
 export function validateEmail(email: string): boolean {
-  if (!email) return false;
-  const emailRegex = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
-  return emailRegex.test(email);
+	if (!email) return false;
+	const emailRegex = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
+	return emailRegex.test(email);
 }
 
 /**
@@ -65,9 +68,9 @@ export function validateEmail(email: string): boolean {
  * @returns true if valid, false otherwise
  */
 export function validateMinDigits(value: string, minLength: number): boolean {
-  if (!value) return false;
-  const cleaned = cleanPhone(value);
-  return cleaned.length >= minLength && /^\d+$/.test(cleaned);
+	if (!value) return false;
+	const cleaned = cleanPhone(value);
+	return cleaned.length >= minLength && /^\d+$/.test(cleaned);
 }
 
 /**
@@ -77,9 +80,9 @@ export function validateMinDigits(value: string, minLength: number): boolean {
  * @returns true if valid, false otherwise
  */
 export function validateDocumentLength(value: string, minLength: number = 6): boolean {
-  if (!value) return false;
-  const normalized = normalizeDocument(value);
-  return normalized.length >= minLength;
+	if (!value) return false;
+	const normalized = normalizeDocument(value);
+	return normalized.length >= minLength;
 }
 
 /**
@@ -89,7 +92,7 @@ export function validateDocumentLength(value: string, minLength: number = 6): bo
  * @returns true if valid, false otherwise
  */
 export function validateNIT(nit: string): boolean {
-  return validateMinDigits(nit, 7);
+	return validateMinDigits(nit, 7);
 }
 
 /**
@@ -97,13 +100,13 @@ export function validateNIT(nit: string): boolean {
  * @param level - Income level ('bajo', 'medio', 'alto')
  * @returns Numeric value (2000, 5000, or 10000)
  */
-export function mapIncomeLevelToValue(level: 'bajo' | 'medio' | 'alto'): number {
-  const mapping = {
-    bajo: 2000,
-    medio: 5000,
-    alto: 10000,
-  };
-  return mapping[level];
+export function mapIncomeLevelToValue(level: "bajo" | "medio" | "alto"): number {
+	const mapping = {
+		bajo: 2000,
+		medio: 5000,
+		alto: 10000,
+	};
+	return mapping[level];
 }
 
 /**
@@ -111,11 +114,11 @@ export function mapIncomeLevelToValue(level: 'bajo' | 'medio' | 'alto'): number 
  * @param value - Numeric income value
  * @returns Income level label ('bajo', 'medio', 'alto') or undefined
  */
-export function mapIncomeValueToLevel(value: number): 'bajo' | 'medio' | 'alto' | undefined {
-  if (value <= 2000) return 'bajo';
-  if (value <= 5000) return 'medio';
-  if (value <= 10000) return 'alto';
-  return undefined;
+export function mapIncomeValueToLevel(value: number): "bajo" | "medio" | "alto" | undefined {
+	if (value <= 2000) return "bajo";
+	if (value <= 5000) return "medio";
+	if (value <= 10000) return "alto";
+	return undefined;
 }
 
 /**
@@ -128,51 +131,51 @@ export function mapIncomeValueToLevel(value: number): 'bajo' | 'medio' | 'alto' 
  * @returns Normalized object
  */
 export function normalizeFormData<T extends Record<string, any>>(
-  obj: T,
-  fieldsToNormalize: string[] = [],
-  emailFields: string[] = [],
-  phoneFields: string[] = []
+	obj: T,
+	fieldsToNormalize: string[] = [],
+	emailFields: string[] = [],
+	phoneFields: string[] = [],
 ): T {
-  const normalized = { ...obj };
+	const normalized = { ...obj };
 
-  for (const key in normalized) {
-    const value = normalized[key];
+	for (const key in normalized) {
+		const value = normalized[key];
 
-    // Skip null/undefined
-    if (value === null || value === undefined) continue;
+		// Skip null/undefined
+		if (value === null || value === undefined) continue;
 
-    // Normalize text fields
-    if (fieldsToNormalize.includes(key) && typeof value === 'string') {
-      normalized[key] = normalizeText(value) as any;
-    }
+		// Normalize text fields
+		if (fieldsToNormalize.includes(key) && typeof value === "string") {
+			normalized[key] = normalizeText(value) as any;
+		}
 
-    // Normalize email fields
-    if (emailFields.includes(key) && typeof value === 'string') {
-      normalized[key] = normalizeEmail(value) as any;
-    }
+		// Normalize email fields
+		if (emailFields.includes(key) && typeof value === "string") {
+			normalized[key] = normalizeEmail(value) as any;
+		}
 
-    // Clean phone fields
-    if (phoneFields.includes(key) && typeof value === 'string') {
-      normalized[key] = cleanPhone(value) as any;
-    }
+		// Clean phone fields
+		if (phoneFields.includes(key) && typeof value === "string") {
+			normalized[key] = cleanPhone(value) as any;
+		}
 
-    // Recursively normalize nested objects
-    if (typeof value === 'object' && !Array.isArray(value)) {
-      normalized[key] = normalizeFormData(value, fieldsToNormalize, emailFields, phoneFields) as any;
-    }
+		// Recursively normalize nested objects
+		if (typeof value === "object" && !Array.isArray(value)) {
+			normalized[key] = normalizeFormData(value, fieldsToNormalize, emailFields, phoneFields) as any;
+		}
 
-    // Recursively normalize arrays
-    if (Array.isArray(value)) {
-      normalized[key] = value.map((item: any) => {
-        if (typeof item === 'object') {
-          return normalizeFormData(item, fieldsToNormalize, emailFields, phoneFields);
-        }
-        return item;
-      }) as any;
-    }
-  }
+		// Recursively normalize arrays
+		if (Array.isArray(value)) {
+			normalized[key] = value.map((item: any) => {
+				if (typeof item === "object") {
+					return normalizeFormData(item, fieldsToNormalize, emailFields, phoneFields);
+				}
+				return item;
+			}) as any;
+		}
+	}
 
-  return normalized;
+	return normalized;
 }
 
 /**
@@ -185,30 +188,30 @@ export function normalizeFormData<T extends Record<string, any>>(
  * because they must match database CHECK constraints in lowercase
  */
 export function normalizeNaturalClientData<T extends Record<string, any>>(data: T): T {
-  const textFields = [
-    'primer_nombre',
-    'segundo_nombre',
-    'primer_apellido',
-    'segundo_apellido',
-    // 'tipo_documento', // EXCLUDED: Must remain lowercase for DB constraint
-    'numero_documento',
-    'extension_ci',
-    'nacionalidad',
-    // 'estado_civil', // EXCLUDED: Must remain lowercase for DB constraint
-    'direccion',
-    'profesion_oficio',
-    'actividad_economica',
-    'lugar_trabajo',
-    'pais_residencia',
-    // 'genero', // EXCLUDED: Must remain lowercase for DB constraint
-    'cargo',
-    'domicilio_comercial',
-  ];
+	const textFields = [
+		"primer_nombre",
+		"segundo_nombre",
+		"primer_apellido",
+		"segundo_apellido",
+		// 'tipo_documento', // EXCLUDED: Must remain lowercase for DB constraint
+		"numero_documento",
+		"extension_ci",
+		"nacionalidad",
+		// 'estado_civil', // EXCLUDED: Must remain lowercase for DB constraint
+		"direccion",
+		"profesion_oficio",
+		"actividad_economica",
+		"lugar_trabajo",
+		"pais_residencia",
+		// 'genero', // EXCLUDED: Must remain lowercase for DB constraint
+		"cargo",
+		"domicilio_comercial",
+	];
 
-  const emailFields = ['correo_electronico'];
-  const phoneFields = ['celular', 'nit'];
+	const emailFields = ["correo_electronico"];
+	const phoneFields = ["celular", "nit"];
 
-  return normalizeFormData(data, textFields, emailFields, phoneFields);
+	return normalizeFormData(data, textFields, emailFields, phoneFields);
 }
 
 /**
@@ -218,20 +221,20 @@ export function normalizeNaturalClientData<T extends Record<string, any>>(data: 
  * @returns Normalized data
  */
 export function normalizeJuridicClientData<T extends Record<string, any>>(data: T): T {
-  const textFields = [
-    'razon_social',
-    'tipo_sociedad',
-    'tipo_documento',
-    'matricula_comercio',
-    'pais_constitucion',
-    'direccion_legal',
-    'actividad_economica',
-  ];
+	const textFields = [
+		"razon_social",
+		"tipo_sociedad",
+		"tipo_documento",
+		"matricula_comercio",
+		"pais_constitucion",
+		"direccion_legal",
+		"actividad_economica",
+	];
 
-  const emailFields = ['correo_electronico'];
-  const phoneFields = ['nit', 'telefono'];
+	const emailFields = ["correo_electronico"];
+	const phoneFields = ["nit", "telefono"];
 
-  return normalizeFormData(data, textFields, emailFields, phoneFields);
+	return normalizeFormData(data, textFields, emailFields, phoneFields);
 }
 
 /**
@@ -244,47 +247,41 @@ export function normalizeJuridicClientData<T extends Record<string, any>>(data: 
  * because they must match database CHECK constraints in lowercase
  */
 export function normalizeUnipersonalClientData<T extends Record<string, any>>(data: T): T {
-  const textFields = [
-    // Personal data (natural client fields)
-    'primer_nombre',
-    'segundo_nombre',
-    'primer_apellido',
-    'segundo_apellido',
-    // 'tipo_documento', // EXCLUDED: Must remain lowercase for DB constraint
-    'numero_documento',
-    'extension_ci',
-    'nacionalidad',
-    // 'estado_civil', // EXCLUDED: Must remain lowercase for DB constraint
-    'direccion',
-    'profesion_oficio',
-    'actividad_economica',
-    'lugar_trabajo',
-    'pais_residencia',
-    // 'genero', // EXCLUDED: Must remain lowercase for DB constraint
-    'cargo',
-    // Commercial data (unipersonal fields)
-    'razon_social',
-    'matricula_comercio',
-    'domicilio_comercial',
-    'actividad_economica_comercial',
-    'nombre_propietario',
-    'apellido_propietario',
-    'extension_propietario',
-    'nacionalidad_propietario',
-    'nombre_representante',
-    'extension_representante',
-  ];
+	const textFields = [
+		// Personal data (natural client fields)
+		"primer_nombre",
+		"segundo_nombre",
+		"primer_apellido",
+		"segundo_apellido",
+		// 'tipo_documento', // EXCLUDED: Must remain lowercase for DB constraint
+		"numero_documento",
+		"extension_ci",
+		"nacionalidad",
+		// 'estado_civil', // EXCLUDED: Must remain lowercase for DB constraint
+		"direccion",
+		"profesion_oficio",
+		"actividad_economica",
+		"lugar_trabajo",
+		"pais_residencia",
+		// 'genero', // EXCLUDED: Must remain lowercase for DB constraint
+		"cargo",
+		// Commercial data (unipersonal fields)
+		"razon_social",
+		"matricula_comercio",
+		"domicilio_comercial",
+		"actividad_economica_comercial",
+		"nombre_propietario",
+		"apellido_propietario",
+		"extension_propietario",
+		"nacionalidad_propietario",
+		"nombre_representante",
+		"extension_representante",
+	];
 
-  const emailFields = ['correo_electronico', 'correo_electronico_comercial'];
-  const phoneFields = [
-    'celular',
-    'nit',
-    'telefono_comercial',
-    'documento_propietario',
-    'ci_representante',
-  ];
+	const emailFields = ["correo_electronico", "correo_electronico_comercial"];
+	const phoneFields = ["celular", "nit", "telefono_comercial", "documento_propietario", "ci_representante"];
 
-  return normalizeFormData(data, textFields, emailFields, phoneFields);
+	return normalizeFormData(data, textFields, emailFields, phoneFields);
 }
 
 /**
@@ -294,44 +291,44 @@ export function normalizeUnipersonalClientData<T extends Record<string, any>>(da
  * @returns Normalized data
  */
 export function normalizeLegalRepresentativeData<T extends Record<string, any>>(data: T): T {
-  const textFields = [
-    'primer_nombre',
-    'segundo_nombre',
-    'primer_apellido',
-    'segundo_apellido',
-    'tipo_documento',
-    'numero_documento',
-    'extension',
-    'cargo',
-  ];
+	const textFields = [
+		"primer_nombre",
+		"segundo_nombre",
+		"primer_apellido",
+		"segundo_apellido",
+		"tipo_documento",
+		"numero_documento",
+		"extension",
+		"cargo",
+	];
 
-  const emailFields = ['correo_electronico'];
-  const phoneFields = ['telefono'];
+	const emailFields = ["correo_electronico"];
+	const phoneFields = ["telefono"];
 
-  return normalizeFormData(data, textFields, emailFields, phoneFields);
+	return normalizeFormData(data, textFields, emailFields, phoneFields);
 }
 
 /**
  * Normalizes ONG client form data
  */
 export function normalizeOngClientData<T extends Record<string, any>>(data: T): T {
-  const textFields = [
-    'nombre_ong',
-    'sigla',
-    'pais_origen',
-    'actividad_principal',
-    'numero_registro_vipfe',
-    'direccion',
-    'nombre_representante',
-    'apellido_representante',
-    'cargo_representante',
-    'extension_ci_representante',
-  ];
+	const textFields = [
+		"nombre_ong",
+		"sigla",
+		"pais_origen",
+		"actividad_principal",
+		"numero_registro_vipfe",
+		"direccion",
+		"nombre_representante",
+		"apellido_representante",
+		"cargo_representante",
+		"extension_ci_representante",
+	];
 
-  const emailFields = ['correo_electronico'];
-  const phoneFields = ['telefono', 'ci_representante'];
+	const emailFields = ["correo_electronico"];
+	const phoneFields = ["telefono", "ci_representante"];
 
-  return normalizeFormData(data, textFields, emailFields, phoneFields);
+	return normalizeFormData(data, textFields, emailFields, phoneFields);
 }
 
 /**
@@ -341,24 +338,24 @@ export function normalizeOngClientData<T extends Record<string, any>>(data: T): 
  * because it must match database CHECK constraint in lowercase.
  */
 export function normalizeAsociacionCivilClientData<T extends Record<string, any>>(data: T): T {
-  const textFields = [
-    'nombre_asociacion',
-    'sigla',
-    // 'tipo_asociacion', // EXCLUDED: lowercase enum
-    'rubro_actividad',
-    'numero_personeria_juridica',
-    'entidad_otorgante_personeria',
-    'direccion',
-    'nombre_representante',
-    'apellido_representante',
-    'cargo_representante',
-    'extension_ci_representante',
-  ];
+	const textFields = [
+		"nombre_asociacion",
+		"sigla",
+		// 'tipo_asociacion', // EXCLUDED: lowercase enum
+		"rubro_actividad",
+		"numero_personeria_juridica",
+		"entidad_otorgante_personeria",
+		"direccion",
+		"nombre_representante",
+		"apellido_representante",
+		"cargo_representante",
+		"extension_ci_representante",
+	];
 
-  const emailFields = ['correo_electronico'];
-  const phoneFields = ['telefono', 'ci_representante', 'nit'];
+	const emailFields = ["correo_electronico"];
+	const phoneFields = ["telefono", "ci_representante", "nit"];
 
-  return normalizeFormData(data, textFields, emailFields, phoneFields);
+	return normalizeFormData(data, textFields, emailFields, phoneFields);
 }
 
 /**
@@ -368,25 +365,25 @@ export function normalizeAsociacionCivilClientData<T extends Record<string, any>
  * because they must match database CHECK constraints in lowercase.
  */
 export function normalizeClubClientData<T extends Record<string, any>>(data: T): T {
-  const textFields = [
-    'nombre_club',
-    'sigla',
-    // 'disciplina_principal', // EXCLUDED: lowercase enum
-    'numero_registro_vipfe',
-    // 'tipo_registro', // EXCLUDED: lowercase enum
-    'entidad_registro',
-    'numero_registro',
-    'direccion',
-    'nombre_representante',
-    'apellido_representante',
-    'cargo_representante',
-    'extension_ci_representante',
-  ];
+	const textFields = [
+		"nombre_club",
+		"sigla",
+		// 'disciplina_principal', // EXCLUDED: lowercase enum
+		"numero_registro_vipfe",
+		// 'tipo_registro', // EXCLUDED: lowercase enum
+		"entidad_registro",
+		"numero_registro",
+		"direccion",
+		"nombre_representante",
+		"apellido_representante",
+		"cargo_representante",
+		"extension_ci_representante",
+	];
 
-  const emailFields = ['correo_electronico'];
-  const phoneFields = ['telefono', 'ci_representante', 'nit'];
+	const emailFields = ["correo_electronico"];
+	const phoneFields = ["telefono", "ci_representante", "nit"];
 
-  return normalizeFormData(data, textFields, emailFields, phoneFields);
+	return normalizeFormData(data, textFields, emailFields, phoneFields);
 }
 
 /**
@@ -396,21 +393,21 @@ export function normalizeClubClientData<T extends Record<string, any>>(data: T):
  * @returns Normalized data
  */
 export function normalizePartnerData<T extends Record<string, any>>(data: T): T {
-  const textFields = [
-    'primer_nombre',
-    'segundo_nombre',
-    'primer_apellido',
-    'segundo_apellido',
-    'direccion',
-    'profesion_oficio',
-    'actividad_economica',
-    'lugar_trabajo',
-  ];
+	const textFields = [
+		"primer_nombre",
+		"segundo_nombre",
+		"primer_apellido",
+		"segundo_apellido",
+		"direccion",
+		"profesion_oficio",
+		"actividad_economica",
+		"lugar_trabajo",
+	];
 
-  const emailFields = ['correo_electronico'];
-  const phoneFields = ['celular'];
+	const emailFields = ["correo_electronico"];
+	const phoneFields = ["celular"];
 
-  return normalizeFormData(data, textFields, emailFields, phoneFields);
+	return normalizeFormData(data, textFields, emailFields, phoneFields);
 }
 
 /**
@@ -419,17 +416,17 @@ export function normalizePartnerData<T extends Record<string, any>>(data: T): T 
  * @returns Formatted date string (DD-MM-YYYY) or empty string if invalid
  */
 export function formatDateDDMMYYYY(date: Date | string | null | undefined): string {
-  if (!date) return '';
+	if (!date) return "";
 
-  const dateObj = typeof date === 'string' ? new Date(date) : date;
+	const dateObj = typeof date === "string" ? new Date(date) : date;
 
-  if (isNaN(dateObj.getTime())) return '';
+	if (isNaN(dateObj.getTime())) return "";
 
-  const day = String(dateObj.getDate()).padStart(2, '0');
-  const month = String(dateObj.getMonth() + 1).padStart(2, '0');
-  const year = dateObj.getFullYear();
+	const day = String(dateObj.getDate()).padStart(2, "0");
+	const month = String(dateObj.getMonth() + 1).padStart(2, "0");
+	const year = dateObj.getFullYear();
 
-  return `${day}-${month}-${year}`;
+	return `${day}-${month}-${year}`;
 }
 
 /**
@@ -438,25 +435,25 @@ export function formatDateDDMMYYYY(date: Date | string | null | undefined): stri
  * @returns Date object or null if invalid
  */
 export function parseDateDDMMYYYY(dateString: string): Date | null {
-  if (!dateString) return null;
+	if (!dateString) return null;
 
-  const parts = dateString.split('-');
-  if (parts.length !== 3) return null;
+	const parts = dateString.split("-");
+	if (parts.length !== 3) return null;
 
-  const day = parseInt(parts[0], 10);
-  const month = parseInt(parts[1], 10) - 1; // Month is 0-indexed
-  const year = parseInt(parts[2], 10);
+	const day = parseInt(parts[0], 10);
+	const month = parseInt(parts[1], 10) - 1; // Month is 0-indexed
+	const year = parseInt(parts[2], 10);
 
-  if (isNaN(day) || isNaN(month) || isNaN(year)) return null;
+	if (isNaN(day) || isNaN(month) || isNaN(year)) return null;
 
-  const date = new Date(year, month, day);
+	const date = new Date(year, month, day);
 
-  // Validate that the date is valid
-  if (date.getDate() !== day || date.getMonth() !== month || date.getFullYear() !== year) {
-    return null;
-  }
+	// Validate that the date is valid
+	if (date.getDate() !== day || date.getMonth() !== month || date.getFullYear() !== year) {
+		return null;
+	}
 
-  return date;
+	return date;
 }
 
 /**
@@ -466,29 +463,29 @@ export function parseDateDDMMYYYY(dateString: string): Date | null {
  * @returns Valid Date object or null
  */
 export function normalizeDate(value: any): Date | null {
-  // If null or undefined, return null
-  if (value === null || value === undefined) {
-    return null;
-  }
+	// If null or undefined, return null
+	if (value === null || value === undefined) {
+		return null;
+	}
 
-  // If it's already a Date and is valid
-  if (value instanceof Date && !isNaN(value.getTime())) {
-    return value;
-  }
+	// If it's already a Date and is valid
+	if (value instanceof Date && !isNaN(value.getTime())) {
+		return value;
+	}
 
-  // If it's an empty object {} or invalid object
-  if (typeof value === 'object' && Object.keys(value).length === 0) {
-    return null;
-  }
+	// If it's an empty object {} or invalid object
+	if (typeof value === "object" && Object.keys(value).length === 0) {
+		return null;
+	}
 
-  // If it's a string, try to parse it
-  if (typeof value === 'string') {
-    const parsed = new Date(value);
-    if (!isNaN(parsed.getTime())) {
-      return parsed;
-    }
-  }
+	// If it's a string, try to parse it
+	if (typeof value === "string") {
+		const parsed = new Date(value);
+		if (!isNaN(parsed.getTime())) {
+			return parsed;
+		}
+	}
 
-  // Default: return null for any invalid value
-  return null;
+	// Default: return null for any invalid value
+	return null;
 }

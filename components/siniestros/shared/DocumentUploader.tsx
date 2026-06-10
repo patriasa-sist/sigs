@@ -5,13 +5,7 @@ import { useDropzone } from "react-dropzone";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Upload, File, X, FileText, Image, AlertCircle, Loader2 } from "lucide-react";
 import { TIPOS_DOCUMENTO_SINIESTRO, type DocumentoSiniestro, type TipoDocumentoSiniestro } from "@/types/siniestro";
 import { createClient } from "@/utils/supabase/client";
@@ -148,10 +142,10 @@ export default function DocumentUploader({
 						storage_path: storagePath,
 						upload_status: "uploaded",
 					});
-				})
+				}),
 			);
 		},
-		[documentos.length, subiendo.length, maxFiles, maxSizeMB, tipoActual, onAgregarDocumento, supabase, userId]
+		[documentos.length, subiendo.length, maxFiles, maxSizeMB, tipoActual, onAgregarDocumento, supabase, userId],
 	);
 
 	const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -218,9 +212,7 @@ export default function DocumentUploader({
 			>
 				<CardContent className="flex flex-col items-center justify-center py-8">
 					<input {...getInputProps()} />
-					<Upload
-						className={`h-12 w-12 mb-4 ${isDragActive ? "text-primary" : "text-muted-foreground"}`}
-					/>
+					<Upload className={`h-12 w-12 mb-4 ${isDragActive ? "text-primary" : "text-muted-foreground"}`} />
 					<p className="text-center text-sm font-medium mb-1">
 						{!userId
 							? "Cargando..."
@@ -276,7 +268,9 @@ export default function DocumentUploader({
 										<div className="flex-1 min-w-0">
 											<p className="text-sm font-medium truncate">{doc.nombre_archivo}</p>
 											<div className="flex items-center gap-2 text-xs text-muted-foreground">
-												<span className="bg-secondary px-2 py-0.5 rounded">{doc.tipo_documento}</span>
+												<span className="bg-secondary px-2 py-0.5 rounded">
+													{doc.tipo_documento}
+												</span>
 												{doc.tamano_bytes && <span>{formatFileSize(doc.tamano_bytes)}</span>}
 											</div>
 										</div>

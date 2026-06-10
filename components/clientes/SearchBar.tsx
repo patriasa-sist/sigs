@@ -16,9 +16,11 @@ export function SearchBar({ onSearch, placeholder }: SearchBarProps) {
 	useEffect(() => {
 		if (timer.current) clearTimeout(timer.current);
 		timer.current = setTimeout(() => onSearch(searchQuery), 350);
-		return () => { if (timer.current) clearTimeout(timer.current); };
-	// onSearch no se incluye en deps para evitar re-renders si el padre no memoiza la función
-	// eslint-disable-next-line react-hooks/exhaustive-deps
+		return () => {
+			if (timer.current) clearTimeout(timer.current);
+		};
+		// onSearch no se incluye en deps para evitar re-renders si el padre no memoiza la función
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [searchQuery]);
 
 	const handleClear = () => {

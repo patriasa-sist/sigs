@@ -48,7 +48,11 @@ export function OngClientForm({ form, onFieldBlur, exceptions = [] }: OngClientF
 	return (
 		<div className="space-y-6">
 			{/* SECCIÓN 1: DATOS DE LA ONG */}
-			<FormSection title="Datos de la ONG" description="Información de identificación de la organización" required>
+			<FormSection
+				title="Datos de la ONG"
+				description="Información de identificación de la organización"
+				required
+			>
 				<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 					<div className="md:col-span-2">
 						<Label htmlFor="nombre_ong">
@@ -68,12 +72,7 @@ export function OngClientForm({ form, onFieldBlur, exceptions = [] }: OngClientF
 
 					<div>
 						<Label htmlFor="sigla">Sigla / Acrónimo</Label>
-						<Input
-							id="sigla"
-							{...ur("sigla")}
-							onBlur={onFieldBlur}
-							placeholder="FEB"
-						/>
+						<Input id="sigla" {...ur("sigla")} onBlur={onFieldBlur} placeholder="FEB" />
 					</div>
 
 					<div>
@@ -94,13 +93,10 @@ export function OngClientForm({ form, onFieldBlur, exceptions = [] }: OngClientF
 					</div>
 
 					<div>
-						<Label htmlFor="nit">NIT o Equivalente <span className="text-muted-foreground text-xs">(opcional)</span></Label>
-						<Input
-							id="nit"
-							{...register("nit")}
-							onBlur={onFieldBlur}
-							placeholder="123456789"
-						/>
+						<Label htmlFor="nit">
+							NIT o Equivalente <span className="text-muted-foreground text-xs">(opcional)</span>
+						</Label>
+						<Input id="nit" {...register("nit")} onBlur={onFieldBlur} placeholder="123456789" />
 					</div>
 
 					<div>
@@ -170,9 +166,7 @@ export function OngClientForm({ form, onFieldBlur, exceptions = [] }: OngClientF
 							placeholder="22123456"
 							className={eb(!!errors.telefono)}
 						/>
-						{errors.telefono && (
-							<p className="text-sm text-destructive mt-1">{errors.telefono.message}</p>
-						)}
+						{errors.telefono && <p className="text-sm text-destructive mt-1">{errors.telefono.message}</p>}
 					</div>
 
 					<div className="md:col-span-2">
