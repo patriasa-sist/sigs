@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { obtenerPolizas, obtenerFiltrosPolizas, type PolizaListItem, type FiltrosPolizasData } from "./actions";
 import { Button } from "@/components/ui/button";
+import { NavButton } from "@/components/ui/nav-button";
 import { Input } from "@/components/ui/input";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -202,19 +203,14 @@ export default function PolizasPage() {
 					</p>
 				</div>
 				<div className="flex items-center gap-2 shrink-0">
-					<Button
-						onClick={() => router.push("/polizas/anexos/nuevo")}
-						variant="outline"
-						size="sm"
-						className="cursor-pointer"
-					>
+					<NavButton href="/polizas/anexos/nuevo" variant="outline" size="sm" className="cursor-pointer">
 						<Plus className="h-4 w-4" />
 						Nuevo Anexo
-					</Button>
-					<Button onClick={() => router.push("/polizas/nueva")} size="sm" className="cursor-pointer">
+					</NavButton>
+					<NavButton href="/polizas/nueva" size="sm" className="cursor-pointer">
 						<Plus className="h-4 w-4" />
 						Nueva Póliza
-					</Button>
+					</NavButton>
 				</div>
 			</div>
 

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { NavButton } from "@/components/ui/nav-button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -56,12 +57,10 @@ export default function EmpleadosList({ empleados, error }: Props) {
 						{soloActivos ? "Activos" : "Todos"}
 					</Button>
 				</div>
-				<Link href="/rrhh/nuevo">
-					<Button size="sm" className="gap-2 shrink-0">
-						<Plus className="h-4 w-4" />
-						Nuevo Empleado
-					</Button>
-				</Link>
+				<NavButton href="/rrhh/nuevo" size="sm" className="gap-2 shrink-0">
+					<Plus className="h-4 w-4" />
+					Nuevo Empleado
+				</NavButton>
 			</div>
 
 			{/* Stats */}
@@ -78,12 +77,10 @@ export default function EmpleadosList({ empleados, error }: Props) {
 						{empleados.length === 0 ? "No hay empleados registrados" : "No se encontraron resultados"}
 					</p>
 					{empleados.length === 0 && (
-						<Link href="/rrhh/nuevo">
-							<Button size="sm" variant="outline" className="gap-2">
-								<Plus className="h-4 w-4" />
-								Registrar primer empleado
-							</Button>
-						</Link>
+						<NavButton href="/rrhh/nuevo" size="sm" variant="outline" className="gap-2">
+							<Plus className="h-4 w-4" />
+							Registrar primer empleado
+						</NavButton>
 					)}
 				</div>
 			) : (

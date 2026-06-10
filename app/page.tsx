@@ -1,6 +1,6 @@
 import React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { NavButton } from "@/components/ui/nav-button";
 import { Badge } from "@/components/ui/badge";
 import {
 	Users,
@@ -22,7 +22,6 @@ import {
 	FileSpreadsheet,
 	Percent,
 } from "lucide-react";
-import Link from "next/link";
 
 const Dashboard = () => {
 	const modules = [
@@ -165,11 +164,9 @@ const Dashboard = () => {
 											</div>
 										))}
 									</div>
-									<Link href={module.link}>
-										<Button className="w-full cursor-pointer" variant="default">
-											Acceder
-										</Button>
-									</Link>
+									<NavButton href={module.link} className="w-full cursor-pointer" variant="default">
+										Acceder
+									</NavButton>
 								</CardContent>
 							</Card>
 						))}

@@ -1,6 +1,5 @@
 import { requirePermission } from "@/utils/auth/helpers";
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
+import { NavButton } from "@/components/ui/nav-button";
 import { Plus } from "lucide-react";
 import Dashboard from "@/components/siniestros/Dashboard";
 import { obtenerSiniestrosConAtencion } from "./actions";
@@ -26,12 +25,10 @@ export default async function SiniestrosPage() {
 						Registro y seguimiento de siniestros reportados en pólizas activas
 					</p>
 				</div>
-				<Button asChild>
-					<Link href="/siniestros/nuevo">
-						<Plus className="mr-2 h-4 w-4" />
-						Registrar Siniestro
-					</Link>
-				</Button>
+				<NavButton href="/siniestros/nuevo">
+					<Plus className="mr-2 h-4 w-4" />
+					Registrar Siniestro
+				</NavButton>
 			</div>
 
 			{result.success ? (

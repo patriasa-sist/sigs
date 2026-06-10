@@ -15,6 +15,7 @@ import { ClientTable } from "@/components/clientes/ClientTable";
 import { ClientDetailModal } from "@/components/clientes/ClientDetailModal";
 import { ViewToggle, ViewMode } from "@/components/clientes/ViewToggle";
 import { Button } from "@/components/ui/button";
+import { NavButton } from "@/components/ui/nav-button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { UserPlus, AlertCircle, Plus, X } from "lucide-react";
@@ -180,10 +181,10 @@ function ClientesContent() {
 								: "Gestión de clientes"}
 					</p>
 				</div>
-				<Button size="sm" onClick={() => router.push("/clientes/nuevo")} className="shrink-0 cursor-pointer">
+				<NavButton href="/clientes/nuevo" size="sm" className="shrink-0 cursor-pointer">
 					<Plus className="h-4 w-4" />
 					Nuevo Cliente
-				</Button>
+				</NavButton>
 			</div>
 
 			{/* ── Search + Filters + View Toggle ───────────────────────── */}
