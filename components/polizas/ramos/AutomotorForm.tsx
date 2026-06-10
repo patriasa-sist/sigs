@@ -18,6 +18,17 @@ import { importarVehiculosDesdeExcel, generarTemplateExcel } from "@/utils/vehic
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
 import { VehiculoModal } from "./VehiculoModal";
 import { createClient } from "@/utils/supabase/client";
 
@@ -37,6 +48,7 @@ export function AutomotorForm({ datos, onChange, onSiguiente, onAnterior }: Prop
 	const [errores, setErrores] = useState<string[]>([]);
 	const [advertencias, setAdvertencias] = useState<string[]>([]);
 	const [importando, setImportando] = useState(false);
+	const [vehiculoAEliminar, setVehiculoAEliminar] = useState<number | null>(null);
 
 	// Catálogos para mostrar nombres en lugar de IDs
 	const [tiposVehiculo, setTiposVehiculo] = useState<TipoVehiculo[]>([]);
@@ -128,13 +140,17 @@ export function AutomotorForm({ datos, onChange, onSiguiente, onAnterior }: Prop
 		setModalAbierto(true);
 	};
 
-	// Eliminar vehículo
+	// Eliminar vehículo (pide confirmación vía AlertDialog)
 	const handleEliminar = (index: number) => {
-		if (confirm("¿Está seguro de eliminar este vehículo?")) {
-			const nuevosVehiculos = vehiculos.filter((_, i) => i !== index);
-			setVehiculos(nuevosVehiculos);
-			onChange({ tipo_poliza: tipoPoliza, vehiculos: nuevosVehiculos });
-		}
+		setVehiculoAEliminar(index);
+	};
+
+	const confirmarEliminar = () => {
+		if (vehiculoAEliminar === null) return;
+		const nuevosVehiculos = vehiculos.filter((_, i) => i !== vehiculoAEliminar);
+		setVehiculos(nuevosVehiculos);
+		onChange({ tipo_poliza: tipoPoliza, vehiculos: nuevosVehiculos });
+		setVehiculoAEliminar(null);
 	};
 
 	// Importar desde Excel
@@ -174,7 +190,7 @@ export function AutomotorForm({ datos, onChange, onSiguiente, onAnterior }: Prop
 					const mensajesError = resultado.errores.map((e) => `Fila ${e.fila}: ${e.errores.join(", ")}`);
 					setErrores([`Se importaron ${resultado.vehiculos_validos.length} vehículos.`, ...mensajesError]);
 				} else {
-					alert(`Se importaron ${resultado.vehiculos_validos.length} vehículos exitosamente.`);
+					toast.success(`Se importaron ${resultado.vehiculos_validos.length} vehículos exitosamente.`);
 				}
 			} else {
 				setErrores(
@@ -199,7 +215,7 @@ export function AutomotorForm({ datos, onChange, onSiguiente, onAnterior }: Prop
 			await generarTemplateExcel();
 		} catch (error) {
 			console.error("Error generando template:", error);
-			alert("Error al generar el template");
+			toast.error("Error al generar el template");
 		}
 	};
 
@@ -222,17 +238,17 @@ export function AutomotorForm({ datos, onChange, onSiguiente, onAnterior }: Prop
 	const tieneVehiculos = vehiculos.length > 0;
 
 	return (
-		<div className="bg-white rounded-lg shadow-sm border p-6">
+		<div className="bg-card rounded-lg shadow-sm border border-border p-6">
 			<div className="flex items-center justify-between mb-6">
 				<div>
-					<h2 className="text-xl font-semibold text-gray-900">Paso 3: Vehículos Asegurados</h2>
-					<p className="text-sm text-gray-600 mt-1">
+					<h2 className="text-xl font-semibold text-foreground">Paso 3: Vehículos Asegurados</h2>
+					<p className="text-sm text-muted-foreground mt-1">
 						Agregue los vehículos que serán asegurados en esta póliza
 					</p>
 				</div>
 
 				{tieneVehiculos && (
-					<div className="flex items-center gap-2 text-green-600">
+					<div className="flex items-center gap-2 text-success">
 						<CheckCircle2 className="h-5 w-5" />
 						<span className="text-sm font-medium">{vehiculos.length} vehículo(s)</span>
 					</div>
@@ -240,12 +256,12 @@ export function AutomotorForm({ datos, onChange, onSiguiente, onAnterior }: Prop
 			</div>
 
 			{/* Tipo de Póliza */}
-			<div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
-				<Label htmlFor="tipo-poliza" className="block text-sm font-medium text-gray-700 mb-2">
+			<div className="mb-6 p-4 bg-secondary rounded-lg border border-border">
+				<Label htmlFor="tipo-poliza" className="block text-sm font-medium text-foreground mb-2">
 					Tipo de Póliza
 				</Label>
 				<Select value={tipoPoliza} onValueChange={handleTipoPolizaChange}>
-					<SelectTrigger id="tipo-poliza" className="w-full max-w-xs bg-white">
+					<SelectTrigger id="tipo-poliza" className="w-full max-w-xs bg-background">
 						<SelectValue />
 					</SelectTrigger>
 					<SelectContent>
@@ -253,7 +269,7 @@ export function AutomotorForm({ datos, onChange, onSiguiente, onAnterior }: Prop
 						<SelectItem value="corporativo">Corporativo</SelectItem>
 					</SelectContent>
 				</Select>
-				<p className="text-xs text-gray-500 mt-1">
+				<p className="text-xs text-muted-foreground mt-1">
 					Seleccione si la póliza es para un cliente individual o corporativo
 				</p>
 			</div>
@@ -290,9 +306,9 @@ export function AutomotorForm({ datos, onChange, onSiguiente, onAnterior }: Prop
 
 			{/* Errores */}
 			{errores.length > 0 && (
-				<div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-					<h4 className="text-sm font-semibold text-red-800 mb-2">Errores:</h4>
-					<ul className="text-sm text-red-700 space-y-1">
+				<div className="mb-6 p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
+					<h4 className="text-sm font-semibold text-destructive mb-2">Errores:</h4>
+					<ul className="text-sm text-destructive space-y-1">
 						{errores.map((error, i) => (
 							<li key={i}>• {error}</li>
 						))}
@@ -302,12 +318,12 @@ export function AutomotorForm({ datos, onChange, onSiguiente, onAnterior }: Prop
 
 			{/* Advertencias (no bloqueantes) */}
 			{advertencias.length > 0 && (
-				<div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-					<h4 className="text-sm font-semibold text-amber-800 mb-2">Advertencias de importación:</h4>
-					<p className="text-xs text-amber-700 mb-2">
+				<div className="mb-6 p-4 bg-warning/10 border border-warning/30 rounded-lg">
+					<h4 className="text-sm font-semibold text-warning-foreground mb-2">Advertencias de importación:</h4>
+					<p className="text-xs text-warning-foreground mb-2">
 						Los vehículos se importaron, pero revise estos datos y complételos manualmente si corresponde.
 					</p>
-					<ul className="text-sm text-amber-700 space-y-1">
+					<ul className="text-sm text-warning-foreground space-y-1">
 						{advertencias.map((adv, i) => (
 							<li key={i}>• {adv}</li>
 						))}
@@ -318,61 +334,63 @@ export function AutomotorForm({ datos, onChange, onSiguiente, onAnterior }: Prop
 			{/* Tabla de vehículos */}
 			{vehiculos.length === 0 ? (
 				<div className="text-center py-12 border-2 border-dashed rounded-lg">
-					<Car className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-					<p className="text-gray-600 mb-2">No hay vehículos agregados</p>
-					<p className="text-sm text-gray-500">Agregue vehículos manualmente o importe desde Excel</p>
+					<Car className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+					<p className="text-muted-foreground mb-2">No hay vehículos agregados</p>
+					<p className="text-sm text-muted-foreground">Agregue vehículos manualmente o importe desde Excel</p>
 				</div>
 			) : (
 				<div className="overflow-x-auto border rounded-lg mb-6">
 					<table className="w-full">
-						<thead className="bg-gray-50">
+						<thead className="bg-muted/50">
 							<tr>
-								<th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">
+								<th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
 									Placa
 								</th>
-								<th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">
+								<th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
 									Tipo
 								</th>
-								<th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">
+								<th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
 									Marca/Modelo
 								</th>
-								<th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">Año</th>
-								<th className="px-4 py-3 text-right text-xs font-medium text-gray-700 uppercase">
+								<th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+									Año
+								</th>
+								<th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase">
 									Valor Asegurado
 								</th>
-								<th className="px-4 py-3 text-right text-xs font-medium text-gray-700 uppercase">
+								<th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase">
 									Franquicia
 								</th>
-								<th className="px-4 py-3 text-center text-xs font-medium text-gray-700 uppercase">
+								<th className="px-4 py-3 text-center text-xs font-medium text-muted-foreground uppercase">
 									Uso
 								</th>
-								<th className="px-4 py-3 text-center text-xs font-medium text-gray-700 uppercase">
+								<th className="px-4 py-3 text-center text-xs font-medium text-muted-foreground uppercase">
 									Coaseguro (%)
 								</th>
-								<th className="px-4 py-3 text-center text-xs font-medium text-gray-700 uppercase">
+								<th className="px-4 py-3 text-center text-xs font-medium text-muted-foreground uppercase">
 									Acciones
 								</th>
 							</tr>
 						</thead>
 						<tbody className="divide-y">
 							{vehiculos.map((vehiculo, index) => (
-								<tr key={index} className="hover:bg-gray-50">
-									<td className="px-4 py-3 font-medium text-gray-900">{vehiculo.placa}</td>
-									<td className="px-4 py-3 text-sm text-gray-600">
+								<tr key={index} className="hover:bg-muted/50">
+									<td className="px-4 py-3 font-medium text-foreground">{vehiculo.placa}</td>
+									<td className="px-4 py-3 text-sm text-muted-foreground">
 										{obtenerNombreTipo(vehiculo.tipo_vehiculo_id)}
 									</td>
-									<td className="px-4 py-3 text-sm text-gray-600">
+									<td className="px-4 py-3 text-sm text-muted-foreground">
 										{obtenerNombreMarca(vehiculo.marca_id)}
 										{vehiculo.modelo ? ` ${vehiculo.modelo}` : ""}
 									</td>
-									<td className="px-4 py-3 text-sm text-gray-600">{vehiculo.ano || "-"}</td>
-									<td className="px-4 py-3 text-sm text-gray-900 text-right">
+									<td className="px-4 py-3 text-sm text-muted-foreground">{vehiculo.ano || "-"}</td>
+									<td className="px-4 py-3 text-sm text-foreground text-right">
 										{vehiculo.valor_asegurado.toLocaleString("es-BO", {
 											minimumFractionDigits: 2,
 											maximumFractionDigits: 2,
 										})}
 									</td>
-									<td className="px-4 py-3 text-sm text-gray-900 text-right">
+									<td className="px-4 py-3 text-sm text-foreground text-right">
 										{vehiculo.franquicia.toLocaleString("es-BO", {
 											minimumFractionDigits: 2,
 											maximumFractionDigits: 2,
@@ -382,14 +400,14 @@ export function AutomotorForm({ datos, onChange, onSiguiente, onAnterior }: Prop
 										<span
 											className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
 												vehiculo.uso === "publico"
-													? "bg-blue-100 text-blue-800"
-													: "bg-green-100 text-green-800"
+													? "bg-info/15 text-info"
+													: "bg-success/15 text-success"
 											}`}
 										>
 											{vehiculo.uso === "publico" ? "Público" : "Particular"}
 										</span>
 									</td>
-									<td className="px-4 py-3 text-center text-sm text-gray-900">
+									<td className="px-4 py-3 text-center text-sm text-foreground">
 										{vehiculo.coaseguro?.toLocaleString("es-BO", {
 											minimumFractionDigits: 2,
 											maximumFractionDigits: 2,
@@ -409,7 +427,7 @@ export function AutomotorForm({ datos, onChange, onSiguiente, onAnterior }: Prop
 												variant="ghost"
 												size="sm"
 												onClick={() => handleEliminar(index)}
-												className="text-red-600 hover:text-red-700 hover:bg-red-50"
+												className="text-destructive hover:text-destructive hover:bg-destructive/10"
 											>
 												<Trash2 className="h-4 w-4" />
 											</Button>
@@ -447,6 +465,32 @@ export function AutomotorForm({ datos, onChange, onSiguiente, onAnterior }: Prop
 					}}
 				/>
 			)}
+
+			{/* Diálogo: confirmar eliminación de vehículo */}
+			<AlertDialog
+				open={vehiculoAEliminar !== null}
+				onOpenChange={(open) => {
+					if (!open) setVehiculoAEliminar(null);
+				}}
+			>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>¿Eliminar este vehículo?</AlertDialogTitle>
+						<AlertDialogDescription>
+							El vehículo se quitará de la lista de la póliza.
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel>Cancelar</AlertDialogCancel>
+						<AlertDialogAction
+							onClick={confirmarEliminar}
+							className="bg-destructive text-white hover:bg-destructive/90"
+						>
+							Eliminar
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
 		</div>
 	);
 }

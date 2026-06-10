@@ -25,12 +25,8 @@ import type {
 	DatosTransporte,
 	DatosAeronavegacion,
 } from "@/types/poliza";
-import {
-	validarFechasPago,
-	validarDatosBasicos,
-	validarModalidadPago,
-	ramoRequiereDatosEspecificos,
-} from "@/utils/polizaValidation";
+import { validarDatosBasicos, validarModalidadPago, ramoRequiereDatosEspecificos } from "@/utils/polizaValidation";
+import { DOCUMENTOS_OBLIGATORIOS } from "@/utils/validationConstants";
 import { Button } from "@/components/ui/button";
 import {
 	AlertDialog,
@@ -127,24 +123,11 @@ export function Resumen({ formState, onAnterior, onEditarPaso, onGuardar, guarda
 			}
 		}
 
-		// Validar fechas de pago
-		if (formState.modalidad_pago) {
-			const validacion = validarFechasPago();
-			if (!validacion.valido) {
-				validacion.errores.forEach((error) => {
-					nuevasAdvertencias.push({
-						tipo: "warning",
-						campo: error.campo,
-						mensaje: error.mensaje,
-					});
-				});
-			}
-		}
-
 		// Advertencias sobre documentos obligatorios faltantes
 		const docsSubidos = formState.documentos.filter((d) => d.upload_status === "uploaded" || d.id);
-		const docObligatorios = ["Póliza"];
-		const docsFaltantes = docObligatorios.filter((tipo) => !docsSubidos.some((d) => d.tipo_documento === tipo));
+		const docsFaltantes = DOCUMENTOS_OBLIGATORIOS.filter(
+			(tipo) => !docsSubidos.some((d) => d.tipo_documento === tipo),
+		);
 		if (docsFaltantes.length > 0) {
 			nuevasAdvertencias.push({
 				tipo: "error",

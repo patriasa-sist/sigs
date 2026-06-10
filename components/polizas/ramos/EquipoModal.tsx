@@ -160,10 +160,10 @@ export function EquipoModal({ equipo, onGuardar, onCancelar }: Props) {
 	if (cargando) {
 		return (
 			<div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-				<div className="bg-white rounded-lg p-6">
+				<div className="bg-card rounded-lg p-6">
 					<div className="text-center">
 						<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
-						<p className="text-sm text-gray-600">Cargando...</p>
+						<p className="text-sm text-muted-foreground">Cargando...</p>
 					</div>
 				</div>
 			</div>
@@ -172,9 +172,9 @@ export function EquipoModal({ equipo, onGuardar, onCancelar }: Props) {
 
 	return (
 		<div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-			<div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+			<div className="bg-card rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
 				{/* Header */}
-				<div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between">
+				<div className="sticky top-0 bg-card border-b px-6 py-4 flex items-center justify-between">
 					<h2 className="text-xl font-semibold">{equipo ? "Editar Equipo" : "Agregar Equipo"}</h2>
 					<Button variant="ghost" size="icon" onClick={onCancelar} className="rounded-full">
 						<X className="h-5 w-5" />
@@ -186,28 +186,28 @@ export function EquipoModal({ equipo, onGuardar, onCancelar }: Props) {
 					<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 						{/* CAMPOS OBLIGATORIOS */}
 						<div className="md:col-span-2">
-							<h3 className="text-sm font-semibold text-gray-900 mb-4">Campos Obligatorios</h3>
+							<h3 className="text-sm font-semibold text-foreground mb-4">Campos Obligatorios</h3>
 						</div>
 
 						{/* Número de Serie - CAMPO PRINCIPAL */}
 						<div className="space-y-2">
 							<Label htmlFor="nro_serie">
-								Nº de Serie <span className="text-red-500">*</span>
+								Nº de Serie <span className="text-destructive">*</span>
 							</Label>
 							<Input
 								id="nro_serie"
 								value={formData.nro_serie}
 								onChange={(e) => handleChange("nro_serie", e.target.value.toUpperCase())}
 								placeholder="SN123456789"
-								className={errores.nro_serie ? "border-red-500" : ""}
+								className={errores.nro_serie ? "border-destructive" : ""}
 							/>
-							{errores.nro_serie && <p className="text-sm text-red-600">{errores.nro_serie}</p>}
+							{errores.nro_serie && <p className="text-sm text-destructive">{errores.nro_serie}</p>}
 						</div>
 
 						{/* Valor Asegurado */}
 						<div className="space-y-2">
 							<Label htmlFor="valor_asegurado">
-								Valor Asegurado (Bs) <span className="text-red-500">*</span>
+								Valor Asegurado (Bs) <span className="text-destructive">*</span>
 							</Label>
 							<Input
 								id="valor_asegurado"
@@ -217,32 +217,32 @@ export function EquipoModal({ equipo, onGuardar, onCancelar }: Props) {
 								value={formData.valor_asegurado}
 								onChange={(e) => handleChange("valor_asegurado", parseFloat(e.target.value) || 0)}
 								placeholder="50000"
-								className={errores.valor_asegurado ? "border-red-500" : ""}
+								className={errores.valor_asegurado ? "border-destructive" : ""}
 							/>
 							{errores.valor_asegurado && (
-								<p className="text-sm text-red-600">{errores.valor_asegurado}</p>
+								<p className="text-sm text-destructive">{errores.valor_asegurado}</p>
 							)}
 						</div>
 
 						{/* Número de Chasis */}
 						<div className="space-y-2">
 							<Label htmlFor="nro_chasis">
-								Nº de Chasis <span className="text-red-500">*</span>
+								Nº de Chasis <span className="text-destructive">*</span>
 							</Label>
 							<Input
 								id="nro_chasis"
 								value={formData.nro_chasis}
 								onChange={(e) => handleChange("nro_chasis", e.target.value.toUpperCase())}
 								placeholder="CH123456789"
-								className={errores.nro_chasis ? "border-red-500" : ""}
+								className={errores.nro_chasis ? "border-destructive" : ""}
 							/>
-							{errores.nro_chasis && <p className="text-sm text-red-600">{errores.nro_chasis}</p>}
+							{errores.nro_chasis && <p className="text-sm text-destructive">{errores.nro_chasis}</p>}
 						</div>
 
 						{/* Franquicia */}
 						<div className="space-y-2">
 							<Label htmlFor="franquicia">
-								Franquicia (Bs) <span className="text-red-500">*</span>
+								Franquicia (Bs) <span className="text-destructive">*</span>
 							</Label>
 							<Input
 								id="franquicia"
@@ -252,18 +252,18 @@ export function EquipoModal({ equipo, onGuardar, onCancelar }: Props) {
 								value={formData.franquicia ?? ""}
 								onChange={(e) => handleChange("franquicia", parseFloat(e.target.value) || 0)}
 								placeholder="Ej: 700, 1000, 1400"
-								className={errores.franquicia ? "border-red-500" : ""}
+								className={errores.franquicia ? "border-destructive" : ""}
 							/>
-							{errores.franquicia && <p className="text-sm text-red-600">{errores.franquicia}</p>}
+							{errores.franquicia && <p className="text-sm text-destructive">{errores.franquicia}</p>}
 						</div>
 
 						{/* Uso */}
 						<div className="space-y-2">
 							<Label htmlFor="uso">
-								Uso <span className="text-red-500">*</span>
+								Uso <span className="text-destructive">*</span>
 							</Label>
 							<Select value={formData.uso} onValueChange={(value) => handleChange("uso", value)}>
-								<SelectTrigger className={errores.uso ? "border-red-500" : ""}>
+								<SelectTrigger className={errores.uso ? "border-destructive" : ""}>
 									<SelectValue />
 								</SelectTrigger>
 								<SelectContent>
@@ -271,13 +271,13 @@ export function EquipoModal({ equipo, onGuardar, onCancelar }: Props) {
 									<SelectItem value="publico">Público</SelectItem>
 								</SelectContent>
 							</Select>
-							{errores.uso && <p className="text-sm text-red-600">{errores.uso}</p>}
+							{errores.uso && <p className="text-sm text-destructive">{errores.uso}</p>}
 						</div>
 
 						{/* Coaseguro */}
 						<div className="space-y-2">
 							<Label htmlFor="coaseguro">
-								Coaseguro (%) <span className="text-red-500">*</span>
+								Coaseguro (%) <span className="text-destructive">*</span>
 							</Label>
 							<Input
 								id="coaseguro"
@@ -288,14 +288,14 @@ export function EquipoModal({ equipo, onGuardar, onCancelar }: Props) {
 								value={formData.coaseguro ?? ""}
 								onChange={(e) => handleChange("coaseguro", parseFloat(e.target.value) || 0)}
 								placeholder="0"
-								className={errores.coaseguro ? "border-red-500" : ""}
+								className={errores.coaseguro ? "border-destructive" : ""}
 							/>
-							{errores.coaseguro && <p className="text-sm text-red-600">{errores.coaseguro}</p>}
+							{errores.coaseguro && <p className="text-sm text-destructive">{errores.coaseguro}</p>}
 						</div>
 
 						{/* CAMPOS OPCIONALES */}
 						<div className="md:col-span-2 mt-4">
-							<h3 className="text-sm font-semibold text-gray-900 mb-4">Campos Opcionales</h3>
+							<h3 className="text-sm font-semibold text-foreground mb-4">Campos Opcionales</h3>
 						</div>
 
 						{/* Placa (opcional para equipos) */}
@@ -307,7 +307,9 @@ export function EquipoModal({ equipo, onGuardar, onCancelar }: Props) {
 								onChange={(e) => handleChange("placa", e.target.value.toUpperCase())}
 								placeholder="Ej: ABC-123"
 							/>
-							<p className="text-xs text-gray-500">Algunos equipos industriales no tienen placa</p>
+							<p className="text-xs text-muted-foreground">
+								Algunos equipos industriales no tienen placa
+							</p>
 						</div>
 
 						{/* Tipo de Equipo */}
@@ -375,9 +377,9 @@ export function EquipoModal({ equipo, onGuardar, onCancelar }: Props) {
 									handleChange("ano", valor);
 								}}
 								placeholder="2020"
-								className={errores.ano ? "border-red-500" : ""}
+								className={errores.ano ? "border-destructive" : ""}
 							/>
-							{errores.ano && <p className="text-sm text-red-600">{errores.ano}</p>}
+							{errores.ano && <p className="text-sm text-destructive">{errores.ano}</p>}
 						</div>
 
 						{/* Color */}
@@ -425,7 +427,7 @@ export function EquipoModal({ equipo, onGuardar, onCancelar }: Props) {
 				</div>
 
 				{/* Footer */}
-				<div className="sticky bottom-0 bg-gray-50 border-t px-6 py-4 flex justify-end gap-3">
+				<div className="sticky bottom-0 bg-secondary border-t px-6 py-4 flex justify-end gap-3">
 					<Button variant="outline" onClick={onCancelar}>
 						Cancelar
 					</Button>

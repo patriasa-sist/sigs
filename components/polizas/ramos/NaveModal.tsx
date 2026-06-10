@@ -101,9 +101,9 @@ export function NaveModal({ nave, nivelesAP, tipoNave, onGuardar, onCancelar }: 
 
 	return (
 		<div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-			<div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+			<div className="bg-card rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
 				{/* Header */}
-				<div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between">
+				<div className="sticky top-0 bg-card border-b px-6 py-4 flex items-center justify-between">
 					<h2 className="text-xl font-semibold">{nave ? `Editar ${tipoLabel}` : `Agregar ${tipoLabel}`}</h2>
 					<Button variant="ghost" size="icon" onClick={onCancelar} className="rounded-full">
 						<X className="h-5 w-5" />
@@ -115,73 +115,73 @@ export function NaveModal({ nave, nivelesAP, tipoNave, onGuardar, onCancelar }: 
 					<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 						{/* DATOS DE IDENTIFICACIÓN */}
 						<div className="md:col-span-2">
-							<h3 className="text-sm font-semibold text-gray-900 mb-4">Datos de Identificación</h3>
+							<h3 className="text-sm font-semibold text-foreground mb-4">Datos de Identificación</h3>
 						</div>
 
 						{/* Matrícula */}
 						<div className="space-y-2">
 							<Label htmlFor="matricula">
-								Matrícula <span className="text-red-500">*</span>
+								Matrícula <span className="text-destructive">*</span>
 							</Label>
 							<Input
 								id="matricula"
 								value={formData.matricula}
 								onChange={(e) => handleChange("matricula", e.target.value.toUpperCase())}
 								placeholder="Ej: CP-1234"
-								className={errores.matricula ? "border-red-500" : ""}
+								className={errores.matricula ? "border-destructive" : ""}
 							/>
-							{errores.matricula && <p className="text-sm text-red-600">{errores.matricula}</p>}
+							{errores.matricula && <p className="text-sm text-destructive">{errores.matricula}</p>}
 						</div>
 
 						{/* Serie */}
 						<div className="space-y-2">
 							<Label htmlFor="serie">
-								Número de Serie <span className="text-red-500">*</span>
+								Número de Serie <span className="text-destructive">*</span>
 							</Label>
 							<Input
 								id="serie"
 								value={formData.serie}
 								onChange={(e) => handleChange("serie", e.target.value.toUpperCase())}
 								placeholder="Ej: SN123456789"
-								className={errores.serie ? "border-red-500" : ""}
+								className={errores.serie ? "border-destructive" : ""}
 							/>
-							{errores.serie && <p className="text-sm text-red-600">{errores.serie}</p>}
+							{errores.serie && <p className="text-sm text-destructive">{errores.serie}</p>}
 						</div>
 
 						{/* Marca */}
 						<div className="space-y-2">
 							<Label htmlFor="marca">
-								Marca <span className="text-red-500">*</span>
+								Marca <span className="text-destructive">*</span>
 							</Label>
 							<Input
 								id="marca"
 								value={formData.marca}
 								onChange={(e) => handleChange("marca", e.target.value)}
 								placeholder={tipoNave === "aeronave" ? "Ej: Cessna, Boeing" : "Ej: Yamaha, Sea-Doo"}
-								className={errores.marca ? "border-red-500" : ""}
+								className={errores.marca ? "border-destructive" : ""}
 							/>
-							{errores.marca && <p className="text-sm text-red-600">{errores.marca}</p>}
+							{errores.marca && <p className="text-sm text-destructive">{errores.marca}</p>}
 						</div>
 
 						{/* Modelo */}
 						<div className="space-y-2">
 							<Label htmlFor="modelo">
-								Modelo <span className="text-red-500">*</span>
+								Modelo <span className="text-destructive">*</span>
 							</Label>
 							<Input
 								id="modelo"
 								value={formData.modelo}
 								onChange={(e) => handleChange("modelo", e.target.value)}
 								placeholder={tipoNave === "aeronave" ? "Ej: 172 Skyhawk" : "Ej: FX Cruiser"}
-								className={errores.modelo ? "border-red-500" : ""}
+								className={errores.modelo ? "border-destructive" : ""}
 							/>
-							{errores.modelo && <p className="text-sm text-red-600">{errores.modelo}</p>}
+							{errores.modelo && <p className="text-sm text-destructive">{errores.modelo}</p>}
 						</div>
 
 						{/* Año */}
 						<div className="space-y-2">
 							<Label htmlFor="ano">
-								Año <span className="text-red-500">*</span>
+								Año <span className="text-destructive">*</span>
 							</Label>
 							<Input
 								id="ano"
@@ -191,15 +191,15 @@ export function NaveModal({ nave, nivelesAP, tipoNave, onGuardar, onCancelar }: 
 								value={formData.ano ?? ""}
 								onChange={(e) => handleChange("ano", parseInt(e.target.value) || undefined)}
 								placeholder="2020"
-								className={errores.ano ? "border-red-500" : ""}
+								className={errores.ano ? "border-destructive" : ""}
 							/>
-							{errores.ano && <p className="text-sm text-red-600">{errores.ano}</p>}
+							{errores.ano && <p className="text-sm text-destructive">{errores.ano}</p>}
 						</div>
 
 						{/* Uso */}
 						<div className="space-y-2">
 							<Label htmlFor="uso">
-								Uso <span className="text-red-500">*</span>
+								Uso <span className="text-destructive">*</span>
 							</Label>
 							<Select
 								value={formData.uso}
@@ -207,7 +207,7 @@ export function NaveModal({ nave, nivelesAP, tipoNave, onGuardar, onCancelar }: 
 									handleChange("uso", value as "privado" | "publico" | "recreacion")
 								}
 							>
-								<SelectTrigger className={errores.uso ? "border-red-500" : ""}>
+								<SelectTrigger className={errores.uso ? "border-destructive" : ""}>
 									<SelectValue />
 								</SelectTrigger>
 								<SelectContent>
@@ -216,18 +216,18 @@ export function NaveModal({ nave, nivelesAP, tipoNave, onGuardar, onCancelar }: 
 									<SelectItem value="recreacion">Recreación</SelectItem>
 								</SelectContent>
 							</Select>
-							{errores.uso && <p className="text-sm text-red-600">{errores.uso}</p>}
+							{errores.uso && <p className="text-sm text-destructive">{errores.uso}</p>}
 						</div>
 
 						{/* CAPACIDAD */}
 						<div className="md:col-span-2 mt-4">
-							<h3 className="text-sm font-semibold text-gray-900 mb-4">Capacidad</h3>
+							<h3 className="text-sm font-semibold text-foreground mb-4">Capacidad</h3>
 						</div>
 
 						{/* Número de Pasajeros */}
 						<div className="space-y-2">
 							<Label htmlFor="nro_pasajeros">
-								Número de Pasajeros <span className="text-red-500">*</span>
+								Número de Pasajeros <span className="text-destructive">*</span>
 							</Label>
 							<Input
 								id="nro_pasajeros"
@@ -236,15 +236,17 @@ export function NaveModal({ nave, nivelesAP, tipoNave, onGuardar, onCancelar }: 
 								value={formData.nro_pasajeros ?? ""}
 								onChange={(e) => handleChange("nro_pasajeros", parseInt(e.target.value) || 0)}
 								placeholder="4"
-								className={errores.nro_pasajeros ? "border-red-500" : ""}
+								className={errores.nro_pasajeros ? "border-destructive" : ""}
 							/>
-							{errores.nro_pasajeros && <p className="text-sm text-red-600">{errores.nro_pasajeros}</p>}
+							{errores.nro_pasajeros && (
+								<p className="text-sm text-destructive">{errores.nro_pasajeros}</p>
+							)}
 						</div>
 
 						{/* Número de Tripulantes */}
 						<div className="space-y-2">
 							<Label htmlFor="nro_tripulantes">
-								Número de Tripulantes <span className="text-red-500">*</span>
+								Número de Tripulantes <span className="text-destructive">*</span>
 							</Label>
 							<Input
 								id="nro_tripulantes"
@@ -253,22 +255,22 @@ export function NaveModal({ nave, nivelesAP, tipoNave, onGuardar, onCancelar }: 
 								value={formData.nro_tripulantes ?? ""}
 								onChange={(e) => handleChange("nro_tripulantes", parseInt(e.target.value) || 1)}
 								placeholder="2"
-								className={errores.nro_tripulantes ? "border-red-500" : ""}
+								className={errores.nro_tripulantes ? "border-destructive" : ""}
 							/>
 							{errores.nro_tripulantes && (
-								<p className="text-sm text-red-600">{errores.nro_tripulantes}</p>
+								<p className="text-sm text-destructive">{errores.nro_tripulantes}</p>
 							)}
 						</div>
 
 						{/* VALORES ASEGURADOS */}
 						<div className="md:col-span-2 mt-4">
-							<h3 className="text-sm font-semibold text-gray-900 mb-4">Valores Asegurados</h3>
+							<h3 className="text-sm font-semibold text-foreground mb-4">Valores Asegurados</h3>
 						</div>
 
 						{/* Valor Casco */}
 						<div className="space-y-2">
 							<Label htmlFor="valor_casco">
-								Valor Casco <span className="text-red-500">*</span>
+								Valor Casco <span className="text-destructive">*</span>
 							</Label>
 							<Input
 								id="valor_casco"
@@ -278,16 +280,16 @@ export function NaveModal({ nave, nivelesAP, tipoNave, onGuardar, onCancelar }: 
 								value={formData.valor_casco ?? ""}
 								onChange={(e) => handleChange("valor_casco", parseFloat(e.target.value) || 0)}
 								placeholder="100000"
-								className={errores.valor_casco ? "border-red-500" : ""}
+								className={errores.valor_casco ? "border-destructive" : ""}
 							/>
-							{errores.valor_casco && <p className="text-sm text-red-600">{errores.valor_casco}</p>}
-							<p className="text-xs text-gray-500">Valor asegurado del casco de la {tipoNave}</p>
+							{errores.valor_casco && <p className="text-sm text-destructive">{errores.valor_casco}</p>}
+							<p className="text-xs text-muted-foreground">Valor asegurado del casco de la {tipoNave}</p>
 						</div>
 
 						{/* Valor Responsabilidad Civil */}
 						<div className="space-y-2">
 							<Label htmlFor="valor_responsabilidad_civil">
-								Responsabilidad Civil <span className="text-red-500">*</span>
+								Responsabilidad Civil <span className="text-destructive">*</span>
 							</Label>
 							<Input
 								id="valor_responsabilidad_civil"
@@ -299,12 +301,12 @@ export function NaveModal({ nave, nivelesAP, tipoNave, onGuardar, onCancelar }: 
 									handleChange("valor_responsabilidad_civil", parseFloat(e.target.value) || 0)
 								}
 								placeholder="50000"
-								className={errores.valor_responsabilidad_civil ? "border-red-500" : ""}
+								className={errores.valor_responsabilidad_civil ? "border-destructive" : ""}
 							/>
 							{errores.valor_responsabilidad_civil && (
-								<p className="text-sm text-red-600">{errores.valor_responsabilidad_civil}</p>
+								<p className="text-sm text-destructive">{errores.valor_responsabilidad_civil}</p>
 							)}
-							<p className="text-xs text-gray-500">Cobertura de responsabilidad civil</p>
+							<p className="text-xs text-muted-foreground">Cobertura de responsabilidad civil</p>
 						</div>
 
 						{/* Nivel de Accidentes Personales */}
@@ -331,11 +333,11 @@ export function NaveModal({ nave, nivelesAP, tipoNave, onGuardar, onCancelar }: 
 									))}
 								</SelectContent>
 							</Select>
-							<p className="text-xs text-gray-500">
+							<p className="text-xs text-muted-foreground">
 								Cobertura de accidentes personales para tripulantes y pasajeros
 							</p>
 							{nivelesAP.length === 0 && (
-								<p className="text-xs text-amber-600">
+								<p className="text-xs text-warning">
 									No hay niveles de AP configurados. Configure niveles en la sección superior para
 									asignarlos.
 								</p>
@@ -345,7 +347,7 @@ export function NaveModal({ nave, nivelesAP, tipoNave, onGuardar, onCancelar }: 
 				</div>
 
 				{/* Footer */}
-				<div className="sticky bottom-0 bg-gray-50 border-t px-6 py-4 flex justify-end gap-3">
+				<div className="sticky bottom-0 bg-secondary border-t px-6 py-4 flex justify-end gap-3">
 					<Button variant="outline" onClick={onCancelar}>
 						Cancelar
 					</Button>

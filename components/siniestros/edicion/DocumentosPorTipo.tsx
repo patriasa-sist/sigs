@@ -3,6 +3,16 @@
 import { useState, useCallback, useMemo, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { FileText, Trash2, ExternalLink, Loader2, RotateCcw } from "lucide-react";
 import {
 	TIPOS_DOCUMENTO_SINIESTRO,
@@ -37,6 +47,7 @@ export default function DocumentosPorTipo({
 }: DocumentosPorTipoProps) {
 	const [tipoSeleccionado, setTipoSeleccionado] = useState<TipoDocumentoSiniestro>(TIPOS_DOCUMENTO_SINIESTRO[0]);
 	const [operationLoading, setOperationLoading] = useState<string | null>(null);
+	const [docAEliminar, setDocAEliminar] = useState<{ id: string; archivoUrl: string } | null>(null);
 
 	// Documentos temporales (para el uploader)
 	const [documentosTemporales, setDocumentosTemporales] = useState<DocumentoSiniestro[]>([]);
@@ -157,30 +168,33 @@ export default function DocumentosPorTipo({
 	);
 
 	// Handler para eliminar permanentemente (solo admin)
-	const handleEliminarPermanente = useCallback(
-		async (documentoId: string, archivoUrl: string) => {
-			if (!confirm("¿Estás seguro? Esta acción no se puede deshacer.")) return;
+	const handleEliminarPermanente = useCallback((documentoId: string, archivoUrl: string) => {
+		setDocAEliminar({ id: documentoId, archivoUrl });
+	}, []);
 
-			setOperationLoading(documentoId);
+	const confirmarEliminacion = useCallback(async () => {
+		if (!docAEliminar) return;
+		const { id: documentoId, archivoUrl } = docAEliminar;
+		setDocAEliminar(null);
 
-			try {
-				const result = await eliminarDocumentoSiniestroPermanente(documentoId, archivoUrl, siniestroId);
+		setOperationLoading(documentoId);
 
-				if (result.success) {
-					toast.success("Documento eliminado permanentemente");
-					onDocumentosChange();
-				} else {
-					toast.error(result.error || "Error al eliminar");
-				}
-			} catch (error) {
-				console.error("Error:", error);
-				toast.error("Error al eliminar documento");
-			} finally {
-				setOperationLoading(null);
+		try {
+			const result = await eliminarDocumentoSiniestroPermanente(documentoId, archivoUrl, siniestroId);
+
+			if (result.success) {
+				toast.success("Documento eliminado permanentemente");
+				onDocumentosChange();
+			} else {
+				toast.error(result.error || "Error al eliminar");
 			}
-		},
-		[siniestroId, onDocumentosChange],
-	);
+		} catch (error) {
+			console.error("Error:", error);
+			toast.error("Error al eliminar documento");
+		} finally {
+			setOperationLoading(null);
+		}
+	}, [docAEliminar, siniestroId, onDocumentosChange]);
 
 	// Verificar si es imagen
 	const esImagen = (nombreArchivo: string) => {
@@ -418,6 +432,30 @@ export default function DocumentosPorTipo({
 					)}
 				</CardContent>
 			</Card>
+
+			{/* Diálogo: confirmar eliminación permanente */}
+			<AlertDialog
+				open={docAEliminar !== null}
+				onOpenChange={(open) => {
+					if (!open) setDocAEliminar(null);
+				}}
+			>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>¿Eliminar este documento permanentemente?</AlertDialogTitle>
+						<AlertDialogDescription>Esta acción no se puede deshacer.</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel>Cancelar</AlertDialogCancel>
+						<AlertDialogAction
+							onClick={confirmarEliminacion}
+							className="bg-destructive text-white hover:bg-destructive/90"
+						>
+							Eliminar
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
 		</div>
 	);
 }

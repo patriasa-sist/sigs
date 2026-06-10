@@ -119,6 +119,13 @@ export const PRODUCTO_RULES = {
 } as const;
 
 /**
+ * Tipos de documento que deben estar cargados para completar el paso de
+ * documentos de una póliza (compuerta de CargarDocumentos, Resumen y
+ * calcularPasoMaximoFormulario).
+ */
+export const DOCUMENTOS_OBLIGATORIOS = ["Póliza"] as const;
+
+/**
  * Reglas de validación para documentos
  */
 export const DOCUMENTO_RULES = {

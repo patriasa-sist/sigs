@@ -12,6 +12,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
 import { BuscadorClientes } from "../BuscadorClientes";
 import { useLiveSync } from "@/hooks/useLiveSync";
 
@@ -59,6 +70,7 @@ export function RiesgosVariosForm({ datos, moneda, onChange, onSiguiente, onAnte
 
 	const [mostrarBuscador, setMostrarBuscador] = useState(false);
 	const [errores, setErrores] = useState<Record<string, string>>({});
+	const [bienAEliminar, setBienAEliminar] = useState<number | null>(null);
 
 	// Calcular valor total cuando cambian los items del modal
 	useEffect(() => {
@@ -102,15 +114,15 @@ export function RiesgosVariosForm({ datos, moneda, onChange, onSiguiente, onAnte
 
 	const guardarBien = () => {
 		if (!direccionBien.trim()) {
-			alert("Debe ingresar una dirección");
+			toast.error("Debe ingresar una dirección");
 			return;
 		}
 		if (itemsBien.length === 0) {
-			alert("Debe agregar al menos un item asegurado");
+			toast.error("Debe agregar al menos un item asegurado");
 			return;
 		}
 		if (valorTotalDeclarado <= 0) {
-			alert("El valor total declarado debe ser mayor a 0");
+			toast.error("El valor total declarado debe ser mayor a 0");
 			return;
 		}
 
@@ -136,10 +148,15 @@ export function RiesgosVariosForm({ datos, moneda, onChange, onSiguiente, onAnte
 		setMostrarModalBien(false);
 	};
 
+	// Eliminar bien (pide confirmación vía AlertDialog)
 	const eliminarBien = (index: number) => {
-		if (confirm("¿Está seguro de eliminar este bien?")) {
-			setBienes(bienes.filter((_, i) => i !== index));
-		}
+		setBienAEliminar(index);
+	};
+
+	const confirmarEliminar = () => {
+		if (bienAEliminar === null) return;
+		setBienes(bienes.filter((_, i) => i !== bienAEliminar));
+		setBienAEliminar(null);
 	};
 
 	const agregarAsegurado = (cliente: { id: string; nombre: string; ci: string }) => {
@@ -200,17 +217,17 @@ export function RiesgosVariosForm({ datos, moneda, onChange, onSiguiente, onAnte
 	const monedaLabel = moneda || "Bs";
 
 	return (
-		<div className="bg-white rounded-lg shadow-sm border p-6">
+		<div className="bg-card rounded-lg shadow-sm border border-border p-6">
 			<div className="flex items-center justify-between mb-6">
 				<div>
-					<h2 className="text-xl font-semibold text-gray-900">
+					<h2 className="text-xl font-semibold text-foreground">
 						Paso 3: Datos Específicos - Riesgos Varios Misceláneos
 					</h2>
-					<p className="text-sm text-gray-600 mt-1">Configure los bienes y asegurados</p>
+					<p className="text-sm text-muted-foreground mt-1">Configure los bienes y asegurados</p>
 				</div>
 
 				{tieneDatos && (
-					<div className="flex items-center gap-2 text-green-600">
+					<div className="flex items-center gap-2 text-success">
 						<CheckCircle2 className="h-5 w-5" />
 						<span className="text-sm font-medium">
 							{bienes.length} bien(es), {asegurados.length} asegurado(s)
@@ -221,19 +238,19 @@ export function RiesgosVariosForm({ datos, moneda, onChange, onSiguiente, onAnte
 
 			<div className="space-y-6">
 				{/* Valor Total Asegurado (Calculado) */}
-				<div className="bg-gray-50 border rounded-lg p-4">
+				<div className="bg-secondary border rounded-lg p-4">
 					<Label className="text-base font-semibold">Valor Total Asegurado (Calculado)</Label>
-					<p className="text-2xl font-bold text-gray-900 mt-2">
+					<p className="text-2xl font-bold text-foreground mt-2">
 						{monedaLabel} {valorAseguradoTotal.toLocaleString("es-BO", { minimumFractionDigits: 2 })}
 					</p>
-					<p className="text-xs text-gray-500 mt-1">Suma de todos los bienes declarados</p>
+					<p className="text-xs text-muted-foreground mt-1">Suma de todos los bienes declarados</p>
 				</div>
 
 				{/* Info sobre items */}
-				<div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+				<div className="bg-info/10 border border-info/20 rounded-lg p-4">
 					<div className="flex gap-3">
-						<AlertCircle className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
-						<div className="text-sm text-blue-900">
+						<AlertCircle className="h-5 w-5 text-info flex-shrink-0 mt-0.5" />
+						<div className="text-sm text-info">
 							<p className="font-medium mb-2">Sistema de Items por Ubicación:</p>
 							<ul className="space-y-1 text-xs">
 								<li>• Cada bien asegurado puede tener múltiples items con montos individuales</li>
@@ -253,7 +270,7 @@ export function RiesgosVariosForm({ datos, moneda, onChange, onSiguiente, onAnte
 				<div className="space-y-3">
 					<div className="flex items-center justify-between">
 						<Label className="text-base">
-							Bienes Asegurados <span className="text-red-500">*</span>
+							Bienes Asegurados <span className="text-destructive">*</span>
 						</Label>
 						<Button onClick={() => abrirModalBien()} size="sm">
 							<Plus className="mr-2 h-4 w-4" />
@@ -261,13 +278,13 @@ export function RiesgosVariosForm({ datos, moneda, onChange, onSiguiente, onAnte
 						</Button>
 					</div>
 
-					{errores.bienes && <p className="text-sm text-red-600">{errores.bienes}</p>}
+					{errores.bienes && <p className="text-sm text-destructive">{errores.bienes}</p>}
 
 					{bienes.length === 0 ? (
 						<div className="border-2 border-dashed rounded-lg p-8 text-center">
-							<Home className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-							<p className="text-sm text-gray-600">No hay bienes asegurados</p>
-							<p className="text-xs text-gray-500 mt-1">
+							<Home className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+							<p className="text-sm text-muted-foreground">No hay bienes asegurados</p>
+							<p className="text-xs text-muted-foreground mt-1">
 								Haga clic en &quot;Agregar Bien&quot; para comenzar
 							</p>
 						</div>
@@ -277,15 +294,15 @@ export function RiesgosVariosForm({ datos, moneda, onChange, onSiguiente, onAnte
 								<div key={index} className="p-4">
 									<div className="flex items-start justify-between mb-2">
 										<div className="flex-1">
-											<p className="font-medium text-gray-900">{bien.direccion}</p>
-											<p className="text-sm text-gray-600">
+											<p className="font-medium text-foreground">{bien.direccion}</p>
+											<p className="text-sm text-muted-foreground">
 												Valor Total: {monedaLabel}{" "}
 												{bien.valor_total_declarado.toLocaleString("es-BO", {
 													minimumFractionDigits: 2,
 												})}
 											</p>
 											{bien.es_primer_riesgo && (
-												<span className="inline-block mt-1 px-2 py-1 bg-purple-100 text-purple-700 text-xs font-medium rounded">
+												<span className="inline-block mt-1 px-2 py-1 bg-primary/10 text-primary text-xs font-medium rounded">
 													Primer Riesgo
 												</span>
 											)}
@@ -295,11 +312,11 @@ export function RiesgosVariosForm({ datos, moneda, onChange, onSiguiente, onAnte
 												<Edit2 className="h-4 w-4" />
 											</Button>
 											<Button variant="ghost" size="sm" onClick={() => eliminarBien(index)}>
-												<Trash2 className="h-4 w-4 text-red-600" />
+												<Trash2 className="h-4 w-4 text-destructive" />
 											</Button>
 										</div>
 									</div>
-									<div className="mt-3 space-y-1 text-xs text-gray-600">
+									<div className="mt-3 space-y-1 text-xs text-muted-foreground">
 										<p className="font-medium">Items:</p>
 										{bien.items.map((item, i) => (
 											<div key={i} className="flex justify-between pl-4">
@@ -320,7 +337,7 @@ export function RiesgosVariosForm({ datos, moneda, onChange, onSiguiente, onAnte
 				<div className="space-y-3">
 					<div className="flex items-center justify-between">
 						<Label>
-							Asegurados <span className="text-gray-400 text-xs font-normal">(opcional)</span>
+							Asegurados <span className="text-muted-foreground text-xs font-normal">(opcional)</span>
 						</Label>
 						<Button type="button" variant="outline" size="sm" onClick={() => setMostrarBuscador(true)}>
 							<Plus className="mr-2 h-4 w-4" />
@@ -328,13 +345,13 @@ export function RiesgosVariosForm({ datos, moneda, onChange, onSiguiente, onAnte
 						</Button>
 					</div>
 
-					{errores.asegurados && <p className="text-sm text-red-600">{errores.asegurados}</p>}
+					{errores.asegurados && <p className="text-sm text-destructive">{errores.asegurados}</p>}
 
 					{asegurados.length === 0 ? (
 						<div className="border-2 border-dashed rounded-lg p-8 text-center">
-							<Users className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-							<p className="text-sm text-gray-600">No hay asegurados agregados</p>
-							<p className="text-xs text-gray-500 mt-1">
+							<Users className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+							<p className="text-sm text-muted-foreground">No hay asegurados agregados</p>
+							<p className="text-xs text-muted-foreground mt-1">
 								Opcional: agregue asegurados si aplica para este riesgo
 							</p>
 						</div>
@@ -343,11 +360,11 @@ export function RiesgosVariosForm({ datos, moneda, onChange, onSiguiente, onAnte
 							{asegurados.map((asegurado) => (
 								<div
 									key={asegurado.client_id}
-									className="p-4 flex items-center justify-between hover:bg-gray-50"
+									className="p-4 flex items-center justify-between hover:bg-muted/50"
 								>
 									<div className="flex-1">
-										<p className="text-sm font-medium text-gray-900">{asegurado.client_name}</p>
-										<p className="text-xs text-gray-600">CI/NIT: {asegurado.client_ci}</p>
+										<p className="text-sm font-medium text-foreground">{asegurado.client_name}</p>
+										<p className="text-xs text-muted-foreground">CI/NIT: {asegurado.client_ci}</p>
 									</div>
 									<Button
 										type="button"
@@ -355,7 +372,7 @@ export function RiesgosVariosForm({ datos, moneda, onChange, onSiguiente, onAnte
 										size="sm"
 										onClick={() => eliminarAsegurado(asegurado.client_id)}
 									>
-										<Trash2 className="h-4 w-4 text-red-600" />
+										<Trash2 className="h-4 w-4 text-destructive" />
 									</Button>
 								</div>
 							))}
@@ -366,9 +383,9 @@ export function RiesgosVariosForm({ datos, moneda, onChange, onSiguiente, onAnte
 
 			{/* Modal de Bien */}
 			{mostrarModalBien && (
-				<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-					<div className="bg-white rounded-lg p-6 max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-						<h3 className="text-lg font-semibold text-gray-900 mb-4">
+				<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+					<div className="bg-card rounded-lg p-6 max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+						<h3 className="text-lg font-semibold text-foreground mb-4">
 							{bienEditando !== null ? "Editar" : "Agregar"} Bien Asegurado
 						</h3>
 
@@ -376,7 +393,7 @@ export function RiesgosVariosForm({ datos, moneda, onChange, onSiguiente, onAnte
 							{/* Dirección */}
 							<div className="space-y-2">
 								<Label htmlFor="direccion_bien_rv">
-									Dirección/Ubicación <span className="text-red-500">*</span>
+									Dirección/Ubicación <span className="text-destructive">*</span>
 								</Label>
 								<Input
 									id="direccion_bien_rv"
@@ -413,9 +430,9 @@ export function RiesgosVariosForm({ datos, moneda, onChange, onSiguiente, onAnte
 									) && (
 										<>
 											<div className="flex items-center gap-2 pt-1">
-												<div className="h-px flex-1 bg-gray-200" />
-												<span className="text-xs text-gray-400 font-medium">3D</span>
-												<div className="h-px flex-1 bg-gray-200" />
+												<div className="h-px flex-1 bg-muted" />
+												<span className="text-xs text-muted-foreground font-medium">3D</span>
+												<div className="h-px flex-1 bg-muted" />
 											</div>
 											<div className="flex gap-2 flex-wrap">
 												{ITEMS_FIDELIDAD.filter(
@@ -468,7 +485,7 @@ export function RiesgosVariosForm({ datos, moneda, onChange, onSiguiente, onAnte
 													size="sm"
 													onClick={() => eliminarItem(item.nombre)}
 												>
-													<Trash2 className="h-4 w-4 text-red-600" />
+													<Trash2 className="h-4 w-4 text-destructive" />
 												</Button>
 											</div>
 										))}
@@ -477,9 +494,9 @@ export function RiesgosVariosForm({ datos, moneda, onChange, onSiguiente, onAnte
 							</div>
 
 							{/* Valor Total Declarado (Calculado) */}
-							<div className="bg-gray-50 border rounded-lg p-3">
+							<div className="bg-secondary border rounded-lg p-3">
 								<Label className="text-sm font-medium">Valor Total Declarado (Calculado)</Label>
-								<p className="text-xl font-bold text-gray-900 mt-1">
+								<p className="text-xl font-bold text-foreground mt-1">
 									{monedaLabel}{" "}
 									{valorTotalDeclarado.toLocaleString("es-BO", { minimumFractionDigits: 2 })}
 								</p>
@@ -528,6 +545,30 @@ export function RiesgosVariosForm({ datos, moneda, onChange, onSiguiente, onAnte
 					<ChevronRight className="ml-2 h-5 w-5" />
 				</Button>
 			</div>
+
+			{/* Diálogo: confirmar eliminación de bien */}
+			<AlertDialog
+				open={bienAEliminar !== null}
+				onOpenChange={(open) => {
+					if (!open) setBienAEliminar(null);
+				}}
+			>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>¿Está seguro de eliminar este bien?</AlertDialogTitle>
+						<AlertDialogDescription>Se quitará de la lista de la póliza.</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel>Cancelar</AlertDialogCancel>
+						<AlertDialogAction
+							onClick={confirmarEliminar}
+							className="bg-destructive text-white hover:bg-destructive/90"
+						>
+							Eliminar
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
 		</div>
 	);
 }

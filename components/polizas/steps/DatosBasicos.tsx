@@ -93,16 +93,22 @@ export function DatosBasicos({ datos, onChange, onSiguiente, onAnterior }: Props
 		try {
 			const supabase = createClient();
 
-			// Obtener usuario actual y su perfil para determinar rol
+			// Obtener usuario y rol desde los claims del JWT de la sesión (user_role),
+			// sin consultar la tabla profiles
 			const {
-				data: { user },
-			} = await supabase.auth.getUser();
+				data: { session },
+			} = await supabase.auth.getSession();
 			let userRole = "";
 			let userId = "";
-			if (user) {
-				userId = user.id;
-				const { data: profileData } = await supabase.from("profiles").select("role").eq("id", user.id).single();
-				userRole = profileData?.role || "";
+			if (session) {
+				userId = session.user.id;
+				try {
+					const payload = session.access_token.split(".")[1];
+					const decoded = JSON.parse(atob(payload.replace(/-/g, "+").replace(/_/g, "/")));
+					userRole = decoded.user_role || "";
+				} catch {
+					// JWT ilegible: se continúa sin rol (gating conservador)
+				}
 			}
 
 			const [
@@ -123,7 +129,7 @@ export function DatosBasicos({ datos, onChange, onSiguiente, onAnterior }: Props
 							return supabase
 								.from("profiles")
 								.select("id, full_name, role")
-								.in("role", ["comercial", "admin", "agente", "usuario"])
+								.in("role", ["comercial", "admin", "agente"])
 								.order("full_name");
 						}
 						return result;
@@ -133,7 +139,7 @@ export function DatosBasicos({ datos, onChange, onSiguiente, onAnterior }: Props
 						supabase
 							.from("profiles")
 							.select("id, full_name, role")
-							.in("role", ["comercial", "admin", "agente", "usuario"])
+							.in("role", ["comercial", "admin", "agente"])
 							.order("full_name"),
 				),
 				supabase

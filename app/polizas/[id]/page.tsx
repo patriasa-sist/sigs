@@ -38,6 +38,7 @@ import {
 } from "lucide-react";
 import { formatCurrency, formatDate } from "@/utils/formatters";
 import Link from "next/link";
+import { toast } from "sonner";
 
 export default function PolizaDetallePage() {
 	const router = useRouter();
@@ -133,7 +134,7 @@ export default function PolizaDetallePage() {
 			// Recargar los datos de la póliza
 			await cargarDetalle();
 		} else {
-			alert(`Error: ${result.error}`);
+			toast.error(`Error: ${result.error}`);
 		}
 		setValidationLoading(null);
 	};
@@ -148,7 +149,7 @@ export default function PolizaDetallePage() {
 			// Recargar los datos de la póliza
 			await cargarDetalle();
 		} else {
-			alert(`Error: ${result.error}`);
+			toast.error(`Error: ${result.error}`);
 		}
 		setValidationLoading(null);
 	};

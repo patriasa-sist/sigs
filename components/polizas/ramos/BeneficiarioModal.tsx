@@ -142,9 +142,9 @@ export function BeneficiarioModal({
 
 	return (
 		<div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-			<div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+			<div className="bg-card rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
 				{/* Header */}
-				<div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between">
+				<div className="sticky top-0 bg-card border-b px-6 py-4 flex items-center justify-between">
 					<h2 className="text-xl font-semibold">
 						{titulo ?? (beneficiario ? "Editar" : "Agregar") + " — Datos Mínimos"}
 					</h2>
@@ -157,10 +157,10 @@ export function BeneficiarioModal({
 				<div className="p-6">
 					<div className="space-y-6">
 						{/* Información de ayuda */}
-						<div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+						<div className="bg-info/10 border border-info/20 rounded-lg p-4">
 							<div className="flex items-start gap-2">
-								<AlertTriangle className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
-								<div className="text-sm text-blue-900">
+								<AlertTriangle className="h-5 w-5 text-info flex-shrink-0 mt-0.5" />
+								<div className="text-sm text-info">
 									<p className="font-medium mb-1">Asegurados Datos Mínimos</p>
 									<p>
 										Personas cubiertas por la póliza que no están registradas como clientes en el
@@ -174,34 +174,34 @@ export function BeneficiarioModal({
 						{/* Nombre Completo */}
 						<div className="space-y-2">
 							<Label htmlFor="nombre_completo">
-								Nombre Completo <span className="text-red-500">*</span>
+								Nombre Completo <span className="text-destructive">*</span>
 							</Label>
 							<Input
 								id="nombre_completo"
 								value={formData.nombre_completo}
 								onChange={(e) => handleChange("nombre_completo", e.target.value)}
 								placeholder="Juan Carlos Pérez López"
-								className={errores.nombre_completo ? "border-red-500" : ""}
+								className={errores.nombre_completo ? "border-destructive" : ""}
 							/>
 							{errores.nombre_completo && (
-								<p className="text-sm text-red-600">{errores.nombre_completo}</p>
+								<p className="text-sm text-destructive">{errores.nombre_completo}</p>
 							)}
 						</div>
 
 						{/* Carnet */}
 						<div className="space-y-2">
 							<Label htmlFor="carnet">
-								Carnet de Identidad <span className="text-red-500">*</span>
+								Carnet de Identidad <span className="text-destructive">*</span>
 							</Label>
 							<Input
 								id="carnet"
 								value={formData.carnet}
 								onChange={(e) => handleChange("carnet", e.target.value)}
 								placeholder="1234567 LP"
-								className={errores.carnet ? "border-red-500" : ""}
+								className={errores.carnet ? "border-destructive" : ""}
 							/>
-							{errores.carnet && <p className="text-sm text-red-600">{errores.carnet}</p>}
-							<p className="text-xs text-gray-500">
+							{errores.carnet && <p className="text-sm text-destructive">{errores.carnet}</p>}
+							<p className="text-xs text-muted-foreground">
 								Incluya el complemento si corresponde (ej: 1234567 LP)
 							</p>
 						</div>
@@ -211,7 +211,8 @@ export function BeneficiarioModal({
 							{/* Fecha de Nacimiento */}
 							<div className="space-y-2">
 								<Label htmlFor="fecha_nacimiento">
-									Fecha de Nacimiento <span className="text-gray-400 text-xs">(opcional)</span>
+									Fecha de Nacimiento{" "}
+									<span className="text-muted-foreground text-xs">(opcional)</span>
 								</Label>
 								<Input
 									id="fecha_nacimiento"
@@ -219,23 +220,23 @@ export function BeneficiarioModal({
 									lang="es"
 									value={formData.fecha_nacimiento || ""}
 									onChange={(e) => handleChange("fecha_nacimiento", e.target.value)}
-									className={errores.fecha_nacimiento ? "border-red-500" : ""}
+									className={errores.fecha_nacimiento ? "border-destructive" : ""}
 								/>
 								{errores.fecha_nacimiento && (
-									<p className="text-sm text-red-600">{errores.fecha_nacimiento}</p>
+									<p className="text-sm text-destructive">{errores.fecha_nacimiento}</p>
 								)}
 							</div>
 
 							{/* Género */}
 							<div className="space-y-2">
 								<Label htmlFor="genero">
-									Género <span className="text-gray-400 text-xs">(opcional)</span>
+									Género <span className="text-muted-foreground text-xs">(opcional)</span>
 								</Label>
 								<Select
 									value={formData.genero || ""}
 									onValueChange={(value: "M" | "F" | "Otro") => handleChange("genero", value)}
 								>
-									<SelectTrigger className={errores.genero ? "border-red-500" : ""}>
+									<SelectTrigger className={errores.genero ? "border-destructive" : ""}>
 										<SelectValue placeholder="Seleccione género" />
 									</SelectTrigger>
 									<SelectContent>
@@ -244,7 +245,7 @@ export function BeneficiarioModal({
 										<SelectItem value="Otro">Otro</SelectItem>
 									</SelectContent>
 								</Select>
-								{errores.genero && <p className="text-sm text-red-600">{errores.genero}</p>}
+								{errores.genero && <p className="text-sm text-destructive">{errores.genero}</p>}
 							</div>
 						</div>
 
@@ -253,13 +254,13 @@ export function BeneficiarioModal({
 							{/* Nivel de Cobertura */}
 							<div className="space-y-2">
 								<Label htmlFor="nivel_id">
-									Nivel de Cobertura <span className="text-red-500">*</span>
+									Nivel de Cobertura <span className="text-destructive">*</span>
 								</Label>
 								<Select
 									value={formData.nivel_id}
 									onValueChange={(value) => handleChange("nivel_id", value)}
 								>
-									<SelectTrigger className={errores.nivel_id ? "border-red-500" : ""}>
+									<SelectTrigger className={errores.nivel_id ? "border-destructive" : ""}>
 										<SelectValue placeholder="Seleccione un nivel" />
 									</SelectTrigger>
 									<SelectContent>
@@ -273,20 +274,20 @@ export function BeneficiarioModal({
 										))}
 									</SelectContent>
 								</Select>
-								{errores.nivel_id && <p className="text-sm text-red-600">{errores.nivel_id}</p>}
+								{errores.nivel_id && <p className="text-sm text-destructive">{errores.nivel_id}</p>}
 							</div>
 
 							{/* Rol (oculto si hideRol=true) */}
 							{!hideRol && (
 								<div className="space-y-2">
 									<Label htmlFor="rol">
-										Rol <span className="text-red-500">*</span>
+										Rol <span className="text-destructive">*</span>
 									</Label>
 									<Select
 										value={formData.rol ?? ""}
 										onValueChange={(value) => handleChange("rol", value)}
 									>
-										<SelectTrigger className={errores.rol ? "border-red-500" : ""}>
+										<SelectTrigger className={errores.rol ? "border-destructive" : ""}>
 											<SelectValue placeholder="Seleccione un rol" />
 										</SelectTrigger>
 										<SelectContent>
@@ -297,8 +298,10 @@ export function BeneficiarioModal({
 											))}
 										</SelectContent>
 									</Select>
-									{errores.rol && <p className="text-sm text-red-600">{errores.rol}</p>}
-									{descripcionRoles && <p className="text-xs text-gray-500">{descripcionRoles}</p>}
+									{errores.rol && <p className="text-sm text-destructive">{errores.rol}</p>}
+									{descripcionRoles && (
+										<p className="text-xs text-muted-foreground">{descripcionRoles}</p>
+									)}
 								</div>
 							)}
 						</div>
@@ -306,7 +309,7 @@ export function BeneficiarioModal({
 				</div>
 
 				{/* Footer */}
-				<div className="sticky bottom-0 bg-gray-50 border-t px-6 py-4 flex justify-end gap-3">
+				<div className="sticky bottom-0 bg-secondary border-t px-6 py-4 flex justify-end gap-3">
 					<Button variant="outline" onClick={onCancelar}>
 						Cancelar
 					</Button>

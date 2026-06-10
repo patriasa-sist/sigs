@@ -17,6 +17,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
 import { EquipoModal } from "./EquipoModal";
 import { createClient } from "@/utils/supabase/client";
 import { importarEquiposDesdeExcel, generarTemplateEquiposExcel } from "@/utils/equipoExcelImport";
@@ -39,6 +50,7 @@ export function RamosTecnicosForm({ datos, onChange, onSiguiente, onAnterior }: 
 	const [indexEditando, setIndexEditando] = useState<number | null>(null);
 	const [errores, setErrores] = useState<string[]>([]);
 	const [importando, setImportando] = useState(false);
+	const [equipoAEliminar, setEquipoAEliminar] = useState<number | null>(null);
 
 	// Catálogos para mostrar nombres en lugar de IDs
 	const [tiposEquipo, setTiposEquipo] = useState<TipoEquipo[]>([]);
@@ -145,17 +157,21 @@ export function RamosTecnicosForm({ datos, onChange, onSiguiente, onAnterior }: 
 		setModalAbierto(true);
 	};
 
-	// Eliminar equipo
+	// Eliminar equipo (pide confirmación vía AlertDialog)
 	const handleEliminar = (index: number) => {
-		if (confirm("¿Está seguro de eliminar este equipo?")) {
-			const nuevosEquipos = equipos.filter((_, i) => i !== index);
-			setEquipos(nuevosEquipos);
-			onChange({
-				valor_asegurado: parseFloat(valorAsegurado) || 0,
-				tipo_poliza: tipoPoliza,
-				equipos: nuevosEquipos,
-			});
-		}
+		setEquipoAEliminar(index);
+	};
+
+	const confirmarEliminar = () => {
+		if (equipoAEliminar === null) return;
+		const nuevosEquipos = equipos.filter((_, i) => i !== equipoAEliminar);
+		setEquipos(nuevosEquipos);
+		onChange({
+			valor_asegurado: parseFloat(valorAsegurado) || 0,
+			tipo_poliza: tipoPoliza,
+			equipos: nuevosEquipos,
+		});
+		setEquipoAEliminar(null);
 	};
 
 	// Importar desde Excel
@@ -193,7 +209,7 @@ export function RamosTecnicosForm({ datos, onChange, onSiguiente, onAnterior }: 
 					const mensajesError = resultado.errores.map((e) => `Fila ${e.fila}: ${e.errores.join(", ")}`);
 					setErrores([`Se importaron ${resultado.equipos_validos.length} equipos.`, ...mensajesError]);
 				} else {
-					alert(`Se importaron ${resultado.equipos_validos.length} equipos exitosamente.`);
+					toast.success(`Se importaron ${resultado.equipos_validos.length} equipos exitosamente.`);
 				}
 			} else {
 				setErrores(
@@ -218,7 +234,7 @@ export function RamosTecnicosForm({ datos, onChange, onSiguiente, onAnterior }: 
 			await generarTemplateEquiposExcel();
 		} catch (error) {
 			console.error("Error generando template:", error);
-			alert("Error al generar el template");
+			toast.error("Error al generar el template");
 		}
 	};
 
@@ -249,17 +265,17 @@ export function RamosTecnicosForm({ datos, onChange, onSiguiente, onAnterior }: 
 	const tieneEquipos = equipos.length > 0;
 
 	return (
-		<div className="bg-white rounded-lg shadow-sm border p-6">
+		<div className="bg-card rounded-lg shadow-sm border border-border p-6">
 			<div className="flex items-center justify-between mb-6">
 				<div>
-					<h2 className="text-xl font-semibold text-gray-900">Paso 3: Datos del Ramo Técnico</h2>
-					<p className="text-sm text-gray-600 mt-1">
+					<h2 className="text-xl font-semibold text-foreground">Paso 3: Datos del Ramo Técnico</h2>
+					<p className="text-sm text-muted-foreground mt-1">
 						Complete los datos del ramo técnico. Los equipos son opcionales según el producto.
 					</p>
 				</div>
 
 				{tieneEquipos && (
-					<div className="flex items-center gap-2 text-green-600">
+					<div className="flex items-center gap-2 text-success">
 						<CheckCircle2 className="h-5 w-5" />
 						<span className="text-sm font-medium">{equipos.length} equipo(s)</span>
 					</div>
@@ -267,10 +283,10 @@ export function RamosTecnicosForm({ datos, onChange, onSiguiente, onAnterior }: 
 			</div>
 
 			{/* Valor Asegurado + Tipo de Póliza en la misma fila */}
-			<div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200 flex flex-wrap gap-6">
+			<div className="mb-6 p-4 bg-secondary rounded-lg border border-border flex flex-wrap gap-6">
 				<div>
-					<Label htmlFor="valor-asegurado" className="block text-sm font-medium text-gray-700 mb-2">
-						Valor Asegurado <span className="text-red-500">*</span>
+					<Label htmlFor="valor-asegurado" className="block text-sm font-medium text-foreground mb-2">
+						Valor Asegurado <span className="text-destructive">*</span>
 					</Label>
 					<Input
 						id="valor-asegurado"
@@ -280,17 +296,17 @@ export function RamosTecnicosForm({ datos, onChange, onSiguiente, onAnterior }: 
 						placeholder="0.00"
 						value={valorAsegurado}
 						onChange={handleValorAseguradoChange}
-						className="w-48 bg-white"
+						className="w-48 bg-background"
 					/>
-					<p className="text-xs text-gray-500 mt-1">Valor total asegurado</p>
+					<p className="text-xs text-muted-foreground mt-1">Valor total asegurado</p>
 				</div>
 
 				<div>
-					<Label htmlFor="tipo-poliza" className="block text-sm font-medium text-gray-700 mb-2">
+					<Label htmlFor="tipo-poliza" className="block text-sm font-medium text-foreground mb-2">
 						Tipo de Póliza
 					</Label>
 					<Select value={tipoPoliza} onValueChange={handleTipoPolizaChange}>
-						<SelectTrigger id="tipo-poliza" className="w-48 bg-white">
+						<SelectTrigger id="tipo-poliza" className="w-48 bg-background">
 							<SelectValue />
 						</SelectTrigger>
 						<SelectContent>
@@ -298,16 +314,16 @@ export function RamosTecnicosForm({ datos, onChange, onSiguiente, onAnterior }: 
 							<SelectItem value="corporativo">Corporativo</SelectItem>
 						</SelectContent>
 					</Select>
-					<p className="text-xs text-gray-500 mt-1">Individual o corporativo</p>
+					<p className="text-xs text-muted-foreground mt-1">Individual o corporativo</p>
 				</div>
 			</div>
 
 			{/* Equipos (opcional) */}
 			<div className="mb-2">
-				<p className="text-sm font-medium text-gray-700">
-					Equipos Asegurados <span className="text-gray-400 font-normal">(opcional)</span>
+				<p className="text-sm font-medium text-foreground">
+					Equipos Asegurados <span className="text-muted-foreground font-normal">(opcional)</span>
 				</p>
-				<p className="text-xs text-gray-500 mt-0.5">
+				<p className="text-xs text-muted-foreground mt-0.5">
 					Solo aplica para productos con equipos identificables (p.ej. Equipo Pesado Móvil, Rotura de
 					Maquinaria)
 				</p>
@@ -345,9 +361,9 @@ export function RamosTecnicosForm({ datos, onChange, onSiguiente, onAnterior }: 
 
 			{/* Errores */}
 			{errores.length > 0 && (
-				<div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-					<h4 className="text-sm font-semibold text-red-800 mb-2">Errores:</h4>
-					<ul className="text-sm text-red-700 space-y-1">
+				<div className="mb-6 p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
+					<h4 className="text-sm font-semibold text-destructive mb-2">Errores:</h4>
+					<ul className="text-sm text-destructive space-y-1">
 						{errores.map((error, i) => (
 							<li key={i}>• {error}</li>
 						))}
@@ -358,61 +374,63 @@ export function RamosTecnicosForm({ datos, onChange, onSiguiente, onAnterior }: 
 			{/* Tabla de equipos */}
 			{equipos.length === 0 ? (
 				<div className="text-center py-12 border-2 border-dashed rounded-lg">
-					<Cog className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-					<p className="text-gray-600 mb-2">No hay equipos agregados</p>
-					<p className="text-sm text-gray-500">Agregue equipos manualmente o importe desde Excel</p>
+					<Cog className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+					<p className="text-muted-foreground mb-2">No hay equipos agregados</p>
+					<p className="text-sm text-muted-foreground">Agregue equipos manualmente o importe desde Excel</p>
 				</div>
 			) : (
 				<div className="overflow-x-auto border rounded-lg mb-6">
 					<table className="w-full">
-						<thead className="bg-gray-50">
+						<thead className="bg-muted/50">
 							<tr>
-								<th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">
+								<th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
 									Nº Serie
 								</th>
-								<th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">
+								<th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
 									Tipo
 								</th>
-								<th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">
+								<th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
 									Marca/Modelo
 								</th>
-								<th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">Año</th>
-								<th className="px-4 py-3 text-right text-xs font-medium text-gray-700 uppercase">
+								<th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+									Año
+								</th>
+								<th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase">
 									Valor Asegurado
 								</th>
-								<th className="px-4 py-3 text-right text-xs font-medium text-gray-700 uppercase">
+								<th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase">
 									Franquicia
 								</th>
-								<th className="px-4 py-3 text-center text-xs font-medium text-gray-700 uppercase">
+								<th className="px-4 py-3 text-center text-xs font-medium text-muted-foreground uppercase">
 									Uso
 								</th>
-								<th className="px-4 py-3 text-center text-xs font-medium text-gray-700 uppercase">
+								<th className="px-4 py-3 text-center text-xs font-medium text-muted-foreground uppercase">
 									Coaseguro (%)
 								</th>
-								<th className="px-4 py-3 text-center text-xs font-medium text-gray-700 uppercase">
+								<th className="px-4 py-3 text-center text-xs font-medium text-muted-foreground uppercase">
 									Acciones
 								</th>
 							</tr>
 						</thead>
 						<tbody className="divide-y">
 							{equipos.map((equipo, index) => (
-								<tr key={index} className="hover:bg-gray-50">
-									<td className="px-4 py-3 font-medium text-gray-900">{equipo.nro_serie}</td>
-									<td className="px-4 py-3 text-sm text-gray-600">
+								<tr key={index} className="hover:bg-muted/50">
+									<td className="px-4 py-3 font-medium text-foreground">{equipo.nro_serie}</td>
+									<td className="px-4 py-3 text-sm text-muted-foreground">
 										{obtenerNombreTipo(equipo.tipo_equipo_id)}
 									</td>
-									<td className="px-4 py-3 text-sm text-gray-600">
+									<td className="px-4 py-3 text-sm text-muted-foreground">
 										{obtenerNombreMarca(equipo.marca_equipo_id)}
 										{equipo.modelo ? ` ${equipo.modelo}` : ""}
 									</td>
-									<td className="px-4 py-3 text-sm text-gray-600">{equipo.ano || "-"}</td>
-									<td className="px-4 py-3 text-sm text-gray-900 text-right">
+									<td className="px-4 py-3 text-sm text-muted-foreground">{equipo.ano || "-"}</td>
+									<td className="px-4 py-3 text-sm text-foreground text-right">
 										{equipo.valor_asegurado.toLocaleString("es-BO", {
 											minimumFractionDigits: 2,
 											maximumFractionDigits: 2,
 										})}
 									</td>
-									<td className="px-4 py-3 text-sm text-gray-900 text-right">
+									<td className="px-4 py-3 text-sm text-foreground text-right">
 										{equipo.franquicia.toLocaleString("es-BO", {
 											minimumFractionDigits: 2,
 											maximumFractionDigits: 2,
@@ -422,14 +440,14 @@ export function RamosTecnicosForm({ datos, onChange, onSiguiente, onAnterior }: 
 										<span
 											className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
 												equipo.uso === "publico"
-													? "bg-blue-100 text-blue-800"
-													: "bg-green-100 text-green-800"
+													? "bg-info/15 text-info"
+													: "bg-success/15 text-success"
 											}`}
 										>
 											{equipo.uso === "publico" ? "Público" : "Particular"}
 										</span>
 									</td>
-									<td className="px-4 py-3 text-center text-sm text-gray-900">
+									<td className="px-4 py-3 text-center text-sm text-foreground">
 										{equipo.coaseguro?.toLocaleString("es-BO", {
 											minimumFractionDigits: 2,
 											maximumFractionDigits: 2,
@@ -449,7 +467,7 @@ export function RamosTecnicosForm({ datos, onChange, onSiguiente, onAnterior }: 
 												variant="ghost"
 												size="sm"
 												onClick={() => handleEliminar(index)}
-												className="text-red-600 hover:text-red-700 hover:bg-red-50"
+												className="text-destructive hover:text-destructive hover:bg-destructive/10"
 											>
 												<Trash2 className="h-4 w-4" />
 											</Button>
@@ -487,6 +505,30 @@ export function RamosTecnicosForm({ datos, onChange, onSiguiente, onAnterior }: 
 					}}
 				/>
 			)}
+
+			{/* Diálogo: confirmar eliminación de equipo */}
+			<AlertDialog
+				open={equipoAEliminar !== null}
+				onOpenChange={(open) => {
+					if (!open) setEquipoAEliminar(null);
+				}}
+			>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>¿Está seguro de eliminar este equipo?</AlertDialogTitle>
+						<AlertDialogDescription>Se quitará de la lista de la póliza.</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel>Cancelar</AlertDialogCancel>
+						<AlertDialogAction
+							onClick={confirmarEliminar}
+							className="bg-destructive text-white hover:bg-destructive/90"
+						>
+							Eliminar
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
 		</div>
 	);
 }

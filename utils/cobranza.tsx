@@ -2,6 +2,7 @@
 
 import React from "react";
 import { pdf } from "@react-pdf/renderer";
+import { toast } from "sonner";
 import type { CuotaPago, PolizaConPagos, ContactoCliente, Moneda, AvisoMoraData } from "@/types/cobranza";
 import { cleanPhoneNumber } from "./whatsapp";
 import { obtenerEstadoReal } from "./estadoCuota";
@@ -61,7 +62,7 @@ export function enviarRecordatorioWhatsApp(
 	const numeroTelefono = contacto.celular || contacto.telefono;
 
 	if (!numeroTelefono) {
-		alert("No se encontró número de teléfono para este cliente");
+		toast.warning("No se encontró número de teléfono para este cliente");
 		return;
 	}
 
@@ -126,7 +127,7 @@ export function enviarRecordatorioConsolidadoWhatsApp(
 ): void {
 	const numeroTelefono = contacto.celular || contacto.telefono;
 	if (!numeroTelefono) {
-		alert("No se encontró número de teléfono para este cliente");
+		toast.warning("No se encontró número de teléfono para este cliente");
 		return;
 	}
 	const mensaje = generarMensajeConsolidado(cuotas, poliza, clienteNombre);
@@ -144,7 +145,7 @@ export function enviarRecordatorioConsolidadoEmail(
 	clienteNombre: string,
 ): void {
 	if (!contacto.correo) {
-		alert("No se encontró correo electrónico para este cliente");
+		toast.warning("No se encontró correo electrónico para este cliente");
 		return;
 	}
 	const mensaje = generarMensajeConsolidado(cuotas, poliza, clienteNombre);
@@ -163,7 +164,7 @@ export function enviarRecordatorioEmail(
 	clienteNombre: string,
 ): void {
 	if (!contacto.correo) {
-		alert("No se encontró correo electrónico para este cliente");
+		toast.warning("No se encontró correo electrónico para este cliente");
 		return;
 	}
 

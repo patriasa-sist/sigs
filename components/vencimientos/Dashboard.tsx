@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import dynamic from "next/dynamic";
+import { toast } from "sonner";
 import { ProcessedInsuranceRecord, SortOptions, DashboardStats, InsuranceStatus } from "@/types/insurance";
 import { formatDate, getUniqueValues } from "@/utils/excel";
 import { PDFGenerationResult } from "@/types/pdf";
@@ -223,7 +224,7 @@ export default function Dashboard({ data, onBack, onUpdateData }: DashboardProps
 
 	const handleOpenLetterGenerator = () => {
 		if (selectedRecords.size === 0) {
-			alert("Por favor selecciona al menos un registro para generar cartas.");
+			toast.warning("Por favor selecciona al menos un registro para generar cartas.");
 			return;
 		}
 		setShowLetterGenerator(true);

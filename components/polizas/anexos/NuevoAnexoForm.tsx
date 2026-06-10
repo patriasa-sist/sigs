@@ -5,6 +5,16 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { FileText } from "lucide-react";
 import { toast } from "sonner";
 import type { AnexoFormState, DatosPolizaParaAnexo, PlanPagoInclusion } from "@/types/anexo";
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { guardarAnexo, obtenerDatosParaAnexo } from "@/app/polizas/anexos/actions";
 import { createClient } from "@/utils/supabase/client";
 
@@ -114,11 +124,17 @@ export function NuevoAnexoForm() {
 		[],
 	);
 
+	const [mostrarDialogoCancelar, setMostrarDialogoCancelar] = useState(false);
+
 	const handleCancelar = () => {
 		if (formState.paso_actual > 1) {
-			const confirmCancel = window.confirm("¿Está seguro de cancelar? Se perderán los datos ingresados.");
-			if (!confirmCancel) return;
+			setMostrarDialogoCancelar(true);
+			return;
 		}
+		router.push("/polizas");
+	};
+
+	const confirmarCancelar = () => {
 		router.push("/polizas");
 	};
 
@@ -224,6 +240,25 @@ export function NuevoAnexoForm() {
 					onAnterior={() => setFormState((prev) => ({ ...prev, paso_actual: 4 }))}
 				/>
 			)}
+
+			{/* Diálogo: confirmar cancelación */}
+			<AlertDialog open={mostrarDialogoCancelar} onOpenChange={setMostrarDialogoCancelar}>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>¿Cancelar el registro?</AlertDialogTitle>
+						<AlertDialogDescription>Se perderán los datos ingresados.</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel>Seguir editando</AlertDialogCancel>
+						<AlertDialogAction
+							onClick={confirmarCancelar}
+							className="bg-destructive text-white hover:bg-destructive/90"
+						>
+							Sí, cancelar
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
 		</div>
 	);
 }

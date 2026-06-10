@@ -5,6 +5,16 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
 	ChevronLeft,
 	ChevronRight,
 	Save,
@@ -132,10 +142,14 @@ export default function RegistrarSiniestroForm() {
 		}
 	};
 
+	const [mostrarDialogoCancelar, setMostrarDialogoCancelar] = useState(false);
+
 	const handleCancelar = () => {
-		if (confirm("¿Está seguro de cancelar? Se perderán todos los datos ingresados.")) {
-			router.push("/siniestros");
-		}
+		setMostrarDialogoCancelar(true);
+	};
+
+	const confirmarCancelar = () => {
+		router.push("/siniestros");
 	};
 
 	const handleGuardar = async () => {
@@ -457,6 +471,25 @@ export default function RegistrarSiniestroForm() {
 					</div>
 				</div>
 			</div>
+
+			{/* Diálogo: confirmar cancelación */}
+			<AlertDialog open={mostrarDialogoCancelar} onOpenChange={setMostrarDialogoCancelar}>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>¿Cancelar el registro?</AlertDialogTitle>
+						<AlertDialogDescription>Se perderán todos los datos ingresados.</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel>Seguir editando</AlertDialogCancel>
+						<AlertDialogAction
+							onClick={confirmarCancelar}
+							className="bg-destructive text-white hover:bg-destructive/90"
+						>
+							Sí, cancelar
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
 		</div>
 	);
 }

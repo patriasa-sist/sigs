@@ -29,6 +29,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { BuscadorClientes } from "../BuscadorClientes";
 import { BeneficiarioModal, type DatosPersonaMinima } from "./BeneficiarioModal";
 import { importarAseguradosDesdeExcel, generarTemplateAseguradosExcel } from "@/utils/aseguradoExcelImport";
@@ -45,6 +55,8 @@ type Props = {
 };
 
 type SubPaso = "niveles" | "principal";
+
+type ConfirmacionEliminar = { tipo: "nivel"; id: string } | { tipo: "asegurado"; id: string };
 
 export function AccidentesPersonalesForm({
 	datos,
@@ -80,6 +92,7 @@ export function AccidentesPersonalesForm({
 	const [errores, setErrores] = useState<Record<string, string>>({});
 	const [importandoAsegurados, setImportandoAsegurados] = useState(false);
 	const [erroresImport, setErroresImport] = useState<string[]>([]);
+	const [confirmacionEliminar, setConfirmacionEliminar] = useState<ConfirmacionEliminar | null>(null);
 
 	// ===== FUNCIONES NIVELES =====
 	const crearNuevoNivel = () => {
@@ -143,7 +156,7 @@ export function AccidentesPersonalesForm({
 	};
 
 	const eliminarNivel = (id: string) => {
-		if (confirm("¿Está seguro de eliminar este nivel?")) setNiveles(niveles.filter((n) => n.id !== id));
+		setConfirmacionEliminar({ tipo: "nivel", id });
 	};
 
 	const continuarAPrincipal = () => {
@@ -198,7 +211,17 @@ export function AccidentesPersonalesForm({
 	};
 
 	const eliminarAsegurado = (id: string) => {
-		if (confirm("¿Eliminar este asegurado?")) setAsegurados(asegurados.filter((a) => a.id !== id));
+		setConfirmacionEliminar({ tipo: "asegurado", id });
+	};
+
+	const confirmarEliminar = () => {
+		if (!confirmacionEliminar) return;
+		if (confirmacionEliminar.tipo === "nivel") {
+			setNiveles(niveles.filter((n) => n.id !== confirmacionEliminar.id));
+		} else {
+			setAsegurados(asegurados.filter((a) => a.id !== confirmacionEliminar.id));
+		}
+		setConfirmacionEliminar(null);
 	};
 
 	const handleDescargarTemplate = async () => {
@@ -291,21 +314,51 @@ export function AccidentesPersonalesForm({
 	const volverANiveles = () => setSubPaso("niveles");
 	const esCompleto = datos !== null;
 
+	// Diálogo de confirmación compartido entre ambos sub-pasos
+	const dialogoEliminar = (
+		<AlertDialog
+			open={confirmacionEliminar !== null}
+			onOpenChange={(open) => {
+				if (!open) setConfirmacionEliminar(null);
+			}}
+		>
+			<AlertDialogContent>
+				<AlertDialogHeader>
+					<AlertDialogTitle>
+						{confirmacionEliminar?.tipo === "nivel"
+							? "¿Está seguro de eliminar este nivel?"
+							: "¿Eliminar este asegurado?"}
+					</AlertDialogTitle>
+					<AlertDialogDescription>Se quitará de la lista de la póliza.</AlertDialogDescription>
+				</AlertDialogHeader>
+				<AlertDialogFooter>
+					<AlertDialogCancel>Cancelar</AlertDialogCancel>
+					<AlertDialogAction
+						onClick={confirmarEliminar}
+						className="bg-destructive text-white hover:bg-destructive/90"
+					>
+						Eliminar
+					</AlertDialogAction>
+				</AlertDialogFooter>
+			</AlertDialogContent>
+		</AlertDialog>
+	);
+
 	// ===================== SUB-PASO 2.1: NIVELES =====================
 	if (subPaso === "niveles") {
 		return (
-			<div className="bg-white rounded-lg shadow-sm border p-6">
+			<div className="bg-card rounded-lg shadow-sm border border-border p-6">
 				<div className="flex items-center justify-between mb-6">
 					<div>
-						<h2 className="text-xl font-semibold text-gray-900">
+						<h2 className="text-xl font-semibold text-foreground">
 							Paso 2.1: Configurar Niveles de Cobertura (Accidentes Personales)
 						</h2>
-						<p className="text-sm text-gray-600 mt-1">
+						<p className="text-sm text-muted-foreground mt-1">
 							Defina los niveles de cobertura para las pólizas de accidentes personales
 						</p>
 					</div>
 					{niveles.length > 0 && (
-						<div className="flex items-center gap-2 text-green-600">
+						<div className="flex items-center gap-2 text-success">
 							<CheckCircle2 className="h-5 w-5" />
 							<span className="text-sm font-medium">{niveles.length} nivel(es) creado(s)</span>
 						</div>
@@ -314,7 +367,7 @@ export function AccidentesPersonalesForm({
 
 				{niveles.length > 0 && (
 					<div className="mb-6">
-						<h3 className="text-sm font-medium text-gray-700 mb-3">Niveles creados:</h3>
+						<h3 className="text-sm font-medium text-foreground mb-3">Niveles creados:</h3>
 						<div className="space-y-2">
 							{niveles.map((nivel) => {
 								const cob = nivel.coberturas as CoberturasAccidentesPersonales;
@@ -325,14 +378,14 @@ export function AccidentesPersonalesForm({
 									>
 										<div className="flex-1">
 											<div className="flex items-center gap-3">
-												<p className="font-medium text-gray-900">{nivel.nombre}</p>
+												<p className="font-medium text-foreground">{nivel.nombre}</p>
 												{nivel.prima_nivel && (
-													<span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
+													<span className="text-xs bg-info/15 text-info px-2 py-1 rounded-full">
 														Prima: {moneda} {nivel.prima_nivel.toLocaleString()}
 													</span>
 												)}
 											</div>
-											<div className="text-sm text-gray-600 space-y-1 mt-2">
+											<div className="text-sm text-muted-foreground space-y-1 mt-2">
 												{cob.muerte_accidental.habilitado && (
 													<p>
 														• Muerte Accidental: Bs{" "}
@@ -371,8 +424,8 @@ export function AccidentesPersonalesForm({
 				)}
 
 				{nivelEditando && (
-					<div className="mb-6 p-6 border-2 border-primary rounded-lg bg-blue-50">
-						<h3 className="text-lg font-semibold text-gray-900 mb-4">
+					<div className="mb-6 p-6 border-2 border-primary rounded-lg bg-info/10">
+						<h3 className="text-lg font-semibold text-foreground mb-4">
 							{niveles.some((n) => n.id === nivelEditando.id) ? "Editar" : "Crear"} Nivel
 						</h3>
 						<div className="space-y-4">
@@ -402,11 +455,11 @@ export function AccidentesPersonalesForm({
 										}
 										placeholder="0.00"
 									/>
-									<p className="text-xs text-gray-500">Prima específica para este nivel</p>
+									<p className="text-xs text-muted-foreground">Prima específica para este nivel</p>
 								</div>
 							</div>
 							<div className="space-y-4 pt-4 border-t">
-								<h4 className="font-medium text-gray-900">Coberturas:</h4>
+								<h4 className="font-medium text-foreground">Coberturas:</h4>
 								{/* MUERTE ACCIDENTAL */}
 								<div className="flex items-start gap-4">
 									<div className="flex items-center space-x-2 pt-2 min-w-[200px]">
@@ -442,10 +495,12 @@ export function AccidentesPersonalesForm({
 														},
 													})
 												}
-												className={errores.muerte_accidental ? "border-red-500" : ""}
+												className={errores.muerte_accidental ? "border-destructive" : ""}
 											/>
 											{errores.muerte_accidental && (
-												<p className="text-sm text-red-600 mt-1">{errores.muerte_accidental}</p>
+												<p className="text-sm text-destructive mt-1">
+													{errores.muerte_accidental}
+												</p>
 											)}
 										</div>
 									)}
@@ -485,10 +540,10 @@ export function AccidentesPersonalesForm({
 														},
 													})
 												}
-												className={errores.invalidez_total_parcial ? "border-red-500" : ""}
+												className={errores.invalidez_total_parcial ? "border-destructive" : ""}
 											/>
 											{errores.invalidez_total_parcial && (
-												<p className="text-sm text-red-600 mt-1">
+												<p className="text-sm text-destructive mt-1">
 													{errores.invalidez_total_parcial}
 												</p>
 											)}
@@ -530,10 +585,12 @@ export function AccidentesPersonalesForm({
 														},
 													})
 												}
-												className={errores.gastos_medicos ? "border-red-500" : ""}
+												className={errores.gastos_medicos ? "border-destructive" : ""}
 											/>
 											{errores.gastos_medicos && (
-												<p className="text-sm text-red-600 mt-1">{errores.gastos_medicos}</p>
+												<p className="text-sm text-destructive mt-1">
+													{errores.gastos_medicos}
+												</p>
 											)}
 										</div>
 									)}
@@ -570,19 +627,19 @@ export function AccidentesPersonalesForm({
 														},
 													})
 												}
-												className={errores.sepelio ? "border-red-500" : ""}
+												className={errores.sepelio ? "border-destructive" : ""}
 											/>
 											{errores.sepelio && (
-												<p className="text-sm text-red-600 mt-1">{errores.sepelio}</p>
+												<p className="text-sm text-destructive mt-1">{errores.sepelio}</p>
 											)}
 										</div>
 									)}
 								</div>
 							</div>
 							{errores.general && (
-								<div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded">
-									<AlertTriangle className="h-4 w-4 text-red-600" />
-									<p className="text-sm text-red-600">{errores.general}</p>
+								<div className="flex items-center gap-2 p-3 bg-destructive/10 border border-destructive/20 rounded">
+									<AlertTriangle className="h-4 w-4 text-destructive" />
+									<p className="text-sm text-destructive">{errores.general}</p>
 								</div>
 							)}
 							<div className="flex justify-end gap-2">
@@ -603,9 +660,9 @@ export function AccidentesPersonalesForm({
 				)}
 
 				{errores.general && !nivelEditando && (
-					<div className="flex items-center gap-2 p-3 mb-4 bg-amber-50 border border-amber-200 rounded">
-						<AlertTriangle className="h-4 w-4 text-amber-600" />
-						<p className="text-sm text-amber-600">{errores.general}</p>
+					<div className="flex items-center gap-2 p-3 mb-4 bg-warning/10 border border-warning/30 rounded">
+						<AlertTriangle className="h-4 w-4 text-warning" />
+						<p className="text-sm text-warning">{errores.general}</p>
 					</div>
 				)}
 
@@ -619,22 +676,26 @@ export function AccidentesPersonalesForm({
 						<ChevronRight className="ml-2 h-5 w-5" />
 					</Button>
 				</div>
+
+				{dialogoEliminar}
 			</div>
 		);
 	}
 
 	// ===================== SUB-PASO 3: FORMULARIO PRINCIPAL =====================
 	return (
-		<div className="bg-white rounded-lg shadow-sm border p-6">
+		<div className="bg-card rounded-lg shadow-sm border border-border p-6">
 			<div className="flex items-center justify-between mb-6">
 				<div>
-					<h2 className="text-xl font-semibold text-gray-900">
+					<h2 className="text-xl font-semibold text-foreground">
 						Paso 3: Datos Específicos — Accidentes Personales
 					</h2>
-					<p className="text-sm text-gray-600 mt-1">Complete la información de contratante y asegurados</p>
+					<p className="text-sm text-muted-foreground mt-1">
+						Complete la información de contratante y asegurados
+					</p>
 				</div>
 				{esCompleto && (
-					<div className="flex items-center gap-2 text-green-600">
+					<div className="flex items-center gap-2 text-success">
 						<CheckCircle2 className="h-5 w-5" />
 						<span className="text-sm font-medium">Completado</span>
 					</div>
@@ -642,15 +703,15 @@ export function AccidentesPersonalesForm({
 			</div>
 
 			{/* Niveles configurados */}
-			<div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+			<div className="mb-6 p-4 bg-info/10 border border-info/20 rounded-lg">
 				<div className="flex items-center justify-between">
 					<div className="flex items-center gap-2">
-						<Settings className="h-5 w-5 text-blue-600" />
+						<Settings className="h-5 w-5 text-info" />
 						<div>
-							<p className="text-sm font-medium text-gray-900">
+							<p className="text-sm font-medium text-foreground">
 								{niveles.length} nivel(es) configurado(s)
 							</p>
-							<p className="text-xs text-gray-600">{niveles.map((n) => n.nombre).join(", ")}</p>
+							<p className="text-xs text-muted-foreground">{niveles.map((n) => n.nombre).join(", ")}</p>
 						</div>
 					</div>
 					<Button variant="outline" size="sm" onClick={volverANiveles}>
@@ -662,7 +723,7 @@ export function AccidentesPersonalesForm({
 			<div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
 				<div className="space-y-2">
 					<Label htmlFor="tipo_poliza">
-						Tipo de Póliza <span className="text-red-500">*</span>
+						Tipo de Póliza <span className="text-destructive">*</span>
 					</Label>
 					<Select
 						value={tipoPoliza}
@@ -679,10 +740,10 @@ export function AccidentesPersonalesForm({
 				</div>
 				<div className="space-y-2">
 					<Label htmlFor="regional">
-						Regional Asegurado <span className="text-red-500">*</span>
+						Regional Asegurado <span className="text-destructive">*</span>
 					</Label>
 					<Select value={regionalId} onValueChange={setRegionalId}>
-						<SelectTrigger className={errores.regional ? "border-red-500" : ""}>
+						<SelectTrigger className={errores.regional ? "border-destructive" : ""}>
 							<SelectValue placeholder="Seleccione una regional" />
 						</SelectTrigger>
 						<SelectContent>
@@ -693,7 +754,7 @@ export function AccidentesPersonalesForm({
 							))}
 						</SelectContent>
 					</Select>
-					{errores.regional && <p className="text-sm text-red-600">{errores.regional}</p>}
+					{errores.regional && <p className="text-sm text-destructive">{errores.regional}</p>}
 				</div>
 			</div>
 
@@ -702,9 +763,9 @@ export function AccidentesPersonalesForm({
 				<div className="flex items-center justify-between">
 					<div>
 						<Label className="text-base">
-							Contratante <span className="text-red-500">*</span>
+							Contratante <span className="text-destructive">*</span>
 						</Label>
-						<p className="text-sm text-gray-600 mt-1">
+						<p className="text-sm text-muted-foreground mt-1">
 							Cliente registrado que contrata la póliza (requiere datos completos)
 						</p>
 					</div>
@@ -720,17 +781,17 @@ export function AccidentesPersonalesForm({
 				</div>
 
 				{errores.contratante && (
-					<div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded">
-						<AlertTriangle className="h-4 w-4 text-red-600" />
-						<p className="text-sm text-red-600">{errores.contratante}</p>
+					<div className="flex items-center gap-2 p-3 bg-destructive/10 border border-destructive/20 rounded">
+						<AlertTriangle className="h-4 w-4 text-destructive" />
+						<p className="text-sm text-destructive">{errores.contratante}</p>
 					</div>
 				)}
 
 				{aseguradoPrincipal && !contratante && (
-					<div className="p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between">
+					<div className="p-3 bg-info/10 border border-info/20 rounded-lg flex items-center justify-between">
 						<div className="flex items-center gap-2">
-							<UserCheck className="h-4 w-4 text-blue-600" />
-							<span className="text-sm text-blue-900">
+							<UserCheck className="h-4 w-4 text-info" />
+							<span className="text-sm text-info">
 								<strong>{aseguradoPrincipal.nombre_completo}</strong> ({aseguradoPrincipal.documento}) —
 								Asegurado de la póliza
 							</span>
@@ -753,8 +814,8 @@ export function AccidentesPersonalesForm({
 				)}
 
 				{mostrarBuscadorContratante && (
-					<div className="p-4 border-2 border-primary rounded-lg bg-blue-50">
-						<h3 className="font-semibold text-gray-900 mb-4">Buscar Contratante</h3>
+					<div className="p-4 border-2 border-primary rounded-lg bg-info/10">
+						<h3 className="font-semibold text-foreground mb-4">Buscar Contratante</h3>
 						<BuscadorClientes
 							onSeleccionar={seleccionarContratante}
 							onCancelar={() => setMostrarBuscadorContratante(false)}
@@ -768,12 +829,12 @@ export function AccidentesPersonalesForm({
 							<UserCheck className="h-5 w-5 text-primary flex-shrink-0 mt-1" />
 							<div className="flex-1 space-y-3">
 								<div>
-									<p className="font-medium text-gray-900">{contratante.client_name}</p>
-									<p className="text-sm text-gray-600">CI: {contratante.client_ci}</p>
+									<p className="font-medium text-foreground">{contratante.client_name}</p>
+									<p className="text-sm text-muted-foreground">CI: {contratante.client_ci}</p>
 								</div>
 								<div className="grid grid-cols-1 md:grid-cols-2 gap-3">
 									<div className="space-y-1">
-										<Label className="text-xs text-gray-600">Nivel de Cobertura</Label>
+										<Label className="text-xs text-muted-foreground">Nivel de Cobertura</Label>
 										<Select
 											value={contratante.nivel_id}
 											onValueChange={(v) => setContratante({ ...contratante, nivel_id: v })}
@@ -791,8 +852,8 @@ export function AccidentesPersonalesForm({
 										</Select>
 									</div>
 									<div className="space-y-1">
-										<Label className="text-xs text-gray-600">
-											Rol <span className="text-red-500">*</span>
+										<Label className="text-xs text-muted-foreground">
+											Rol <span className="text-destructive">*</span>
 										</Label>
 										<Select
 											value={contratante.rol}
@@ -810,7 +871,7 @@ export function AccidentesPersonalesForm({
 												<SelectItem value="contratante">Contratante</SelectItem>
 											</SelectContent>
 										</Select>
-										<p className="text-xs text-gray-500">
+										<p className="text-xs text-muted-foreground">
 											{contratante.rol === "contratante-asegurado"
 												? "Es contratante y también está asegurado"
 												: "Solo contrata, no está asegurado — debe agregar asegurados"}
@@ -828,7 +889,7 @@ export function AccidentesPersonalesForm({
 									<Edit className="h-4 w-4" />
 								</Button>
 								<Button variant="ghost" size="sm" onClick={eliminarContratante}>
-									<Trash2 className="h-4 w-4 text-red-600" />
+									<Trash2 className="h-4 w-4 text-destructive" />
 								</Button>
 							</div>
 						</div>
@@ -837,9 +898,9 @@ export function AccidentesPersonalesForm({
 
 				{!contratante && !mostrarBuscadorContratante && (
 					<div className="text-center py-8 border-2 border-dashed rounded-lg">
-						<Users className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-						<p className="text-gray-600">No hay contratante seleccionado</p>
-						<p className="text-sm text-gray-500">
+						<Users className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+						<p className="text-muted-foreground">No hay contratante seleccionado</p>
+						<p className="text-sm text-muted-foreground">
 							Haga clic en &ldquo;Seleccionar Contratante&rdquo; para comenzar
 						</p>
 					</div>
@@ -852,12 +913,12 @@ export function AccidentesPersonalesForm({
 					<div>
 						<Label className="text-base">
 							Asegurados
-							{contratante?.rol === "contratante" && <span className="text-red-500 ml-1">*</span>}
+							{contratante?.rol === "contratante" && <span className="text-destructive ml-1">*</span>}
 						</Label>
-						<p className="text-sm text-gray-600 mt-1">
+						<p className="text-sm text-muted-foreground mt-1">
 							Personas aseguradas con datos mínimos (sin registro completo en el sistema)
 							{contratante?.rol === "contratante-asegurado" && (
-								<span className="text-gray-400"> — el contratante ya está asegurado</span>
+								<span className="text-muted-foreground"> — el contratante ya está asegurado</span>
 							)}
 						</p>
 					</div>
@@ -890,16 +951,16 @@ export function AccidentesPersonalesForm({
 				</div>
 
 				{errores.asegurados && (
-					<div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded">
-						<AlertTriangle className="h-4 w-4 text-red-600" />
-						<p className="text-sm text-red-600">{errores.asegurados}</p>
+					<div className="flex items-center gap-2 p-3 bg-destructive/10 border border-destructive/20 rounded">
+						<AlertTriangle className="h-4 w-4 text-destructive" />
+						<p className="text-sm text-destructive">{errores.asegurados}</p>
 					</div>
 				)}
 
 				{erroresImport.length > 0 && (
-					<div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+					<div className="p-4 bg-warning/10 border border-warning/30 rounded-lg">
 						<div className="flex items-start justify-between gap-2">
-							<ul className="text-sm text-amber-800 space-y-1 flex-1">
+							<ul className="text-sm text-warning-foreground space-y-1 flex-1">
 								{erroresImport.map((msg, i) => (
 									<li key={i}>• {msg}</li>
 								))}
@@ -907,7 +968,7 @@ export function AccidentesPersonalesForm({
 							<button
 								type="button"
 								onClick={() => setErroresImport([])}
-								className="text-amber-600 hover:text-amber-800 text-xs flex-shrink-0"
+								className="text-warning hover:text-warning-foreground text-xs flex-shrink-0"
 							>
 								✕
 							</button>
@@ -918,21 +979,21 @@ export function AccidentesPersonalesForm({
 				{asegurados.length > 0 ? (
 					<div className="space-y-3">
 						{asegurados.map((asegurado) => (
-							<div key={asegurado.id} className="p-4 border rounded-lg bg-gray-50">
+							<div key={asegurado.id} className="p-4 border rounded-lg bg-secondary">
 								<div className="flex items-start gap-4">
 									<UserPlus className="h-5 w-5 text-primary flex-shrink-0 mt-1" />
 									<div className="flex-1 space-y-3">
 										<div className="flex items-start justify-between">
 											<div>
 												<div className="flex items-center gap-2">
-													<p className="font-medium text-gray-900">
+													<p className="font-medium text-foreground">
 														{asegurado.nombre_completo}
 													</p>
-													<span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+													<span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-info/15 text-info">
 														Asegurado
 													</span>
 												</div>
-												<div className="text-sm text-gray-600 space-y-0.5 mt-1">
+												<div className="text-sm text-muted-foreground space-y-0.5 mt-1">
 													<p>CI: {asegurado.carnet}</p>
 													{asegurado.fecha_nacimiento && (
 														<p>
@@ -967,12 +1028,12 @@ export function AccidentesPersonalesForm({
 													size="sm"
 													onClick={() => eliminarAsegurado(asegurado.id)}
 												>
-													<Trash2 className="h-4 w-4 text-red-600" />
+													<Trash2 className="h-4 w-4 text-destructive" />
 												</Button>
 											</div>
 										</div>
 										<div className="space-y-1">
-											<Label className="text-xs text-gray-600">Nivel de Cobertura</Label>
+											<Label className="text-xs text-muted-foreground">Nivel de Cobertura</Label>
 											<Select
 												value={asegurado.nivel_id}
 												onValueChange={(v) =>
@@ -1002,8 +1063,8 @@ export function AccidentesPersonalesForm({
 					</div>
 				) : (
 					<div className="text-center py-6 border-2 border-dashed rounded-lg">
-						<UserPlus className="h-10 w-10 text-gray-400 mx-auto mb-2" />
-						<p className="text-gray-500 text-sm">
+						<UserPlus className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
+						<p className="text-muted-foreground text-sm">
 							{contratante?.rol === "contratante-asegurado"
 								? "Opcional: el contratante ya está asegurado"
 								: "Agregue al menos un asegurado"}
@@ -1013,9 +1074,9 @@ export function AccidentesPersonalesForm({
 			</div>
 
 			{/* Info de roles */}
-			<div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-				<p className="text-sm text-blue-900 font-medium mb-2">Roles en pólizas de Accidentes Personales:</p>
-				<ul className="text-xs text-blue-800 space-y-1 ml-2">
+			<div className="bg-info/10 border border-info/20 rounded-lg p-4 mb-6">
+				<p className="text-sm text-info font-medium mb-2">Roles en pólizas de Accidentes Personales:</p>
+				<ul className="text-xs text-info space-y-1 ml-2">
 					<li>
 						• <strong>Contratante-Asegurado:</strong> Contrata y también está asegurado en la póliza
 					</li>
@@ -1053,6 +1114,8 @@ export function AccidentesPersonalesForm({
 					}}
 				/>
 			)}
+
+			{dialogoEliminar}
 		</div>
 	);
 }

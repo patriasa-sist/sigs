@@ -105,10 +105,10 @@ export function VehiculoRCModal({ vehiculo, onGuardar, onCancelar }: Props) {
 	if (cargando) {
 		return (
 			<div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-				<div className="bg-white rounded-lg p-6">
+				<div className="bg-card rounded-lg p-6">
 					<div className="text-center">
 						<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2" />
-						<p className="text-sm text-gray-600">Cargando...</p>
+						<p className="text-sm text-muted-foreground">Cargando...</p>
 					</div>
 				</div>
 			</div>
@@ -117,9 +117,9 @@ export function VehiculoRCModal({ vehiculo, onGuardar, onCancelar }: Props) {
 
 	return (
 		<div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-			<div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+			<div className="bg-card rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
 				{/* Header */}
-				<div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between">
+				<div className="sticky top-0 bg-card border-b px-6 py-4 flex items-center justify-between">
 					<h2 className="text-xl font-semibold">{vehiculo ? "Editar Vehículo" : "Agregar Vehículo"}</h2>
 					<Button variant="ghost" size="icon" onClick={onCancelar} className="rounded-full">
 						<X className="h-5 w-5" />
@@ -131,46 +131,46 @@ export function VehiculoRCModal({ vehiculo, onGuardar, onCancelar }: Props) {
 					<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 						{/* CAMPOS OBLIGATORIOS */}
 						<div className="md:col-span-2">
-							<h3 className="text-sm font-semibold text-gray-900 mb-4">Campos Obligatorios</h3>
+							<h3 className="text-sm font-semibold text-foreground mb-4">Campos Obligatorios</h3>
 						</div>
 
 						{/* Placa */}
 						<div className="space-y-2">
 							<Label htmlFor="placa">
-								Placa <span className="text-red-500">*</span>
+								Placa <span className="text-destructive">*</span>
 							</Label>
 							<Input
 								id="placa"
 								value={form.placa ?? ""}
 								onChange={(e) => set("placa", e.target.value.toUpperCase())}
 								placeholder="Ej: 5995SLC"
-								className={errores.placa ? "border-red-500" : ""}
+								className={errores.placa ? "border-destructive" : ""}
 							/>
-							{errores.placa && <p className="text-sm text-red-600">{errores.placa}</p>}
+							{errores.placa && <p className="text-sm text-destructive">{errores.placa}</p>}
 						</div>
 
 						{/* Nº de Chasis */}
 						<div className="space-y-2">
 							<Label htmlFor="nro_chasis">
-								Nº de Chasis <span className="text-red-500">*</span>
+								Nº de Chasis <span className="text-destructive">*</span>
 							</Label>
 							<Input
 								id="nro_chasis"
 								value={form.nro_chasis ?? ""}
 								onChange={(e) => set("nro_chasis", e.target.value.toUpperCase())}
 								placeholder="Ej: VF610A36XHD006394"
-								className={errores.nro_chasis ? "border-red-500" : ""}
+								className={errores.nro_chasis ? "border-destructive" : ""}
 							/>
-							{errores.nro_chasis && <p className="text-sm text-red-600">{errores.nro_chasis}</p>}
+							{errores.nro_chasis && <p className="text-sm text-destructive">{errores.nro_chasis}</p>}
 						</div>
 
 						{/* Uso */}
 						<div className="space-y-2">
 							<Label htmlFor="uso">
-								Uso <span className="text-red-500">*</span>
+								Uso <span className="text-destructive">*</span>
 							</Label>
 							<Select value={form.uso ?? ""} onValueChange={(v) => set("uso", v as VehiculoRC["uso"])}>
-								<SelectTrigger className={errores.uso ? "border-red-500" : ""}>
+								<SelectTrigger className={errores.uso ? "border-destructive" : ""}>
 									<SelectValue />
 								</SelectTrigger>
 								<SelectContent>
@@ -179,12 +179,12 @@ export function VehiculoRCModal({ vehiculo, onGuardar, onCancelar }: Props) {
 									<SelectItem value="privado">Privado</SelectItem>
 								</SelectContent>
 							</Select>
-							{errores.uso && <p className="text-sm text-red-600">{errores.uso}</p>}
+							{errores.uso && <p className="text-sm text-destructive">{errores.uso}</p>}
 						</div>
 
 						{/* CAMPOS OPCIONALES */}
 						<div className="md:col-span-2 mt-4">
-							<h3 className="text-sm font-semibold text-gray-900 mb-4">Campos Opcionales</h3>
+							<h3 className="text-sm font-semibold text-foreground mb-4">Campos Opcionales</h3>
 						</div>
 
 						{/* Tipo de Vehículo */}
@@ -249,9 +249,9 @@ export function VehiculoRCModal({ vehiculo, onGuardar, onCancelar }: Props) {
 								value={form.ano ?? ""}
 								onChange={(e) => set("ano", e.target.value ? parseInt(e.target.value) : undefined)}
 								placeholder="2023"
-								className={errores.ano ? "border-red-500" : ""}
+								className={errores.ano ? "border-destructive" : ""}
 							/>
-							{errores.ano && <p className="text-sm text-red-600">{errores.ano}</p>}
+							{errores.ano && <p className="text-sm text-destructive">{errores.ano}</p>}
 						</div>
 
 						{/* Color */}
@@ -347,9 +347,9 @@ export function VehiculoRCModal({ vehiculo, onGuardar, onCancelar }: Props) {
 								value={form.ejes ?? ""}
 								onChange={(e) => set("ejes", e.target.value ? parseInt(e.target.value) : undefined)}
 								placeholder="Ej: 3"
-								className={errores.ejes ? "border-red-500" : ""}
+								className={errores.ejes ? "border-destructive" : ""}
 							/>
-							{errores.ejes && <p className="text-sm text-red-600">{errores.ejes}</p>}
+							{errores.ejes && <p className="text-sm text-destructive">{errores.ejes}</p>}
 						</div>
 
 						{/* Asientos */}
@@ -362,9 +362,9 @@ export function VehiculoRCModal({ vehiculo, onGuardar, onCancelar }: Props) {
 								value={form.asientos ?? ""}
 								onChange={(e) => set("asientos", e.target.value ? parseInt(e.target.value) : undefined)}
 								placeholder="Ej: 2"
-								className={errores.asientos ? "border-red-500" : ""}
+								className={errores.asientos ? "border-destructive" : ""}
 							/>
-							{errores.asientos && <p className="text-sm text-red-600">{errores.asientos}</p>}
+							{errores.asientos && <p className="text-sm text-destructive">{errores.asientos}</p>}
 						</div>
 
 						{/* Cilindrada */}
@@ -379,15 +379,15 @@ export function VehiculoRCModal({ vehiculo, onGuardar, onCancelar }: Props) {
 									set("cilindrada", e.target.value ? parseInt(e.target.value) : undefined)
 								}
 								placeholder="Ej: 12800"
-								className={errores.cilindrada ? "border-red-500" : ""}
+								className={errores.cilindrada ? "border-destructive" : ""}
 							/>
-							{errores.cilindrada && <p className="text-sm text-red-600">{errores.cilindrada}</p>}
+							{errores.cilindrada && <p className="text-sm text-destructive">{errores.cilindrada}</p>}
 						</div>
 					</div>
 				</div>
 
 				{/* Footer */}
-				<div className="sticky bottom-0 bg-gray-50 border-t px-6 py-4 flex justify-end gap-3">
+				<div className="sticky bottom-0 bg-secondary border-t px-6 py-4 flex justify-end gap-3">
 					<Button variant="outline" onClick={onCancelar}>
 						Cancelar
 					</Button>

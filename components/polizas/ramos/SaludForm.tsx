@@ -29,6 +29,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { BuscadorClientes } from "../BuscadorClientes";
 import { BeneficiarioModal, type DatosPersonaMinima } from "./BeneficiarioModal";
 import { useLiveSync } from "@/hooks/useLiveSync";
@@ -47,6 +57,8 @@ type SubPaso = "niveles" | "principal";
 
 // Para el modal de familiares, indica a qué grupo pertenece (contratante o un titular)
 type ContextoFamiliar = { tipo: "contratante" } | { tipo: "titular"; titularId: string };
+
+type ConfirmacionEliminar = { tipo: "nivel"; id: string } | { tipo: "titular"; id: string };
 
 export function SaludForm({
 	datos,
@@ -83,6 +95,7 @@ export function SaludForm({
 	const [contextoFamiliar, setContextoFamiliar] = useState<ContextoFamiliar | null>(null);
 	const [titularesExpandidos, setTitularesExpandidos] = useState<Set<string>>(new Set());
 	const [errores, setErrores] = useState<Record<string, string>>({});
+	const [confirmacionEliminar, setConfirmacionEliminar] = useState<ConfirmacionEliminar | null>(null);
 
 	// ===== FUNCIONES NIVELES =====
 	const crearNuevoNivel = () => {
@@ -124,7 +137,7 @@ export function SaludForm({
 	};
 
 	const eliminarNivel = (id: string) => {
-		if (confirm("¿Eliminar este nivel?")) setNiveles(niveles.filter((n) => n.id !== id));
+		setConfirmacionEliminar({ tipo: "nivel", id });
 	};
 
 	const continuarAPrincipal = () => {
@@ -197,9 +210,17 @@ export function SaludForm({
 	};
 
 	const eliminarTitular = (id: string) => {
-		if (confirm("¿Eliminar este titular y todos sus familiares?")) {
-			setTitulares(titulares.filter((t) => t.id !== id));
+		setConfirmacionEliminar({ tipo: "titular", id });
+	};
+
+	const confirmarEliminar = () => {
+		if (!confirmacionEliminar) return;
+		if (confirmacionEliminar.tipo === "nivel") {
+			setNiveles(niveles.filter((n) => n.id !== confirmacionEliminar.id));
+		} else {
+			setTitulares(titulares.filter((t) => t.id !== confirmacionEliminar.id));
 		}
+		setConfirmacionEliminar(null);
 	};
 
 	const toggleExpandirTitular = (id: string) => {
@@ -364,10 +385,10 @@ export function SaludForm({
 		onEditarFamiliar: (f: FamiliarSalud) => void,
 		onEliminarFamiliar: (f: FamiliarSalud) => void,
 	) => (
-		<div className="mt-3 pl-4 border-l-2 border-gray-200 space-y-2">
+		<div className="mt-3 pl-4 border-l-2 border-border space-y-2">
 			{/* Cónyuge */}
 			<div className="flex items-center justify-between">
-				<p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Cónyuge</p>
+				<p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Cónyuge</p>
 				{!conyugue && (
 					<Button variant="ghost" size="sm" onClick={onAgregarConyugue} className="h-7 text-xs">
 						<Plus className="mr-1 h-3 w-3" />
@@ -378,8 +399,8 @@ export function SaludForm({
 			{conyugue ? (
 				<div className="flex items-center justify-between p-2 bg-pink-50 border border-pink-200 rounded">
 					<div>
-						<p className="text-sm font-medium text-gray-800">{conyugue.nombre_completo}</p>
-						<p className="text-xs text-gray-500">
+						<p className="text-sm font-medium text-foreground">{conyugue.nombre_completo}</p>
+						<p className="text-xs text-muted-foreground">
 							CI: {conyugue.carnet} · Nivel:{" "}
 							{niveles.find((n) => n.id === conyugue.nivel_id)?.nombre ?? "—"}
 						</p>
@@ -399,17 +420,17 @@ export function SaludForm({
 							onClick={() => onEliminarFamiliar(conyugue)}
 							className="h-7 w-7 p-0"
 						>
-							<Trash2 className="h-3.5 w-3.5 text-red-500" />
+							<Trash2 className="h-3.5 w-3.5 text-destructive" />
 						</Button>
 					</div>
 				</div>
 			) : (
-				<p className="text-xs text-gray-400 italic">Sin cónyuge</p>
+				<p className="text-xs text-muted-foreground italic">Sin cónyuge</p>
 			)}
 
 			{/* Descendientes */}
 			<div className="flex items-center justify-between mt-1">
-				<p className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+				<p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
 					Descendientes ({descendientes.length})
 				</p>
 				<Button variant="ghost" size="sm" onClick={onAgregarDescendiente} className="h-7 text-xs">
@@ -422,11 +443,11 @@ export function SaludForm({
 					{descendientes.map((d) => (
 						<div
 							key={d.id}
-							className="flex items-center justify-between p-2 bg-green-50 border border-green-200 rounded"
+							className="flex items-center justify-between p-2 bg-success/10 border border-success/30 rounded"
 						>
 							<div>
-								<p className="text-sm font-medium text-gray-800">{d.nombre_completo}</p>
-								<p className="text-xs text-gray-500">
+								<p className="text-sm font-medium text-foreground">{d.nombre_completo}</p>
+								<p className="text-xs text-muted-foreground">
 									CI: {d.carnet} · Nivel: {niveles.find((n) => n.id === d.nivel_id)?.nombre ?? "—"}
 								</p>
 							</div>
@@ -445,33 +466,67 @@ export function SaludForm({
 									onClick={() => onEliminarFamiliar(d)}
 									className="h-7 w-7 p-0"
 								>
-									<Trash2 className="h-3.5 w-3.5 text-red-500" />
+									<Trash2 className="h-3.5 w-3.5 text-destructive" />
 								</Button>
 							</div>
 						</div>
 					))}
 				</div>
 			) : (
-				<p className="text-xs text-gray-400 italic">Sin descendientes</p>
+				<p className="text-xs text-muted-foreground italic">Sin descendientes</p>
 			)}
 		</div>
+	);
+
+	// Diálogo de confirmación compartido entre ambos sub-pasos
+	const dialogoEliminar = (
+		<AlertDialog
+			open={confirmacionEliminar !== null}
+			onOpenChange={(open) => {
+				if (!open) setConfirmacionEliminar(null);
+			}}
+		>
+			<AlertDialogContent>
+				<AlertDialogHeader>
+					<AlertDialogTitle>
+						{confirmacionEliminar?.tipo === "nivel"
+							? "¿Eliminar este nivel?"
+							: "¿Eliminar este titular y todos sus familiares?"}
+					</AlertDialogTitle>
+					<AlertDialogDescription>
+						{confirmacionEliminar?.tipo === "titular"
+							? "Se quitarán de la lista de la póliza."
+							: "Se quitará de la lista de la póliza."}
+					</AlertDialogDescription>
+				</AlertDialogHeader>
+				<AlertDialogFooter>
+					<AlertDialogCancel>Cancelar</AlertDialogCancel>
+					<AlertDialogAction
+						onClick={confirmarEliminar}
+						className="bg-destructive text-white hover:bg-destructive/90"
+					>
+						Eliminar
+					</AlertDialogAction>
+				</AlertDialogFooter>
+			</AlertDialogContent>
+		</AlertDialog>
 	);
 
 	// ===================== SUB-PASO 2.1: NIVELES =====================
 	if (subPaso === "niveles") {
 		return (
-			<div className="bg-white rounded-lg shadow-sm border p-6">
+			<div className="bg-card rounded-lg shadow-sm border border-border p-6">
 				<div className="flex items-center justify-between mb-6">
 					<div>
-						<h2 className="text-xl font-semibold text-gray-900">
+						<h2 className="text-xl font-semibold text-foreground">
 							Paso 2.1: Configurar Niveles de Cobertura (Salud)
 						</h2>
-						<p className="text-sm text-gray-600 mt-1">
+						<p className="text-sm text-muted-foreground mt-1">
 							Defina los niveles de cobertura para las pólizas de salud
 						</p>
 					</div>
 					{niveles.length > 0 && (
-						<div className="flex items-center gap-2 text-green-600">
+						<div className="flex items-center gap-2 text-success">
 							<CheckCircle2 className="h-5 w-5" />
 							<span className="text-sm font-medium">{niveles.length} nivel(es) creado(s)</span>
 						</div>
@@ -480,13 +535,13 @@ export function SaludForm({
 
 				{niveles.length > 0 && (
 					<div className="mb-6">
-						<h3 className="text-sm font-medium text-gray-700 mb-3">Niveles creados:</h3>
+						<h3 className="text-sm font-medium text-foreground mb-3">Niveles creados:</h3>
 						<div className="space-y-2">
 							{niveles.map((nivel) => (
 								<div key={nivel.id} className="flex items-center justify-between p-4 border rounded-lg">
 									<div className="flex-1">
-										<p className="font-medium text-gray-900">{nivel.nombre}</p>
-										<p className="text-sm text-gray-600">
+										<p className="font-medium text-foreground">{nivel.nombre}</p>
+										<p className="text-sm text-muted-foreground">
 											Cobertura: {moneda} {nivel.monto.toLocaleString()}
 										</p>
 									</div>
@@ -505,8 +560,8 @@ export function SaludForm({
 				)}
 
 				{nivelEditando && (
-					<div className="mb-6 p-6 border-2 border-primary rounded-lg bg-blue-50">
-						<h3 className="text-lg font-semibold text-gray-900 mb-4">
+					<div className="mb-6 p-6 border-2 border-primary rounded-lg bg-info/10">
+						<h3 className="text-lg font-semibold text-foreground mb-4">
 							{niveles.some((n) => n.id === nivelEditando.id) ? "Editar" : "Crear"} Nivel
 						</h3>
 						<div className="space-y-4">
@@ -524,9 +579,11 @@ export function SaludForm({
 										}
 									}}
 									placeholder="Ej: Nivel 1, Nivel Básico, Nivel Premium, etc."
-									className={errores.nombre_nivel ? "border-red-500" : ""}
+									className={errores.nombre_nivel ? "border-destructive" : ""}
 								/>
-								{errores.nombre_nivel && <p className="text-sm text-red-600">{errores.nombre_nivel}</p>}
+								{errores.nombre_nivel && (
+									<p className="text-sm text-destructive">{errores.nombre_nivel}</p>
+								)}
 							</div>
 							<div className="space-y-2">
 								<Label htmlFor="monto_nivel">Monto de Cobertura</Label>
@@ -545,15 +602,19 @@ export function SaludForm({
 										}
 									}}
 									placeholder="0.00"
-									className={errores.monto_nivel ? "border-red-500" : ""}
+									className={errores.monto_nivel ? "border-destructive" : ""}
 								/>
-								{errores.monto_nivel && <p className="text-sm text-red-600">{errores.monto_nivel}</p>}
-								<p className="text-xs text-gray-500">Monto máximo de cobertura para este nivel</p>
+								{errores.monto_nivel && (
+									<p className="text-sm text-destructive">{errores.monto_nivel}</p>
+								)}
+								<p className="text-xs text-muted-foreground">
+									Monto máximo de cobertura para este nivel
+								</p>
 							</div>
 							{errores.general && (
-								<div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded">
-									<AlertTriangle className="h-4 w-4 text-red-600" />
-									<p className="text-sm text-red-600">{errores.general}</p>
+								<div className="flex items-center gap-2 p-3 bg-destructive/10 border border-destructive/20 rounded">
+									<AlertTriangle className="h-4 w-4 text-destructive" />
+									<p className="text-sm text-destructive">{errores.general}</p>
 								</div>
 							)}
 							<div className="flex justify-end gap-2">
@@ -574,9 +635,9 @@ export function SaludForm({
 				)}
 
 				{errores.general && !nivelEditando && (
-					<div className="flex items-center gap-2 p-3 mb-4 bg-amber-50 border border-amber-200 rounded">
-						<AlertTriangle className="h-4 w-4 text-amber-600" />
-						<p className="text-sm text-amber-600">{errores.general}</p>
+					<div className="flex items-center gap-2 p-3 mb-4 bg-warning/10 border border-warning/30 rounded">
+						<AlertTriangle className="h-4 w-4 text-warning" />
+						<p className="text-sm text-warning">{errores.general}</p>
 					</div>
 				)}
 
@@ -590,20 +651,24 @@ export function SaludForm({
 						<ChevronRight className="ml-2 h-5 w-5" />
 					</Button>
 				</div>
+
+				{dialogoEliminar}
 			</div>
 		);
 	}
 
 	// ===================== SUB-PASO 3: FORMULARIO PRINCIPAL =====================
 	return (
-		<div className="bg-white rounded-lg shadow-sm border p-6">
+		<div className="bg-card rounded-lg shadow-sm border border-border p-6">
 			<div className="flex items-center justify-between mb-6">
 				<div>
-					<h2 className="text-xl font-semibold text-gray-900">Paso 3: Datos Específicos — Salud</h2>
-					<p className="text-sm text-gray-600 mt-1">Complete la información de contratante y titulares</p>
+					<h2 className="text-xl font-semibold text-foreground">Paso 3: Datos Específicos — Salud</h2>
+					<p className="text-sm text-muted-foreground mt-1">
+						Complete la información de contratante y titulares
+					</p>
 				</div>
 				{esCompleto && (
-					<div className="flex items-center gap-2 text-green-600">
+					<div className="flex items-center gap-2 text-success">
 						<CheckCircle2 className="h-5 w-5" />
 						<span className="text-sm font-medium">Completado</span>
 					</div>
@@ -611,15 +676,15 @@ export function SaludForm({
 			</div>
 
 			{/* Niveles configurados */}
-			<div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+			<div className="mb-6 p-4 bg-info/10 border border-info/20 rounded-lg">
 				<div className="flex items-center justify-between">
 					<div className="flex items-center gap-2">
-						<Settings className="h-5 w-5 text-blue-600" />
+						<Settings className="h-5 w-5 text-info" />
 						<div>
-							<p className="text-sm font-medium text-gray-900">
+							<p className="text-sm font-medium text-foreground">
 								{niveles.length} nivel(es) configurado(s)
 							</p>
-							<p className="text-xs text-gray-600">
+							<p className="text-xs text-muted-foreground">
 								{niveles.map((n) => `${n.nombre} (${moneda} ${n.monto.toLocaleString()})`).join(", ")}
 							</p>
 						</div>
@@ -633,7 +698,7 @@ export function SaludForm({
 			<div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
 				<div className="space-y-2">
 					<Label htmlFor="tipo_poliza">
-						Tipo de Póliza <span className="text-red-500">*</span>
+						Tipo de Póliza <span className="text-destructive">*</span>
 					</Label>
 					<Select value={tipoPoliza} onValueChange={(v: "individual" | "corporativo") => setTipoPoliza(v)}>
 						<SelectTrigger>
@@ -647,10 +712,10 @@ export function SaludForm({
 				</div>
 				<div className="space-y-2">
 					<Label htmlFor="regional">
-						Regional Asegurado <span className="text-red-500">*</span>
+						Regional Asegurado <span className="text-destructive">*</span>
 					</Label>
 					<Select value={regionalId} onValueChange={setRegionalId}>
-						<SelectTrigger className={errores.regional ? "border-red-500" : ""}>
+						<SelectTrigger className={errores.regional ? "border-destructive" : ""}>
 							<SelectValue placeholder="Seleccione una regional" />
 						</SelectTrigger>
 						<SelectContent>
@@ -661,7 +726,7 @@ export function SaludForm({
 							))}
 						</SelectContent>
 					</Select>
-					{errores.regional && <p className="text-sm text-red-600">{errores.regional}</p>}
+					{errores.regional && <p className="text-sm text-destructive">{errores.regional}</p>}
 				</div>
 				<div className="space-y-2 md:col-span-2">
 					<div className="flex items-center space-x-2">
@@ -682,9 +747,9 @@ export function SaludForm({
 				<div className="flex items-center justify-between">
 					<div>
 						<Label className="text-base">
-							Contratante <span className="text-red-500">*</span>
+							Contratante <span className="text-destructive">*</span>
 						</Label>
-						<p className="text-sm text-gray-600 mt-1">
+						<p className="text-sm text-muted-foreground mt-1">
 							Cliente registrado que contrata la póliza (requiere datos completos)
 						</p>
 					</div>
@@ -700,17 +765,17 @@ export function SaludForm({
 				</div>
 
 				{errores.contratante && (
-					<div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded">
-						<AlertTriangle className="h-4 w-4 text-red-600" />
-						<p className="text-sm text-red-600">{errores.contratante}</p>
+					<div className="flex items-center gap-2 p-3 bg-destructive/10 border border-destructive/20 rounded">
+						<AlertTriangle className="h-4 w-4 text-destructive" />
+						<p className="text-sm text-destructive">{errores.contratante}</p>
 					</div>
 				)}
 
 				{aseguradoPrincipal && !contratante && (
-					<div className="p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between">
+					<div className="p-3 bg-info/10 border border-info/20 rounded-lg flex items-center justify-between">
 						<div className="flex items-center gap-2">
-							<UserCheck className="h-4 w-4 text-blue-600" />
-							<span className="text-sm text-blue-900">
+							<UserCheck className="h-4 w-4 text-info" />
+							<span className="text-sm text-info">
 								<strong>{aseguradoPrincipal.nombre_completo}</strong> ({aseguradoPrincipal.documento}) —
 								Asegurado de la póliza
 							</span>
@@ -733,8 +798,8 @@ export function SaludForm({
 				)}
 
 				{mostrarBuscadorContratante && (
-					<div className="p-4 border-2 border-primary rounded-lg bg-blue-50">
-						<h3 className="font-semibold text-gray-900 mb-4">Buscar Contratante</h3>
+					<div className="p-4 border-2 border-primary rounded-lg bg-info/10">
+						<h3 className="font-semibold text-foreground mb-4">Buscar Contratante</h3>
 						<BuscadorClientes
 							onSeleccionar={seleccionarContratante}
 							onCancelar={() => setMostrarBuscadorContratante(false)}
@@ -748,12 +813,12 @@ export function SaludForm({
 							<UserCheck className="h-5 w-5 text-primary flex-shrink-0 mt-1" />
 							<div className="flex-1 space-y-3">
 								<div>
-									<p className="font-medium text-gray-900">{contratante.client_name}</p>
-									<p className="text-sm text-gray-600">CI: {contratante.client_ci}</p>
+									<p className="font-medium text-foreground">{contratante.client_name}</p>
+									<p className="text-sm text-muted-foreground">CI: {contratante.client_ci}</p>
 								</div>
 								<div className="grid grid-cols-1 md:grid-cols-2 gap-3">
 									<div className="space-y-1">
-										<Label className="text-xs text-gray-600">Nivel de Cobertura</Label>
+										<Label className="text-xs text-muted-foreground">Nivel de Cobertura</Label>
 										<Select
 											value={contratante.nivel_id}
 											onValueChange={(v) => setContratante({ ...contratante, nivel_id: v })}
@@ -771,8 +836,8 @@ export function SaludForm({
 										</Select>
 									</div>
 									<div className="space-y-1">
-										<Label className="text-xs text-gray-600">
-											Rol <span className="text-red-500">*</span>
+										<Label className="text-xs text-muted-foreground">
+											Rol <span className="text-destructive">*</span>
 										</Label>
 										<Select
 											value={contratante.rol}
@@ -788,7 +853,7 @@ export function SaludForm({
 												<SelectItem value="contratante">Contratante</SelectItem>
 											</SelectContent>
 										</Select>
-										<p className="text-xs text-gray-500">
+										<p className="text-xs text-muted-foreground">
 											{contratante.rol === "contratante-titular"
 												? "Es contratante y también es titular (puede tener cónyuge y descendientes)"
 												: "Solo contrata — debe haber al menos 1 titular"}
@@ -821,7 +886,7 @@ export function SaludForm({
 									<Edit className="h-4 w-4" />
 								</Button>
 								<Button variant="ghost" size="sm" onClick={eliminarContratante}>
-									<Trash2 className="h-4 w-4 text-red-600" />
+									<Trash2 className="h-4 w-4 text-destructive" />
 								</Button>
 							</div>
 						</div>
@@ -830,9 +895,9 @@ export function SaludForm({
 
 				{!contratante && !mostrarBuscadorContratante && (
 					<div className="text-center py-8 border-2 border-dashed rounded-lg">
-						<Users className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-						<p className="text-gray-600">No hay contratante seleccionado</p>
-						<p className="text-sm text-gray-500">
+						<Users className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+						<p className="text-muted-foreground">No hay contratante seleccionado</p>
+						<p className="text-sm text-muted-foreground">
 							Haga clic en &ldquo;Seleccionar Contratante&rdquo; para comenzar
 						</p>
 					</div>
@@ -845,12 +910,12 @@ export function SaludForm({
 					<div>
 						<Label className="text-base">
 							Titulares
-							{contratante?.rol === "contratante" && <span className="text-red-500 ml-1">*</span>}
+							{contratante?.rol === "contratante" && <span className="text-destructive ml-1">*</span>}
 						</Label>
-						<p className="text-sm text-gray-600 mt-1">
+						<p className="text-sm text-muted-foreground mt-1">
 							Personas titulares aseguradas con datos mínimos
 							{contratante?.rol === "contratante-titular" && (
-								<span className="text-gray-400"> — el contratante ya es titular</span>
+								<span className="text-muted-foreground"> — el contratante ya es titular</span>
 							)}
 						</p>
 					</div>
@@ -861,9 +926,9 @@ export function SaludForm({
 				</div>
 
 				{errores.titulares && (
-					<div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded">
-						<AlertTriangle className="h-4 w-4 text-red-600" />
-						<p className="text-sm text-red-600">{errores.titulares}</p>
+					<div className="flex items-center gap-2 p-3 bg-destructive/10 border border-destructive/20 rounded">
+						<AlertTriangle className="h-4 w-4 text-destructive" />
+						<p className="text-sm text-destructive">{errores.titulares}</p>
 					</div>
 				)}
 
@@ -874,17 +939,17 @@ export function SaludForm({
 							return (
 								<div key={titular.id} className="border rounded-lg overflow-hidden">
 									{/* Cabecera del titular */}
-									<div className="p-4 bg-gray-50 flex items-center gap-3">
+									<div className="p-4 bg-secondary flex items-center gap-3">
 										<UserPlus className="h-5 w-5 text-primary flex-shrink-0" />
 										<div className="flex-1">
 											<div className="flex items-center gap-2">
-												<p className="font-medium text-gray-900">{titular.nombre_completo}</p>
+												<p className="font-medium text-foreground">{titular.nombre_completo}</p>
 												<span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-teal-100 text-teal-800">
 													Titular
 												</span>
 											</div>
-											<p className="text-sm text-gray-600">CI: {titular.carnet}</p>
-											<p className="text-xs text-gray-500">
+											<p className="text-sm text-muted-foreground">CI: {titular.carnet}</p>
+											<p className="text-xs text-muted-foreground">
 												Nivel: {niveles.find((n) => n.id === titular.nivel_id)?.nombre ?? "—"} ·
 												Familia: {(titular.conyugue ? 1 : 0) + titular.descendientes.length}{" "}
 												miembro(s)
@@ -892,7 +957,7 @@ export function SaludForm({
 										</div>
 										<div className="flex items-center gap-1">
 											<div className="space-y-1 mr-2">
-												<Label className="text-xs text-gray-500">Nivel</Label>
+												<Label className="text-xs text-muted-foreground">Nivel</Label>
 												<Select
 													value={titular.nivel_id}
 													onValueChange={(v) =>
@@ -929,7 +994,7 @@ export function SaludForm({
 												onClick={() => eliminarTitular(titular.id)}
 												className="h-8 w-8 p-0"
 											>
-												<Trash2 className="h-4 w-4 text-red-600" />
+												<Trash2 className="h-4 w-4 text-destructive" />
 											</Button>
 											<Button
 												variant="ghost"
@@ -948,7 +1013,7 @@ export function SaludForm({
 
 									{/* Familiares del titular (expandible) */}
 									{expandido && (
-										<div className="p-4 bg-white border-t">
+										<div className="p-4 bg-card border-t">
 											{renderFamiliares(
 												titular.conyugue,
 												titular.descendientes,
@@ -965,8 +1030,8 @@ export function SaludForm({
 					</div>
 				) : (
 					<div className="text-center py-6 border-2 border-dashed rounded-lg">
-						<UserPlus className="h-10 w-10 text-gray-400 mx-auto mb-2" />
-						<p className="text-gray-500 text-sm">
+						<UserPlus className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
+						<p className="text-muted-foreground text-sm">
 							{contratante?.rol === "contratante-titular"
 								? "Opcional: el contratante ya es titular"
 								: "Agregue al menos un titular"}
@@ -976,9 +1041,9 @@ export function SaludForm({
 			</div>
 
 			{/* Info de roles */}
-			<div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-				<p className="text-sm text-blue-900 font-medium mb-2">Roles en pólizas de Salud:</p>
-				<ul className="text-xs text-blue-800 space-y-1 ml-2">
+			<div className="bg-info/10 border border-info/20 rounded-lg p-4 mb-6">
+				<p className="text-sm text-info font-medium mb-2">Roles en pólizas de Salud:</p>
+				<ul className="text-xs text-info space-y-1 ml-2">
 					<li>
 						• <strong>Contratante-Titular:</strong> Contrata y es titular principal (puede tener cónyuge y
 						descendientes)
@@ -1045,6 +1110,8 @@ export function SaludForm({
 					}}
 				/>
 			)}
+
+			{dialogoEliminar}
 		</div>
 	);
 }

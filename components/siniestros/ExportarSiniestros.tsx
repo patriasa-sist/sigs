@@ -6,6 +6,7 @@ import { Download, Loader2 } from "lucide-react";
 import * as ExcelJS from "exceljs";
 import type { SiniestroVista } from "@/types/siniestro";
 import { toExcelDateLaPaz, formatFechaHoraLaPaz, hoyLaPaz } from "@/utils/formatters";
+import { toast } from "sonner";
 
 interface ExportarSiniestrosProps {
 	siniestros: SiniestroVista[];
@@ -22,7 +23,7 @@ export default function ExportarSiniestros({ siniestros, filtrosActivos }: Expor
 
 	const handleExport = async () => {
 		if (siniestros.length === 0) {
-			alert("No hay siniestros para exportar");
+			toast.warning("No hay siniestros para exportar");
 			return;
 		}
 
@@ -189,7 +190,7 @@ export default function ExportarSiniestros({ siniestros, filtrosActivos }: Expor
 			window.URL.revokeObjectURL(url);
 		} catch (error) {
 			console.error("Error exportando siniestros:", error);
-			alert("Error al exportar siniestros. Intente nuevamente.");
+			toast.error("Error al exportar siniestros. Intente nuevamente.");
 		} finally {
 			setLoading(false);
 		}

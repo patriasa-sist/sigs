@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { createClient } from "@/utils/supabase/client";
 import { generateTempStoragePath } from "@/utils/fileUpload";
+import { DOCUMENTOS_OBLIGATORIOS } from "@/utils/validationConstants";
 
 type Props = {
 	documentos: DocumentoPoliza[];
@@ -27,9 +28,6 @@ const TIPOS_DOCUMENTO = [
 	"Condicionado general",
 	"Otro",
 ] as const;
-
-// Tipos de documentos obligatorios para continuar al siguiente paso
-const DOCUMENTOS_OBLIGATORIOS = ["Póliza"] as const;
 
 const BUCKET = "polizas-documentos";
 

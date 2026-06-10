@@ -24,6 +24,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { toast } from "sonner";
 import { ProcessedInsuranceRecord } from "@/types/insurance";
 import {
 	LetterData,
@@ -1111,7 +1112,7 @@ export default function LetterGenerator({ selectedRecords, onClose, onGenerated 
 				window.open(pdfUrl, "_blank");
 			} catch (error) {
 				console.error("Error generating preview:", error);
-				alert("Error al generar la vista previa");
+				toast.error("Error al generar la vista previa");
 			}
 		}
 
@@ -1185,7 +1186,7 @@ export default function LetterGenerator({ selectedRecords, onClose, onGenerated 
 			onGenerated?.(result);
 		} catch (error) {
 			console.error("Error generating PDF:", error);
-			alert("Error al generar el PDF");
+			toast.error("Error al generar el PDF");
 		} finally {
 			setIsGenerating(false);
 			endOperation(operationId);
@@ -1244,7 +1245,7 @@ export default function LetterGenerator({ selectedRecords, onClose, onGenerated 
 			onGenerated?.(result);
 		} catch (error) {
 			console.error("Error generating ZIP:", error);
-			alert("Error al generar el archivo ZIP");
+			toast.error("Error al generar el archivo ZIP");
 		} finally {
 			setIsGenerating(false);
 		}
@@ -1311,7 +1312,7 @@ export default function LetterGenerator({ selectedRecords, onClose, onGenerated 
 			onGenerated?.(result);
 		} catch (error) {
 			console.error("Error preparing WhatsApp message:", error);
-			alert("Error al preparar el mensaje de WhatsApp.");
+			toast.error("Error al preparar el mensaje de WhatsApp.");
 		} finally {
 			setIsGenerating(false);
 			endOperation(operationId);

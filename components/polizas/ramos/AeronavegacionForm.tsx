@@ -19,6 +19,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
 import { BuscadorClientes } from "../BuscadorClientes";
 import { NaveModal } from "./NaveModal";
 import { useLiveSync } from "@/hooks/useLiveSync";
@@ -33,6 +44,12 @@ type Props = {
 
 // Sub-paso interno: configuración de niveles AP o formulario principal
 type SubPaso = "niveles_ap" | "principal";
+
+// Elemento pendiente de confirmación de eliminación (AlertDialog compartido)
+type ConfirmacionEliminar =
+	| { tipo: "nivel"; id: string }
+	| { tipo: "nave"; index: number }
+	| { tipo: "asegurado"; clientId: string };
 
 export function AeronavegacionForm({ datos, tipoNave, onChange, onSiguiente, onAnterior }: Props) {
 	// Estado del sub-paso actual
@@ -59,6 +76,7 @@ export function AeronavegacionForm({ datos, tipoNave, onChange, onSiguiente, onA
 	const [indexNaveEditando, setIndexNaveEditando] = useState<number | null>(null);
 	const [mostrarBuscadorCliente, setMostrarBuscadorCliente] = useState(false);
 	const [errores, setErrores] = useState<Record<string, string>>({});
+	const [confirmacionEliminar, setConfirmacionEliminar] = useState<ConfirmacionEliminar | null>(null);
 
 	const tipoLabel = tipoNave === "aeronave" ? "Aeronave" : "Nave/Embarcación";
 	const tipoLabelPlural = tipoNave === "aeronave" ? "Aeronaves" : "Naves/Embarcaciones";
@@ -136,15 +154,13 @@ export function AeronavegacionForm({ datos, tipoNave, onChange, onSiguiente, onA
 		// Verificar si alguna nave usa este nivel
 		const navesConNivel = naves.filter((n) => n.nivel_ap_id === id);
 		if (navesConNivel.length > 0) {
-			alert(
+			toast.warning(
 				`No se puede eliminar este nivel porque está asignado a ${navesConNivel.length} ${tipoLabelPlural.toLowerCase()}`,
 			);
 			return;
 		}
 
-		if (confirm("¿Está seguro de eliminar este nivel?")) {
-			setNivelesAP(nivelesAP.filter((n) => n.id !== id));
-		}
+		setConfirmacionEliminar({ tipo: "nivel", id });
 	};
 
 	const continuarAPrincipal = () => {
@@ -184,7 +200,7 @@ export function AeronavegacionForm({ datos, tipoNave, onChange, onSiguiente, onA
 		} else {
 			// Verificar matrícula única
 			if (naves.some((n) => n.matricula === nave.matricula)) {
-				alert("Ya existe una nave con esa matrícula");
+				toast.warning("Ya existe una nave con esa matrícula");
 				return;
 			}
 			nuevasNaves = [...naves, nave];
@@ -197,19 +213,15 @@ export function AeronavegacionForm({ datos, tipoNave, onChange, onSiguiente, onA
 		setIndexNaveEditando(null);
 	};
 
-	// Eliminar nave
+	// Eliminar nave (pide confirmación vía AlertDialog)
 	const handleEliminarNave = (index: number) => {
-		if (confirm(`¿Está seguro de eliminar esta ${tipoLabel.toLowerCase()}?`)) {
-			const nuevasNaves = naves.filter((_, i) => i !== index);
-			setNaves(nuevasNaves);
-			actualizarDatos({ naves: nuevasNaves });
-		}
+		setConfirmacionEliminar({ tipo: "nave", index });
 	};
 
 	// Agregar asegurado adicional
 	const handleAgregarAsegurado = (cliente: { id: string; nombre: string; ci: string }) => {
 		if (aseguradosAdicionales.some((a) => a.client_id === cliente.id)) {
-			alert("Este cliente ya fue agregado como asegurado adicional");
+			toast.warning("Este cliente ya fue agregado como asegurado adicional");
 			return;
 		}
 
@@ -226,13 +238,26 @@ export function AeronavegacionForm({ datos, tipoNave, onChange, onSiguiente, onA
 		setMostrarBuscadorCliente(false);
 	};
 
-	// Eliminar asegurado adicional
+	// Eliminar asegurado adicional (pide confirmación vía AlertDialog)
 	const handleEliminarAsegurado = (clientId: string) => {
-		if (confirm("¿Está seguro de eliminar este asegurado adicional?")) {
-			const nuevosAsegurados = aseguradosAdicionales.filter((a) => a.client_id !== clientId);
+		setConfirmacionEliminar({ tipo: "asegurado", clientId });
+	};
+
+	// Ejecuta la eliminación confirmada en el AlertDialog compartido
+	const confirmarEliminar = () => {
+		if (!confirmacionEliminar) return;
+		if (confirmacionEliminar.tipo === "nivel") {
+			setNivelesAP(nivelesAP.filter((n) => n.id !== confirmacionEliminar.id));
+		} else if (confirmacionEliminar.tipo === "nave") {
+			const nuevasNaves = naves.filter((_, i) => i !== confirmacionEliminar.index);
+			setNaves(nuevasNaves);
+			actualizarDatos({ naves: nuevasNaves });
+		} else {
+			const nuevosAsegurados = aseguradosAdicionales.filter((a) => a.client_id !== confirmacionEliminar.clientId);
 			setAseguradosAdicionales(nuevosAsegurados);
 			actualizarDatos({ asegurados_adicionales: nuevosAsegurados });
 		}
+		setConfirmacionEliminar(null);
 	};
 
 	// Actualizar datos del formulario
@@ -299,62 +324,94 @@ export function AeronavegacionForm({ datos, tipoNave, onChange, onSiguiente, onA
 
 	const tieneNaves = naves.length > 0;
 
+	// Diálogo de confirmación compartido entre ambos sub-pasos
+	const dialogoEliminar = (
+		<AlertDialog
+			open={confirmacionEliminar !== null}
+			onOpenChange={(open) => {
+				if (!open) setConfirmacionEliminar(null);
+			}}
+		>
+			<AlertDialogContent>
+				<AlertDialogHeader>
+					<AlertDialogTitle>
+						{confirmacionEliminar?.tipo === "nivel"
+							? "¿Eliminar este nivel?"
+							: confirmacionEliminar?.tipo === "nave"
+								? `¿Eliminar esta ${tipoLabel.toLowerCase()}?`
+								: "¿Eliminar este asegurado adicional?"}
+					</AlertDialogTitle>
+					<AlertDialogDescription>Se quitará de la lista de la póliza.</AlertDialogDescription>
+				</AlertDialogHeader>
+				<AlertDialogFooter>
+					<AlertDialogCancel>Cancelar</AlertDialogCancel>
+					<AlertDialogAction
+						onClick={confirmarEliminar}
+						className="bg-destructive text-white hover:bg-destructive/90"
+					>
+						Eliminar
+					</AlertDialogAction>
+				</AlertDialogFooter>
+			</AlertDialogContent>
+		</AlertDialog>
+	);
+
 	// ===== RENDER PASO 2.1: NIVELES AP =====
 	if (subPaso === "niveles_ap") {
 		return (
-			<div className="bg-white rounded-lg shadow-sm border p-6">
+			<div className="bg-card rounded-lg shadow-sm border border-border p-6">
 				<div className="flex items-center justify-between mb-6">
 					<div>
-						<h2 className="text-xl font-semibold text-gray-900">
+						<h2 className="text-xl font-semibold text-foreground">
 							Paso 2.1: Niveles de Accidentes Personales
 						</h2>
-						<p className="text-sm text-gray-600 mt-1">
+						<p className="text-sm text-muted-foreground mt-1">
 							Configure los niveles de cobertura de AP para tripulantes y pasajeros (opcional)
 						</p>
 					</div>
-					<Settings className="h-6 w-6 text-gray-400" />
+					<Settings className="h-6 w-6 text-muted-foreground" />
 				</div>
 
 				{/* Lista de niveles */}
 				{nivelesAP.length > 0 && (
 					<div className="mb-6 border rounded-lg overflow-hidden">
 						<table className="w-full">
-							<thead className="bg-gray-50">
+							<thead className="bg-muted/50">
 								<tr>
-									<th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">
+									<th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
 										Nivel
 									</th>
-									<th className="px-4 py-3 text-right text-xs font-medium text-gray-700 uppercase">
+									<th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase">
 										Muerte Accidental
 									</th>
-									<th className="px-4 py-3 text-right text-xs font-medium text-gray-700 uppercase">
+									<th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase">
 										Invalidez
 									</th>
-									<th className="px-4 py-3 text-right text-xs font-medium text-gray-700 uppercase">
+									<th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase">
 										Gastos Médicos
 									</th>
-									<th className="px-4 py-3 text-center text-xs font-medium text-gray-700 uppercase">
+									<th className="px-4 py-3 text-center text-xs font-medium text-muted-foreground uppercase">
 										Acciones
 									</th>
 								</tr>
 							</thead>
 							<tbody className="divide-y">
 								{nivelesAP.map((nivel) => (
-									<tr key={nivel.id} className="hover:bg-gray-50">
-										<td className="px-4 py-3 font-medium text-gray-900">{nivel.nombre}</td>
-										<td className="px-4 py-3 text-right text-gray-900">
+									<tr key={nivel.id} className="hover:bg-muted/50">
+										<td className="px-4 py-3 font-medium text-foreground">{nivel.nombre}</td>
+										<td className="px-4 py-3 text-right text-foreground">
 											{nivel.monto_muerte_accidental.toLocaleString("es-BO", {
 												minimumFractionDigits: 2,
 												maximumFractionDigits: 2,
 											})}
 										</td>
-										<td className="px-4 py-3 text-right text-gray-900">
+										<td className="px-4 py-3 text-right text-foreground">
 											{nivel.monto_invalidez.toLocaleString("es-BO", {
 												minimumFractionDigits: 2,
 												maximumFractionDigits: 2,
 											})}
 										</td>
-										<td className="px-4 py-3 text-right text-gray-900">
+										<td className="px-4 py-3 text-right text-foreground">
 											{nivel.monto_gastos_medicos.toLocaleString("es-BO", {
 												minimumFractionDigits: 2,
 												maximumFractionDigits: 2,
@@ -369,7 +426,7 @@ export function AeronavegacionForm({ datos, tipoNave, onChange, onSiguiente, onA
 													variant="ghost"
 													size="sm"
 													onClick={() => eliminarNivel(nivel.id)}
-													className="text-red-600 hover:text-red-700 hover:bg-red-50"
+													className="text-destructive hover:text-destructive hover:bg-destructive/10"
 												>
 													<Trash2 className="h-4 w-4" />
 												</Button>
@@ -384,8 +441,8 @@ export function AeronavegacionForm({ datos, tipoNave, onChange, onSiguiente, onA
 
 				{/* Formulario para crear/editar nivel */}
 				{nivelEditando ? (
-					<div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-						<h4 className="text-sm font-semibold text-blue-900 mb-4">
+					<div className="mb-6 p-4 bg-info/10 rounded-lg border border-info/20">
+						<h4 className="text-sm font-semibold text-info mb-4">
 							{nivelesAP.some((n) => n.id === nivelEditando.id) ? "Editar Nivel" : "Nuevo Nivel"}
 						</h4>
 
@@ -397,9 +454,11 @@ export function AeronavegacionForm({ datos, tipoNave, onChange, onSiguiente, onA
 									value={nombreNivel}
 									onChange={(e) => setNombreNivel(e.target.value)}
 									placeholder="Ej: Nivel 1"
-									className={errores.nombre_nivel ? "border-red-500" : ""}
+									className={errores.nombre_nivel ? "border-destructive" : ""}
 								/>
-								{errores.nombre_nivel && <p className="text-sm text-red-600">{errores.nombre_nivel}</p>}
+								{errores.nombre_nivel && (
+									<p className="text-sm text-destructive">{errores.nombre_nivel}</p>
+								)}
 							</div>
 
 							<div className="space-y-2">
@@ -442,7 +501,7 @@ export function AeronavegacionForm({ datos, tipoNave, onChange, onSiguiente, onA
 							</div>
 						</div>
 
-						{errores.montos && <p className="text-sm text-red-600 mt-2">{errores.montos}</p>}
+						{errores.montos && <p className="text-sm text-destructive mt-2">{errores.montos}</p>}
 
 						<div className="flex justify-end gap-2 mt-4">
 							<Button
@@ -466,9 +525,9 @@ export function AeronavegacionForm({ datos, tipoNave, onChange, onSiguiente, onA
 
 				{nivelesAP.length === 0 && !nivelEditando && (
 					<div className="text-center py-8 border-2 border-dashed rounded-lg mb-6">
-						<Settings className="h-10 w-10 text-gray-400 mx-auto mb-3" />
-						<p className="text-gray-600 mb-1">No hay niveles de AP configurados</p>
-						<p className="text-sm text-gray-500">
+						<Settings className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+						<p className="text-muted-foreground mb-1">No hay niveles de AP configurados</p>
+						<p className="text-sm text-muted-foreground">
 							Puede continuar sin niveles o agregar niveles para cobertura de tripulantes/pasajeros
 						</p>
 					</div>
@@ -486,23 +545,25 @@ export function AeronavegacionForm({ datos, tipoNave, onChange, onSiguiente, onA
 						<ChevronRight className="ml-2 h-5 w-5" />
 					</Button>
 				</div>
+
+				{dialogoEliminar}
 			</div>
 		);
 	}
 
 	// ===== RENDER PASO 3: PRINCIPAL =====
 	return (
-		<div className="bg-white rounded-lg shadow-sm border p-6">
+		<div className="bg-card rounded-lg shadow-sm border border-border p-6">
 			<div className="flex items-center justify-between mb-6">
 				<div>
-					<h2 className="text-xl font-semibold text-gray-900">Paso 3: {tipoLabelPlural} Aseguradas</h2>
-					<p className="text-sm text-gray-600 mt-1">
+					<h2 className="text-xl font-semibold text-foreground">Paso 3: {tipoLabelPlural} Aseguradas</h2>
+					<p className="text-sm text-muted-foreground mt-1">
 						Agregue las {tipoLabelPlural.toLowerCase()} y asegurados adicionales
 					</p>
 				</div>
 
 				{tieneNaves && (
-					<div className="flex items-center gap-2 text-green-600">
+					<div className="flex items-center gap-2 text-success">
 						<CheckCircle2 className="h-5 w-5" />
 						<span className="text-sm font-medium">
 							{naves.length}{" "}
@@ -514,19 +575,19 @@ export function AeronavegacionForm({ datos, tipoNave, onChange, onSiguiente, onA
 
 			{/* Botón para volver a niveles AP */}
 			<div className="mb-4">
-				<Button variant="ghost" size="sm" onClick={volverANiveles} className="text-gray-600">
+				<Button variant="ghost" size="sm" onClick={volverANiveles} className="text-muted-foreground">
 					<Settings className="mr-2 h-4 w-4" />
 					Configurar Niveles AP ({nivelesAP.length} configurados)
 				</Button>
 			</div>
 
 			{/* Tipo de Póliza */}
-			<div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
-				<Label htmlFor="tipo-poliza" className="block text-sm font-medium text-gray-700 mb-2">
+			<div className="mb-6 p-4 bg-secondary rounded-lg border border-border">
+				<Label htmlFor="tipo-poliza" className="block text-sm font-medium text-foreground mb-2">
 					Tipo de Póliza
 				</Label>
 				<Select value={tipoPoliza} onValueChange={handleTipoPolizaChange}>
-					<SelectTrigger id="tipo-poliza" className="w-full max-w-xs bg-white">
+					<SelectTrigger id="tipo-poliza" className="w-full max-w-xs bg-background">
 						<SelectValue />
 					</SelectTrigger>
 					<SelectContent>
@@ -539,7 +600,7 @@ export function AeronavegacionForm({ datos, tipoNave, onChange, onSiguiente, onA
 			{/* Sección de Naves */}
 			<div className="mb-6">
 				<div className="flex items-center justify-between mb-4">
-					<h3 className="text-lg font-medium text-gray-900">{tipoLabelPlural}</h3>
+					<h3 className="text-lg font-medium text-foreground">{tipoLabelPlural}</h3>
 					<Button onClick={handleAgregarNave}>
 						<Plus className="mr-2 h-4 w-4" />
 						Agregar {tipoLabel}
@@ -547,69 +608,69 @@ export function AeronavegacionForm({ datos, tipoNave, onChange, onSiguiente, onA
 				</div>
 
 				{errores.general && (
-					<div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+					<div className="mb-4 p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive text-sm">
 						{errores.general}
 					</div>
 				)}
 
 				{naves.length === 0 ? (
 					<div className="text-center py-12 border-2 border-dashed rounded-lg">
-						<IconoNave className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-						<p className="text-gray-600 mb-2">No hay {tipoLabelPlural.toLowerCase()} agregadas</p>
-						<p className="text-sm text-gray-500">
+						<IconoNave className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+						<p className="text-muted-foreground mb-2">No hay {tipoLabelPlural.toLowerCase()} agregadas</p>
+						<p className="text-sm text-muted-foreground">
 							Agregue al menos una {tipoLabel.toLowerCase()} para continuar
 						</p>
 					</div>
 				) : (
 					<div className="overflow-x-auto border rounded-lg">
 						<table className="w-full">
-							<thead className="bg-gray-50">
+							<thead className="bg-muted/50">
 								<tr>
-									<th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">
+									<th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
 										Matrícula
 									</th>
-									<th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">
+									<th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
 										Marca/Modelo
 									</th>
-									<th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">
+									<th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
 										Año
 									</th>
-									<th className="px-4 py-3 text-center text-xs font-medium text-gray-700 uppercase">
+									<th className="px-4 py-3 text-center text-xs font-medium text-muted-foreground uppercase">
 										Uso
 									</th>
-									<th className="px-4 py-3 text-center text-xs font-medium text-gray-700 uppercase">
+									<th className="px-4 py-3 text-center text-xs font-medium text-muted-foreground uppercase">
 										Pasajeros
 									</th>
-									<th className="px-4 py-3 text-right text-xs font-medium text-gray-700 uppercase">
+									<th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase">
 										Valor Casco
 									</th>
-									<th className="px-4 py-3 text-right text-xs font-medium text-gray-700 uppercase">
+									<th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase">
 										Valor RC
 									</th>
-									<th className="px-4 py-3 text-center text-xs font-medium text-gray-700 uppercase">
+									<th className="px-4 py-3 text-center text-xs font-medium text-muted-foreground uppercase">
 										Nivel AP
 									</th>
-									<th className="px-4 py-3 text-center text-xs font-medium text-gray-700 uppercase">
+									<th className="px-4 py-3 text-center text-xs font-medium text-muted-foreground uppercase">
 										Acciones
 									</th>
 								</tr>
 							</thead>
 							<tbody className="divide-y">
 								{naves.map((nave, index) => (
-									<tr key={index} className="hover:bg-gray-50">
-										<td className="px-4 py-3 font-medium text-gray-900">{nave.matricula}</td>
-										<td className="px-4 py-3 text-sm text-gray-600">
+									<tr key={index} className="hover:bg-muted/50">
+										<td className="px-4 py-3 font-medium text-foreground">{nave.matricula}</td>
+										<td className="px-4 py-3 text-sm text-muted-foreground">
 											{nave.marca} {nave.modelo}
 										</td>
-										<td className="px-4 py-3 text-sm text-gray-600">{nave.ano}</td>
+										<td className="px-4 py-3 text-sm text-muted-foreground">{nave.ano}</td>
 										<td className="px-4 py-3 text-center">
 											<span
 												className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
 													nave.uso === "publico"
-														? "bg-blue-100 text-blue-800"
+														? "bg-info/15 text-info"
 														: nave.uso === "recreacion"
-															? "bg-purple-100 text-purple-800"
-															: "bg-green-100 text-green-800"
+															? "bg-primary/10 text-primary"
+															: "bg-success/15 text-success"
 												}`}
 											>
 												{nave.uso === "publico"
@@ -619,16 +680,16 @@ export function AeronavegacionForm({ datos, tipoNave, onChange, onSiguiente, onA
 														: "Privado"}
 											</span>
 										</td>
-										<td className="px-4 py-3 text-center text-sm text-gray-600">
+										<td className="px-4 py-3 text-center text-sm text-muted-foreground">
 											{nave.nro_pasajeros} / {nave.nro_tripulantes}
 										</td>
-										<td className="px-4 py-3 text-right text-sm text-gray-900">
+										<td className="px-4 py-3 text-right text-sm text-foreground">
 											{nave.valor_casco.toLocaleString("es-BO", {
 												minimumFractionDigits: 2,
 												maximumFractionDigits: 2,
 											})}
 										</td>
-										<td className="px-4 py-3 text-right text-sm text-gray-900">
+										<td className="px-4 py-3 text-right text-sm text-foreground">
 											{nave.valor_responsabilidad_civil.toLocaleString("es-BO", {
 												minimumFractionDigits: 2,
 												maximumFractionDigits: 2,
@@ -638,8 +699,8 @@ export function AeronavegacionForm({ datos, tipoNave, onChange, onSiguiente, onA
 											<span
 												className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
 													nave.nivel_ap_id
-														? "bg-indigo-100 text-indigo-800"
-														: "bg-gray-100 text-gray-600"
+														? "bg-primary/10 text-primary"
+														: "bg-muted text-muted-foreground"
 												}`}
 											>
 												{obtenerNombreNivelAP(nave.nivel_ap_id)}
@@ -658,7 +719,7 @@ export function AeronavegacionForm({ datos, tipoNave, onChange, onSiguiente, onA
 													variant="ghost"
 													size="sm"
 													onClick={() => handleEliminarNave(index)}
-													className="text-red-600 hover:text-red-700 hover:bg-red-50"
+													className="text-destructive hover:text-destructive hover:bg-destructive/10"
 												>
 													<Trash2 className="h-4 w-4" />
 												</Button>
@@ -673,14 +734,16 @@ export function AeronavegacionForm({ datos, tipoNave, onChange, onSiguiente, onA
 			</div>
 
 			{/* Sección de Asegurados Adicionales */}
-			<div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+			<div className="mb-6 p-4 bg-secondary rounded-lg border border-border">
 				<div className="flex items-center justify-between mb-4">
 					<div>
-						<h3 className="text-lg font-medium text-gray-900 flex items-center gap-2">
+						<h3 className="text-lg font-medium text-foreground flex items-center gap-2">
 							<Users className="h-5 w-5" />
 							Asegurados Adicionales
 						</h3>
-						<p className="text-sm text-gray-500">Opcional: agregue otros asegurados además del titular</p>
+						<p className="text-sm text-muted-foreground">
+							Opcional: agregue otros asegurados además del titular
+						</p>
 					</div>
 					<Button variant="outline" onClick={() => setMostrarBuscadorCliente(true)}>
 						<UserPlus className="mr-2 h-4 w-4" />
@@ -689,26 +752,26 @@ export function AeronavegacionForm({ datos, tipoNave, onChange, onSiguiente, onA
 				</div>
 
 				{aseguradosAdicionales.length === 0 ? (
-					<div className="text-center py-6 border-2 border-dashed rounded-lg bg-white">
-						<Users className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-						<p className="text-sm text-gray-500">No hay asegurados adicionales</p>
+					<div className="text-center py-6 border-2 border-dashed rounded-lg bg-card">
+						<Users className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+						<p className="text-sm text-muted-foreground">No hay asegurados adicionales</p>
 					</div>
 				) : (
 					<div className="space-y-2">
 						{aseguradosAdicionales.map((asegurado) => (
 							<div
 								key={asegurado.client_id}
-								className="flex items-center justify-between p-3 bg-white rounded-lg border"
+								className="flex items-center justify-between p-3 bg-card rounded-lg border"
 							>
 								<div>
-									<p className="font-medium text-gray-900">{asegurado.client_name}</p>
-									<p className="text-sm text-gray-500">CI: {asegurado.client_ci}</p>
+									<p className="font-medium text-foreground">{asegurado.client_name}</p>
+									<p className="text-sm text-muted-foreground">CI: {asegurado.client_ci}</p>
 								</div>
 								<Button
 									variant="ghost"
 									size="sm"
 									onClick={() => handleEliminarAsegurado(asegurado.client_id)}
-									className="text-red-600 hover:text-red-700 hover:bg-red-50"
+									className="text-destructive hover:text-destructive hover:bg-destructive/10"
 								>
 									<Trash2 className="h-4 w-4" />
 								</Button>
@@ -754,6 +817,8 @@ export function AeronavegacionForm({ datos, tipoNave, onChange, onSiguiente, onA
 					clientesExcluidos={aseguradosAdicionales.map((a) => a.client_id)}
 				/>
 			)}
+
+			{dialogoEliminar}
 		</div>
 	);
 }

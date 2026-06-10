@@ -13,6 +13,13 @@ type Props = {
 	onSiguiente: () => void;
 };
 
+// Filas de los selects de búsqueda. PostgREST infiere el join `clients` como
+// array al no conocer la cardinalidad del FK; estos tipos fijan el to-one real.
+type ClientsJoin = { id: string; client_type: string; status: string; created_at: string };
+type NaturalClientRow = ClienteNatural & { clients: ClientsJoin };
+type JuridicClientRow = ClienteJuridico & { clients: ClientsJoin };
+type UnipersonalClientRow = { razon_social: string; nit: string; clients: ClientsJoin };
+
 export function BuscarAsegurado({ asegurado, onAseguradoSeleccionado, onSiguiente }: Props) {
 	const [busqueda, setBusqueda] = useState("");
 	const [resultados, setResultados] = useState<AseguradoSeleccionado[]>([]);
@@ -20,7 +27,15 @@ export function BuscarAsegurado({ asegurado, onAseguradoSeleccionado, onSiguient
 	const [error, setError] = useState<string | null>(null);
 
 	const buscarClientes = useCallback(async (query: string) => {
-		if (!query.trim()) {
+		// PostgREST usa comas, paréntesis y comillas como sintaxis del filtro .or();
+		// se eliminan del término para no romper la consulta ni inyectar operadores.
+		const q = query
+			.trim()
+			.replace(/[,()"'\\]/g, " ")
+			.replace(/\s+/g, " ")
+			.trim();
+
+		if (!q) {
 			setResultados([]);
 			return;
 		}
@@ -30,12 +45,13 @@ export function BuscarAsegurado({ asegurado, onAseguradoSeleccionado, onSiguient
 
 		try {
 			const supabase = createClient();
-			const q = query.trim();
 
 			const [naturalesResult, juridicosResult, unipersonalesResult] = await Promise.all([
 				supabase
 					.from("natural_clients")
-					.select("*, clients!inner(id, client_type, status, created_at)")
+					.select(
+						"client_id, primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, tipo_documento, numero_documento, extension_ci, fecha_nacimiento, direccion, celular, correo_electronico, clients!inner(id, client_type, status, created_at)",
+					)
 					.eq("clients.status", "active")
 					.or(
 						`primer_nombre.ilike.%${q}%,` +
@@ -45,21 +61,26 @@ export function BuscarAsegurado({ asegurado, onAseguradoSeleccionado, onSiguient
 							`numero_documento.ilike.%${q}%`,
 					)
 					.order("created_at", { referencedTable: "clients", ascending: false })
-					.limit(15),
+					.limit(15)
+					.overrideTypes<NaturalClientRow[], { merge: false }>(),
 				supabase
 					.from("juridic_clients")
-					.select("*, clients!inner(id, client_type, status, created_at)")
+					.select(
+						"client_id, razon_social, tipo_sociedad, nit, matricula_comercio, direccion_legal, correo_electronico, telefono, clients!inner(id, client_type, status, created_at)",
+					)
 					.eq("clients.status", "active")
 					.or(`razon_social.ilike.%${q}%,nit.ilike.%${q}%`)
 					.order("created_at", { referencedTable: "clients", ascending: false })
-					.limit(10),
+					.limit(10)
+					.overrideTypes<JuridicClientRow[], { merge: false }>(),
 				supabase
 					.from("unipersonal_clients")
-					.select("*, clients!inner(id, client_type, status, created_at)")
+					.select("razon_social, nit, clients!inner(id, client_type, status, created_at)")
 					.eq("clients.status", "active")
 					.or(`razon_social.ilike.%${q}%,nit.ilike.%${q}%`)
 					.order("created_at", { referencedTable: "clients", ascending: false })
-					.limit(10),
+					.limit(10)
+					.overrideTypes<UnipersonalClientRow[], { merge: false }>(),
 			]);
 
 			if (naturalesResult.error) throw naturalesResult.error;

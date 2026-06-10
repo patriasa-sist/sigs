@@ -6,6 +6,16 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
 	ArrowLeft,
 	User2,
 	MapPin,
@@ -64,6 +74,7 @@ export default function EmpleadoProfile({ empleado }: Props) {
 	const [checklist, setChecklist] = useState<Record<string, ChecklistItem>>(empleado.employee_checklist?.items ?? {});
 	const [savingChecklist, setSavingChecklist] = useState(false);
 	const [showPDF, setShowPDF] = useState<"identificacion" | "documentos" | "patrimonio" | null>(null);
+	const [docADescartar, setDocADescartar] = useState<string | null>(null);
 
 	const completitud = calcularCompletitudChecklist(checklist);
 
@@ -148,9 +159,14 @@ export default function EmpleadoProfile({ empleado }: Props) {
 		window.location.reload();
 	};
 
-	const handleDocDiscard = async (docId: string) => {
-		if (!confirm("¿Descartar este documento?")) return;
-		await descartarDocumentoEmpleado(docId, empleado.id);
+	const handleDocDiscard = (docId: string) => {
+		setDocADescartar(docId);
+	};
+
+	const confirmarDescarte = async () => {
+		if (!docADescartar) return;
+		await descartarDocumentoEmpleado(docADescartar, empleado.id);
+		setDocADescartar(null);
 		window.location.reload();
 	};
 
@@ -652,6 +668,32 @@ export default function EmpleadoProfile({ empleado }: Props) {
 					)}
 				</div>
 			)}
+
+			{/* Diálogo: confirmar descarte de documento */}
+			<AlertDialog
+				open={docADescartar !== null}
+				onOpenChange={(open) => {
+					if (!open) setDocADescartar(null);
+				}}
+			>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>¿Descartar este documento?</AlertDialogTitle>
+						<AlertDialogDescription>
+							El documento dejará de mostrarse en el perfil del empleado.
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel>Cancelar</AlertDialogCancel>
+						<AlertDialogAction
+							onClick={confirmarDescarte}
+							className="bg-destructive text-white hover:bg-destructive/90"
+						>
+							Descartar
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
 		</div>
 	);
 }

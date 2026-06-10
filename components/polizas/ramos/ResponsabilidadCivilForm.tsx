@@ -7,6 +7,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { VehiculoRCModal } from "./VehiculoRCModal";
 import { createClient } from "@/utils/supabase/client";
 import { useLiveSync } from "@/hooks/useLiveSync";
@@ -29,6 +39,7 @@ export function ResponsabilidadCivilForm({ datos, onChange, onSiguiente, onAnter
 	const [vehiculoEditando, setVehiculoEditando] = useState<VehiculoRC | null>(null);
 	const [indexEditando, setIndexEditando] = useState<number | null>(null);
 	const [errores, setErrores] = useState<Record<string, string>>({});
+	const [vehiculoAEliminar, setVehiculoAEliminar] = useState<number | null>(null);
 
 	// Catálogos para mostrar nombres en la tabla
 	const [tiposVehiculo, setTiposVehiculo] = useState<TipoVehiculo[]>([]);
@@ -80,10 +91,15 @@ export function ResponsabilidadCivilForm({ datos, onChange, onSiguiente, onAnter
 	};
 
 	const handleEliminar = (idx: number) => {
-		if (!confirm("¿Eliminar este vehículo?")) return;
-		const lista = vehiculos.filter((_, i) => i !== idx);
+		setVehiculoAEliminar(idx);
+	};
+
+	const confirmarEliminar = () => {
+		if (vehiculoAEliminar === null) return;
+		const lista = vehiculos.filter((_, i) => i !== vehiculoAEliminar);
 		setVehiculos(lista);
 		emitir(lista);
+		setVehiculoAEliminar(null);
 	};
 
 	const handleTipoPolizaChange = (value: "individual" | "corporativo") => {
@@ -130,24 +146,24 @@ export function ResponsabilidadCivilForm({ datos, onChange, onSiguiente, onAnter
 	};
 
 	const usoColor = (uso: VehiculoRC["uso"]) => {
-		if (uso === "publico") return "bg-blue-100 text-blue-800";
-		if (uso === "privado") return "bg-purple-100 text-purple-800";
-		return "bg-green-100 text-green-800";
+		if (uso === "publico") return "bg-info/15 text-info";
+		if (uso === "privado") return "bg-primary/10 text-primary";
+		return "bg-success/15 text-success";
 	};
 
 	return (
-		<div className="bg-white rounded-lg shadow-sm border p-6">
+		<div className="bg-card rounded-lg shadow-sm border border-border p-6">
 			<div className="flex items-center justify-between mb-6">
 				<div>
-					<h2 className="text-xl font-semibold text-gray-900">
+					<h2 className="text-xl font-semibold text-foreground">
 						Paso 3: Datos Específicos - Responsabilidad Civil
 					</h2>
-					<p className="text-sm text-gray-600 mt-1">
+					<p className="text-sm text-muted-foreground mt-1">
 						Configure el límite de cobertura y opcionalmente los vehículos asegurados
 					</p>
 				</div>
 				{valorAsegurado > 0 && (
-					<div className="flex items-center gap-2 text-green-600">
+					<div className="flex items-center gap-2 text-success">
 						<CheckCircle2 className="h-5 w-5" />
 						<span className="text-sm font-medium">
 							{vehiculos.length > 0 ? `${vehiculos.length} vehículo(s)` : "Listo"}
@@ -157,12 +173,12 @@ export function ResponsabilidadCivilForm({ datos, onChange, onSiguiente, onAnter
 			</div>
 
 			{/* Datos generales de la póliza */}
-			<div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 p-4 bg-gray-50 rounded-lg border border-gray-200">
+			<div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 p-4 bg-secondary rounded-lg border border-border">
 				{/* Tipo de Póliza */}
 				<div className="space-y-2">
 					<Label htmlFor="tipo_poliza">Tipo de Póliza</Label>
 					<Select value={tipoPoliza} onValueChange={handleTipoPolizaChange}>
-						<SelectTrigger className="bg-white">
+						<SelectTrigger className="bg-background">
 							<SelectValue />
 						</SelectTrigger>
 						<SelectContent>
@@ -175,7 +191,7 @@ export function ResponsabilidadCivilForm({ datos, onChange, onSiguiente, onAnter
 				{/* Valor Asegurado (límite de cobertura) */}
 				<div className="space-y-2">
 					<Label htmlFor="valor_asegurado">
-						Límite de Cobertura <span className="text-red-500">*</span>
+						Límite de Cobertura <span className="text-destructive">*</span>
 					</Label>
 					<Input
 						id="valor_asegurado"
@@ -185,10 +201,10 @@ export function ResponsabilidadCivilForm({ datos, onChange, onSiguiente, onAnter
 						value={valorAsegurado || ""}
 						onChange={(e) => handleValorChange(parseFloat(e.target.value) || 0)}
 						placeholder="100000.00"
-						className={`bg-white ${errores.valor_asegurado ? "border-red-500" : ""}`}
+						className={`bg-background ${errores.valor_asegurado ? "border-destructive" : ""}`}
 					/>
-					{errores.valor_asegurado && <p className="text-sm text-red-600">{errores.valor_asegurado}</p>}
-					<p className="text-xs text-gray-500">
+					{errores.valor_asegurado && <p className="text-sm text-destructive">{errores.valor_asegurado}</p>}
+					<p className="text-xs text-muted-foreground">
 						La moneda se toma de los datos básicos de la póliza (Paso 2)
 					</p>
 				</div>
@@ -196,8 +212,8 @@ export function ResponsabilidadCivilForm({ datos, onChange, onSiguiente, onAnter
 
 			{/* Sección de vehículos */}
 			<div className="flex items-center justify-between mb-4">
-				<h3 className="text-base font-semibold text-gray-900">
-					Vehículos Asegurados <span className="text-gray-400 text-sm font-normal">(opcional)</span>
+				<h3 className="text-base font-semibold text-foreground">
+					Vehículos Asegurados <span className="text-muted-foreground text-sm font-normal">(opcional)</span>
 				</h3>
 				<Button
 					onClick={() => {
@@ -213,59 +229,61 @@ export function ResponsabilidadCivilForm({ datos, onChange, onSiguiente, onAnter
 
 			{vehiculos.length === 0 ? (
 				<div className="text-center py-12 border-2 border-dashed rounded-lg mb-6">
-					<Car className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-					<p className="text-gray-600 mb-1">No hay vehículos agregados</p>
-					<p className="text-sm text-gray-500">
+					<Car className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+					<p className="text-muted-foreground mb-1">No hay vehículos agregados</p>
+					<p className="text-sm text-muted-foreground">
 						Agregue los vehículos que pueden causar accidentes a terceros
 					</p>
 				</div>
 			) : (
 				<div className="overflow-x-auto border rounded-lg mb-6">
 					<table className="w-full">
-						<thead className="bg-gray-50">
+						<thead className="bg-muted/50">
 							<tr>
-								<th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">
+								<th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
 									Placa
 								</th>
-								<th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">
+								<th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
 									Chasis
 								</th>
-								<th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">
+								<th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
 									Tipo
 								</th>
-								<th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">
+								<th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
 									Marca / Modelo
 								</th>
-								<th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">Año</th>
-								<th className="px-4 py-3 text-center text-xs font-medium text-gray-700 uppercase">
+								<th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+									Año
+								</th>
+								<th className="px-4 py-3 text-center text-xs font-medium text-muted-foreground uppercase">
 									Uso
 								</th>
-								<th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">
+								<th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
 									Servicio
 								</th>
-								<th className="px-4 py-3 text-center text-xs font-medium text-gray-700 uppercase">
+								<th className="px-4 py-3 text-center text-xs font-medium text-muted-foreground uppercase">
 									Acciones
 								</th>
 							</tr>
 						</thead>
 						<tbody className="divide-y">
 							{vehiculos.map((v, idx) => (
-								<tr key={idx} className="hover:bg-gray-50">
-									<td className="px-4 py-3 font-medium text-gray-900">{v.placa}</td>
+								<tr key={idx} className="hover:bg-muted/50">
+									<td className="px-4 py-3 font-medium text-foreground">{v.placa}</td>
 									<td
-										className="px-4 py-3 text-sm text-gray-600 max-w-[140px] truncate"
+										className="px-4 py-3 text-sm text-muted-foreground max-w-[140px] truncate"
 										title={v.nro_chasis}
 									>
 										{v.nro_chasis}
 									</td>
-									<td className="px-4 py-3 text-sm text-gray-600">
+									<td className="px-4 py-3 text-sm text-muted-foreground">
 										{nombreTipo(v.tipo_vehiculo_id)}
 									</td>
-									<td className="px-4 py-3 text-sm text-gray-600">
+									<td className="px-4 py-3 text-sm text-muted-foreground">
 										{nombreMarca(v.marca_vehiculo_id)}
 										{v.modelo ? ` ${v.modelo}` : ""}
 									</td>
-									<td className="px-4 py-3 text-sm text-gray-600">{v.ano ?? "-"}</td>
+									<td className="px-4 py-3 text-sm text-muted-foreground">{v.ano ?? "-"}</td>
 									<td className="px-4 py-3 text-center">
 										<span
 											className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${usoColor(v.uso)}`}
@@ -273,7 +291,7 @@ export function ResponsabilidadCivilForm({ datos, onChange, onSiguiente, onAnter
 											{usoLabel(v.uso)}
 										</span>
 									</td>
-									<td className="px-4 py-3 text-sm text-gray-600">{v.servicio ?? "-"}</td>
+									<td className="px-4 py-3 text-sm text-muted-foreground">{v.servicio ?? "-"}</td>
 									<td className="px-4 py-3 text-center">
 										<div className="flex items-center justify-center gap-2">
 											<Button variant="ghost" size="sm" onClick={() => handleEditar(v, idx)}>
@@ -283,7 +301,7 @@ export function ResponsabilidadCivilForm({ datos, onChange, onSiguiente, onAnter
 												variant="ghost"
 												size="sm"
 												onClick={() => handleEliminar(idx)}
-												className="text-red-600 hover:text-red-700 hover:bg-red-50"
+												className="text-destructive hover:text-destructive hover:bg-destructive/10"
 											>
 												<Trash2 className="h-4 w-4" />
 											</Button>
@@ -320,6 +338,32 @@ export function ResponsabilidadCivilForm({ datos, onChange, onSiguiente, onAnter
 					}}
 				/>
 			)}
+
+			{/* Diálogo: confirmar eliminación de vehículo */}
+			<AlertDialog
+				open={vehiculoAEliminar !== null}
+				onOpenChange={(open) => {
+					if (!open) setVehiculoAEliminar(null);
+				}}
+			>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>¿Eliminar este vehículo?</AlertDialogTitle>
+						<AlertDialogDescription>
+							El vehículo se quitará de la lista de la póliza.
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel>Cancelar</AlertDialogCancel>
+						<AlertDialogAction
+							onClick={confirmarEliminar}
+							className="bg-destructive text-white hover:bg-destructive/90"
+						>
+							Eliminar
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
 		</div>
 	);
 }

@@ -27,6 +27,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
 import { BuscadorClientes } from "../BuscadorClientes";
 import { importarAseguradosDesdeExcel, generarPlantillaExcel } from "@/utils/sepelioExcelImport";
 import { useLiveSync } from "@/hooks/useLiveSync";
@@ -62,6 +73,7 @@ export function SepelioForm({ datos, regionales, onChange, onSiguiente, onAnteri
 	const [asegurados, setAsegurados] = useState<AseguradoConNivel[]>(datos?.asegurados || []);
 	const [mostrarBuscador, setMostrarBuscador] = useState(false);
 	const [errores, setErrores] = useState<Record<string, string>>({});
+	const [nivelAEliminar, setNivelAEliminar] = useState<string | null>(null);
 
 	// ===== EXCEL IMPORT =====
 	const fileInputRef = useRef<HTMLInputElement>(null);
@@ -133,9 +145,13 @@ export function SepelioForm({ datos, regionales, onChange, onSiguiente, onAnteri
 	};
 
 	const eliminarNivel = (id: string) => {
-		if (confirm("¿Está seguro de eliminar este nivel?")) {
-			setNiveles(niveles.filter((n) => n.id !== id));
-		}
+		setNivelAEliminar(id);
+	};
+
+	const confirmarEliminar = () => {
+		if (nivelAEliminar === null) return;
+		setNiveles(niveles.filter((n) => n.id !== nivelAEliminar));
+		setNivelAEliminar(null);
 	};
 
 	const continuarAPrincipal = () => {
@@ -152,7 +168,7 @@ export function SepelioForm({ datos, regionales, onChange, onSiguiente, onAnteri
 	const agregarAsegurado = (cliente: { id: string; nombre: string; ci: string }) => {
 		// Verificar que no esté duplicado
 		if (asegurados.some((a) => a.client_id === cliente.id)) {
-			alert("Este cliente ya fue agregado");
+			toast.warning("Este cliente ya fue agregado");
 			return;
 		}
 
@@ -191,7 +207,7 @@ export function SepelioForm({ datos, regionales, onChange, onSiguiente, onAnteri
 			URL.revokeObjectURL(url);
 		} catch (error) {
 			console.error("Error al generar plantilla:", error);
-			alert("Error al generar la plantilla");
+			toast.error("Error al generar la plantilla");
 		}
 	};
 
@@ -217,7 +233,7 @@ export function SepelioForm({ datos, regionales, onChange, onSiguiente, onAnteri
 			}
 		} catch (error) {
 			console.error("Error al importar Excel:", error);
-			alert("Error al importar el archivo Excel");
+			toast.error("Error al importar el archivo Excel");
 		} finally {
 			setImportandoExcel(false);
 			// Limpiar input para permitir reimportar el mismo archivo
@@ -289,22 +305,48 @@ export function SepelioForm({ datos, regionales, onChange, onSiguiente, onAnteri
 	// ===== RENDERIZADO =====
 	const esCompleto = datos !== null;
 
+	// Diálogo de confirmación compartido entre ambos sub-pasos
+	const dialogoEliminar = (
+		<AlertDialog
+			open={nivelAEliminar !== null}
+			onOpenChange={(open) => {
+				if (!open) setNivelAEliminar(null);
+			}}
+		>
+			<AlertDialogContent>
+				<AlertDialogHeader>
+					<AlertDialogTitle>¿Está seguro de eliminar este nivel?</AlertDialogTitle>
+					<AlertDialogDescription>Se quitará de la lista de la póliza.</AlertDialogDescription>
+				</AlertDialogHeader>
+				<AlertDialogFooter>
+					<AlertDialogCancel>Cancelar</AlertDialogCancel>
+					<AlertDialogAction
+						onClick={confirmarEliminar}
+						className="bg-destructive text-white hover:bg-destructive/90"
+					>
+						Eliminar
+					</AlertDialogAction>
+				</AlertDialogFooter>
+			</AlertDialogContent>
+		</AlertDialog>
+	);
+
 	// SUB-PASO 2.1: CONFIGURACIÓN DE NIVELES
 	if (subPaso === "niveles") {
 		return (
-			<div className="bg-white rounded-lg shadow-sm border p-6">
+			<div className="bg-card rounded-lg shadow-sm border border-border p-6">
 				<div className="flex items-center justify-between mb-6">
 					<div>
-						<h2 className="text-xl font-semibold text-gray-900">
+						<h2 className="text-xl font-semibold text-foreground">
 							Paso 2.1: Configurar Niveles de Cobertura (Sepelio)
 						</h2>
-						<p className="text-sm text-gray-600 mt-1">
+						<p className="text-sm text-muted-foreground mt-1">
 							Defina los niveles de cobertura para las pólizas de sepelio
 						</p>
 					</div>
 
 					{niveles.length > 0 && (
-						<div className="flex items-center gap-2 text-green-600">
+						<div className="flex items-center gap-2 text-success">
 							<CheckCircle2 className="h-5 w-5" />
 							<span className="text-sm font-medium">{niveles.length} nivel(es) creado(s)</span>
 						</div>
@@ -314,7 +356,7 @@ export function SepelioForm({ datos, regionales, onChange, onSiguiente, onAnteri
 				{/* Lista de niveles creados */}
 				{niveles.length > 0 && (
 					<div className="mb-6">
-						<h3 className="text-sm font-medium text-gray-700 mb-3">Niveles creados:</h3>
+						<h3 className="text-sm font-medium text-foreground mb-3">Niveles creados:</h3>
 						<div className="space-y-2">
 							{niveles.map((nivel) => {
 								const coberturas = nivel.coberturas as CoberturaSepelio;
@@ -324,8 +366,8 @@ export function SepelioForm({ datos, regionales, onChange, onSiguiente, onAnteri
 										className="flex items-center justify-between p-4 border rounded-lg"
 									>
 										<div className="flex-1">
-											<p className="font-medium text-gray-900">{nivel.nombre}</p>
-											<p className="text-sm text-gray-600">
+											<p className="font-medium text-foreground">{nivel.nombre}</p>
+											<p className="text-sm text-muted-foreground">
 												Sepelio:{" "}
 												{coberturas.sepelio.habilitado
 													? `Bs ${coberturas.sepelio.valor.toLocaleString()}`
@@ -349,8 +391,8 @@ export function SepelioForm({ datos, regionales, onChange, onSiguiente, onAnteri
 
 				{/* Formulario de nivel (crear/editar) */}
 				{nivelEditando && (
-					<div className="mb-6 p-6 border-2 border-primary rounded-lg bg-blue-50">
-						<h3 className="text-lg font-semibold text-gray-900 mb-4">
+					<div className="mb-6 p-6 border-2 border-primary rounded-lg bg-info/10">
+						<h3 className="text-lg font-semibold text-foreground mb-4">
 							{niveles.some((n) => n.id === nivelEditando.id) ? "Editar" : "Crear"} Nivel
 						</h3>
 
@@ -366,7 +408,7 @@ export function SepelioForm({ datos, regionales, onChange, onSiguiente, onAnteri
 							</div>
 
 							<div className="space-y-4 pt-4 border-t">
-								<h4 className="font-medium text-gray-900">Coberturas:</h4>
+								<h4 className="font-medium text-foreground">Coberturas:</h4>
 
 								{/* SEPELIO */}
 								<div className="flex items-start gap-4">
@@ -397,10 +439,10 @@ export function SepelioForm({ datos, regionales, onChange, onSiguiente, onAnteri
 														valor: parseFloat(e.target.value) || 0,
 													})
 												}
-												className={errores.sepelio ? "border-red-500" : ""}
+												className={errores.sepelio ? "border-destructive" : ""}
 											/>
 											{errores.sepelio && (
-												<p className="text-sm text-red-600 mt-1">{errores.sepelio}</p>
+												<p className="text-sm text-destructive mt-1">{errores.sepelio}</p>
 											)}
 										</div>
 									)}
@@ -408,9 +450,9 @@ export function SepelioForm({ datos, regionales, onChange, onSiguiente, onAnteri
 							</div>
 
 							{errores.general && (
-								<div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded">
-									<AlertTriangle className="h-4 w-4 text-red-600" />
-									<p className="text-sm text-red-600">{errores.general}</p>
+								<div className="flex items-center gap-2 p-3 bg-destructive/10 border border-destructive/20 rounded">
+									<AlertTriangle className="h-4 w-4 text-destructive" />
+									<p className="text-sm text-destructive">{errores.general}</p>
 								</div>
 							)}
 
@@ -433,9 +475,9 @@ export function SepelioForm({ datos, regionales, onChange, onSiguiente, onAnteri
 				)}
 
 				{errores.general && !nivelEditando && (
-					<div className="flex items-center gap-2 p-3 mb-4 bg-amber-50 border border-amber-200 rounded">
-						<AlertTriangle className="h-4 w-4 text-amber-600" />
-						<p className="text-sm text-amber-600">{errores.general}</p>
+					<div className="flex items-center gap-2 p-3 mb-4 bg-warning/10 border border-warning/30 rounded">
+						<AlertTriangle className="h-4 w-4 text-warning" />
+						<p className="text-sm text-warning">{errores.general}</p>
 					</div>
 				)}
 
@@ -451,23 +493,25 @@ export function SepelioForm({ datos, regionales, onChange, onSiguiente, onAnteri
 						<ChevronRight className="ml-2 h-5 w-5" />
 					</Button>
 				</div>
+
+				{dialogoEliminar}
 			</div>
 		);
 	}
 
 	// SUB-PASO 3: FORMULARIO PRINCIPAL
 	return (
-		<div className="bg-white rounded-lg shadow-sm border p-6">
+		<div className="bg-card rounded-lg shadow-sm border border-border p-6">
 			<div className="flex items-center justify-between mb-6">
 				<div>
-					<h2 className="text-xl font-semibold text-gray-900">Paso 3: Datos Específicos - Sepelio</h2>
-					<p className="text-sm text-gray-600 mt-1">
+					<h2 className="text-xl font-semibold text-foreground">Paso 3: Datos Específicos - Sepelio</h2>
+					<p className="text-sm text-muted-foreground mt-1">
 						Complete la información de los asegurados y sus niveles de cobertura
 					</p>
 				</div>
 
 				{esCompleto && (
-					<div className="flex items-center gap-2 text-green-600">
+					<div className="flex items-center gap-2 text-success">
 						<CheckCircle2 className="h-5 w-5" />
 						<span className="text-sm font-medium">Completado</span>
 					</div>
@@ -475,15 +519,15 @@ export function SepelioForm({ datos, regionales, onChange, onSiguiente, onAnteri
 			</div>
 
 			{/* Botón para volver a editar niveles */}
-			<div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+			<div className="mb-6 p-4 bg-info/10 border border-info/20 rounded-lg">
 				<div className="flex items-center justify-between">
 					<div className="flex items-center gap-2">
-						<Settings className="h-5 w-5 text-blue-600" />
+						<Settings className="h-5 w-5 text-info" />
 						<div>
-							<p className="text-sm font-medium text-gray-900">
+							<p className="text-sm font-medium text-foreground">
 								{niveles.length} nivel(es) de cobertura configurado(s)
 							</p>
-							<p className="text-xs text-gray-600">{niveles.map((n) => n.nombre).join(", ")}</p>
+							<p className="text-xs text-muted-foreground">{niveles.map((n) => n.nombre).join(", ")}</p>
 						</div>
 					</div>
 					<Button variant="outline" size="sm" onClick={volverANiveles}>
@@ -496,7 +540,7 @@ export function SepelioForm({ datos, regionales, onChange, onSiguiente, onAnteri
 				{/* Tipo de Póliza */}
 				<div className="space-y-2">
 					<Label htmlFor="tipo_poliza">
-						Tipo de Póliza <span className="text-red-500">*</span>
+						Tipo de Póliza <span className="text-destructive">*</span>
 					</Label>
 					<Select
 						value={tipoPoliza}
@@ -515,10 +559,10 @@ export function SepelioForm({ datos, regionales, onChange, onSiguiente, onAnteri
 				{/* Regional */}
 				<div className="space-y-2">
 					<Label htmlFor="regional">
-						Regional Asegurado <span className="text-red-500">*</span>
+						Regional Asegurado <span className="text-destructive">*</span>
 					</Label>
 					<Select value={regionalId} onValueChange={setRegionalId}>
-						<SelectTrigger className={errores.regional ? "border-red-500" : ""}>
+						<SelectTrigger className={errores.regional ? "border-destructive" : ""}>
 							<SelectValue placeholder="Seleccione una regional" />
 						</SelectTrigger>
 						<SelectContent>
@@ -529,7 +573,7 @@ export function SepelioForm({ datos, regionales, onChange, onSiguiente, onAnteri
 							))}
 						</SelectContent>
 					</Select>
-					{errores.regional && <p className="text-sm text-red-600">{errores.regional}</p>}
+					{errores.regional && <p className="text-sm text-destructive">{errores.regional}</p>}
 				</div>
 			</div>
 
@@ -538,9 +582,9 @@ export function SepelioForm({ datos, regionales, onChange, onSiguiente, onAnteri
 				<div className="flex items-center justify-between">
 					<div>
 						<Label className="text-base">
-							Asegurados <span className="text-red-500">*</span>
+							Asegurados <span className="text-destructive">*</span>
 						</Label>
-						<p className="text-sm text-gray-600 mt-1">
+						<p className="text-sm text-muted-foreground mt-1">
 							Agregue los asegurados y asigne su nivel de cobertura
 						</p>
 					</div>
@@ -575,10 +619,10 @@ export function SepelioForm({ datos, regionales, onChange, onSiguiente, onAnteri
 				/>
 
 				{/* Info sobre importación Excel */}
-				<div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+				<div className="bg-info/10 border border-info/20 rounded-lg p-4">
 					<div className="flex gap-3">
-						<FileSpreadsheet className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
-						<div className="text-sm text-blue-900">
+						<FileSpreadsheet className="h-5 w-5 text-info flex-shrink-0 mt-0.5" />
+						<div className="text-sm text-info">
 							<p className="font-medium mb-1">Importación masiva desde Excel</p>
 							<ul className="space-y-1 text-xs">
 								<li>• Descargue la plantilla Excel con las columnas correctas</li>
@@ -592,17 +636,17 @@ export function SepelioForm({ datos, regionales, onChange, onSiguiente, onAnteri
 				</div>
 
 				{errores.asegurados && (
-					<div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded">
-						<AlertTriangle className="h-4 w-4 text-red-600" />
-						<p className="text-sm text-red-600">{errores.asegurados}</p>
+					<div className="flex items-center gap-2 p-3 bg-destructive/10 border border-destructive/20 rounded">
+						<AlertTriangle className="h-4 w-4 text-destructive" />
+						<p className="text-sm text-destructive">{errores.asegurados}</p>
 					</div>
 				)}
 
 				{/* Buscador de clientes */}
 				{mostrarBuscador && (
-					<div className="p-4 border-2 border-primary rounded-lg bg-blue-50">
+					<div className="p-4 border-2 border-primary rounded-lg bg-info/10">
 						<div className="flex items-center justify-between mb-4">
-							<h3 className="font-semibold text-gray-900">Buscar Cliente</h3>
+							<h3 className="font-semibold text-foreground">Buscar Cliente</h3>
 						</div>
 						<BuscadorClientes
 							onSeleccionar={agregarAsegurado}
@@ -616,10 +660,10 @@ export function SepelioForm({ datos, regionales, onChange, onSiguiente, onAnteri
 					<div className="space-y-3">
 						{asegurados.map((asegurado) => (
 							<div key={asegurado.client_id} className="flex items-center gap-4 p-4 border rounded-lg">
-								<Users className="h-5 w-5 text-gray-400 flex-shrink-0" />
+								<Users className="h-5 w-5 text-muted-foreground flex-shrink-0" />
 								<div className="flex-1">
-									<p className="font-medium text-gray-900">{asegurado.client_name}</p>
-									<p className="text-sm text-gray-600">CI: {asegurado.client_ci}</p>
+									<p className="font-medium text-foreground">{asegurado.client_name}</p>
+									<p className="text-sm text-muted-foreground">CI: {asegurado.client_ci}</p>
 								</div>
 								<div className="flex items-center gap-2">
 									<Select
@@ -642,7 +686,7 @@ export function SepelioForm({ datos, regionales, onChange, onSiguiente, onAnteri
 										size="sm"
 										onClick={() => eliminarAsegurado(asegurado.client_id)}
 									>
-										<Trash2 className="h-4 w-4 text-red-600" />
+										<Trash2 className="h-4 w-4 text-destructive" />
 									</Button>
 								</div>
 							</div>
@@ -650,9 +694,9 @@ export function SepelioForm({ datos, regionales, onChange, onSiguiente, onAnteri
 					</div>
 				) : (
 					<div className="text-center py-8 border-2 border-dashed rounded-lg">
-						<Users className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-						<p className="text-gray-600">No hay asegurados agregados</p>
-						<p className="text-sm text-gray-500">
+						<Users className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+						<p className="text-muted-foreground">No hay asegurados agregados</p>
+						<p className="text-sm text-muted-foreground">
 							Haga clic en &ldquo;Agregar Asegurado&rdquo; para comenzar
 						</p>
 					</div>
@@ -661,10 +705,10 @@ export function SepelioForm({ datos, regionales, onChange, onSiguiente, onAnteri
 
 			{/* Modal de resultado de importación */}
 			{mostrarResultadoImport && resultadoImport && (
-				<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-					<div className="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+				<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+					<div className="bg-card rounded-lg p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto">
 						<div className="flex items-center justify-between mb-4">
-							<h3 className="text-lg font-semibold text-gray-900">Resultado de Importación</h3>
+							<h3 className="text-lg font-semibold text-foreground">Resultado de Importación</h3>
 							<Button variant="ghost" size="sm" onClick={cerrarModalResultado}>
 								<X className="h-4 w-4" />
 							</Button>
@@ -672,30 +716,30 @@ export function SepelioForm({ datos, regionales, onChange, onSiguiente, onAnteri
 
 						{/* Resumen */}
 						<div className="grid grid-cols-2 gap-4 mb-4">
-							<div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-								<p className="text-sm text-green-700 font-medium">Asegurados Importados</p>
-								<p className="text-2xl font-bold text-green-900">
+							<div className="p-4 bg-success/10 border border-success/30 rounded-lg">
+								<p className="text-sm text-success font-medium">Asegurados Importados</p>
+								<p className="text-2xl font-bold text-success">
 									{resultadoImport.asegurados_validos.length}
 								</p>
 							</div>
-							<div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-								<p className="text-sm text-red-700 font-medium">Errores</p>
-								<p className="text-2xl font-bold text-red-900">{resultadoImport.errores.length}</p>
+							<div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
+								<p className="text-sm text-destructive font-medium">Errores</p>
+								<p className="text-2xl font-bold text-destructive">{resultadoImport.errores.length}</p>
 							</div>
 						</div>
 
 						{/* Lista de errores */}
 						{resultadoImport.errores.length > 0 && (
 							<div className="mb-4">
-								<h4 className="font-medium text-gray-900 mb-2">Errores encontrados:</h4>
+								<h4 className="font-medium text-foreground mb-2">Errores encontrados:</h4>
 								<div className="space-y-2 max-h-64 overflow-y-auto">
 									{resultadoImport.errores.map((error, index) => (
 										<div
 											key={index}
-											className="p-3 bg-red-50 border border-red-200 rounded text-sm"
+											className="p-3 bg-destructive/10 border border-destructive/20 rounded text-sm"
 										>
-											<p className="font-medium text-red-900">Fila {error.fila}:</p>
-											<ul className="list-disc list-inside text-red-700 mt-1">
+											<p className="font-medium text-destructive">Fila {error.fila}:</p>
+											<ul className="list-disc list-inside text-destructive mt-1">
 												{error.errores.map((err, i) => (
 													<li key={i}>{err}</li>
 												))}
@@ -709,15 +753,17 @@ export function SepelioForm({ datos, regionales, onChange, onSiguiente, onAnteri
 						{/* Lista de asegurados importados */}
 						{resultadoImport.asegurados_validos.length > 0 && (
 							<div className="mb-4">
-								<h4 className="font-medium text-gray-900 mb-2">Asegurados importados exitosamente:</h4>
+								<h4 className="font-medium text-foreground mb-2">
+									Asegurados importados exitosamente:
+								</h4>
 								<div className="space-y-2 max-h-48 overflow-y-auto">
 									{resultadoImport.asegurados_validos.map((asegurado, index) => (
 										<div
 											key={index}
-											className="p-2 bg-green-50 border border-green-200 rounded text-sm"
+											className="p-2 bg-success/10 border border-success/30 rounded text-sm"
 										>
-											<p className="font-medium text-green-900">{asegurado.client_name}</p>
-											<p className="text-green-700 text-xs">
+											<p className="font-medium text-success">{asegurado.client_name}</p>
+											<p className="text-success text-xs">
 												CI: {asegurado.client_ci} • Nivel:{" "}
 												{niveles.find((n) => n.id === asegurado.nivel_id)?.nombre}
 											</p>
@@ -746,6 +792,8 @@ export function SepelioForm({ datos, regionales, onChange, onSiguiente, onAnteri
 					<ChevronRight className="ml-2 h-5 w-5" />
 				</Button>
 			</div>
+
+			{dialogoEliminar}
 		</div>
 	);
 }

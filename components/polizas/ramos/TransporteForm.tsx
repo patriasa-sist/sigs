@@ -230,15 +230,17 @@ export function TransporteForm({ datos, onChange, onSiguiente, onAnterior }: Pro
 	const paisDestinoNombre = paises.find((p) => p.id === paisDestinoId)?.nombre || "";
 
 	return (
-		<div className="bg-white rounded-lg shadow-sm border p-6">
+		<div className="bg-card rounded-lg shadow-sm border border-border p-6">
 			<div className="flex items-center justify-between mb-6">
 				<div>
-					<h2 className="text-xl font-semibold text-gray-900">Paso 3: Datos Específicos - Transporte</h2>
-					<p className="text-sm text-gray-600 mt-1">Configure los datos del embarque y la mercancía</p>
+					<h2 className="text-xl font-semibold text-foreground">Paso 3: Datos Específicos - Transporte</h2>
+					<p className="text-sm text-muted-foreground mt-1">
+						Configure los datos del embarque y la mercancía
+					</p>
 				</div>
 
 				{tieneDatos && (
-					<div className="flex items-center gap-2 text-green-600">
+					<div className="flex items-center gap-2 text-success">
 						<CheckCircle2 className="h-5 w-5" />
 						<span className="text-sm font-medium">Datos completos</span>
 					</div>
@@ -248,14 +250,14 @@ export function TransporteForm({ datos, onChange, onSiguiente, onAnterior }: Pro
 			<div className="space-y-6">
 				{/* Sección: Mercancía */}
 				<div className="border rounded-lg p-4 space-y-4">
-					<h3 className="font-medium text-gray-900 flex items-center gap-2">
-						<Package className="h-5 w-5 text-gray-600" />
+					<h3 className="font-medium text-foreground flex items-center gap-2">
+						<Package className="h-5 w-5 text-muted-foreground" />
 						Datos de la Mercancía
 					</h3>
 
 					<div className="space-y-2">
 						<Label htmlFor="materia_asegurada">
-							Materia Asegurada <span className="text-red-500">*</span>
+							Materia Asegurada <span className="text-destructive">*</span>
 						</Label>
 						<Textarea
 							id="materia_asegurada"
@@ -263,29 +265,31 @@ export function TransporteForm({ datos, onChange, onSiguiente, onAnterior }: Pro
 							onChange={(e) => setMateriaAsegurada(e.target.value)}
 							placeholder="Descripción detallada de la mercancía a transportar..."
 							rows={3}
-							className={errores.materia ? "border-red-500" : ""}
+							className={errores.materia ? "border-destructive" : ""}
 						/>
-						{errores.materia && <p className="text-sm text-red-600">{errores.materia}</p>}
+						{errores.materia && <p className="text-sm text-destructive">{errores.materia}</p>}
 					</div>
 
 					<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 						<div className="space-y-2">
 							<Label htmlFor="tipo_embalaje">
-								Tipo de Embalaje <span className="text-red-500">*</span>
+								Tipo de Embalaje <span className="text-destructive">*</span>
 							</Label>
 							<Input
 								id="tipo_embalaje"
 								value={tipoEmbalaje}
 								onChange={(e) => setTipoEmbalaje(e.target.value)}
 								placeholder="Ej: Cajas de cartón, Pallets, Contenedor..."
-								className={errores.tipo_embalaje ? "border-red-500" : ""}
+								className={errores.tipo_embalaje ? "border-destructive" : ""}
 							/>
-							{errores.tipo_embalaje && <p className="text-sm text-red-600">{errores.tipo_embalaje}</p>}
+							{errores.tipo_embalaje && (
+								<p className="text-sm text-destructive">{errores.tipo_embalaje}</p>
+							)}
 						</div>
 
 						<div className="space-y-2">
 							<Label htmlFor="valor_asegurado">
-								Valor Asegurado <span className="text-red-500">*</span>
+								Valor Asegurado <span className="text-destructive">*</span>
 							</Label>
 							<Input
 								id="valor_asegurado"
@@ -295,21 +299,21 @@ export function TransporteForm({ datos, onChange, onSiguiente, onAnterior }: Pro
 								value={valorAsegurado || ""}
 								onChange={(e) => setValorAsegurado(parseFloat(e.target.value) || 0)}
 								placeholder="0.00"
-								className={errores.valor ? "border-red-500" : ""}
+								className={errores.valor ? "border-destructive" : ""}
 							/>
-							{errores.valor && <p className="text-sm text-red-600">{errores.valor}</p>}
+							{errores.valor && <p className="text-sm text-destructive">{errores.valor}</p>}
 						</div>
 					</div>
 				</div>
 
 				{/* Sección: Embarque */}
 				<div className="border rounded-lg p-4 space-y-4">
-					<h3 className="font-medium text-gray-900">Datos del Embarque</h3>
+					<h3 className="font-medium text-foreground">Datos del Embarque</h3>
 
 					<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 						<div className="space-y-2">
 							<Label htmlFor="fecha_embarque">
-								Fecha de Embarque <span className="text-red-500">*</span>
+								Fecha de Embarque <span className="text-destructive">*</span>
 							</Label>
 							<Input
 								id="fecha_embarque"
@@ -317,14 +321,16 @@ export function TransporteForm({ datos, onChange, onSiguiente, onAnterior }: Pro
 								lang="es"
 								value={fechaEmbarque}
 								onChange={(e) => setFechaEmbarque(e.target.value)}
-								className={errores.fecha_embarque ? "border-red-500" : ""}
+								className={errores.fecha_embarque ? "border-destructive" : ""}
 							/>
-							{errores.fecha_embarque && <p className="text-sm text-red-600">{errores.fecha_embarque}</p>}
+							{errores.fecha_embarque && (
+								<p className="text-sm text-destructive">{errores.fecha_embarque}</p>
+							)}
 						</div>
 
 						<div className="space-y-2">
 							<Label htmlFor="tipo_transporte">
-								Tipo de Transporte <span className="text-red-500">*</span>
+								Tipo de Transporte <span className="text-destructive">*</span>
 							</Label>
 							<Select value={tipoTransporte} onValueChange={(v: TipoTransporte) => setTipoTransporte(v)}>
 								<SelectTrigger>
@@ -349,14 +355,14 @@ export function TransporteForm({ datos, onChange, onSiguiente, onAnterior }: Pro
 				<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 					{/* Origen */}
 					<div className="border rounded-lg p-4 space-y-4">
-						<h3 className="font-medium text-gray-900 text-green-700">📍 Origen</h3>
+						<h3 className="font-medium text-foreground text-success">📍 Origen</h3>
 
 						<div className="space-y-2">
 							<Label htmlFor="pais_origen">
-								País de Origen <span className="text-red-500">*</span>
+								País de Origen <span className="text-destructive">*</span>
 							</Label>
 							<Select value={paisOrigenId} onValueChange={setPaisOrigenId} disabled={cargandoPaises}>
-								<SelectTrigger className={errores.pais_origen ? "border-red-500" : ""}>
+								<SelectTrigger className={errores.pais_origen ? "border-destructive" : ""}>
 									<SelectValue placeholder={cargandoPaises ? "Cargando..." : "Seleccione país"} />
 								</SelectTrigger>
 								<SelectContent>
@@ -367,34 +373,36 @@ export function TransporteForm({ datos, onChange, onSiguiente, onAnterior }: Pro
 									))}
 								</SelectContent>
 							</Select>
-							{errores.pais_origen && <p className="text-sm text-red-600">{errores.pais_origen}</p>}
+							{errores.pais_origen && <p className="text-sm text-destructive">{errores.pais_origen}</p>}
 						</div>
 
 						<div className="space-y-2">
 							<Label htmlFor="ciudad_origen">
-								Ciudad de Origen <span className="text-red-500">*</span>
+								Ciudad de Origen <span className="text-destructive">*</span>
 							</Label>
 							<Input
 								id="ciudad_origen"
 								value={ciudadOrigen}
 								onChange={(e) => setCiudadOrigen(e.target.value)}
 								placeholder="Ej: La Paz, Santa Cruz..."
-								className={errores.ciudad_origen ? "border-red-500" : ""}
+								className={errores.ciudad_origen ? "border-destructive" : ""}
 							/>
-							{errores.ciudad_origen && <p className="text-sm text-red-600">{errores.ciudad_origen}</p>}
+							{errores.ciudad_origen && (
+								<p className="text-sm text-destructive">{errores.ciudad_origen}</p>
+							)}
 						</div>
 					</div>
 
 					{/* Destino */}
 					<div className="border rounded-lg p-4 space-y-4">
-						<h3 className="font-medium text-gray-900 text-blue-700">📍 Destino</h3>
+						<h3 className="font-medium text-foreground text-info">📍 Destino</h3>
 
 						<div className="space-y-2">
 							<Label htmlFor="pais_destino">
-								País de Destino <span className="text-red-500">*</span>
+								País de Destino <span className="text-destructive">*</span>
 							</Label>
 							<Select value={paisDestinoId} onValueChange={setPaisDestinoId} disabled={cargandoPaises}>
-								<SelectTrigger className={errores.pais_destino ? "border-red-500" : ""}>
+								<SelectTrigger className={errores.pais_destino ? "border-destructive" : ""}>
 									<SelectValue placeholder={cargandoPaises ? "Cargando..." : "Seleccione país"} />
 								</SelectTrigger>
 								<SelectContent>
@@ -405,30 +413,32 @@ export function TransporteForm({ datos, onChange, onSiguiente, onAnterior }: Pro
 									))}
 								</SelectContent>
 							</Select>
-							{errores.pais_destino && <p className="text-sm text-red-600">{errores.pais_destino}</p>}
+							{errores.pais_destino && <p className="text-sm text-destructive">{errores.pais_destino}</p>}
 						</div>
 
 						<div className="space-y-2">
 							<Label htmlFor="ciudad_destino">
-								Ciudad de Destino <span className="text-red-500">*</span>
+								Ciudad de Destino <span className="text-destructive">*</span>
 							</Label>
 							<Input
 								id="ciudad_destino"
 								value={ciudadDestino}
 								onChange={(e) => setCiudadDestino(e.target.value)}
 								placeholder="Ej: Buenos Aires, Lima..."
-								className={errores.ciudad_destino ? "border-red-500" : ""}
+								className={errores.ciudad_destino ? "border-destructive" : ""}
 							/>
-							{errores.ciudad_destino && <p className="text-sm text-red-600">{errores.ciudad_destino}</p>}
+							{errores.ciudad_destino && (
+								<p className="text-sm text-destructive">{errores.ciudad_destino}</p>
+							)}
 						</div>
 					</div>
 				</div>
 
 				{/* Preview de ruta */}
 				{paisOrigenNombre && paisDestinoNombre && ciudadOrigen && ciudadDestino && (
-					<div className="bg-gray-50 rounded-lg p-4 text-center">
-						<p className="text-sm text-gray-600">Ruta del transporte:</p>
-						<p className="font-medium text-gray-900">
+					<div className="bg-secondary rounded-lg p-4 text-center">
+						<p className="text-sm text-muted-foreground">Ruta del transporte:</p>
+						<p className="font-medium text-foreground">
 							{ciudadOrigen}, {paisOrigenNombre} → {ciudadDestino}, {paisDestinoNombre}
 						</p>
 					</div>
@@ -436,26 +446,26 @@ export function TransporteForm({ datos, onChange, onSiguiente, onAnterior }: Pro
 
 				{/* Sección: Factura */}
 				<div className="border rounded-lg p-4 space-y-4">
-					<h3 className="font-medium text-gray-900">Datos de Facturación</h3>
+					<h3 className="font-medium text-foreground">Datos de Facturación</h3>
 
 					<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 						<div className="space-y-2">
 							<Label htmlFor="factura">
-								Número de Factura <span className="text-red-500">*</span>
+								Número de Factura <span className="text-destructive">*</span>
 							</Label>
 							<Input
 								id="factura"
 								value={factura}
 								onChange={(e) => setFactura(e.target.value)}
 								placeholder="Ej: FAC-001-2026"
-								className={errores.factura ? "border-red-500" : ""}
+								className={errores.factura ? "border-destructive" : ""}
 							/>
-							{errores.factura && <p className="text-sm text-red-600">{errores.factura}</p>}
+							{errores.factura && <p className="text-sm text-destructive">{errores.factura}</p>}
 						</div>
 
 						<div className="space-y-2">
 							<Label htmlFor="fecha_factura">
-								Fecha de Factura <span className="text-red-500">*</span>
+								Fecha de Factura <span className="text-destructive">*</span>
 							</Label>
 							<Input
 								id="fecha_factura"
@@ -463,23 +473,25 @@ export function TransporteForm({ datos, onChange, onSiguiente, onAnterior }: Pro
 								lang="es"
 								value={fechaFactura}
 								onChange={(e) => setFechaFactura(e.target.value)}
-								className={errores.fecha_factura ? "border-red-500" : ""}
+								className={errores.fecha_factura ? "border-destructive" : ""}
 							/>
-							{errores.fecha_factura && <p className="text-sm text-red-600">{errores.fecha_factura}</p>}
+							{errores.fecha_factura && (
+								<p className="text-sm text-destructive">{errores.fecha_factura}</p>
+							)}
 						</div>
 					</div>
 				</div>
 
 				{/* Sección: Coberturas */}
 				<div className="border rounded-lg p-4 space-y-4">
-					<h3 className="font-medium text-gray-900">
-						Coberturas <span className="text-red-500">*</span>
+					<h3 className="font-medium text-foreground">
+						Coberturas <span className="text-destructive">*</span>
 					</h3>
 
 					<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 						<div
 							className={`p-4 border rounded-lg cursor-pointer transition-colors ${
-								coberturaA ? "border-blue-500 bg-blue-50" : "hover:bg-gray-50"
+								coberturaA ? "border-primary bg-primary/10" : "hover:bg-muted/50"
 							}`}
 							onClick={() => setCoberturaA(!coberturaA)}
 						>
@@ -490,7 +502,7 @@ export function TransporteForm({ datos, onChange, onSiguiente, onAnterior }: Pro
 								/>
 								<div>
 									<Label className="font-medium cursor-pointer">Cobertura A - Todo Riesgo</Label>
-									<p className="text-sm text-gray-600 mt-1">
+									<p className="text-sm text-muted-foreground mt-1">
 										Cubre todos los riesgos de pérdida o daño físico de la mercancía, excepto
 										exclusiones específicas.
 									</p>
@@ -500,7 +512,7 @@ export function TransporteForm({ datos, onChange, onSiguiente, onAnterior }: Pro
 
 						<div
 							className={`p-4 border rounded-lg cursor-pointer transition-colors ${
-								coberturaC ? "border-blue-500 bg-blue-50" : "hover:bg-gray-50"
+								coberturaC ? "border-primary bg-primary/10" : "hover:bg-muted/50"
 							}`}
 							onClick={() => setCoberturaC(!coberturaC)}
 						>
@@ -513,7 +525,7 @@ export function TransporteForm({ datos, onChange, onSiguiente, onAnterior }: Pro
 									<Label className="font-medium cursor-pointer">
 										Cobertura C - Riesgos Nombrados
 									</Label>
-									<p className="text-sm text-gray-600 mt-1">
+									<p className="text-sm text-muted-foreground mt-1">
 										Cubre únicamente los riesgos expresamente mencionados en la póliza (incendio,
 										naufragio, colisión, etc.).
 									</p>
@@ -521,13 +533,13 @@ export function TransporteForm({ datos, onChange, onSiguiente, onAnterior }: Pro
 							</div>
 						</div>
 					</div>
-					{errores.coberturas && <p className="text-sm text-red-600">{errores.coberturas}</p>}
+					{errores.coberturas && <p className="text-sm text-destructive">{errores.coberturas}</p>}
 				</div>
 
 				{/* Sección: Modalidad */}
 				<div className="border rounded-lg p-4 space-y-4">
-					<h3 className="font-medium text-gray-900">
-						Modalidad de Póliza <span className="text-red-500">*</span>
+					<h3 className="font-medium text-foreground">
+						Modalidad de Póliza <span className="text-destructive">*</span>
 					</h3>
 
 					<div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -535,23 +547,21 @@ export function TransporteForm({ datos, onChange, onSiguiente, onAnterior }: Pro
 							<div
 								key={mod.value}
 								className={`p-4 border rounded-lg cursor-pointer transition-colors ${
-									modalidad === mod.value ? "border-blue-500 bg-blue-50" : "hover:bg-gray-50"
+									modalidad === mod.value ? "border-primary bg-primary/10" : "hover:bg-muted/50"
 								}`}
 								onClick={() => setModalidad(mod.value)}
 							>
 								<div className="flex items-start gap-3">
 									<div
 										className={`w-4 h-4 rounded-full border-2 mt-0.5 flex items-center justify-center ${
-											modalidad === mod.value ? "border-blue-500" : "border-gray-300"
+											modalidad === mod.value ? "border-primary" : "border-border"
 										}`}
 									>
-										{modalidad === mod.value && (
-											<div className="w-2 h-2 rounded-full bg-blue-500" />
-										)}
+										{modalidad === mod.value && <div className="w-2 h-2 rounded-full bg-primary" />}
 									</div>
 									<div>
 										<Label className="font-medium cursor-pointer">{mod.label}</Label>
-										<p className="text-sm text-gray-600 mt-1">{mod.descripcion}</p>
+										<p className="text-sm text-muted-foreground mt-1">{mod.descripcion}</p>
 									</div>
 								</div>
 							</div>

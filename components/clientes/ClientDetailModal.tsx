@@ -36,6 +36,7 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import type { PermissionCheckResult } from "@/types/clientPermission";
 import { CIVIL_STATUS, DOCUMENT_TYPES, GENDER_OPTIONS, COMPANY_TYPES, type ExtraPhone } from "@/types/clientForm";
 import { ExtraPhonesInput } from "./ExtraPhonesInput";
+import { toast } from "sonner";
 
 // Additional types from detail-actions
 type PartnerData = {
@@ -273,11 +274,11 @@ export function ClientDetailModal({ clientId, onClose }: Props) {
 				window.open(data.signedUrl, "_blank");
 			} else {
 				console.error("No se pudo obtener la URL del documento", error);
-				alert("Error al abrir el documento");
+				toast.error("Error al abrir el documento");
 			}
 		} catch (error) {
 			console.error("Error downloading document:", error);
-			alert("Error al abrir el documento");
+			toast.error("Error al abrir el documento");
 		}
 	};
 

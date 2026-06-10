@@ -13,7 +13,14 @@ import type {
 	PolizaFormState,
 	PasoFormulario,
 } from "@/types/poliza";
-import { POLIZA_RULES, VEHICULO_RULES, PAGO_RULES, PRODUCTO_RULES, VALIDATION_MESSAGES } from "./validationConstants";
+import {
+	POLIZA_RULES,
+	VEHICULO_RULES,
+	PAGO_RULES,
+	PRODUCTO_RULES,
+	VALIDATION_MESSAGES,
+	DOCUMENTOS_OBLIGATORIOS,
+} from "./validationConstants";
 
 /**
  * Indica si un ramo tiene formulario específico implementado (Paso 3) y por lo
@@ -70,7 +77,7 @@ export function calcularPasoMaximoFormulario(state: PolizaFormState): PasoFormul
 	if (!validacionPago || !validacionPago.valido) return 4;
 
 	const docsSubidos = state.documentos.filter((d) => d.upload_status === "uploaded" || d.id);
-	if (!docsSubidos.some((d) => d.tipo_documento === "Póliza")) return 5;
+	if (!DOCUMENTOS_OBLIGATORIOS.every((tipo) => docsSubidos.some((d) => d.tipo_documento === tipo))) return 5;
 
 	return 6;
 }
@@ -423,23 +430,10 @@ export function validarModalidadPago(
 }
 
 /**
- * Valida fechas de pago que no sean anteriores a la fecha actual
- * NOTA: Esta validación está DESHABILITADA ya que las pólizas en curso
- * pueden tener cuotas con fechas pasadas que necesitan ser registradas.
- * Solo se valida contra fin de vigencia (ver validarFechasDentroVigencia)
- */
-export function validarFechasPago(): ValidationResult {
-	// Validación deshabilitada - permitir cualquier fecha
-	// Las pólizas en curso pueden tener cuotas vencidas que se están registrando
-	return {
-		valido: true,
-		errores: [],
-	};
-}
-
-/**
  * Valida que las fechas de pago no excedan la vigencia de la póliza
  * Esta es una validación de advertencia, no bloquea el guardado
+ * NOTA: deliberadamente NO se valida que las fechas de pago sean futuras;
+ * las pólizas en curso pueden registrar cuotas con fechas ya pasadas.
  */
 export function validarFechasDentroVigencia(
 	pago: ModalidadPago,

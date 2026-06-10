@@ -53,6 +53,16 @@ import { OngClientForm } from "@/components/clientes/OngClientForm";
 import { ClubClientForm } from "@/components/clientes/ClubClientForm";
 import { AsociacionCivilClientForm } from "@/components/clientes/AsociacionCivilClientForm";
 import { Button } from "@/components/ui/button";
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Save, X, ChevronLeft, Users, Check, AlertTriangle } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import { saveExtraPhones } from "@/app/clientes/celulares/actions";
@@ -364,6 +374,10 @@ export default function NuevoClientePage() {
 		};
 	}, [asocEntidadPersoneria, asocNumeroPersoneria, clientType]);
 
+	// Borrador pendiente de decisión y confirmación de cancelar (AlertDialog)
+	const [draftPendiente, setDraftPendiente] = useState<{ draft: ClientFormState; edad: string } | null>(null);
+	const [mostrarDialogoCancelar, setMostrarDialogoCancelar] = useState(false);
+
 	// Load user and check for draft on mount
 	useEffect(() => {
 		const initialize = async () => {
@@ -385,53 +399,13 @@ export default function NuevoClientePage() {
 					// Non-critical: if exceptions can't be fetched, all docs remain required
 				}
 
-				// Check for draft and prompt user
+				// Check for draft and prompt user (decisión vía AlertDialog)
 				if (hasDraft()) {
 					const draft = loadDraft();
 					const timestamp = getDraftTimestamp();
 
 					if (draft && timestamp) {
-						const age = formatDraftAge(timestamp);
-						const shouldRestore = confirm(
-							`Se encontró un borrador guardado ${age}.\n\n¿Desea continuar con el borrador?`,
-						);
-
-						if (shouldRestore) {
-							setClientType(draft.clientType);
-
-							if (draft.clientType === "natural" && draft.naturalData) {
-								Object.entries(draft.naturalData).forEach(([key, value]) => {
-									naturalForm.setValue(key as keyof NaturalClientFormData, value as never);
-								});
-							} else if (draft.clientType === "unipersonal" && draft.unipersonalData) {
-								Object.entries(draft.unipersonalData).forEach(([key, value]) => {
-									unipersonalForm.setValue(key as keyof UnipersonalClientFormData, value as never);
-								});
-							} else if (draft.clientType === "juridica" && draft.juridicData) {
-								Object.entries(draft.juridicData).forEach(([key, value]) => {
-									juridicForm.setValue(key as keyof JuridicClientFormData, value as never);
-								});
-							} else if (draft.clientType === "ong" && draft.ongData) {
-								Object.entries(draft.ongData).forEach(([key, value]) => {
-									ongForm.setValue(key as keyof OngClientFormData, value as never);
-								});
-							} else if (draft.clientType === "club" && draft.clubData) {
-								Object.entries(draft.clubData).forEach(([key, value]) => {
-									clubForm.setValue(key as keyof ClubClientFormData, value as never);
-								});
-							} else if (draft.clientType === "asociacion_civil" && draft.asociacionCivilData) {
-								Object.entries(draft.asociacionCivilData).forEach(([key, value]) => {
-									asociacionCivilForm.setValue(
-										key as keyof AsociacionCivilClientFormData,
-										value as never,
-									);
-								});
-							}
-
-							toast.success("Borrador restaurado");
-						} else {
-							clearDraft();
-						}
+						setDraftPendiente({ draft, edad: formatDraftAge(timestamp) });
 					}
 				}
 			} catch (error) {
@@ -445,6 +419,47 @@ export default function NuevoClientePage() {
 		initialize();
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
+
+	// Restaurar el borrador confirmado en el AlertDialog
+	const restaurarBorrador = () => {
+		if (!draftPendiente) return;
+		const { draft } = draftPendiente;
+		setClientType(draft.clientType);
+
+		if (draft.clientType === "natural" && draft.naturalData) {
+			Object.entries(draft.naturalData).forEach(([key, value]) => {
+				naturalForm.setValue(key as keyof NaturalClientFormData, value as never);
+			});
+		} else if (draft.clientType === "unipersonal" && draft.unipersonalData) {
+			Object.entries(draft.unipersonalData).forEach(([key, value]) => {
+				unipersonalForm.setValue(key as keyof UnipersonalClientFormData, value as never);
+			});
+		} else if (draft.clientType === "juridica" && draft.juridicData) {
+			Object.entries(draft.juridicData).forEach(([key, value]) => {
+				juridicForm.setValue(key as keyof JuridicClientFormData, value as never);
+			});
+		} else if (draft.clientType === "ong" && draft.ongData) {
+			Object.entries(draft.ongData).forEach(([key, value]) => {
+				ongForm.setValue(key as keyof OngClientFormData, value as never);
+			});
+		} else if (draft.clientType === "club" && draft.clubData) {
+			Object.entries(draft.clubData).forEach(([key, value]) => {
+				clubForm.setValue(key as keyof ClubClientFormData, value as never);
+			});
+		} else if (draft.clientType === "asociacion_civil" && draft.asociacionCivilData) {
+			Object.entries(draft.asociacionCivilData).forEach(([key, value]) => {
+				asociacionCivilForm.setValue(key as keyof AsociacionCivilClientFormData, value as never);
+			});
+		}
+
+		toast.success("Borrador restaurado");
+		setDraftPendiente(null);
+	};
+
+	const descartarBorrador = () => {
+		clearDraft();
+		setDraftPendiente(null);
+	};
 
 	// Auto-save draft on form changes
 	const handleAutoSave = () => {
@@ -480,14 +495,14 @@ export default function NuevoClientePage() {
 		handleAutoSave();
 	};
 
-	// Handle cancel
+	// Handle cancel (pide confirmación vía AlertDialog)
 	const handleCancel = () => {
-		const shouldCancel = confirm("¿Está seguro que desea cancelar? Se perderá el borrador guardado.");
+		setMostrarDialogoCancelar(true);
+	};
 
-		if (shouldCancel) {
-			clearDraft();
-			router.push("/clientes");
-		}
+	const confirmarCancelar = () => {
+		clearDraft();
+		router.push("/clientes");
 	};
 
 	// Upload client documents to Storage and database
@@ -1874,6 +1889,42 @@ export default function NuevoClientePage() {
 					)}
 				</div>
 			</div>
+
+			{/* Diálogo: borrador encontrado */}
+			<AlertDialog open={!!draftPendiente}>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>Borrador de cliente encontrado</AlertDialogTitle>
+						<AlertDialogDescription>
+							Se encontró un borrador guardado {draftPendiente?.edad}. ¿Desea continuar con el borrador?
+							Si lo descarta, se eliminará permanentemente.
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel onClick={descartarBorrador}>Descartar borrador</AlertDialogCancel>
+						<AlertDialogAction onClick={restaurarBorrador}>Continuar borrador</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
+
+			{/* Diálogo: confirmar cancelación */}
+			<AlertDialog open={mostrarDialogoCancelar} onOpenChange={setMostrarDialogoCancelar}>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>¿Cancelar el registro?</AlertDialogTitle>
+						<AlertDialogDescription>Se perderá el borrador guardado.</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel>Seguir editando</AlertDialogCancel>
+						<AlertDialogAction
+							onClick={confirmarCancelar}
+							className="bg-destructive text-white hover:bg-destructive/90"
+						>
+							Sí, cancelar
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
 		</div>
 	);
 }
