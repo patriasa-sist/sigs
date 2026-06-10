@@ -25,8 +25,23 @@ import type {
 	DatosTransporte,
 	DatosAeronavegacion,
 } from "@/types/poliza";
-import { validarFechasPago } from "@/utils/polizaValidation";
+import {
+	validarFechasPago,
+	validarDatosBasicos,
+	validarModalidadPago,
+	ramoRequiereDatosEspecificos,
+} from "@/utils/polizaValidation";
 import { Button } from "@/components/ui/button";
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { createClient } from "@/utils/supabase/client";
 
 const LABELS_TIPO_TRANSPORTE: Record<string, string> = {
@@ -58,6 +73,59 @@ export function Resumen({ formState, onAnterior, onEditarPaso, onGuardar, guarda
 
 	const generarAdvertencias = useCallback(() => {
 		const nuevasAdvertencias: AdvertenciaPoliza[] = [];
+
+		// Asegurado seleccionado (compuerta final antes de llegar al server action)
+		if (!formState.asegurado) {
+			nuevasAdvertencias.push({
+				tipo: "error",
+				campo: "asegurado",
+				mensaje: "Debe seleccionar un asegurado antes de guardar",
+			});
+		}
+
+		// Datos básicos completos y válidos
+		if (!formState.datos_basicos) {
+			nuevasAdvertencias.push({
+				tipo: "error",
+				campo: "datos_basicos",
+				mensaje: "Debe completar los datos básicos antes de guardar",
+			});
+		} else {
+			const validacionBasicos = validarDatosBasicos(formState.datos_basicos);
+			if (!validacionBasicos.valido) {
+				validacionBasicos.errores.forEach((error) => {
+					nuevasAdvertencias.push({
+						tipo: "error",
+						campo: error.campo,
+						mensaje: `Datos básicos: ${error.mensaje}`,
+					});
+				});
+			}
+		}
+
+		// Modalidad de pago completa y válida
+		if (!formState.modalidad_pago) {
+			nuevasAdvertencias.push({
+				tipo: "error",
+				campo: "modalidad_pago",
+				mensaje: "Debe definir la modalidad de pago antes de guardar",
+			});
+		} else {
+			const validacionPago = validarModalidadPago(
+				formState.modalidad_pago,
+				formState.datos_basicos?.tipo_prima ?? "directa",
+				formState.datos_basicos?.es_retroactiva ?? false,
+			);
+			if (!validacionPago.valido) {
+				validacionPago.errores.forEach((error) => {
+					nuevasAdvertencias.push({
+						tipo: "error",
+						campo: error.campo,
+						mensaje: `Modalidad de pago: ${error.mensaje}`,
+					});
+				});
+			}
+		}
 
 		// Validar fechas de pago
 		if (formState.modalidad_pago) {
@@ -107,38 +175,74 @@ export function Resumen({ formState, onAnterior, onEditarPaso, onGuardar, guarda
 		}
 
 		// Validar que datos_especificos exista para ramos que lo requieren
-		if (formState.datos_basicos?.ramo) {
-			const ramoNorm = formState.datos_basicos.ramo
-				.toLowerCase()
-				.trim()
-				.normalize("NFD")
-				.replace(/[\u0300-\u036f]/g, "");
+		if (
+			formState.datos_basicos?.ramo &&
+			ramoRequiereDatosEspecificos(formState.datos_basicos.ramo) &&
+			!formState.datos_especificos
+		) {
+			nuevasAdvertencias.push({
+				tipo: "error",
+				campo: "datos_especificos",
+				mensaje: `Debe completar los datos específicos del ramo "${formState.datos_basicos.ramo}" antes de guardar`,
+			});
+		}
 
-			// Ramos que tienen formulario específico implementado (no el genérico)
-			const requiereDatosEspecificos =
-				ramoNorm.includes("automotor") ||
-				ramoNorm.includes("salud") ||
-				ramoNorm.includes("enfermedad") ||
-				ramoNorm.includes("incendio") ||
-				ramoNorm.includes("responsabilidad") ||
-				ramoNorm.includes("civil") ||
-				ramoNorm.includes("transporte") ||
-				ramoNorm.includes("aeronavegacion") ||
-				ramoNorm.includes("nave") ||
-				ramoNorm.includes("embarcacion") ||
-				ramoNorm.includes("accidente") ||
-				ramoNorm.includes("vida") ||
-				ramoNorm.includes("sepelio") ||
-				ramoNorm.includes("defuncion") ||
-				(ramoNorm.includes("riesgo") && ramoNorm.includes("vario")) ||
-				(ramoNorm.includes("ramo") && ramoNorm.includes("tecnico"));
+		// Estructura mínima de los datos específicos según el ramo
+		if (formState.datos_especificos) {
+			const de = formState.datos_especificos;
+			const errorEspecifico = (mensaje: string) => {
+				nuevasAdvertencias.push({ tipo: "error", campo: "datos_especificos", mensaje });
+			};
 
-			if (requiereDatosEspecificos && !formState.datos_especificos) {
-				nuevasAdvertencias.push({
-					tipo: "error",
-					campo: "datos_especificos",
-					mensaje: `Debe completar los datos específicos del ramo "${formState.datos_basicos.ramo}" antes de guardar`,
-				});
+			switch (de.tipo_ramo) {
+				case "Automotores":
+					if (de.datos.vehiculos.length === 0) {
+						errorEspecifico("Debe agregar al menos un vehículo en los datos específicos");
+					}
+					break;
+				case "Salud":
+					if (!de.datos.contratante) {
+						errorEspecifico("Debe seleccionar el contratante en los datos específicos de Salud");
+					}
+					break;
+				case "Vida":
+				case "Accidentes Personales":
+					if (!de.datos.contratante) {
+						errorEspecifico(`Debe seleccionar el contratante en los datos específicos de ${de.tipo_ramo}`);
+					}
+					break;
+				case "Sepelio":
+					if (de.datos.asegurados.length === 0) {
+						errorEspecifico("Debe agregar al menos un asegurado en los datos específicos de Sepelio");
+					}
+					break;
+				case "Incendio y Aliados":
+				case "Riesgos Varios Misceláneos":
+					if (de.datos.bienes.length === 0) {
+						errorEspecifico(`Debe agregar al menos un bien asegurado en los datos de ${de.tipo_ramo}`);
+					}
+					break;
+				case "Aeronavegación":
+				case "Naves o embarcaciones":
+					if (de.datos.naves.length === 0) {
+						errorEspecifico("Debe agregar al menos una nave/aeronave en los datos específicos");
+					}
+					break;
+				case "Responsabilidad Civil":
+					if (!de.datos.valor_asegurado || de.datos.valor_asegurado <= 0) {
+						errorEspecifico("El valor asegurado de Responsabilidad Civil debe ser mayor a 0");
+					}
+					break;
+				case "Ramos técnicos":
+					if (!de.datos.valor_asegurado || de.datos.valor_asegurado <= 0) {
+						errorEspecifico("El valor asegurado de Ramos técnicos debe ser mayor a 0");
+					}
+					break;
+				case "Transportes":
+					if (!de.datos.materia_asegurada) {
+						errorEspecifico("Debe indicar la materia asegurada en los datos de Transportes");
+					}
+					break;
 			}
 		}
 
@@ -177,14 +281,17 @@ export function Resumen({ formState, onAnterior, onEditarPaso, onGuardar, guarda
 		cargarProducto();
 	}, [formState.datos_basicos?.producto_id]);
 
+	// Diálogo de confirmación cuando hay advertencias (warnings no bloqueantes)
+	const [mostrarConfirmarWarnings, setMostrarConfirmarWarnings] = useState(false);
+
 	const handleGuardar = async () => {
 		if (guardando) return;
 
 		// Confirmar si hay warnings
 		const tieneWarnings = advertencias.some((a) => a.tipo === "warning");
 		if (tieneWarnings) {
-			const confirmar = confirm("Hay advertencias sobre la póliza. ¿Está seguro de continuar con el guardado?");
-			if (!confirmar) return;
+			setMostrarConfirmarWarnings(true);
+			return;
 		}
 
 		await onGuardar();
@@ -640,8 +747,9 @@ export function Resumen({ formState, onAnterior, onEditarPaso, onGuardar, guarda
 										</div>
 										<div>
 											<span className="font-medium text-foreground">Tipo de transporte:</span>{" "}
-											{LABELS_TIPO_TRANSPORTE[(datos_especificos.datos as DatosTransporte).tipo_transporte] ??
-												(datos_especificos.datos as DatosTransporte).tipo_transporte}
+											{LABELS_TIPO_TRANSPORTE[
+												(datos_especificos.datos as DatosTransporte).tipo_transporte
+											] ?? (datos_especificos.datos as DatosTransporte).tipo_transporte}
 										</div>
 										<div>
 											<span className="font-medium text-foreground">Ruta:</span>{" "}
@@ -650,19 +758,24 @@ export function Resumen({ formState, onAnterior, onEditarPaso, onGuardar, guarda
 										</div>
 										<div>
 											<span className="font-medium text-foreground">Valor Asegurado:</span>{" "}
-											{(datos_especificos.datos as DatosTransporte).valor_asegurado.toLocaleString("es-BO")}{" "}
+											{(
+												datos_especificos.datos as DatosTransporte
+											).valor_asegurado.toLocaleString("es-BO")}{" "}
 											{modalidad_pago?.moneda || "Bs"}
 										</div>
 										<div>
 											<span className="font-medium text-foreground">Modalidad:</span>{" "}
-											{LABELS_MODALIDAD_TRANSPORTE[(datos_especificos.datos as DatosTransporte).modalidad] ??
-												(datos_especificos.datos as DatosTransporte).modalidad}
+											{LABELS_MODALIDAD_TRANSPORTE[
+												(datos_especificos.datos as DatosTransporte).modalidad
+											] ?? (datos_especificos.datos as DatosTransporte).modalidad}
 										</div>
 										<div>
 											<span className="font-medium text-foreground">Coberturas:</span>{" "}
 											{[
-												(datos_especificos.datos as DatosTransporte).cobertura_a && "A (Todo Riesgo)",
-												(datos_especificos.datos as DatosTransporte).cobertura_c && "C (Riesgos Nombrados)",
+												(datos_especificos.datos as DatosTransporte).cobertura_a &&
+													"A (Todo Riesgo)",
+												(datos_especificos.datos as DatosTransporte).cobertura_c &&
+													"C (Riesgos Nombrados)",
 											]
 												.filter(Boolean)
 												.join(", ") || "—"}
@@ -680,13 +793,15 @@ export function Resumen({ formState, onAnterior, onEditarPaso, onGuardar, guarda
 												? "Aeronave"
 												: "Embarcación"}
 											{" · "}
-											{(datos_especificos.datos as DatosAeronavegacion).tipo_poliza === "individual"
+											{(datos_especificos.datos as DatosAeronavegacion).tipo_poliza ===
+											"individual"
 												? "Individual"
 												: "Corporativo"}
 										</div>
 										<div>
 											<span className="font-medium text-foreground">
-												{(datos_especificos.datos as DatosAeronavegacion).tipo_nave === "aeronave"
+												{(datos_especificos.datos as DatosAeronavegacion).tipo_nave ===
+												"aeronave"
 													? "Aeronaves"
 													: "Naves/Embarcaciones"}
 												:
@@ -699,7 +814,10 @@ export function Resumen({ formState, onAnterior, onEditarPaso, onGuardar, guarda
 										</div>
 										<div>
 											<span className="font-medium text-foreground">Asegurados adicionales:</span>{" "}
-											{(datos_especificos.datos as DatosAeronavegacion).asegurados_adicionales.length}
+											{
+												(datos_especificos.datos as DatosAeronavegacion).asegurados_adicionales
+													.length
+											}
 										</div>
 									</div>
 								)}
@@ -708,19 +826,23 @@ export function Resumen({ formState, onAnterior, onEditarPaso, onGuardar, guarda
 									<div className="text-sm text-muted-foreground space-y-2">
 										<div>
 											<span className="font-medium text-foreground">Valor Asegurado:</span>{" "}
-											{(datos_especificos.datos as DatosRamosTecnicos).valor_asegurado.toLocaleString("es-BO")}{" "}
+											{(
+												datos_especificos.datos as DatosRamosTecnicos
+											).valor_asegurado.toLocaleString("es-BO")}{" "}
 											{modalidad_pago?.moneda || "Bs"}
 										</div>
 										<div>
 											<span className="font-medium text-foreground">Tipo de Póliza:</span>{" "}
-											{(datos_especificos.datos as DatosRamosTecnicos).tipo_poliza === "individual"
+											{(datos_especificos.datos as DatosRamosTecnicos).tipo_poliza ===
+											"individual"
 												? "Individual"
 												: "Corporativo"}
 										</div>
 										{((datos_especificos.datos as DatosRamosTecnicos).equipos?.length ?? 0) > 0 && (
 											<div>
 												<span className="font-medium text-foreground">Equipos:</span>{" "}
-												{(datos_especificos.datos as DatosRamosTecnicos).equipos!.length} equipo(s) registrado(s)
+												{(datos_especificos.datos as DatosRamosTecnicos).equipos!.length}{" "}
+												equipo(s) registrado(s)
 											</div>
 										)}
 									</div>
@@ -868,6 +990,36 @@ export function Resumen({ formState, onAnterior, onEditarPaso, onGuardar, guarda
 					)}
 				</Button>
 			</div>
+
+			{/* Diálogo: confirmar guardado con advertencias */}
+			<AlertDialog open={mostrarConfirmarWarnings} onOpenChange={setMostrarConfirmarWarnings}>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>Guardar con advertencias</AlertDialogTitle>
+						<AlertDialogDescription>
+							Hay advertencias sobre la póliza. ¿Está seguro de continuar con el guardado?
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					{warnings.length > 0 && (
+						<ul className="text-sm text-warning-foreground bg-warning/10 border border-warning/30 rounded-lg p-3 space-y-1 max-h-40 overflow-y-auto">
+							{warnings.map((adv, i) => (
+								<li key={i}>• {adv.mensaje}</li>
+							))}
+						</ul>
+					)}
+					<AlertDialogFooter>
+						<AlertDialogCancel>Revisar</AlertDialogCancel>
+						<AlertDialogAction
+							onClick={() => {
+								setMostrarConfirmarWarnings(false);
+								onGuardar();
+							}}
+						>
+							Guardar de todas formas
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
 		</div>
 	);
 }

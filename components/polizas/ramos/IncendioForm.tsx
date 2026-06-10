@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { BuscadorClientes } from "../BuscadorClientes";
+import { useLiveSync } from "@/hooks/useLiveSync";
 
 type Props = {
 	datos: DatosIncendio | null;
@@ -88,11 +89,7 @@ export function IncendioForm({ datos, regionales, onChange, onSiguiente, onAnter
 	};
 
 	const actualizarMontoItem = (nombreItem: ItemIncendio["nombre"], nuevoMonto: number) => {
-		setItemsBien(
-			itemsBien.map((item) =>
-				item.nombre === nombreItem ? { ...item, monto: nuevoMonto } : item
-			)
-		);
+		setItemsBien(itemsBien.map((item) => (item.nombre === nombreItem ? { ...item, monto: nuevoMonto } : item)));
 	};
 
 	const eliminarItem = (nombreItem: ItemIncendio["nombre"]) => {
@@ -162,6 +159,23 @@ export function IncendioForm({ datos, regionales, onChange, onSiguiente, onAnter
 	const eliminarAsegurado = (clientId: string) => {
 		setAsegurados(asegurados.filter((a) => a.client_id !== clientId));
 	};
+
+	// Sincroniza ediciones con el padre en vivo (sin requerir "Continuar"),
+	// para que el borrador de recovery y el resumen reflejen lo escrito.
+	useLiveSync(
+		() =>
+			regionalId && bienes.length > 0
+				? {
+						tipo_poliza: tipoPoliza,
+						regional_asegurado_id: regionalId,
+						valor_asegurado: valorAseguradoTotal,
+						bienes,
+						asegurados,
+					}
+				: null,
+		onChange,
+		[tipoPoliza, regionalId, valorAseguradoTotal, bienes, asegurados],
+	);
 
 	const handleContinuar = () => {
 		const nuevosErrores: Record<string, string> = {};
@@ -272,7 +286,10 @@ export function IncendioForm({ datos, regionales, onChange, onSiguiente, onAnter
 							<p className="font-medium mb-2">Sistema de Items por Ubicación:</p>
 							<ul className="space-y-1 text-xs">
 								<li>• Cada bien asegurado puede tener múltiples items con montos individuales</li>
-								<li>• Items disponibles: edificaciones, activos fijos, equipos, maquinaria, existencias, dinero y valores, vidrios</li>
+								<li>
+									• Items disponibles: edificaciones, activos fijos, equipos, maquinaria, existencias,
+									dinero y valores, vidrios
+								</li>
 								<li>• El valor total se calcula automáticamente sumando todos los items</li>
 								<li>• Puede marcar un bien como &quot;primer riesgo&quot; si corresponde</li>
 							</ul>
@@ -298,7 +315,9 @@ export function IncendioForm({ datos, regionales, onChange, onSiguiente, onAnter
 						<div className="border-2 border-dashed rounded-lg p-8 text-center">
 							<Home className="h-12 w-12 text-gray-400 mx-auto mb-3" />
 							<p className="text-sm text-gray-600">No hay bienes asegurados</p>
-							<p className="text-xs text-gray-500 mt-1">Haga clic en &quot;Agregar Bien&quot; para comenzar</p>
+							<p className="text-xs text-gray-500 mt-1">
+								Haga clic en &quot;Agregar Bien&quot; para comenzar
+							</p>
 						</div>
 					) : (
 						<div className="border rounded-lg divide-y">
@@ -308,7 +327,10 @@ export function IncendioForm({ datos, regionales, onChange, onSiguiente, onAnter
 										<div className="flex-1">
 											<p className="font-medium text-gray-900">{bien.direccion}</p>
 											<p className="text-sm text-gray-600">
-												Valor Total: Bs {bien.valor_total_declarado.toLocaleString("es-BO", { minimumFractionDigits: 2 })}
+												Valor Total: Bs{" "}
+												{bien.valor_total_declarado.toLocaleString("es-BO", {
+													minimumFractionDigits: 2,
+												})}
 											</p>
 											{bien.es_primer_riesgo && (
 												<span className="inline-block mt-1 px-2 py-1 bg-purple-100 text-purple-700 text-xs font-medium rounded">
@@ -361,7 +383,10 @@ export function IncendioForm({ datos, regionales, onChange, onSiguiente, onAnter
 					) : (
 						<div className="border rounded-lg divide-y">
 							{asegurados.map((asegurado) => (
-								<div key={asegurado.client_id} className="p-4 flex items-center justify-between hover:bg-gray-50">
+								<div
+									key={asegurado.client_id}
+									className="p-4 flex items-center justify-between hover:bg-gray-50"
+								>
 									<div className="flex-1">
 										<p className="text-sm font-medium text-gray-900">{asegurado.client_name}</p>
 										<p className="text-xs text-gray-600">CI/NIT: {asegurado.client_ci}</p>
@@ -409,7 +434,9 @@ export function IncendioForm({ datos, regionales, onChange, onSiguiente, onAnter
 
 								{/* Selector de items */}
 								<div className="flex gap-2 flex-wrap">
-									{ITEMS_DISPONIBLES.filter(nombre => !itemsBien.some(item => item.nombre === nombre)).map((nombreItem) => (
+									{ITEMS_DISPONIBLES.filter(
+										(nombre) => !itemsBien.some((item) => item.nombre === nombre),
+									).map((nombreItem) => (
 										<Button
 											key={nombreItem}
 											type="button"
@@ -427,7 +454,10 @@ export function IncendioForm({ datos, regionales, onChange, onSiguiente, onAnter
 								{itemsBien.length > 0 && (
 									<div className="space-y-2 mt-3">
 										{itemsBien.map((item) => (
-											<div key={item.nombre} className="flex items-center gap-2 p-3 border rounded-lg">
+											<div
+												key={item.nombre}
+												className="flex items-center gap-2 p-3 border rounded-lg"
+											>
 												<div className="flex-1">
 													<Label className="text-sm font-medium">{item.nombre}</Label>
 													<Input
@@ -436,7 +466,10 @@ export function IncendioForm({ datos, regionales, onChange, onSiguiente, onAnter
 														step="0.01"
 														value={item.monto || ""}
 														onChange={(e) =>
-															actualizarMontoItem(item.nombre, parseFloat(e.target.value) || 0)
+															actualizarMontoItem(
+																item.nombre,
+																parseFloat(e.target.value) || 0,
+															)
 														}
 														placeholder="0.00"
 														className="mt-1"

@@ -5,6 +5,7 @@ import { createAdminClient } from "@/utils/supabase/admin";
 import { revalidatePath } from "next/cache";
 import { getDataScopeFilter } from "@/utils/auth/helpers";
 import { generateFinalStoragePath } from "@/utils/fileUpload";
+import { ramoRequiereDatosEspecificos } from "@/utils/polizaValidation";
 import type { PolizaFormState } from "@/types/poliza";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -13,7 +14,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
  */
 function mapSupabaseError(
 	error: { code?: string; message?: string; details?: string; hint?: string } | null | undefined,
-	context: string
+	context: string,
 ): string {
 	if (!error) return context;
 
@@ -47,7 +48,7 @@ function mapSupabaseError(
  */
 function throwIfError(
 	error: { code?: string; message?: string; details?: string; hint?: string } | null,
-	context: string
+	context: string,
 ) {
 	if (error) {
 		throw new Error(mapSupabaseError(error, context));
@@ -78,8 +79,7 @@ async function limpiarPolizaFallida(polizaId: string): Promise<void> {
 		}
 
 		// Borrar archivos de Storage retornados por la función
-		const archivos: Array<{ bucket: string; path: string }> =
-			resultado.detalles?.archivos_storage ?? [];
+		const archivos: Array<{ bucket: string; path: string }> = resultado.detalles?.archivos_storage ?? [];
 
 		if (archivos.length > 0) {
 			const porBucket: Record<string, string[]> = {};
@@ -93,9 +93,7 @@ async function limpiarPolizaFallida(polizaId: string): Promise<void> {
 			}
 
 			for (const [bucket, paths] of Object.entries(porBucket)) {
-				const { error: removeError } = await supabaseAdmin.storage
-					.from(bucket)
-					.remove(paths);
+				const { error: removeError } = await supabaseAdmin.storage.from(bucket).remove(paths);
 
 				if (removeError) {
 					console.error(`[CLEANUP] Error borrando archivos de ${bucket}:`, removeError);
@@ -112,11 +110,7 @@ async function limpiarPolizaFallida(polizaId: string): Promise<void> {
 /**
  * Inserta las cuotas de pago para la póliza. Lanza error si falla.
  */
-async function insertarPagos(
-	supabase: SupabaseClient,
-	polizaId: string,
-	formState: PolizaFormState
-) {
+async function insertarPagos(supabase: SupabaseClient, polizaId: string, formState: PolizaFormState) {
 	if (!formState.modalidad_pago) return;
 
 	// Pólizas SIN PRIMA PROPIA (madre / open-cover): no se insertan cuotas.
@@ -197,11 +191,7 @@ async function insertarPagos(
 /**
  * Inserta los datos específicos del ramo. Lanza error si falla.
  */
-async function insertarDatosRamo(
-	supabase: SupabaseClient,
-	polizaId: string,
-	formState: PolizaFormState
-) {
+async function insertarDatosRamo(supabase: SupabaseClient, polizaId: string, formState: PolizaFormState) {
 	if (!formState.datos_especificos) return;
 
 	// Automotores
@@ -238,7 +228,14 @@ async function insertarDatosRamo(
 		if (niveles.length > 0) {
 			const { error: errorNiveles } = await supabase
 				.from("polizas_salud_niveles")
-				.insert(niveles.map((nivel) => ({ id: nivel.id, poliza_id: polizaId, nombre: nivel.nombre, monto: nivel.monto })));
+				.insert(
+					niveles.map((nivel) => ({
+						id: nivel.id,
+						poliza_id: polizaId,
+						nombre: nivel.nombre,
+						monto: nivel.monto,
+					})),
+				);
 			throwIfError(errorNiveles, "Error al guardar los niveles de salud");
 		}
 
@@ -269,14 +266,10 @@ async function insertarDatosRamo(
 				.single();
 			throwIfError(errorTitular, "Error al guardar el titular de salud");
 
-			const familiares = [
-				...(titular.conyugue ? [titular.conyugue] : []),
-				...titular.descendientes,
-			];
+			const familiares = [...(titular.conyugue ? [titular.conyugue] : []), ...titular.descendientes];
 			if (familiares.length > 0) {
-				const { error: errorFamiliares } = await supabase
-					.from("polizas_salud_beneficiarios")
-					.insert(familiares.map((f) => ({
+				const { error: errorFamiliares } = await supabase.from("polizas_salud_beneficiarios").insert(
+					familiares.map((f) => ({
 						poliza_id: polizaId,
 						nombre_completo: f.nombre_completo,
 						carnet: f.carnet,
@@ -285,7 +278,8 @@ async function insertarDatosRamo(
 						nivel_id: f.nivel_id,
 						rol: f.rol,
 						titular_id: titularDB?.id || null,
-					})));
+					})),
+				);
 				throwIfError(errorFamiliares, "Error al guardar los familiares del titular de salud");
 			}
 		}
@@ -293,14 +287,10 @@ async function insertarDatosRamo(
 		// Familiares del contratante-titular (si aplica)
 		if (datosSalud.contratante?.rol === "contratante-titular") {
 			const c = datosSalud.contratante;
-			const familiares = [
-				...(c.conyugue ? [c.conyugue] : []),
-				...(c.descendientes || []),
-			];
+			const familiares = [...(c.conyugue ? [c.conyugue] : []), ...(c.descendientes || [])];
 			if (familiares.length > 0) {
-				const { error: errorFamContratante } = await supabase
-					.from("polizas_salud_beneficiarios")
-					.insert(familiares.map((f) => ({
+				const { error: errorFamContratante } = await supabase.from("polizas_salud_beneficiarios").insert(
+					familiares.map((f) => ({
 						poliza_id: polizaId,
 						nombre_completo: f.nombre_completo,
 						carnet: f.carnet,
@@ -309,7 +299,8 @@ async function insertarDatosRamo(
 						nivel_id: f.nivel_id,
 						rol: f.rol,
 						titular_id: null,
-					})));
+					})),
+				);
 				throwIfError(errorFamContratante, "Error al guardar los familiares del contratante-titular");
 			}
 		}
@@ -319,31 +310,32 @@ async function insertarDatosRamo(
 	if (formState.datos_especificos.tipo_ramo === "Transportes") {
 		const datosTransporte = formState.datos_especificos.datos;
 
-		const { error: errorTransporte } = await supabase
-			.from("polizas_transporte")
-			.insert({
-				poliza_id: polizaId,
-				materia_asegurada: datosTransporte.materia_asegurada,
-				tipo_embalaje: datosTransporte.tipo_embalaje,
-				fecha_embarque: datosTransporte.fecha_embarque,
-				tipo_transporte: datosTransporte.tipo_transporte,
-				pais_origen_id: datosTransporte.pais_origen_id,
-				ciudad_origen: datosTransporte.ciudad_origen,
-				pais_destino_id: datosTransporte.pais_destino_id,
-				ciudad_destino: datosTransporte.ciudad_destino,
-				valor_asegurado: datosTransporte.valor_asegurado,
-				factura: datosTransporte.factura,
-				fecha_factura: datosTransporte.fecha_factura,
-				cobertura_a: datosTransporte.cobertura_a,
-				cobertura_c: datosTransporte.cobertura_c,
-				modalidad: datosTransporte.modalidad,
-			});
+		const { error: errorTransporte } = await supabase.from("polizas_transporte").insert({
+			poliza_id: polizaId,
+			materia_asegurada: datosTransporte.materia_asegurada,
+			tipo_embalaje: datosTransporte.tipo_embalaje,
+			fecha_embarque: datosTransporte.fecha_embarque,
+			tipo_transporte: datosTransporte.tipo_transporte,
+			pais_origen_id: datosTransporte.pais_origen_id,
+			ciudad_origen: datosTransporte.ciudad_origen,
+			pais_destino_id: datosTransporte.pais_destino_id,
+			ciudad_destino: datosTransporte.ciudad_destino,
+			valor_asegurado: datosTransporte.valor_asegurado,
+			factura: datosTransporte.factura,
+			fecha_factura: datosTransporte.fecha_factura,
+			cobertura_a: datosTransporte.cobertura_a,
+			cobertura_c: datosTransporte.cobertura_c,
+			modalidad: datosTransporte.modalidad,
+		});
 
 		throwIfError(errorTransporte, "Error al guardar datos de transporte");
 	}
 
 	// Aeronavegación / Naves o embarcaciones
-	if (formState.datos_especificos.tipo_ramo === "Aeronavegación" || formState.datos_especificos.tipo_ramo === "Naves o embarcaciones") {
+	if (
+		formState.datos_especificos.tipo_ramo === "Aeronavegación" ||
+		formState.datos_especificos.tipo_ramo === "Naves o embarcaciones"
+	) {
 		const datosAero = formState.datos_especificos.datos;
 
 		const nivelesAP = datosAero.niveles_ap || [];
@@ -385,12 +377,10 @@ async function insertarDatosRamo(
 				nro_tripulantes: nave.nro_tripulantes,
 				valor_casco: nave.valor_casco,
 				valor_responsabilidad_civil: nave.valor_responsabilidad_civil,
-				nivel_ap_id: nave.nivel_ap_id ? (nivelIdMap.get(nave.nivel_ap_id) || null) : null,
+				nivel_ap_id: nave.nivel_ap_id ? nivelIdMap.get(nave.nivel_ap_id) || null : null,
 			}));
 
-			const { error: errorNaves } = await supabase
-				.from("polizas_aeronavegacion_naves")
-				.insert(navesParaInsertar);
+			const { error: errorNaves } = await supabase.from("polizas_aeronavegacion_naves").insert(navesParaInsertar);
 
 			throwIfError(errorNaves, "Error al guardar las naves/embarcaciones");
 		}
@@ -415,13 +405,11 @@ async function insertarDatosRamo(
 		const datosRT = formState.datos_especificos.datos;
 
 		// 1. Datos generales del ramo (valor asegurado y tipo de póliza)
-		const { error: errorRT } = await supabase
-			.from("polizas_ramos_tecnicos")
-			.insert({
-				poliza_id: polizaId,
-				valor_asegurado: datosRT.valor_asegurado,
-				tipo_poliza: datosRT.tipo_poliza,
-			});
+		const { error: errorRT } = await supabase.from("polizas_ramos_tecnicos").insert({
+			poliza_id: polizaId,
+			valor_asegurado: datosRT.valor_asegurado,
+			tipo_poliza: datosRT.tipo_poliza,
+		});
 
 		throwIfError(errorRT, "Error al guardar datos de ramos técnicos");
 
@@ -479,9 +467,7 @@ async function insertarDatosRamo(
 					monto: item.monto,
 				}));
 
-				const { error: errorItems } = await supabase
-					.from("polizas_incendio_items")
-					.insert(itemsParaInsertar);
+				const { error: errorItems } = await supabase.from("polizas_incendio_items").insert(itemsParaInsertar);
 
 				throwIfError(errorItems, "Error al guardar los items de incendio");
 			}
@@ -554,13 +540,11 @@ async function insertarDatosRamo(
 	if (formState.datos_especificos.tipo_ramo === "Responsabilidad Civil") {
 		const datosRC = formState.datos_especificos.datos;
 
-		const { error: errorRC } = await supabase
-			.from("polizas_responsabilidad_civil")
-			.insert({
-				poliza_id: polizaId,
-				tipo_poliza: datosRC.tipo_poliza,
-				valor_asegurado: datosRC.valor_asegurado,
-			});
+		const { error: errorRC } = await supabase.from("polizas_responsabilidad_civil").insert({
+			poliza_id: polizaId,
+			tipo_poliza: datosRC.tipo_poliza,
+			valor_asegurado: datosRC.valor_asegurado,
+		});
 
 		throwIfError(errorRC, "Error al guardar datos de responsabilidad civil");
 
@@ -587,9 +571,7 @@ async function insertarDatosRamo(
 				cilindrada: v.cilindrada ?? null,
 			}));
 
-			const { error: errorVehiculos } = await supabase
-				.from("polizas_rc_vehiculos")
-				.insert(vehiculosParaInsertar);
+			const { error: errorVehiculos } = await supabase.from("polizas_rc_vehiculos").insert(vehiculosParaInsertar);
 
 			throwIfError(errorVehiculos, "Error al guardar los vehículos de responsabilidad civil");
 		}
@@ -626,7 +608,15 @@ async function insertarDatosRamo(
 
 		// Sepelio: asegurados desde DB (AseguradoConNivel[])
 		if (formState.datos_especificos.tipo_ramo === "Sepelio") {
-			const asegurados = "asegurados" in datosNivel ? (datosNivel.asegurados as Array<{ client_id: string; nivel_id: string; cargo?: string; rol?: string }>) : [];
+			const asegurados =
+				"asegurados" in datosNivel
+					? (datosNivel.asegurados as Array<{
+							client_id: string;
+							nivel_id: string;
+							cargo?: string;
+							rol?: string;
+						}>)
+					: [];
 			if (asegurados.length > 0) {
 				const aseguradosParaInsertar = asegurados
 					.filter((a) => nivelIdMap.has(a.nivel_id))
@@ -651,20 +641,28 @@ async function insertarDatosRamo(
 			formState.datos_especificos.tipo_ramo === "Vida" ||
 			formState.datos_especificos.tipo_ramo === "Accidentes Personales"
 		) {
-			const datosVidaAP = datosNivel as { contratante?: { client_id: string; nivel_id: string; rol: string }; asegurados?: Array<{ id: string; nombre_completo: string; carnet: string; fecha_nacimiento?: string; genero?: string; nivel_id: string }> };
+			const datosVidaAP = datosNivel as {
+				contratante?: { client_id: string; nivel_id: string; rol: string };
+				asegurados?: Array<{
+					id: string;
+					nombre_completo: string;
+					carnet: string;
+					fecha_nacimiento?: string;
+					genero?: string;
+					nivel_id: string;
+				}>;
+			};
 
 			// Contratante → polizas_asegurados_nivel
 			if (datosVidaAP.contratante && nivelIdMap.has(datosVidaAP.contratante.nivel_id)) {
 				const c = datosVidaAP.contratante;
-				const { error: errorContratante } = await supabase
-					.from("polizas_asegurados_nivel")
-					.insert({
-						poliza_id: polizaId,
-						client_id: c.client_id,
-						nivel_id: nivelIdMap.get(c.nivel_id)!,
-						rol: c.rol,
-						cargo: null,
-					});
+				const { error: errorContratante } = await supabase.from("polizas_asegurados_nivel").insert({
+					poliza_id: polizaId,
+					client_id: c.client_id,
+					nivel_id: nivelIdMap.get(c.nivel_id)!,
+					rol: c.rol,
+					cargo: null,
+				});
 				throwIfError(errorContratante, "Error al guardar el contratante");
 			}
 
@@ -682,9 +680,7 @@ async function insertarDatosRamo(
 					rol: "asegurado",
 				}));
 			if (paraInsertar.length > 0) {
-				const { error: errorAsegurados } = await supabase
-					.from("polizas_beneficiarios")
-					.insert(paraInsertar);
+				const { error: errorAsegurados } = await supabase.from("polizas_beneficiarios").insert(paraInsertar);
 				throwIfError(errorAsegurados, "Error al guardar los asegurados");
 			}
 		}
@@ -695,14 +691,8 @@ async function insertarDatosRamo(
  * Procesa documentos: mueve de temp/ a {poliza_id}/ y registra en BD.
  * Best-effort: no lanza error si falla (los archivos siguen accesibles en temp/).
  */
-async function procesarDocumentos(
-	supabase: SupabaseClient,
-	polizaId: string,
-	formState: PolizaFormState
-) {
-	const docsSubidos = formState.documentos.filter(
-		(d) => d.storage_path && d.upload_status === "uploaded"
-	);
+async function procesarDocumentos(supabase: SupabaseClient, polizaId: string, formState: PolizaFormState) {
+	const docsSubidos = formState.documentos.filter((d) => d.storage_path && d.upload_status === "uploaded");
 
 	if (docsSubidos.length === 0) return;
 
@@ -711,9 +701,7 @@ async function procesarDocumentos(
 		const finalPath = generateFinalStoragePath(polizaId, documento.nombre_archivo);
 
 		let usedPath = finalPath;
-		const { error: moveError } = await supabase.storage
-			.from("polizas-documentos")
-			.move(tempPath, finalPath);
+		const { error: moveError } = await supabase.storage.from("polizas-documentos").move(tempPath, finalPath);
 
 		if (moveError) {
 			console.error("[DOCS] Error moviendo documento, usando ruta temporal:", moveError);
@@ -766,29 +754,15 @@ export async function guardarPoliza(formState: PolizaFormState) {
 		}
 
 		// Validar datos_especificos para ramos que lo requieren
-		const ramoNorm = formState.datos_basicos.ramo
-			.toLowerCase().trim()
-			.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-		const requiereDatosEspecificos =
-			ramoNorm.includes("automotor") ||
-			ramoNorm.includes("salud") || ramoNorm.includes("enfermedad") ||
-			ramoNorm.includes("incendio") ||
-			ramoNorm.includes("responsabilidad") || ramoNorm.includes("civil") ||
-			ramoNorm.includes("transporte") ||
-			ramoNorm.includes("aeronavegacion") ||
-			ramoNorm.includes("nave") || ramoNorm.includes("embarcacion") ||
-			ramoNorm.includes("accidente") ||
-			ramoNorm.includes("vida") ||
-			ramoNorm.includes("sepelio") || ramoNorm.includes("defuncion") ||
-			(ramoNorm.includes("riesgo") && ramoNorm.includes("vario")) ||
-			(ramoNorm.includes("ramo") && ramoNorm.includes("tecnico"));
-
-		if (requiereDatosEspecificos && !formState.datos_especificos) {
-			return { success: false, error: `Datos específicos del ramo "${formState.datos_basicos.ramo}" son obligatorios` };
+		if (ramoRequiereDatosEspecificos(formState.datos_basicos.ramo) && !formState.datos_especificos) {
+			return {
+				success: false,
+				error: `Datos específicos del ramo "${formState.datos_basicos.ramo}" son obligatorios`,
+			};
 		}
 
 		// Validar que agente/comercial solo asigne responsable dentro de su equipo
-		const scope = await getDataScopeFilter('polizas');
+		const scope = await getDataScopeFilter("polizas");
 		if (scope.needsScoping && formState.datos_basicos.responsable_id) {
 			if (!scope.teamMemberIds.includes(formState.datos_basicos.responsable_id)) {
 				return { success: false, error: "Solo puede asignar como responsable a un miembro de su equipo" };
@@ -796,20 +770,27 @@ export async function guardarPoliza(formState: PolizaFormState) {
 		}
 
 		// 2. Insertar póliza principal
-		const pagoData = formState.modalidad_pago as { prima_neta?: number; comision?: number; comision_empresa?: number; comision_encargado?: number };
+		const pagoData = formState.modalidad_pago as {
+			prima_neta?: number;
+			comision?: number;
+			comision_empresa?: number;
+			comision_encargado?: number;
+		};
 		const sinPrimaPropia = formState.datos_basicos.tipo_prima === "sin_prima_propia";
 
 		// Extraer campos ramo-específicos que se guardan en la tabla polizas
 		const datosEsp = formState.datos_especificos?.datos;
 		const ramosConRegionalAsegurado = ["Salud", "Vida", "Accidentes Personales", "Sepelio"];
-		const regionalAseguradoId = ramosConRegionalAsegurado.includes(formState.datos_especificos?.tipo_ramo ?? "")
-			&& datosEsp && "regional_asegurado_id" in datosEsp
-			? (datosEsp as { regional_asegurado_id: string }).regional_asegurado_id || null
-			: null;
-		const tieneMaternidad = formState.datos_especificos?.tipo_ramo === "Salud"
-			&& datosEsp && "tiene_maternidad" in datosEsp
-			? (datosEsp as { tiene_maternidad: boolean }).tiene_maternidad
-			: false;
+		const regionalAseguradoId =
+			ramosConRegionalAsegurado.includes(formState.datos_especificos?.tipo_ramo ?? "") &&
+			datosEsp &&
+			"regional_asegurado_id" in datosEsp
+				? (datosEsp as { regional_asegurado_id: string }).regional_asegurado_id || null
+				: null;
+		const tieneMaternidad =
+			formState.datos_especificos?.tipo_ramo === "Salud" && datosEsp && "tiene_maternidad" in datosEsp
+				? (datosEsp as { tiene_maternidad: boolean }).tiene_maternidad
+				: false;
 		const { data: poliza, error: errorPoliza } = await supabase
 			.from("polizas")
 			.insert({
@@ -833,12 +814,16 @@ export async function guardarPoliza(formState: PolizaFormState) {
 				comision: sinPrimaPropia ? null : pagoData.comision_empresa || pagoData.comision || null,
 				comision_empresa: sinPrimaPropia ? null : pagoData.comision_empresa || null,
 				comision_encargado: sinPrimaPropia ? null : pagoData.comision_encargado || null,
-				usar_factores_contado: formState.modalidad_pago.tipo === "credito" && formState.modalidad_pago.usar_factores_contado === true,
+				usar_factores_contado:
+					formState.modalidad_pago.tipo === "credito" &&
+					formState.modalidad_pago.usar_factores_contado === true,
 				tipo_prima: formState.datos_basicos.tipo_prima ?? "directa",
 				es_retroactiva: formState.datos_basicos.es_retroactiva ?? false,
 				estado: "pendiente",
 				es_renovacion: formState.datos_basicos.es_renovacion || false,
-				nro_poliza_anterior: formState.datos_basicos.es_renovacion ? (formState.datos_basicos.nro_poliza_anterior || null) : null,
+				nro_poliza_anterior: formState.datos_basicos.es_renovacion
+					? formState.datos_basicos.nro_poliza_anterior || null
+					: null,
 				regional_asegurado_id: regionalAseguradoId,
 				tiene_maternidad: tieneMaternidad,
 			})
@@ -859,9 +844,10 @@ export async function guardarPoliza(formState: PolizaFormState) {
 			await limpiarPolizaFallida(poliza.id);
 			return {
 				success: false,
-				error: insertError instanceof Error
-					? insertError.message
-					: "Error guardando datos de la póliza. Los datos parciales fueron limpiados automáticamente.",
+				error:
+					insertError instanceof Error
+						? insertError.message
+						: "Error guardando datos de la póliza. Los datos parciales fueron limpiados automáticamente.",
 			};
 		}
 

@@ -165,6 +165,7 @@ export async function updateSession(request: NextRequest) {
 }
 
 // Configure which paths the middleware runs on
+// NOTA: el matcher efectivo es el de middleware.ts en la raíz del proyecto; mantener ambos en sincronía.
 export const config = {
 	matcher: [
 		/*
@@ -172,8 +173,9 @@ export const config = {
 		 * - _next/static (static files)
 		 * - _next/image (image optimization files)
 		 * - favicon.ico (favicon file)
+		 * - site.webmanifest (el navegador lo pide sin cookies; un redirect a login rompe el manifest)
 		 * - images, icons, etc. (static assets)
 		 */
-		"/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+		"/((?!_next/static|_next/image|favicon.ico|site.webmanifest|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|webmanifest)$).*)",
 	],
 };

@@ -21,6 +21,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { BuscadorClientes } from "../BuscadorClientes";
 import { NaveModal } from "./NaveModal";
+import { useLiveSync } from "@/hooks/useLiveSync";
 
 type Props = {
 	datos: DatosAeronavegacion | null;
@@ -36,7 +37,7 @@ type SubPaso = "niveles_ap" | "principal";
 export function AeronavegacionForm({ datos, tipoNave, onChange, onSiguiente, onAnterior }: Props) {
 	// Estado del sub-paso actual
 	const [subPaso, setSubPaso] = useState<SubPaso>(
-		datos?.niveles_ap && datos.niveles_ap.length > 0 ? "principal" : "niveles_ap"
+		datos?.niveles_ap && datos.niveles_ap.length > 0 ? "principal" : "niveles_ap",
 	);
 
 	// ===== PASO 2.1: NIVELES DE ACCIDENTES PERSONALES =====
@@ -48,12 +49,10 @@ export function AeronavegacionForm({ datos, tipoNave, onChange, onSiguiente, onA
 	const [montoGastosMedicos, setMontoGastosMedicos] = useState<number>(0);
 
 	// ===== PASO 3: FORMULARIO PRINCIPAL =====
-	const [tipoPoliza, setTipoPoliza] = useState<"individual" | "corporativo">(
-		datos?.tipo_poliza || "individual"
-	);
+	const [tipoPoliza, setTipoPoliza] = useState<"individual" | "corporativo">(datos?.tipo_poliza || "individual");
 	const [naves, setNaves] = useState<NaveEmbarcacion[]>(datos?.naves || []);
 	const [aseguradosAdicionales, setAseguradosAdicionales] = useState<AseguradoAeronavegacion[]>(
-		datos?.asegurados_adicionales || []
+		datos?.asegurados_adicionales || [],
 	);
 	const [modalNaveAbierto, setModalNaveAbierto] = useState(false);
 	const [naveEditando, setNaveEditando] = useState<NaveEmbarcacion | null>(null);
@@ -137,7 +136,9 @@ export function AeronavegacionForm({ datos, tipoNave, onChange, onSiguiente, onA
 		// Verificar si alguna nave usa este nivel
 		const navesConNivel = naves.filter((n) => n.nivel_ap_id === id);
 		if (navesConNivel.length > 0) {
-			alert(`No se puede eliminar este nivel porque está asignado a ${navesConNivel.length} ${tipoLabelPlural.toLowerCase()}`);
+			alert(
+				`No se puede eliminar este nivel porque está asignado a ${navesConNivel.length} ${tipoLabelPlural.toLowerCase()}`,
+			);
 			return;
 		}
 
@@ -254,6 +255,23 @@ export function AeronavegacionForm({ datos, tipoNave, onChange, onSiguiente, onA
 	};
 
 	// Continuar al siguiente paso
+	// Sincroniza ediciones con el padre en vivo (sin requerir "Continuar"),
+	// para que el borrador de recovery y el resumen reflejen lo escrito.
+	useLiveSync(
+		() =>
+			naves.length > 0
+				? {
+						tipo_poliza: tipoPoliza,
+						tipo_nave: tipoNave,
+						niveles_ap: nivelesAP,
+						naves,
+						asegurados_adicionales: aseguradosAdicionales,
+					}
+				: null,
+		onChange,
+		[tipoPoliza, tipoNave, nivelesAP, naves, aseguradosAdicionales],
+	);
+
 	const handleContinuar = () => {
 		if (naves.length === 0) {
 			setErrores({ general: `Debe agregar al menos una ${tipoLabel.toLowerCase()}` });
@@ -344,11 +362,7 @@ export function AeronavegacionForm({ datos, tipoNave, onChange, onSiguiente, onA
 										</td>
 										<td className="px-4 py-3 text-center">
 											<div className="flex items-center justify-center gap-2">
-												<Button
-													variant="ghost"
-													size="sm"
-													onClick={() => editarNivel(nivel)}
-												>
+												<Button variant="ghost" size="sm" onClick={() => editarNivel(nivel)}>
 													<Edit className="h-4 w-4" />
 												</Button>
 												<Button
@@ -385,9 +399,7 @@ export function AeronavegacionForm({ datos, tipoNave, onChange, onSiguiente, onA
 									placeholder="Ej: Nivel 1"
 									className={errores.nombre_nivel ? "border-red-500" : ""}
 								/>
-								{errores.nombre_nivel && (
-									<p className="text-sm text-red-600">{errores.nombre_nivel}</p>
-								)}
+								{errores.nombre_nivel && <p className="text-sm text-red-600">{errores.nombre_nivel}</p>}
 							</div>
 
 							<div className="space-y-2">
@@ -430,9 +442,7 @@ export function AeronavegacionForm({ datos, tipoNave, onChange, onSiguiente, onA
 							</div>
 						</div>
 
-						{errores.montos && (
-							<p className="text-sm text-red-600 mt-2">{errores.montos}</p>
-						)}
+						{errores.montos && <p className="text-sm text-red-600 mt-2">{errores.montos}</p>}
 
 						<div className="flex justify-end gap-2 mt-4">
 							<Button
@@ -485,9 +495,7 @@ export function AeronavegacionForm({ datos, tipoNave, onChange, onSiguiente, onA
 		<div className="bg-white rounded-lg shadow-sm border p-6">
 			<div className="flex items-center justify-between mb-6">
 				<div>
-					<h2 className="text-xl font-semibold text-gray-900">
-						Paso 3: {tipoLabelPlural} Aseguradas
-					</h2>
+					<h2 className="text-xl font-semibold text-gray-900">Paso 3: {tipoLabelPlural} Aseguradas</h2>
 					<p className="text-sm text-gray-600 mt-1">
 						Agregue las {tipoLabelPlural.toLowerCase()} y asegurados adicionales
 					</p>
@@ -497,7 +505,8 @@ export function AeronavegacionForm({ datos, tipoNave, onChange, onSiguiente, onA
 					<div className="flex items-center gap-2 text-green-600">
 						<CheckCircle2 className="h-5 w-5" />
 						<span className="text-sm font-medium">
-							{naves.length} {naves.length === 1 ? tipoLabel.toLowerCase() : tipoLabelPlural.toLowerCase()}
+							{naves.length}{" "}
+							{naves.length === 1 ? tipoLabel.toLowerCase() : tipoLabelPlural.toLowerCase()}
 						</span>
 					</div>
 				)}
@@ -599,15 +608,15 @@ export function AeronavegacionForm({ datos, tipoNave, onChange, onSiguiente, onA
 													nave.uso === "publico"
 														? "bg-blue-100 text-blue-800"
 														: nave.uso === "recreacion"
-														? "bg-purple-100 text-purple-800"
-														: "bg-green-100 text-green-800"
+															? "bg-purple-100 text-purple-800"
+															: "bg-green-100 text-green-800"
 												}`}
 											>
 												{nave.uso === "publico"
 													? "Público"
 													: nave.uso === "recreacion"
-													? "Recreación"
-													: "Privado"}
+														? "Recreación"
+														: "Privado"}
 											</span>
 										</td>
 										<td className="px-4 py-3 text-center text-sm text-gray-600">
@@ -671,9 +680,7 @@ export function AeronavegacionForm({ datos, tipoNave, onChange, onSiguiente, onA
 							<Users className="h-5 w-5" />
 							Asegurados Adicionales
 						</h3>
-						<p className="text-sm text-gray-500">
-							Opcional: agregue otros asegurados además del titular
-						</p>
+						<p className="text-sm text-gray-500">Opcional: agregue otros asegurados además del titular</p>
 					</div>
 					<Button variant="outline" onClick={() => setMostrarBuscadorCliente(true)}>
 						<UserPlus className="mr-2 h-4 w-4" />

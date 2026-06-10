@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { useLiveSync } from "@/hooks/useLiveSync";
 import {
 	ChevronRight,
 	ChevronLeft,
@@ -120,6 +121,10 @@ export function ModalidadPago({
 	const [moneda, setMoneda] = useState<Moneda>(datos?.moneda || "Bs");
 	const [errores, setErrores] = useState<Record<string, string>>({});
 	const [advertencias, setAdvertencias] = useState<Record<string, string>>({});
+
+	// Metadata de pago de la carga inicial (modo edición): ids de cuotas en BD y
+	// flags de pagado. Se preservan al recomponer el objeto de modalidad.
+	const flagsInicialesRef = useRef(datos);
 
 	// Estado para feedback visual en modo edición
 	const [datosActualizados, setDatosActualizados] = useState<boolean>(false);
@@ -286,38 +291,26 @@ export function ModalidadPago({
 		setCuotas(nuevasCuotas);
 	};
 
-	const handleContinuar = () => {
-		let datosPago: ModalidadPagoType & { comision_empresa?: number; comision_encargado?: number };
+	/**
+	 * Compone el objeto de modalidad de pago a partir del estado local actual.
+	 * Única fuente de verdad usada por "Continuar" y por el live-sync con el padre.
+	 */
+	const construirDatosPago = (): ModalidadPagoType & { comision_empresa?: number; comision_encargado?: number } => {
+		const inicial = flagsInicialesRef.current;
 
 		// Póliza SIN PRIMA PROPIA: contado degenerado (prima 0, sin cuotas reales).
 		// La prima, si existe, llega por anexos de inclusión.
 		if (sinPrimaPropia) {
-			const datosSinPrima: ModalidadPagoType = {
+			return {
 				tipo: "contado",
 				cuota_unica: 0,
 				fecha_pago_unico: inicioVigencia || fechaPagoUnico || "",
 				prima_total: 0,
 				moneda,
 			};
-			const validacionSinPrima = validarModalidadPago(datosSinPrima, "sin_prima_propia");
-			if (!validacionSinPrima.valido) {
-				const nuevosErrores: Record<string, string> = {};
-				validacionSinPrima.errores.forEach((error) => {
-					nuevosErrores[error.campo] = error.mensaje;
-				});
-				setErrores(nuevosErrores);
-				return;
-			}
-			setErrores({});
-			setAdvertencias({});
-			onChange(datosSinPrima);
-			if (mode === "edit") {
-				setDatosActualizados(true);
-				setTimeout(() => setDatosActualizados(false), 2000);
-			}
-			onSiguiente();
-			return;
 		}
+
+		let datosPago: ModalidadPagoType & { comision_empresa?: number; comision_encargado?: number };
 
 		if (tipoPago === "contado") {
 			datosPago = {
@@ -328,6 +321,9 @@ export function ModalidadPago({
 				moneda,
 				prima_neta,
 				comision,
+				// Preservar metadata de edición (cuota ya registrada/pagada en BD)
+				cuota_id: inicial?.tipo === "contado" ? inicial.cuota_id : undefined,
+				cuota_pagada: inicial?.tipo === "contado" ? inicial.cuota_pagada : undefined,
 			};
 		} else {
 			// cantidad_cuotas representa el total de cuotas (inicial + regulares)
@@ -344,6 +340,10 @@ export function ModalidadPago({
 				prima_neta,
 				comision,
 				usar_factores_contado: usarFactoresContado || undefined,
+				// Preservar metadata de edición (cuota inicial/pagos ya registrados en BD)
+				cuota_inicial_id: inicial?.tipo === "credito" ? inicial.cuota_inicial_id : undefined,
+				cuota_inicial_pagada: inicial?.tipo === "credito" ? inicial.cuota_inicial_pagada : undefined,
+				tiene_pagos: inicial?.tipo === "credito" ? inicial.tiene_pagos : undefined,
 			};
 		}
 
@@ -351,6 +351,55 @@ export function ModalidadPago({
 		if (calculos) {
 			datosPago.comision_empresa = calculos.comision_empresa;
 			datosPago.comision_encargado = calculos.comision_encargado;
+		}
+
+		return datosPago;
+	};
+
+	// Sincroniza las ediciones con el padre en vivo (sin requerir "Continuar"),
+	// para que el borrador de recovery y el resumen reflejen lo escrito.
+	useLiveSync(construirDatosPago, onChange, [
+		sinPrimaPropia,
+		tipoPago,
+		cuotaUnica,
+		fechaPagoUnico,
+		primaTotal,
+		cuotaInicial,
+		fechaInicioCuotas,
+		periodoPago,
+		cuotas,
+		moneda,
+		usarFactoresContado,
+		prima_neta,
+		comision,
+		calculos?.comision_empresa,
+		calculos?.comision_encargado,
+		inicioVigencia,
+	]);
+
+	const handleContinuar = () => {
+		const datosPago = construirDatosPago();
+
+		// Póliza sin prima propia: solo se valida moneda
+		if (sinPrimaPropia) {
+			const validacionSinPrima = validarModalidadPago(datosPago, "sin_prima_propia");
+			if (!validacionSinPrima.valido) {
+				const nuevosErrores: Record<string, string> = {};
+				validacionSinPrima.errores.forEach((error) => {
+					nuevosErrores[error.campo] = error.mensaje;
+				});
+				setErrores(nuevosErrores);
+				return;
+			}
+			setErrores({});
+			setAdvertencias({});
+			onChange(datosPago);
+			if (mode === "edit") {
+				setDatosActualizados(true);
+				setTimeout(() => setDatosActualizados(false), 2000);
+			}
+			onSiguiente();
+			return;
 		}
 
 		// Validar campos requeridos (retroactiva: prima opcional)
@@ -755,9 +804,9 @@ export function ModalidadPago({
 								/>
 								<p className="text-xs text-muted-foreground">
 									Use la prima total real de la póliza arriba y aquí el importe de cada cuota que aún
-									está <strong>pendiente de cobro</strong>. Al generar, se crearán solo esas cuotas (las
-									ya cobradas antes de cargar la póliza no se registran). Si lo deja vacío, las cuotas se
-									calculan dividiendo la prima total.
+									está <strong>pendiente de cobro</strong>. Al generar, se crearán solo esas cuotas
+									(las ya cobradas antes de cargar la póliza no se registran). Si lo deja vacío, las
+									cuotas se calculan dividiendo la prima total.
 								</p>
 							</div>
 						)}
@@ -1295,61 +1344,67 @@ export function ModalidadPago({
 						<AlertCircle className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
 						<p className="text-xs text-muted-foreground">
 							Carga histórica: registre la prima total real de la póliza, pero solo las cuotas que aún
-							están <strong>pendientes de cobro</strong>. Se guardarán como <strong>pendientes</strong> para
-							que Cobranza las gestione; las cuotas ya cobradas antes de cargar la póliza no se registran,
-							por eso la suma de cuotas puede ser menor a la prima total. La prima es opcional (puede
-							continuar sin registrar cuotas).
+							están <strong>pendientes de cobro</strong>. Se guardarán como <strong>pendientes</strong>{" "}
+							para que Cobranza las gestione; las cuotas ya cobradas antes de cargar la póliza no se
+							registran, por eso la suma de cuotas puede ser menor a la prima total. La prima es opcional
+							(puede continuar sin registrar cuotas).
 						</p>
 					</div>
 
 					{/* Desglose: prima total vs cuotas registradas vs saldo histórico no registrado */}
-					{tipoPago === "credito" && cuotas.length > 0 && primaTotal > 0 && (() => {
-						const sumaCuotasRetro =
-							(cuotaInicial > 0 ? cuotaInicial : 0) + cuotas.reduce((s, c) => s + (c.monto || 0), 0);
-						const saldoHistoricoRetro = primaTotal - sumaCuotasRetro;
-						const excede = saldoHistoricoRetro < -0.01;
-						return (
-							<div className="p-4 bg-card border border-border rounded-lg">
-								<div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
-									<div>
-										<p className="text-muted-foreground font-medium">Prima total</p>
-										<p className="text-foreground text-lg font-bold">
-											{primaTotal.toLocaleString("es-BO", { minimumFractionDigits: 2 })} {moneda}
-										</p>
+					{tipoPago === "credito" &&
+						cuotas.length > 0 &&
+						primaTotal > 0 &&
+						(() => {
+							const sumaCuotasRetro =
+								(cuotaInicial > 0 ? cuotaInicial : 0) + cuotas.reduce((s, c) => s + (c.monto || 0), 0);
+							const saldoHistoricoRetro = primaTotal - sumaCuotasRetro;
+							const excede = saldoHistoricoRetro < -0.01;
+							return (
+								<div className="p-4 bg-card border border-border rounded-lg">
+									<div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
+										<div>
+											<p className="text-muted-foreground font-medium">Prima total</p>
+											<p className="text-foreground text-lg font-bold">
+												{primaTotal.toLocaleString("es-BO", { minimumFractionDigits: 2 })}{" "}
+												{moneda}
+											</p>
+										</div>
+										<div>
+											<p className="text-muted-foreground font-medium">Cuotas registradas</p>
+											<p className="text-foreground text-lg font-bold">
+												{sumaCuotasRetro.toLocaleString("es-BO", { minimumFractionDigits: 2 })}{" "}
+												{moneda}
+											</p>
+										</div>
+										<div>
+											<p className="text-muted-foreground font-medium">
+												{excede ? "Excede la prima" : "Saldo histórico (no registrado)"}
+											</p>
+											<p
+												className={`text-lg font-bold ${excede ? "text-destructive" : "text-foreground"}`}
+											>
+												{Math.abs(saldoHistoricoRetro).toLocaleString("es-BO", {
+													minimumFractionDigits: 2,
+												})}{" "}
+												{moneda}
+											</p>
+										</div>
 									</div>
-									<div>
-										<p className="text-muted-foreground font-medium">Cuotas registradas</p>
-										<p className="text-foreground text-lg font-bold">
-											{sumaCuotasRetro.toLocaleString("es-BO", { minimumFractionDigits: 2 })} {moneda}
+									{excede ? (
+										<p className="text-xs text-destructive mt-2">
+											La suma de cuotas supera la prima total. Reduzca las cuotas o aumente la
+											prima.
 										</p>
-									</div>
-									<div>
-										<p className="text-muted-foreground font-medium">
-											{excede ? "Excede la prima" : "Saldo histórico (no registrado)"}
+									) : saldoHistoricoRetro > 0.01 ? (
+										<p className="text-xs text-muted-foreground mt-2">
+											El saldo histórico corresponde a cuotas ya cobradas fuera del sistema y no
+											se registrará en Cobranza.
 										</p>
-										<p
-											className={`text-lg font-bold ${excede ? "text-destructive" : "text-foreground"}`}
-										>
-											{Math.abs(saldoHistoricoRetro).toLocaleString("es-BO", {
-												minimumFractionDigits: 2,
-											})}{" "}
-											{moneda}
-										</p>
-									</div>
+									) : null}
 								</div>
-								{excede ? (
-									<p className="text-xs text-destructive mt-2">
-										La suma de cuotas supera la prima total. Reduzca las cuotas o aumente la prima.
-									</p>
-								) : saldoHistoricoRetro > 0.01 ? (
-									<p className="text-xs text-muted-foreground mt-2">
-										El saldo histórico corresponde a cuotas ya cobradas fuera del sistema y no se
-										registrará en Cobranza.
-									</p>
-								) : null}
-							</div>
-						);
-					})()}
+							);
+						})()}
 				</div>
 			)}
 

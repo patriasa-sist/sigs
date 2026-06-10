@@ -2,12 +2,18 @@
 
 import { useState, useEffect } from "react";
 import { ChevronRight, ChevronLeft, CheckCircle2, Plus, Trash2, Users, Home, Edit2, AlertCircle } from "lucide-react";
-import type { DatosRiesgosVarios, BienAseguradoRiesgosVarios, AseguradoRiesgosVarios, ItemRiesgosVarios } from "@/types/poliza";
+import type {
+	DatosRiesgosVarios,
+	BienAseguradoRiesgosVarios,
+	AseguradoRiesgosVarios,
+	ItemRiesgosVarios,
+} from "@/types/poliza";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { BuscadorClientes } from "../BuscadorClientes";
+import { useLiveSync } from "@/hooks/useLiveSync";
 
 type Props = {
 	datos: DatosRiesgosVarios | null;
@@ -87,11 +93,7 @@ export function RiesgosVariosForm({ datos, moneda, onChange, onSiguiente, onAnte
 	};
 
 	const actualizarMontoItem = (nombreItem: ItemRiesgosVarios["nombre"], nuevoMonto: number) => {
-		setItemsBien(
-			itemsBien.map((item) =>
-				item.nombre === nombreItem ? { ...item, monto: nuevoMonto } : item
-			)
-		);
+		setItemsBien(itemsBien.map((item) => (item.nombre === nombreItem ? { ...item, monto: nuevoMonto } : item)));
 	};
 
 	const eliminarItem = (nombreItem: ItemRiesgosVarios["nombre"]) => {
@@ -158,6 +160,21 @@ export function RiesgosVariosForm({ datos, moneda, onChange, onSiguiente, onAnte
 		setAsegurados(asegurados.filter((a) => a.client_id !== clientId));
 	};
 
+	// Sincroniza ediciones con el padre en vivo (sin requerir "Continuar"),
+	// para que el borrador de recovery y el resumen reflejen lo escrito.
+	useLiveSync(
+		() =>
+			bienes.length > 0
+				? {
+						valor_total_asegurado: valorAseguradoTotal,
+						bienes,
+						asegurados,
+					}
+				: null,
+		onChange,
+		[valorAseguradoTotal, bienes, asegurados],
+	);
+
 	const handleContinuar = () => {
 		const nuevosErrores: Record<string, string> = {};
 
@@ -220,7 +237,11 @@ export function RiesgosVariosForm({ datos, moneda, onChange, onSiguiente, onAnte
 							<p className="font-medium mb-2">Sistema de Items por Ubicación:</p>
 							<ul className="space-y-1 text-xs">
 								<li>• Cada bien asegurado puede tener múltiples items con montos individuales</li>
-								<li>• Items disponibles: edificaciones, activos fijos, equipos electrónicos, maquinaria, bienes de terceros, existencias, dinero y valores, vidrios, letreros, pérdida de beneficios</li>
+								<li>
+									• Items disponibles: edificaciones, activos fijos, equipos electrónicos, maquinaria,
+									bienes de terceros, existencias, dinero y valores, vidrios, letreros, pérdida de
+									beneficios
+								</li>
 								<li>• El valor total se calcula automáticamente sumando todos los items</li>
 								<li>• Puede marcar un bien como &quot;primer riesgo&quot; si corresponde</li>
 							</ul>
@@ -246,7 +267,9 @@ export function RiesgosVariosForm({ datos, moneda, onChange, onSiguiente, onAnte
 						<div className="border-2 border-dashed rounded-lg p-8 text-center">
 							<Home className="h-12 w-12 text-gray-400 mx-auto mb-3" />
 							<p className="text-sm text-gray-600">No hay bienes asegurados</p>
-							<p className="text-xs text-gray-500 mt-1">Haga clic en &quot;Agregar Bien&quot; para comenzar</p>
+							<p className="text-xs text-gray-500 mt-1">
+								Haga clic en &quot;Agregar Bien&quot; para comenzar
+							</p>
 						</div>
 					) : (
 						<div className="border rounded-lg divide-y">
@@ -256,7 +279,10 @@ export function RiesgosVariosForm({ datos, moneda, onChange, onSiguiente, onAnte
 										<div className="flex-1">
 											<p className="font-medium text-gray-900">{bien.direccion}</p>
 											<p className="text-sm text-gray-600">
-												Valor Total: {monedaLabel} {bien.valor_total_declarado.toLocaleString("es-BO", { minimumFractionDigits: 2 })}
+												Valor Total: {monedaLabel}{" "}
+												{bien.valor_total_declarado.toLocaleString("es-BO", {
+													minimumFractionDigits: 2,
+												})}
 											</p>
 											{bien.es_primer_riesgo && (
 												<span className="inline-block mt-1 px-2 py-1 bg-purple-100 text-purple-700 text-xs font-medium rounded">
@@ -278,7 +304,9 @@ export function RiesgosVariosForm({ datos, moneda, onChange, onSiguiente, onAnte
 										{bien.items.map((item, i) => (
 											<div key={i} className="flex justify-between pl-4">
 												<span>• {item.nombre}</span>
-												<span>{monedaLabel} {item.monto.toLocaleString()}</span>
+												<span>
+													{monedaLabel} {item.monto.toLocaleString()}
+												</span>
 											</div>
 										))}
 									</div>
@@ -306,12 +334,17 @@ export function RiesgosVariosForm({ datos, moneda, onChange, onSiguiente, onAnte
 						<div className="border-2 border-dashed rounded-lg p-8 text-center">
 							<Users className="h-12 w-12 text-gray-400 mx-auto mb-3" />
 							<p className="text-sm text-gray-600">No hay asegurados agregados</p>
-							<p className="text-xs text-gray-500 mt-1">Opcional: agregue asegurados si aplica para este riesgo</p>
+							<p className="text-xs text-gray-500 mt-1">
+								Opcional: agregue asegurados si aplica para este riesgo
+							</p>
 						</div>
 					) : (
 						<div className="border rounded-lg divide-y">
 							{asegurados.map((asegurado) => (
-								<div key={asegurado.client_id} className="p-4 flex items-center justify-between hover:bg-gray-50">
+								<div
+									key={asegurado.client_id}
+									className="p-4 flex items-center justify-between hover:bg-gray-50"
+								>
 									<div className="flex-1">
 										<p className="text-sm font-medium text-gray-900">{asegurado.client_name}</p>
 										<p className="text-xs text-gray-600">CI/NIT: {asegurado.client_ci}</p>
@@ -360,7 +393,9 @@ export function RiesgosVariosForm({ datos, moneda, onChange, onSiguiente, onAnte
 								{/* Selector de items */}
 								<div className="space-y-2">
 									<div className="flex gap-2 flex-wrap">
-										{ITEMS_GENERALES.filter(nombre => !itemsBien.some(item => item.nombre === nombre)).map((nombreItem) => (
+										{ITEMS_GENERALES.filter(
+											(nombre) => !itemsBien.some((item) => item.nombre === nombre),
+										).map((nombreItem) => (
 											<Button
 												key={nombreItem}
 												type="button"
@@ -373,7 +408,9 @@ export function RiesgosVariosForm({ datos, moneda, onChange, onSiguiente, onAnte
 											</Button>
 										))}
 									</div>
-									{ITEMS_FIDELIDAD.some(nombre => !itemsBien.some(item => item.nombre === nombre)) && (
+									{ITEMS_FIDELIDAD.some(
+										(nombre) => !itemsBien.some((item) => item.nombre === nombre),
+									) && (
 										<>
 											<div className="flex items-center gap-2 pt-1">
 												<div className="h-px flex-1 bg-gray-200" />
@@ -381,7 +418,9 @@ export function RiesgosVariosForm({ datos, moneda, onChange, onSiguiente, onAnte
 												<div className="h-px flex-1 bg-gray-200" />
 											</div>
 											<div className="flex gap-2 flex-wrap">
-												{ITEMS_FIDELIDAD.filter(nombre => !itemsBien.some(item => item.nombre === nombre)).map((nombreItem) => (
+												{ITEMS_FIDELIDAD.filter(
+													(nombre) => !itemsBien.some((item) => item.nombre === nombre),
+												).map((nombreItem) => (
 													<Button
 														key={nombreItem}
 														type="button"
@@ -402,7 +441,10 @@ export function RiesgosVariosForm({ datos, moneda, onChange, onSiguiente, onAnte
 								{itemsBien.length > 0 && (
 									<div className="space-y-2 mt-3">
 										{itemsBien.map((item) => (
-											<div key={item.nombre} className="flex items-center gap-2 p-3 border rounded-lg">
+											<div
+												key={item.nombre}
+												className="flex items-center gap-2 p-3 border rounded-lg"
+											>
 												<div className="flex-1">
 													<Label className="text-sm font-medium">{item.nombre}</Label>
 													<Input
@@ -411,7 +453,10 @@ export function RiesgosVariosForm({ datos, moneda, onChange, onSiguiente, onAnte
 														step="0.01"
 														value={item.monto || ""}
 														onChange={(e) =>
-															actualizarMontoItem(item.nombre, parseFloat(e.target.value) || 0)
+															actualizarMontoItem(
+																item.nombre,
+																parseFloat(e.target.value) || 0,
+															)
 														}
 														placeholder="0.00"
 														className="mt-1"
@@ -435,7 +480,8 @@ export function RiesgosVariosForm({ datos, moneda, onChange, onSiguiente, onAnte
 							<div className="bg-gray-50 border rounded-lg p-3">
 								<Label className="text-sm font-medium">Valor Total Declarado (Calculado)</Label>
 								<p className="text-xl font-bold text-gray-900 mt-1">
-									{monedaLabel} {valorTotalDeclarado.toLocaleString("es-BO", { minimumFractionDigits: 2 })}
+									{monedaLabel}{" "}
+									{valorTotalDeclarado.toLocaleString("es-BO", { minimumFractionDigits: 2 })}
 								</p>
 							</div>
 

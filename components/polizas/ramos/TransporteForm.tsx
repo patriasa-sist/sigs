@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { createClient } from "@/utils/supabase/client";
+import { useLiveSync } from "@/hooks/useLiveSync";
 
 type Props = {
 	datos: DatosTransporte | null;
@@ -30,7 +31,11 @@ const MODALIDADES: { value: ModalidadTransporte; label: string; descripcion: str
 	{ value: "flotante", label: "Flotante", descripcion: "Múltiples embarques durante la vigencia" },
 	{ value: "flat", label: "Flat", descripcion: "Prima fija para el período" },
 	{ value: "un_solo_embarque", label: "Un solo embarque", descripcion: "Cobertura para un único envío" },
-	{ value: "flat_prima_minima_deposito", label: "Flat con prima mínima depósito", descripcion: "Prima mínima con ajuste posterior" },
+	{
+		value: "flat_prima_minima_deposito",
+		label: "Flat con prima mínima depósito",
+		descripcion: "Prima mínima con ajuste posterior",
+	},
 ];
 
 export function TransporteForm({ datos, onChange, onSiguiente, onAnterior }: Props) {
@@ -132,6 +137,57 @@ export function TransporteForm({ datos, onChange, onSiguiente, onAnterior }: Pro
 		setErrores(nuevosErrores);
 		return Object.keys(nuevosErrores).length === 0;
 	};
+
+	// Sincroniza ediciones con el padre en vivo (sin requerir "Continuar"),
+	// para que el borrador de recovery y el resumen reflejen lo escrito.
+	useLiveSync(
+		() =>
+			materiaAsegurada &&
+			tipoEmbalaje &&
+			fechaEmbarque &&
+			ciudadOrigen &&
+			paisOrigenId &&
+			ciudadDestino &&
+			paisDestinoId &&
+			valorAsegurado > 0 &&
+			factura &&
+			fechaFactura &&
+			(coberturaA || coberturaC)
+				? {
+						materia_asegurada: materiaAsegurada,
+						tipo_embalaje: tipoEmbalaje,
+						fecha_embarque: fechaEmbarque,
+						tipo_transporte: tipoTransporte,
+						ciudad_origen: ciudadOrigen,
+						pais_origen_id: paisOrigenId,
+						ciudad_destino: ciudadDestino,
+						pais_destino_id: paisDestinoId,
+						valor_asegurado: valorAsegurado,
+						factura: factura,
+						fecha_factura: fechaFactura,
+						cobertura_a: coberturaA,
+						cobertura_c: coberturaC,
+						modalidad,
+					}
+				: null,
+		onChange,
+		[
+			materiaAsegurada,
+			tipoEmbalaje,
+			fechaEmbarque,
+			tipoTransporte,
+			ciudadOrigen,
+			paisOrigenId,
+			ciudadDestino,
+			paisDestinoId,
+			valorAsegurado,
+			factura,
+			fechaFactura,
+			coberturaA,
+			coberturaC,
+			modalidad,
+		],
+	);
 
 	const handleContinuar = () => {
 		if (!validarFormulario()) return;
@@ -428,12 +484,15 @@ export function TransporteForm({ datos, onChange, onSiguiente, onAnterior }: Pro
 							onClick={() => setCoberturaA(!coberturaA)}
 						>
 							<div className="flex items-start gap-3">
-								<Checkbox checked={coberturaA} onCheckedChange={(checked) => setCoberturaA(!!checked)} />
+								<Checkbox
+									checked={coberturaA}
+									onCheckedChange={(checked) => setCoberturaA(!!checked)}
+								/>
 								<div>
 									<Label className="font-medium cursor-pointer">Cobertura A - Todo Riesgo</Label>
 									<p className="text-sm text-gray-600 mt-1">
-										Cubre todos los riesgos de pérdida o daño físico de la mercancía, excepto exclusiones
-										específicas.
+										Cubre todos los riesgos de pérdida o daño físico de la mercancía, excepto
+										exclusiones específicas.
 									</p>
 								</div>
 							</div>
@@ -446,12 +505,17 @@ export function TransporteForm({ datos, onChange, onSiguiente, onAnterior }: Pro
 							onClick={() => setCoberturaC(!coberturaC)}
 						>
 							<div className="flex items-start gap-3">
-								<Checkbox checked={coberturaC} onCheckedChange={(checked) => setCoberturaC(!!checked)} />
+								<Checkbox
+									checked={coberturaC}
+									onCheckedChange={(checked) => setCoberturaC(!!checked)}
+								/>
 								<div>
-									<Label className="font-medium cursor-pointer">Cobertura C - Riesgos Nombrados</Label>
+									<Label className="font-medium cursor-pointer">
+										Cobertura C - Riesgos Nombrados
+									</Label>
 									<p className="text-sm text-gray-600 mt-1">
-										Cubre únicamente los riesgos expresamente mencionados en la póliza (incendio, naufragio,
-										colisión, etc.).
+										Cubre únicamente los riesgos expresamente mencionados en la póliza (incendio,
+										naufragio, colisión, etc.).
 									</p>
 								</div>
 							</div>
@@ -481,7 +545,9 @@ export function TransporteForm({ datos, onChange, onSiguiente, onAnterior }: Pro
 											modalidad === mod.value ? "border-blue-500" : "border-gray-300"
 										}`}
 									>
-										{modalidad === mod.value && <div className="w-2 h-2 rounded-full bg-blue-500" />}
+										{modalidad === mod.value && (
+											<div className="w-2 h-2 rounded-full bg-blue-500" />
+										)}
 									</div>
 									<div>
 										<Label className="font-medium cursor-pointer">{mod.label}</Label>

@@ -1,4 +1,7 @@
 {
+	"editor.defaultFormatter": "esbenp.prettier-vscode",
+	"editor.formatOnSave": true,
+	"files.eol": "\n",
 	"conventionalCommits.scopes": [
 		"users",
 		"style",

@@ -10,8 +10,70 @@ import type {
 	DocumentoPoliza,
 	CalculoComisionParams,
 	CalculoComisionResult,
+	PolizaFormState,
+	PasoFormulario,
 } from "@/types/poliza";
 import { POLIZA_RULES, VEHICULO_RULES, PAGO_RULES, PRODUCTO_RULES, VALIDATION_MESSAGES } from "./validationConstants";
+
+/**
+ * Indica si un ramo tiene formulario específico implementado (Paso 3) y por lo
+ * tanto requiere datos_especificos antes de guardar.
+ * Única fuente de verdad para esta regla (usada en Resumen, server actions y
+ * cálculo de paso máximo del formulario).
+ */
+export function ramoRequiereDatosEspecificos(ramo: string): boolean {
+	const ramoNorm = ramo
+		.toLowerCase()
+		.trim()
+		.normalize("NFD")
+		.replace(/[\u0300-\u036f]/g, "");
+
+	return (
+		ramoNorm.includes("automotor") ||
+		ramoNorm.includes("salud") ||
+		ramoNorm.includes("enfermedad") ||
+		ramoNorm.includes("incendio") ||
+		ramoNorm.includes("responsabilidad") ||
+		ramoNorm.includes("civil") ||
+		ramoNorm.includes("transporte") ||
+		ramoNorm.includes("aeronavegacion") ||
+		ramoNorm.includes("nave") ||
+		ramoNorm.includes("embarcacion") ||
+		ramoNorm.includes("accidente") ||
+		ramoNorm.includes("vida") ||
+		ramoNorm.includes("sepelio") ||
+		ramoNorm.includes("defuncion") ||
+		(ramoNorm.includes("riesgo") && ramoNorm.includes("vario")) ||
+		(ramoNorm.includes("ramo") && ramoNorm.includes("tecnico"))
+	);
+}
+
+/**
+ * Calcula hasta qué paso del formulario los datos están completos y válidos.
+ * Se usa al restaurar un borrador para volver a mostrar todas las secciones
+ * que el usuario ya había desbloqueado (replica las compuertas de cada paso).
+ */
+export function calcularPasoMaximoFormulario(state: PolizaFormState): PasoFormulario {
+	if (!state.asegurado) return 1;
+
+	if (!state.datos_basicos || !validarDatosBasicos(state.datos_basicos).valido) return 2;
+
+	if (ramoRequiereDatosEspecificos(state.datos_basicos.ramo) && !state.datos_especificos) return 3;
+
+	const validacionPago = state.modalidad_pago
+		? validarModalidadPago(
+				state.modalidad_pago,
+				state.datos_basicos.tipo_prima ?? "directa",
+				state.datos_basicos.es_retroactiva ?? false,
+			)
+		: null;
+	if (!validacionPago || !validacionPago.valido) return 4;
+
+	const docsSubidos = state.documentos.filter((d) => d.upload_status === "uploaded" || d.id);
+	if (!docsSubidos.some((d) => d.tipo_documento === "Póliza")) return 5;
+
+	return 6;
+}
 
 /**
  * Valida los datos básicos de una póliza (Paso 2)
@@ -216,7 +278,7 @@ export function validarPlacasUnicas(vehiculos: VehiculoAutomotor[]): ValidationR
 export function validarModalidadPago(
 	pago: Partial<ModalidadPago>,
 	tipoPrima: TipoPrima = "directa",
-	esRetroactiva = false
+	esRetroactiva = false,
 ): ValidationResult {
 	const errores: ValidationError[] = [];
 
@@ -339,7 +401,7 @@ export function validarModalidadPago(
 					errores.push({
 						campo: "cuotas",
 						mensaje: `La suma de cuotas (${totalCalculado.toFixed(
-							2
+							2,
 						)}) no puede superar la prima total (${totalEsperado.toFixed(2)})`,
 					});
 				}
@@ -347,7 +409,7 @@ export function validarModalidadPago(
 				errores.push({
 					campo: "cuotas",
 					mensaje: `La suma de cuotas (${totalCalculado.toFixed(
-						2
+						2,
 					)}) no coincide con prima total (${totalEsperado.toFixed(2)})`,
 				});
 			}
@@ -382,7 +444,7 @@ export function validarFechasPago(): ValidationResult {
 export function validarFechasDentroVigencia(
 	pago: ModalidadPago,
 	inicio_vigencia: string,
-	fin_vigencia: string
+	fin_vigencia: string,
 ): ValidationResult {
 	const errores: ValidationError[] = [];
 	const fechaInicio = new Date(inicio_vigencia);

@@ -32,6 +32,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { BuscadorClientes } from "../BuscadorClientes";
 import { BeneficiarioModal, type DatosPersonaMinima } from "./BeneficiarioModal";
 import { importarAseguradosDesdeExcel, generarTemplateAseguradosExcel } from "@/utils/aseguradoExcelImport";
+import { useLiveSync } from "@/hooks/useLiveSync";
 
 type Props = {
 	datos: DatosAccidentesPersonales | null;
@@ -109,17 +110,30 @@ export function AccidentesPersonalesForm({
 		Object.entries(coberturas).forEach(([key, cobertura]) => {
 			if (cobertura.habilitado && cobertura.valor <= 0) nuevosErrores[key] = "El valor debe ser mayor a 0";
 		});
-		if (Object.keys(nuevosErrores).length > 0) { setErrores(nuevosErrores); return; }
+		if (Object.keys(nuevosErrores).length > 0) {
+			setErrores(nuevosErrores);
+			return;
+		}
 
-		const nivelActualizado: NivelCobertura = { ...nivelEditando, coberturas: coberturas as CoberturasAccidentesPersonales };
+		const nivelActualizado: NivelCobertura = {
+			...nivelEditando,
+			coberturas: coberturas as CoberturasAccidentesPersonales,
+		};
 		const index = niveles.findIndex((n) => n.id === nivelEditando.id);
 		if (index >= 0) {
-			const n = [...niveles]; n[index] = nivelActualizado; setNiveles(n);
+			const n = [...niveles];
+			n[index] = nivelActualizado;
+			setNiveles(n);
 		} else {
 			setNiveles([...niveles, nivelActualizado]);
 		}
 		setNivelEditando(null);
-		setCoberturas({ muerte_accidental: { habilitado: false, valor: 0 }, invalidez_total_parcial: { habilitado: false, valor: 0 }, gastos_medicos: { habilitado: false, valor: 0 }, sepelio: { habilitado: false, valor: 0 } });
+		setCoberturas({
+			muerte_accidental: { habilitado: false, valor: 0 },
+			invalidez_total_parcial: { habilitado: false, valor: 0 },
+			gastos_medicos: { habilitado: false, valor: 0 },
+			sepelio: { habilitado: false, valor: 0 },
+		});
 		setErrores({});
 	};
 
@@ -133,7 +147,10 @@ export function AccidentesPersonalesForm({
 	};
 
 	const continuarAPrincipal = () => {
-		if (niveles.length === 0) { setErrores({ general: "Debe crear al menos un nivel de cobertura" }); return; }
+		if (niveles.length === 0) {
+			setErrores({ general: "Debe crear al menos un nivel de cobertura" });
+			return;
+		}
 		setErrores({});
 		setSubPaso("principal");
 	};
@@ -153,8 +170,14 @@ export function AccidentesPersonalesForm({
 	const eliminarContratante = () => setContratante(null);
 
 	// ===== FUNCIONES ASEGURADOS =====
-	const abrirModalAsegurado = () => { setAseguradoEditando(null); setMostrarModalAsegurado(true); };
-	const editarAsegurado = (a: AseguradoAPVida) => { setAseguradoEditando(a); setMostrarModalAsegurado(true); };
+	const abrirModalAsegurado = () => {
+		setAseguradoEditando(null);
+		setMostrarModalAsegurado(true);
+	};
+	const editarAsegurado = (a: AseguradoAPVida) => {
+		setAseguradoEditando(a);
+		setMostrarModalAsegurado(true);
+	};
 
 	const guardarAsegurado = (datos: DatosPersonaMinima) => {
 		const nuevo: AseguradoAPVida = {
@@ -202,7 +225,9 @@ export function AccidentesPersonalesForm({
 						...msgs,
 					]);
 				} else {
-					setErroresImport([`Se importaron ${resultado.asegurados_validos.length} asegurado(s) exitosamente.`]);
+					setErroresImport([
+						`Se importaron ${resultado.asegurados_validos.length} asegurado(s) exitosamente.`,
+					]);
 				}
 			} else {
 				setErroresImport(
@@ -219,6 +244,23 @@ export function AccidentesPersonalesForm({
 		}
 	};
 
+	// Sincroniza ediciones con el padre en vivo (sin requerir "Continuar"),
+	// para que el borrador de recovery y el resumen reflejen lo escrito.
+	useLiveSync(
+		() =>
+			contratante
+				? {
+						niveles,
+						tipo_poliza: tipoPoliza,
+						regional_asegurado_id: regionalId,
+						contratante,
+						asegurados,
+					}
+				: null,
+		onChange,
+		[niveles, tipoPoliza, regionalId, contratante, asegurados],
+	);
+
 	const handleContinuar = () => {
 		const nuevosErrores: Record<string, string> = {};
 		if (!regionalId) nuevosErrores.regional = "Debe seleccionar una regional";
@@ -231,9 +273,18 @@ export function AccidentesPersonalesForm({
 		}
 		const sinNivel = asegurados.filter((a) => !a.nivel_id);
 		if (sinNivel.length > 0) nuevosErrores.asegurados = "Todos los asegurados deben tener un nivel asignado";
-		if (Object.keys(nuevosErrores).length > 0) { setErrores(nuevosErrores); return; }
+		if (Object.keys(nuevosErrores).length > 0) {
+			setErrores(nuevosErrores);
+			return;
+		}
 
-		onChange({ niveles, tipo_poliza: tipoPoliza, regional_asegurado_id: regionalId, contratante: contratante!, asegurados });
+		onChange({
+			niveles,
+			tipo_poliza: tipoPoliza,
+			regional_asegurado_id: regionalId,
+			contratante: contratante!,
+			asegurados,
+		});
 		onSiguiente();
 	};
 
@@ -268,7 +319,10 @@ export function AccidentesPersonalesForm({
 							{niveles.map((nivel) => {
 								const cob = nivel.coberturas as CoberturasAccidentesPersonales;
 								return (
-									<div key={nivel.id} className="flex items-center justify-between p-4 border rounded-lg">
+									<div
+										key={nivel.id}
+										className="flex items-center justify-between p-4 border rounded-lg"
+									>
 										<div className="flex-1">
 											<div className="flex items-center gap-3">
 												<p className="font-medium text-gray-900">{nivel.nombre}</p>
@@ -280,13 +334,21 @@ export function AccidentesPersonalesForm({
 											</div>
 											<div className="text-sm text-gray-600 space-y-1 mt-2">
 												{cob.muerte_accidental.habilitado && (
-													<p>• Muerte Accidental: Bs {cob.muerte_accidental.valor.toLocaleString()}</p>
+													<p>
+														• Muerte Accidental: Bs{" "}
+														{cob.muerte_accidental.valor.toLocaleString()}
+													</p>
 												)}
 												{cob.invalidez_total_parcial.habilitado && (
-													<p>• Invalidez Total/Parcial: Bs {cob.invalidez_total_parcial.valor.toLocaleString()}</p>
+													<p>
+														• Invalidez Total/Parcial: Bs{" "}
+														{cob.invalidez_total_parcial.valor.toLocaleString()}
+													</p>
 												)}
 												{cob.gastos_medicos.habilitado && (
-													<p>• Gastos Médicos: Bs {cob.gastos_medicos.valor.toLocaleString()}</p>
+													<p>
+														• Gastos Médicos: Bs {cob.gastos_medicos.valor.toLocaleString()}
+													</p>
 												)}
 												{cob.sepelio.habilitado && (
 													<p>• Sepelio: Bs {cob.sepelio.valor.toLocaleString()}</p>
@@ -294,7 +356,9 @@ export function AccidentesPersonalesForm({
 											</div>
 										</div>
 										<div className="flex gap-2">
-											<Button variant="outline" size="sm" onClick={() => editarNivel(nivel)}>Editar</Button>
+											<Button variant="outline" size="sm" onClick={() => editarNivel(nivel)}>
+												Editar
+											</Button>
 											<Button variant="ghost" size="sm" onClick={() => eliminarNivel(nivel.id)}>
 												<Trash2 className="h-4 w-4" />
 											</Button>
@@ -331,7 +395,10 @@ export function AccidentesPersonalesForm({
 										step="0.01"
 										value={nivelEditando.prima_nivel || ""}
 										onChange={(e) =>
-											setNivelEditando({ ...nivelEditando, prima_nivel: parseFloat(e.target.value) || undefined })
+											setNivelEditando({
+												...nivelEditando,
+												prima_nivel: parseFloat(e.target.value) || undefined,
+											})
 										}
 										placeholder="0.00"
 									/>
@@ -347,10 +414,18 @@ export function AccidentesPersonalesForm({
 											id="cob_muerte_accidental"
 											checked={coberturas.muerte_accidental.habilitado}
 											onCheckedChange={(checked) =>
-												setCoberturas({ ...coberturas, muerte_accidental: { ...coberturas.muerte_accidental, habilitado: checked === true } })
+												setCoberturas({
+													...coberturas,
+													muerte_accidental: {
+														...coberturas.muerte_accidental,
+														habilitado: checked === true,
+													},
+												})
 											}
 										/>
-										<Label htmlFor="cob_muerte_accidental" className="cursor-pointer">MUERTE ACCIDENTAL</Label>
+										<Label htmlFor="cob_muerte_accidental" className="cursor-pointer">
+											MUERTE ACCIDENTAL
+										</Label>
 									</div>
 									{coberturas.muerte_accidental.habilitado && (
 										<div className="flex-1">
@@ -358,10 +433,20 @@ export function AccidentesPersonalesForm({
 												type="number"
 												placeholder={`Valor asegurado (${moneda})`}
 												value={coberturas.muerte_accidental.valor || ""}
-												onChange={(e) => setCoberturas({ ...coberturas, muerte_accidental: { ...coberturas.muerte_accidental, valor: parseFloat(e.target.value) || 0 } })}
+												onChange={(e) =>
+													setCoberturas({
+														...coberturas,
+														muerte_accidental: {
+															...coberturas.muerte_accidental,
+															valor: parseFloat(e.target.value) || 0,
+														},
+													})
+												}
 												className={errores.muerte_accidental ? "border-red-500" : ""}
 											/>
-											{errores.muerte_accidental && <p className="text-sm text-red-600 mt-1">{errores.muerte_accidental}</p>}
+											{errores.muerte_accidental && (
+												<p className="text-sm text-red-600 mt-1">{errores.muerte_accidental}</p>
+											)}
 										</div>
 									)}
 								</div>
@@ -372,10 +457,18 @@ export function AccidentesPersonalesForm({
 											id="cob_invalidez"
 											checked={coberturas.invalidez_total_parcial.habilitado}
 											onCheckedChange={(checked) =>
-												setCoberturas({ ...coberturas, invalidez_total_parcial: { ...coberturas.invalidez_total_parcial, habilitado: checked === true } })
+												setCoberturas({
+													...coberturas,
+													invalidez_total_parcial: {
+														...coberturas.invalidez_total_parcial,
+														habilitado: checked === true,
+													},
+												})
 											}
 										/>
-										<Label htmlFor="cob_invalidez" className="cursor-pointer">INVALIDEZ TOTAL/PARCIAL</Label>
+										<Label htmlFor="cob_invalidez" className="cursor-pointer">
+											INVALIDEZ TOTAL/PARCIAL
+										</Label>
 									</div>
 									{coberturas.invalidez_total_parcial.habilitado && (
 										<div className="flex-1">
@@ -383,10 +476,22 @@ export function AccidentesPersonalesForm({
 												type="number"
 												placeholder={`Valor asegurado (${moneda})`}
 												value={coberturas.invalidez_total_parcial.valor || ""}
-												onChange={(e) => setCoberturas({ ...coberturas, invalidez_total_parcial: { ...coberturas.invalidez_total_parcial, valor: parseFloat(e.target.value) || 0 } })}
+												onChange={(e) =>
+													setCoberturas({
+														...coberturas,
+														invalidez_total_parcial: {
+															...coberturas.invalidez_total_parcial,
+															valor: parseFloat(e.target.value) || 0,
+														},
+													})
+												}
 												className={errores.invalidez_total_parcial ? "border-red-500" : ""}
 											/>
-											{errores.invalidez_total_parcial && <p className="text-sm text-red-600 mt-1">{errores.invalidez_total_parcial}</p>}
+											{errores.invalidez_total_parcial && (
+												<p className="text-sm text-red-600 mt-1">
+													{errores.invalidez_total_parcial}
+												</p>
+											)}
 										</div>
 									)}
 								</div>
@@ -397,10 +502,18 @@ export function AccidentesPersonalesForm({
 											id="cob_gastos_medicos"
 											checked={coberturas.gastos_medicos.habilitado}
 											onCheckedChange={(checked) =>
-												setCoberturas({ ...coberturas, gastos_medicos: { ...coberturas.gastos_medicos, habilitado: checked === true } })
+												setCoberturas({
+													...coberturas,
+													gastos_medicos: {
+														...coberturas.gastos_medicos,
+														habilitado: checked === true,
+													},
+												})
 											}
 										/>
-										<Label htmlFor="cob_gastos_medicos" className="cursor-pointer">GASTOS MÉDICOS</Label>
+										<Label htmlFor="cob_gastos_medicos" className="cursor-pointer">
+											GASTOS MÉDICOS
+										</Label>
 									</div>
 									{coberturas.gastos_medicos.habilitado && (
 										<div className="flex-1">
@@ -408,10 +521,20 @@ export function AccidentesPersonalesForm({
 												type="number"
 												placeholder={`Valor asegurado (${moneda})`}
 												value={coberturas.gastos_medicos.valor || ""}
-												onChange={(e) => setCoberturas({ ...coberturas, gastos_medicos: { ...coberturas.gastos_medicos, valor: parseFloat(e.target.value) || 0 } })}
+												onChange={(e) =>
+													setCoberturas({
+														...coberturas,
+														gastos_medicos: {
+															...coberturas.gastos_medicos,
+															valor: parseFloat(e.target.value) || 0,
+														},
+													})
+												}
 												className={errores.gastos_medicos ? "border-red-500" : ""}
 											/>
-											{errores.gastos_medicos && <p className="text-sm text-red-600 mt-1">{errores.gastos_medicos}</p>}
+											{errores.gastos_medicos && (
+												<p className="text-sm text-red-600 mt-1">{errores.gastos_medicos}</p>
+											)}
 										</div>
 									)}
 								</div>
@@ -422,10 +545,15 @@ export function AccidentesPersonalesForm({
 											id="cob_sepelio"
 											checked={coberturas.sepelio.habilitado}
 											onCheckedChange={(checked) =>
-												setCoberturas({ ...coberturas, sepelio: { ...coberturas.sepelio, habilitado: checked === true } })
+												setCoberturas({
+													...coberturas,
+													sepelio: { ...coberturas.sepelio, habilitado: checked === true },
+												})
 											}
 										/>
-										<Label htmlFor="cob_sepelio" className="cursor-pointer">SEPELIO</Label>
+										<Label htmlFor="cob_sepelio" className="cursor-pointer">
+											SEPELIO
+										</Label>
 									</div>
 									{coberturas.sepelio.habilitado && (
 										<div className="flex-1">
@@ -433,10 +561,20 @@ export function AccidentesPersonalesForm({
 												type="number"
 												placeholder={`Valor asegurado (${moneda})`}
 												value={coberturas.sepelio.valor || ""}
-												onChange={(e) => setCoberturas({ ...coberturas, sepelio: { ...coberturas.sepelio, valor: parseFloat(e.target.value) || 0 } })}
+												onChange={(e) =>
+													setCoberturas({
+														...coberturas,
+														sepelio: {
+															...coberturas.sepelio,
+															valor: parseFloat(e.target.value) || 0,
+														},
+													})
+												}
 												className={errores.sepelio ? "border-red-500" : ""}
 											/>
-											{errores.sepelio && <p className="text-sm text-red-600 mt-1">{errores.sepelio}</p>}
+											{errores.sepelio && (
+												<p className="text-sm text-red-600 mt-1">{errores.sepelio}</p>
+											)}
 										</div>
 									)}
 								</div>
@@ -448,7 +586,9 @@ export function AccidentesPersonalesForm({
 								</div>
 							)}
 							<div className="flex justify-end gap-2">
-								<Button variant="outline" onClick={() => setNivelEditando(null)}>Cancelar</Button>
+								<Button variant="outline" onClick={() => setNivelEditando(null)}>
+									Cancelar
+								</Button>
 								<Button onClick={guardarNivel}>Guardar Nivel</Button>
 							</div>
 						</div>
@@ -488,7 +628,9 @@ export function AccidentesPersonalesForm({
 		<div className="bg-white rounded-lg shadow-sm border p-6">
 			<div className="flex items-center justify-between mb-6">
 				<div>
-					<h2 className="text-xl font-semibold text-gray-900">Paso 3: Datos Específicos — Accidentes Personales</h2>
+					<h2 className="text-xl font-semibold text-gray-900">
+						Paso 3: Datos Específicos — Accidentes Personales
+					</h2>
 					<p className="text-sm text-gray-600 mt-1">Complete la información de contratante y asegurados</p>
 				</div>
 				{esCompleto && (
@@ -505,19 +647,30 @@ export function AccidentesPersonalesForm({
 					<div className="flex items-center gap-2">
 						<Settings className="h-5 w-5 text-blue-600" />
 						<div>
-							<p className="text-sm font-medium text-gray-900">{niveles.length} nivel(es) configurado(s)</p>
+							<p className="text-sm font-medium text-gray-900">
+								{niveles.length} nivel(es) configurado(s)
+							</p>
 							<p className="text-xs text-gray-600">{niveles.map((n) => n.nombre).join(", ")}</p>
 						</div>
 					</div>
-					<Button variant="outline" size="sm" onClick={volverANiveles}>Editar Niveles</Button>
+					<Button variant="outline" size="sm" onClick={volverANiveles}>
+						Editar Niveles
+					</Button>
 				</div>
 			</div>
 
 			<div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
 				<div className="space-y-2">
-					<Label htmlFor="tipo_poliza">Tipo de Póliza <span className="text-red-500">*</span></Label>
-					<Select value={tipoPoliza} onValueChange={(value: "individual" | "corporativo") => setTipoPoliza(value)}>
-						<SelectTrigger><SelectValue /></SelectTrigger>
+					<Label htmlFor="tipo_poliza">
+						Tipo de Póliza <span className="text-red-500">*</span>
+					</Label>
+					<Select
+						value={tipoPoliza}
+						onValueChange={(value: "individual" | "corporativo") => setTipoPoliza(value)}
+					>
+						<SelectTrigger>
+							<SelectValue />
+						</SelectTrigger>
 						<SelectContent>
 							<SelectItem value="individual">Individual</SelectItem>
 							<SelectItem value="corporativo">Corporativo</SelectItem>
@@ -525,14 +678,18 @@ export function AccidentesPersonalesForm({
 					</Select>
 				</div>
 				<div className="space-y-2">
-					<Label htmlFor="regional">Regional Asegurado <span className="text-red-500">*</span></Label>
+					<Label htmlFor="regional">
+						Regional Asegurado <span className="text-red-500">*</span>
+					</Label>
 					<Select value={regionalId} onValueChange={setRegionalId}>
 						<SelectTrigger className={errores.regional ? "border-red-500" : ""}>
 							<SelectValue placeholder="Seleccione una regional" />
 						</SelectTrigger>
 						<SelectContent>
 							{regionales.map((r) => (
-								<SelectItem key={r.id} value={r.id}>{r.nombre}</SelectItem>
+								<SelectItem key={r.id} value={r.id}>
+									{r.nombre}
+								</SelectItem>
 							))}
 						</SelectContent>
 					</Select>
@@ -544,11 +701,18 @@ export function AccidentesPersonalesForm({
 			<div className="space-y-4 mb-6">
 				<div className="flex items-center justify-between">
 					<div>
-						<Label className="text-base">Contratante <span className="text-red-500">*</span></Label>
-						<p className="text-sm text-gray-600 mt-1">Cliente registrado que contrata la póliza (requiere datos completos)</p>
+						<Label className="text-base">
+							Contratante <span className="text-red-500">*</span>
+						</Label>
+						<p className="text-sm text-gray-600 mt-1">
+							Cliente registrado que contrata la póliza (requiere datos completos)
+						</p>
 					</div>
 					{!contratante && (
-						<Button onClick={() => setMostrarBuscadorContratante(true)} disabled={mostrarBuscadorContratante}>
+						<Button
+							onClick={() => setMostrarBuscadorContratante(true)}
+							disabled={mostrarBuscadorContratante}
+						>
 							<Plus className="mr-2 h-4 w-4" />
 							Seleccionar Contratante
 						</Button>
@@ -567,11 +731,20 @@ export function AccidentesPersonalesForm({
 						<div className="flex items-center gap-2">
 							<UserCheck className="h-4 w-4 text-blue-600" />
 							<span className="text-sm text-blue-900">
-								<strong>{aseguradoPrincipal.nombre_completo}</strong> ({aseguradoPrincipal.documento}) — Asegurado de la póliza
+								<strong>{aseguradoPrincipal.nombre_completo}</strong> ({aseguradoPrincipal.documento}) —
+								Asegurado de la póliza
 							</span>
 						</div>
-						<Button size="sm" variant="outline"
-							onClick={() => seleccionarContratante({ id: aseguradoPrincipal.id, nombre: aseguradoPrincipal.nombre_completo, ci: aseguradoPrincipal.documento })}
+						<Button
+							size="sm"
+							variant="outline"
+							onClick={() =>
+								seleccionarContratante({
+									id: aseguradoPrincipal.id,
+									nombre: aseguradoPrincipal.nombre_completo,
+									ci: aseguradoPrincipal.documento,
+								})
+							}
 						>
 							<Plus className="mr-1 h-3 w-3" />
 							Usar como Contratante
@@ -605,23 +778,35 @@ export function AccidentesPersonalesForm({
 											value={contratante.nivel_id}
 											onValueChange={(v) => setContratante({ ...contratante, nivel_id: v })}
 										>
-											<SelectTrigger className="w-full"><SelectValue placeholder="Nivel" /></SelectTrigger>
+											<SelectTrigger className="w-full">
+												<SelectValue placeholder="Nivel" />
+											</SelectTrigger>
 											<SelectContent>
 												{niveles.map((nivel) => (
-													<SelectItem key={nivel.id} value={nivel.id}>{nivel.nombre}</SelectItem>
+													<SelectItem key={nivel.id} value={nivel.id}>
+														{nivel.nombre}
+													</SelectItem>
 												))}
 											</SelectContent>
 										</Select>
 									</div>
 									<div className="space-y-1">
-										<Label className="text-xs text-gray-600">Rol <span className="text-red-500">*</span></Label>
+										<Label className="text-xs text-gray-600">
+											Rol <span className="text-red-500">*</span>
+										</Label>
 										<Select
 											value={contratante.rol}
-											onValueChange={(v) => setContratante({ ...contratante, rol: v as ContratanteAPVida["rol"] })}
+											onValueChange={(v) =>
+												setContratante({ ...contratante, rol: v as ContratanteAPVida["rol"] })
+											}
 										>
-											<SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+											<SelectTrigger className="w-full">
+												<SelectValue />
+											</SelectTrigger>
 											<SelectContent>
-												<SelectItem value="contratante-asegurado">Contratante-Asegurado</SelectItem>
+												<SelectItem value="contratante-asegurado">
+													Contratante-Asegurado
+												</SelectItem>
 												<SelectItem value="contratante">Contratante</SelectItem>
 											</SelectContent>
 										</Select>
@@ -634,7 +819,12 @@ export function AccidentesPersonalesForm({
 								</div>
 							</div>
 							<div className="flex gap-2">
-								<Button variant="ghost" size="sm" onClick={() => setMostrarBuscadorContratante(true)} title="Cambiar contratante">
+								<Button
+									variant="ghost"
+									size="sm"
+									onClick={() => setMostrarBuscadorContratante(true)}
+									title="Cambiar contratante"
+								>
 									<Edit className="h-4 w-4" />
 								</Button>
 								<Button variant="ghost" size="sm" onClick={eliminarContratante}>
@@ -649,7 +839,9 @@ export function AccidentesPersonalesForm({
 					<div className="text-center py-8 border-2 border-dashed rounded-lg">
 						<Users className="h-12 w-12 text-gray-400 mx-auto mb-3" />
 						<p className="text-gray-600">No hay contratante seleccionado</p>
-						<p className="text-sm text-gray-500">Haga clic en &ldquo;Seleccionar Contratante&rdquo; para comenzar</p>
+						<p className="text-sm text-gray-500">
+							Haga clic en &ldquo;Seleccionar Contratante&rdquo; para comenzar
+						</p>
 					</div>
 				)}
 			</div>
@@ -733,24 +925,48 @@ export function AccidentesPersonalesForm({
 										<div className="flex items-start justify-between">
 											<div>
 												<div className="flex items-center gap-2">
-													<p className="font-medium text-gray-900">{asegurado.nombre_completo}</p>
-													<span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">Asegurado</span>
+													<p className="font-medium text-gray-900">
+														{asegurado.nombre_completo}
+													</p>
+													<span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+														Asegurado
+													</span>
 												</div>
 												<div className="text-sm text-gray-600 space-y-0.5 mt-1">
 													<p>CI: {asegurado.carnet}</p>
 													{asegurado.fecha_nacimiento && (
-														<p>Fecha Nac: {new Date(asegurado.fecha_nacimiento).toLocaleDateString("es-BO")}</p>
+														<p>
+															Fecha Nac:{" "}
+															{new Date(asegurado.fecha_nacimiento).toLocaleDateString(
+																"es-BO",
+															)}
+														</p>
 													)}
 													{asegurado.genero && (
-														<p>Género: {asegurado.genero === "M" ? "Masculino" : asegurado.genero === "F" ? "Femenino" : "Otro"}</p>
+														<p>
+															Género:{" "}
+															{asegurado.genero === "M"
+																? "Masculino"
+																: asegurado.genero === "F"
+																	? "Femenino"
+																	: "Otro"}
+														</p>
 													)}
 												</div>
 											</div>
 											<div className="flex gap-2">
-												<Button variant="ghost" size="sm" onClick={() => editarAsegurado(asegurado)}>
+												<Button
+													variant="ghost"
+													size="sm"
+													onClick={() => editarAsegurado(asegurado)}
+												>
 													<Edit className="h-4 w-4" />
 												</Button>
-												<Button variant="ghost" size="sm" onClick={() => eliminarAsegurado(asegurado.id)}>
+												<Button
+													variant="ghost"
+													size="sm"
+													onClick={() => eliminarAsegurado(asegurado.id)}
+												>
 													<Trash2 className="h-4 w-4 text-red-600" />
 												</Button>
 											</div>
@@ -760,13 +976,21 @@ export function AccidentesPersonalesForm({
 											<Select
 												value={asegurado.nivel_id}
 												onValueChange={(v) =>
-													setAsegurados(asegurados.map((a) => (a.id === asegurado.id ? { ...a, nivel_id: v } : a)))
+													setAsegurados(
+														asegurados.map((a) =>
+															a.id === asegurado.id ? { ...a, nivel_id: v } : a,
+														),
+													)
 												}
 											>
-												<SelectTrigger className="w-full"><SelectValue placeholder="Nivel" /></SelectTrigger>
+												<SelectTrigger className="w-full">
+													<SelectValue placeholder="Nivel" />
+												</SelectTrigger>
 												<SelectContent>
 													{niveles.map((nivel) => (
-														<SelectItem key={nivel.id} value={nivel.id}>{nivel.nombre}</SelectItem>
+														<SelectItem key={nivel.id} value={nivel.id}>
+															{nivel.nombre}
+														</SelectItem>
 													))}
 												</SelectContent>
 											</Select>
@@ -792,9 +1016,15 @@ export function AccidentesPersonalesForm({
 			<div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
 				<p className="text-sm text-blue-900 font-medium mb-2">Roles en pólizas de Accidentes Personales:</p>
 				<ul className="text-xs text-blue-800 space-y-1 ml-2">
-					<li>• <strong>Contratante-Asegurado:</strong> Contrata y también está asegurado en la póliza</li>
-					<li>• <strong>Contratante:</strong> Solo contrata (no asegurado) — debe haber al menos 1 asegurado</li>
-					<li>• <strong>Asegurado:</strong> Persona cubierta con datos mínimos</li>
+					<li>
+						• <strong>Contratante-Asegurado:</strong> Contrata y también está asegurado en la póliza
+					</li>
+					<li>
+						• <strong>Contratante:</strong> Solo contrata (no asegurado) — debe haber al menos 1 asegurado
+					</li>
+					<li>
+						• <strong>Asegurado:</strong> Persona cubierta con datos mínimos
+					</li>
 				</ul>
 			</div>
 
@@ -817,7 +1047,10 @@ export function AccidentesPersonalesForm({
 					hideRol={true}
 					titulo={aseguradoEditando ? "Editar Asegurado" : "Agregar Asegurado"}
 					onGuardar={guardarAsegurado}
-					onCancelar={() => { setMostrarModalAsegurado(false); setAseguradoEditando(null); }}
+					onCancelar={() => {
+						setMostrarModalAsegurado(false);
+						setAseguradoEditando(null);
+					}}
 				/>
 			)}
 		</div>

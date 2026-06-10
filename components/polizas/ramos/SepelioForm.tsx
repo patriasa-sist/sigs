@@ -15,7 +15,13 @@ import {
 	FileSpreadsheet,
 	X,
 } from "lucide-react";
-import type { DatosSepelio, AseguradoConNivel, NivelCobertura, CoberturaSepelio, SepelioExcelImportResult } from "@/types/poliza";
+import type {
+	DatosSepelio,
+	AseguradoConNivel,
+	NivelCobertura,
+	CoberturaSepelio,
+	SepelioExcelImportResult,
+} from "@/types/poliza";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,6 +29,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { BuscadorClientes } from "../BuscadorClientes";
 import { importarAseguradosDesdeExcel, generarPlantillaExcel } from "@/utils/sepelioExcelImport";
+import { useLiveSync } from "@/hooks/useLiveSync";
 
 type Props = {
 	datos: DatosSepelio | null;
@@ -38,7 +45,7 @@ type SubPaso = "niveles" | "principal";
 export function SepelioForm({ datos, regionales, onChange, onSiguiente, onAnterior }: Props) {
 	// Estado del sub-paso actual
 	const [subPaso, setSubPaso] = useState<SubPaso>(
-		datos?.niveles && datos.niveles.length > 0 ? "principal" : "niveles"
+		datos?.niveles && datos.niveles.length > 0 ? "principal" : "niveles",
 	);
 
 	// ===== PASO 2.1: NIVELES DE COBERTURA =====
@@ -50,9 +57,7 @@ export function SepelioForm({ datos, regionales, onChange, onSiguiente, onAnteri
 	});
 
 	// ===== PASO 3: FORMULARIO PRINCIPAL =====
-	const [tipoPoliza, setTipoPoliza] = useState<"individual" | "corporativo">(
-		datos?.tipo_poliza || "individual"
-	);
+	const [tipoPoliza, setTipoPoliza] = useState<"individual" | "corporativo">(datos?.tipo_poliza || "individual");
 	const [regionalId, setRegionalId] = useState<string>(datos?.regional_asegurado_id || "");
 	const [asegurados, setAsegurados] = useState<AseguradoConNivel[]>(datos?.asegurados || []);
 	const [mostrarBuscador, setMostrarBuscador] = useState(false);
@@ -204,9 +209,7 @@ export function SepelioForm({ datos, regionales, onChange, onSiguiente, onAnteri
 			if (resultado.asegurados_validos.length > 0) {
 				// Filtrar duplicados (por client_id)
 				const idsExistentes = new Set(asegurados.map((a) => a.client_id));
-				const nuevosAsegurados = resultado.asegurados_validos.filter(
-					(a) => !idsExistentes.has(a.client_id)
-				);
+				const nuevosAsegurados = resultado.asegurados_validos.filter((a) => !idsExistentes.has(a.client_id));
 
 				if (nuevosAsegurados.length > 0) {
 					setAsegurados([...asegurados, ...nuevosAsegurados]);
@@ -228,6 +231,22 @@ export function SepelioForm({ datos, regionales, onChange, onSiguiente, onAnteri
 		setMostrarResultadoImport(false);
 		setResultadoImport(null);
 	};
+
+	// Sincroniza ediciones con el padre en vivo (sin requerir "Continuar"),
+	// para que el borrador de recovery y el resumen reflejen lo escrito.
+	useLiveSync(
+		() =>
+			asegurados.length > 0
+				? {
+						niveles,
+						tipo_poliza: tipoPoliza,
+						regional_asegurado_id: regionalId,
+						asegurados,
+					}
+				: null,
+		onChange,
+		[niveles, tipoPoliza, regionalId, asegurados],
+	);
 
 	const handleContinuar = () => {
 		const nuevosErrores: Record<string, string> = {};
@@ -300,26 +319,24 @@ export function SepelioForm({ datos, regionales, onChange, onSiguiente, onAnteri
 							{niveles.map((nivel) => {
 								const coberturas = nivel.coberturas as CoberturaSepelio;
 								return (
-									<div key={nivel.id} className="flex items-center justify-between p-4 border rounded-lg">
+									<div
+										key={nivel.id}
+										className="flex items-center justify-between p-4 border rounded-lg"
+									>
 										<div className="flex-1">
 											<p className="font-medium text-gray-900">{nivel.nombre}</p>
 											<p className="text-sm text-gray-600">
-												Sepelio: {coberturas.sepelio.habilitado ? `Bs ${coberturas.sepelio.valor.toLocaleString()}` : "No incluido"}
+												Sepelio:{" "}
+												{coberturas.sepelio.habilitado
+													? `Bs ${coberturas.sepelio.valor.toLocaleString()}`
+													: "No incluido"}
 											</p>
 										</div>
 										<div className="flex gap-2">
-											<Button
-												variant="outline"
-												size="sm"
-												onClick={() => editarNivel(nivel)}
-											>
+											<Button variant="outline" size="sm" onClick={() => editarNivel(nivel)}>
 												Editar
 											</Button>
-											<Button
-												variant="outline"
-												size="sm"
-												onClick={() => eliminarNivel(nivel.id)}
-											>
+											<Button variant="outline" size="sm" onClick={() => eliminarNivel(nivel.id)}>
 												<Trash2 className="h-4 w-4" />
 											</Button>
 										</div>
@@ -343,9 +360,7 @@ export function SepelioForm({ datos, regionales, onChange, onSiguiente, onAnteri
 								<Input
 									id="nombre_nivel"
 									value={nivelEditando.nombre}
-									onChange={(e) =>
-										setNivelEditando({ ...nivelEditando, nombre: e.target.value })
-									}
+									onChange={(e) => setNivelEditando({ ...nivelEditando, nombre: e.target.value })}
 									placeholder="Ej: Nivel 1, Nivel Premium, etc."
 								/>
 							</div>
@@ -468,9 +483,7 @@ export function SepelioForm({ datos, regionales, onChange, onSiguiente, onAnteri
 							<p className="text-sm font-medium text-gray-900">
 								{niveles.length} nivel(es) de cobertura configurado(s)
 							</p>
-							<p className="text-xs text-gray-600">
-								{niveles.map((n) => n.nombre).join(", ")}
-							</p>
+							<p className="text-xs text-gray-600">{niveles.map((n) => n.nombre).join(", ")}</p>
 						</div>
 					</div>
 					<Button variant="outline" size="sm" onClick={volverANiveles}>
@@ -485,7 +498,10 @@ export function SepelioForm({ datos, regionales, onChange, onSiguiente, onAnteri
 					<Label htmlFor="tipo_poliza">
 						Tipo de Póliza <span className="text-red-500">*</span>
 					</Label>
-					<Select value={tipoPoliza} onValueChange={(value: "individual" | "corporativo") => setTipoPoliza(value)}>
+					<Select
+						value={tipoPoliza}
+						onValueChange={(value: "individual" | "corporativo") => setTipoPoliza(value)}
+					>
 						<SelectTrigger>
 							<SelectValue />
 						</SelectTrigger>
@@ -515,8 +531,7 @@ export function SepelioForm({ datos, regionales, onChange, onSiguiente, onAnteri
 					</Select>
 					{errores.regional && <p className="text-sm text-red-600">{errores.regional}</p>}
 				</div>
-
-				</div>
+			</div>
 
 			{/* Asegurados */}
 			<div className="space-y-4 mb-6">
@@ -600,44 +615,46 @@ export function SepelioForm({ datos, regionales, onChange, onSiguiente, onAnteri
 				{asegurados.length > 0 ? (
 					<div className="space-y-3">
 						{asegurados.map((asegurado) => (
-								<div key={asegurado.client_id} className="flex items-center gap-4 p-4 border rounded-lg">
-									<Users className="h-5 w-5 text-gray-400 flex-shrink-0" />
-									<div className="flex-1">
-										<p className="font-medium text-gray-900">{asegurado.client_name}</p>
-										<p className="text-sm text-gray-600">CI: {asegurado.client_ci}</p>
-									</div>
-									<div className="flex items-center gap-2">
-										<Select
-											value={asegurado.nivel_id}
-											onValueChange={(value) => cambiarNivel(asegurado.client_id, value)}
-										>
-											<SelectTrigger className="w-[180px]">
-												<SelectValue placeholder="Nivel" />
-											</SelectTrigger>
-											<SelectContent>
-												{niveles.map((nivel) => (
-													<SelectItem key={nivel.id} value={nivel.id}>
-														{nivel.nombre}
-													</SelectItem>
-												))}
-											</SelectContent>
-										</Select>
-										<Button
-											variant="ghost"
-											size="sm"
-											onClick={() => eliminarAsegurado(asegurado.client_id)}
-										>
-											<Trash2 className="h-4 w-4 text-red-600" />
-										</Button>
-									</div>
+							<div key={asegurado.client_id} className="flex items-center gap-4 p-4 border rounded-lg">
+								<Users className="h-5 w-5 text-gray-400 flex-shrink-0" />
+								<div className="flex-1">
+									<p className="font-medium text-gray-900">{asegurado.client_name}</p>
+									<p className="text-sm text-gray-600">CI: {asegurado.client_ci}</p>
 								</div>
+								<div className="flex items-center gap-2">
+									<Select
+										value={asegurado.nivel_id}
+										onValueChange={(value) => cambiarNivel(asegurado.client_id, value)}
+									>
+										<SelectTrigger className="w-[180px]">
+											<SelectValue placeholder="Nivel" />
+										</SelectTrigger>
+										<SelectContent>
+											{niveles.map((nivel) => (
+												<SelectItem key={nivel.id} value={nivel.id}>
+													{nivel.nombre}
+												</SelectItem>
+											))}
+										</SelectContent>
+									</Select>
+									<Button
+										variant="ghost"
+										size="sm"
+										onClick={() => eliminarAsegurado(asegurado.client_id)}
+									>
+										<Trash2 className="h-4 w-4 text-red-600" />
+									</Button>
+								</div>
+							</div>
 						))}
 					</div>
 				) : (
 					<div className="text-center py-8 border-2 border-dashed rounded-lg">
 						<Users className="h-12 w-12 text-gray-400 mx-auto mb-3" />
 						<p className="text-gray-600">No hay asegurados agregados</p>
-						<p className="text-sm text-gray-500">Haga clic en &ldquo;Agregar Asegurado&rdquo; para comenzar</p>
+						<p className="text-sm text-gray-500">
+							Haga clic en &ldquo;Agregar Asegurado&rdquo; para comenzar
+						</p>
 					</div>
 				)}
 			</div>
@@ -647,9 +664,7 @@ export function SepelioForm({ datos, regionales, onChange, onSiguiente, onAnteri
 				<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
 					<div className="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto">
 						<div className="flex items-center justify-between mb-4">
-							<h3 className="text-lg font-semibold text-gray-900">
-								Resultado de Importación
-							</h3>
+							<h3 className="text-lg font-semibold text-gray-900">Resultado de Importación</h3>
 							<Button variant="ghost" size="sm" onClick={cerrarModalResultado}>
 								<X className="h-4 w-4" />
 							</Button>
@@ -659,7 +674,9 @@ export function SepelioForm({ datos, regionales, onChange, onSiguiente, onAnteri
 						<div className="grid grid-cols-2 gap-4 mb-4">
 							<div className="p-4 bg-green-50 border border-green-200 rounded-lg">
 								<p className="text-sm text-green-700 font-medium">Asegurados Importados</p>
-								<p className="text-2xl font-bold text-green-900">{resultadoImport.asegurados_validos.length}</p>
+								<p className="text-2xl font-bold text-green-900">
+									{resultadoImport.asegurados_validos.length}
+								</p>
 							</div>
 							<div className="p-4 bg-red-50 border border-red-200 rounded-lg">
 								<p className="text-sm text-red-700 font-medium">Errores</p>
@@ -673,10 +690,11 @@ export function SepelioForm({ datos, regionales, onChange, onSiguiente, onAnteri
 								<h4 className="font-medium text-gray-900 mb-2">Errores encontrados:</h4>
 								<div className="space-y-2 max-h-64 overflow-y-auto">
 									{resultadoImport.errores.map((error, index) => (
-										<div key={index} className="p-3 bg-red-50 border border-red-200 rounded text-sm">
-											<p className="font-medium text-red-900">
-												Fila {error.fila}:
-											</p>
+										<div
+											key={index}
+											className="p-3 bg-red-50 border border-red-200 rounded text-sm"
+										>
+											<p className="font-medium text-red-900">Fila {error.fila}:</p>
 											<ul className="list-disc list-inside text-red-700 mt-1">
 												{error.errores.map((err, i) => (
 													<li key={i}>{err}</li>
@@ -694,10 +712,14 @@ export function SepelioForm({ datos, regionales, onChange, onSiguiente, onAnteri
 								<h4 className="font-medium text-gray-900 mb-2">Asegurados importados exitosamente:</h4>
 								<div className="space-y-2 max-h-48 overflow-y-auto">
 									{resultadoImport.asegurados_validos.map((asegurado, index) => (
-										<div key={index} className="p-2 bg-green-50 border border-green-200 rounded text-sm">
+										<div
+											key={index}
+											className="p-2 bg-green-50 border border-green-200 rounded text-sm"
+										>
 											<p className="font-medium text-green-900">{asegurado.client_name}</p>
 											<p className="text-green-700 text-xs">
-												CI: {asegurado.client_ci} • Nivel: {niveles.find(n => n.id === asegurado.nivel_id)?.nombre}
+												CI: {asegurado.client_ci} • Nivel:{" "}
+												{niveles.find((n) => n.id === asegurado.nivel_id)?.nombre}
 											</p>
 										</div>
 									))}

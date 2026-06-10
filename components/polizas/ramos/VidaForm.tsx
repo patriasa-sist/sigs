@@ -1,5 +1,7 @@
 "use client";
 
+import { useLiveSync } from "@/hooks/useLiveSync";
+
 import { useState } from "react";
 import {
 	ChevronRight,
@@ -210,6 +212,23 @@ export function VidaForm({ datos, regionales, aseguradoPrincipal, onChange, onSi
 		}
 	};
 
+	// Sincroniza ediciones con el padre en vivo (sin requerir "Continuar"),
+	// para que el borrador de recovery y el resumen reflejen lo escrito.
+	useLiveSync(
+		() =>
+			contratante
+				? {
+						niveles,
+						tipo_poliza: tipoPoliza,
+						regional_asegurado_id: regionalId,
+						contratante,
+						asegurados,
+					}
+				: null,
+		onChange,
+		[niveles, tipoPoliza, regionalId, contratante, asegurados],
+	);
+
 	const handleContinuar = () => {
 		const nuevosErrores: Record<string, string> = {};
 
@@ -225,8 +244,7 @@ export function VidaForm({ datos, regionales, aseguradoPrincipal, onChange, onSi
 			}
 			// Si el contratante no es asegurado, debe haber al menos 1 asegurado
 			if (contratante.rol === "contratante" && asegurados.length === 0) {
-				nuevosErrores.asegurados =
-					"Si el contratante no es asegurado, debe agregar al menos un asegurado";
+				nuevosErrores.asegurados = "Si el contratante no es asegurado, debe agregar al menos un asegurado";
 			}
 		}
 
@@ -282,7 +300,10 @@ export function VidaForm({ datos, regionales, aseguradoPrincipal, onChange, onSi
 							{niveles.map((nivel) => {
 								const cob = nivel.coberturas as CoberturasVida;
 								return (
-									<div key={nivel.id} className="flex items-center justify-between p-4 border rounded-lg">
+									<div
+										key={nivel.id}
+										className="flex items-center justify-between p-4 border rounded-lg"
+									>
 										<div className="flex-1">
 											<p className="font-medium text-gray-900">{nivel.nombre}</p>
 											<div className="text-sm text-gray-600 space-y-1">
@@ -296,7 +317,9 @@ export function VidaForm({ datos, regionales, aseguradoPrincipal, onChange, onSi
 													<p>• Sepelio: Bs {cob.sepelio.valor.toLocaleString()}</p>
 												)}
 												{cob.gastos_medicos.habilitado && (
-													<p>• Gastos Médicos: Bs {cob.gastos_medicos.valor.toLocaleString()}</p>
+													<p>
+														• Gastos Médicos: Bs {cob.gastos_medicos.valor.toLocaleString()}
+													</p>
 												)}
 												{cob.indm_enfermedades_graves.habilitado && (
 													<p>
@@ -346,10 +369,15 @@ export function VidaForm({ datos, regionales, aseguradoPrincipal, onChange, onSi
 											id="cob_muerte"
 											checked={coberturas.muerte.habilitado}
 											onCheckedChange={(checked) =>
-												setCoberturas({ ...coberturas, muerte: { ...coberturas.muerte, habilitado: checked === true } })
+												setCoberturas({
+													...coberturas,
+													muerte: { ...coberturas.muerte, habilitado: checked === true },
+												})
 											}
 										/>
-										<Label htmlFor="cob_muerte" className="cursor-pointer">MUERTE (por cualquier causa)</Label>
+										<Label htmlFor="cob_muerte" className="cursor-pointer">
+											MUERTE (por cualquier causa)
+										</Label>
 									</div>
 									{coberturas.muerte.habilitado && (
 										<div className="flex-1">
@@ -357,10 +385,20 @@ export function VidaForm({ datos, regionales, aseguradoPrincipal, onChange, onSi
 												type="number"
 												placeholder="Valor asegurado"
 												value={coberturas.muerte.valor || ""}
-												onChange={(e) => setCoberturas({ ...coberturas, muerte: { ...coberturas.muerte, valor: parseFloat(e.target.value) || 0 } })}
+												onChange={(e) =>
+													setCoberturas({
+														...coberturas,
+														muerte: {
+															...coberturas.muerte,
+															valor: parseFloat(e.target.value) || 0,
+														},
+													})
+												}
 												className={errores.muerte ? "border-red-500" : ""}
 											/>
-											{errores.muerte && <p className="text-sm text-red-600 mt-1">{errores.muerte}</p>}
+											{errores.muerte && (
+												<p className="text-sm text-red-600 mt-1">{errores.muerte}</p>
+											)}
 										</div>
 									)}
 								</div>
@@ -371,10 +409,15 @@ export function VidaForm({ datos, regionales, aseguradoPrincipal, onChange, onSi
 											id="cob_dima"
 											checked={coberturas.dima.habilitado}
 											onCheckedChange={(checked) =>
-												setCoberturas({ ...coberturas, dima: { ...coberturas.dima, habilitado: checked === true } })
+												setCoberturas({
+													...coberturas,
+													dima: { ...coberturas.dima, habilitado: checked === true },
+												})
 											}
 										/>
-										<Label htmlFor="cob_dima" className="cursor-pointer">DIMA</Label>
+										<Label htmlFor="cob_dima" className="cursor-pointer">
+											DIMA
+										</Label>
 									</div>
 									{coberturas.dima.habilitado && (
 										<div className="flex-1">
@@ -382,10 +425,20 @@ export function VidaForm({ datos, regionales, aseguradoPrincipal, onChange, onSi
 												type="number"
 												placeholder="Valor asegurado"
 												value={coberturas.dima.valor || ""}
-												onChange={(e) => setCoberturas({ ...coberturas, dima: { ...coberturas.dima, valor: parseFloat(e.target.value) || 0 } })}
+												onChange={(e) =>
+													setCoberturas({
+														...coberturas,
+														dima: {
+															...coberturas.dima,
+															valor: parseFloat(e.target.value) || 0,
+														},
+													})
+												}
 												className={errores.dima ? "border-red-500" : ""}
 											/>
-											{errores.dima && <p className="text-sm text-red-600 mt-1">{errores.dima}</p>}
+											{errores.dima && (
+												<p className="text-sm text-red-600 mt-1">{errores.dima}</p>
+											)}
 										</div>
 									)}
 								</div>
@@ -396,10 +449,15 @@ export function VidaForm({ datos, regionales, aseguradoPrincipal, onChange, onSi
 											id="cob_sepelio"
 											checked={coberturas.sepelio.habilitado}
 											onCheckedChange={(checked) =>
-												setCoberturas({ ...coberturas, sepelio: { ...coberturas.sepelio, habilitado: checked === true } })
+												setCoberturas({
+													...coberturas,
+													sepelio: { ...coberturas.sepelio, habilitado: checked === true },
+												})
 											}
 										/>
-										<Label htmlFor="cob_sepelio" className="cursor-pointer">SEPELIO</Label>
+										<Label htmlFor="cob_sepelio" className="cursor-pointer">
+											SEPELIO
+										</Label>
 									</div>
 									{coberturas.sepelio.habilitado && (
 										<div className="flex-1">
@@ -407,10 +465,20 @@ export function VidaForm({ datos, regionales, aseguradoPrincipal, onChange, onSi
 												type="number"
 												placeholder="Valor asegurado"
 												value={coberturas.sepelio.valor || ""}
-												onChange={(e) => setCoberturas({ ...coberturas, sepelio: { ...coberturas.sepelio, valor: parseFloat(e.target.value) || 0 } })}
+												onChange={(e) =>
+													setCoberturas({
+														...coberturas,
+														sepelio: {
+															...coberturas.sepelio,
+															valor: parseFloat(e.target.value) || 0,
+														},
+													})
+												}
 												className={errores.sepelio ? "border-red-500" : ""}
 											/>
-											{errores.sepelio && <p className="text-sm text-red-600 mt-1">{errores.sepelio}</p>}
+											{errores.sepelio && (
+												<p className="text-sm text-red-600 mt-1">{errores.sepelio}</p>
+											)}
 										</div>
 									)}
 								</div>
@@ -421,10 +489,18 @@ export function VidaForm({ datos, regionales, aseguradoPrincipal, onChange, onSi
 											id="cob_gastos_medicos"
 											checked={coberturas.gastos_medicos.habilitado}
 											onCheckedChange={(checked) =>
-												setCoberturas({ ...coberturas, gastos_medicos: { ...coberturas.gastos_medicos, habilitado: checked === true } })
+												setCoberturas({
+													...coberturas,
+													gastos_medicos: {
+														...coberturas.gastos_medicos,
+														habilitado: checked === true,
+													},
+												})
 											}
 										/>
-										<Label htmlFor="cob_gastos_medicos" className="cursor-pointer">GASTOS MÉDICOS</Label>
+										<Label htmlFor="cob_gastos_medicos" className="cursor-pointer">
+											GASTOS MÉDICOS
+										</Label>
 									</div>
 									{coberturas.gastos_medicos.habilitado && (
 										<div className="flex-1">
@@ -432,10 +508,20 @@ export function VidaForm({ datos, regionales, aseguradoPrincipal, onChange, onSi
 												type="number"
 												placeholder="Valor asegurado"
 												value={coberturas.gastos_medicos.valor || ""}
-												onChange={(e) => setCoberturas({ ...coberturas, gastos_medicos: { ...coberturas.gastos_medicos, valor: parseFloat(e.target.value) || 0 } })}
+												onChange={(e) =>
+													setCoberturas({
+														...coberturas,
+														gastos_medicos: {
+															...coberturas.gastos_medicos,
+															valor: parseFloat(e.target.value) || 0,
+														},
+													})
+												}
 												className={errores.gastos_medicos ? "border-red-500" : ""}
 											/>
-											{errores.gastos_medicos && <p className="text-sm text-red-600 mt-1">{errores.gastos_medicos}</p>}
+											{errores.gastos_medicos && (
+												<p className="text-sm text-red-600 mt-1">{errores.gastos_medicos}</p>
+											)}
 										</div>
 									)}
 								</div>
@@ -446,10 +532,18 @@ export function VidaForm({ datos, regionales, aseguradoPrincipal, onChange, onSi
 											id="cob_indm"
 											checked={coberturas.indm_enfermedades_graves.habilitado}
 											onCheckedChange={(checked) =>
-												setCoberturas({ ...coberturas, indm_enfermedades_graves: { ...coberturas.indm_enfermedades_graves, habilitado: checked === true } })
+												setCoberturas({
+													...coberturas,
+													indm_enfermedades_graves: {
+														...coberturas.indm_enfermedades_graves,
+														habilitado: checked === true,
+													},
+												})
 											}
 										/>
-										<Label htmlFor="cob_indm" className="cursor-pointer">INDM POR ENFERMEDADES GRAVES</Label>
+										<Label htmlFor="cob_indm" className="cursor-pointer">
+											INDM POR ENFERMEDADES GRAVES
+										</Label>
 									</div>
 									{coberturas.indm_enfermedades_graves.habilitado && (
 										<div className="flex-1">
@@ -457,10 +551,22 @@ export function VidaForm({ datos, regionales, aseguradoPrincipal, onChange, onSi
 												type="number"
 												placeholder="Valor asegurado"
 												value={coberturas.indm_enfermedades_graves.valor || ""}
-												onChange={(e) => setCoberturas({ ...coberturas, indm_enfermedades_graves: { ...coberturas.indm_enfermedades_graves, valor: parseFloat(e.target.value) || 0 } })}
+												onChange={(e) =>
+													setCoberturas({
+														...coberturas,
+														indm_enfermedades_graves: {
+															...coberturas.indm_enfermedades_graves,
+															valor: parseFloat(e.target.value) || 0,
+														},
+													})
+												}
 												className={errores.indm_enfermedades_graves ? "border-red-500" : ""}
 											/>
-											{errores.indm_enfermedades_graves && <p className="text-sm text-red-600 mt-1">{errores.indm_enfermedades_graves}</p>}
+											{errores.indm_enfermedades_graves && (
+												<p className="text-sm text-red-600 mt-1">
+													{errores.indm_enfermedades_graves}
+												</p>
+											)}
 										</div>
 									)}
 								</div>
@@ -472,7 +578,9 @@ export function VidaForm({ datos, regionales, aseguradoPrincipal, onChange, onSi
 								</div>
 							)}
 							<div className="flex justify-end gap-2">
-								<Button variant="outline" onClick={() => setNivelEditando(null)}>Cancelar</Button>
+								<Button variant="outline" onClick={() => setNivelEditando(null)}>
+									Cancelar
+								</Button>
 								<Button onClick={guardarNivel}>Guardar Nivel</Button>
 							</div>
 						</div>
@@ -513,9 +621,7 @@ export function VidaForm({ datos, regionales, aseguradoPrincipal, onChange, onSi
 			<div className="flex items-center justify-between mb-6">
 				<div>
 					<h2 className="text-xl font-semibold text-gray-900">Paso 3: Datos Específicos — Vida</h2>
-					<p className="text-sm text-gray-600 mt-1">
-						Complete la información de contratante y asegurados
-					</p>
+					<p className="text-sm text-gray-600 mt-1">Complete la información de contratante y asegurados</p>
 				</div>
 				{esCompleto && (
 					<div className="flex items-center gap-2 text-green-600">
@@ -571,7 +677,9 @@ export function VidaForm({ datos, regionales, aseguradoPrincipal, onChange, onSi
 						</SelectTrigger>
 						<SelectContent>
 							{regionales.map((r) => (
-								<SelectItem key={r.id} value={r.id}>{r.nombre}</SelectItem>
+								<SelectItem key={r.id} value={r.id}>
+									{r.nombre}
+								</SelectItem>
 							))}
 						</SelectContent>
 					</Select>
@@ -586,13 +694,18 @@ export function VidaForm({ datos, regionales, aseguradoPrincipal, onChange, onSi
 			<div className="space-y-4 mb-6">
 				<div className="flex items-center justify-between">
 					<div>
-						<Label className="text-base">Contratante <span className="text-red-500">*</span></Label>
+						<Label className="text-base">
+							Contratante <span className="text-red-500">*</span>
+						</Label>
 						<p className="text-sm text-gray-600 mt-1">
 							Cliente registrado que contrata la póliza (requiere datos completos)
 						</p>
 					</div>
 					{!contratante && (
-						<Button onClick={() => setMostrarBuscadorContratante(true)} disabled={mostrarBuscadorContratante}>
+						<Button
+							onClick={() => setMostrarBuscadorContratante(true)}
+							disabled={mostrarBuscadorContratante}
+						>
 							<Plus className="mr-2 h-4 w-4" />
 							Seleccionar Contratante
 						</Button>
@@ -663,19 +776,28 @@ export function VidaForm({ datos, regionales, aseguradoPrincipal, onChange, onSi
 											</SelectTrigger>
 											<SelectContent>
 												{niveles.map((nivel) => (
-													<SelectItem key={nivel.id} value={nivel.id}>{nivel.nombre}</SelectItem>
+													<SelectItem key={nivel.id} value={nivel.id}>
+														{nivel.nombre}
+													</SelectItem>
 												))}
 											</SelectContent>
 										</Select>
 									</div>
 									<div className="space-y-1">
-										<Label className="text-xs text-gray-600">Rol <span className="text-red-500">*</span></Label>
-										<Select value={contratante.rol} onValueChange={(v) => cambiarRolContratante(v as ContratanteAPVida["rol"])}>
+										<Label className="text-xs text-gray-600">
+											Rol <span className="text-red-500">*</span>
+										</Label>
+										<Select
+											value={contratante.rol}
+											onValueChange={(v) => cambiarRolContratante(v as ContratanteAPVida["rol"])}
+										>
 											<SelectTrigger className="w-full">
 												<SelectValue />
 											</SelectTrigger>
 											<SelectContent>
-												<SelectItem value="contratante-asegurado">Contratante-Asegurado</SelectItem>
+												<SelectItem value="contratante-asegurado">
+													Contratante-Asegurado
+												</SelectItem>
 												<SelectItem value="contratante">Contratante</SelectItem>
 											</SelectContent>
 										</Select>
@@ -688,7 +810,12 @@ export function VidaForm({ datos, regionales, aseguradoPrincipal, onChange, onSi
 								</div>
 							</div>
 							<div className="flex gap-2">
-								<Button variant="ghost" size="sm" onClick={() => setMostrarBuscadorContratante(true)} title="Cambiar contratante">
+								<Button
+									variant="ghost"
+									size="sm"
+									onClick={() => setMostrarBuscadorContratante(true)}
+									title="Cambiar contratante"
+								>
 									<Edit className="h-4 w-4" />
 								</Button>
 								<Button variant="ghost" size="sm" onClick={eliminarContratante}>
@@ -703,7 +830,9 @@ export function VidaForm({ datos, regionales, aseguradoPrincipal, onChange, onSi
 					<div className="text-center py-8 border-2 border-dashed rounded-lg">
 						<Users className="h-12 w-12 text-gray-400 mx-auto mb-3" />
 						<p className="text-gray-600">No hay contratante seleccionado</p>
-						<p className="text-sm text-gray-500">Haga clic en &ldquo;Seleccionar Contratante&rdquo; para comenzar</p>
+						<p className="text-sm text-gray-500">
+							Haga clic en &ldquo;Seleccionar Contratante&rdquo; para comenzar
+						</p>
 					</div>
 				)}
 			</div>
@@ -714,9 +843,7 @@ export function VidaForm({ datos, regionales, aseguradoPrincipal, onChange, onSi
 					<div>
 						<Label className="text-base">
 							Asegurados
-							{contratante?.rol === "contratante" && (
-								<span className="text-red-500 ml-1">*</span>
-							)}
+							{contratante?.rol === "contratante" && <span className="text-red-500 ml-1">*</span>}
 						</Label>
 						<p className="text-sm text-gray-600 mt-1">
 							Personas aseguradas con datos mínimos (sin registro completo en el sistema)
@@ -748,7 +875,9 @@ export function VidaForm({ datos, regionales, aseguradoPrincipal, onChange, onSi
 										<div className="flex items-start justify-between">
 											<div>
 												<div className="flex items-center gap-2">
-													<p className="font-medium text-gray-900">{asegurado.nombre_completo}</p>
+													<p className="font-medium text-gray-900">
+														{asegurado.nombre_completo}
+													</p>
 													<span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
 														Asegurado
 													</span>
@@ -756,18 +885,38 @@ export function VidaForm({ datos, regionales, aseguradoPrincipal, onChange, onSi
 												<div className="text-sm text-gray-600 space-y-0.5 mt-1">
 													<p>CI: {asegurado.carnet}</p>
 													{asegurado.fecha_nacimiento && (
-														<p>Fecha Nac: {new Date(asegurado.fecha_nacimiento).toLocaleDateString("es-BO")}</p>
+														<p>
+															Fecha Nac:{" "}
+															{new Date(asegurado.fecha_nacimiento).toLocaleDateString(
+																"es-BO",
+															)}
+														</p>
 													)}
 													{asegurado.genero && (
-														<p>Género: {asegurado.genero === "M" ? "Masculino" : asegurado.genero === "F" ? "Femenino" : "Otro"}</p>
+														<p>
+															Género:{" "}
+															{asegurado.genero === "M"
+																? "Masculino"
+																: asegurado.genero === "F"
+																	? "Femenino"
+																	: "Otro"}
+														</p>
 													)}
 												</div>
 											</div>
 											<div className="flex gap-2">
-												<Button variant="ghost" size="sm" onClick={() => editarAsegurado(asegurado)}>
+												<Button
+													variant="ghost"
+													size="sm"
+													onClick={() => editarAsegurado(asegurado)}
+												>
 													<Edit className="h-4 w-4" />
 												</Button>
-												<Button variant="ghost" size="sm" onClick={() => eliminarAsegurado(asegurado.id)}>
+												<Button
+													variant="ghost"
+													size="sm"
+													onClick={() => eliminarAsegurado(asegurado.id)}
+												>
 													<Trash2 className="h-4 w-4 text-red-600" />
 												</Button>
 											</div>
@@ -777,7 +926,11 @@ export function VidaForm({ datos, regionales, aseguradoPrincipal, onChange, onSi
 											<Select
 												value={asegurado.nivel_id}
 												onValueChange={(v) =>
-													setAsegurados(asegurados.map((a) => (a.id === asegurado.id ? { ...a, nivel_id: v } : a)))
+													setAsegurados(
+														asegurados.map((a) =>
+															a.id === asegurado.id ? { ...a, nivel_id: v } : a,
+														),
+													)
 												}
 											>
 												<SelectTrigger className="w-full">
@@ -785,7 +938,9 @@ export function VidaForm({ datos, regionales, aseguradoPrincipal, onChange, onSi
 												</SelectTrigger>
 												<SelectContent>
 													{niveles.map((nivel) => (
-														<SelectItem key={nivel.id} value={nivel.id}>{nivel.nombre}</SelectItem>
+														<SelectItem key={nivel.id} value={nivel.id}>
+															{nivel.nombre}
+														</SelectItem>
 													))}
 												</SelectContent>
 											</Select>
@@ -811,9 +966,15 @@ export function VidaForm({ datos, regionales, aseguradoPrincipal, onChange, onSi
 			<div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
 				<p className="text-sm text-blue-900 font-medium mb-2">Roles en pólizas de Vida:</p>
 				<ul className="text-xs text-blue-800 space-y-1 ml-2">
-					<li>• <strong>Contratante-Asegurado:</strong> Contrata y también está asegurado en la póliza</li>
-					<li>• <strong>Contratante:</strong> Solo contrata (no asegurado) — debe haber al menos 1 asegurado</li>
-					<li>• <strong>Asegurado:</strong> Persona cubierta con datos mínimos</li>
+					<li>
+						• <strong>Contratante-Asegurado:</strong> Contrata y también está asegurado en la póliza
+					</li>
+					<li>
+						• <strong>Contratante:</strong> Solo contrata (no asegurado) — debe haber al menos 1 asegurado
+					</li>
+					<li>
+						• <strong>Asegurado:</strong> Persona cubierta con datos mínimos
+					</li>
 				</ul>
 			</div>
 

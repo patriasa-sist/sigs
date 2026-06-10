@@ -31,6 +31,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { BuscadorClientes } from "../BuscadorClientes";
 import { BeneficiarioModal, type DatosPersonaMinima } from "./BeneficiarioModal";
+import { useLiveSync } from "@/hooks/useLiveSync";
 
 type Props = {
 	datos: DatosSalud | null;
@@ -45,9 +46,7 @@ type Props = {
 type SubPaso = "niveles" | "principal";
 
 // Para el modal de familiares, indica a qué grupo pertenece (contratante o un titular)
-type ContextoFamiliar =
-	| { tipo: "contratante" }
-	| { tipo: "titular"; titularId: string };
+type ContextoFamiliar = { tipo: "contratante" } | { tipo: "titular"; titularId: string };
 
 export function SaludForm({
 	datos,
@@ -98,20 +97,30 @@ export function SaludForm({
 		const errs: Record<string, string> = {};
 		if (!nombreNivel.trim()) errs.nombre_nivel = "El nombre es obligatorio";
 		if (montoNivel <= 0) errs.monto_nivel = "El monto debe ser mayor a 0";
-		if (Object.keys(errs).length > 0) { setErrores(errs); return; }
+		if (Object.keys(errs).length > 0) {
+			setErrores(errs);
+			return;
+		}
 
 		const actualizado: NivelSalud = { ...nivelEditando, nombre: nombreNivel, monto: montoNivel };
 		const idx = niveles.findIndex((n) => n.id === nivelEditando.id);
 		if (idx >= 0) {
-			const arr = [...niveles]; arr[idx] = actualizado; setNiveles(arr);
+			const arr = [...niveles];
+			arr[idx] = actualizado;
+			setNiveles(arr);
 		} else {
 			setNiveles([...niveles, actualizado]);
 		}
-		setNivelEditando(null); setNombreNivel(""); setMontoNivel(0); setErrores({});
+		setNivelEditando(null);
+		setNombreNivel("");
+		setMontoNivel(0);
+		setErrores({});
 	};
 
 	const editarNivel = (nivel: NivelSalud) => {
-		setNivelEditando(nivel); setNombreNivel(nivel.nombre); setMontoNivel(nivel.monto);
+		setNivelEditando(nivel);
+		setNombreNivel(nivel.nombre);
+		setMontoNivel(nivel.monto);
 	};
 
 	const eliminarNivel = (id: string) => {
@@ -119,8 +128,12 @@ export function SaludForm({
 	};
 
 	const continuarAPrincipal = () => {
-		if (niveles.length === 0) { setErrores({ general: "Debe crear al menos un nivel de cobertura" }); return; }
-		setErrores({}); setSubPaso("principal");
+		if (niveles.length === 0) {
+			setErrores({ general: "Debe crear al menos un nivel de cobertura" });
+			return;
+		}
+		setErrores({});
+		setSubPaso("principal");
 	};
 
 	// ===== FUNCIONES CONTRATANTE =====
@@ -140,16 +153,31 @@ export function SaludForm({
 	const eliminarContratante = () => setContratante(null);
 
 	// ===== FUNCIONES TITULARES =====
-	const abrirModalTitular = () => { setTitularEditando(null); setMostrarModalTitular(true); };
-	const editarTitular = (t: TitularSalud) => { setTitularEditando(t); setMostrarModalTitular(true); };
+	const abrirModalTitular = () => {
+		setTitularEditando(null);
+		setMostrarModalTitular(true);
+	};
+	const editarTitular = (t: TitularSalud) => {
+		setTitularEditando(t);
+		setMostrarModalTitular(true);
+	};
 
 	const guardarTitular = (datos: DatosPersonaMinima) => {
 		if (titularEditando) {
-			setTitulares(titulares.map((t) =>
-				t.id === titularEditando.id
-					? { ...t, nombre_completo: datos.nombre_completo, carnet: datos.carnet, fecha_nacimiento: datos.fecha_nacimiento, genero: datos.genero, nivel_id: datos.nivel_id }
-					: t,
-			));
+			setTitulares(
+				titulares.map((t) =>
+					t.id === titularEditando.id
+						? {
+								...t,
+								nombre_completo: datos.nombre_completo,
+								carnet: datos.carnet,
+								fecha_nacimiento: datos.fecha_nacimiento,
+								genero: datos.genero,
+								nivel_id: datos.nivel_id,
+							}
+						: t,
+				),
+			);
 		} else {
 			const nuevo: TitularSalud = {
 				id: datos.id,
@@ -164,7 +192,8 @@ export function SaludForm({
 			setTitulares([...titulares, nuevo]);
 			setTitularesExpandidos((prev) => new Set([...prev, nuevo.id]));
 		}
-		setMostrarModalTitular(false); setTitularEditando(null);
+		setMostrarModalTitular(false);
+		setTitularEditando(null);
 	};
 
 	const eliminarTitular = (id: string) => {
@@ -176,7 +205,8 @@ export function SaludForm({
 	const toggleExpandirTitular = (id: string) => {
 		setTitularesExpandidos((prev) => {
 			const next = new Set(prev);
-			if (next.has(id)) next.delete(id); else next.add(id);
+			if (next.has(id)) next.delete(id);
+			else next.add(id);
 			return next;
 		});
 	};
@@ -214,7 +244,9 @@ export function SaludForm({
 				} else {
 					setContratante({
 						...contratante,
-						descendientes: (contratante.descendientes || []).map((d) => d.id === familiarEditando.id ? familiar : d),
+						descendientes: (contratante.descendientes || []).map((d) =>
+							d.id === familiarEditando.id ? familiar : d,
+						),
 					});
 				}
 			} else if (familiar.rol === "conyugue") {
@@ -224,23 +256,32 @@ export function SaludForm({
 			}
 		} else if (contextoFamiliar.tipo === "titular") {
 			const titularId = contextoFamiliar.titularId;
-			setTitulares(titulares.map((t) => {
-				if (t.id !== titularId) return t;
-				if (familiarEditando) {
-					if (familiarEditando.rol === "conyugue") {
-						return { ...t, conyugue: familiar.rol === "conyugue" ? familiar : undefined };
+			setTitulares(
+				titulares.map((t) => {
+					if (t.id !== titularId) return t;
+					if (familiarEditando) {
+						if (familiarEditando.rol === "conyugue") {
+							return { ...t, conyugue: familiar.rol === "conyugue" ? familiar : undefined };
+						} else {
+							return {
+								...t,
+								descendientes: t.descendientes.map((d) =>
+									d.id === familiarEditando.id ? familiar : d,
+								),
+							};
+						}
+					} else if (familiar.rol === "conyugue") {
+						return { ...t, conyugue: familiar };
 					} else {
-						return { ...t, descendientes: t.descendientes.map((d) => d.id === familiarEditando.id ? familiar : d) };
+						return { ...t, descendientes: [...t.descendientes, familiar] };
 					}
-				} else if (familiar.rol === "conyugue") {
-					return { ...t, conyugue: familiar };
-				} else {
-					return { ...t, descendientes: [...t.descendientes, familiar] };
-				}
-			}));
+				}),
+			);
 		}
 
-		setMostrarModalFamiliar(false); setFamiliarEditando(null); setContextoFamiliar(null);
+		setMostrarModalFamiliar(false);
+		setFamiliarEditando(null);
+		setContextoFamiliar(null);
 	};
 
 	const eliminarFamiliarContratante = (familiar: FamiliarSalud) => {
@@ -248,17 +289,40 @@ export function SaludForm({
 		if (familiar.rol === "conyugue") {
 			setContratante({ ...contratante, conyugue: undefined });
 		} else {
-			setContratante({ ...contratante, descendientes: (contratante.descendientes || []).filter((d) => d.id !== familiar.id) });
+			setContratante({
+				...contratante,
+				descendientes: (contratante.descendientes || []).filter((d) => d.id !== familiar.id),
+			});
 		}
 	};
 
 	const eliminarFamiliarTitular = (titularId: string, familiar: FamiliarSalud) => {
-		setTitulares(titulares.map((t) => {
-			if (t.id !== titularId) return t;
-			if (familiar.rol === "conyugue") return { ...t, conyugue: undefined };
-			return { ...t, descendientes: t.descendientes.filter((d) => d.id !== familiar.id) };
-		}));
+		setTitulares(
+			titulares.map((t) => {
+				if (t.id !== titularId) return t;
+				if (familiar.rol === "conyugue") return { ...t, conyugue: undefined };
+				return { ...t, descendientes: t.descendientes.filter((d) => d.id !== familiar.id) };
+			}),
+		);
 	};
+
+	// Sincroniza ediciones con el padre en vivo (sin requerir "Continuar"),
+	// para que el borrador de recovery y el resumen reflejen lo escrito.
+	useLiveSync(
+		() =>
+			contratante
+				? {
+						niveles,
+						tipo_poliza: tipoPoliza,
+						regional_asegurado_id: regionalId,
+						tiene_maternidad: tieneMaternidad,
+						contratante,
+						titulares,
+					}
+				: null,
+		onChange,
+		[niveles, tipoPoliza, regionalId, tieneMaternidad, contratante, titulares],
+	);
 
 	const handleContinuar = () => {
 		const errs: Record<string, string> = {};
@@ -272,9 +336,19 @@ export function SaludForm({
 		}
 		const sinNivel = titulares.filter((t) => !t.nivel_id);
 		if (sinNivel.length > 0) errs.titulares = "Todos los titulares deben tener un nivel asignado";
-		if (Object.keys(errs).length > 0) { setErrores(errs); return; }
+		if (Object.keys(errs).length > 0) {
+			setErrores(errs);
+			return;
+		}
 
-		onChange({ niveles, tipo_poliza: tipoPoliza, regional_asegurado_id: regionalId, tiene_maternidad: tieneMaternidad, contratante: contratante!, titulares });
+		onChange({
+			niveles,
+			tipo_poliza: tipoPoliza,
+			regional_asegurado_id: regionalId,
+			tiene_maternidad: tieneMaternidad,
+			contratante: contratante!,
+			titulares,
+		});
 		onSiguiente();
 	};
 
@@ -296,7 +370,8 @@ export function SaludForm({
 				<p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Cónyuge</p>
 				{!conyugue && (
 					<Button variant="ghost" size="sm" onClick={onAgregarConyugue} className="h-7 text-xs">
-						<Plus className="mr-1 h-3 w-3" />Agregar Cónyuge
+						<Plus className="mr-1 h-3 w-3" />
+						Agregar Cónyuge
 					</Button>
 				)}
 			</div>
@@ -304,13 +379,26 @@ export function SaludForm({
 				<div className="flex items-center justify-between p-2 bg-pink-50 border border-pink-200 rounded">
 					<div>
 						<p className="text-sm font-medium text-gray-800">{conyugue.nombre_completo}</p>
-						<p className="text-xs text-gray-500">CI: {conyugue.carnet} · Nivel: {niveles.find((n) => n.id === conyugue.nivel_id)?.nombre ?? "—"}</p>
+						<p className="text-xs text-gray-500">
+							CI: {conyugue.carnet} · Nivel:{" "}
+							{niveles.find((n) => n.id === conyugue.nivel_id)?.nombre ?? "—"}
+						</p>
 					</div>
 					<div className="flex gap-1">
-						<Button variant="ghost" size="sm" onClick={() => onEditarFamiliar(conyugue)} className="h-7 w-7 p-0">
+						<Button
+							variant="ghost"
+							size="sm"
+							onClick={() => onEditarFamiliar(conyugue)}
+							className="h-7 w-7 p-0"
+						>
 							<Edit className="h-3.5 w-3.5" />
 						</Button>
-						<Button variant="ghost" size="sm" onClick={() => onEliminarFamiliar(conyugue)} className="h-7 w-7 p-0">
+						<Button
+							variant="ghost"
+							size="sm"
+							onClick={() => onEliminarFamiliar(conyugue)}
+							className="h-7 w-7 p-0"
+						>
 							<Trash2 className="h-3.5 w-3.5 text-red-500" />
 						</Button>
 					</div>
@@ -325,22 +413,38 @@ export function SaludForm({
 					Descendientes ({descendientes.length})
 				</p>
 				<Button variant="ghost" size="sm" onClick={onAgregarDescendiente} className="h-7 text-xs">
-					<Plus className="mr-1 h-3 w-3" />Agregar Descendiente
+					<Plus className="mr-1 h-3 w-3" />
+					Agregar Descendiente
 				</Button>
 			</div>
 			{descendientes.length > 0 ? (
 				<div className="space-y-1">
 					{descendientes.map((d) => (
-						<div key={d.id} className="flex items-center justify-between p-2 bg-green-50 border border-green-200 rounded">
+						<div
+							key={d.id}
+							className="flex items-center justify-between p-2 bg-green-50 border border-green-200 rounded"
+						>
 							<div>
 								<p className="text-sm font-medium text-gray-800">{d.nombre_completo}</p>
-								<p className="text-xs text-gray-500">CI: {d.carnet} · Nivel: {niveles.find((n) => n.id === d.nivel_id)?.nombre ?? "—"}</p>
+								<p className="text-xs text-gray-500">
+									CI: {d.carnet} · Nivel: {niveles.find((n) => n.id === d.nivel_id)?.nombre ?? "—"}
+								</p>
 							</div>
 							<div className="flex gap-1">
-								<Button variant="ghost" size="sm" onClick={() => onEditarFamiliar(d)} className="h-7 w-7 p-0">
+								<Button
+									variant="ghost"
+									size="sm"
+									onClick={() => onEditarFamiliar(d)}
+									className="h-7 w-7 p-0"
+								>
 									<Edit className="h-3.5 w-3.5" />
 								</Button>
-								<Button variant="ghost" size="sm" onClick={() => onEliminarFamiliar(d)} className="h-7 w-7 p-0">
+								<Button
+									variant="ghost"
+									size="sm"
+									onClick={() => onEliminarFamiliar(d)}
+									className="h-7 w-7 p-0"
+								>
 									<Trash2 className="h-3.5 w-3.5 text-red-500" />
 								</Button>
 							</div>
@@ -359,8 +463,12 @@ export function SaludForm({
 			<div className="bg-white rounded-lg shadow-sm border p-6">
 				<div className="flex items-center justify-between mb-6">
 					<div>
-						<h2 className="text-xl font-semibold text-gray-900">Paso 2.1: Configurar Niveles de Cobertura (Salud)</h2>
-						<p className="text-sm text-gray-600 mt-1">Defina los niveles de cobertura para las pólizas de salud</p>
+						<h2 className="text-xl font-semibold text-gray-900">
+							Paso 2.1: Configurar Niveles de Cobertura (Salud)
+						</h2>
+						<p className="text-sm text-gray-600 mt-1">
+							Defina los niveles de cobertura para las pólizas de salud
+						</p>
 					</div>
 					{niveles.length > 0 && (
 						<div className="flex items-center gap-2 text-green-600">
@@ -383,7 +491,9 @@ export function SaludForm({
 										</p>
 									</div>
 									<div className="flex gap-2">
-										<Button variant="outline" size="sm" onClick={() => editarNivel(nivel)}>Editar</Button>
+										<Button variant="outline" size="sm" onClick={() => editarNivel(nivel)}>
+											Editar
+										</Button>
 										<Button variant="ghost" size="sm" onClick={() => eliminarNivel(nivel.id)}>
 											<Trash2 className="h-4 w-4" />
 										</Button>
@@ -405,7 +515,14 @@ export function SaludForm({
 								<Input
 									id="nombre_nivel"
 									value={nombreNivel}
-									onChange={(e) => { setNombreNivel(e.target.value); if (errores.nombre_nivel) { const rest = { ...errores }; delete rest.nombre_nivel; setErrores(rest); } }}
+									onChange={(e) => {
+										setNombreNivel(e.target.value);
+										if (errores.nombre_nivel) {
+											const rest = { ...errores };
+											delete rest.nombre_nivel;
+											setErrores(rest);
+										}
+									}}
 									placeholder="Ej: Nivel 1, Nivel Básico, Nivel Premium, etc."
 									className={errores.nombre_nivel ? "border-red-500" : ""}
 								/>
@@ -419,7 +536,14 @@ export function SaludForm({
 									min="0"
 									step="0.01"
 									value={montoNivel || ""}
-									onChange={(e) => { setMontoNivel(parseFloat(e.target.value) || 0); if (errores.monto_nivel) { const rest = { ...errores }; delete rest.monto_nivel; setErrores(rest); } }}
+									onChange={(e) => {
+										setMontoNivel(parseFloat(e.target.value) || 0);
+										if (errores.monto_nivel) {
+											const rest = { ...errores };
+											delete rest.monto_nivel;
+											setErrores(rest);
+										}
+									}}
 									placeholder="0.00"
 									className={errores.monto_nivel ? "border-red-500" : ""}
 								/>
@@ -433,7 +557,9 @@ export function SaludForm({
 								</div>
 							)}
 							<div className="flex justify-end gap-2">
-								<Button variant="outline" onClick={() => setNivelEditando(null)}>Cancelar</Button>
+								<Button variant="outline" onClick={() => setNivelEditando(null)}>
+									Cancelar
+								</Button>
 								<Button onClick={guardarNivel}>Guardar Nivel</Button>
 							</div>
 						</div>
@@ -474,9 +600,7 @@ export function SaludForm({
 			<div className="flex items-center justify-between mb-6">
 				<div>
 					<h2 className="text-xl font-semibold text-gray-900">Paso 3: Datos Específicos — Salud</h2>
-					<p className="text-sm text-gray-600 mt-1">
-						Complete la información de contratante y titulares
-					</p>
+					<p className="text-sm text-gray-600 mt-1">Complete la información de contratante y titulares</p>
 				</div>
 				{esCompleto && (
 					<div className="flex items-center gap-2 text-green-600">
@@ -492,19 +616,29 @@ export function SaludForm({
 					<div className="flex items-center gap-2">
 						<Settings className="h-5 w-5 text-blue-600" />
 						<div>
-							<p className="text-sm font-medium text-gray-900">{niveles.length} nivel(es) configurado(s)</p>
-							<p className="text-xs text-gray-600">{niveles.map((n) => `${n.nombre} (${moneda} ${n.monto.toLocaleString()})`).join(", ")}</p>
+							<p className="text-sm font-medium text-gray-900">
+								{niveles.length} nivel(es) configurado(s)
+							</p>
+							<p className="text-xs text-gray-600">
+								{niveles.map((n) => `${n.nombre} (${moneda} ${n.monto.toLocaleString()})`).join(", ")}
+							</p>
 						</div>
 					</div>
-					<Button variant="outline" size="sm" onClick={volverANiveles}>Editar Niveles</Button>
+					<Button variant="outline" size="sm" onClick={volverANiveles}>
+						Editar Niveles
+					</Button>
 				</div>
 			</div>
 
 			<div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
 				<div className="space-y-2">
-					<Label htmlFor="tipo_poliza">Tipo de Póliza <span className="text-red-500">*</span></Label>
+					<Label htmlFor="tipo_poliza">
+						Tipo de Póliza <span className="text-red-500">*</span>
+					</Label>
 					<Select value={tipoPoliza} onValueChange={(v: "individual" | "corporativo") => setTipoPoliza(v)}>
-						<SelectTrigger><SelectValue /></SelectTrigger>
+						<SelectTrigger>
+							<SelectValue />
+						</SelectTrigger>
 						<SelectContent>
 							<SelectItem value="individual">Individual</SelectItem>
 							<SelectItem value="corporativo">Corporativo</SelectItem>
@@ -512,14 +646,18 @@ export function SaludForm({
 					</Select>
 				</div>
 				<div className="space-y-2">
-					<Label htmlFor="regional">Regional Asegurado <span className="text-red-500">*</span></Label>
+					<Label htmlFor="regional">
+						Regional Asegurado <span className="text-red-500">*</span>
+					</Label>
 					<Select value={regionalId} onValueChange={setRegionalId}>
 						<SelectTrigger className={errores.regional ? "border-red-500" : ""}>
 							<SelectValue placeholder="Seleccione una regional" />
 						</SelectTrigger>
 						<SelectContent>
 							{regionales.map((r) => (
-								<SelectItem key={r.id} value={r.id}>{r.nombre}</SelectItem>
+								<SelectItem key={r.id} value={r.id}>
+									{r.nombre}
+								</SelectItem>
 							))}
 						</SelectContent>
 					</Select>
@@ -543,13 +681,18 @@ export function SaludForm({
 			<div className="space-y-4 mb-6">
 				<div className="flex items-center justify-between">
 					<div>
-						<Label className="text-base">Contratante <span className="text-red-500">*</span></Label>
+						<Label className="text-base">
+							Contratante <span className="text-red-500">*</span>
+						</Label>
 						<p className="text-sm text-gray-600 mt-1">
 							Cliente registrado que contrata la póliza (requiere datos completos)
 						</p>
 					</div>
 					{!contratante && (
-						<Button onClick={() => setMostrarBuscadorContratante(true)} disabled={mostrarBuscadorContratante}>
+						<Button
+							onClick={() => setMostrarBuscadorContratante(true)}
+							disabled={mostrarBuscadorContratante}
+						>
 							<Plus className="mr-2 h-4 w-4" />
 							Seleccionar Contratante
 						</Button>
@@ -568,11 +711,20 @@ export function SaludForm({
 						<div className="flex items-center gap-2">
 							<UserCheck className="h-4 w-4 text-blue-600" />
 							<span className="text-sm text-blue-900">
-								<strong>{aseguradoPrincipal.nombre_completo}</strong> ({aseguradoPrincipal.documento}) — Asegurado de la póliza
+								<strong>{aseguradoPrincipal.nombre_completo}</strong> ({aseguradoPrincipal.documento}) —
+								Asegurado de la póliza
 							</span>
 						</div>
-						<Button size="sm" variant="outline"
-							onClick={() => seleccionarContratante({ id: aseguradoPrincipal.id, nombre: aseguradoPrincipal.nombre_completo, ci: aseguradoPrincipal.documento })}
+						<Button
+							size="sm"
+							variant="outline"
+							onClick={() =>
+								seleccionarContratante({
+									id: aseguradoPrincipal.id,
+									nombre: aseguradoPrincipal.nombre_completo,
+									ci: aseguradoPrincipal.documento,
+								})
+							}
 						>
 							<Plus className="mr-1 h-3 w-3" />
 							Usar como Contratante
@@ -602,19 +754,35 @@ export function SaludForm({
 								<div className="grid grid-cols-1 md:grid-cols-2 gap-3">
 									<div className="space-y-1">
 										<Label className="text-xs text-gray-600">Nivel de Cobertura</Label>
-										<Select value={contratante.nivel_id} onValueChange={(v) => setContratante({ ...contratante, nivel_id: v })}>
-											<SelectTrigger className="w-full"><SelectValue placeholder="Nivel" /></SelectTrigger>
+										<Select
+											value={contratante.nivel_id}
+											onValueChange={(v) => setContratante({ ...contratante, nivel_id: v })}
+										>
+											<SelectTrigger className="w-full">
+												<SelectValue placeholder="Nivel" />
+											</SelectTrigger>
 											<SelectContent>
 												{niveles.map((n) => (
-													<SelectItem key={n.id} value={n.id}>{n.nombre} — {moneda} {n.monto.toLocaleString()}</SelectItem>
+													<SelectItem key={n.id} value={n.id}>
+														{n.nombre} — {moneda} {n.monto.toLocaleString()}
+													</SelectItem>
 												))}
 											</SelectContent>
 										</Select>
 									</div>
 									<div className="space-y-1">
-										<Label className="text-xs text-gray-600">Rol <span className="text-red-500">*</span></Label>
-										<Select value={contratante.rol} onValueChange={(v) => setContratante({ ...contratante, rol: v as ContratanteSalud["rol"] })}>
-											<SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+										<Label className="text-xs text-gray-600">
+											Rol <span className="text-red-500">*</span>
+										</Label>
+										<Select
+											value={contratante.rol}
+											onValueChange={(v) =>
+												setContratante({ ...contratante, rol: v as ContratanteSalud["rol"] })
+											}
+										>
+											<SelectTrigger className="w-full">
+												<SelectValue />
+											</SelectTrigger>
 											<SelectContent>
 												<SelectItem value="contratante-titular">Contratante-Titular</SelectItem>
 												<SelectItem value="contratante">Contratante</SelectItem>
@@ -629,21 +797,27 @@ export function SaludForm({
 								</div>
 
 								{/* Familiares del contratante-titular */}
-								{contratante.rol === "contratante-titular" && renderFamiliares(
-									contratante.conyugue,
-									contratante.descendientes || [],
-									() => abrirModalFamiliarContratante(),
-									() => {
-										setFamiliarEditando(null);
-										setContextoFamiliar({ tipo: "contratante" });
-										setMostrarModalFamiliar(true);
-									},
-									(f) => abrirModalFamiliarContratante(f),
-									(f) => eliminarFamiliarContratante(f),
-								)}
+								{contratante.rol === "contratante-titular" &&
+									renderFamiliares(
+										contratante.conyugue,
+										contratante.descendientes || [],
+										() => abrirModalFamiliarContratante(),
+										() => {
+											setFamiliarEditando(null);
+											setContextoFamiliar({ tipo: "contratante" });
+											setMostrarModalFamiliar(true);
+										},
+										(f) => abrirModalFamiliarContratante(f),
+										(f) => eliminarFamiliarContratante(f),
+									)}
 							</div>
 							<div className="flex gap-2">
-								<Button variant="ghost" size="sm" onClick={() => setMostrarBuscadorContratante(true)} title="Cambiar contratante">
+								<Button
+									variant="ghost"
+									size="sm"
+									onClick={() => setMostrarBuscadorContratante(true)}
+									title="Cambiar contratante"
+								>
 									<Edit className="h-4 w-4" />
 								</Button>
 								<Button variant="ghost" size="sm" onClick={eliminarContratante}>
@@ -658,7 +832,9 @@ export function SaludForm({
 					<div className="text-center py-8 border-2 border-dashed rounded-lg">
 						<Users className="h-12 w-12 text-gray-400 mx-auto mb-3" />
 						<p className="text-gray-600">No hay contratante seleccionado</p>
-						<p className="text-sm text-gray-500">Haga clic en &ldquo;Seleccionar Contratante&rdquo; para comenzar</p>
+						<p className="text-sm text-gray-500">
+							Haga clic en &ldquo;Seleccionar Contratante&rdquo; para comenzar
+						</p>
 					</div>
 				)}
 			</div>
@@ -703,12 +879,15 @@ export function SaludForm({
 										<div className="flex-1">
 											<div className="flex items-center gap-2">
 												<p className="font-medium text-gray-900">{titular.nombre_completo}</p>
-												<span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-teal-100 text-teal-800">Titular</span>
+												<span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-teal-100 text-teal-800">
+													Titular
+												</span>
 											</div>
 											<p className="text-sm text-gray-600">CI: {titular.carnet}</p>
 											<p className="text-xs text-gray-500">
 												Nivel: {niveles.find((n) => n.id === titular.nivel_id)?.nombre ?? "—"} ·
-												Familia: {(titular.conyugue ? 1 : 0) + titular.descendientes.length} miembro(s)
+												Familia: {(titular.conyugue ? 1 : 0) + titular.descendientes.length}{" "}
+												miembro(s)
 											</p>
 										</div>
 										<div className="flex items-center gap-1">
@@ -717,7 +896,11 @@ export function SaludForm({
 												<Select
 													value={titular.nivel_id}
 													onValueChange={(v) =>
-														setTitulares(titulares.map((t) => t.id === titular.id ? { ...t, nivel_id: v } : t))
+														setTitulares(
+															titulares.map((t) =>
+																t.id === titular.id ? { ...t, nivel_id: v } : t,
+															),
+														)
 													}
 												>
 													<SelectTrigger className="w-36 h-8 text-xs">
@@ -725,19 +908,40 @@ export function SaludForm({
 													</SelectTrigger>
 													<SelectContent>
 														{niveles.map((n) => (
-															<SelectItem key={n.id} value={n.id} className="text-xs">{n.nombre}</SelectItem>
+															<SelectItem key={n.id} value={n.id} className="text-xs">
+																{n.nombre}
+															</SelectItem>
 														))}
 													</SelectContent>
 												</Select>
 											</div>
-											<Button variant="ghost" size="sm" onClick={() => editarTitular(titular)} className="h-8 w-8 p-0">
+											<Button
+												variant="ghost"
+												size="sm"
+												onClick={() => editarTitular(titular)}
+												className="h-8 w-8 p-0"
+											>
 												<Edit className="h-4 w-4" />
 											</Button>
-											<Button variant="ghost" size="sm" onClick={() => eliminarTitular(titular.id)} className="h-8 w-8 p-0">
+											<Button
+												variant="ghost"
+												size="sm"
+												onClick={() => eliminarTitular(titular.id)}
+												className="h-8 w-8 p-0"
+											>
 												<Trash2 className="h-4 w-4 text-red-600" />
 											</Button>
-											<Button variant="ghost" size="sm" onClick={() => toggleExpandirTitular(titular.id)} className="h-8 w-8 p-0">
-												{expandido ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+											<Button
+												variant="ghost"
+												size="sm"
+												onClick={() => toggleExpandirTitular(titular.id)}
+												className="h-8 w-8 p-0"
+											>
+												{expandido ? (
+													<ChevronUp className="h-4 w-4" />
+												) : (
+													<ChevronDown className="h-4 w-4" />
+												)}
 											</Button>
 										</div>
 									</div>
@@ -775,11 +979,22 @@ export function SaludForm({
 			<div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
 				<p className="text-sm text-blue-900 font-medium mb-2">Roles en pólizas de Salud:</p>
 				<ul className="text-xs text-blue-800 space-y-1 ml-2">
-					<li>• <strong>Contratante-Titular:</strong> Contrata y es titular principal (puede tener cónyuge y descendientes)</li>
-					<li>• <strong>Contratante:</strong> Solo contrata — debe haber al menos 1 titular</li>
-					<li>• <strong>Titular:</strong> Cabeza de grupo familiar asegurado</li>
-					<li>• <strong>Cónyuge:</strong> Pareja del titular (máx. 1 por titular)</li>
-					<li>• <strong>Descendiente:</strong> Hijo u otro dependiente del titular</li>
+					<li>
+						• <strong>Contratante-Titular:</strong> Contrata y es titular principal (puede tener cónyuge y
+						descendientes)
+					</li>
+					<li>
+						• <strong>Contratante:</strong> Solo contrata — debe haber al menos 1 titular
+					</li>
+					<li>
+						• <strong>Titular:</strong> Cabeza de grupo familiar asegurado
+					</li>
+					<li>
+						• <strong>Cónyuge:</strong> Pareja del titular (máx. 1 por titular)
+					</li>
+					<li>
+						• <strong>Descendiente:</strong> Hijo u otro dependiente del titular
+					</li>
 				</ul>
 			</div>
 
@@ -803,7 +1018,10 @@ export function SaludForm({
 					hideRol={true}
 					titulo={titularEditando ? "Editar Titular" : "Agregar Titular"}
 					onGuardar={guardarTitular}
-					onCancelar={() => { setMostrarModalTitular(false); setTitularEditando(null); }}
+					onCancelar={() => {
+						setMostrarModalTitular(false);
+						setTitularEditando(null);
+					}}
 				/>
 			)}
 
@@ -820,7 +1038,11 @@ export function SaludForm({
 					]}
 					titulo={familiarEditando ? "Editar Familiar" : "Agregar Familiar"}
 					onGuardar={guardarFamiliar}
-					onCancelar={() => { setMostrarModalFamiliar(false); setFamiliarEditando(null); setContextoFamiliar(null); }}
+					onCancelar={() => {
+						setMostrarModalFamiliar(false);
+						setFamiliarEditando(null);
+						setContextoFamiliar(null);
+					}}
 				/>
 			)}
 		</div>

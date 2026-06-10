@@ -14,6 +14,17 @@ import {
 } from "@/utils/polizaFormStorage";
 import type { PolizaFormState, PasoFormulario, ProductoAseguradora } from "@/types/poliza";
 import { Button } from "@/components/ui/button";
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { calcularPasoMaximoFormulario } from "@/utils/polizaValidation";
 import { guardarPoliza } from "@/app/polizas/nueva/actions";
 import { actualizarPoliza } from "@/app/polizas/[id]/editar/actions";
 import { createClient } from "@/utils/supabase/client";
@@ -240,45 +251,69 @@ export function NuevaPolizaForm({ mode = "create", polizaId, initialData }: Nuev
 	}, [formState.datos_basicos?.responsable_id]);
 
 	// --- Draft backup/restore (solo en modo creación) ---
-	const draftInitialized = useRef(false);
+	const draftChecked = useRef(false);
 
-	// Restaurar borrador al montar
+	// Borrador encontrado, pendiente de decisión del usuario (diálogo abierto)
+	const [draftPendiente, setDraftPendiente] = useState<{ draft: PolizaFormState; edad: string } | null>(null);
+
+	// El auto-guardado se habilita recién cuando no hay borrador pendiente o el
+	// usuario ya decidió qué hacer con él (evita pisar el borrador con un
+	// formulario vacío mientras el diálogo está abierto).
+	const [autosaveHabilitado, setAutosaveHabilitado] = useState(false);
+
 	useEffect(() => {
-		if (mode !== "create" || draftInitialized.current) return;
-		draftInitialized.current = true;
+		if (mode !== "create" || draftChecked.current) return;
+		draftChecked.current = true;
 
-		if (!hasPolizaDraft()) return;
+		if (!hasPolizaDraft()) {
+			setAutosaveHabilitado(true);
+			return;
+		}
 
 		const draft = loadPolizaDraft();
 		const timestamp = getPolizaDraftTimestamp();
 
-		if (!draft || !timestamp) return;
-
-		const age = formatDraftAge(timestamp);
-		const shouldRestore = confirm(
-			`Se encontró un borrador de póliza guardado ${age}.\n\n¿Desea continuar con el borrador?`,
-		);
-
-		if (shouldRestore) {
-			// Filtrar documentos: conservar los que tienen storage_path (ya subidos a Storage)
-			const docsRestaurables = draft.documentos.filter((d) => d.storage_path && d.upload_status === "uploaded");
-			setFormState({ ...draft, documentos: docsRestaurables });
-
-			if (draft.documentos.length > 0 && docsRestaurables.length === 0) {
-				toast.success("Borrador restaurado", {
-					description: "Los documentos adjuntos deben volver a cargarse.",
-				});
-			} else if (docsRestaurables.length > 0) {
-				toast.success("Borrador restaurado", {
-					description: `${docsRestaurables.length} documento(s) recuperado(s).`,
-				});
-			} else {
-				toast.success("Borrador restaurado");
-			}
-		} else {
-			clearPolizaDraft();
+		if (!draft || !timestamp) {
+			setAutosaveHabilitado(true);
+			return;
 		}
+
+		setDraftPendiente({ draft, edad: formatDraftAge(timestamp) });
 	}, [mode]);
+
+	const restaurarBorrador = () => {
+		if (!draftPendiente) return;
+		const { draft } = draftPendiente;
+
+		// Filtrar documentos: conservar los que tienen storage_path (ya subidos a Storage)
+		const docsRestaurables = draft.documentos.filter((d) => d.storage_path && d.upload_status === "uploaded");
+		const estadoRestaurado: PolizaFormState = { ...draft, documentos: docsRestaurables };
+
+		setFormState(estadoRestaurado);
+		// Re-desbloquear todas las secciones que el borrador ya tenía completas
+		setPasoMaximo(Math.max(draft.paso_actual, calcularPasoMaximoFormulario(estadoRestaurado)));
+
+		if (draft.documentos.length > 0 && docsRestaurables.length === 0) {
+			toast.success("Borrador restaurado", {
+				description: "Los documentos adjuntos deben volver a cargarse.",
+			});
+		} else if (docsRestaurables.length > 0) {
+			toast.success("Borrador restaurado", {
+				description: `${docsRestaurables.length} documento(s) recuperado(s).`,
+			});
+		} else {
+			toast.success("Borrador restaurado");
+		}
+
+		setDraftPendiente(null);
+		setAutosaveHabilitado(true);
+	};
+
+	const descartarBorrador = () => {
+		clearPolizaDraft();
+		setDraftPendiente(null);
+		setAutosaveHabilitado(true);
+	};
 
 	// Auto-save con debounce
 	const saveTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -293,8 +328,7 @@ export function NuevaPolizaForm({ mode = "create", polizaId, initialData }: Nuev
 	}, []);
 
 	useEffect(() => {
-		if (mode !== "create") return;
-		if (!draftInitialized.current) return;
+		if (mode !== "create" || !autosaveHabilitado) return;
 
 		debouncedSave(formState);
 
@@ -303,61 +337,55 @@ export function NuevaPolizaForm({ mode = "create", polizaId, initialData }: Nuev
 				clearTimeout(saveTimeout.current);
 			}
 		};
-	}, [formState, mode, debouncedSave]);
+	}, [formState, mode, autosaveHabilitado, debouncedSave]);
 
-	// Navegación
-	const handleCancelar = async () => {
-		const mensaje =
-			mode === "edit"
-				? "¿Está seguro de cancelar? Se perderán los cambios no guardados."
-				: "¿Está seguro de cancelar? Se perderán todos los datos ingresados.";
+	// Navegación / cancelar
+	const [mostrarDialogoCancelar, setMostrarDialogoCancelar] = useState(false);
 
-		if (confirm(mensaje)) {
-			// Limpiar archivos temporales subidos a Storage (best-effort)
-			const tempPaths = formState.documentos
-				.filter((d) => d.storage_path?.startsWith("temp/") && !d.id)
-				.map((d) => d.storage_path!);
+	const confirmarCancelar = async () => {
+		// Limpiar archivos temporales subidos a Storage (best-effort)
+		const tempPaths = formState.documentos
+			.filter((d) => d.storage_path?.startsWith("temp/") && !d.id)
+			.map((d) => d.storage_path!);
 
-			if (tempPaths.length > 0) {
-				try {
-					const supabase = createClient();
-					await supabase.storage.from("polizas-documentos").remove(tempPaths);
-				} catch {
-					// Best-effort: archivos huérfanos se limpian en purga semestral
-				}
+		if (tempPaths.length > 0) {
+			try {
+				const supabase = createClient();
+				await supabase.storage.from("polizas-documentos").remove(tempPaths);
+			} catch {
+				// Best-effort: archivos huérfanos se limpian en purga semestral
 			}
+		}
 
-			if (mode === "create") {
-				clearPolizaDraft();
-			}
-			if ((mode === "edit" || mode === "renovacion") && polizaId) {
-				router.push(`/polizas/${polizaId}`);
-			} else {
-				router.push("/polizas");
-			}
+		if (mode === "create") {
+			clearPolizaDraft();
+		}
+		if ((mode === "edit" || mode === "renovacion") && polizaId) {
+			router.push(`/polizas/${polizaId}`);
+		} else {
+			router.push("/polizas");
 		}
 	};
 
-	const handleSiguientePaso = () => {
-		const siguientePaso = (formState.paso_actual + 1) as PasoFormulario;
-		if (siguientePaso <= 6) {
-			setFormState((prev) => ({
-				...prev,
-				paso_actual: siguientePaso,
-			}));
-			setPasoMaximo((prev) => Math.max(prev, siguientePaso));
-		}
-	};
+	// Avance step-aware: cada paso declara desde dónde avanza/retrocede. Así,
+	// clics repetidos en "Continuar" de un mismo paso no desbloquean secciones
+	// posteriores sin pasar por la validación de cada paso intermedio.
+	const avanzarDesde = useCallback((paso: PasoFormulario) => {
+		const siguiente = Math.min(paso + 1, 6) as PasoFormulario;
+		setFormState((prev) => ({
+			...prev,
+			paso_actual: siguiente,
+		}));
+		setPasoMaximo((prev) => Math.max(prev, siguiente));
+	}, []);
 
-	const handlePasoAnterior = () => {
-		const pasoAnterior = (formState.paso_actual - 1) as PasoFormulario;
-		if (pasoAnterior >= 1) {
-			setFormState((prev) => ({
-				...prev,
-				paso_actual: pasoAnterior,
-			}));
-		}
-	};
+	const retrocederDesde = useCallback((paso: PasoFormulario) => {
+		const anterior = Math.max(paso - 1, 1) as PasoFormulario;
+		setFormState((prev) => ({
+			...prev,
+			paso_actual: anterior,
+		}));
+	}, []);
 
 	const handleActualizarPaso = (paso: PasoFormulario) => {
 		setFormState((prev) => ({
@@ -429,7 +457,7 @@ export function NuevaPolizaForm({ mode = "create", polizaId, initialData }: Nuev
 								asegurado,
 							}));
 						}}
-						onSiguiente={handleSiguientePaso}
+						onSiguiente={() => avanzarDesde(1)}
 					/>
 				)}
 
@@ -441,10 +469,15 @@ export function NuevaPolizaForm({ mode = "create", polizaId, initialData }: Nuev
 							setFormState((prev) => ({
 								...prev,
 								datos_basicos: datos,
+								// Si cambia el ramo, los datos específicos del ramo anterior dejan de ser válidos
+								datos_especificos:
+									prev.datos_basicos?.ramo && prev.datos_basicos.ramo !== datos.ramo
+										? null
+										: prev.datos_especificos,
 							}));
 						}}
-						onSiguiente={handleSiguientePaso}
-						onAnterior={handlePasoAnterior}
+						onSiguiente={() => avanzarDesde(2)}
+						onAnterior={() => retrocederDesde(2)}
 					/>
 				)}
 
@@ -462,8 +495,8 @@ export function NuevaPolizaForm({ mode = "create", polizaId, initialData }: Nuev
 								datos_especificos: datos,
 							}));
 						}}
-						onSiguiente={handleSiguientePaso}
-						onAnterior={handlePasoAnterior}
+						onSiguiente={() => avanzarDesde(3)}
+						onAnterior={() => retrocederDesde(3)}
 					/>
 				)}
 
@@ -484,8 +517,8 @@ export function NuevaPolizaForm({ mode = "create", polizaId, initialData }: Nuev
 								modalidad_pago: datos,
 							}));
 						}}
-						onSiguiente={handleSiguientePaso}
-						onAnterior={handlePasoAnterior}
+						onSiguiente={() => avanzarDesde(4)}
+						onAnterior={() => retrocederDesde(4)}
 					/>
 				)}
 
@@ -499,8 +532,8 @@ export function NuevaPolizaForm({ mode = "create", polizaId, initialData }: Nuev
 								documentos,
 							}));
 						}}
-						onSiguiente={handleSiguientePaso}
-						onAnterior={handlePasoAnterior}
+						onSiguiente={() => avanzarDesde(5)}
+						onAnterior={() => retrocederDesde(5)}
 						userId={userId}
 					/>
 				)}
@@ -509,7 +542,7 @@ export function NuevaPolizaForm({ mode = "create", polizaId, initialData }: Nuev
 				{pasoMaximo >= 6 && (
 					<Resumen
 						formState={formState}
-						onAnterior={handlePasoAnterior}
+						onAnterior={() => retrocederDesde(6)}
 						onEditarPaso={handleActualizarPaso}
 						onGuardar={handleGuardar}
 						guardando={guardando}
@@ -536,14 +569,23 @@ export function NuevaPolizaForm({ mode = "create", polizaId, initialData }: Nuev
 						<FileText className="h-6 w-6 text-primary shrink-0" />
 						<div className="min-w-0">
 							<h1 className="text-xl font-semibold text-foreground leading-tight">
-								{mode === "edit" ? "Editar Póliza" : mode === "renovacion" ? "Renovar Póliza" : "Nueva Póliza"}
+								{mode === "edit"
+									? "Editar Póliza"
+									: mode === "renovacion"
+										? "Renovar Póliza"
+										: "Nueva Póliza"}
 							</h1>
 							<p className="text-sm text-muted-foreground leading-tight">
 								{STEP_CONFIG[formState.paso_actual - 1]?.label} — Paso {formState.paso_actual} de 6
 							</p>
 						</div>
 					</div>
-					<Button variant="ghost" size="sm" onClick={handleCancelar} className="shrink-0 text-muted-foreground hover:text-destructive hover:bg-destructive/8">
+					<Button
+						variant="ghost"
+						size="sm"
+						onClick={() => setMostrarDialogoCancelar(true)}
+						className="shrink-0 text-muted-foreground hover:text-destructive hover:bg-destructive/8"
+					>
 						<X className="h-4 w-4 mr-1.5" />
 						Cancelar
 					</Button>
@@ -629,7 +671,9 @@ export function NuevaPolizaForm({ mode = "create", polizaId, initialData }: Nuev
 													</p>
 												)}
 												{isActive && (
-													<p className="text-[0.8125rem] text-primary/70 mt-0.5">En progreso</p>
+													<p className="text-[0.8125rem] text-primary/70 mt-0.5">
+														En progreso
+													</p>
 												)}
 											</div>
 										</div>
@@ -643,6 +687,46 @@ export function NuevaPolizaForm({ mode = "create", polizaId, initialData }: Nuev
 				{/* Form content */}
 				<div className="flex-1 min-w-0">{renderPasosAcumulativos()}</div>
 			</div>
+
+			{/* Diálogo: borrador encontrado */}
+			<AlertDialog open={!!draftPendiente}>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>Borrador de póliza encontrado</AlertDialogTitle>
+						<AlertDialogDescription>
+							Se encontró un borrador de póliza guardado {draftPendiente?.edad}. ¿Desea continuar donde se
+							quedó? Si lo descarta, se eliminará permanentemente.
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel onClick={descartarBorrador}>Descartar borrador</AlertDialogCancel>
+						<AlertDialogAction onClick={restaurarBorrador}>Continuar borrador</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
+
+			{/* Diálogo: confirmar cancelación */}
+			<AlertDialog open={mostrarDialogoCancelar} onOpenChange={setMostrarDialogoCancelar}>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>¿Cancelar el registro?</AlertDialogTitle>
+						<AlertDialogDescription>
+							{mode === "edit"
+								? "Se perderán los cambios no guardados."
+								: "Se perderán todos los datos ingresados."}
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel>Seguir editando</AlertDialogCancel>
+						<AlertDialogAction
+							onClick={confirmarCancelar}
+							className="bg-destructive text-white hover:bg-destructive/90"
+						>
+							Sí, cancelar
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
 		</div>
 	);
 }

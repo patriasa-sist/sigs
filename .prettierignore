@@ -1,0 +1,12 @@
+# Build y dependencias
+.next
+node_modules
+package-lock.json
+
+# Estáticos y SQL (prettier no parsea .sql; docs contiene migraciones + markdown de referencia)
+public
+supabase
+docs
+
+# Markdown: no reformatear documentación ni CLAUDE.md
+*.md

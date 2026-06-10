@@ -13,6 +13,7 @@ import type {
 } from "@/types/poliza";
 import { validarDatosBasicos } from "@/utils/polizaValidation";
 import { POLIZA_RULES } from "@/utils/validationConstants";
+import { useLiveSync } from "@/hooks/useLiveSync";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -82,6 +83,10 @@ export function DatosBasicos({ datos, onChange, onSiguiente, onAnterior }: Props
 	const [cargandoProductos, setCargandoProductos] = useState(false);
 	const [errorProductos, setErrorProductos] = useState<string | null>(null);
 	const [errores, setErrores] = useState<Record<string, string>>({});
+
+	// Sincroniza las ediciones con el padre en vivo (sin requerir "Continuar"),
+	// para que el borrador de recovery y el resumen reflejen lo escrito.
+	useLiveSync(() => formData as DatosBasicosPoliza, onChange, [formData]);
 
 	// Cargar catálogos
 	const cargarCatalogos = useCallback(async () => {
@@ -298,23 +303,6 @@ export function DatosBasicos({ datos, onChange, onSiguiente, onAnterior }: Props
 		onSiguiente();
 	};
 
-	// Actualizar datos
-	const handleActualizar = () => {
-		const validacion = validarDatosBasicos(formData);
-
-		if (!validacion.valido) {
-			const nuevosErrores: Record<string, string> = {};
-			validacion.errores.forEach((error) => {
-				nuevosErrores[error.campo] = error.mensaje;
-			});
-			setErrores(nuevosErrores);
-			return;
-		}
-
-		onChange(formData as DatosBasicosPoliza);
-		alert("Datos actualizados correctamente");
-	};
-
 	const todosLosCamposCompletos =
 		formData.numero_poliza &&
 		formData.compania_aseguradora_id &&
@@ -329,7 +317,7 @@ export function DatosBasicos({ datos, onChange, onSiguiente, onAnterior }: Props
 		formData.grupo_produccion &&
 		formData.moneda;
 
-	const esCompleto = datos !== null;
+	const esCompleto = Boolean(todosLosCamposCompletos);
 
 	if (cargandoCatalogos) {
 		return (
@@ -744,18 +732,10 @@ export function DatosBasicos({ datos, onChange, onSiguiente, onAnterior }: Props
 					Anterior
 				</Button>
 
-				<div className="flex gap-2">
-					{esCompleto && (
-						<Button variant="outline" onClick={handleActualizar}>
-							Actualizar Datos
-						</Button>
-					)}
-
-					<Button onClick={handleContinuar} disabled={!todosLosCamposCompletos}>
-						Continuar con Datos Específicos
-						<ChevronRight className="ml-2 h-5 w-5" />
-					</Button>
-				</div>
+				<Button onClick={handleContinuar} disabled={!todosLosCamposCompletos}>
+					Continuar con Datos Específicos
+					<ChevronRight className="ml-2 h-5 w-5" />
+				</Button>
 			</div>
 		</div>
 	);

@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { VehiculoRCModal } from "./VehiculoRCModal";
 import { createClient } from "@/utils/supabase/client";
+import { useLiveSync } from "@/hooks/useLiveSync";
 
 type TipoVehiculo = { id: string; nombre: string };
 type MarcaVehiculo = { id: string; nombre: string };
@@ -21,9 +22,7 @@ type Props = {
 };
 
 export function ResponsabilidadCivilForm({ datos, onChange, onSiguiente, onAnterior }: Props) {
-	const [tipoPoliza, setTipoPoliza] = useState<"individual" | "corporativo">(
-		datos?.tipo_poliza ?? "individual"
-	);
+	const [tipoPoliza, setTipoPoliza] = useState<"individual" | "corporativo">(datos?.tipo_poliza ?? "individual");
 	const [valorAsegurado, setValorAsegurado] = useState<number>(datos?.valor_asegurado ?? 0);
 	const [vehiculos, setVehiculos] = useState<VehiculoRC[]>(datos?.vehiculos ?? []);
 	const [modalAbierto, setModalAbierto] = useState(false);
@@ -100,6 +99,14 @@ export function ResponsabilidadCivilForm({ datos, onChange, onSiguiente, onAnter
 			setErrores(rest);
 		}
 	};
+
+	// Sincroniza ediciones con el padre en vivo (sin requerir "Continuar"),
+	// para que el borrador de recovery y el resumen reflejen lo escrito.
+	useLiveSync(
+		() => (valorAsegurado > 0 ? { tipo_poliza: tipoPoliza, valor_asegurado: valorAsegurado, vehiculos } : null),
+		onChange,
+		[tipoPoliza, valorAsegurado, vehiculos],
+	);
 
 	const handleContinuar = () => {
 		const nuevosErrores: Record<string, string> = {};
@@ -180,9 +187,7 @@ export function ResponsabilidadCivilForm({ datos, onChange, onSiguiente, onAnter
 						placeholder="100000.00"
 						className={`bg-white ${errores.valor_asegurado ? "border-red-500" : ""}`}
 					/>
-					{errores.valor_asegurado && (
-						<p className="text-sm text-red-600">{errores.valor_asegurado}</p>
-					)}
+					{errores.valor_asegurado && <p className="text-sm text-red-600">{errores.valor_asegurado}</p>}
 					<p className="text-xs text-gray-500">
 						La moneda se toma de los datos básicos de la póliza (Paso 2)
 					</p>
@@ -194,7 +199,13 @@ export function ResponsabilidadCivilForm({ datos, onChange, onSiguiente, onAnter
 				<h3 className="text-base font-semibold text-gray-900">
 					Vehículos Asegurados <span className="text-gray-400 text-sm font-normal">(opcional)</span>
 				</h3>
-				<Button onClick={() => { setVehiculoEditando(null); setIndexEditando(null); setModalAbierto(true); }}>
+				<Button
+					onClick={() => {
+						setVehiculoEditando(null);
+						setIndexEditando(null);
+						setModalAbierto(true);
+					}}
+				>
 					<Plus className="mr-2 h-4 w-4" />
 					Agregar Vehículo
 				</Button>
@@ -213,31 +224,52 @@ export function ResponsabilidadCivilForm({ datos, onChange, onSiguiente, onAnter
 					<table className="w-full">
 						<thead className="bg-gray-50">
 							<tr>
-								<th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">Placa</th>
-								<th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">Chasis</th>
-								<th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">Tipo</th>
-								<th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">Marca / Modelo</th>
+								<th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">
+									Placa
+								</th>
+								<th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">
+									Chasis
+								</th>
+								<th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">
+									Tipo
+								</th>
+								<th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">
+									Marca / Modelo
+								</th>
 								<th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">Año</th>
-								<th className="px-4 py-3 text-center text-xs font-medium text-gray-700 uppercase">Uso</th>
-								<th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">Servicio</th>
-								<th className="px-4 py-3 text-center text-xs font-medium text-gray-700 uppercase">Acciones</th>
+								<th className="px-4 py-3 text-center text-xs font-medium text-gray-700 uppercase">
+									Uso
+								</th>
+								<th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">
+									Servicio
+								</th>
+								<th className="px-4 py-3 text-center text-xs font-medium text-gray-700 uppercase">
+									Acciones
+								</th>
 							</tr>
 						</thead>
 						<tbody className="divide-y">
 							{vehiculos.map((v, idx) => (
 								<tr key={idx} className="hover:bg-gray-50">
 									<td className="px-4 py-3 font-medium text-gray-900">{v.placa}</td>
-									<td className="px-4 py-3 text-sm text-gray-600 max-w-[140px] truncate" title={v.nro_chasis}>
+									<td
+										className="px-4 py-3 text-sm text-gray-600 max-w-[140px] truncate"
+										title={v.nro_chasis}
+									>
 										{v.nro_chasis}
 									</td>
-									<td className="px-4 py-3 text-sm text-gray-600">{nombreTipo(v.tipo_vehiculo_id)}</td>
+									<td className="px-4 py-3 text-sm text-gray-600">
+										{nombreTipo(v.tipo_vehiculo_id)}
+									</td>
 									<td className="px-4 py-3 text-sm text-gray-600">
 										{nombreMarca(v.marca_vehiculo_id)}
 										{v.modelo ? ` ${v.modelo}` : ""}
 									</td>
 									<td className="px-4 py-3 text-sm text-gray-600">{v.ano ?? "-"}</td>
 									<td className="px-4 py-3 text-center">
-										<span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${usoColor(v.uso)}`}>
+										<span
+											className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${usoColor(v.uso)}`}
+										>
 											{usoLabel(v.uso)}
 										</span>
 									</td>
