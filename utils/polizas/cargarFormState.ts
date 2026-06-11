@@ -291,9 +291,16 @@ export async function cargarPolizaFormState(
 		}
 
 		// 5. Get datos_especificos based on ramo
+		// Despacho acento-insensible: los valores reales de polizas.ramo llevan tildes
+		// ("Ramos técnicos", "Aeronavegación") que un includes() sin normalizar no detecta.
+		const ramoLower = poliza.ramo
+			.toLowerCase()
+			.normalize("NFD")
+			.replace(/\p{Diacritic}/gu, "");
+
 		let datos_especificos: DatosEspecificosPoliza | null = null;
 
-		if (poliza.ramo.toLowerCase().includes("automotor")) {
+		if (ramoLower.includes("automotor")) {
 			const { data: vehiculos } = await supabase
 				.from("polizas_automotor_vehiculos")
 				.select("*")
@@ -328,7 +335,7 @@ export async function cargarPolizaFormState(
 		}
 
 		// Salud
-		if (poliza.ramo.toLowerCase().includes("salud") || poliza.ramo.toLowerCase().includes("enfermedad")) {
+		if (ramoLower.includes("salud") || ramoLower.includes("enfermedad")) {
 			const { data: niveles, error: errorNiveles } = await supabase
 				.from("polizas_salud_niveles")
 				.select("id, nombre, monto")
@@ -444,7 +451,6 @@ export async function cargarPolizaFormState(
 		}
 
 		// Vida, Accidentes Personales, Sepelio (tablas compartidas: polizas_niveles, polizas_asegurados_nivel, polizas_beneficiarios)
-		const ramoLower = poliza.ramo.toLowerCase();
 		if (
 			ramoLower.includes("vida") ||
 			ramoLower.includes("accidente") ||
