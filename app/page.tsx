@@ -1,6 +1,6 @@
 import React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { NavButton } from "@/components/ui/nav-button";
+import { NavLink } from "@/components/ui/nav-link";
 import { Badge } from "@/components/ui/badge";
 import {
 	Users,
@@ -164,9 +164,9 @@ const Dashboard = () => {
 											</div>
 										))}
 									</div>
-									<NavButton href={module.link} className="w-full cursor-pointer" variant="default">
+									<NavLink href={module.link} className="w-full cursor-pointer" variant="default">
 										Acceder
-									</NavButton>
+									</NavLink>
 								</CardContent>
 							</Card>
 						))}
