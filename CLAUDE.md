@@ -32,7 +32,7 @@ Guía para Claude Code (claude.ai/code) al trabajar en este repositorio.
 - Los permisos granulares viajan en el JWT (claims `user_role`, `user_permissions`, `team_member_ids` inyectados por `custom_access_token_hook`). Cambios de permisos/equipos requieren re-login.
 - Admin tiene bypass hardcodeado en código (nunca consulta permisos en BD).
 - Server: helpers en `utils/auth/helpers.ts` (`getCurrentUser` cacheado, `hasPermission`/`requirePermission`, `getDataScopeFilter` — 0 queries a BD). Cliente: decodificar `session.access_token` (patrón en `components/ui/navbar.tsx` y `components/polizas/steps/DatosBasicos.tsx`).
-- Middleware: `utils/supabase/middleware.ts` con mapa `PROTECTED_ROUTES` por permiso; el matcher de rutas vive SOLO en `middleware.ts` de la raíz.
+- Middleware/proxy: `utils/supabase/middleware.ts` con mapa `PROTECTED_ROUTES` por permiso; el matcher de rutas vive SOLO en `proxy.ts` de la raíz (Next 16 renombró `middleware.ts` → `proxy.ts`).
 - Doc de referencia: `docs/SISTEMA_PERMISOS_Y_EQUIPOS.md` (escrita antes del código; ante dudas, verificar la BD vía MCP).
 
 ## Módulos (app/)

@@ -15,8 +15,8 @@ import { fetchRamoMappingData, getEffectiveRamo } from "@/utils/pucMapping";
  */
 export function excelDateToJSDate(excelDate: number | Date): Date {
 	if (excelDate instanceof Date) {
-		let tiempoMili = excelDate.getTime();
-		let tiempoActual = new Date(1899, 11, 30).getTime();
+		const tiempoMili = excelDate.getTime();
+		const tiempoActual = new Date(1899, 11, 30).getTime();
 		// Si ya es Date pero viene de Excel, convertir a número para aplicar corrección
 		const excelSerial = (tiempoMili - tiempoActual) / (24 * 60 * 60 * 1000);
 		return excelDateToJSDate(excelSerial);
@@ -55,7 +55,7 @@ export function determineStatus(daysUntilExpiry: number): InsuranceStatus {
  * Limpia y normaliza strings, manejando texto enriquecido de Excel.
  * Esta función es clave para prevenir errores de '[object Object]' y mejorar la seguridad.
  */
-export function cleanString(value: any): string {
+export function cleanString(value: unknown): string {
 	if (value === null || value === undefined) {
 		return "";
 	}
@@ -78,7 +78,7 @@ export function cleanString(value: any): string {
 /**
  * Convierte valor a número, manejando diferentes formatos
  */
-export function parseNumber(value: any): number {
+export function parseNumber(value: unknown): number {
 	if (typeof value === "number") return value;
 	if (typeof value === "string") {
 		const cleaned = value.replace(/[^\d.-]/g, "");
@@ -91,11 +91,11 @@ export function parseNumber(value: any): number {
 /**
  * Valida un registro individual
  */
-export function validateRecord(record: any, rowIndex: number): { isValid: boolean; errors: string[] } {
+export function validateRecord(record: object, rowIndex: number): { isValid: boolean; errors: string[] } {
 	const errors: string[] = [];
 
 	VALIDATION_RULES.forEach((rule) => {
-		const value = record[rule.field];
+		const value = (record as Record<string, unknown>)[rule.field];
 
 		if (rule.required && (value === null || value === undefined || value === "")) {
 			errors.push(`Fila ${rowIndex}: Campo "${rule.field}" es requerido`);
@@ -130,7 +130,7 @@ export function validateRecord(record: any, rowIndex: number): { isValid: boolea
 					if (typeof value === "number") {
 						dateValue = excelDateToJSDate(value);
 					} else {
-						dateValue = new Date(value);
+						dateValue = new Date(value as string | Date);
 					}
 					if (isNaN(dateValue.getTime())) {
 						errors.push(`Fila ${rowIndex}: "${rule.field}" debe ser una fecha válida`);
@@ -153,7 +153,7 @@ export function validateRecord(record: any, rowIndex: number): { isValid: boolea
 /**
  * Normalize currency type from Excel
  */
-export function normalizeCurrencyType(value: any): "Bs." | "$us." | undefined {
+export function normalizeCurrencyType(value: unknown): "Bs." | "$us." | undefined {
 	if (!value) return undefined;
 
 	const cleanValue = cleanString(value).toLowerCase();
@@ -182,11 +182,11 @@ export function normalizeCurrencyType(value: any): "Bs." | "$us." | undefined {
 /**
  * Mapea las columnas del Excel a nuestro tipo InsuranceRecord
  */
-export function mapExcelRowToRecord(row: any): InsuranceRecord {
+export function mapExcelRowToRecord(row: Record<string, unknown>): InsuranceRecord {
 	return {
 		nro: parseNumber(row["NRO."]),
-		inicioDeVigencia: row["INICIO DE VIGENCIA"],
-		finDeVigencia: row["FIN DE VIGENCIA"],
+		inicioDeVigencia: row["INICIO DE VIGENCIA"] as InsuranceRecord["inicioDeVigencia"],
+		finDeVigencia: row["FIN DE VIGENCIA"] as InsuranceRecord["finDeVigencia"],
 		compania: cleanString(row["COMPAÑÍA"]) || "Sin especificar",
 		ramo: "Sin especificar", // Will be set by PUC mapping
 		puc: cleanString(row["PUC"]), // New PUC column
@@ -377,7 +377,7 @@ export async function processExcelFile(file: File): Promise<ExcelUploadResult> {
 
 		for (let rowNumber = 2; rowNumber <= worksheet.rowCount; rowNumber++) {
 			const row = worksheet.getRow(rowNumber);
-			const rowObject: any = {};
+			const rowObject: Record<string, unknown> = {};
 			let hasData = false;
 
 			row.eachCell((cell, colNumber) => {

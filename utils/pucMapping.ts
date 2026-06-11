@@ -1,6 +1,5 @@
 // utils/pucMapping.ts - PUC code to ramo mapping using pre-fetched data
 
-import { createClient } from "@/utils/supabase/client";
 import { RamoMappingData } from "@/types/insurance";
 
 // Fallback ramo mappings in case database is unavailable (complete set from DB)

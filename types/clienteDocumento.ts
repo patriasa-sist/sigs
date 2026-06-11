@@ -347,7 +347,7 @@ export function formatFileSize(bytes: number): string {
  * Validate file type
  */
 export function isValidFileType(file: File): boolean {
-	return ALLOWED_FILE_TYPES.includes(file.type as any);
+	return (ALLOWED_FILE_TYPES as readonly string[]).includes(file.type);
 }
 
 /**
@@ -392,7 +392,7 @@ export function validateFile(file: File): FileValidationError | null {
 
 	// Validate extension
 	const extension = getFileExtension(file.name);
-	if (!ALLOWED_FILE_EXTENSIONS.includes(extension as any)) {
+	if (!(ALLOWED_FILE_EXTENSIONS as readonly string[]).includes(extension)) {
 		return {
 			field: "extension",
 			message: "Extensión de archivo no permitida.",

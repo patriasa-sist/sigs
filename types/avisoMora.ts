@@ -1,6 +1,6 @@
 // types/avisoMora.ts - Type definitions for Aviso de Mora PDF generation
 
-import type { PolizaConPagos, ContactoCliente, CuotaVencidaConMora, Moneda } from "./cobranza";
+import type { Moneda } from "./cobranza";
 
 /**
  * Datos completos para generar PDF de aviso de mora

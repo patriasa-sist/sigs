@@ -3,7 +3,6 @@
 import { ProcessedInsuranceRecord } from "@/types/insurance";
 import { LetterData, PolicyForLetter, VehicleForLetter, InsuredPlaceForLetter } from "@/types/pdf";
 import { normalizeCurrencyType } from "./excel";
-import { generateLetterReference } from "./letterReferences";
 
 // Constantes para los textos de plantilla
 const HEALTH_CONDITIONS_TEMPLATE = `Le informamos que, a partir de su renovación, todas las compañías aseguradoras han realizado ajustes a sus coberturas.`;
@@ -107,10 +106,10 @@ export function groupRecordsForLetters(records: ProcessedInsuranceRecord[]): Let
 		groups[key].push(record);
 	});
 
-	return Object.entries(groups).map(([key, groupRecords], index) => {
+	return Object.entries(groups).map(([, groupRecords], index) => {
 		const firstRecord = groupRecords[0];
 		const templateType = determineTemplateType(firstRecord.ramo, firstRecord.puc, firstRecord.compania);
-		let policies: PolicyForLetter[] = [];
+		const policies: PolicyForLetter[] = [];
 		const sourceRecordIds = groupRecords.map((r) => r.id!).filter((id) => id);
 
 		const policyGroups: Record<string, ProcessedInsuranceRecord[]> = {};
@@ -325,10 +324,10 @@ export async function groupRecordsForLettersWithReferences(records: ProcessedIns
 	const letters: LetterData[] = [];
 
 	// Process each group sequentially to ensure unique reference numbers
-	for (const [key, groupRecords] of Object.entries(groups)) {
+	for (const [, groupRecords] of Object.entries(groups)) {
 		const firstRecord = groupRecords[0];
 		const templateType = determineTemplateType(firstRecord.ramo, firstRecord.puc, firstRecord.compania);
-		let policies: PolicyForLetter[] = [];
+		const policies: PolicyForLetter[] = [];
 		const sourceRecordIds = groupRecords.map((r) => r.id!).filter((id) => id);
 
 		const policyGroups: Record<string, ProcessedInsuranceRecord[]> = {};

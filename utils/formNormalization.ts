@@ -130,13 +130,13 @@ export function mapIncomeValueToLevel(value: number): "bajo" | "medio" | "alto" 
  * @param phoneFields - Array of field names to clean as phone numbers
  * @returns Normalized object
  */
-export function normalizeFormData<T extends Record<string, any>>(
+export function normalizeFormData<T extends object>(
 	obj: T,
 	fieldsToNormalize: string[] = [],
 	emailFields: string[] = [],
 	phoneFields: string[] = [],
 ): T {
-	const normalized = { ...obj };
+	const normalized = { ...obj } as Record<string, unknown>;
 
 	for (const key in normalized) {
 		const value = normalized[key];
@@ -146,36 +146,36 @@ export function normalizeFormData<T extends Record<string, any>>(
 
 		// Normalize text fields
 		if (fieldsToNormalize.includes(key) && typeof value === "string") {
-			normalized[key] = normalizeText(value) as any;
+			normalized[key] = normalizeText(value);
 		}
 
 		// Normalize email fields
 		if (emailFields.includes(key) && typeof value === "string") {
-			normalized[key] = normalizeEmail(value) as any;
+			normalized[key] = normalizeEmail(value);
 		}
 
 		// Clean phone fields
 		if (phoneFields.includes(key) && typeof value === "string") {
-			normalized[key] = cleanPhone(value) as any;
+			normalized[key] = cleanPhone(value);
 		}
 
 		// Recursively normalize nested objects
 		if (typeof value === "object" && !Array.isArray(value)) {
-			normalized[key] = normalizeFormData(value, fieldsToNormalize, emailFields, phoneFields) as any;
+			normalized[key] = normalizeFormData(value, fieldsToNormalize, emailFields, phoneFields);
 		}
 
 		// Recursively normalize arrays
 		if (Array.isArray(value)) {
-			normalized[key] = value.map((item: any) => {
+			normalized[key] = value.map((item) => {
 				if (typeof item === "object") {
-					return normalizeFormData(item, fieldsToNormalize, emailFields, phoneFields);
+					return normalizeFormData(item as object, fieldsToNormalize, emailFields, phoneFields);
 				}
 				return item;
-			}) as any;
+			});
 		}
 	}
 
-	return normalized;
+	return normalized as T;
 }
 
 /**
@@ -187,7 +187,7 @@ export function normalizeFormData<T extends Record<string, any>>(
  * NOTE: tipo_documento, estado_civil, and genero are NOT normalized to uppercase
  * because they must match database CHECK constraints in lowercase
  */
-export function normalizeNaturalClientData<T extends Record<string, any>>(data: T): T {
+export function normalizeNaturalClientData<T extends object>(data: T): T {
 	const textFields = [
 		"primer_nombre",
 		"segundo_nombre",
@@ -220,7 +220,7 @@ export function normalizeNaturalClientData<T extends Record<string, any>>(data: 
  * @param data - Juridic client form data
  * @returns Normalized data
  */
-export function normalizeJuridicClientData<T extends Record<string, any>>(data: T): T {
+export function normalizeJuridicClientData<T extends object>(data: T): T {
 	const textFields = [
 		"razon_social",
 		"tipo_sociedad",
@@ -246,7 +246,7 @@ export function normalizeJuridicClientData<T extends Record<string, any>>(data: 
  * NOTE: tipo_documento, estado_civil, and genero are NOT normalized to uppercase
  * because they must match database CHECK constraints in lowercase
  */
-export function normalizeUnipersonalClientData<T extends Record<string, any>>(data: T): T {
+export function normalizeUnipersonalClientData<T extends object>(data: T): T {
 	const textFields = [
 		// Personal data (natural client fields)
 		"primer_nombre",
@@ -290,7 +290,7 @@ export function normalizeUnipersonalClientData<T extends Record<string, any>>(da
  * @param data - Legal representative form data
  * @returns Normalized data
  */
-export function normalizeLegalRepresentativeData<T extends Record<string, any>>(data: T): T {
+export function normalizeLegalRepresentativeData<T extends object>(data: T): T {
 	const textFields = [
 		"primer_nombre",
 		"segundo_nombre",
@@ -311,7 +311,7 @@ export function normalizeLegalRepresentativeData<T extends Record<string, any>>(
 /**
  * Normalizes ONG client form data
  */
-export function normalizeOngClientData<T extends Record<string, any>>(data: T): T {
+export function normalizeOngClientData<T extends object>(data: T): T {
 	const textFields = [
 		"nombre_ong",
 		"sigla",
@@ -337,7 +337,7 @@ export function normalizeOngClientData<T extends Record<string, any>>(data: T): 
  * NOTE: tipo_asociacion is NOT normalized to uppercase
  * because it must match database CHECK constraint in lowercase.
  */
-export function normalizeAsociacionCivilClientData<T extends Record<string, any>>(data: T): T {
+export function normalizeAsociacionCivilClientData<T extends object>(data: T): T {
 	const textFields = [
 		"nombre_asociacion",
 		"sigla",
@@ -364,7 +364,7 @@ export function normalizeAsociacionCivilClientData<T extends Record<string, any>
  * NOTE: disciplina_principal and tipo_registro are NOT normalized to uppercase
  * because they must match database CHECK constraints in lowercase.
  */
-export function normalizeClubClientData<T extends Record<string, any>>(data: T): T {
+export function normalizeClubClientData<T extends object>(data: T): T {
 	const textFields = [
 		"nombre_club",
 		"sigla",
@@ -392,7 +392,7 @@ export function normalizeClubClientData<T extends Record<string, any>>(data: T):
  * @param data - Partner form data
  * @returns Normalized data
  */
-export function normalizePartnerData<T extends Record<string, any>>(data: T): T {
+export function normalizePartnerData<T extends object>(data: T): T {
 	const textFields = [
 		"primer_nombre",
 		"segundo_nombre",
@@ -462,7 +462,7 @@ export function parseDateDDMMYYYY(dateString: string): Date | null {
  * @param value - Date value to normalize (can be Date, object, undefined, null)
  * @returns Valid Date object or null
  */
-export function normalizeDate(value: any): Date | null {
+export function normalizeDate(value: unknown): Date | null {
 	// If null or undefined, return null
 	if (value === null || value === undefined) {
 		return null;

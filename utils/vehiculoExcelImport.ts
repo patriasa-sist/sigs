@@ -1,7 +1,7 @@
 // utils/vehiculoExcelImport.ts - Importación de vehículos desde Excel
 
 import * as ExcelJS from "exceljs";
-import type { VehiculoAutomotor, VehiculoExcelRow, ExcelImportResult } from "@/types/poliza";
+import type { VehiculoAutomotor, ExcelImportResult } from "@/types/poliza";
 import { validarVehiculoAutomotor } from "./polizaValidation";
 import { VEHICULO_RULES } from "./validationConstants";
 

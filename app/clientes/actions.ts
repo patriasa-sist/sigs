@@ -1020,9 +1020,3 @@ export async function obtenerFiltrosClientes(): Promise<ActionResult<FiltrosClie
 		return { success: false, error: getErrorMessage(error), details: error };
 	}
 }
-
-// ============================================
-// EXPORTS
-// ============================================
-
-export { getAllClients as default };
