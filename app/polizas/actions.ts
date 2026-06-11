@@ -386,11 +386,13 @@ export async function obtenerPolizas(params: ObtenerPolizasParams = {}) {
 
 		const scope = await getDataScopeFilter();
 
-		// Si hay búsqueda de texto, obtener client_ids coincidentes en paralelo
+		// Si hay búsqueda de texto, obtener client_ids (por nombre/CI) y poliza_ids
+		// (por placa de vehículo) coincidentes, todo en paralelo.
 		let searchClientIds: string[] = [];
+		let searchPolizaIds: string[] = [];
 		if (search?.trim()) {
 			const q = search.trim().substring(0, 100);
-			const [natRes, jurRes, uniRes] = await Promise.all([
+			const [natRes, jurRes, uniRes, autoRes, rcRes, tecRes, anexoAutoRes, anexoTecRes] = await Promise.all([
 				supabase
 					.from("natural_clients")
 					.select("client_id")
@@ -402,11 +404,39 @@ export async function obtenerPolizas(params: ObtenerPolizasParams = {}) {
 					.from("unipersonal_clients")
 					.select("client_id")
 					.or(`razon_social.ilike.%${q}%,nit.ilike.%${q}%`),
+				// Placa en el registro base: automotor (indexada), responsabilidad civil y ramos técnicos.
+				supabase.from("polizas_automotor_vehiculos").select("poliza_id").ilike("placa", `%${q}%`),
+				supabase.from("polizas_rc_vehiculos").select("poliza_id").ilike("placa", `%${q}%`),
+				supabase.from("polizas_ramos_tecnicos_equipos").select("poliza_id").ilike("placa", `%${q}%`),
+				// Placa agregada vía anexo de inclusión: resolver poliza_id solo de anexos activos.
+				supabase
+					.from("polizas_anexos_automotor_vehiculos")
+					.select("anexo:polizas_anexos!inner(poliza_id)")
+					.eq("anexo.estado", "activo")
+					.ilike("placa", `%${q}%`),
+				supabase
+					.from("polizas_anexos_ramos_tecnicos_equipos")
+					.select("anexo:polizas_anexos!inner(poliza_id)")
+					.eq("anexo.estado", "activo")
+					.ilike("placa", `%${q}%`),
 			]);
 			searchClientIds = [
 				...(natRes.data?.map((r) => r.client_id) ?? []),
 				...(jurRes.data?.map((r) => r.client_id) ?? []),
 				...(uniRes.data?.map((r) => r.client_id) ?? []),
+			];
+			// El join embebido devuelve `anexo` como objeto { poliza_id } (relación a-uno).
+			type AnexoPolizaRef = { anexo: { poliza_id: string } | null };
+			const anexoPolizaIds = (rows: unknown): string[] =>
+				(rows as AnexoPolizaRef[] | null)?.map((r) => r.anexo?.poliza_id).filter((v): v is string => !!v) ?? [];
+			searchPolizaIds = [
+				...new Set([
+					...(autoRes.data?.map((r) => r.poliza_id) ?? []),
+					...(rcRes.data?.map((r) => r.poliza_id) ?? []),
+					...(tecRes.data?.map((r) => r.poliza_id) ?? []),
+					...anexoPolizaIds(anexoAutoRes.data),
+					...anexoPolizaIds(anexoTecRes.data),
+				]),
 			];
 		}
 
@@ -450,11 +480,10 @@ export async function obtenerPolizas(params: ObtenerPolizasParams = {}) {
 
 		if (search?.trim()) {
 			const sq = search.trim().substring(0, 100);
-			if (searchClientIds.length > 0) {
-				query = query.or(`numero_poliza.ilike.%${sq}%,client_id.in.(${searchClientIds.join(",")})`);
-			} else {
-				query = query.ilike("numero_poliza", `%${sq}%`);
-			}
+			const orParts = [`numero_poliza.ilike.%${sq}%`];
+			if (searchClientIds.length > 0) orParts.push(`client_id.in.(${searchClientIds.join(",")})`);
+			if (searchPolizaIds.length > 0) orParts.push(`id.in.(${searchPolizaIds.join(",")})`);
+			query = query.or(orParts.join(","));
 		}
 
 		const { data: polizas, error, count } = await query;

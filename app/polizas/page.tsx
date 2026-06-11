@@ -222,7 +222,7 @@ export default function PolizasPage() {
 						<Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
 						<Input
 							type="text"
-							placeholder="Buscar por Nº póliza, nombre del cliente, CI/NIT…"
+							placeholder="Buscar por Nº póliza, cliente, CI/NIT o placa…"
 							value={searchQuery}
 							onChange={(e) => setSearchQuery(e.target.value)}
 							className="pl-9 pr-9"
