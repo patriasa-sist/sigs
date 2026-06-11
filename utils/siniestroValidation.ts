@@ -143,11 +143,12 @@ export function validarCoberturas(coberturas: CoberturasStep | null): Validacion
 		};
 	}
 
-	// Validar que haya al menos una cobertura seleccionada
-	const tieneCoberturas = coberturas.coberturas_seleccionadas.length > 0;
+	// Validar que haya al menos una cobertura (seleccionada del catálogo o escrita a mano)
+	const tieneCoberturas =
+		coberturas.coberturas_seleccionadas.length > 0 || (coberturas.nuevas_coberturas?.length ?? 0) > 0;
 
 	if (!tieneCoberturas) {
-		errores.push("Debe seleccionar al menos una cobertura");
+		errores.push("Debe indicar al menos una cobertura");
 	}
 
 	return {

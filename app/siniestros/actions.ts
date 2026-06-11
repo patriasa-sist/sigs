@@ -211,38 +211,68 @@ export async function guardarSiniestro(formState: RegistroSiniestroFormState): P
 
 		if (siniestroError) throw siniestroError;
 
-		// 2. Insertar coberturas seleccionadas
+		// Set de cobertura_ids ya vinculados al siniestro (evita inserts duplicados).
+		const coberturaIdsUsados = new Set<string>();
+
+		// 2. Insertar coberturas seleccionadas del catálogo
 		if (formState.coberturas.coberturas_seleccionadas.length > 0) {
 			const coberturasData = formState.coberturas.coberturas_seleccionadas.map((cob) => ({
 				siniestro_id: siniestro.id,
 				cobertura_id: cob.id,
 			}));
+			formState.coberturas.coberturas_seleccionadas.forEach((cob) => coberturaIdsUsados.add(cob.id));
 
 			const { error: coberturasError } = await supabase.from("siniestros_coberturas").insert(coberturasData);
 
 			if (coberturasError) throw coberturasError;
 		}
 
-		// 3. Si hay cobertura custom, agregarla al catálogo primero
-		if (formState.coberturas.nueva_cobertura) {
-			const { data: nuevaCobertura, error: coberturaError } = await supabase
-				.from("coberturas_catalogo")
-				.insert({
-					nombre: formState.coberturas.nueva_cobertura.nombre,
-					descripcion: formState.coberturas.nueva_cobertura.descripcion,
-					ramo: formState.poliza_seleccionada.ramo,
-					es_custom: true,
-				})
-				.select()
-				.single();
+		// 3. Coberturas escritas a mano: materializarlas en el catálogo (dedup por
+		//    nombre+ramo, reutilizando la entrada existente) y vincularlas.
+		if (formState.coberturas.nuevas_coberturas?.length) {
+			const ramo = formState.poliza_seleccionada.ramo;
 
-			if (coberturaError) throw coberturaError;
+			for (const nc of formState.coberturas.nuevas_coberturas) {
+				const nombre = nc.nombre.trim();
+				if (!nombre) continue;
 
-			// Asociar nueva cobertura al siniestro
-			await supabase.from("siniestros_coberturas").insert({
-				siniestro_id: siniestro.id,
-				cobertura_id: nuevaCobertura.id,
-			});
+				// ¿Ya existe esa cobertura para el ramo? (case-insensitive)
+				const { data: existente } = await supabase
+					.from("coberturas_catalogo")
+					.select("id")
+					.eq("ramo", ramo)
+					.ilike("nombre", nombre)
+					.limit(1)
+					.maybeSingle();
+
+				let coberturaId = existente?.id;
+
+				if (!coberturaId) {
+					const { data: creada, error: crearError } = await supabase
+						.from("coberturas_catalogo")
+						.insert({
+							nombre,
+							descripcion: nc.descripcion ?? null,
+							ramo,
+							es_custom: true,
+						})
+						.select("id")
+						.single();
+
+					if (crearError) throw crearError;
+					coberturaId = creada.id;
+				}
+
+				if (coberturaIdsUsados.has(coberturaId)) continue;
+				coberturaIdsUsados.add(coberturaId);
+
+				const { error: linkError } = await supabase.from("siniestros_coberturas").insert({
+					siniestro_id: siniestro.id,
+					cobertura_id: coberturaId,
+				});
+
+				if (linkError) throw linkError;
+			}
 		}
 
 		// 4. Registrar documentos iniciales (ya subidos client-side a Storage en temp/)

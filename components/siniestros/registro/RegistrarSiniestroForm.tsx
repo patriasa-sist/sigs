@@ -60,7 +60,9 @@ function getStepSummary(paso: number, state: RegistroSiniestroFormState): string
 			return `${formatDate(state.detalles.fecha_siniestro)} · ${lugar}`;
 		}
 		case 3: {
-			const count = state.coberturas?.coberturas_seleccionadas.length ?? 0;
+			const count =
+				(state.coberturas?.coberturas_seleccionadas.length ?? 0) +
+				(state.coberturas?.nuevas_coberturas?.length ?? 0);
 			return count > 0 ? `${count} cobertura${count !== 1 ? "s" : ""}` : null;
 		}
 		case 4: {

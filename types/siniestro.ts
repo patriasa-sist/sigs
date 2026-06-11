@@ -38,6 +38,12 @@ export const TIPOS_DOCUMENTO_SINIESTRO = [
 	"orden de compra/trabajo",
 	"inspección",
 	"liquidación",
+	"orden de solicitud",
+	"informe de resultados médicos",
+	"factura (reembolso)",
+	"carta de rechazo",
+	"carta de garantía",
+	"documento de identidad",
 	"carta_rechazo",
 	"carta_respaldo",
 	"archivo_uif",
@@ -217,11 +223,12 @@ export type CoberturaSeleccionada = {
 
 export type CoberturasStep = {
 	coberturas_seleccionadas: CoberturaSeleccionada[];
-	// Permite agregar coberturas custom
-	nueva_cobertura?: {
+	// Coberturas escritas a mano (texto libre). Se materializan como entradas
+	// es_custom del catálogo al guardar, con dedup por nombre+ramo.
+	nuevas_coberturas?: Array<{
 		nombre: string;
 		descripcion?: string;
-	};
+	}>;
 };
 
 // ============================================

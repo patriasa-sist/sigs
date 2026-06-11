@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
-import { AlertCircle } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { AlertCircle, Plus, X } from "lucide-react";
 import CoberturaSelector from "@/components/siniestros/shared/CoberturaSelector";
 import type { CoberturasStep, CoberturaSeleccionada } from "@/types/siniestro";
 
@@ -15,126 +15,136 @@ interface CoberturasProps {
 	showMinError?: boolean;
 }
 
-// UUID real de la cobertura "Gestión comercial" en coberturas_catalogo
-const GESTION_COMERCIAL_ID = "a5eb5c20-fcd7-4147-85da-c753956eba81";
-
 export default function CoberturasStepComponent({
 	ramo,
 	coberturas,
 	onCoberturasChange,
 	showMinError,
 }: CoberturasProps) {
-	const [gestionComercialSeleccionada, setGestionComercialSeleccionada] = useState(false);
+	const [nuevaCobertura, setNuevaCobertura] = useState("");
 
-	// Inicializar estado si Gestión comercial ya está seleccionada
-	useEffect(() => {
-		const yaSeleccionada = coberturas?.coberturas_seleccionadas?.some((c) => c.id === GESTION_COMERCIAL_ID);
-		setGestionComercialSeleccionada(yaSeleccionada || false);
-	}, [coberturas?.coberturas_seleccionadas]);
+	const seleccionadas = coberturas?.coberturas_seleccionadas || [];
+	const escritas = coberturas?.nuevas_coberturas || [];
+	const totalCoberturas = seleccionadas.length + escritas.length;
 
 	const handleCoberturaToggle = (cobertura: CoberturaSeleccionada, selected: boolean) => {
-		const coberturasActuales = coberturas?.coberturas_seleccionadas || [];
-
-		const nuevasCoberturas = selected
-			? [...coberturasActuales, cobertura]
-			: coberturasActuales.filter((c) => c.id !== cobertura.id);
+		const nuevasSeleccionadas = selected
+			? [...seleccionadas, cobertura]
+			: seleccionadas.filter((c) => c.id !== cobertura.id);
 
 		onCoberturasChange({
 			...coberturas,
-			coberturas_seleccionadas: nuevasCoberturas,
+			coberturas_seleccionadas: nuevasSeleccionadas,
 		} as CoberturasStep);
 	};
 
-	const handleGestionComercialToggle = (checked: boolean) => {
-		setGestionComercialSeleccionada(checked);
+	const agregarCoberturaEscrita = () => {
+		const nombre = nuevaCobertura.trim();
+		if (!nombre) return;
 
-		const coberturasActuales = coberturas?.coberturas_seleccionadas || [];
+		// Evitar duplicados (case-insensitive) frente a lo ya escrito o seleccionado.
+		const yaExiste =
+			escritas.some((c) => c.nombre.toLowerCase() === nombre.toLowerCase()) ||
+			seleccionadas.some((c) => c.nombre.toLowerCase() === nombre.toLowerCase());
 
-		if (checked) {
-			// Agregar Gestión comercial
-			const gestionComercial: CoberturaSeleccionada = {
-				id: GESTION_COMERCIAL_ID,
-				nombre: "Gestión comercial",
-				descripcion: "Cobertura especial aplicable a todos los ramos",
-			};
+		if (!yaExiste) {
 			onCoberturasChange({
 				...coberturas,
-				coberturas_seleccionadas: [...coberturasActuales, gestionComercial],
-			} as CoberturasStep);
-		} else {
-			// Quitar Gestión comercial
-			const nuevasCoberturas = coberturasActuales.filter((c) => c.id !== GESTION_COMERCIAL_ID);
-			onCoberturasChange({
-				...coberturas,
-				coberturas_seleccionadas: nuevasCoberturas,
+				coberturas_seleccionadas: seleccionadas,
+				nuevas_coberturas: [...escritas, { nombre }],
 			} as CoberturasStep);
 		}
+		setNuevaCobertura("");
+	};
+
+	const quitarCoberturaEscrita = (nombre: string) => {
+		onCoberturasChange({
+			...coberturas,
+			coberturas_seleccionadas: seleccionadas,
+			nuevas_coberturas: escritas.filter((c) => c.nombre !== nombre),
+		} as CoberturasStep);
 	};
 
 	return (
 		<Card>
 			<CardHeader>
 				<CardTitle>Paso 3: Coberturas Afectadas</CardTitle>
-				<CardDescription>Selecciona las coberturas de la póliza que aplican a este siniestro</CardDescription>
+				<CardDescription>
+					Indica las coberturas de la póliza que se están aplicando a este siniestro
+				</CardDescription>
 			</CardHeader>
 			<CardContent className="space-y-4">
-				{/* Error inline si no hay coberturas seleccionadas */}
-				{showMinError && (
+				{/* Error inline si no hay ninguna cobertura */}
+				{showMinError && totalCoberturas === 0 && (
 					<p className="text-sm text-destructive flex items-center gap-1.5">
 						<AlertCircle className="h-3.5 w-3.5" />
-						Debe seleccionar al menos una cobertura
+						Debe indicar al menos una cobertura
 					</p>
 				)}
 
-				{/* Información del ramo */}
-				<div className="flex items-start gap-2 text-sm bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
-					<AlertCircle className="h-4 w-4 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
-					<div className="text-blue-900 dark:text-blue-100">
-						<p className="font-medium mb-1">Ramo de la póliza: {ramo}</p>
-						<p className="text-sm">
-							Las coberturas mostradas corresponden a este tipo de seguro. Selecciona todas las que
-							apliquen al siniestro reportado.
-						</p>
+				{/* Input de texto libre: escribir 1 o más coberturas aplicadas */}
+				<div className="space-y-2">
+					<label className="text-sm font-medium text-foreground">Coberturas aplicadas</label>
+					<div className="flex gap-2">
+						<Input
+							value={nuevaCobertura}
+							onChange={(e) => setNuevaCobertura(e.target.value)}
+							onKeyDown={(e) => {
+								if (e.key === "Enter") {
+									e.preventDefault();
+									agregarCoberturaEscrita();
+								}
+							}}
+							placeholder="Escribe una cobertura y presiona Enter o Agregar…"
+						/>
+						<Button
+							type="button"
+							variant="outline"
+							onClick={agregarCoberturaEscrita}
+							disabled={!nuevaCobertura.trim()}
+							className="shrink-0"
+						>
+							<Plus className="h-4 w-4" />
+							Agregar
+						</Button>
 					</div>
+
+					{escritas.length > 0 && (
+						<div className="flex flex-wrap gap-2 pt-1">
+							{escritas.map((cob) => (
+								<span
+									key={cob.nombre}
+									className="inline-flex items-center gap-1.5 bg-primary/10 text-primary px-2.5 py-1 rounded-md text-sm"
+								>
+									{cob.nombre}
+									<button
+										type="button"
+										onClick={() => quitarCoberturaEscrita(cob.nombre)}
+										className="hover:text-destructive transition-colors"
+										aria-label={`Quitar ${cob.nombre}`}
+									>
+										<X className="h-3.5 w-3.5" />
+									</button>
+								</span>
+							))}
+						</div>
+					)}
 				</div>
 
-				{/* Cobertura especial: Gestión comercial */}
-				<Card className="border-2 border-dashed border-primary/30 bg-primary/5">
-					<CardContent className="p-4">
-						<div className="flex items-start gap-3">
-							<Checkbox
-								id="cobertura-gestion-comercial"
-								checked={gestionComercialSeleccionada}
-								onCheckedChange={(checked) => handleGestionComercialToggle(checked as boolean)}
-							/>
-							<div className="flex-1">
-								<Label
-									htmlFor="cobertura-gestion-comercial"
-									className="font-medium cursor-pointer text-base"
-								>
-									Gestión comercial
-								</Label>
-								<p className="text-xs text-muted-foreground mt-1">
-									Cobertura especial aplicable a todos los ramos
-								</p>
-							</div>
-						</div>
-					</CardContent>
-				</Card>
-
-				{/* Selector de coberturas del ramo */}
+				{/* Selector de coberturas del catálogo del ramo (donde existan) */}
 				<CoberturaSelector
 					ramo={ramo}
-					coberturasSeleccionadas={coberturas?.coberturas_seleccionadas || []}
+					coberturasSeleccionadas={seleccionadas}
 					onCoberturaToggle={handleCoberturaToggle}
 				/>
 
-				{/* Advertencia si no hay coberturas */}
-				{(!coberturas?.coberturas_seleccionadas || coberturas.coberturas_seleccionadas.length === 0) && (
+				{/* Advertencia si no hay ninguna cobertura */}
+				{totalCoberturas === 0 && (
 					<div className="flex items-start gap-2 text-sm bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
 						<AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
 						<p className="text-amber-900 dark:text-amber-100">
-							Debes seleccionar al menos una cobertura para continuar.
+							Debes indicar al menos una cobertura (escríbela arriba o selecciónala del catálogo) para
+							continuar.
 						</p>
 					</div>
 				)}
