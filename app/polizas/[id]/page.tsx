@@ -10,6 +10,7 @@ import { ValidarPolizaModal } from "@/components/gerencia/ValidarPolizaModal";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { PolicyPermissionsModal } from "@/components/polizas/PolicyPermissionsModal";
+import { AjustePrimaNetaDialog } from "@/components/polizas/AjustePrimaNetaDialog";
 import AnexoDetalleSection from "@/components/polizas/anexos/AnexoDetalleSection";
 import {
 	FileText,
@@ -58,6 +59,7 @@ export default function PolizaDetallePage() {
 	const [showPermissionsModal, setShowPermissionsModal] = useState(false);
 	const [showValidarModal, setShowValidarModal] = useState(false);
 	const [showRechazoModal, setShowRechazoModal] = useState(false);
+	const [showAjustePrimaModal, setShowAjustePrimaModal] = useState(false);
 
 	const cargarDetalle = useCallback(async () => {
 		setIsLoading(true);
@@ -2132,10 +2134,30 @@ export default function PolizaDetallePage() {
 							{/* Prima Neta + Comisión */}
 							<div className="py-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
 								<div>
-									<p className="text-xs text-muted-foreground mb-0.5">Prima Neta</p>
+									<div className="flex items-center gap-1.5 mb-0.5">
+										<p className="text-xs text-muted-foreground">Prima Neta</p>
+										{isAdmin && poliza.tipo_prima !== "sin_prima_propia" && (
+											<button
+												type="button"
+												onClick={() => setShowAjustePrimaModal(true)}
+												title="Ajustar prima neta manualmente (solo admin)"
+												className="text-muted-foreground hover:text-foreground transition-colors"
+											>
+												<Pencil className="h-3 w-3" />
+											</button>
+										)}
+									</div>
 									<p className="text-sm font-semibold text-foreground">
 										{formatCurrency(poliza.prima_neta, poliza.moneda)}
 									</p>
+									{poliza.prima_neta_manual && (
+										<span
+											title={poliza.prima_neta_ajuste_motivo || undefined}
+											className="inline-block mt-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-warning/15 text-warning-foreground border border-warning/30 cursor-help"
+										>
+											Ajuste manual
+										</span>
+									)}
 								</div>
 								<div>
 									<p className="text-xs text-muted-foreground mb-0.5">Comisión</p>
@@ -2358,6 +2380,28 @@ export default function PolizaDetallePage() {
 				}}
 				isLoading={validationLoading === "rechazar"}
 			/>
+
+			{/* Manual Prima Neta Adjustment Modal (admin only) */}
+			{isAdmin && (
+				<AjustePrimaNetaDialog
+					isOpen={showAjustePrimaModal}
+					onClose={() => setShowAjustePrimaModal(false)}
+					onSuccess={cargarDetalle}
+					poliza={{
+						id: poliza.id,
+						numero_poliza: poliza.numero_poliza,
+						moneda: poliza.moneda,
+						prima_total: poliza.prima_total,
+						prima_neta: poliza.prima_neta,
+						comision_empresa: poliza.comision_empresa,
+						comision: poliza.comision,
+						comision_encargado: poliza.comision_encargado,
+						prima_neta_manual: poliza.prima_neta_manual,
+						prima_neta_ajuste_motivo: poliza.prima_neta_ajuste_motivo,
+						pagos: poliza.pagos.map((p) => ({ monto: p.monto, estado: p.estado })),
+					}}
+				/>
+			)}
 		</div>
 	);
 }

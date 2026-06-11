@@ -244,6 +244,8 @@ export async function cargarPolizaFormState(
 				moneda: poliza.moneda,
 				prima_neta: poliza.prima_neta,
 				comision: poliza.comision,
+				prima_neta_manual: poliza.prima_neta_manual || undefined,
+				prima_neta_ajuste_motivo: poliza.prima_neta_ajuste_motivo || undefined,
 				cuota_id: pago?.id,
 				cuota_pagada: pago?.estado === "pagado",
 			};
@@ -279,6 +281,8 @@ export async function cargarPolizaFormState(
 				})),
 				prima_neta: poliza.prima_neta,
 				comision: poliza.comision,
+				prima_neta_manual: poliza.prima_neta_manual || undefined,
+				prima_neta_ajuste_motivo: poliza.prima_neta_ajuste_motivo || undefined,
 				usar_factores_contado: poliza.usar_factores_contado || false,
 				cuota_inicial_id: cuotaInicial?.id,
 				cuota_inicial_pagada: cuotaInicial?.estado === "pagado",

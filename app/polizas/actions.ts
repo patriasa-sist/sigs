@@ -29,6 +29,12 @@ export type PolizaDetalle = PolizaListItem & {
 	fecha_emision_compania: string;
 	prima_neta: number;
 	comision: number;
+	comision_empresa: number | null;
+	comision_encargado: number | null;
+	tipo_prima: string;
+	// Ajuste manual de prima neta (admin)
+	prima_neta_manual: boolean;
+	prima_neta_ajuste_motivo: string | null;
 	categoria_nombre: string;
 	// Audit and validation fields
 	creador_nombre: string | null;
@@ -1656,6 +1662,11 @@ export async function obtenerDetallePoliza(polizaId: string) {
 			prima_total: poliza.prima_total,
 			prima_neta: poliza.prima_neta,
 			comision: poliza.comision,
+			comision_empresa: poliza.comision_empresa ?? null,
+			comision_encargado: poliza.comision_encargado ?? null,
+			tipo_prima: poliza.tipo_prima ?? "directa",
+			prima_neta_manual: poliza.prima_neta_manual ?? false,
+			prima_neta_ajuste_motivo: poliza.prima_neta_ajuste_motivo ?? null,
 			moneda: poliza.moneda,
 			estado: poliza.estado,
 			modalidad_pago: poliza.modalidad_pago,

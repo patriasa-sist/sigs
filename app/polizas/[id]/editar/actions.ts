@@ -270,7 +270,9 @@ export async function actualizarPoliza(
 		// Get current policy state
 		const { data: currentPoliza, error: fetchError } = await supabase
 			.from("polizas")
-			.select("estado, modalidad_pago")
+			.select(
+				"estado, modalidad_pago, prima_total, producto_id, usar_factores_contado, prima_neta_manual, prima_neta, comision, comision_empresa, comision_encargado",
+			)
 			.eq("id", polizaId)
 			.single();
 
@@ -353,6 +355,29 @@ export async function actualizarPoliza(
 			regional_asegurado_id: regionalAseguradoId,
 			tiene_maternidad: tieneMaternidad,
 		};
+
+		// Ajuste manual de prima neta (admin): si la base de cálculo no cambió
+		// (prima total, producto, modalidad, factores), preservar los montos
+		// ajustados a mano; si cambió, el ajuste pierde sustento y se limpia
+		// (entran los montos recalculados por el formulario).
+		if (currentPoliza.prima_neta_manual === true) {
+			const baseCalculoCambio =
+				sinPrimaPropia ||
+				Number(currentPoliza.prima_total) !== formState.modalidad_pago.prima_total ||
+				currentPoliza.producto_id !== formState.datos_basicos.producto_id ||
+				currentPoliza.modalidad_pago !== formState.modalidad_pago.tipo ||
+				(currentPoliza.usar_factores_contado ?? false) !== (updatePayload.usar_factores_contado as boolean);
+
+			if (baseCalculoCambio) {
+				updatePayload.prima_neta_manual = false;
+				updatePayload.prima_neta_ajuste_motivo = null;
+			} else {
+				updatePayload.prima_neta = currentPoliza.prima_neta;
+				updatePayload.comision = currentPoliza.comision;
+				updatePayload.comision_empresa = currentPoliza.comision_empresa;
+				updatePayload.comision_encargado = currentPoliza.comision_encargado;
+			}
+		}
 
 		// If policy was active or rejected, reset to pending and clear validation/rejection
 		if (needsRevalidation) {

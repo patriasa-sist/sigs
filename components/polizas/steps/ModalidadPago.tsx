@@ -10,6 +10,7 @@ import {
 	CreditCard,
 	Calendar,
 	AlertCircle,
+	AlertTriangle,
 	Sparkles,
 	Lock,
 	Check,
@@ -553,6 +554,21 @@ export function ModalidadPago({
 					<p className="text-sm text-warning-foreground">
 						No se puede cambiar la modalidad de pago porque hay cuotas ya pagados. Solo puede editar las
 						cuotas pendientes.
+					</p>
+				</div>
+			)}
+
+			{/* Aviso: prima neta ajustada manualmente por un admin */}
+			{mode === "edit" && flagsInicialesRef.current?.prima_neta_manual && (
+				<div className="mb-4 p-3 bg-warning/10 border border-warning/30 rounded-lg flex items-start gap-2">
+					<AlertTriangle className="h-5 w-5 text-warning flex-shrink-0 mt-0.5" />
+					<p className="text-sm text-warning-foreground">
+						Esta póliza tiene la prima neta <strong>ajustada manualmente</strong> por un administrador
+						{flagsInicialesRef.current.prima_neta_ajuste_motivo
+							? ` (motivo: ${flagsInicialesRef.current.prima_neta_ajuste_motivo})`
+							: ""}
+						. Si no cambias la prima total, el producto ni la modalidad, los montos ajustados se conservan
+						al guardar; si los cambias, se recalculan automáticamente y el ajuste se descarta.
 					</p>
 				</div>
 			)}

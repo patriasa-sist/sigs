@@ -608,6 +608,9 @@ export type PagoContado = {
 	// Campos calculados (solo para display)
 	prima_neta?: number; // prima_total * 0.87
 	comision?: number; // prima_neta * 0.02
+	// Ajuste manual admin (solo lectura en edición; se gestiona desde el detalle)
+	prima_neta_manual?: boolean;
+	prima_neta_ajuste_motivo?: string | null;
 	// Campos para edición
 	cuota_id?: string; // ID de la cuota en BD
 	cuota_pagada?: boolean; // Si la cuota única ya está pagada
@@ -625,6 +628,9 @@ export type PagoCredito = {
 	// Campos calculados (solo para display)
 	prima_neta?: number;
 	comision?: number;
+	// Ajuste manual admin (solo lectura en edición; se gestiona desde el detalle)
+	prima_neta_manual?: boolean;
+	prima_neta_ajuste_motivo?: string | null;
 	// Caso especial: usar factores de contado en pago a crédito
 	usar_factores_contado?: boolean; // Si true, usa factor_contado en vez de factor_credito para cálculos
 	// Campos para edición
