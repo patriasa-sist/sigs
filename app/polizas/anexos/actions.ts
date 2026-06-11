@@ -756,15 +756,41 @@ export async function guardarAnexo(formState: AnexoFormState): Promise<{
 				// Inclusión: cuotas propias del anexo, independientes de la póliza madre
 				await guardarCuotasInclusion(supabase, anexo.id, formState.plan_pago_inclusion!);
 			} else {
-				// Exclusión: descuentos negativos sobre cuotas originales (incluso pagadas)
+				// Exclusión: descuentos sobre cuotas originales (incluso pagadas).
+				// El monto se normaliza a negativo y no puede exceder la cuota original.
 				const cuotasConDelta = formState.cuotas_ajuste.filter((c) => c.monto_delta !== 0);
 				if (cuotasConDelta.length > 0) {
+					const { data: cuotasOriginales, error: cuotasError } = await supabase
+						.from("polizas_pagos")
+						.select("id, monto")
+						.eq("poliza_id", formState.poliza_id)
+						.in(
+							"id",
+							cuotasConDelta.map((c) => c.cuota_original_id),
+						);
+					throwIfAnexoError(cuotasError, "Error al verificar las cuotas de la póliza");
+
+					const montoPorCuota = new Map(
+						(cuotasOriginales || []).map((c) => [c.id as string, Number(c.monto)]),
+					);
+					for (const c of cuotasConDelta) {
+						const montoOriginal = montoPorCuota.get(c.cuota_original_id);
+						if (montoOriginal === undefined) {
+							throw new Error(`La cuota ${c.numero_cuota} no pertenece a esta póliza`);
+						}
+						if (Math.abs(c.monto_delta) > montoOriginal + 0.005) {
+							throw new Error(
+								`El descuento de la cuota ${c.numero_cuota} excede su monto original (${montoOriginal.toFixed(2)})`,
+							);
+						}
+					}
+
 					const pagosInsert = cuotasConDelta.map((c) => ({
 						anexo_id: anexo.id,
 						cuota_original_id: c.cuota_original_id,
 						tipo: "ajuste" as const,
 						numero_cuota: c.numero_cuota,
-						monto: c.monto_delta,
+						monto: -Math.abs(c.monto_delta),
 						fecha_vencimiento: c.fecha_vencimiento,
 						estado: "pendiente" as const,
 						observaciones: "Descuento por exclusión",

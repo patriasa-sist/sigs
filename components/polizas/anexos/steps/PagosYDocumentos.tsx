@@ -47,6 +47,14 @@ function fechaDefault(offsetMeses: number): string {
 	return d.toISOString().split("T")[0];
 }
 
+// Los inputs type="number" del navegador aceptan e/E/+/-; los montos solo
+// admiten dígitos y punto decimal.
+function bloquearSimbolos(e: React.KeyboardEvent<HTMLInputElement>) {
+	if (e.key === "e" || e.key === "E" || e.key === "+" || e.key === "-") {
+		e.preventDefault();
+	}
+}
+
 function computarCuotas(
 	modalidad: "contado" | "credito",
 	primaTotal: number,
@@ -118,11 +126,11 @@ function SeccionPlanInclusion({
 	};
 
 	const handlePrimaTotal = (v: string) => {
-		recalcular(plan.modalidad, parseFloat(v) || 0, plan.cuota_inicial, plan.cantidad_cuotas);
+		recalcular(plan.modalidad, Math.max(0, parseFloat(v) || 0), plan.cuota_inicial, plan.cantidad_cuotas);
 	};
 
 	const handleCuotaInicial = (v: string) => {
-		recalcular(plan.modalidad, plan.prima_total, parseFloat(v) || 0, plan.cantidad_cuotas);
+		recalcular(plan.modalidad, plan.prima_total, Math.max(0, parseFloat(v) || 0), plan.cantidad_cuotas);
 	};
 
 	const handleCantidadCuotas = (v: string) => {
@@ -131,7 +139,7 @@ function SeccionPlanInclusion({
 	};
 
 	const handleCuotaMonto = (idx: number, v: string) => {
-		const updated = plan.cuotas.map((c, i) => (i === idx ? { ...c, monto: parseFloat(v) || 0 } : c));
+		const updated = plan.cuotas.map((c, i) => (i === idx ? { ...c, monto: Math.max(0, parseFloat(v) || 0) } : c));
 		onChange({ ...plan, cuotas: updated });
 	};
 
@@ -175,8 +183,10 @@ function SeccionPlanInclusion({
 						type="number"
 						step="0.01"
 						min="0"
+						inputMode="decimal"
 						value={plan.prima_total || ""}
 						onChange={(e) => handlePrimaTotal(e.target.value)}
+						onKeyDown={bloquearSimbolos}
 						placeholder="0.00"
 					/>
 				</div>
@@ -190,8 +200,10 @@ function SeccionPlanInclusion({
 								type="number"
 								step="0.01"
 								min="0"
+								inputMode="decimal"
 								value={plan.cuota_inicial || ""}
 								onChange={(e) => handleCuotaInicial(e.target.value)}
+								onKeyDown={bloquearSimbolos}
 								placeholder="0.00 (opcional)"
 							/>
 						</div>
@@ -201,8 +213,13 @@ function SeccionPlanInclusion({
 								id="inc_cant"
 								type="number"
 								min="1"
+								inputMode="numeric"
 								value={plan.cantidad_cuotas}
 								onChange={(e) => handleCantidadCuotas(e.target.value)}
+								onKeyDown={(e) => {
+									if (e.key === ".") e.preventDefault();
+									bloquearSimbolos(e);
+								}}
 							/>
 						</div>
 					</>
@@ -239,8 +256,10 @@ function SeccionPlanInclusion({
 												type="number"
 												step="0.01"
 												min="0"
+												inputMode="decimal"
 												value={cuota.monto || ""}
 												onChange={(e) => handleCuotaMonto(idx, e.target.value)}
+												onKeyDown={bloquearSimbolos}
 												className="w-32 text-right ml-auto"
 												placeholder="0.00"
 											/>
@@ -293,8 +312,8 @@ function SeccionAjusteExclusion({
 	return (
 		<div className="space-y-3">
 			<p className="text-xs text-gray-500">
-				Ingrese el descuento <strong>negativo</strong> que corresponde a cada cuota afectada por la exclusión.
-				Puede aplicarse a cualquier cuota, incluso las ya pagadas.
+				Ingrese el descuento que corresponde a cada cuota afectada por la exclusión; se <strong>restará</strong>{" "}
+				del monto original. Puede aplicarse a cualquier cuota, incluso las ya pagadas.
 			</p>
 
 			<div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 flex items-start gap-2 text-xs text-amber-700">
@@ -310,7 +329,7 @@ function SeccionAjusteExclusion({
 							<th className="text-left px-4 py-2">#</th>
 							<th className="text-left px-4 py-2">Vencimiento</th>
 							<th className="text-right px-4 py-2">Monto Original</th>
-							<th className="text-right px-4 py-2">Descuento (negativo)</th>
+							<th className="text-right px-4 py-2">Descuento</th>
 							<th className="text-right px-4 py-2">Monto Ajustado</th>
 							<th className="text-center px-4 py-2">Estado</th>
 						</tr>
@@ -332,8 +351,12 @@ function SeccionAjusteExclusion({
 									<Input
 										type="number"
 										step="0.01"
-										value={cuota.monto_delta || ""}
+										min="0"
+										max={cuota.monto_original}
+										inputMode="decimal"
+										value={Math.abs(cuota.monto_delta) || ""}
 										onChange={(e) => onChangeDelta(idx, e.target.value)}
+										onKeyDown={bloquearSimbolos}
 										className="w-32 text-right ml-auto"
 										placeholder="0.00"
 									/>
@@ -362,11 +385,7 @@ function SeccionAjusteExclusion({
 			{cuotasAjuste.some((c) => c.monto_delta !== 0) && (
 				<div className="text-right">
 					<span className="text-sm font-medium">
-						Descuento total:{" "}
-						<span className={totalDelta <= 0 ? "text-red-600" : "text-green-600"}>
-							{totalDelta >= 0 ? "+" : ""}
-							{formatCurrency(totalDelta, moneda)}
-						</span>
+						Descuento total: <span className="text-red-600">{formatCurrency(totalDelta, moneda)}</span>
 					</span>
 				</div>
 			)}
@@ -436,9 +455,11 @@ export function PagosYDocumentos({
 	}, [tipoAnexo, vigenciaCorrida, onChangeVigenciaCorrida]);
 
 	const handleDeltaChange = (idx: number, value: string) => {
-		const delta = parseFloat(value) || 0;
+		// El usuario escribe el descuento en positivo; se guarda como delta
+		// negativo, sin exceder el monto original de la cuota.
+		const descuento = Math.min(Math.abs(parseFloat(value) || 0), cuotasAjuste[idx].monto_original);
 		const updated = [...cuotasAjuste];
-		updated[idx] = { ...updated[idx], monto_delta: delta };
+		updated[idx] = { ...updated[idx], monto_delta: -descuento };
 		onChangeCuotas(updated);
 	};
 
@@ -535,6 +556,15 @@ export function PagosYDocumentos({
 			}
 		}
 
+		if (tipoAnexo === "exclusion") {
+			if (cuotasAjuste.some((c) => c.monto_delta > 0)) {
+				newErrors.push("Los descuentos de exclusión deben restar al monto de la cuota, no sumarlo");
+			}
+			if (cuotasAjuste.some((c) => Math.abs(c.monto_delta) > c.monto_original + 0.005)) {
+				newErrors.push("El descuento no puede exceder el monto original de la cuota");
+			}
+		}
+
 		if (tipoAnexo === "anulacion" && vigenciaCorrida && vigenciaCorrida.monto < 0) {
 			newErrors.push("El monto de vigencia corrida no puede ser negativo");
 		}
@@ -624,13 +654,15 @@ export function PagosYDocumentos({
 									type="number"
 									step="0.01"
 									min="0"
+									inputMode="decimal"
 									value={vigenciaCorrida.monto || ""}
 									onChange={(e) =>
 										onChangeVigenciaCorrida({
 											...vigenciaCorrida,
-											monto: parseFloat(e.target.value) || 0,
+											monto: Math.max(0, parseFloat(e.target.value) || 0),
 										})
 									}
+									onKeyDown={bloquearSimbolos}
 									placeholder="0.00"
 								/>
 							</div>
