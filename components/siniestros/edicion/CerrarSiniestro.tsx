@@ -26,30 +26,35 @@ import {
 	validarCierreRechazo,
 	validarCierreDeclinacion,
 	validarCierreIndemnizacion,
+	validarCierreSalud,
 } from "@/utils/siniestroValidation";
 import type {
 	DatosCierreRechazo,
 	DatosCierreDeclinacion,
 	DatosCierreIndemnizacion,
+	DatosCierreSalud,
 	MotivoRechazo,
 	MotivoDeclinacion,
 	Moneda,
 	DocumentoSiniestro,
+	TipoDocumentoSiniestro,
 } from "@/types/siniestro";
 
 interface CerrarSiniestroProps {
 	siniestroId: string;
 	numeroPoliza: string;
+	ramo?: string;
 }
 
-type TipoCierre = "rechazo" | "declinacion" | "indemnizacion";
+type TipoCierre = "rechazo" | "declinacion" | "indemnizacion" | "salud";
 
 const MOTIVOS_RECHAZO: MotivoRechazo[] = ["Mora", "Incumplimiento", "Sin cobertura", "No aplicable"];
 const MOTIVOS_DECLINACION: MotivoDeclinacion[] = ["Solicitud cliente", "Pagó otra póliza"];
 const MONEDAS: Moneda[] = ["Bs", "USD", "USDT", "UFV"];
 
-export default function CerrarSiniestro({ siniestroId, numeroPoliza }: CerrarSiniestroProps) {
+export default function CerrarSiniestro({ siniestroId, numeroPoliza, ramo }: CerrarSiniestroProps) {
 	const router = useRouter();
+	const esSalud = !!ramo?.toLowerCase().includes("salud");
 	const [open, setOpen] = useState(false);
 	const [activeTab, setActiveTab] = useState<TipoCierre>("rechazo");
 	const [loading, setLoading] = useState(false);
@@ -96,11 +101,14 @@ export default function CerrarSiniestro({ siniestroId, numeroPoliza }: CerrarSin
 	const [monedaPagado, setMonedaPagado] = useState<Moneda>("Bs");
 	// const [esPagoComercial, setEsPagoComercial] = useState(false); // REMOVIDO: Ya no se usa
 
+	// Estado para Cierre Salud
+	const [respaldoCierre, setRespaldoCierre] = useState<DocumentoSiniestro | null>(null);
+
 	// Handler de archivo: sube client-side a Storage (temp/) y guarda solo la metadata
 	const handleFileUpload = useCallback(
 		async (
 			e: React.ChangeEvent<HTMLInputElement>,
-			tipo: "carta_rechazo" | "carta_respaldo" | "archivo_uif" | "archivo_pep",
+			tipo: "carta_rechazo" | "carta_respaldo" | "archivo_uif" | "archivo_pep" | "respaldo_cierre",
 		) => {
 			const file = e.target.files?.[0];
 			if (!file) return;
@@ -144,8 +152,11 @@ export default function CerrarSiniestro({ siniestroId, numeroPoliza }: CerrarSin
 				return;
 			}
 
+			// El switch usa "respaldo_cierre" como clave interna; el tipo_documento
+			// real (y lo que se guarda en BD) es "respaldo de cierre".
+			const tipoDoc: TipoDocumentoSiniestro = tipo === "respaldo_cierre" ? "respaldo de cierre" : tipo;
 			const documento: DocumentoSiniestro = {
-				tipo_documento: tipo,
+				tipo_documento: tipoDoc,
 				nombre_archivo: file.name,
 				tamano_bytes: file.size,
 				archivo_url: storagePath,
@@ -167,28 +178,37 @@ export default function CerrarSiniestro({ siniestroId, numeroPoliza }: CerrarSin
 				case "archivo_pep":
 					setArchivoPEP(documento);
 					break;
+				case "respaldo_cierre":
+					setRespaldoCierre(documento);
+					break;
 			}
 		},
 		[userId, supabase],
 	);
 
 	// Limpiar archivo
-	const clearFile = useCallback((tipo: "carta_rechazo" | "carta_respaldo" | "archivo_uif" | "archivo_pep") => {
-		switch (tipo) {
-			case "carta_rechazo":
-				setCartaRechazo(null);
-				break;
-			case "carta_respaldo":
-				setCartaRespaldo(null);
-				break;
-			case "archivo_uif":
-				setArchivoUIF(null);
-				break;
-			case "archivo_pep":
-				setArchivoPEP(null);
-				break;
-		}
-	}, []);
+	const clearFile = useCallback(
+		(tipo: "carta_rechazo" | "carta_respaldo" | "archivo_uif" | "archivo_pep" | "respaldo_cierre") => {
+			switch (tipo) {
+				case "carta_rechazo":
+					setCartaRechazo(null);
+					break;
+				case "carta_respaldo":
+					setCartaRespaldo(null);
+					break;
+				case "archivo_uif":
+					setArchivoUIF(null);
+					break;
+				case "archivo_pep":
+					setArchivoPEP(null);
+					break;
+				case "respaldo_cierre":
+					setRespaldoCierre(null);
+					break;
+			}
+		},
+		[],
+	);
 
 	// Validar según tipo
 	const validarFormulario = useCallback((): boolean => {
@@ -264,6 +284,30 @@ export default function CerrarSiniestro({ siniestroId, numeroPoliza }: CerrarSin
 			}
 			setAdvertencias(validacion.advertencias);
 			return true;
+		} else if (activeTab === "salud") {
+			if (!respaldoCierre) {
+				setErrores(["Debe adjuntar el respaldo de cierre"]);
+				return false;
+			}
+
+			const datos: DatosCierreSalud = {
+				tipo: "salud",
+				respaldo_cierre: respaldoCierre,
+				monto_reclamado: montoReclamado || undefined,
+				moneda_reclamado: monedaReclamado,
+				deducible: deducible || undefined,
+				moneda_deducible: monedaDeducible,
+				monto_pagado: montoPagado || undefined,
+				moneda_pagado: monedaPagado,
+			};
+
+			const validacion = validarCierreSalud(datos);
+			if (!validacion.valido) {
+				setErrores(validacion.errores);
+				return false;
+			}
+			setAdvertencias(validacion.advertencias);
+			return true;
 		}
 
 		return false;
@@ -281,6 +325,7 @@ export default function CerrarSiniestro({ siniestroId, numeroPoliza }: CerrarSin
 		monedaDeducible,
 		montoPagado,
 		monedaPagado,
+		respaldoCierre,
 		// esPagoComercial, // REMOVIDO
 	]);
 
@@ -292,7 +337,7 @@ export default function CerrarSiniestro({ siniestroId, numeroPoliza }: CerrarSin
 		setErrores([]);
 
 		try {
-			let datosCierre: DatosCierreRechazo | DatosCierreDeclinacion | DatosCierreIndemnizacion;
+			let datosCierre: DatosCierreRechazo | DatosCierreDeclinacion | DatosCierreIndemnizacion | DatosCierreSalud;
 
 			if (activeTab === "rechazo") {
 				datosCierre = {
@@ -305,6 +350,17 @@ export default function CerrarSiniestro({ siniestroId, numeroPoliza }: CerrarSin
 					tipo: "declinacion",
 					motivo_declinacion: motivoDeclinacion as MotivoDeclinacion,
 					carta_respaldo: cartaRespaldo!,
+				};
+			} else if (activeTab === "salud") {
+				datosCierre = {
+					tipo: "salud",
+					respaldo_cierre: respaldoCierre!,
+					monto_reclamado: montoReclamado || undefined,
+					moneda_reclamado: monedaReclamado,
+					deducible: deducible || undefined,
+					moneda_deducible: monedaDeducible,
+					monto_pagado: montoPagado || undefined,
+					moneda_pagado: monedaPagado,
 				};
 			} else {
 				datosCierre = {
@@ -472,7 +528,11 @@ export default function CerrarSiniestro({ siniestroId, numeroPoliza }: CerrarSin
 					<TabsList className="grid w-full grid-cols-3">
 						<TabsTrigger value="rechazo">Rechazado</TabsTrigger>
 						<TabsTrigger value="declinacion">Declinado</TabsTrigger>
-						<TabsTrigger value="indemnizacion">Concluido</TabsTrigger>
+						{esSalud ? (
+							<TabsTrigger value="salud">Cierre Salud</TabsTrigger>
+						) : (
+							<TabsTrigger value="indemnizacion">Concluido</TabsTrigger>
+						)}
 					</TabsList>
 
 					{/* Tab Rechazo */}
@@ -548,131 +608,251 @@ export default function CerrarSiniestro({ siniestroId, numeroPoliza }: CerrarSin
 						</div>
 					</TabsContent>
 
+					{/* Tab Cierre Salud (reemplaza a Indemnización en ramo Salud) */}
+					{esSalud && (
+						<TabsContent value="salud" className="space-y-4 mt-4">
+							<div className="space-y-2">
+								<Label htmlFor="respaldo-cierre">
+									Respaldo de Cierre <span className="text-red-500">*</span>
+								</Label>
+								<DropZone
+									id="respaldo-cierre"
+									file={respaldoCierre}
+									accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+									hint="PDF, JPG, PNG, DOC — máx. 20MB"
+									onFile={(e) => handleFileUpload(e, "respaldo_cierre")}
+									onRemove={() => clearFile("respaldo_cierre")}
+								/>
+							</div>
+
+							<p className="text-sm text-muted-foreground">
+								Los montos son opcionales para el cierre de Salud. Complétalos solo si aplica.
+							</p>
+
+							{/* Monto Reclamado (opcional) */}
+							<div className="space-y-2">
+								<Label>Monto Reclamado</Label>
+								<div className="grid grid-cols-3 gap-2">
+									<Select
+										value={monedaReclamado}
+										onValueChange={(v) => setMonedaReclamado(v as Moneda)}
+									>
+										<SelectTrigger>
+											<SelectValue />
+										</SelectTrigger>
+										<SelectContent>
+											{MONEDAS.map((m) => (
+												<SelectItem key={m} value={m}>
+													{m}
+												</SelectItem>
+											))}
+										</SelectContent>
+									</Select>
+									<Input
+										type="number"
+										step="0.01"
+										min="0"
+										value={montoReclamado || ""}
+										onChange={(e) => setMontoReclamado(parseFloat(e.target.value) || 0)}
+										className="col-span-2"
+										placeholder="0.00"
+									/>
+								</div>
+							</div>
+
+							{/* Deducible (opcional) */}
+							<div className="space-y-2">
+								<Label>Deducible</Label>
+								<div className="grid grid-cols-3 gap-2">
+									<Select
+										value={monedaDeducible}
+										onValueChange={(v) => setMonedaDeducible(v as Moneda)}
+									>
+										<SelectTrigger>
+											<SelectValue />
+										</SelectTrigger>
+										<SelectContent>
+											{MONEDAS.map((m) => (
+												<SelectItem key={m} value={m}>
+													{m}
+												</SelectItem>
+											))}
+										</SelectContent>
+									</Select>
+									<Input
+										type="number"
+										step="0.01"
+										min="0"
+										value={deducible || ""}
+										onChange={(e) => setDeducible(parseFloat(e.target.value) || 0)}
+										className="col-span-2"
+										placeholder="0.00"
+									/>
+								</div>
+							</div>
+
+							{/* Monto Pagado (opcional) */}
+							<div className="space-y-2">
+								<Label>Monto Pagado</Label>
+								<div className="grid grid-cols-3 gap-2">
+									<Select value={monedaPagado} onValueChange={(v) => setMonedaPagado(v as Moneda)}>
+										<SelectTrigger>
+											<SelectValue />
+										</SelectTrigger>
+										<SelectContent>
+											{MONEDAS.map((m) => (
+												<SelectItem key={m} value={m}>
+													{m}
+												</SelectItem>
+											))}
+										</SelectContent>
+									</Select>
+									<Input
+										type="number"
+										step="0.01"
+										min="0"
+										value={montoPagado || ""}
+										onChange={(e) => setMontoPagado(parseFloat(e.target.value) || 0)}
+										className="col-span-2"
+										placeholder="0.00"
+									/>
+								</div>
+							</div>
+						</TabsContent>
+					)}
+
 					{/* Tab Indemnización */}
-					<TabsContent value="indemnizacion" className="space-y-4 mt-4">
-						{/* Archivos obligatorios */}
-						<div className="grid grid-cols-2 gap-4">
+					{!esSalud && (
+						<TabsContent value="indemnizacion" className="space-y-4 mt-4">
+							{/* Archivos obligatorios */}
+							<div className="grid grid-cols-2 gap-4">
+								<div className="space-y-2">
+									<Label htmlFor="archivo-uif">
+										Archivo UIF <span className="text-red-500">*</span>
+									</Label>
+									<DropZone
+										id="archivo-uif"
+										file={archivoUIF}
+										accept=".pdf"
+										hint="Solo PDF"
+										onFile={(e) => handleFileUpload(e, "archivo_uif")}
+										onRemove={() => clearFile("archivo_uif")}
+									/>
+								</div>
+
+								<div className="space-y-2">
+									<Label htmlFor="archivo-pep">
+										Archivo PEP <span className="text-red-500">*</span>
+									</Label>
+									<DropZone
+										id="archivo-pep"
+										file={archivoPEP}
+										accept=".pdf"
+										hint="Solo PDF"
+										onFile={(e) => handleFileUpload(e, "archivo_pep")}
+										onRemove={() => clearFile("archivo_pep")}
+									/>
+								</div>
+							</div>
+
+							{/* Monto Reclamado */}
 							<div className="space-y-2">
-								<Label htmlFor="archivo-uif">
-									Archivo UIF <span className="text-red-500">*</span>
+								<Label>
+									Monto Reclamado <span className="text-red-500">*</span>
 								</Label>
-								<DropZone
-									id="archivo-uif"
-									file={archivoUIF}
-									accept=".pdf"
-									hint="Solo PDF"
-									onFile={(e) => handleFileUpload(e, "archivo_uif")}
-									onRemove={() => clearFile("archivo_uif")}
-								/>
+								<div className="grid grid-cols-3 gap-2">
+									<Select
+										value={monedaReclamado}
+										onValueChange={(v) => setMonedaReclamado(v as Moneda)}
+									>
+										<SelectTrigger>
+											<SelectValue />
+										</SelectTrigger>
+										<SelectContent>
+											{MONEDAS.map((m) => (
+												<SelectItem key={m} value={m}>
+													{m}
+												</SelectItem>
+											))}
+										</SelectContent>
+									</Select>
+									<Input
+										type="number"
+										step="0.01"
+										min="0"
+										value={montoReclamado}
+										onChange={(e) => setMontoReclamado(parseFloat(e.target.value) || 0)}
+										className="col-span-2"
+										placeholder="0.00"
+									/>
+								</div>
 							</div>
 
+							{/* Deducible */}
 							<div className="space-y-2">
-								<Label htmlFor="archivo-pep">
-									Archivo PEP <span className="text-red-500">*</span>
+								<Label>
+									Deducible <span className="text-red-500">*</span>
 								</Label>
-								<DropZone
-									id="archivo-pep"
-									file={archivoPEP}
-									accept=".pdf"
-									hint="Solo PDF"
-									onFile={(e) => handleFileUpload(e, "archivo_pep")}
-									onRemove={() => clearFile("archivo_pep")}
-								/>
+								<div className="grid grid-cols-3 gap-2">
+									<Select
+										value={monedaDeducible}
+										onValueChange={(v) => setMonedaDeducible(v as Moneda)}
+									>
+										<SelectTrigger>
+											<SelectValue />
+										</SelectTrigger>
+										<SelectContent>
+											{MONEDAS.map((m) => (
+												<SelectItem key={m} value={m}>
+													{m}
+												</SelectItem>
+											))}
+										</SelectContent>
+									</Select>
+									<Input
+										type="number"
+										step="0.01"
+										min="0"
+										value={deducible}
+										onChange={(e) => setDeducible(parseFloat(e.target.value) || 0)}
+										className="col-span-2"
+										placeholder="0.00"
+									/>
+								</div>
 							</div>
-						</div>
 
-						{/* Monto Reclamado */}
-						<div className="space-y-2">
-							<Label>
-								Monto Reclamado <span className="text-red-500">*</span>
-							</Label>
-							<div className="grid grid-cols-3 gap-2">
-								<Select value={monedaReclamado} onValueChange={(v) => setMonedaReclamado(v as Moneda)}>
-									<SelectTrigger>
-										<SelectValue />
-									</SelectTrigger>
-									<SelectContent>
-										{MONEDAS.map((m) => (
-											<SelectItem key={m} value={m}>
-												{m}
-											</SelectItem>
-										))}
-									</SelectContent>
-								</Select>
-								<Input
-									type="number"
-									step="0.01"
-									min="0"
-									value={montoReclamado}
-									onChange={(e) => setMontoReclamado(parseFloat(e.target.value) || 0)}
-									className="col-span-2"
-									placeholder="0.00"
-								/>
+							{/* Monto Pagado */}
+							<div className="space-y-2">
+								<Label>
+									Monto Pagado <span className="text-red-500">*</span>
+								</Label>
+								<div className="grid grid-cols-3 gap-2">
+									<Select value={monedaPagado} onValueChange={(v) => setMonedaPagado(v as Moneda)}>
+										<SelectTrigger>
+											<SelectValue />
+										</SelectTrigger>
+										<SelectContent>
+											{MONEDAS.map((m) => (
+												<SelectItem key={m} value={m}>
+													{m}
+												</SelectItem>
+											))}
+										</SelectContent>
+									</Select>
+									<Input
+										type="number"
+										step="0.01"
+										min="0"
+										value={montoPagado}
+										onChange={(e) => setMontoPagado(parseFloat(e.target.value) || 0)}
+										className="col-span-2"
+										placeholder="0.00"
+									/>
+								</div>
 							</div>
-						</div>
 
-						{/* Deducible */}
-						<div className="space-y-2">
-							<Label>
-								Deducible <span className="text-red-500">*</span>
-							</Label>
-							<div className="grid grid-cols-3 gap-2">
-								<Select value={monedaDeducible} onValueChange={(v) => setMonedaDeducible(v as Moneda)}>
-									<SelectTrigger>
-										<SelectValue />
-									</SelectTrigger>
-									<SelectContent>
-										{MONEDAS.map((m) => (
-											<SelectItem key={m} value={m}>
-												{m}
-											</SelectItem>
-										))}
-									</SelectContent>
-								</Select>
-								<Input
-									type="number"
-									step="0.01"
-									min="0"
-									value={deducible}
-									onChange={(e) => setDeducible(parseFloat(e.target.value) || 0)}
-									className="col-span-2"
-									placeholder="0.00"
-								/>
-							</div>
-						</div>
-
-						{/* Monto Pagado */}
-						<div className="space-y-2">
-							<Label>
-								Monto Pagado <span className="text-red-500">*</span>
-							</Label>
-							<div className="grid grid-cols-3 gap-2">
-								<Select value={monedaPagado} onValueChange={(v) => setMonedaPagado(v as Moneda)}>
-									<SelectTrigger>
-										<SelectValue />
-									</SelectTrigger>
-									<SelectContent>
-										{MONEDAS.map((m) => (
-											<SelectItem key={m} value={m}>
-												{m}
-											</SelectItem>
-										))}
-									</SelectContent>
-								</Select>
-								<Input
-									type="number"
-									step="0.01"
-									min="0"
-									value={montoPagado}
-									onChange={(e) => setMontoPagado(parseFloat(e.target.value) || 0)}
-									className="col-span-2"
-									placeholder="0.00"
-								/>
-							</div>
-						</div>
-
-						{/* Pago Comercial - REMOVIDO */}
-						{/* <div className="flex items-center space-x-2">
+							{/* Pago Comercial - REMOVIDO */}
+							{/* <div className="flex items-center space-x-2">
 							<Checkbox
 								id="pago-comercial"
 								checked={esPagoComercial}
@@ -682,7 +862,8 @@ export default function CerrarSiniestro({ siniestroId, numeroPoliza }: CerrarSin
 								Es pago comercial (no cubre la aseguradora)
 							</Label>
 						</div> */}
-					</TabsContent>
+						</TabsContent>
+					)}
 				</Tabs>
 
 				<DialogFooter>

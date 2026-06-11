@@ -17,6 +17,7 @@ import type {
 	DatosCierreRechazo,
 	DatosCierreDeclinacion,
 	DatosCierreIndemnizacion,
+	DatosCierreSalud,
 	AgregarObservacionResponse,
 	CerrarSiniestroResponse,
 	BusquedaPolizasResponse,
@@ -188,6 +189,9 @@ export async function guardarSiniestro(formState: RegistroSiniestroFormState): P
 		return { success: false, error: "Datos incompletos" };
 	}
 
+	// En ramo Salud no aplican lugar del hecho, monto de reserva ni moneda.
+	const esSalud = !!formState.poliza_seleccionada.ramo?.toLowerCase().includes("salud");
+
 	try {
 		// 1. Insertar siniestro principal
 		const { data: siniestro, error: siniestroError } = await supabase
@@ -197,10 +201,10 @@ export async function guardarSiniestro(formState: RegistroSiniestroFormState): P
 				fecha_siniestro: formState.detalles.fecha_siniestro,
 				fecha_reporte: formState.detalles.fecha_reporte,
 				fecha_reporte_compania: formState.detalles.fecha_reporte_compania,
-				lugar_hecho: formState.detalles.lugar_hecho,
+				lugar_hecho: esSalud ? null : formState.detalles.lugar_hecho,
 				departamento_id: formState.detalles.departamento_id,
-				monto_reserva: formState.detalles.monto_reserva,
-				moneda: formState.detalles.moneda,
+				monto_reserva: esSalud ? null : formState.detalles.monto_reserva,
+				moneda: esSalud ? null : formState.detalles.moneda,
 				descripcion: formState.detalles.descripcion,
 				contactos: formState.detalles.contactos, // Ahora es ContactoSiniestro[] en lugar de string[]
 				responsable_id: formState.detalles.responsable_id || null, // Si no se especifica, el trigger asignará created_by
@@ -669,7 +673,7 @@ export async function agregarDocumentosSiniestro(
  */
 export async function cerrarSiniestro(
 	siniestroId: string,
-	datosCierre: DatosCierreRechazo | DatosCierreDeclinacion | DatosCierreIndemnizacion,
+	datosCierre: DatosCierreRechazo | DatosCierreDeclinacion | DatosCierreIndemnizacion | DatosCierreSalud,
 ): Promise<CerrarSiniestroResponse> {
 	const permiso = await verificarPermisoSiniestros();
 	if (!permiso.authorized) {
@@ -758,6 +762,35 @@ export async function cerrarSiniestro(
 					nombre_archivo: doc.nombre_archivo,
 					archivo_url: usedPath,
 					tamano_bytes: doc.tamano_bytes ?? null,
+				});
+			}
+		} else if (datosCierre.tipo === "salud") {
+			// Cierre de Salud: concluye sin UIF/PEP; montos opcionales; un único
+			// documento de respaldo. Reusa motivo_cierre_tipo='indemnizacion'.
+			updateData.estado = "concluido";
+			updateData.motivo_cierre_tipo = "indemnizacion";
+			updateData.monto_reclamado = datosCierre.monto_reclamado ?? null;
+			updateData.moneda_reclamado = datosCierre.moneda_reclamado ?? null;
+			updateData.deducible = datosCierre.deducible ?? null;
+			updateData.moneda_deducible = datosCierre.moneda_deducible ?? null;
+			updateData.monto_pagado = datosCierre.monto_pagado ?? null;
+			updateData.moneda_pagado = datosCierre.moneda_pagado ?? null;
+			updateData.es_pago_comercial = false;
+
+			// Registrar el respaldo de cierre (ya subido client-side a temp/)
+			const usedPath = await moverDocSiniestroAStorageFinal(
+				supabase,
+				siniestroId,
+				datosCierre.respaldo_cierre,
+				"respaldo_cierre",
+			);
+			if (usedPath) {
+				await supabase.from("siniestros_documentos").insert({
+					siniestro_id: siniestroId,
+					tipo_documento: "respaldo de cierre",
+					nombre_archivo: datosCierre.respaldo_cierre.nombre_archivo,
+					archivo_url: usedPath,
+					tamano_bytes: datosCierre.respaldo_cierre.tamano_bytes ?? null,
 				});
 			}
 		}

@@ -197,13 +197,15 @@ function SiniestrosTable({ siniestros, sortField, sortDirection, onSort }: Sinie
 											{/* Reserva */}
 											<td className="px-4 py-3 text-right">
 												<div className="text-sm font-medium text-foreground tabular-nums">
-													{siniestro.monto_reserva.toLocaleString("es-BO", {
-														minimumFractionDigits: 2,
-														maximumFractionDigits: 2,
-													})}
+													{siniestro.monto_reserva != null
+														? siniestro.monto_reserva.toLocaleString("es-BO", {
+																minimumFractionDigits: 2,
+																maximumFractionDigits: 2,
+															})
+														: "—"}
 												</div>
 												<div className="text-xs text-muted-foreground mt-0.5">
-													{siniestro.moneda}
+													{siniestro.moneda || ""}
 												</div>
 											</td>
 
@@ -303,11 +305,12 @@ function SiniestrosTable({ siniestros, sortField, sortDirection, onSort }: Sinie
 										<div className="min-w-0">
 											<p className="text-xs text-muted-foreground">Reserva</p>
 											<p className="text-sm font-medium text-foreground tabular-nums">
-												{siniestro.moneda}{" "}
-												{siniestro.monto_reserva.toLocaleString("es-BO", {
-													minimumFractionDigits: 2,
-													maximumFractionDigits: 2,
-												})}
+												{siniestro.monto_reserva != null
+													? `${siniestro.moneda || ""} ${siniestro.monto_reserva.toLocaleString(
+															"es-BO",
+															{ minimumFractionDigits: 2, maximumFractionDigits: 2 },
+														)}`
+													: "—"}
 											</p>
 										</div>
 										<div className="text-right min-w-0">

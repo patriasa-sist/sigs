@@ -196,8 +196,8 @@ export default function Dashboard({ siniestrosIniciales, statsIniciales }: Dashb
 					bVal = b.cliente_nombre.toLowerCase();
 					break;
 				case "monto_reserva":
-					aVal = a.monto_reserva;
-					bVal = b.monto_reserva;
+					aVal = a.monto_reserva ?? 0;
+					bVal = b.monto_reserva ?? 0;
 					break;
 				case "codigo_siniestro":
 					aVal = a.codigo_siniestro || "";

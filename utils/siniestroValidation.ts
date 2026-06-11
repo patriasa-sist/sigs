@@ -7,6 +7,7 @@ import type {
 	DatosCierreRechazo,
 	DatosCierreDeclinacion,
 	DatosCierreIndemnizacion,
+	DatosCierreSalud,
 	DocumentoSiniestro,
 	RegistroSiniestroFormState,
 } from "@/types/siniestro";
@@ -32,7 +33,7 @@ function noEsFechaFutura(fecha: string): boolean {
 /**
  * Validar detalles del siniestro (Paso 2)
  */
-export function validarDetalles(detalles: DetallesSiniestro | null): ValidacionSiniestro {
+export function validarDetalles(detalles: DetallesSiniestro | null, esSalud = false): ValidacionSiniestro {
 	const errores: string[] = [];
 	const advertencias: string[] = [];
 
@@ -68,11 +69,13 @@ export function validarDetalles(detalles: DetallesSiniestro | null): ValidacionS
 		}
 	}
 
-	// Validar lugar_hecho
-	if (!detalles.lugar_hecho || detalles.lugar_hecho.trim().length === 0) {
-		errores.push("El lugar del hecho es obligatorio");
-	} else if (detalles.lugar_hecho.trim().length < 5) {
-		errores.push("El lugar del hecho debe tener al menos 5 caracteres");
+	// Validar lugar_hecho (no aplica en Salud)
+	if (!esSalud) {
+		if (!detalles.lugar_hecho || detalles.lugar_hecho.trim().length === 0) {
+			errores.push("El lugar del hecho es obligatorio");
+		} else if (detalles.lugar_hecho.trim().length < 5) {
+			errores.push("El lugar del hecho debe tener al menos 5 caracteres");
+		}
 	}
 
 	// Validar departamento_id
@@ -80,16 +83,17 @@ export function validarDetalles(detalles: DetallesSiniestro | null): ValidacionS
 		errores.push("Debe seleccionar un departamento");
 	}
 
-	// Validar monto_reserva
-	if (detalles.monto_reserva === undefined || detalles.monto_reserva === null) {
-		errores.push("El monto de reserva es obligatorio");
-	} else if (detalles.monto_reserva <= 0) {
-		errores.push("El monto de reserva debe ser mayor a 0");
-	}
+	// Validar monto_reserva y moneda (no aplican en Salud)
+	if (!esSalud) {
+		if (detalles.monto_reserva === undefined || detalles.monto_reserva === null) {
+			errores.push("El monto de reserva es obligatorio");
+		} else if (detalles.monto_reserva <= 0) {
+			errores.push("El monto de reserva debe ser mayor a 0");
+		}
 
-	// Validar moneda
-	if (!detalles.moneda) {
-		errores.push("Debe seleccionar una moneda");
+		if (!detalles.moneda) {
+			errores.push("Debe seleccionar una moneda");
+		}
 	}
 
 	// Validar descripción
@@ -205,8 +209,9 @@ export function validarFormularioCompleto(formState: RegistroSiniestroFormState)
 		errores.push("Debe seleccionar una póliza");
 	}
 
-	// Validar detalles
-	const validacionDetalles = validarDetalles(formState.detalles);
+	// Validar detalles (en Salud no aplican lugar/monto/moneda)
+	const esSalud = !!formState.poliza_seleccionada?.ramo?.toLowerCase().includes("salud");
+	const validacionDetalles = validarDetalles(formState.detalles, esSalud);
 	errores.push(...validacionDetalles.errores);
 	advertencias.push(...validacionDetalles.advertencias);
 
@@ -266,6 +271,37 @@ export function validarCierreDeclinacion(datos: DatosCierreDeclinacion): Validac
 		errores.push("Debe adjuntar la carta de respaldo");
 	} else if (!datos.carta_respaldo.file && !datos.carta_respaldo.archivo_url) {
 		errores.push("La carta de respaldo no tiene archivo asociado");
+	}
+
+	return {
+		valido: errores.length === 0,
+		errores,
+		advertencias,
+	};
+}
+
+/**
+ * Validar cierre de Salud (concluye con respaldo; montos opcionales)
+ */
+export function validarCierreSalud(datos: DatosCierreSalud): ValidacionSiniestro {
+	const errores: string[] = [];
+	const advertencias: string[] = [];
+
+	if (!datos.respaldo_cierre) {
+		errores.push("Debe adjuntar el respaldo de cierre");
+	} else if (!datos.respaldo_cierre.file && !datos.respaldo_cierre.archivo_url) {
+		errores.push("El respaldo de cierre no tiene archivo asociado");
+	}
+
+	// Coherencia de montos (si se ingresan, deben ser válidos)
+	if (datos.monto_reclamado != null && datos.monto_reclamado < 0) {
+		errores.push("El monto reclamado no puede ser negativo");
+	}
+	if (datos.deducible != null && datos.deducible < 0) {
+		errores.push("El deducible no puede ser negativo");
+	}
+	if (datos.monto_pagado != null && datos.monto_pagado < 0) {
+		errores.push("El monto pagado no puede ser negativo");
 	}
 
 	return {

@@ -33,7 +33,7 @@ export default function ResumenReadonly({ siniestro, coberturas }: ResumenReadon
 
 						<div>
 							<p className="text-sm text-muted-foreground">Lugar del Hecho</p>
-							<p className="font-medium">{siniestro.lugar_hecho}</p>
+							<p className="font-medium">{siniestro.lugar_hecho || "No aplica"}</p>
 						</div>
 					</div>
 

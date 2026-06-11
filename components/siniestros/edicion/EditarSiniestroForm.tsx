@@ -101,10 +101,11 @@ export default function EditarSiniestroForm({
 						<div>
 							<p className="text-xs text-muted-foreground">Monto reserva</p>
 							<p className="text-sm font-medium text-foreground mt-0.5">
-								{siniestro.moneda}{" "}
-								{siniestro.monto_reserva.toLocaleString("es-BO", {
-									minimumFractionDigits: 2,
-								})}
+								{siniestro.monto_reserva != null
+									? `${siniestro.moneda || ""} ${siniestro.monto_reserva.toLocaleString("es-BO", {
+											minimumFractionDigits: 2,
+										})}`
+									: "—"}
 							</p>
 						</div>
 						<div>
@@ -218,7 +219,11 @@ export default function EditarSiniestroForm({
 									Registra el resultado final: rechazo, declinación o indemnización. Acción
 									irreversible.
 								</p>
-								<CerrarSiniestro siniestroId={siniestro.id} numeroPoliza={siniestro.numero_poliza} />
+								<CerrarSiniestro
+									siniestroId={siniestro.id}
+									numeroPoliza={siniestro.numero_poliza}
+									ramo={siniestro.ramo}
+								/>
 							</CardContent>
 						</Card>
 					)}

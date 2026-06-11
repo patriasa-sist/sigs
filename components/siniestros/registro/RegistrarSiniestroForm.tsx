@@ -109,7 +109,8 @@ export default function RegistrarSiniestroForm() {
 			case 1:
 				return poliza_seleccionada !== null;
 			case 2: {
-				const v = validarDetalles(detalles);
+				const esSalud = !!poliza_seleccionada?.ramo?.toLowerCase().includes("salud");
+				const v = validarDetalles(detalles, esSalud);
 				if (!v.valido) {
 					setValidationTriggerStep2((t) => t + 1); // activa errores inline en el step
 					return false;
@@ -398,6 +399,7 @@ export default function RegistrarSiniestroForm() {
 								setFormState((prev) => ({ ...prev, detalles }))
 							}
 							validationTrigger={validationTriggerStep2}
+							esSalud={!!formState.poliza_seleccionada.ramo?.toLowerCase().includes("salud")}
 						/>
 					)}
 

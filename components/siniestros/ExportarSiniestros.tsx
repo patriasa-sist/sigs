@@ -4,12 +4,12 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Download, Loader2 } from "lucide-react";
 import * as ExcelJS from "exceljs";
-import type { SiniestroVista } from "@/types/siniestro";
+import type { SiniestroVistaConEstado } from "@/types/siniestro";
 import { toExcelDateLaPaz, formatFechaHoraLaPaz, hoyLaPaz } from "@/utils/formatters";
 import { toast } from "sonner";
 
 interface ExportarSiniestrosProps {
-	siniestros: SiniestroVista[];
+	siniestros: SiniestroVistaConEstado[];
 	filtrosActivos?: {
 		searchTerm?: string;
 		estadoFiltro?: string;
@@ -57,6 +57,8 @@ export default function ExportarSiniestros({ siniestros, filtrosActivos }: Expor
 				"Observaciones",
 				"Creado por",
 				"Fecha Creación",
+				"Etapa",
+				"Último Movimiento",
 			];
 
 			// Agregar encabezados con estilo
@@ -89,11 +91,13 @@ export default function ExportarSiniestros({ siniestros, filtrosActivos }: Expor
 					siniestro.total_observaciones,
 					siniestro.creado_por_nombre || "N/A",
 					toExcelDateLaPaz(siniestro.fecha_creacion),
+					siniestro.estado_actual_nombre || "—",
+					siniestro.updated_at ? toExcelDateLaPaz(siniestro.updated_at) : "—",
 				]);
 			});
 
 			// Formatear columnas de fechas
-			const dateColumns = [1, 2, 17]; // Fecha Siniestro, Fecha Reporte, Fecha Creación
+			const dateColumns = [1, 2, 17, 19]; // Fecha Siniestro, Fecha Reporte, Fecha Creación, Último Movimiento
 			dateColumns.forEach((colNum) => {
 				const column = worksheet.getColumn(colNum);
 				column.numFmt = "dd/mm/yyyy";
@@ -119,6 +123,7 @@ export default function ExportarSiniestros({ siniestros, filtrosActivos }: Expor
 			worksheet.getColumn(14).width = 10; // Documentos
 			worksheet.getColumn(15).width = 12; // Observaciones
 			worksheet.getColumn(16).width = 25; // Creado por
+			worksheet.getColumn(18).width = 18; // Etapa
 
 			// Aplicar bordes a todas las celdas con datos
 			worksheet.eachRow((row, rowNumber) => {

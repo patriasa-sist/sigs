@@ -46,6 +46,7 @@ export const TIPOS_DOCUMENTO_SINIESTRO = [
 	"documento de identidad",
 	"carta_rechazo",
 	"carta_respaldo",
+	"respaldo de cierre",
 	"archivo_uif",
 	"archivo_pep",
 	"Otro",
@@ -281,7 +282,7 @@ export type EdicionSiniestroFormState = {
 
 	// Estado de cierre
 	tipo_cierre?: MotivoCierreTipo;
-	datos_cierre?: DatosCierreRechazo | DatosCierreDeclinacion | DatosCierreIndemnizacion;
+	datos_cierre?: DatosCierreRechazo | DatosCierreDeclinacion | DatosCierreIndemnizacion | DatosCierreSalud;
 };
 
 // ============================================
@@ -311,6 +312,20 @@ export type DatosCierreIndemnizacion = {
 	monto_pagado: number;
 	moneda_pagado: Moneda;
 	es_pago_comercial: boolean;
+};
+
+// Cierre específico de Salud: reemplaza al de indemnización para ese ramo.
+// Concluye el siniestro (estado concluido) con un único documento de respaldo;
+// los montos son opcionales.
+export type DatosCierreSalud = {
+	tipo: "salud";
+	respaldo_cierre: DocumentoSiniestro; // Archivo obligatorio
+	monto_reclamado?: number;
+	moneda_reclamado?: Moneda;
+	deducible?: number;
+	moneda_deducible?: Moneda;
+	monto_pagado?: number;
+	moneda_pagado?: Moneda;
 };
 
 // ============================================

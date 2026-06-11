@@ -18,6 +18,8 @@ interface DetallesSiniestroProps {
 	onDetallesChange: (detalles: DetallesSiniestro) => void;
 	/** Incrementar para activar validación inline (patrón trigger) */
 	validationTrigger?: number;
+	/** En ramo Salud no aplican lugar del hecho, monto de reserva ni moneda */
+	esSalud?: boolean;
 }
 
 type Regional = {
@@ -39,6 +41,7 @@ export default function DetallesSiniestroStep({
 	detalles,
 	onDetallesChange,
 	validationTrigger,
+	esSalud = false,
 }: DetallesSiniestroProps) {
 	const [regionales, setRegionales] = useState<Regional[]>([]);
 	const [responsables, setResponsables] = useState<UsuarioResponsable[]>([]);
@@ -101,12 +104,12 @@ export default function DetallesSiniestroStep({
 		if (!detalles?.fecha_reporte) e.fecha_reporte = "La fecha de reporte es obligatoria";
 		if (!detalles?.fecha_reporte_compania)
 			e.fecha_reporte_compania = "La fecha de reporte a la compañía es obligatoria";
-		if (!detalles?.lugar_hecho || detalles.lugar_hecho.trim().length < 5)
+		if (!esSalud && (!detalles?.lugar_hecho || detalles.lugar_hecho.trim().length < 5))
 			e.lugar_hecho = "El lugar del hecho es obligatorio (mínimo 5 caracteres)";
 		if (!detalles?.departamento_id) e.departamento_id = "Debe seleccionar un departamento";
-		if (!detalles?.monto_reserva || detalles.monto_reserva <= 0)
+		if (!esSalud && (!detalles?.monto_reserva || detalles.monto_reserva <= 0))
 			e.monto_reserva = "El monto de reserva debe ser mayor a 0";
-		if (!detalles?.moneda) e.moneda = "Debe seleccionar una moneda";
+		if (!esSalud && !detalles?.moneda) e.moneda = "Debe seleccionar una moneda";
 		if (!detalles?.descripcion || detalles.descripcion.trim().length < 20)
 			e.descripcion = "La descripción debe tener al menos 20 caracteres";
 		if (!detalles?.contactos || detalles.contactos.length === 0) e.contactos = "Debe agregar al menos un contacto";
@@ -254,19 +257,21 @@ export default function DetallesSiniestroStep({
 
 				{/* Lugar y Departamento */}
 				<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-					<div className="space-y-2">
-						<Label htmlFor="lugar_hecho">
-							Lugar del Hecho <span className="text-destructive">*</span>
-						</Label>
-						<Input
-							id="lugar_hecho"
-							placeholder="Ej: Av. 6 de Agosto y calle Capitán Ravelo"
-							value={detalles?.lugar_hecho || ""}
-							onChange={(e) => handleFieldChange("lugar_hecho", e.target.value)}
-							className={errores.lugar_hecho ? "border-destructive" : ""}
-						/>
-						{errores.lugar_hecho && <p className="text-sm text-destructive">{errores.lugar_hecho}</p>}
-					</div>
+					{!esSalud && (
+						<div className="space-y-2">
+							<Label htmlFor="lugar_hecho">
+								Lugar del Hecho <span className="text-destructive">*</span>
+							</Label>
+							<Input
+								id="lugar_hecho"
+								placeholder="Ej: Av. 6 de Agosto y calle Capitán Ravelo"
+								value={detalles?.lugar_hecho || ""}
+								onChange={(e) => handleFieldChange("lugar_hecho", e.target.value)}
+								className={errores.lugar_hecho ? "border-destructive" : ""}
+							/>
+							{errores.lugar_hecho && <p className="text-sm text-destructive">{errores.lugar_hecho}</p>}
+						</div>
+					)}
 
 					<div className="space-y-2">
 						<Label htmlFor="departamento">
@@ -296,48 +301,54 @@ export default function DetallesSiniestroStep({
 					</div>
 				</div>
 
-				{/* Monto de Reserva y Moneda */}
-				<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-					<div className="space-y-2 md:col-span-2">
-						<Label htmlFor="monto_reserva">
-							Monto de Reserva <span className="text-destructive">*</span>
-						</Label>
-						<Input
-							id="monto_reserva"
-							type="number"
-							step="0.01"
-							min="0"
-							placeholder="0.00"
-							value={detalles?.monto_reserva || ""}
-							onChange={(e) => handleFieldChange("monto_reserva", parseFloat(e.target.value))}
-							className={errores.monto_reserva ? "border-destructive" : ""}
-						/>
-						{errores.monto_reserva && <p className="text-sm text-destructive">{errores.monto_reserva}</p>}
-						<p className="text-xs text-muted-foreground">Monto estimado inicial para cubrir el siniestro</p>
-					</div>
+				{/* Monto de Reserva y Moneda (no aplica en Salud) */}
+				{!esSalud && (
+					<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+						<div className="space-y-2 md:col-span-2">
+							<Label htmlFor="monto_reserva">
+								Monto de Reserva <span className="text-destructive">*</span>
+							</Label>
+							<Input
+								id="monto_reserva"
+								type="number"
+								step="0.01"
+								min="0"
+								placeholder="0.00"
+								value={detalles?.monto_reserva || ""}
+								onChange={(e) => handleFieldChange("monto_reserva", parseFloat(e.target.value))}
+								className={errores.monto_reserva ? "border-destructive" : ""}
+							/>
+							{errores.monto_reserva && (
+								<p className="text-sm text-destructive">{errores.monto_reserva}</p>
+							)}
+							<p className="text-xs text-muted-foreground">
+								Monto estimado inicial para cubrir el siniestro
+							</p>
+						</div>
 
-					<div className="space-y-2">
-						<Label htmlFor="moneda">
-							Moneda <span className="text-destructive">*</span>
-						</Label>
-						<Select
-							value={detalles?.moneda || ""}
-							onValueChange={(value) => handleFieldChange("moneda", value as Moneda)}
-						>
-							<SelectTrigger id="moneda" className={errores.moneda ? "border-destructive" : ""}>
-								<SelectValue placeholder="Selecciona" />
-							</SelectTrigger>
-							<SelectContent>
-								{MONEDAS.map((moneda) => (
-									<SelectItem key={moneda} value={moneda}>
-										{moneda}
-									</SelectItem>
-								))}
-							</SelectContent>
-						</Select>
-						{errores.moneda && <p className="text-sm text-destructive">{errores.moneda}</p>}
+						<div className="space-y-2">
+							<Label htmlFor="moneda">
+								Moneda <span className="text-destructive">*</span>
+							</Label>
+							<Select
+								value={detalles?.moneda || ""}
+								onValueChange={(value) => handleFieldChange("moneda", value as Moneda)}
+							>
+								<SelectTrigger id="moneda" className={errores.moneda ? "border-destructive" : ""}>
+									<SelectValue placeholder="Selecciona" />
+								</SelectTrigger>
+								<SelectContent>
+									{MONEDAS.map((moneda) => (
+										<SelectItem key={moneda} value={moneda}>
+											{moneda}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+							{errores.moneda && <p className="text-sm text-destructive">{errores.moneda}</p>}
+						</div>
 					</div>
-				</div>
+				)}
 
 				{/* Responsable del Siniestro */}
 				<div className="space-y-2">
