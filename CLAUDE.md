@@ -43,7 +43,7 @@ Guía para Claude Code (claude.ai/code) al trabajar en este repositorio.
 - **siniestros** — registro multi-paso, edición (documentos por tipo, estados, responsable, cierre), export Excel.
 - **vencimientos** — carga de Excel de pólizas por vencer, dashboard con filtros, cartas PDF masivas (ZIP) y WhatsApp.
 - **gerencia** — dashboard estadístico (permiso `gerencia.ver`; pesado en BD, mantener aislado) y validación de pólizas/anexos en `/gerencia/validacion` (permiso `polizas.validar` o ser líder de equipo). Flujo: las pólizas nacen `pendiente` → gerencia valida (`activa`) o rechaza.
-- **reportes** — exports consolidados, módulo independiente de gerencia: `gerencia.exportar` (Producción, Contable, Comisiones por Director, con data scoping por equipo) y `gerencia.amlc` (reporte AMLC regulatorio, sin scoping).
+- **reportes** — exports consolidados, módulo independiente de gerencia: `gerencia.exportar` (Producción, Contable, Comisiones por Director, con data scoping por equipo), `gerencia.amlc` (reporte AMLC regulatorio, sin scoping) y `gerencia.aps` (9 reportes APS en ZIP: Producción PDF + Comisión/Prima Neta Excel × Ingreso/Egreso/General; sin scoping, USD→Bs con tipo de cambio editable).
 - **auditoria** — revisiones por muestreo de clientes, flags de documentos erróneos (notifica por correo al creador), otorgamiento de excepciones, ventana de carga retroactiva.
 - **rrhh** — perfiles de empleados con documentos.
 - **admin** — usuarios (incluye firma PNG para PDFs), roles y permisos, equipos, catálogos de seguros, transferencias de datos, eliminación nuclear de pólizas.

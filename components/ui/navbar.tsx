@@ -196,7 +196,7 @@ export function Navbar() {
 			href: "/reportes",
 			label: "Reportes",
 			icon: FileSpreadsheet,
-			show: can("gerencia.exportar") || can("gerencia.amlc"),
+			show: can("gerencia.exportar") || can("gerencia.amlc") || can("gerencia.aps"),
 		},
 	];
 	const visibleNavItems = navItems.filter((item) => item.show);

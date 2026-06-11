@@ -49,6 +49,7 @@ export type Permission =
 	| "gerencia.ver"
 	| "gerencia.exportar"
 	| "gerencia.amlc"
+	| "gerencia.aps"
 	| "auditoria.ver"
 	| "auditoria.excepciones"
 	| "rrhh.ver"

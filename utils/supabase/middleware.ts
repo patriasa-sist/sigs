@@ -19,7 +19,7 @@ const PROTECTED_ROUTES: Record<string, Permission | Permission[]> = {
 	"/vencimientos": "vencimientos.ver",
 	"/gerencia/validacion": "polizas.validar",
 	"/gerencia": "gerencia.ver",
-	"/reportes": ["gerencia.exportar", "gerencia.amlc"],
+	"/reportes": ["gerencia.exportar", "gerencia.amlc", "gerencia.aps"],
 	"/auditoria": "auditoria.ver",
 	"/rrhh": "rrhh.ver",
 };

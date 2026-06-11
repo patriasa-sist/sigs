@@ -3,6 +3,7 @@ import { checkPermission } from "@/utils/auth/helpers";
 import ExportarProduccion from "@/components/reportes/ExportarProduccion";
 import ExportarContable from "@/components/reportes/ExportarContable";
 import ExportarAMLC from "@/components/reportes/ExportarAMLC";
+import ExportarAPS from "@/components/reportes/ExportarAPS";
 import ExportarComisionesDirector from "@/components/reportes/ExportarComisionesDirector";
 import {
 	obtenerRegionales,
@@ -12,12 +13,13 @@ import {
 } from "@/app/reportes/actions";
 
 export default async function ReportesPage() {
-	const [exportar, amlc] = await Promise.all([
+	const [exportar, amlc, aps] = await Promise.all([
 		checkPermission("gerencia.exportar"),
 		checkPermission("gerencia.amlc"),
+		checkPermission("gerencia.aps"),
 	]);
 
-	if (!exportar.allowed && !amlc.allowed) {
+	if (!exportar.allowed && !amlc.allowed && !aps.allowed) {
 		redirect("/unauthorized");
 	}
 
@@ -63,6 +65,7 @@ export default async function ReportesPage() {
 						/>
 					</>
 				)}
+				{aps.allowed && <ExportarAPS />}
 				{amlc.allowed && <ExportarAMLC />}
 			</div>
 		</div>

@@ -50,6 +50,7 @@ export const ALL_PERMISSIONS: readonly Permission[] = [
 	"gerencia.ver",
 	"gerencia.exportar",
 	"gerencia.amlc",
+	"gerencia.aps",
 	"auditoria.ver",
 	"auditoria.excepciones",
 	"rrhh.ver",
@@ -95,6 +96,7 @@ export const PERMISSION_ACTION_LABELS: Record<string, string> = {
 	equipos: "Equipos",
 	excepciones: "Excepciones",
 	amlc: "AMLC",
+	aps: "APS",
 };
 
 /**
