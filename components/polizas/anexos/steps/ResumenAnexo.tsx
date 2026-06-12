@@ -9,6 +9,8 @@ import { formatCurrency, formatDate } from "@/utils/formatters";
 type Props = {
 	formState: AnexoFormState;
 	datosPoliza: DatosPolizaParaAnexo | null;
+	mode?: "create" | "edit";
+	anexoEstado?: "pendiente" | "rechazado" | "activo";
 	onGuardar: () => void;
 	isSaving: boolean;
 	onEditarPaso: (paso: PasoAnexo) => void;
@@ -21,11 +23,21 @@ const TIPO_LABELS = {
 	anulacion: { label: "Anulación", color: "bg-red-100 text-red-700" },
 };
 
-export function ResumenAnexo({ formState, onGuardar, isSaving, onEditarPaso, onAnterior }: Props) {
+export function ResumenAnexo({
+	formState,
+	mode = "create",
+	anexoEstado,
+	onGuardar,
+	isSaving,
+	onEditarPaso,
+	onAnterior,
+}: Props) {
 	const config = formState.config!;
 	const poliza = formState.poliza_resumen!;
 	const tipoInfo = TIPO_LABELS[config.tipo_anexo];
 	const moneda = poliza.moneda;
+	const isEdit = mode === "edit";
+	const editandoActivo = isEdit && anexoEstado === "activo";
 
 	// Calcular advertencias
 	const advertencias: { tipo: "error" | "warning" | "info"; mensaje: string }[] = [];
@@ -95,9 +107,11 @@ export function ResumenAnexo({ formState, onGuardar, isSaving, onEditarPaso, onA
 			<div className="border rounded-lg p-4 mb-4">
 				<div className="flex items-center justify-between mb-2">
 					<h3 className="font-medium text-sm text-gray-500">Póliza</h3>
-					<button onClick={() => onEditarPaso(1)} className="text-blue-500 hover:text-blue-700">
-						<Edit className="h-4 w-4" />
-					</button>
+					{!isEdit && (
+						<button onClick={() => onEditarPaso(1)} className="text-blue-500 hover:text-blue-700">
+							<Edit className="h-4 w-4" />
+						</button>
+					)}
 				</div>
 				<div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
 					<div>
@@ -297,9 +311,31 @@ export function ResumenAnexo({ formState, onGuardar, isSaving, onEditarPaso, onA
 			<div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-6">
 				<p className="text-sm text-blue-700">
 					<Info className="h-4 w-4 inline mr-1" />
-					El anexo se creará en estado <strong>pendiente</strong> y requerirá validación gerencial para
-					activarse.
-					{config.tipo_anexo === "anulacion" && (
+					{editandoActivo ? (
+						<>
+							El anexo está <strong>activo</strong>: los cambios en datos, documentos y observaciones
+							preservan la validación. Solo si modifica cuotas o montos volverá a estado{" "}
+							<strong>pendiente</strong> y requerirá validación gerencial nuevamente.
+							{config.tipo_anexo === "anulacion" && (
+								<span className="text-red-600 font-medium">
+									{" "}
+									Si cambia la vigencia corrida, la póliza volverá a estar activa hasta que gerencia
+									revalide la anulación.
+								</span>
+							)}
+						</>
+					) : isEdit ? (
+						<>
+							Al guardar los cambios, el anexo volverá a estado <strong>pendiente</strong> y requerirá
+							validación gerencial nuevamente.
+						</>
+					) : (
+						<>
+							El anexo se creará en estado <strong>pendiente</strong> y requerirá validación gerencial
+							para activarse.
+						</>
+					)}
+					{!editandoActivo && config.tipo_anexo === "anulacion" && (
 						<span className="text-red-600 font-medium">
 							{" "}
 							Una vez validado, la póliza quedará anulada permanentemente.
@@ -327,7 +363,7 @@ export function ResumenAnexo({ formState, onGuardar, isSaving, onEditarPaso, onA
 					) : (
 						<>
 							<Save className="h-4 w-4 mr-2" />
-							Guardar Anexo
+							{isEdit ? "Guardar Cambios" : "Guardar Anexo"}
 						</>
 					)}
 				</Button>

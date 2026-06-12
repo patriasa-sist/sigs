@@ -15,7 +15,7 @@ import {
 	AlertDialogHeader,
 	AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { guardarAnexo, obtenerDatosParaAnexo } from "@/app/polizas/anexos/actions";
+import { guardarAnexo, actualizarAnexo, obtenerDatosParaAnexo } from "@/app/polizas/anexos/actions";
 import { createClient } from "@/utils/supabase/client";
 
 // Steps
@@ -38,11 +38,20 @@ const INITIAL_STATE: AnexoFormState = {
 	advertencias: [],
 };
 
-export function NuevoAnexoForm() {
+type Props = {
+	mode?: "create" | "edit";
+	anexoId?: string;
+	anexoEstado?: "pendiente" | "rechazado" | "activo";
+	initialFormState?: AnexoFormState;
+	initialDatosPoliza?: DatosPolizaParaAnexo;
+};
+
+export function NuevoAnexoForm({ mode = "create", anexoId, anexoEstado, initialFormState, initialDatosPoliza }: Props) {
 	const router = useRouter();
 	const searchParams = useSearchParams();
-	const [formState, setFormState] = useState<AnexoFormState>(INITIAL_STATE);
-	const [datosPoliza, setDatosPoliza] = useState<DatosPolizaParaAnexo | null>(null);
+	const isEdit = mode === "edit";
+	const [formState, setFormState] = useState<AnexoFormState>(initialFormState ?? INITIAL_STATE);
+	const [datosPoliza, setDatosPoliza] = useState<DatosPolizaParaAnexo | null>(initialDatosPoliza ?? null);
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	const [_isLoading, setIsLoading] = useState(false);
 	const [isSaving, setIsSaving] = useState(false);
@@ -60,8 +69,9 @@ export function NuevoAnexoForm() {
 		loadUser();
 	}, []);
 
-	// Si viene con polizaId en query params, preseleccionar
+	// Si viene con polizaId en query params, preseleccionar (solo creación)
 	useEffect(() => {
+		if (isEdit) return;
 		const polizaIdParam = searchParams.get("polizaId");
 		if (polizaIdParam && !formState.poliza_id) {
 			cargarDatosPoliza(polizaIdParam);
@@ -90,10 +100,16 @@ export function NuevoAnexoForm() {
 	const handleGuardar = async () => {
 		setIsSaving(true);
 		try {
-			const result = await guardarAnexo(formState);
+			const result =
+				isEdit && anexoId ? await actualizarAnexo(anexoId, formState) : await guardarAnexo(formState);
 			if (result.success) {
-				toast.success("Anexo creado exitosamente", {
-					description: "El anexo ha sido registrado y está pendiente de validación gerencial.",
+				const seMantuvoActivo = isEdit && "estado_final" in result && result.estado_final === "activo";
+				toast.success(isEdit ? "Anexo actualizado exitosamente" : "Anexo creado exitosamente", {
+					description: isEdit
+						? seMantuvoActivo
+							? "Los cambios fueron guardados. La validación gerencial se mantiene."
+							: "Los cambios fueron guardados. El anexo quedó pendiente de validación gerencial."
+						: "El anexo ha sido registrado y está pendiente de validación gerencial.",
 				});
 				router.push(`/polizas/${formState.poliza_id}`);
 			} else {
@@ -126,16 +142,24 @@ export function NuevoAnexoForm() {
 
 	const [mostrarDialogoCancelar, setMostrarDialogoCancelar] = useState(false);
 
+	const rutaSalida = isEdit && formState.poliza_id ? `/polizas/${formState.poliza_id}` : "/polizas";
+
 	const handleCancelar = () => {
 		if (formState.paso_actual > 1) {
 			setMostrarDialogoCancelar(true);
 			return;
 		}
-		router.push("/polizas");
+		router.push(rutaSalida);
 	};
 
 	const confirmarCancelar = () => {
-		router.push("/polizas");
+		router.push(rutaSalida);
+	};
+
+	// En edición la póliza es fija: el paso 1 (búsqueda) queda bloqueado
+	const irAPaso = (paso: number) => {
+		const destino = isEdit ? Math.max(2, paso) : paso;
+		setFormState((prev) => ({ ...prev, paso_actual: destino as AnexoFormState["paso_actual"] }));
 	};
 
 	return (
@@ -145,7 +169,9 @@ export function NuevoAnexoForm() {
 				<div className="flex items-center gap-3">
 					<FileText className="h-8 w-8 text-blue-600" />
 					<div>
-						<h1 className="text-2xl font-bold">Nuevo Anexo</h1>
+						<h1 className="text-2xl font-bold">
+							{isEdit ? `Editar Anexo ${formState.config?.numero_anexo || ""}`.trim() : "Nuevo Anexo"}
+						</h1>
 						<p className="text-gray-500">
 							{formState.poliza_resumen
 								? `Póliza ${formState.poliza_resumen.numero_poliza} — ${formState.poliza_resumen.ramo}`
@@ -170,7 +196,7 @@ export function NuevoAnexoForm() {
 					cargarDatosPoliza(poliza.id);
 				}}
 				visible={true}
-				deshabilitado={formState.paso_actual > 1}
+				deshabilitado={isEdit || formState.paso_actual > 1}
 			/>
 
 			{/* Paso 2: Configuración del Anexo */}
@@ -178,13 +204,14 @@ export function NuevoAnexoForm() {
 				<ConfigAnexo
 					config={formState.config}
 					tieneAnulacionPendiente={datosPoliza.poliza.tiene_anulacion_pendiente}
+					tipoBloqueado={isEdit}
 					onChange={(config) => setFormState((prev) => ({ ...prev, config }))}
 					onSiguiente={() => {
 						// Si es anulación, saltar paso 3 (datos específicos)
 						const siguientePaso = formState.config?.tipo_anexo === "anulacion" ? 4 : 3;
-						setFormState((prev) => ({ ...prev, paso_actual: siguientePaso as 3 | 4 }));
+						irAPaso(siguientePaso);
 					}}
-					onAnterior={() => setFormState((prev) => ({ ...prev, paso_actual: 1 }))}
+					onAnterior={() => irAPaso(1)}
 				/>
 			)}
 
@@ -234,9 +261,11 @@ export function NuevoAnexoForm() {
 				<ResumenAnexo
 					formState={formState}
 					datosPoliza={datosPoliza}
+					mode={mode}
+					anexoEstado={anexoEstado}
 					onGuardar={handleGuardar}
 					isSaving={isSaving}
-					onEditarPaso={(paso) => setFormState((prev) => ({ ...prev, paso_actual: paso }))}
+					onEditarPaso={(paso) => irAPaso(paso)}
 					onAnterior={() => setFormState((prev) => ({ ...prev, paso_actual: 4 }))}
 				/>
 			)}
@@ -245,8 +274,12 @@ export function NuevoAnexoForm() {
 			<AlertDialog open={mostrarDialogoCancelar} onOpenChange={setMostrarDialogoCancelar}>
 				<AlertDialogContent>
 					<AlertDialogHeader>
-						<AlertDialogTitle>¿Cancelar el registro?</AlertDialogTitle>
-						<AlertDialogDescription>Se perderán los datos ingresados.</AlertDialogDescription>
+						<AlertDialogTitle>
+							{isEdit ? "¿Cancelar la edición?" : "¿Cancelar el registro?"}
+						</AlertDialogTitle>
+						<AlertDialogDescription>
+							{isEdit ? "Se perderán los cambios no guardados." : "Se perderán los datos ingresados."}
+						</AlertDialogDescription>
 					</AlertDialogHeader>
 					<AlertDialogFooter>
 						<AlertDialogCancel>Seguir editando</AlertDialogCancel>

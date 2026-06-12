@@ -262,6 +262,9 @@ export function PolicyPermissionsModal({ polizaId, numeroPoliza, isOpen, onClose
 									<UserPlus className="h-3.5 w-3.5" />
 									Otorgar nuevo permiso
 								</h3>
+								<p className="text-xs text-muted-foreground mb-4">
+									El permiso habilita al usuario a editar esta póliza y sus anexos.
+								</p>
 
 								{availableUsers.length === 0 ? (
 									<div className="text-center py-5 rounded-lg border border-dashed border-border bg-muted/30">

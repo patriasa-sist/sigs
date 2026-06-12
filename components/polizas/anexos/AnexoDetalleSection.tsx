@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import {
 	FileText,
 	CreditCard,
@@ -12,6 +13,7 @@ import {
 	Loader2,
 	AlertTriangle,
 	Package,
+	Pencil,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -25,7 +27,12 @@ import {
 	DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { obtenerAnexosPoliza, obtenerDetalleAnexo, type AnexoDetalle } from "@/app/polizas/anexos/actions";
+import {
+	obtenerAnexosPoliza,
+	obtenerDetalleAnexo,
+	checkAnexoEditAccess,
+	type AnexoDetalle,
+} from "@/app/polizas/anexos/actions";
 import { validarAnexo, rechazarAnexo } from "@/app/gerencia/validacion-anexos/actions";
 import { formatDate, formatCurrency } from "@/utils/formatters";
 import type { AnexoResumen } from "@/types/anexo";
@@ -50,12 +57,17 @@ const ESTADO_BADGE = {
 };
 
 export default function AnexoDetalleSection({ polizaId, moneda, puedeValidar, onAnexoValidado }: Props) {
+	const router = useRouter();
 	const [anexos, setAnexos] = useState<AnexoResumen[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [showAnexos, setShowAnexos] = useState(false);
 	const [expandedAnexo, setExpandedAnexo] = useState<string | null>(null);
 	const [detalleCache, setDetalleCache] = useState<Record<string, AnexoDetalle>>({});
 	const [detalleLoading, setDetalleLoading] = useState<string | null>(null);
+	const [editAccess, setEditAccess] = useState<{ canEdit: boolean; userId: string | null }>({
+		canEdit: false,
+		userId: null,
+	});
 
 	// Validation dialog
 	const [dialogOpen, setDialogOpen] = useState(false);
@@ -79,6 +91,27 @@ export default function AnexoDetalleSection({ polizaId, moneda, puedeValidar, on
 	useEffect(() => {
 		cargarAnexos();
 	}, [cargarAnexos]);
+
+	// Acceso de edición de anexos: mismo modelo que la edición de pólizas
+	// (admin, líder de equipo, permiso explícito por póliza o polizas.editar)
+	useEffect(() => {
+		const verificarAcceso = async () => {
+			const result = await checkAnexoEditAccess(polizaId);
+			if (result.success) {
+				setEditAccess({ canEdit: result.canEdit, userId: result.userId || null });
+			}
+		};
+		verificarAcceso();
+	}, [polizaId]);
+
+	const puedeEditarAnexo = (anexo: AnexoResumen) => {
+		// Activos también editables: revalidación condicional en el servidor
+		// (solo cambios en cuotas/montos devuelven el anexo a pendiente)
+		if (anexo.estado !== "pendiente" && anexo.estado !== "rechazado" && anexo.estado !== "activo") return false;
+		if (editAccess.canEdit) return true;
+		// El creador de un anexo rechazado puede corregirlo y reenviarlo
+		return anexo.estado === "rechazado" && !!anexo.created_by && anexo.created_by === editAccess.userId;
+	};
 
 	const toggleDetalle = async (anexoId: string) => {
 		if (expandedAnexo === anexoId) {
@@ -235,6 +268,18 @@ export default function AnexoDetalleSection({ polizaId, moneda, puedeValidar, on
 											</p>
 										</div>
 										<div className="flex items-center gap-2">
+											{/* Edit button for pending/rejected anexos */}
+											{puedeEditarAnexo(anexo) && (
+												<Button
+													variant="outline"
+													size="sm"
+													onClick={() => router.push(`/polizas/anexos/${anexo.id}/editar`)}
+													disabled={actionLoading}
+												>
+													<Pencil className="h-4 w-4 mr-1" />
+													Editar
+												</Button>
+											)}
 											{/* Validation buttons for pending anexos */}
 											{puedeValidar && anexo.estado === "pendiente" && (
 												<>

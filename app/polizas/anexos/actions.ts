@@ -14,7 +14,20 @@ import type {
 	CuotaAnexoPropia,
 	AnexoResumen,
 	PlanPagoInclusion,
+	AnexoItemChange,
+	CuotaAjuste,
 } from "@/types/anexo";
+import type {
+	VehiculoAutomotor,
+	EquipoIndustrial,
+	NaveEmbarcacion,
+	ContratanteSalud,
+	TitularSalud,
+	BienAseguradoIncendio,
+	BienAseguradoRiesgosVarios,
+	AseguradoConNivel,
+	DocumentoPoliza,
+} from "@/types/poliza";
 
 // ============================================
 // HELPERS
@@ -241,7 +254,13 @@ export async function buscarPolizasParaAnexo(query: string): Promise<{
 // 2. OBTENER DATOS PARA ANEXO
 // ============================================
 
-export async function obtenerDatosParaAnexo(polizaId: string): Promise<{
+export async function obtenerDatosParaAnexo(
+	polizaId: string,
+	// excluirAnexoId: al editar un anexo, sus propios efectos no deben
+	// aplicarse sobre los items actuales (sus exclusiones deben seguir
+	// visibles en el selector y sus inclusiones no duplicarse como actuales)
+	opciones?: { permitirAnulada?: boolean; excluirAnexoId?: string },
+): Promise<{
 	success: boolean;
 	datos?: DatosPolizaParaAnexo;
 	error?: string;
@@ -292,7 +311,8 @@ export async function obtenerDatosParaAnexo(polizaId: string): Promise<{
 
 		const poliza = polizaResult.data;
 
-		if (poliza.estado !== "activa") {
+		// permitirAnulada: al editar el anexo de anulación activo, la póliza ya está anulada
+		if (poliza.estado !== "activa" && !(opciones?.permitirAnulada && poliza.estado === "anulada")) {
 			return { success: false, error: "Solo se pueden crear anexos en pólizas activas" };
 		}
 
@@ -330,15 +350,16 @@ export async function obtenerDatosParaAnexo(polizaId: string): Promise<{
 			}
 		}
 
-		// Verificar anulación pendiente/activa
-		const tieneAnulacion = (anexosResult.data || []).some(
+		// Verificar anulación pendiente/activa (sin contar el anexo en edición)
+		const anexosRelevantes = (anexosResult.data || []).filter((a) => a.id !== opciones?.excluirAnexoId);
+		const tieneAnulacion = anexosRelevantes.some(
 			(a) => a.tipo_anexo === "anulacion" && (a.estado === "pendiente" || a.estado === "activo"),
 		);
 
 		const compania = poliza.companias_aseguradoras as unknown as { nombre: string } | null;
 
 		// Cargar items actuales del ramo (originales + incluidos por anexos activos, menos excluidos)
-		const anexosActivos = (anexosResult.data || []).filter((a) => a.estado === "activo");
+		const anexosActivos = anexosRelevantes.filter((a) => a.estado === "activo");
 		const itemsActuales = await cargarItemsActualesRamo(supabase, polizaId, poliza.ramo, anexosActivos);
 
 		const datos: DatosPolizaParaAnexo = {
@@ -1076,7 +1097,7 @@ export async function obtenerAnexosPoliza(polizaId: string): Promise<{
 			.select(
 				`
 				id, numero_anexo, tipo_anexo, fecha_anexo, fecha_efectiva,
-				estado, observaciones, fecha_validacion,
+				estado, observaciones, fecha_validacion, created_by,
 				creador:profiles!created_by (full_name),
 				validador:profiles!validado_por (full_name)
 			`,
@@ -1123,6 +1144,7 @@ export async function obtenerAnexosPoliza(polizaId: string): Promise<{
 				fecha_efectiva: a.fecha_efectiva,
 				estado: a.estado,
 				observaciones: a.observaciones || undefined,
+				created_by: a.created_by || undefined,
 				created_by_nombre: creador?.full_name || undefined,
 				validado_por_nombre: validador?.full_name || undefined,
 				fecha_validacion: a.fecha_validacion || undefined,
@@ -1586,4 +1608,840 @@ async function cargarItemsAnexoRamo(
 	}
 
 	return [];
+}
+
+// ============================================
+// 7. EDICIÓN DE ANEXOS
+// Pendientes/rechazados: toda edición vuelve a pendiente.
+// Activos: revalidación condicional — solo si cambian los pagos
+// (cuotas/montos) vuelve a pendiente; lo cosmético preserva la validación.
+// ============================================
+
+type SupabaseServer = Awaited<ReturnType<typeof createClient>>;
+
+/**
+ * Verifica si un usuario es líder de equipo del responsable de la póliza.
+ */
+async function esLiderDeEquipoParaResponsable(
+	supabase: SupabaseServer,
+	userId: string,
+	responsableId: string,
+): Promise<boolean> {
+	const { data: leaderTeams } = await supabase
+		.from("equipo_miembros")
+		.select("equipo_id")
+		.eq("user_id", userId)
+		.eq("rol_equipo", "lider");
+
+	if (!leaderTeams || leaderTeams.length === 0) return false;
+
+	const teamIds = leaderTeams.map((t: { equipo_id: string }) => t.equipo_id);
+
+	const { count } = await supabase
+		.from("equipo_miembros")
+		.select("*", { count: "exact", head: true })
+		.eq("user_id", responsableId)
+		.in("equipo_id", teamIds);
+
+	return (count ?? 0) > 0;
+}
+
+/**
+ * Permiso explícito vigente sobre la póliza (policy_edit_permissions),
+ * otorgado por un admin o por el líder de equipo. El mismo permiso que
+ * habilita editar la póliza habilita editar sus anexos.
+ */
+async function tienePermisoExplicitoPoliza(
+	supabase: SupabaseServer,
+	userId: string,
+	polizaId: string,
+): Promise<boolean> {
+	const { data: perms } = await supabase
+		.from("policy_edit_permissions")
+		.select("id, expires_at")
+		.eq("poliza_id", polizaId)
+		.eq("user_id", userId)
+		.is("revoked_at", null)
+		.order("granted_at", { ascending: false })
+		.limit(1);
+
+	const perm = perms?.[0];
+	return !!perm && (!perm.expires_at || new Date(perm.expires_at) > new Date());
+}
+
+/**
+ * Autorización para editar un anexo — mismo modelo que la edición de pólizas:
+ * admin, líder de equipo del responsable, permiso explícito por póliza,
+ * permiso global polizas.editar (dentro del scope de equipo) o el creador
+ * de un anexo rechazado (corregir y reenviar).
+ * Editables: pendiente, rechazado y activo (este último con revalidación
+ * condicional en actualizarAnexo).
+ */
+async function verifyAnexoEditPermission(anexoId: string) {
+	const supabase = await createClient();
+
+	const {
+		data: { user },
+	} = await supabase.auth.getUser();
+	if (!user) throw new Error("No autenticado");
+
+	const { data: anexo } = await supabase
+		.from("polizas_anexos")
+		.select(
+			`
+			id, estado, tipo_anexo, poliza_id, created_by,
+			numero_anexo, fecha_efectiva, observaciones,
+			poliza:polizas!poliza_id (responsable_id)
+		`,
+		)
+		.eq("id", anexoId)
+		.single();
+
+	if (!anexo) throw new Error("Anexo no encontrado");
+
+	if (anexo.estado !== "pendiente" && anexo.estado !== "rechazado" && anexo.estado !== "activo") {
+		throw new Error("El anexo no se encuentra en un estado editable");
+	}
+
+	const responsableId = (anexo.poliza as unknown as { responsable_id: string } | null)?.responsable_id;
+
+	const anexoData = {
+		id: anexo.id as string,
+		estado: anexo.estado as "pendiente" | "rechazado" | "activo",
+		tipo_anexo: anexo.tipo_anexo as "inclusion" | "exclusion" | "anulacion",
+		poliza_id: anexo.poliza_id as string,
+		numero_anexo: anexo.numero_anexo as string,
+		fecha_efectiva: anexo.fecha_efectiva as string,
+		observaciones: (anexo.observaciones as string | null) || "",
+	};
+
+	// Admin siempre puede
+	const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
+	if (profile?.role === "admin") return { supabase, user, anexo: anexoData };
+
+	// Creador de un anexo rechazado: corregir y reenviar
+	if (anexo.estado === "rechazado" && anexo.created_by === user.id) {
+		return { supabase, user, anexo: anexoData };
+	}
+
+	// Líder de equipo del responsable de la póliza
+	if (responsableId && (await esLiderDeEquipoParaResponsable(supabase, user.id, responsableId))) {
+		return { supabase, user, anexo: anexoData };
+	}
+
+	// Permiso explícito por póliza (otorgado por admin o líder de equipo)
+	if (await tienePermisoExplicitoPoliza(supabase, user.id, anexo.poliza_id)) {
+		return { supabase, user, anexo: anexoData };
+	}
+
+	// Permiso global polizas.editar, respetando el scope de equipo
+	const { data: hasEditPerm } = await supabase.rpc("user_has_permission", {
+		p_user_id: user.id,
+		p_permission_id: "polizas.editar",
+	});
+	if (hasEditPerm) {
+		const scope = await getDataScopeFilter("polizas");
+		if (!scope.needsScoping || (responsableId && scope.teamMemberIds.includes(responsableId))) {
+			return { supabase, user, anexo: anexoData };
+		}
+	}
+
+	throw new Error("No tienes permiso para editar este anexo");
+}
+
+/**
+ * Verifica si el usuario actual puede editar anexos de una póliza (para
+ * mostrar/ocultar el botón de edición en la UI). La verificación
+ * autoritativa siempre ocurre en el servidor al cargar/guardar.
+ */
+export async function checkAnexoEditAccess(polizaId: string): Promise<{
+	success: boolean;
+	canEdit: boolean;
+	userId?: string;
+	error?: string;
+}> {
+	const supabase = await createClient();
+
+	try {
+		const {
+			data: { user },
+		} = await supabase.auth.getUser();
+		if (!user) return { success: false, canEdit: false, error: "No autenticado" };
+
+		const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
+		if (profile?.role === "admin") return { success: true, canEdit: true, userId: user.id };
+
+		const { data: poliza } = await supabase.from("polizas").select("responsable_id").eq("id", polizaId).single();
+		const responsableId = poliza?.responsable_id as string | undefined;
+
+		if (responsableId && (await esLiderDeEquipoParaResponsable(supabase, user.id, responsableId))) {
+			return { success: true, canEdit: true, userId: user.id };
+		}
+
+		if (await tienePermisoExplicitoPoliza(supabase, user.id, polizaId)) {
+			return { success: true, canEdit: true, userId: user.id };
+		}
+
+		const { data: hasEditPerm } = await supabase.rpc("user_has_permission", {
+			p_user_id: user.id,
+			p_permission_id: "polizas.editar",
+		});
+		if (hasEditPerm) {
+			const scope = await getDataScopeFilter("polizas");
+			if (!scope.needsScoping || (responsableId && scope.teamMemberIds.includes(responsableId))) {
+				return { success: true, canEdit: true, userId: user.id };
+			}
+		}
+
+		return { success: true, canEdit: false, userId: user.id };
+	} catch (error) {
+		console.error("Error verificando acceso de edición de anexos:", error);
+		return {
+			success: false,
+			canEdit: false,
+			error: error instanceof Error ? error.message : "Error desconocido",
+		};
+	}
+}
+
+/**
+ * Reconstruye items_cambio del formulario desde las tablas espejo del anexo.
+ * Los nombres de cliente (client_name/client_ci) no se persisten en las
+ * tablas espejo; solo se usan para display en el selector de exclusión, que
+ * los toma de items_actuales, así que pueden ir vacíos.
+ */
+async function cargarItemsCambioAnexo(
+	supabase: SupabaseServer,
+	anexoId: string,
+	ramo: string,
+): Promise<AnexoFormState["items_cambio"]> {
+	const ramoLower = ramo.toLowerCase();
+
+	const parseItemsJson = <T>(raw: unknown): T[] => {
+		if (typeof raw === "string") {
+			try {
+				return JSON.parse(raw) as T[];
+			} catch {
+				return [];
+			}
+		}
+		return Array.isArray(raw) ? (raw as T[]) : [];
+	};
+
+	if (ramoLower.includes("automotor")) {
+		const { data } = await supabase.from("polizas_anexos_automotor_vehiculos").select("*").eq("anexo_id", anexoId);
+		if (!data || data.length === 0) return null;
+		const items: AnexoItemChange<VehiculoAutomotor>[] = data.map((v) => ({
+			accion: v.accion,
+			original_item_id: v.original_item_id || undefined,
+			data: {
+				placa: v.placa,
+				valor_asegurado: Number(v.valor_asegurado),
+				franquicia: Number(v.franquicia),
+				nro_chasis: v.nro_chasis,
+				uso: v.uso,
+				coaseguro: Number(v.coaseguro) || 0,
+				tipo_vehiculo_id: v.tipo_vehiculo_id || undefined,
+				marca_id: v.marca_id || undefined,
+				modelo: v.modelo || undefined,
+				ano: v.ano || undefined,
+				color: v.color || undefined,
+				ejes: v.ejes || undefined,
+				nro_motor: v.nro_motor || undefined,
+				nro_asientos: v.nro_asientos || undefined,
+				plaza_circulacion: v.plaza_circulacion || undefined,
+			},
+		}));
+		return { tipo_ramo: "Automotores", items };
+	}
+
+	if (ramoLower.includes("salud") || ramoLower.includes("enfermedad")) {
+		const [{ data: aseg }, { data: benef }] = await Promise.all([
+			supabase.from("polizas_anexos_salud_asegurados").select("*").eq("anexo_id", anexoId),
+			supabase.from("polizas_anexos_salud_beneficiarios").select("*").eq("anexo_id", anexoId),
+		]);
+		if ((!aseg || aseg.length === 0) && (!benef || benef.length === 0)) return null;
+		const items_asegurados: AnexoItemChange<ContratanteSalud>[] = (aseg || []).map((a) => ({
+			accion: a.accion,
+			original_item_id: a.original_item_id || undefined,
+			data: { client_id: a.client_id, client_name: "", client_ci: "", nivel_id: a.nivel_id, rol: a.rol },
+		}));
+		const items_beneficiarios: AnexoItemChange<TitularSalud>[] = (benef || []).map((b) => ({
+			accion: b.accion,
+			original_item_id: b.original_item_id || undefined,
+			data: {
+				id: b.original_item_id || b.id,
+				nombre_completo: b.nombre_completo,
+				carnet: b.carnet,
+				fecha_nacimiento: b.fecha_nacimiento || undefined,
+				genero: b.genero || undefined,
+				nivel_id: b.nivel_id,
+				descendientes: [],
+			},
+		}));
+		return { tipo_ramo: "Salud", items_asegurados, items_beneficiarios };
+	}
+
+	if (ramoLower.includes("tecnico") || ramoLower.includes("técnico")) {
+		const { data } = await supabase
+			.from("polizas_anexos_ramos_tecnicos_equipos")
+			.select("*")
+			.eq("anexo_id", anexoId);
+		if (!data || data.length === 0) return null;
+		const items: AnexoItemChange<EquipoIndustrial>[] = data.map((e) => ({
+			accion: e.accion,
+			original_item_id: e.original_item_id || undefined,
+			data: {
+				nro_serie: e.nro_serie,
+				valor_asegurado: Number(e.valor_asegurado),
+				franquicia: Number(e.franquicia),
+				nro_chasis: e.nro_chasis,
+				uso: e.uso,
+				coaseguro: Number(e.coaseguro) || 0,
+				placa: e.placa || undefined,
+				tipo_equipo_id: e.tipo_equipo_id || undefined,
+				marca_equipo_id: e.marca_equipo_id || undefined,
+				modelo: e.modelo || undefined,
+				ano: e.ano || undefined,
+				color: e.color || undefined,
+				nro_motor: e.nro_motor || undefined,
+				plaza_circulacion: e.plaza_circulacion || undefined,
+			},
+		}));
+		return { tipo_ramo: "Ramos técnicos", items };
+	}
+
+	if (
+		ramoLower.includes("aeronavegacion") ||
+		ramoLower.includes("aeronavegación") ||
+		ramoLower.includes("naves") ||
+		ramoLower.includes("embarcacion") ||
+		ramoLower.includes("embarcación")
+	) {
+		const { data } = await supabase.from("polizas_anexos_aeronavegacion_naves").select("*").eq("anexo_id", anexoId);
+		if (!data || data.length === 0) return null;
+		const tipoRamo =
+			ramoLower.includes("naves") || ramoLower.includes("embarcacion") || ramoLower.includes("embarcación")
+				? ("Naves o embarcaciones" as const)
+				: ("Aeronavegación" as const);
+		const items: AnexoItemChange<NaveEmbarcacion>[] = data.map((n) => ({
+			accion: n.accion,
+			original_item_id: n.original_item_id || undefined,
+			data: {
+				matricula: n.matricula,
+				marca: n.marca,
+				modelo: n.modelo,
+				ano: n.ano,
+				serie: n.serie,
+				uso: n.uso,
+				nro_pasajeros: n.nro_pasajeros,
+				nro_tripulantes: n.nro_tripulantes,
+				valor_casco: Number(n.valor_casco),
+				valor_responsabilidad_civil: Number(n.valor_responsabilidad_civil),
+				nivel_ap_id: n.nivel_ap_id || undefined,
+			},
+		}));
+		return { tipo_ramo: tipoRamo, items };
+	}
+
+	if (ramoLower.includes("incendio")) {
+		const { data } = await supabase.from("polizas_anexos_incendio_bienes").select("*").eq("anexo_id", anexoId);
+		if (!data || data.length === 0) return null;
+		const items: AnexoItemChange<BienAseguradoIncendio>[] = data.map((b) => ({
+			accion: b.accion,
+			original_item_id: b.original_item_id || undefined,
+			data: {
+				direccion: b.direccion,
+				valor_total_declarado: Number(b.valor_total_declarado),
+				es_primer_riesgo: !!b.es_primer_riesgo,
+				items: parseItemsJson(b.items),
+			},
+		}));
+		return { tipo_ramo: "Incendio y Aliados", items };
+	}
+
+	if (ramoLower.includes("riesgo") && ramoLower.includes("vario")) {
+		const { data } = await supabase
+			.from("polizas_anexos_riesgos_varios_bienes")
+			.select("*")
+			.eq("anexo_id", anexoId);
+		if (!data || data.length === 0) return null;
+		const items: AnexoItemChange<BienAseguradoRiesgosVarios>[] = data.map((b) => ({
+			accion: b.accion,
+			original_item_id: b.original_item_id || undefined,
+			data: {
+				direccion: b.direccion,
+				valor_total_declarado: Number(b.valor_total_declarado),
+				es_primer_riesgo: !!b.es_primer_riesgo,
+				items: parseItemsJson(b.items),
+			},
+		}));
+		return { tipo_ramo: "Riesgos Varios Misceláneos", items };
+	}
+
+	if (
+		ramoLower.includes("vida") ||
+		ramoLower.includes("sepelio") ||
+		ramoLower.includes("defuncion") ||
+		ramoLower.includes("defunción") ||
+		(ramoLower.includes("accidente") && ramoLower.includes("personal"))
+	) {
+		const { data } = await supabase.from("polizas_anexos_asegurados_nivel").select("*").eq("anexo_id", anexoId);
+		if (!data || data.length === 0) return null;
+		const tipoRamo = ramoLower.includes("vida")
+			? ("Vida" as const)
+			: ramoLower.includes("sepelio") || ramoLower.includes("defuncion") || ramoLower.includes("defunción")
+				? ("Sepelio" as const)
+				: ("Accidentes Personales" as const);
+		const items: AnexoItemChange<AseguradoConNivel>[] = data.map((a) => ({
+			accion: a.accion,
+			original_item_id: a.original_item_id || undefined,
+			data: {
+				client_id: a.client_id,
+				client_name: "",
+				client_ci: "",
+				nivel_id: a.nivel_id || "",
+				cargo: a.cargo || undefined,
+			},
+		}));
+		return { tipo_ramo: tipoRamo, items };
+	}
+
+	return null;
+}
+
+/**
+ * Carga un anexo editable (pendiente/rechazado/activo) y lo transforma a
+ * AnexoFormState para el formulario de edición, junto con los datos de la
+ * póliza madre.
+ */
+export async function obtenerAnexoParaEdicion(anexoId: string): Promise<{
+	success: boolean;
+	formState?: AnexoFormState;
+	datosPoliza?: DatosPolizaParaAnexo;
+	estadoAnexo?: "pendiente" | "rechazado" | "activo";
+	error?: string;
+}> {
+	try {
+		const { supabase, anexo } = await verifyAnexoEditPermission(anexoId);
+
+		// Reutiliza la carga de datos de la póliza (cuotas, items actuales),
+		// sin aplicar los efectos del anexo en edición sobre los items.
+		// Si el anexo es la anulación activa, la póliza ya está anulada.
+		const datosResult = await obtenerDatosParaAnexo(anexo.poliza_id, {
+			permitirAnulada: anexo.tipo_anexo === "anulacion",
+			excluirAnexoId: anexoId,
+		});
+		if (!datosResult.success || !datosResult.datos) {
+			return { success: false, error: datosResult.error || "No se pudieron cargar los datos de la póliza" };
+		}
+		const datosPoliza = datosResult.datos;
+
+		const [itemsCambio, pagosResult, docsResult] = await Promise.all([
+			cargarItemsCambioAnexo(supabase, anexoId, datosPoliza.poliza.ramo),
+			supabase
+				.from("polizas_anexos_pagos")
+				.select("id, cuota_original_id, tipo, numero_cuota, monto, fecha_vencimiento, observaciones")
+				.eq("anexo_id", anexoId)
+				.order("numero_cuota", { ascending: true }),
+			supabase
+				.from("polizas_anexos_documentos")
+				.select("id, tipo_documento, nombre_archivo, archivo_url, tamano_bytes")
+				.eq("anexo_id", anexoId)
+				.eq("estado", "activo"),
+		]);
+
+		const pagos = pagosResult.data || [];
+
+		// Inclusión: plan de pago propio del anexo
+		let planPagoInclusion: PlanPagoInclusion | null = null;
+		const cuotasPropias = pagos.filter((p) => p.tipo === "cuota_propia");
+		if (cuotasPropias.length > 0) {
+			const cuotas = cuotasPropias.map((p) => ({
+				numero_cuota: p.numero_cuota ?? 0,
+				monto: Number(p.monto),
+				fecha_vencimiento: p.fecha_vencimiento || "",
+			}));
+			const primaTotal = Math.round(cuotas.reduce((s, c) => s + c.monto, 0) * 100) / 100;
+			planPagoInclusion = {
+				modalidad: cuotas.length === 1 ? "contado" : "credito",
+				prima_total: primaTotal,
+				cuota_inicial: 0,
+				cantidad_cuotas: cuotas.length,
+				cuotas,
+			};
+		}
+
+		// Exclusión: descuentos existentes mapeados sobre todas las cuotas originales
+		const ajustes = new Map(
+			pagos
+				.filter((p) => p.tipo === "ajuste" && p.cuota_original_id)
+				.map((p) => [p.cuota_original_id as string, p]),
+		);
+		const cuotasAjuste: CuotaAjuste[] = datosPoliza.cuotas.map((c) => {
+			const ajuste = ajustes.get(c.id);
+			return {
+				cuota_original_id: c.id,
+				numero_cuota: c.numero_cuota,
+				monto_original: c.monto,
+				monto_delta: ajuste ? Number(ajuste.monto) : 0,
+				fecha_vencimiento: ajuste?.fecha_vencimiento || c.fecha_vencimiento,
+				estado_original: c.estado,
+			};
+		});
+
+		// Anulación: vigencia corrida
+		const vc = pagos.find((p) => p.tipo === "vigencia_corrida");
+		const vigenciaCorrida = vc
+			? {
+					monto: Number(vc.monto),
+					fecha_vencimiento: vc.fecha_vencimiento || "",
+					observaciones: vc.observaciones || "",
+				}
+			: null;
+
+		// Documentos existentes: identificados por id, ya en su ruta final
+		const documentos: DocumentoPoliza[] = (docsResult.data || []).map((d) => ({
+			id: d.id,
+			tipo_documento: d.tipo_documento,
+			nombre_archivo: d.nombre_archivo,
+			archivo_url: d.archivo_url,
+			storage_path: d.archivo_url,
+			tamano_bytes: d.tamano_bytes || undefined,
+			upload_status: "uploaded" as const,
+			estado: "activo" as const,
+		}));
+
+		const formState: AnexoFormState = {
+			paso_actual: 5,
+			poliza_id: anexo.poliza_id,
+			poliza_resumen: datosPoliza.poliza,
+			config: {
+				tipo_anexo: anexo.tipo_anexo,
+				numero_anexo: anexo.numero_anexo,
+				fecha_efectiva: anexo.fecha_efectiva,
+				observaciones: anexo.observaciones,
+			},
+			items_cambio: itemsCambio,
+			plan_pago_inclusion: planPagoInclusion,
+			cuotas_ajuste: anexo.tipo_anexo === "exclusion" ? cuotasAjuste : [],
+			vigencia_corrida: vigenciaCorrida,
+			documentos,
+			advertencias: [],
+		};
+
+		return { success: true, formState, datosPoliza, estadoAnexo: anexo.estado };
+	} catch (error) {
+		console.error("Error cargando anexo para edición:", error);
+		return { success: false, error: error instanceof Error ? error.message : "Error desconocido" };
+	}
+}
+
+/**
+ * Actualiza un anexo editable: reemplaza items, ajusta documentos (soft
+ * delete de los quitados, alta de los nuevos) y aplica revalidación
+ * condicional — un anexo pendiente/rechazado siempre vuelve a pendiente; un
+ * anexo activo solo vuelve a pendiente si cambian sus pagos (cuotas/montos),
+ * las ediciones cosméticas (items, documentos, observaciones) preservan la
+ * validación para no recargar a gerencia con nimiedades.
+ */
+export async function actualizarAnexo(
+	anexoId: string,
+	formState: AnexoFormState,
+): Promise<{ success: boolean; anexo_id?: string; estado_final?: "pendiente" | "activo"; error?: string }> {
+	try {
+		const { supabase, user, anexo } = await verifyAnexoEditPermission(anexoId);
+
+		if (!formState.config) {
+			return { success: false, error: "Datos del anexo incompletos" };
+		}
+
+		if (formState.config.tipo_anexo !== anexo.tipo_anexo) {
+			return {
+				success: false,
+				error: "El tipo de anexo no se puede cambiar. Si necesita otro tipo, cree un anexo nuevo.",
+			};
+		}
+
+		// La póliza madre debe seguir activa, salvo que este anexo sea la
+		// anulación activa que la dejó anulada
+		const { data: poliza } = await supabase.from("polizas").select("id, estado").eq("id", anexo.poliza_id).single();
+
+		const esAnulacionActiva = anexo.tipo_anexo === "anulacion" && anexo.estado === "activo";
+		const polizaEditable =
+			poliza && (poliza.estado === "activa" || (esAnulacionActiva && poliza.estado === "anulada"));
+		if (!polizaEditable) {
+			return { success: false, error: "La póliza no está activa. No se pueden editar sus anexos." };
+		}
+
+		// Validar plan de inclusión si corresponde
+		if (anexo.tipo_anexo === "inclusion") {
+			const plan = formState.plan_pago_inclusion;
+			if (!plan || plan.prima_total <= 0 || plan.cuotas.length === 0) {
+				return { success: false, error: "El plan de pago de la inclusión es requerido" };
+			}
+		}
+
+		// Documento obligatorio (existentes que se mantienen o nuevos subidos)
+		const docsValidos = formState.documentos.filter((d) => d.storage_path && d.upload_status === "uploaded");
+		if (docsValidos.length === 0) {
+			return { success: false, error: "El documento de anexo es obligatorio" };
+		}
+
+		// Validar descuentos de exclusión ANTES de tocar datos
+		const cuotasConDelta =
+			anexo.tipo_anexo === "exclusion" ? formState.cuotas_ajuste.filter((c) => c.monto_delta !== 0) : [];
+		if (cuotasConDelta.length > 0) {
+			const { data: cuotasOriginales, error: cuotasError } = await supabase
+				.from("polizas_pagos")
+				.select("id, monto")
+				.eq("poliza_id", anexo.poliza_id)
+				.in(
+					"id",
+					cuotasConDelta.map((c) => c.cuota_original_id),
+				);
+			throwIfAnexoError(cuotasError, "Error al verificar las cuotas de la póliza");
+
+			const montoPorCuota = new Map((cuotasOriginales || []).map((c) => [c.id as string, Number(c.monto)]));
+			for (const c of cuotasConDelta) {
+				const montoOriginal = montoPorCuota.get(c.cuota_original_id);
+				if (montoOriginal === undefined) {
+					return { success: false, error: `La cuota ${c.numero_cuota} no pertenece a esta póliza` };
+				}
+				if (Math.abs(c.monto_delta) > montoOriginal + 0.005) {
+					return {
+						success: false,
+						error: `El descuento de la cuota ${c.numero_cuota} excede su monto original (${montoOriginal.toFixed(2)})`,
+					};
+				}
+			}
+		}
+
+		// --- DETECTAR CAMBIO FINANCIERO (pagos: cuotas, montos, fechas) ---
+		// Se compara el set de pagos resultante contra el existente. Solo un
+		// cambio financiero obliga a revalidar un anexo activo; lo cosmético
+		// (items, documentos, observaciones, número) preserva la validación.
+		type PagoNuevo = {
+			tipo: "vigencia_corrida" | "cuota_propia" | "ajuste";
+			cuota_original_id: string | null;
+			numero_cuota: number | null;
+			monto: number;
+			fecha_vencimiento: string | null;
+			observaciones: string;
+		};
+		const nuevosPagos: PagoNuevo[] = [];
+		if (anexo.tipo_anexo === "anulacion") {
+			if (formState.vigencia_corrida && formState.vigencia_corrida.monto > 0) {
+				nuevosPagos.push({
+					tipo: "vigencia_corrida",
+					cuota_original_id: null,
+					numero_cuota: 0,
+					monto: formState.vigencia_corrida.monto,
+					fecha_vencimiento: formState.vigencia_corrida.fecha_vencimiento,
+					observaciones: formState.vigencia_corrida.observaciones?.trim() || "Cobro vigencia corrida",
+				});
+			}
+		} else if (anexo.tipo_anexo === "inclusion") {
+			const plan = formState.plan_pago_inclusion!;
+			for (const c of plan.cuotas) {
+				nuevosPagos.push({
+					tipo: "cuota_propia",
+					cuota_original_id: null,
+					numero_cuota: c.numero_cuota,
+					monto: c.monto,
+					fecha_vencimiento: c.fecha_vencimiento,
+					observaciones:
+						plan.modalidad === "contado"
+							? "Pago contado por inclusión"
+							: `Cuota ${c.numero_cuota} de ${plan.cuotas.length} por inclusión`,
+				});
+			}
+		} else {
+			for (const c of cuotasConDelta) {
+				nuevosPagos.push({
+					tipo: "ajuste",
+					cuota_original_id: c.cuota_original_id,
+					numero_cuota: c.numero_cuota,
+					monto: -Math.abs(c.monto_delta),
+					fecha_vencimiento: c.fecha_vencimiento,
+					observaciones: "Descuento por exclusión",
+				});
+			}
+		}
+
+		const { data: pagosExistentes, error: pagosExistentesError } = await supabase
+			.from("polizas_anexos_pagos")
+			.select("id, tipo, cuota_original_id, numero_cuota, monto, fecha_vencimiento, estado, fecha_pago")
+			.eq("anexo_id", anexoId);
+		throwIfAnexoError(pagosExistentesError, "Error al verificar los pagos del anexo");
+
+		const clavePago = (p: {
+			tipo: string;
+			cuota_original_id: string | null;
+			numero_cuota: number | null;
+			monto: number;
+			fecha_vencimiento: string | null;
+		}) =>
+			`${p.tipo}|${p.cuota_original_id || ""}|${p.numero_cuota ?? ""}|${Number(p.monto).toFixed(2)}|${p.fecha_vencimiento || ""}`;
+
+		const clavesExistentes = (pagosExistentes || []).map(clavePago).sort().join("\n");
+		const clavesNuevas = nuevosPagos.map(clavePago).sort().join("\n");
+		const cambioFinanciero = clavesExistentes !== clavesNuevas;
+
+		const eraActivo = anexo.estado === "activo";
+		const mantieneValidacion = eraActivo && !cambioFinanciero;
+
+		// Con pagos ya registrados (cobranza) no se pueden alterar los montos
+		if (cambioFinanciero) {
+			const tienePagosRegistrados = (pagosExistentes || []).some(
+				(p) => p.fecha_pago || p.estado === "pagado" || p.estado === "parcial",
+			);
+			if (tienePagosRegistrados) {
+				return {
+					success: false,
+					error: "El anexo tiene cuotas con pagos registrados; no se pueden modificar sus montos o cuotas. Contacte a un administrador.",
+				};
+			}
+		}
+
+		// --- ACTUALIZAR ANEXO PRINCIPAL ---
+		const camposBase = {
+			numero_anexo: formState.config.numero_anexo.trim(),
+			fecha_efectiva: formState.config.fecha_efectiva,
+			observaciones: formState.config.observaciones?.trim() || null,
+			updated_by: user.id,
+			updated_at: new Date().toISOString(),
+		};
+		const { error: updateError } = await supabase
+			.from("polizas_anexos")
+			.update(
+				mantieneValidacion
+					? camposBase
+					: {
+							...camposBase,
+							estado: "pendiente",
+							validado_por: null,
+							fecha_validacion: null,
+							motivo_rechazo: null,
+							rechazado_por: null,
+							fecha_rechazo: null,
+						},
+			)
+			.eq("id", anexoId);
+
+		if (updateError) {
+			return { success: false, error: mapAnexoError(updateError, "Error al actualizar el anexo") };
+		}
+
+		// Anulación activa con cambio financiero: deshacer la anulación de la
+		// póliza hasta que gerencia revalide el anexo (inverso de validarAnexo)
+		if (esAnulacionActiva && cambioFinanciero) {
+			const { error: polizaError } = await supabase
+				.from("polizas")
+				.update({ estado: "activa" })
+				.eq("id", anexo.poliza_id)
+				.eq("estado", "anulada");
+			if (polizaError) {
+				console.error("Error reactivando póliza tras editar anulación:", polizaError);
+				return { success: false, error: "Anexo actualizado pero no se pudo reactivar la póliza" };
+			}
+		}
+
+		// --- REEMPLAZAR ITEMS (siempre) Y PAGOS (solo si cambiaron) ---
+		try {
+			const tablasItems = [
+				"polizas_anexos_automotor_vehiculos",
+				"polizas_anexos_salud_asegurados",
+				"polizas_anexos_salud_beneficiarios",
+				"polizas_anexos_ramos_tecnicos_equipos",
+				"polizas_anexos_aeronavegacion_naves",
+				"polizas_anexos_incendio_bienes",
+				"polizas_anexos_riesgos_varios_bienes",
+				"polizas_anexos_asegurados_nivel",
+			];
+			for (const tabla of tablasItems) {
+				const { error: deleteError } = await supabase.from(tabla).delete().eq("anexo_id", anexoId);
+				throwIfAnexoError(deleteError, "Error al limpiar los datos anteriores del anexo");
+			}
+
+			// Pagos sin cambios se conservan intactos (preserva estado/fecha_pago)
+			if (cambioFinanciero) {
+				const { error: deletePagosError } = await supabase
+					.from("polizas_anexos_pagos")
+					.delete()
+					.eq("anexo_id", anexoId);
+				throwIfAnexoError(deletePagosError, "Error al limpiar los pagos anteriores del anexo");
+
+				if (nuevosPagos.length > 0) {
+					const { error: pagosError } = await supabase.from("polizas_anexos_pagos").insert(
+						nuevosPagos.map((p) => ({
+							anexo_id: anexoId,
+							cuota_original_id: p.cuota_original_id,
+							tipo: p.tipo,
+							numero_cuota: p.numero_cuota,
+							monto: p.monto,
+							fecha_vencimiento: p.fecha_vencimiento,
+							estado: "pendiente" as const,
+							observaciones: p.observaciones,
+						})),
+					);
+					throwIfAnexoError(pagosError, "Error al guardar los pagos del anexo");
+				}
+			}
+
+			if (formState.items_cambio && anexo.tipo_anexo !== "anulacion") {
+				await insertarItemsRamo(supabase, anexoId, formState.items_cambio);
+			}
+		} catch (insertError) {
+			console.error("Error reemplazando datos del anexo:", insertError);
+			return {
+				success: false,
+				error:
+					insertError instanceof Error
+						? `${insertError.message}. Revise el anexo y vuelva a guardar.`
+						: "Error guardando los datos del anexo. Revise el anexo y vuelva a guardar.",
+			};
+		}
+
+		// --- DOCUMENTOS ---
+		// Soft delete de los existentes que se quitaron del formulario
+		const idsEnFormulario = new Set(formState.documentos.filter((d) => d.id).map((d) => d.id as string));
+		const { data: docsActuales } = await supabase
+			.from("polizas_anexos_documentos")
+			.select("id")
+			.eq("anexo_id", anexoId)
+			.eq("estado", "activo");
+
+		const idsDescartar = (docsActuales || []).map((d) => d.id as string).filter((id) => !idsEnFormulario.has(id));
+		if (idsDescartar.length > 0) {
+			await supabase.from("polizas_anexos_documentos").update({ estado: "descartado" }).in("id", idsDescartar);
+		}
+
+		// Registrar documentos nuevos (subidos a temp/ desde el cliente)
+		for (const doc of docsValidos.filter((d) => !d.id)) {
+			const tempPath = doc.storage_path!;
+			const finalPath = generateFinalStoragePath(`anexos/${anexoId}`, doc.nombre_archivo);
+
+			const { error: moveError } = await supabase.storage.from("polizas-documentos").move(tempPath, finalPath);
+			const usedPath = moveError ? tempPath : finalPath;
+
+			await supabase.from("polizas_anexos_documentos").insert({
+				anexo_id: anexoId,
+				tipo_documento: doc.tipo_documento || "Documento de Anexo",
+				nombre_archivo: doc.nombre_archivo,
+				archivo_url: usedPath,
+				tamano_bytes: doc.tamano_bytes || null,
+				uploaded_by: user.id,
+			});
+		}
+
+		revalidatePath("/polizas");
+		revalidatePath(`/polizas/${anexo.poliza_id}`);
+		revalidatePath("/gerencia/validacion");
+
+		return { success: true, anexo_id: anexoId, estado_final: mantieneValidacion ? "activo" : "pendiente" };
+	} catch (error) {
+		console.error("Error actualizando anexo:", error);
+		return { success: false, error: error instanceof Error ? error.message : "Error desconocido" };
+	}
 }

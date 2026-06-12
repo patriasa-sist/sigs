@@ -11,6 +11,7 @@ import type { ConfigAnexo as ConfigAnexoType } from "@/types/anexo";
 type Props = {
 	config: ConfigAnexoType | null;
 	tieneAnulacionPendiente: boolean;
+	tipoBloqueado?: boolean;
 	onChange: (config: ConfigAnexoType) => void;
 	onSiguiente: () => void;
 	onAnterior: () => void;
@@ -43,7 +44,14 @@ const TIPOS_ANEXO = [
 	},
 ];
 
-export function ConfigAnexo({ config, tieneAnulacionPendiente, onChange, onSiguiente, onAnterior }: Props) {
+export function ConfigAnexo({
+	config,
+	tieneAnulacionPendiente,
+	tipoBloqueado,
+	onChange,
+	onSiguiente,
+	onAnterior,
+}: Props) {
 	const [tipoAnexo, setTipoAnexo] = useState(config?.tipo_anexo || "");
 	const [numeroAnexo, setNumeroAnexo] = useState(config?.numero_anexo || "");
 	const [fechaEfectiva, setFechaEfectiva] = useState(
@@ -98,19 +106,20 @@ export function ConfigAnexo({ config, tieneAnulacionPendiente, onChange, onSigui
 					{TIPOS_ANEXO.map((tipo) => {
 						const Icon = tipo.icon;
 						const isSelected = tipoAnexo === tipo.value;
-						const isDisabled = tipo.value === "anulacion" && tieneAnulacionPendiente;
+						const isDisabled =
+							(tipo.value === "anulacion" && tieneAnulacionPendiente) || (!!tipoBloqueado && !isSelected);
 
 						return (
 							<button
 								key={tipo.value}
 								type="button"
-								disabled={isDisabled}
+								disabled={isDisabled || !!tipoBloqueado}
 								onClick={() => setTipoAnexo(tipo.value)}
 								className={`p-4 rounded-lg border-2 text-left transition-all ${
-									isDisabled
-										? "opacity-50 cursor-not-allowed border-gray-200 bg-gray-50"
-										: isSelected
-											? tipo.selectedColor
+									isSelected
+										? tipo.selectedColor
+										: isDisabled
+											? "opacity-50 cursor-not-allowed border-gray-200 bg-gray-50"
 											: `${tipo.color} hover:shadow-md cursor-pointer`
 								}`}
 							>
@@ -119,13 +128,18 @@ export function ConfigAnexo({ config, tieneAnulacionPendiente, onChange, onSigui
 									<span className="font-semibold">{tipo.label}</span>
 								</div>
 								<p className="text-xs opacity-80">{tipo.description}</p>
-								{isDisabled && (
+								{tipo.value === "anulacion" && tieneAnulacionPendiente && !tipoBloqueado && (
 									<p className="text-xs text-red-600 mt-2">Ya existe una anulación pendiente</p>
 								)}
 							</button>
 						);
 					})}
 				</div>
+				{tipoBloqueado && (
+					<p className="text-xs text-muted-foreground mt-2">
+						El tipo de anexo no se puede cambiar al editar. Si necesita otro tipo, cree un anexo nuevo.
+					</p>
+				)}
 			</div>
 
 			{/* Warning para anulación */}

@@ -291,6 +291,7 @@ export type AnexoResumen = {
 	fecha_efectiva: string;
 	estado: EstadoAnexo;
 	observaciones?: string;
+	created_by?: string;
 	created_by_nombre?: string;
 	validado_por_nombre?: string;
 	fecha_validacion?: string;
