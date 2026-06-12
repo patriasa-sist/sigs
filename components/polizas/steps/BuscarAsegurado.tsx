@@ -34,8 +34,9 @@ export function BuscarAsegurado({ asegurado, onAseguradoSeleccionado, onSiguient
 			.replace(/[,()"'\\]/g, " ")
 			.replace(/\s+/g, " ")
 			.trim();
+		const palabras = q.split(" ").filter(Boolean);
 
-		if (!q) {
+		if (palabras.length === 0) {
 			setResultados([]);
 			return;
 		}
@@ -46,38 +47,46 @@ export function BuscarAsegurado({ asegurado, onAseguradoSeleccionado, onSiguient
 		try {
 			const supabase = createClient();
 
+			// Búsqueda multi-palabra: cada palabra debe coincidir en al menos un campo
+			// (AND entre palabras), así "eid gabriel" encuentra a Gabriel Eid.
+			let natQuery = supabase
+				.from("natural_clients")
+				.select(
+					"client_id, primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, tipo_documento, numero_documento, extension_ci, fecha_nacimiento, direccion, celular, correo_electronico, clients!inner(id, client_type, status, created_at)",
+				)
+				.eq("clients.status", "active");
+			let jurQuery = supabase
+				.from("juridic_clients")
+				.select(
+					"client_id, razon_social, tipo_sociedad, nit, matricula_comercio, direccion_legal, correo_electronico, telefono, clients!inner(id, client_type, status, created_at)",
+				)
+				.eq("clients.status", "active");
+			let uniQuery = supabase
+				.from("unipersonal_clients")
+				.select("razon_social, nit, clients!inner(id, client_type, status, created_at)")
+				.eq("clients.status", "active");
+			for (const p of palabras) {
+				natQuery = natQuery.or(
+					`primer_nombre.ilike.%${p}%,` +
+						`segundo_nombre.ilike.%${p}%,` +
+						`primer_apellido.ilike.%${p}%,` +
+						`segundo_apellido.ilike.%${p}%,` +
+						`numero_documento.ilike.%${p}%`,
+				);
+				jurQuery = jurQuery.or(`razon_social.ilike.%${p}%,nit.ilike.%${p}%`);
+				uniQuery = uniQuery.or(`razon_social.ilike.%${p}%,nit.ilike.%${p}%`);
+			}
+
 			const [naturalesResult, juridicosResult, unipersonalesResult] = await Promise.all([
-				supabase
-					.from("natural_clients")
-					.select(
-						"client_id, primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, tipo_documento, numero_documento, extension_ci, fecha_nacimiento, direccion, celular, correo_electronico, clients!inner(id, client_type, status, created_at)",
-					)
-					.eq("clients.status", "active")
-					.or(
-						`primer_nombre.ilike.%${q}%,` +
-							`segundo_nombre.ilike.%${q}%,` +
-							`primer_apellido.ilike.%${q}%,` +
-							`segundo_apellido.ilike.%${q}%,` +
-							`numero_documento.ilike.%${q}%`,
-					)
+				natQuery
 					.order("created_at", { referencedTable: "clients", ascending: false })
 					.limit(15)
 					.overrideTypes<NaturalClientRow[], { merge: false }>(),
-				supabase
-					.from("juridic_clients")
-					.select(
-						"client_id, razon_social, tipo_sociedad, nit, matricula_comercio, direccion_legal, correo_electronico, telefono, clients!inner(id, client_type, status, created_at)",
-					)
-					.eq("clients.status", "active")
-					.or(`razon_social.ilike.%${q}%,nit.ilike.%${q}%`)
+				jurQuery
 					.order("created_at", { referencedTable: "clients", ascending: false })
 					.limit(10)
 					.overrideTypes<JuridicClientRow[], { merge: false }>(),
-				supabase
-					.from("unipersonal_clients")
-					.select("razon_social, nit, clients!inner(id, client_type, status, created_at)")
-					.eq("clients.status", "active")
-					.or(`razon_social.ilike.%${q}%,nit.ilike.%${q}%`)
+				uniQuery
 					.order("created_at", { referencedTable: "clients", ascending: false })
 					.limit(10)
 					.overrideTypes<UnipersonalClientRow[], { merge: false }>(),

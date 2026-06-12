@@ -292,7 +292,7 @@ export type FiltrosPolizasData = {
 	categorias: { id: string; nombre: string }[];
 };
 
-/** Mapea una fila de póliza + mapas de clientes a PolizaListItem */
+/** Mapea una fila de póliza + info resuelta de clientes a PolizaListItem */
 function mapPolizaToListItem(
 	poliza: {
 		id: string;
@@ -314,55 +314,17 @@ function mapPolizaToListItem(
 		profiles: unknown;
 		regionales: unknown;
 	},
-	clientsMap: Map<string, { id: string; client_type: string }>,
-	naturalClientsMap: Map<
-		string,
-		{
-			client_id: string;
-			primer_nombre: string;
-			segundo_nombre: string;
-			primer_apellido: string;
-			segundo_apellido: string;
-			numero_documento: string;
-		}
-	>,
-	juridicClientsMap: Map<string, { client_id: string; razon_social: string; nit: string }>,
-	unipersonalClientsMap: Map<string, { client_id: string; razon_social: string; nit: string }>,
+	clientInfoMap: Map<string, { name: string; ci: string }>,
 ): PolizaListItem {
-	const client = clientsMap.get(poliza.client_id);
-	let client_name = "Cliente Desconocido";
-	let client_ci = "-";
-
-	if (client?.client_type === "natural" || client?.client_type === "unipersonal") {
-		const naturalClient = naturalClientsMap.get(poliza.client_id);
-		if (naturalClient) {
-			const nombres = [naturalClient.primer_nombre, naturalClient.segundo_nombre].filter(Boolean).join(" ");
-			const apellidos = [naturalClient.primer_apellido, naturalClient.segundo_apellido].filter(Boolean).join(" ");
-			client_name = `${nombres} ${apellidos}`.trim();
-			client_ci = naturalClient.numero_documento || "-";
-		}
-		if (client?.client_type === "unipersonal") {
-			const uni = unipersonalClientsMap.get(poliza.client_id);
-			if (uni) {
-				client_name = `${client_name} (${uni.razon_social})`;
-				client_ci = uni.nit || client_ci;
-			}
-		}
-	} else if (client?.client_type === "juridica") {
-		const jur = juridicClientsMap.get(poliza.client_id);
-		if (jur) {
-			client_name = jur.razon_social;
-			client_ci = jur.nit || "-";
-		}
-	}
+	const info = clientInfoMap.get(poliza.client_id);
 
 	return {
 		id: poliza.id,
 		numero_poliza: poliza.numero_poliza,
 		ramo: poliza.ramo,
 		client_id: poliza.client_id,
-		client_name,
-		client_ci,
+		client_name: info?.name || "Cliente Desconocido",
+		client_ci: info?.ci || "-",
 		compania_nombre: (poliza.companias_aseguradoras as { nombre?: string } | null)?.nombre || "-",
 		inicio_vigencia: poliza.inicio_vigencia,
 		fin_vigencia: poliza.fin_vigencia,
@@ -392,24 +354,55 @@ export async function obtenerPolizas(params: ObtenerPolizasParams = {}) {
 
 		const scope = await getDataScopeFilter();
 
-		// Si hay búsqueda de texto, obtener client_ids (por nombre/CI) y poliza_ids
-		// (por placa de vehículo) coincidentes, todo en paralelo.
+		// PostgREST usa comas, paréntesis y comillas como sintaxis del filtro .or();
+		// se eliminan del término para no romper la consulta ni inyectar operadores.
+		const q = (search ?? "")
+			.substring(0, 100)
+			.replace(/[,()"'\\]/g, " ")
+			.replace(/\s+/g, " ")
+			.trim();
+		const palabras = q.split(" ").filter(Boolean);
+
+		// Si hay búsqueda de texto, obtener client_ids (por nombre/documento en todos
+		// los tipos de cliente) y poliza_ids (por placa de vehículo) coincidentes.
 		let searchClientIds: string[] = [];
 		let searchPolizaIds: string[] = [];
-		if (search?.trim()) {
-			const q = search.trim().substring(0, 100);
-			const [natRes, jurRes, uniRes, autoRes, rcRes, tecRes, anexoAutoRes, anexoTecRes] = await Promise.all([
-				supabase
-					.from("natural_clients")
-					.select("client_id")
-					.or(
-						`primer_nombre.ilike.%${q}%,primer_apellido.ilike.%${q}%,segundo_apellido.ilike.%${q}%,numero_documento.ilike.%${q}%`,
-					),
-				supabase.from("juridic_clients").select("client_id").or(`razon_social.ilike.%${q}%,nit.ilike.%${q}%`),
-				supabase
-					.from("unipersonal_clients")
-					.select("client_id")
-					.or(`razon_social.ilike.%${q}%,nit.ilike.%${q}%`),
+		if (palabras.length > 0) {
+			// Búsqueda multi-palabra: cada palabra debe coincidir en al menos un campo
+			// (AND entre palabras), así "eid gabriel" encuentra a Gabriel Eid.
+			const buscarClientIds = (tabla: string, campos: string[]) => {
+				let clientQuery = supabase.from(tabla).select("client_id");
+				for (const p of palabras) {
+					clientQuery = clientQuery.or(campos.map((c) => `${c}.ilike.%${p}%`).join(","));
+				}
+				return clientQuery;
+			};
+
+			const [
+				natRes,
+				jurRes,
+				uniRes,
+				ongRes,
+				clubRes,
+				asocRes,
+				autoRes,
+				rcRes,
+				tecRes,
+				anexoAutoRes,
+				anexoTecRes,
+			] = await Promise.all([
+				buscarClientIds("natural_clients", [
+					"primer_nombre",
+					"segundo_nombre",
+					"primer_apellido",
+					"segundo_apellido",
+					"numero_documento",
+				]),
+				buscarClientIds("juridic_clients", ["razon_social", "nit"]),
+				buscarClientIds("unipersonal_clients", ["razon_social", "nit"]),
+				buscarClientIds("ong_clients", ["nombre_ong", "sigla", "nit"]),
+				buscarClientIds("club_clients", ["nombre_club", "sigla", "nit"]),
+				buscarClientIds("asociacion_civil_clients", ["nombre_asociacion", "sigla", "nit"]),
 				// Placa en el registro base: automotor (indexada), responsabilidad civil y ramos técnicos.
 				supabase.from("polizas_automotor_vehiculos").select("poliza_id").ilike("placa", `%${q}%`),
 				supabase.from("polizas_rc_vehiculos").select("poliza_id").ilike("placa", `%${q}%`),
@@ -430,6 +423,9 @@ export async function obtenerPolizas(params: ObtenerPolizasParams = {}) {
 				...(natRes.data?.map((r) => r.client_id) ?? []),
 				...(jurRes.data?.map((r) => r.client_id) ?? []),
 				...(uniRes.data?.map((r) => r.client_id) ?? []),
+				...(ongRes.data?.map((r) => r.client_id) ?? []),
+				...(clubRes.data?.map((r) => r.client_id) ?? []),
+				...(asocRes.data?.map((r) => r.client_id) ?? []),
 			];
 			// El join embebido devuelve `anexo` como objeto { poliza_id } (relación a-uno).
 			type AnexoPolizaRef = { anexo: { poliza_id: string } | null };
@@ -484,9 +480,8 @@ export async function obtenerPolizas(params: ObtenerPolizasParams = {}) {
 		if (responsable_id) query = query.eq("responsable_id", responsable_id);
 		if (categoria_id) query = query.eq("categoria_id", categoria_id);
 
-		if (search?.trim()) {
-			const sq = search.trim().substring(0, 100);
-			const orParts = [`numero_poliza.ilike.%${sq}%`];
+		if (palabras.length > 0) {
+			const orParts = [`numero_poliza.ilike.%${q}%`];
 			if (searchClientIds.length > 0) orParts.push(`client_id.in.(${searchClientIds.join(",")})`);
 			if (searchPolizaIds.length > 0) orParts.push(`id.in.(${searchPolizaIds.join(",")})`);
 			query = query.or(orParts.join(","));
@@ -501,9 +496,9 @@ export async function obtenerPolizas(params: ObtenerPolizasParams = {}) {
 
 		if (!polizas?.length) return { success: true, polizas: [], total: count ?? 0 };
 
-		// Obtener info de clientes solo para la página actual
+		// Obtener info de clientes solo para la página actual (todos los tipos)
 		const clientIds = [...new Set(polizas.map((p) => p.client_id))];
-		const [{ data: clients }, { data: naturalClients }, { data: juridicClients }, { data: unipersonalClients }] =
+		const [clientsRes, natInfoRes, jurInfoRes, uniInfoRes, ongInfoRes, clubInfoRes, asocInfoRes] =
 			await Promise.all([
 				supabase.from("clients").select("id, client_type").in("id", clientIds),
 				supabase
@@ -514,31 +509,73 @@ export async function obtenerPolizas(params: ObtenerPolizasParams = {}) {
 					.in("client_id", clientIds),
 				supabase.from("juridic_clients").select("client_id, razon_social, nit").in("client_id", clientIds),
 				supabase.from("unipersonal_clients").select("client_id, razon_social, nit").in("client_id", clientIds),
+				supabase.from("ong_clients").select("client_id, nombre_ong, nit").in("client_id", clientIds),
+				supabase.from("club_clients").select("client_id, nombre_club, nit").in("client_id", clientIds),
+				supabase
+					.from("asociacion_civil_clients")
+					.select("client_id, nombre_asociacion, nit")
+					.in("client_id", clientIds),
 			]);
 
-		const clientsMap = new Map(clients?.map((c) => [c.id, c]) ?? []);
-		const naturalClientsMap = new Map(naturalClients?.map((c) => [c.client_id, c]) ?? []);
-		const juridicClientsMap = new Map(juridicClients?.map((c) => [c.client_id, c]) ?? []);
-		const unipersonalClientsMap = new Map(unipersonalClients?.map((c) => [c.client_id, c]) ?? []);
+		const porClientId = <T extends { client_id: string }>(rows: T[] | null) =>
+			new Map((rows ?? []).map((r) => [r.client_id, r]));
+		const naturalClientsMap = porClientId(natInfoRes.data);
+		const juridicClientsMap = porClientId(jurInfoRes.data);
+		const unipersonalClientsMap = porClientId(uniInfoRes.data);
+		const ongClientsMap = porClientId(ongInfoRes.data);
+		const clubClientsMap = porClientId(clubInfoRes.data);
+		const asocClientsMap = porClientId(asocInfoRes.data);
+
+		// Resolver nombre/documento según el tipo de cliente
+		const clientInfoMap = new Map<string, { name: string; ci: string }>();
+		for (const c of clientsRes.data ?? []) {
+			let name = "Cliente Desconocido";
+			let ci = "-";
+			if (c.client_type === "natural" || c.client_type === "unipersonal") {
+				const nc = naturalClientsMap.get(c.id);
+				if (nc) {
+					name = [nc.primer_nombre, nc.segundo_nombre, nc.primer_apellido, nc.segundo_apellido]
+						.filter(Boolean)
+						.join(" ");
+					ci = nc.numero_documento || "-";
+				}
+				if (c.client_type === "unipersonal") {
+					const uni = unipersonalClientsMap.get(c.id);
+					if (uni) {
+						name = `${name} (${uni.razon_social})`;
+						ci = uni.nit || ci;
+					}
+				}
+			} else if (c.client_type === "juridica") {
+				const jc = juridicClientsMap.get(c.id);
+				if (jc) {
+					name = jc.razon_social;
+					ci = jc.nit || "-";
+				}
+			} else if (c.client_type === "ong") {
+				const oc = ongClientsMap.get(c.id);
+				if (oc) {
+					name = oc.nombre_ong;
+					ci = oc.nit || "-";
+				}
+			} else if (c.client_type === "club") {
+				const cc = clubClientsMap.get(c.id);
+				if (cc) {
+					name = cc.nombre_club;
+					ci = cc.nit || "-";
+				}
+			} else if (c.client_type === "asociacion_civil") {
+				const ac = asocClientsMap.get(c.id);
+				if (ac) {
+					name = ac.nombre_asociacion;
+					ci = ac.nit || "-";
+				}
+			}
+			clientInfoMap.set(c.id, { name, ci });
+		}
 
 		const polizasFormateadas = polizas.map((p) =>
-			mapPolizaToListItem(
-				p as Parameters<typeof mapPolizaToListItem>[0],
-				clientsMap as Map<string, { id: string; client_type: string }>,
-				naturalClientsMap as Map<
-					string,
-					{
-						client_id: string;
-						primer_nombre: string;
-						segundo_nombre: string;
-						primer_apellido: string;
-						segundo_apellido: string;
-						numero_documento: string;
-					}
-				>,
-				juridicClientsMap as Map<string, { client_id: string; razon_social: string; nit: string }>,
-				unipersonalClientsMap as Map<string, { client_id: string; razon_social: string; nit: string }>,
-			),
+			mapPolizaToListItem(p as Parameters<typeof mapPolizaToListItem>[0], clientInfoMap),
 		);
 
 		return { success: true, polizas: polizasFormateadas, total: count ?? 0 };
