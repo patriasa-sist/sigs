@@ -66,7 +66,7 @@ Buscar asegurado → Datos básicos → Datos específicos del ramo → Modalida
 
 - Bucket de Storage: `polizas-documentos`.
 - Subida SIEMPRE client-side a `temp/` (los Server Actions están limitados a 2MB y solo reciben metadatos); el action registra/mueve el archivo.
-- Límite: 20MB por archivo. Formatos: PDF, JPG, PNG, DOC, DOCX, MSG, EML.
+- Límite: 20MB por archivo. Formatos: PDF, JPG, PNG (el bucket `polizas-documentos` solo admite `image/*` y `application/pdf`; la subida pasa `contentType` con fallback por extensión para PDFs sin MIME detectado).
 - Tipos de documento: Póliza (obligatorio para avanzar), Plan de pago CLIENTE, Plan de pago BROKER, Condicionado general, Otro.
 - Soft delete: campo `estado` activo/descartado — comercial solo descarta; admin restaura o elimina físicamente (`docs/SOFT_DELETE_DOCUMENTOS.md`).
 

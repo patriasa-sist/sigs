@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useRef, useMemo } from "react";
-import { useDropzone } from "react-dropzone";
+import { useDropzone, type FileRejection } from "react-dropzone";
 import { ChevronRight, ChevronLeft, CheckCircle2, Upload, FileText, X, AlertCircle, Loader2 } from "lucide-react";
 import type { DocumentoPoliza } from "@/types/poliza";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { createClient } from "@/utils/supabase/client";
-import { generateTempStoragePath } from "@/utils/fileUpload";
+import { generateTempStoragePath, inferirContentType } from "@/utils/fileUpload";
 import { DOCUMENTOS_OBLIGATORIOS } from "@/utils/validationConstants";
 
 type Props = {
@@ -46,24 +46,16 @@ export function CargarDocumentos({ documentos, onChange, onSiguiente, onAnterior
 			return `El archivo excede el tamaño máximo de 20MB`;
 		}
 
-		// Validar tipo de archivo (incluye .msg y .eml)
-		const tiposPermitidos = [
-			"application/pdf",
-			"image/jpeg",
-			"image/jpg",
-			"image/png",
-			"application/msword",
-			"application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-			"application/vnd.ms-outlook", // .msg
-			"message/rfc822", // .eml
-		];
+		// Validar tipo de archivo (el bucket de Storage solo admite PDF e imágenes)
+		const tiposPermitidos = ["application/pdf", "image/jpeg", "image/jpg", "image/png"];
 
-		// Para .msg y .eml, el navegador puede no detectar el tipo correcto, validar por extensión
+		// El navegador a veces reporta file.type vacío (escaneos, archivos de correo),
+		// así que validamos también por extensión.
 		const extension = file.name.split(".").pop()?.toLowerCase();
-		const extensionesPermitidas = ["pdf", "jpg", "jpeg", "png", "doc", "docx", "msg", "eml"];
+		const extensionesPermitidas = ["pdf", "jpg", "jpeg", "png"];
 
 		if (!tiposPermitidos.includes(file.type) && !extensionesPermitidas.includes(extension || "")) {
-			return "Tipo de archivo no permitido. Solo se permiten PDF, JPG, PNG, DOC, DOCX, MSG, EML";
+			return "Tipo de archivo no permitido. Solo se permiten PDF, JPG y PNG";
 		}
 
 		return null;
@@ -83,7 +75,13 @@ export function CargarDocumentos({ documentos, onChange, onSiguiente, onAnterior
 
 		const storagePath = generateTempStoragePath(userId, sessionIdRef.current, file.name);
 
-		const { error: uploadError } = await supabase.storage.from(BUCKET).upload(storagePath, file, {
+		// El bucket valida el content-type. supabase-js, al subir un File/Blob, toma el tipo
+		// del propio Blob (ignora la opción contentType), así que si el navegador no detectó el
+		// MIME (file.type vacío en escaneos/correos) re-envolvemos el archivo con el tipo
+		// inferido por extensión para que un PDF/imagen válido no se rechace como octet-stream.
+		const archivoParaSubir = file.type ? file : new File([file], file.name, { type: inferirContentType(file) });
+
+		const { error: uploadError } = await supabase.storage.from(BUCKET).upload(storagePath, archivoParaSubir, {
 			cacheControl: "3600",
 			upsert: false,
 		});
@@ -110,7 +108,7 @@ export function CargarDocumentos({ documentos, onChange, onSiguiente, onAnterior
 
 	// Handle file drop con react-dropzone
 	const onDrop = useCallback(
-		async (acceptedFiles: File[]) => {
+		async (acceptedFiles: File[], fileRejections: FileRejection[]) => {
 			setError(null);
 
 			if (!tipoSeleccionado) {
@@ -119,7 +117,21 @@ export function CargarDocumentos({ documentos, onChange, onSiguiente, onAnterior
 			}
 
 			if (acceptedFiles.length === 0) {
-				setError("No se seleccionaron archivos válidos");
+				// Mostrar el motivo real del rechazo en lugar de un mensaje genérico
+				if (fileRejections.length > 0) {
+					const motivos = fileRejections.map((rej) => {
+						if (rej.errors.some((e) => e.code === "file-too-large")) {
+							return `"${rej.file.name}" supera el máximo de 20MB`;
+						}
+						if (rej.errors.some((e) => e.code === "file-invalid-type")) {
+							return `"${rej.file.name}" no es un tipo permitido (solo PDF, JPG, PNG)`;
+						}
+						return `"${rej.file.name}" no se pudo procesar`;
+					});
+					setError(motivos.join(". "));
+				} else {
+					setError("No se seleccionaron archivos válidos");
+				}
 				return;
 			}
 
@@ -195,10 +207,6 @@ export function CargarDocumentos({ documentos, onChange, onSiguiente, onAnterior
 			"application/pdf": [".pdf"],
 			"image/jpeg": [".jpg", ".jpeg"],
 			"image/png": [".png"],
-			"application/msword": [".doc"],
-			"application/vnd.openxmlformats-officedocument.wordprocessingml.document": [".docx"],
-			"application/vnd.ms-outlook": [".msg"],
-			"message/rfc822": [".eml"],
 		},
 		maxSize: 20 * 1024 * 1024, // 20MB
 		multiple: true,
@@ -325,9 +333,7 @@ export function CargarDocumentos({ documentos, onChange, onSiguiente, onAnterior
 							<p className="text-sm text-muted-foreground mb-1">
 								Arrastre archivos aquí o haga clic para seleccionar
 							</p>
-							<p className="text-xs text-muted-foreground">
-								PDF, JPG, PNG, DOC, DOCX, MSG, EML (máx. 20MB por archivo)
-							</p>
+							<p className="text-xs text-muted-foreground">PDF, JPG, PNG (máx. 20MB por archivo)</p>
 						</>
 					)}
 				</div>

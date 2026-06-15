@@ -45,3 +45,29 @@ export function generateFinalStoragePath(polizaId: string, fileName: string): st
 	const timestamp = Date.now();
 	return `${polizaId}/${timestamp}-${sanitized}`;
 }
+
+/**
+ * Infiere el content-type de un archivo a partir de su extensión cuando el navegador
+ * no lo detecta (file.type vacío en escaneos, archivos de correo o equipos con la
+ * asociación de archivos rota).
+ *
+ * Necesario porque supabase-js, al subir un File/Blob, toma el content-type del propio
+ * Blob e IGNORA la opción `contentType`; un MIME vacío sube como `application/octet-stream`
+ * y un bucket con `allowed_mime_types` lo rechaza (incluso un PDF válido). En el sitio de
+ * subida, re-envolver con `new File([file], file.name, { type: inferirContentType(file) })`.
+ */
+export function inferirContentType(file: File): string {
+	if (file.type) return file.type;
+	const ext = file.name.split(".").pop()?.toLowerCase();
+	switch (ext) {
+		case "pdf":
+			return "application/pdf";
+		case "jpg":
+		case "jpeg":
+			return "image/jpeg";
+		case "png":
+			return "image/png";
+		default:
+			return "application/octet-stream";
+	}
+}

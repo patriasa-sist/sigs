@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { createClient } from "@/utils/supabase/client";
-import { generateTempStoragePath } from "@/utils/fileUpload";
+import { generateTempStoragePath, inferirContentType } from "@/utils/fileUpload";
 import type {
 	CuotaAjuste,
 	CuotaOriginalInfo,
@@ -492,7 +492,16 @@ export function PagosYDocumentos({
 				try {
 					const storagePath = generateTempStoragePath(userId, sessionIdRef.current, file.name);
 
-					const { error: uploadError } = await supabase.storage.from(BUCKET).upload(storagePath, file);
+					// Re-envolver si el navegador no detectó el MIME (file.type vacío) para que el
+					// bucket no rechace un PDF/imagen válido como octet-stream (supabase-js ignora la
+					// opción contentType al subir un File/Blob).
+					const archivoParaSubir = file.type
+						? file
+						: new File([file], file.name, { type: inferirContentType(file) });
+
+					const { error: uploadError } = await supabase.storage
+						.from(BUCKET)
+						.upload(storagePath, archivoParaSubir);
 
 					if (uploadError) {
 						onChangeDocumentos((prev) =>

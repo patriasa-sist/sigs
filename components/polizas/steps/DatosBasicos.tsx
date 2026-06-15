@@ -463,8 +463,9 @@ export function DatosBasicos({ datos, onChange, onSiguiente, onAnterior }: Props
 					<Input
 						id="numero_poliza"
 						value={formData.numero_poliza}
-						onChange={(e) => handleChange("numero_poliza", e.target.value)}
+						onChange={(e) => handleChange("numero_poliza", e.target.value.slice(0, 30))}
 						placeholder="Ej: POL-2024-001"
+						maxLength={30}
 						className={errores.numero_poliza ? "border-destructive" : ""}
 					/>
 					{errores.numero_poliza && <p className="text-sm text-destructive">{errores.numero_poliza}</p>}

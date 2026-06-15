@@ -91,6 +91,8 @@ export function validarDatosBasicos(datos: Partial<DatosBasicosPoliza>): Validat
 	// Validar número de póliza
 	if (!datos.numero_poliza || datos.numero_poliza.trim() === "") {
 		errores.push({ campo: "numero_poliza", mensaje: "Número de póliza es requerido" });
+	} else if (datos.numero_poliza.trim().length > 30) {
+		errores.push({ campo: "numero_poliza", mensaje: "Número de póliza no puede exceder 30 caracteres" });
 	}
 
 	// Validar compañía aseguradora
