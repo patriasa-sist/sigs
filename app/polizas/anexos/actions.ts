@@ -16,6 +16,7 @@ import type {
 	PlanPagoInclusion,
 	AnexoItemChange,
 	CuotaAjuste,
+	MotivoErrorEdicionAnexo,
 } from "@/types/anexo";
 import type {
 	VehiculoAutomotor,
@@ -2015,12 +2016,26 @@ async function cargarItemsCambioAnexo(
  * AnexoFormState para el formulario de edición, junto con los datos de la
  * póliza madre.
  */
+/**
+ * Clasifica el motivo por el que no se pudo abrir un anexo para edición, para
+ * que la UI muestre el mensaje y la ayuda correctos (un fallo de permiso pide
+ * contactar al admin/líder; un fallo de estado de la póliza/anexo no).
+ */
+function clasificarErrorEdicionAnexo(message: string): MotivoErrorEdicionAnexo {
+	const m = message.toLowerCase();
+	if (m.includes("permiso")) return "permiso";
+	if (m.includes("no encontrad") || m.includes("no autenticado")) return "no_encontrado";
+	if (m.includes("activa") || m.includes("estado editable")) return "estado";
+	return "generico";
+}
+
 export async function obtenerAnexoParaEdicion(anexoId: string): Promise<{
 	success: boolean;
 	formState?: AnexoFormState;
 	datosPoliza?: DatosPolizaParaAnexo;
 	estadoAnexo?: "pendiente" | "rechazado" | "activo";
 	error?: string;
+	errorKind?: MotivoErrorEdicionAnexo;
 }> {
 	try {
 		const { supabase, anexo } = await verifyAnexoEditPermission(anexoId);
@@ -2033,7 +2048,17 @@ export async function obtenerAnexoParaEdicion(anexoId: string): Promise<{
 			excluirAnexoId: anexoId,
 		});
 		if (!datosResult.success || !datosResult.datos) {
-			return { success: false, error: datosResult.error || "No se pudieron cargar los datos de la póliza" };
+			// La póliza madre dejó de estar activa (o no se encontró): no es un
+			// problema de permisos del usuario. Reformulamos en clave de edición
+			// porque el mensaje base de `obtenerDatosParaAnexo` habla de "crear".
+			const esEstado = (datosResult.error || "").toLowerCase().includes("activa");
+			return {
+				success: false,
+				error: esEstado
+					? "La póliza de este anexo ya no está activa; solo se pueden editar anexos de pólizas activas."
+					: datosResult.error || "No se pudieron cargar los datos de la póliza",
+				errorKind: clasificarErrorEdicionAnexo(datosResult.error || ""),
+			};
 		}
 		const datosPoliza = datosResult.datos;
 
@@ -2133,7 +2158,8 @@ export async function obtenerAnexoParaEdicion(anexoId: string): Promise<{
 		return { success: true, formState, datosPoliza, estadoAnexo: anexo.estado };
 	} catch (error) {
 		console.error("Error cargando anexo para edición:", error);
-		return { success: false, error: error instanceof Error ? error.message : "Error desconocido" };
+		const message = error instanceof Error ? error.message : "Error desconocido";
+		return { success: false, error: message, errorKind: clasificarErrorEdicionAnexo(message) };
 	}
 }
 

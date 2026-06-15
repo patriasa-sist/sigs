@@ -14,6 +14,11 @@ import type {
 	Moneda,
 } from "./poliza";
 
+// Motivo por el que un anexo no se pudo abrir para edición, para que la UI
+// muestre el mensaje y la ayuda correctos (solo "permiso" pide contactar al
+// admin/líder de equipo).
+export type MotivoErrorEdicionAnexo = "permiso" | "estado" | "no_encontrado" | "generico";
+
 // ============================================
 // TIPOS BASE
 // ============================================
