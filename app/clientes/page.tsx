@@ -95,9 +95,11 @@ function ClientesContent() {
 					console.error("Error loading clients:", result.error, result.details);
 				}
 			} catch (err) {
-				const msg = err instanceof Error ? err.message : "Error desconocido";
-				setError(msg);
+				// El server action lanzó (típicamente fallo de red / conexión).
 				console.error("Unexpected error loading clients:", err);
+				setError(
+					"No se pudo conectar con el servidor para cargar los clientes. Revisa tu conexión a internet e inténtalo de nuevo.",
+				);
 			} finally {
 				setIsLoading(false);
 			}
@@ -122,12 +124,15 @@ function ClientesContent() {
 				setIsSearchMode(true);
 				setTotalRecords(result.data.length);
 			} else {
-				console.error("Search error:", result.error);
-				setError("Error al buscar clientes");
+				console.error("Search error:", result.error, result.details);
+				setError(result.error || "No se pudo completar la búsqueda de clientes");
 			}
 		} catch (err) {
+			// El server action lanzó (típicamente fallo de red / conexión).
 			console.error("Unexpected search error:", err);
-			setError("Error inesperado al buscar");
+			setError(
+				"No se pudo conectar con el servidor para buscar. Revisa tu conexión a internet e inténtalo de nuevo.",
+			);
 		} finally {
 			setIsLoading(false);
 			setCurrentPage(1);
