@@ -249,19 +249,42 @@ export async function cargarPolizaFormState(
 				cuota_id: pago?.id,
 				cuota_pagada: pago?.estado === "pagado",
 			};
+		} else if (!pagos || pagos.length === 0) {
+			// Crédito sin cuotas. Solo es válido en carga retroactiva (histórica),
+			// donde las validaciones de pago se relajan y la póliza pudo guardarse
+			// sin plan; reconstruimos una modalidad de crédito vacía editable.
+			// Para una póliza normal a crédito, no tener cuotas es dato corrupto.
+			if (!poliza.es_retroactiva) {
+				throw new Error(
+					"Esta póliza a crédito no tiene cuotas de pago registradas. " +
+						"Es un dato inconsistente: contacta a un administrador para revisar la póliza.",
+				);
+			}
+			modalidad_pago = {
+				tipo: "credito",
+				prima_total: poliza.prima_total,
+				moneda: poliza.moneda,
+				cantidad_cuotas: 0,
+				cuota_inicial: 0,
+				fecha_inicio_cuotas: poliza.inicio_vigencia,
+				periodo_pago: "mensual",
+				cuotas: [],
+				prima_neta: poliza.prima_neta,
+				comision: poliza.comision,
+				prima_neta_manual: poliza.prima_neta_manual || undefined,
+				prima_neta_ajuste_motivo: poliza.prima_neta_ajuste_motivo || undefined,
+				usar_factores_contado: poliza.usar_factores_contado || false,
+				tiene_pagos: false,
+			};
 		} else {
 			// Credito
-			const cuotaInicial = pagos?.find((p) => p.observaciones?.toLowerCase().includes("inicial"));
-			const cuotasRestantes = pagos?.filter((p) => !p.observaciones?.toLowerCase().includes("inicial")) || [];
-
-			if (!pagos || pagos.length === 0) {
-				throw new Error("No se encontraron cuotas de pago para esta póliza a crédito");
-			}
+			const cuotaInicial = pagos.find((p) => p.observaciones?.toLowerCase().includes("inicial"));
+			const cuotasRestantes = pagos.filter((p) => !p.observaciones?.toLowerCase().includes("inicial"));
 
 			// fecha_inicio_cuotas debe ser la fecha de la primera cuota (inicial si existe, sino la primera regular)
 			const fechaInicioCuotas = cuotaInicial
 				? cuotaInicial.fecha_vencimiento
-				: cuotasRestantes[0].fecha_vencimiento;
+				: cuotasRestantes[0]?.fecha_vencimiento || poliza.inicio_vigencia;
 
 			modalidad_pago = {
 				tipo: "credito",
