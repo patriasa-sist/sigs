@@ -280,6 +280,7 @@ export type CuotaAnexoPropia = {
 	numero_cuota: number;
 	monto: number;
 	fecha_vencimiento: string;
+	fecha_vencimiento_original?: string | null; // Fecha original antes de prórrogas
 	estado: string;
 	observaciones?: string;
 };

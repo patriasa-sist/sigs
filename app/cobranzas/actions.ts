@@ -1116,7 +1116,7 @@ export async function obtenerDetallePolizaParaCuotas(polizaId: string): Promise<
 			.from("polizas_anexos_pagos")
 			.select(
 				`
-				id, anexo_id, numero_cuota, monto, fecha_vencimiento, estado, observaciones,
+				id, anexo_id, numero_cuota, monto, fecha_vencimiento, fecha_vencimiento_original, estado, observaciones,
 				polizas_anexos!inner (id, numero_anexo, estado)
 			`,
 			)
@@ -1135,6 +1135,7 @@ export async function obtenerDetallePolizaParaCuotas(polizaId: string): Promise<
 						numero_cuota: p.numero_cuota ?? 0,
 						monto: Number(p.monto),
 						fecha_vencimiento: p.fecha_vencimiento || "",
+						fecha_vencimiento_original: p.fecha_vencimiento_original || null,
 						estado:
 							(p.estado || "pendiente") === "pendiente" &&
 							p.fecha_vencimiento &&
@@ -1547,6 +1548,74 @@ export async function registrarProrroga(registro: RegistroProrroga): Promise<Reg
 		};
 	} catch (error) {
 		console.error("Error registering prórroga:", error);
+		return {
+			success: false,
+			error: error instanceof Error ? error.message : "Error desconocido",
+		};
+	}
+}
+
+/**
+ * Registrar una prórroga sobre una cuota de ANEXO (polizas_anexos_pagos).
+ * Espejo de registrarProrroga() pero contra el RPC registrar_prorroga_cuota_anexo.
+ */
+export async function registrarProrrogaAnexo(registro: RegistroProrroga): Promise<RegistrarProrrogaResponse> {
+	try {
+		const supabase = await createClient();
+
+		const {
+			data: { user },
+		} = await supabase.auth.getUser();
+		if (!user) {
+			return { success: false, error: "No autenticado" };
+		}
+
+		if (!registro.cuota_id || !registro.nueva_fecha) {
+			return { success: false, error: "Datos incompletos para registrar prórroga" };
+		}
+
+		const nuevaFecha = new Date(registro.nueva_fecha);
+		const hoy = new Date();
+		hoy.setHours(0, 0, 0, 0);
+
+		if (nuevaFecha <= hoy) {
+			return { success: false, error: "La nueva fecha debe ser futura" };
+		}
+
+		const { data, error } = await supabase.rpc("registrar_prorroga_cuota_anexo", {
+			p_cuota_id: registro.cuota_id,
+			p_nueva_fecha: registro.nueva_fecha,
+			p_usuario_id: user.id,
+			p_motivo: registro.motivo || null,
+		});
+
+		if (error) {
+			console.error("Error calling registrar_prorroga_cuota_anexo:", error);
+			return { success: false, error: error.message };
+		}
+
+		const { data: cuotaActualizada } = await supabase
+			.from("polizas_anexos_pagos")
+			.select("prorrogas_historial")
+			.eq("id", registro.cuota_id)
+			.single();
+
+		const totalProrrogas = Array.isArray(cuotaActualizada?.prorrogas_historial)
+			? cuotaActualizada.prorrogas_historial.length
+			: 0;
+
+		revalidatePath("/cobranzas");
+
+		return {
+			success: true,
+			data: {
+				prorroga: data,
+				nueva_fecha_vencimiento: registro.nueva_fecha,
+				total_prorrogas: totalProrrogas,
+			},
+		};
+	} catch (error) {
+		console.error("Error registering prórroga de anexo:", error);
 		return {
 			success: false,
 			error: error instanceof Error ? error.message : "Error desconocido",

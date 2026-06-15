@@ -8,14 +8,24 @@ import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { CalendarIcon, CalendarClock } from "lucide-react";
-import { registrarProrroga } from "@/app/cobranzas/actions";
-import type { CuotaPago, PolizaConPagos } from "@/types/cobranza";
+import { registrarProrroga, registrarProrrogaAnexo } from "@/app/cobranzas/actions";
+import type { PolizaConPagos } from "@/types/cobranza";
 import { formatearFecha } from "@/utils/cobranza";
 import { cn } from "@/lib/utils";
 
+/** Forma mínima requerida para prorrogar una cuota (de póliza o de anexo). */
+export type CuotaProrrogable = {
+	id: string;
+	numero_cuota: number;
+	monto: number;
+	fecha_vencimiento: string;
+};
+
 interface RegistrarProrrogaModalProps {
-	cuota: CuotaPago | null;
+	cuota: CuotaProrrogable | null;
 	poliza: PolizaConPagos | null;
+	/** true cuando la cuota pertenece a un anexo (polizas_anexos_pagos). */
+	esAnexo?: boolean;
 	open: boolean;
 	onClose: () => void;
 	onSuccess: () => void;
@@ -24,6 +34,7 @@ interface RegistrarProrrogaModalProps {
 export default function RegistrarProrrogaModal({
 	cuota,
 	poliza,
+	esAnexo = false,
 	open,
 	onClose,
 	onSuccess,
@@ -70,11 +81,12 @@ export default function RegistrarProrrogaModal({
 		setLoading(true);
 
 		try {
-			const response = await registrarProrroga({
+			const payload = {
 				cuota_id: cuota.id,
 				nueva_fecha: nuevaFecha.toISOString().split("T")[0],
 				motivo: motivo.trim() || undefined,
-			});
+			};
+			const response = esAnexo ? await registrarProrrogaAnexo(payload) : await registrarProrroga(payload);
 
 			if (response.success) {
 				onSuccess();
