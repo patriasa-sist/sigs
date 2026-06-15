@@ -15,6 +15,7 @@ import {
 	UserCircle,
 	Settings,
 	Trash2,
+	Undo2,
 } from "lucide-react";
 
 const adminSections = [
@@ -118,6 +119,12 @@ const adminSections = [
 				icon: Trash2,
 				label: "Eliminar Anexos",
 				description: "Revertir anexos creados por error (reactiva la póliza si era una anulación)",
+			},
+			{
+				href: "/admin/pagos",
+				icon: Undo2,
+				label: "Revertir Pagos",
+				description: "Borrar el pago de una cuota registrado por error (abonos, comprobantes y notas)",
 			},
 		],
 	},
