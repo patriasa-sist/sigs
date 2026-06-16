@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback, memo } from "react";
 import {
 	ChevronRight,
 	ChevronLeft,
@@ -38,6 +38,75 @@ type Props = {
 	onSiguiente: () => void;
 	onAnterior: () => void;
 };
+
+const FORMATO_MONEDA = { minimumFractionDigits: 2, maximumFractionDigits: 2 } as const;
+
+type VehiculoRowProps = {
+	vehiculo: VehiculoAutomotor;
+	index: number;
+	tipoNombre: string;
+	marcaNombre: string;
+	onEditar: (vehiculo: VehiculoAutomotor, index: number) => void;
+	onEliminar: (index: number) => void;
+};
+
+/**
+ * Fila de vehículo memoizada: recibe los nombres ya resueltos como strings y
+ * handlers estables, de modo que escribir en otros campos del paso (o cargar
+ * cientos de vehículos) no obliga a repintar todas las filas.
+ */
+const VehiculoRow = memo(function VehiculoRow({
+	vehiculo,
+	index,
+	tipoNombre,
+	marcaNombre,
+	onEditar,
+	onEliminar,
+}: VehiculoRowProps) {
+	const marcaModelo = [marcaNombre, vehiculo.modelo].filter(Boolean).join(" ") || "-";
+
+	return (
+		<tr className="hover:bg-muted/50">
+			<td className="px-2.5 py-1.5 font-medium text-foreground whitespace-nowrap">{vehiculo.placa}</td>
+			<td className="px-2.5 py-1.5 text-muted-foreground">{tipoNombre}</td>
+			<td className="px-2.5 py-1.5 text-muted-foreground">{marcaModelo}</td>
+			<td className="px-2.5 py-1.5 text-muted-foreground text-right">{vehiculo.ano || "-"}</td>
+			<td className="px-2.5 py-1.5 text-foreground text-right whitespace-nowrap">
+				{vehiculo.valor_asegurado.toLocaleString("es-BO", FORMATO_MONEDA)}
+			</td>
+			<td className="px-2.5 py-1.5 text-foreground text-right whitespace-nowrap">
+				{vehiculo.franquicia.toLocaleString("es-BO", FORMATO_MONEDA)}
+			</td>
+			<td className="px-2.5 py-1.5 text-center">
+				<span
+					className={`inline-flex px-1.5 py-0.5 font-medium rounded-full ${
+						vehiculo.uso === "publico" ? "bg-info/15 text-info" : "bg-success/15 text-success"
+					}`}
+				>
+					{vehiculo.uso === "publico" ? "Público" : "Particular"}
+				</span>
+			</td>
+			<td className="px-2.5 py-1.5 text-right text-foreground whitespace-nowrap">
+				{vehiculo.coaseguro?.toLocaleString("es-BO", FORMATO_MONEDA)}%
+			</td>
+			<td className="px-2.5 py-1.5 text-center">
+				<div className="flex items-center justify-center gap-1">
+					<Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onEditar(vehiculo, index)}>
+						<Edit className="h-3.5 w-3.5" />
+					</Button>
+					<Button
+						variant="ghost"
+						size="icon"
+						className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+						onClick={() => onEliminar(index)}
+					>
+						<Trash2 className="h-3.5 w-3.5" />
+					</Button>
+				</div>
+			</td>
+		</tr>
+	);
+});
 
 export function AutomotorForm({ datos, onChange, onSiguiente, onAnterior }: Props) {
 	const [tipoPoliza, setTipoPoliza] = useState<"individual" | "corporativo">(datos?.tipo_poliza || "individual");
@@ -84,19 +153,10 @@ export function AutomotorForm({ datos, onChange, onSiguiente, onAnterior }: Prop
 		}
 	};
 
-	// Función para obtener el nombre del tipo de vehículo por ID
-	const obtenerNombreTipo = (id?: string): string => {
-		if (!id) return "-";
-		const tipo = tiposVehiculo.find((t) => t.id === id);
-		return tipo ? tipo.nombre : id; // Fallback al ID si no se encuentra
-	};
-
-	// Función para obtener el nombre de la marca por ID
-	const obtenerNombreMarca = (id?: string): string => {
-		if (!id) return "-";
-		const marca = marcas.find((m) => m.id === id);
-		return marca ? marca.nombre : id; // Fallback al ID si no se encuentra
-	};
+	// Mapas id → nombre para lookup O(1) en cada fila (en vez de .find() O(n) por celda,
+	// que con cientos de vehículos repintaba lentísimo en cada render).
+	const tiposMap = useMemo(() => new Map(tiposVehiculo.map((t) => [t.id, t.nombre])), [tiposVehiculo]);
+	const marcasMap = useMemo(() => new Map(marcas.map((m) => [m.id, m.nombre])), [marcas]);
 
 	// Agregar o editar vehículo
 	const handleGuardarVehiculo = (vehiculo: VehiculoAutomotor) => {
@@ -133,17 +193,17 @@ export function AutomotorForm({ datos, onChange, onSiguiente, onAnterior }: Prop
 		setModalAbierto(true);
 	};
 
-	// Abrir modal para editar
-	const handleEditar = (vehiculo: VehiculoAutomotor, index: number) => {
+	// Abrir modal para editar (estable para no romper la memoización de las filas)
+	const handleEditar = useCallback((vehiculo: VehiculoAutomotor, index: number) => {
 		setVehiculoEditando(vehiculo);
 		setIndexEditando(index);
 		setModalAbierto(true);
-	};
+	}, []);
 
 	// Eliminar vehículo (pide confirmación vía AlertDialog)
-	const handleEliminar = (index: number) => {
+	const handleEliminar = useCallback((index: number) => {
 		setVehiculoAEliminar(index);
-	};
+	}, []);
 
 	const confirmarEliminar = () => {
 		if (vehiculoAEliminar === null) return;
@@ -340,100 +400,55 @@ export function AutomotorForm({ datos, onChange, onSiguiente, onAnterior }: Prop
 				</div>
 			) : (
 				<div className="overflow-x-auto border rounded-lg mb-6">
-					<table className="w-full">
+					<table className="w-full text-xs">
 						<thead className="bg-muted/50">
 							<tr>
-								<th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+								<th className="px-2.5 py-2 text-left font-medium text-muted-foreground uppercase">
 									Placa
 								</th>
-								<th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+								<th className="px-2.5 py-2 text-left font-medium text-muted-foreground uppercase">
 									Tipo
 								</th>
-								<th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+								<th className="px-2.5 py-2 text-left font-medium text-muted-foreground uppercase">
 									Marca/Modelo
 								</th>
-								<th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+								<th className="px-2.5 py-2 text-right font-medium text-muted-foreground uppercase">
 									Año
 								</th>
-								<th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase">
-									Valor Asegurado
+								<th className="px-2.5 py-2 text-right font-medium text-muted-foreground uppercase">
+									Valor Aseg.
 								</th>
-								<th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase">
+								<th className="px-2.5 py-2 text-right font-medium text-muted-foreground uppercase">
 									Franquicia
 								</th>
-								<th className="px-4 py-3 text-center text-xs font-medium text-muted-foreground uppercase">
+								<th className="px-2.5 py-2 text-center font-medium text-muted-foreground uppercase">
 									Uso
 								</th>
-								<th className="px-4 py-3 text-center text-xs font-medium text-muted-foreground uppercase">
-									Coaseguro (%)
+								<th className="px-2.5 py-2 text-right font-medium text-muted-foreground uppercase">
+									Coas.
 								</th>
-								<th className="px-4 py-3 text-center text-xs font-medium text-muted-foreground uppercase">
+								<th className="px-2.5 py-2 text-center font-medium text-muted-foreground uppercase">
 									Acciones
 								</th>
 							</tr>
 						</thead>
 						<tbody className="divide-y">
 							{vehiculos.map((vehiculo, index) => (
-								<tr key={index} className="hover:bg-muted/50">
-									<td className="px-4 py-3 font-medium text-foreground">{vehiculo.placa}</td>
-									<td className="px-4 py-3 text-sm text-muted-foreground">
-										{obtenerNombreTipo(vehiculo.tipo_vehiculo_id)}
-									</td>
-									<td className="px-4 py-3 text-sm text-muted-foreground">
-										{obtenerNombreMarca(vehiculo.marca_id)}
-										{vehiculo.modelo ? ` ${vehiculo.modelo}` : ""}
-									</td>
-									<td className="px-4 py-3 text-sm text-muted-foreground">{vehiculo.ano || "-"}</td>
-									<td className="px-4 py-3 text-sm text-foreground text-right">
-										{vehiculo.valor_asegurado.toLocaleString("es-BO", {
-											minimumFractionDigits: 2,
-											maximumFractionDigits: 2,
-										})}
-									</td>
-									<td className="px-4 py-3 text-sm text-foreground text-right">
-										{vehiculo.franquicia.toLocaleString("es-BO", {
-											minimumFractionDigits: 2,
-											maximumFractionDigits: 2,
-										})}
-									</td>
-									<td className="px-4 py-3 text-center">
-										<span
-											className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-												vehiculo.uso === "publico"
-													? "bg-info/15 text-info"
-													: "bg-success/15 text-success"
-											}`}
-										>
-											{vehiculo.uso === "publico" ? "Público" : "Particular"}
-										</span>
-									</td>
-									<td className="px-4 py-3 text-center text-sm text-foreground">
-										{vehiculo.coaseguro?.toLocaleString("es-BO", {
-											minimumFractionDigits: 2,
-											maximumFractionDigits: 2,
-										})}
-										%
-									</td>
-									<td className="px-4 py-3 text-center">
-										<div className="flex items-center justify-center gap-2">
-											<Button
-												variant="ghost"
-												size="sm"
-												onClick={() => handleEditar(vehiculo, index)}
-											>
-												<Edit className="h-4 w-4" />
-											</Button>
-											<Button
-												variant="ghost"
-												size="sm"
-												onClick={() => handleEliminar(index)}
-												className="text-destructive hover:text-destructive hover:bg-destructive/10"
-											>
-												<Trash2 className="h-4 w-4" />
-											</Button>
-										</div>
-									</td>
-								</tr>
+								<VehiculoRow
+									key={index}
+									vehiculo={vehiculo}
+									index={index}
+									tipoNombre={
+										vehiculo.tipo_vehiculo_id
+											? (tiposMap.get(vehiculo.tipo_vehiculo_id) ?? vehiculo.tipo_vehiculo_id)
+											: "-"
+									}
+									marcaNombre={
+										vehiculo.marca_id ? (marcasMap.get(vehiculo.marca_id) ?? vehiculo.marca_id) : ""
+									}
+									onEditar={handleEditar}
+									onEliminar={handleEliminar}
+								/>
 							))}
 						</tbody>
 					</table>
