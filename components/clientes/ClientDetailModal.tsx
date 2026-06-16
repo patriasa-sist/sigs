@@ -17,6 +17,9 @@ import {
 	XCircle,
 	Loader2,
 	Shield,
+	Globe2,
+	Trophy,
+	Users2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -25,16 +28,39 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { getClientDetailsComplete, type ClienteDetalleCompleto } from "@/app/clientes/detail-actions";
 import { formatFileSize, getDocumentTypesForClientType, type ClienteDocumento } from "@/types/clienteDocumento";
-import type { NaturalClient, JuridicClient, UnipersonalClient } from "@/types/database/client";
+import type {
+	NaturalClient,
+	JuridicClient,
+	UnipersonalClient,
+	OngClient,
+	ClubClient,
+	AsociacionCivilClient,
+} from "@/types/database/client";
 import { checkEditPermission } from "@/app/clientes/permisos/actions";
-import { updateNaturalClient, updateJuridicClient, updateUnipersonalClient } from "@/app/clientes/editar/actions";
+import {
+	updateNaturalClient,
+	updateJuridicClient,
+	updateUnipersonalClient,
+	updateOngClient,
+	updateClubClient,
+	updateAsociacionCivilClient,
+} from "@/app/clientes/editar/actions";
 import { saveExtraPhones } from "@/app/clientes/celulares/actions";
 import { ClientPermissionsPanel } from "./ClientPermissionsPanel";
 import { ClienteDocumentUploadEdit } from "./ClienteDocumentUploadEdit";
 import { ClientAuditTrailPanel } from "./ClientAuditTrailPanel";
 import { StatusBadge } from "@/components/ui/status-badge";
 import type { PermissionCheckResult } from "@/types/clientPermission";
-import { CIVIL_STATUS, DOCUMENT_TYPES, GENDER_OPTIONS, COMPANY_TYPES, type ExtraPhone } from "@/types/clientForm";
+import {
+	CIVIL_STATUS,
+	DOCUMENT_TYPES,
+	GENDER_OPTIONS,
+	COMPANY_TYPES,
+	SPORTS_DISCIPLINES,
+	CLUB_REGISTRY_TYPES,
+	ASOCIACION_CIVIL_TYPES,
+	type ExtraPhone,
+} from "@/types/clientForm";
 import { ExtraPhonesInput } from "./ExtraPhonesInput";
 import { toast } from "sonner";
 
@@ -126,6 +152,9 @@ export function ClientDetailModal({ clientId, onClose }: Props) {
 				natural_data: clientResult.data.natural_data,
 				juridic_data: clientResult.data.juridic_data,
 				unipersonal_data: clientResult.data.unipersonal_data,
+				ong_data: clientResult.data.ong_data,
+				club_data: clientResult.data.club_data,
+				asociacion_civil_data: clientResult.data.asociacion_civil_data,
 				extra_phones: clientResult.data.extra_phones || [],
 			});
 		} else {
@@ -159,6 +188,9 @@ export function ClientDetailModal({ clientId, onClose }: Props) {
 				natural_data: client.natural_data,
 				juridic_data: client.juridic_data,
 				unipersonal_data: client.unipersonal_data,
+				ong_data: client.ong_data,
+				club_data: client.club_data,
+				asociacion_civil_data: client.asociacion_civil_data,
 				extra_phones: client.extra_phones || [],
 			});
 		}
@@ -189,6 +221,21 @@ export function ClientDetailModal({ clientId, onClose }: Props) {
 				...editData.natural_data,
 				...editData.unipersonal_data,
 			} as unknown as Parameters<typeof updateUnipersonalClient>[1]);
+		} else if (client.client_type === "ong" && editData.ong_data) {
+			result = await updateOngClient(
+				clientId,
+				editData.ong_data as unknown as Parameters<typeof updateOngClient>[1],
+			);
+		} else if (client.client_type === "club" && editData.club_data) {
+			result = await updateClubClient(
+				clientId,
+				editData.club_data as unknown as Parameters<typeof updateClubClient>[1],
+			);
+		} else if (client.client_type === "asociacion_civil" && editData.asociacion_civil_data) {
+			result = await updateAsociacionCivilClient(
+				clientId,
+				editData.asociacion_civil_data as unknown as Parameters<typeof updateAsociacionCivilClient>[1],
+			);
 		}
 
 		if (result?.success) {
@@ -243,6 +290,39 @@ export function ClientDetailModal({ clientId, onClose }: Props) {
 		}));
 	};
 
+	// Update ONG data field
+	const updateOngField = (field: keyof OngClient, value: unknown) => {
+		setEditData((prev) => ({
+			...prev,
+			ong_data: {
+				...prev.ong_data,
+				[field]: value,
+			} as OngClient,
+		}));
+	};
+
+	// Update club data field
+	const updateClubField = (field: keyof ClubClient, value: unknown) => {
+		setEditData((prev) => ({
+			...prev,
+			club_data: {
+				...prev.club_data,
+				[field]: value,
+			} as ClubClient,
+		}));
+	};
+
+	// Update asociación civil data field
+	const updateAsociacionCivilField = (field: keyof AsociacionCivilClient, value: unknown) => {
+		setEditData((prev) => ({
+			...prev,
+			asociacion_civil_data: {
+				...prev.asociacion_civil_data,
+				[field]: value,
+			} as AsociacionCivilClient,
+		}));
+	};
+
 	// Get client display name for permissions panel
 	const getClientName = (): string => {
 		if (!client) return "";
@@ -254,6 +334,15 @@ export function ClientDetailModal({ clientId, onClose }: Props) {
 		}
 		if (client.client_type === "unipersonal" && client.unipersonal_data) {
 			return client.unipersonal_data.razon_social;
+		}
+		if (client.client_type === "ong" && client.ong_data) {
+			return client.ong_data.nombre_ong;
+		}
+		if (client.client_type === "club" && client.club_data) {
+			return client.club_data.nombre_club;
+		}
+		if (client.client_type === "asociacion_civil" && client.asociacion_civil_data) {
+			return client.asociacion_civil_data.nombre_asociacion;
 		}
 		return "";
 	};
@@ -316,6 +405,12 @@ export function ClientDetailModal({ clientId, onClose }: Props) {
 					<div className="flex items-center gap-3">
 						{client.client_type === "natural" || client.client_type === "unipersonal" ? (
 							<User className="h-5 w-5 text-primary" />
+						) : client.client_type === "ong" ? (
+							<Globe2 className="h-5 w-5 text-primary" />
+						) : client.client_type === "club" ? (
+							<Trophy className="h-5 w-5 text-primary" />
+						) : client.client_type === "asociacion_civil" ? (
+							<Users2 className="h-5 w-5 text-primary" />
 						) : (
 							<Building2 className="h-5 w-5 text-primary" />
 						)}
@@ -328,7 +423,13 @@ export function ClientDetailModal({ clientId, onClose }: Props) {
 									? "Persona Natural"
 									: client.client_type === "unipersonal"
 										? "Unipersonal"
-										: "Persona Jurídica"}
+										: client.client_type === "ong"
+											? "ONG"
+											: client.client_type === "club"
+												? "Club Deportivo"
+												: client.client_type === "asociacion_civil"
+													? "Asociación Civil"
+													: "Persona Jurídica"}
 							</p>
 						</div>
 					</div>
@@ -444,6 +545,32 @@ export function ClientDetailModal({ clientId, onClose }: Props) {
 									onFieldChange={updateJuridicField}
 								/>
 							)}
+							{client.client_type === "ong" && (editData.ong_data || client.ong_data) && (
+								<OngClientGeneral
+									data={isEditMode ? (editData.ong_data as OngClient) : client.ong_data!}
+									isEditing={isEditMode}
+									onFieldChange={updateOngField}
+								/>
+							)}
+							{client.client_type === "club" && (editData.club_data || client.club_data) && (
+								<ClubClientGeneral
+									data={isEditMode ? (editData.club_data as ClubClient) : client.club_data!}
+									isEditing={isEditMode}
+									onFieldChange={updateClubField}
+								/>
+							)}
+							{client.client_type === "asociacion_civil" &&
+								(editData.asociacion_civil_data || client.asociacion_civil_data) && (
+									<AsociacionCivilClientGeneral
+										data={
+											isEditMode
+												? (editData.asociacion_civil_data as AsociacionCivilClient)
+												: client.asociacion_civil_data!
+										}
+										isEditing={isEditMode}
+										onFieldChange={updateAsociacionCivilField}
+									/>
+								)}
 						</TabsContent>
 
 						{/* CONTACTO TAB */}
@@ -455,6 +582,9 @@ export function ClientDetailModal({ clientId, onClose }: Props) {
 								onNaturalFieldChange={updateNaturalField}
 								onJuridicFieldChange={updateJuridicField}
 								onUnipersonalFieldChange={updateUnipersonalField}
+								onOngFieldChange={updateOngField}
+								onClubFieldChange={updateClubField}
+								onAsociacionFieldChange={updateAsociacionCivilField}
 								onExtraPhonesChange={(phones) =>
 									setEditData((prev) => ({ ...prev, extra_phones: phones }))
 								}
@@ -1011,6 +1141,405 @@ function JuridicClientGeneral({ data, isEditing = false, onFieldChange }: Juridi
 	);
 }
 
+// Etiquetas legibles para los enums de los tipos organizacionales
+const SPORTS_DISCIPLINE_LABELS: Record<string, string> = {
+	futbol: "Fútbol",
+	basquetbol: "Básquetbol",
+	voleibol: "Vóleibol",
+	tenis: "Tenis",
+	natacion: "Natación",
+	ciclismo: "Ciclismo",
+	multiple: "Múltiple",
+	otra: "Otra",
+};
+const CLUB_REGISTRY_LABELS: Record<string, string> = {
+	municipal: "Municipal",
+	gobernacion: "Gobernación",
+	viceministerio_de_deportes: "Viceministerio de Deportes",
+	otra: "Otra",
+};
+const ASOCIACION_TYPE_LABELS: Record<string, string> = {
+	sociedad_profesional: "Sociedad Profesional",
+	asociacion_gremial: "Asociación Gremial",
+	fundacion: "Fundación",
+	otra: "Otra",
+};
+
+// Campos de representante legal compartidos por ONG, Club y Asociación Civil
+type OrgRepFields = {
+	nombre_representante: string;
+	apellido_representante: string;
+	cargo_representante: string;
+	ci_representante: string;
+	extension_ci_representante: string | null;
+};
+
+function OrgRepresentativeEdit({
+	data,
+	onFieldChange,
+}: {
+	data: OrgRepFields;
+	onFieldChange: (field: string, value: unknown) => void;
+}) {
+	return (
+		<InfoSection title="Representante Legal" isEditing>
+			<div className="grid grid-cols-2 gap-4">
+				<div className="space-y-1">
+					<Label className="text-sm">Nombre *</Label>
+					<Input
+						value={data.nombre_representante || ""}
+						onChange={(e) => onFieldChange("nombre_representante", e.target.value.toUpperCase())}
+					/>
+				</div>
+				<div className="space-y-1">
+					<Label className="text-sm">Apellido *</Label>
+					<Input
+						value={data.apellido_representante || ""}
+						onChange={(e) => onFieldChange("apellido_representante", e.target.value.toUpperCase())}
+					/>
+				</div>
+				<div className="space-y-1">
+					<Label className="text-sm">Cargo *</Label>
+					<Input
+						value={data.cargo_representante || ""}
+						onChange={(e) => onFieldChange("cargo_representante", e.target.value.toUpperCase())}
+					/>
+				</div>
+				<div className="space-y-1">
+					<Label className="text-sm">CI *</Label>
+					<Input
+						value={data.ci_representante || ""}
+						onChange={(e) => onFieldChange("ci_representante", e.target.value.toUpperCase())}
+					/>
+				</div>
+				<div className="space-y-1">
+					<Label className="text-sm">Extensión CI</Label>
+					<Input
+						value={data.extension_ci_representante || ""}
+						onChange={(e) => onFieldChange("extension_ci_representante", e.target.value.toUpperCase())}
+						placeholder="Ej: SC, LP, etc."
+					/>
+				</div>
+			</div>
+		</InfoSection>
+	);
+}
+
+function OrgRepresentativeView({ data }: { data: OrgRepFields }) {
+	const extension = data.extension_ci_representante ? ` ${data.extension_ci_representante}` : "";
+	return (
+		<InfoSection title="Representante Legal">
+			<InfoRow
+				label="Nombre"
+				value={`${data.nombre_representante} ${data.apellido_representante || ""}`.trim()}
+			/>
+			<InfoRow label="Cargo" value={data.cargo_representante} />
+			<InfoRow label="CI" value={`${data.ci_representante}${extension}`} />
+		</InfoSection>
+	);
+}
+
+interface OngClientGeneralProps {
+	data: OngClient;
+	isEditing?: boolean;
+	onFieldChange?: (field: keyof OngClient, value: unknown) => void;
+}
+
+function OngClientGeneral({ data, isEditing = false, onFieldChange }: OngClientGeneralProps) {
+	if (isEditing) {
+		return (
+			<div className="space-y-6">
+				<InfoSection title="Datos de la ONG" isEditing>
+					<div className="grid grid-cols-2 gap-4">
+						<div className="space-y-1">
+							<Label className="text-sm">Nombre de la ONG *</Label>
+							<Input
+								value={data.nombre_ong || ""}
+								onChange={(e) => onFieldChange?.("nombre_ong", e.target.value.toUpperCase())}
+							/>
+						</div>
+						<div className="space-y-1">
+							<Label className="text-sm">Sigla</Label>
+							<Input
+								value={data.sigla || ""}
+								onChange={(e) => onFieldChange?.("sigla", e.target.value.toUpperCase())}
+							/>
+						</div>
+						<div className="space-y-1">
+							<Label className="text-sm">NIT</Label>
+							<Input
+								value={data.nit || ""}
+								onChange={(e) => onFieldChange?.("nit", e.target.value.toUpperCase())}
+							/>
+						</div>
+						<div className="space-y-1">
+							<Label className="text-sm">N° Registro VIPFE</Label>
+							<Input
+								value={data.numero_registro_vipfe || ""}
+								onChange={(e) => onFieldChange?.("numero_registro_vipfe", e.target.value.toUpperCase())}
+							/>
+						</div>
+						<div className="space-y-1">
+							<Label className="text-sm">País de Origen *</Label>
+							<Input
+								value={data.pais_origen || ""}
+								onChange={(e) => onFieldChange?.("pais_origen", e.target.value.toUpperCase())}
+							/>
+						</div>
+						<div className="space-y-1">
+							<Label className="text-sm">Actividad Principal</Label>
+							<Input
+								value={data.actividad_principal || ""}
+								onChange={(e) => onFieldChange?.("actividad_principal", e.target.value.toUpperCase())}
+							/>
+						</div>
+					</div>
+				</InfoSection>
+
+				<OrgRepresentativeEdit data={data} onFieldChange={onFieldChange as (f: string, v: unknown) => void} />
+			</div>
+		);
+	}
+
+	return (
+		<div className="space-y-6">
+			<InfoSection title="Datos de la ONG">
+				<InfoRow label="Nombre" value={data.nombre_ong} />
+				{data.sigla && <InfoRow label="Sigla" value={data.sigla} />}
+				{data.nit && <InfoRow label="NIT" value={data.nit} />}
+				{data.numero_registro_vipfe && <InfoRow label="N° Registro VIPFE" value={data.numero_registro_vipfe} />}
+				<InfoRow label="País de Origen" value={data.pais_origen} />
+				{data.actividad_principal && <InfoRow label="Actividad Principal" value={data.actividad_principal} />}
+			</InfoSection>
+
+			<OrgRepresentativeView data={data} />
+		</div>
+	);
+}
+
+interface ClubClientGeneralProps {
+	data: ClubClient;
+	isEditing?: boolean;
+	onFieldChange?: (field: keyof ClubClient, value: unknown) => void;
+}
+
+function ClubClientGeneral({ data, isEditing = false, onFieldChange }: ClubClientGeneralProps) {
+	if (isEditing) {
+		return (
+			<div className="space-y-6">
+				<InfoSection title="Datos del Club" isEditing>
+					<div className="grid grid-cols-2 gap-4">
+						<div className="space-y-1">
+							<Label className="text-sm">Nombre del Club *</Label>
+							<Input
+								value={data.nombre_club || ""}
+								onChange={(e) => onFieldChange?.("nombre_club", e.target.value.toUpperCase())}
+							/>
+						</div>
+						<div className="space-y-1">
+							<Label className="text-sm">Sigla</Label>
+							<Input
+								value={data.sigla || ""}
+								onChange={(e) => onFieldChange?.("sigla", e.target.value.toUpperCase())}
+							/>
+						</div>
+						<div className="space-y-1">
+							<Label className="text-sm">Disciplina Principal *</Label>
+							<Select
+								value={data.disciplina_principal || ""}
+								onValueChange={(v) => onFieldChange?.("disciplina_principal", v)}
+							>
+								<SelectTrigger>
+									<SelectValue placeholder="Seleccionar..." />
+								</SelectTrigger>
+								<SelectContent>
+									{SPORTS_DISCIPLINES.map((d) => (
+										<SelectItem key={d} value={d}>
+											{SPORTS_DISCIPLINE_LABELS[d] ?? d}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+						</div>
+						<div className="space-y-1">
+							<Label className="text-sm">NIT</Label>
+							<Input
+								value={data.nit || ""}
+								onChange={(e) => onFieldChange?.("nit", e.target.value.toUpperCase())}
+							/>
+						</div>
+						<div className="space-y-1">
+							<Label className="text-sm">N° Registro VIPFE</Label>
+							<Input
+								value={data.numero_registro_vipfe || ""}
+								onChange={(e) => onFieldChange?.("numero_registro_vipfe", e.target.value.toUpperCase())}
+							/>
+						</div>
+						<div className="space-y-1">
+							<Label className="text-sm">Tipo de Registro *</Label>
+							<Select
+								value={data.tipo_registro || ""}
+								onValueChange={(v) => onFieldChange?.("tipo_registro", v)}
+							>
+								<SelectTrigger>
+									<SelectValue placeholder="Seleccionar..." />
+								</SelectTrigger>
+								<SelectContent>
+									{CLUB_REGISTRY_TYPES.map((t) => (
+										<SelectItem key={t} value={t}>
+											{CLUB_REGISTRY_LABELS[t] ?? t}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+						</div>
+						<div className="space-y-1">
+							<Label className="text-sm">Entidad Emisora *</Label>
+							<Input
+								value={data.entidad_registro || ""}
+								onChange={(e) => onFieldChange?.("entidad_registro", e.target.value.toUpperCase())}
+							/>
+						</div>
+						<div className="space-y-1">
+							<Label className="text-sm">Número de Registro *</Label>
+							<Input
+								value={data.numero_registro || ""}
+								onChange={(e) => onFieldChange?.("numero_registro", e.target.value.toUpperCase())}
+							/>
+						</div>
+					</div>
+				</InfoSection>
+
+				<OrgRepresentativeEdit data={data} onFieldChange={onFieldChange as (f: string, v: unknown) => void} />
+			</div>
+		);
+	}
+
+	return (
+		<div className="space-y-6">
+			<InfoSection title="Datos del Club">
+				<InfoRow label="Nombre" value={data.nombre_club} />
+				{data.sigla && <InfoRow label="Sigla" value={data.sigla} />}
+				<InfoRow
+					label="Disciplina Principal"
+					value={SPORTS_DISCIPLINE_LABELS[data.disciplina_principal] ?? data.disciplina_principal}
+				/>
+				{data.nit && <InfoRow label="NIT" value={data.nit} />}
+				{data.numero_registro_vipfe && <InfoRow label="N° Registro VIPFE" value={data.numero_registro_vipfe} />}
+				<InfoRow label="Tipo de Registro" value={CLUB_REGISTRY_LABELS[data.tipo_registro] ?? data.tipo_registro} />
+				<InfoRow label="Entidad Emisora" value={data.entidad_registro} />
+				<InfoRow label="Número de Registro" value={data.numero_registro} />
+			</InfoSection>
+
+			<OrgRepresentativeView data={data} />
+		</div>
+	);
+}
+
+interface AsociacionCivilClientGeneralProps {
+	data: AsociacionCivilClient;
+	isEditing?: boolean;
+	onFieldChange?: (field: keyof AsociacionCivilClient, value: unknown) => void;
+}
+
+function AsociacionCivilClientGeneral({ data, isEditing = false, onFieldChange }: AsociacionCivilClientGeneralProps) {
+	if (isEditing) {
+		return (
+			<div className="space-y-6">
+				<InfoSection title="Datos de la Asociación" isEditing>
+					<div className="grid grid-cols-2 gap-4">
+						<div className="space-y-1">
+							<Label className="text-sm">Nombre de la Asociación *</Label>
+							<Input
+								value={data.nombre_asociacion || ""}
+								onChange={(e) => onFieldChange?.("nombre_asociacion", e.target.value.toUpperCase())}
+							/>
+						</div>
+						<div className="space-y-1">
+							<Label className="text-sm">Sigla</Label>
+							<Input
+								value={data.sigla || ""}
+								onChange={(e) => onFieldChange?.("sigla", e.target.value.toUpperCase())}
+							/>
+						</div>
+						<div className="space-y-1">
+							<Label className="text-sm">Tipo de Asociación *</Label>
+							<Select
+								value={data.tipo_asociacion || ""}
+								onValueChange={(v) => onFieldChange?.("tipo_asociacion", v)}
+							>
+								<SelectTrigger>
+									<SelectValue placeholder="Seleccionar..." />
+								</SelectTrigger>
+								<SelectContent>
+									{ASOCIACION_CIVIL_TYPES.map((t) => (
+										<SelectItem key={t} value={t}>
+											{ASOCIACION_TYPE_LABELS[t] ?? t}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+						</div>
+						<div className="space-y-1">
+							<Label className="text-sm">Rubro o Actividad *</Label>
+							<Input
+								value={data.rubro_actividad || ""}
+								onChange={(e) => onFieldChange?.("rubro_actividad", e.target.value.toUpperCase())}
+							/>
+						</div>
+						<div className="space-y-1">
+							<Label className="text-sm">NIT</Label>
+							<Input
+								value={data.nit || ""}
+								onChange={(e) => onFieldChange?.("nit", e.target.value.toUpperCase())}
+							/>
+						</div>
+						<div className="space-y-1">
+							<Label className="text-sm">N° Personería Jurídica *</Label>
+							<Input
+								value={data.numero_personeria_juridica || ""}
+								onChange={(e) =>
+									onFieldChange?.("numero_personeria_juridica", e.target.value.toUpperCase())
+								}
+							/>
+						</div>
+						<div className="space-y-1">
+							<Label className="text-sm">Entidad Otorgante *</Label>
+							<Input
+								value={data.entidad_otorgante_personeria || ""}
+								onChange={(e) =>
+									onFieldChange?.("entidad_otorgante_personeria", e.target.value.toUpperCase())
+								}
+							/>
+						</div>
+					</div>
+				</InfoSection>
+
+				<OrgRepresentativeEdit data={data} onFieldChange={onFieldChange as (f: string, v: unknown) => void} />
+			</div>
+		);
+	}
+
+	return (
+		<div className="space-y-6">
+			<InfoSection title="Datos de la Asociación">
+				<InfoRow label="Nombre" value={data.nombre_asociacion} />
+				{data.sigla && <InfoRow label="Sigla" value={data.sigla} />}
+				<InfoRow
+					label="Tipo de Asociación"
+					value={ASOCIACION_TYPE_LABELS[data.tipo_asociacion] ?? data.tipo_asociacion}
+				/>
+				<InfoRow label="Rubro o Actividad" value={data.rubro_actividad} />
+				{data.nit && <InfoRow label="NIT" value={data.nit} />}
+				<InfoRow label="N° Personería Jurídica" value={data.numero_personeria_juridica} />
+				<InfoRow label="Entidad Otorgante" value={data.entidad_otorgante_personeria} />
+			</InfoSection>
+
+			<OrgRepresentativeView data={data} />
+		</div>
+	);
+}
+
 interface ContactInfoProps {
 	client: ClienteDetalleCompleto;
 	editData?: Partial<ClienteDetalleCompleto>;
@@ -1018,6 +1547,9 @@ interface ContactInfoProps {
 	onNaturalFieldChange?: (field: keyof NaturalClient, value: unknown) => void;
 	onJuridicFieldChange?: (field: keyof JuridicClient, value: unknown) => void;
 	onUnipersonalFieldChange?: (field: keyof UnipersonalClient, value: unknown) => void;
+	onOngFieldChange?: (field: keyof OngClient, value: unknown) => void;
+	onClubFieldChange?: (field: keyof ClubClient, value: unknown) => void;
+	onAsociacionFieldChange?: (field: keyof AsociacionCivilClient, value: unknown) => void;
 	onExtraPhonesChange?: (phones: ExtraPhone[]) => void;
 }
 
@@ -1028,11 +1560,45 @@ function ContactInfo({
 	onNaturalFieldChange,
 	onJuridicFieldChange,
 	onUnipersonalFieldChange,
+	onOngFieldChange,
+	onClubFieldChange,
+	onAsociacionFieldChange,
 	onExtraPhonesChange,
 }: ContactInfoProps) {
 	const naturalData = isEditing ? editData?.natural_data || client.natural_data : client.natural_data;
 	const juridicData = isEditing ? editData?.juridic_data || client.juridic_data : client.juridic_data;
 	const unipersonalData = isEditing ? editData?.unipersonal_data || client.unipersonal_data : client.unipersonal_data;
+	const ongData = isEditing ? editData?.ong_data || client.ong_data : client.ong_data;
+	const clubData = isEditing ? editData?.club_data || client.club_data : client.club_data;
+	const asociacionData = isEditing
+		? editData?.asociacion_civil_data || client.asociacion_civil_data
+		: client.asociacion_civil_data;
+
+	// Las asociaciones civiles, ONG y clubes comparten el mismo set de campos de
+	// contacto (dirección, correo, teléfono); se unifican para evitar repetir UI.
+	const orgContact =
+		client.client_type === "ong" && ongData
+			? {
+					direccion: ongData.direccion,
+					correo_electronico: ongData.correo_electronico,
+					telefono: ongData.telefono,
+					onChange: onOngFieldChange as (field: string, value: unknown) => void,
+				}
+			: client.client_type === "club" && clubData
+				? {
+						direccion: clubData.direccion,
+						correo_electronico: clubData.correo_electronico,
+						telefono: clubData.telefono,
+						onChange: onClubFieldChange as (field: string, value: unknown) => void,
+					}
+				: client.client_type === "asociacion_civil" && asociacionData
+					? {
+							direccion: asociacionData.direccion,
+							correo_electronico: asociacionData.correo_electronico,
+							telefono: asociacionData.telefono,
+							onChange: onAsociacionFieldChange as (field: string, value: unknown) => void,
+						}
+					: null;
 
 	if (isEditing) {
 		return (
@@ -1138,6 +1704,34 @@ function ContactInfo({
 								<Input
 									value={naturalData.direccion || ""}
 									onChange={(e) => onNaturalFieldChange?.("direccion", e.target.value.toUpperCase())}
+								/>
+							</div>
+						</div>
+					)}
+
+					{orgContact && (
+						<div className="grid grid-cols-2 gap-4">
+							<div className="space-y-1">
+								<Label className="text-sm">Correo Electrónico</Label>
+								<Input
+									type="email"
+									value={orgContact.correo_electronico || ""}
+									onChange={(e) => orgContact.onChange("correo_electronico", e.target.value)}
+								/>
+							</div>
+							<div className="space-y-1">
+								<Label className="text-sm">Teléfono</Label>
+								<Input
+									type="tel"
+									value={orgContact.telefono || ""}
+									onChange={(e) => orgContact.onChange("telefono", e.target.value)}
+								/>
+							</div>
+							<div className="col-span-2 space-y-1">
+								<Label className="text-sm">Dirección *</Label>
+								<Input
+									value={orgContact.direccion || ""}
+									onChange={(e) => orgContact.onChange("direccion", e.target.value.toUpperCase())}
 								/>
 							</div>
 						</div>
@@ -1291,6 +1885,40 @@ function ContactInfo({
 									<p className="text-sm font-medium text-foreground">
 										{client.natural_data.direccion}
 									</p>
+								</div>
+							</div>
+						)}
+					</>
+				)}
+
+				{orgContact && (
+					<>
+						{orgContact.correo_electronico && (
+							<div className="flex items-start gap-3">
+								<Mail className="h-5 w-5 text-muted-foreground mt-0.5" />
+								<div>
+									<p className="text-xs text-muted-foreground">Correo Electrónico</p>
+									<p className="text-sm font-medium text-foreground">
+										{orgContact.correo_electronico}
+									</p>
+								</div>
+							</div>
+						)}
+						{orgContact.telefono && (
+							<div className="flex items-start gap-3">
+								<Phone className="h-5 w-5 text-muted-foreground mt-0.5" />
+								<div>
+									<p className="text-xs text-muted-foreground">Teléfono</p>
+									<p className="text-sm font-medium text-foreground">{orgContact.telefono}</p>
+								</div>
+							</div>
+						)}
+						{orgContact.direccion && (
+							<div className="flex items-start gap-3">
+								<MapPin className="h-5 w-5 text-muted-foreground mt-0.5" />
+								<div>
+									<p className="text-xs text-muted-foreground">Dirección</p>
+									<p className="text-sm font-medium text-foreground">{orgContact.direccion}</p>
 								</div>
 							</div>
 						)}

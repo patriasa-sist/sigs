@@ -17,6 +17,9 @@ import type {
 	NaturalClientFormData,
 	JuridicClientFormData,
 	UnipersonalClientFormData,
+	OngClientFormData,
+	ClubClientFormData,
+	AsociacionCivilClientFormData,
 	ClientPartnerData,
 	LegalRepresentativeData,
 } from "@/types/clientForm";
@@ -25,6 +28,9 @@ import {
 	unipersonalClientFormSchema,
 	juridicClientCompanySchema,
 	juridicClientContactSchema,
+	ongClientFormSchema,
+	clubClientFormSchema,
+	asociacionCivilClientFormSchema,
 	clientPartnerSchema,
 	legalRepresentativeSchema,
 } from "@/types/clientForm";
@@ -32,6 +38,9 @@ import {
 	normalizeNaturalClientData,
 	normalizeJuridicClientData,
 	normalizeUnipersonalClientData,
+	normalizeOngClientData,
+	normalizeClubClientData,
+	normalizeAsociacionCivilClientData,
 	normalizePartnerData,
 	normalizeLegalRepresentativeData,
 } from "@/utils/formNormalization";
@@ -461,6 +470,254 @@ export async function updateUnipersonalClient(
 	} catch (error) {
 		console.error("[updateUnipersonalClient] Error:", error);
 		await captureError(error, "updateUnipersonalClient", { clientId }, { feature: "guardar-cliente" });
+		return {
+			success: false,
+			error: error instanceof Error ? error.message : "Error desconocido",
+		};
+	}
+}
+
+// ============================================
+// UPDATE ONG CLIENT
+// ============================================
+
+/**
+ * Update an ONG client's data
+ */
+export async function updateOngClient(
+	clientId: string,
+	data: Partial<OngClientFormData>,
+): Promise<ActionResult<void>> {
+	if (!uuidSchema.safeParse(clientId).success) {
+		return { success: false, error: "ID de cliente inválido" };
+	}
+
+	const sanitized = nullsToUndefined(data as Record<string, unknown>);
+	const validation = ongClientFormSchema.partial().safeParse(sanitized);
+	if (!validation.success) {
+		return { success: false, error: formatearErrorZod(validation.error) };
+	}
+
+	try {
+		const { supabase } = await authorizeClientEdit(clientId);
+
+		const { data: clientData, error: clientError } = await supabase
+			.from("clients")
+			.select("id, client_type")
+			.eq("id", clientId)
+			.single();
+
+		if (clientError || !clientData) {
+			return { success: false, error: "Cliente no encontrado" };
+		}
+
+		if (clientData.client_type !== "ong") {
+			return { success: false, error: "Este cliente no es de tipo ONG" };
+		}
+
+		const normalized = normalizeOngClientData(data as Record<string, unknown>);
+		Object.assign(data, normalized);
+
+		const { error: updateError } = await supabase
+			.from("ong_clients")
+			.update({
+				nombre_ong: data.nombre_ong,
+				sigla: data.sigla || null,
+				nit: data.nit || null,
+				numero_registro_vipfe: data.numero_registro_vipfe || null,
+				pais_origen: data.pais_origen,
+				actividad_principal: data.actividad_principal || null,
+				direccion: data.direccion,
+				correo_electronico: data.correo_electronico || null,
+				telefono: data.telefono || null,
+				nombre_representante: data.nombre_representante,
+				apellido_representante: data.apellido_representante,
+				cargo_representante: data.cargo_representante,
+				ci_representante: data.ci_representante,
+				extension_ci_representante: data.extension_ci_representante || null,
+			})
+			.eq("client_id", clientId);
+
+		if (updateError) {
+			console.error("[updateOngClient] ONG client update error:", updateError);
+			await captureError(updateError, "updateOngClient:db", { clientId }, { feature: "guardar-cliente" });
+			return { success: false, error: "Error al actualizar datos de la ONG" };
+		}
+
+		revalidatePath("/clientes");
+		revalidatePath(`/clientes/${clientId}`);
+		return { success: true, data: undefined };
+	} catch (error) {
+		console.error("[updateOngClient] Error:", error);
+		await captureError(error, "updateOngClient", { clientId }, { feature: "guardar-cliente" });
+		return {
+			success: false,
+			error: error instanceof Error ? error.message : "Error desconocido",
+		};
+	}
+}
+
+// ============================================
+// UPDATE CLUB CLIENT
+// ============================================
+
+/**
+ * Update a club deportivo client's data
+ */
+export async function updateClubClient(
+	clientId: string,
+	data: Partial<ClubClientFormData>,
+): Promise<ActionResult<void>> {
+	if (!uuidSchema.safeParse(clientId).success) {
+		return { success: false, error: "ID de cliente inválido" };
+	}
+
+	const sanitized = nullsToUndefined(data as Record<string, unknown>);
+	const validation = clubClientFormSchema.partial().safeParse(sanitized);
+	if (!validation.success) {
+		return { success: false, error: formatearErrorZod(validation.error) };
+	}
+
+	try {
+		const { supabase } = await authorizeClientEdit(clientId);
+
+		const { data: clientData, error: clientError } = await supabase
+			.from("clients")
+			.select("id, client_type")
+			.eq("id", clientId)
+			.single();
+
+		if (clientError || !clientData) {
+			return { success: false, error: "Cliente no encontrado" };
+		}
+
+		if (clientData.client_type !== "club") {
+			return { success: false, error: "Este cliente no es de tipo club deportivo" };
+		}
+
+		const normalized = normalizeClubClientData(data as Record<string, unknown>);
+		Object.assign(data, normalized);
+
+		const { error: updateError } = await supabase
+			.from("club_clients")
+			.update({
+				nombre_club: data.nombre_club,
+				sigla: data.sigla || null,
+				disciplina_principal: data.disciplina_principal,
+				nit: data.nit || null,
+				numero_registro_vipfe: data.numero_registro_vipfe || null,
+				tipo_registro: data.tipo_registro,
+				entidad_registro: data.entidad_registro,
+				numero_registro: data.numero_registro,
+				direccion: data.direccion,
+				correo_electronico: data.correo_electronico || null,
+				telefono: data.telefono || null,
+				nombre_representante: data.nombre_representante,
+				apellido_representante: data.apellido_representante,
+				cargo_representante: data.cargo_representante,
+				ci_representante: data.ci_representante,
+				extension_ci_representante: data.extension_ci_representante || null,
+			})
+			.eq("client_id", clientId);
+
+		if (updateError) {
+			console.error("[updateClubClient] Club client update error:", updateError);
+			await captureError(updateError, "updateClubClient:db", { clientId }, { feature: "guardar-cliente" });
+			return { success: false, error: "Error al actualizar datos del club" };
+		}
+
+		revalidatePath("/clientes");
+		revalidatePath(`/clientes/${clientId}`);
+		return { success: true, data: undefined };
+	} catch (error) {
+		console.error("[updateClubClient] Error:", error);
+		await captureError(error, "updateClubClient", { clientId }, { feature: "guardar-cliente" });
+		return {
+			success: false,
+			error: error instanceof Error ? error.message : "Error desconocido",
+		};
+	}
+}
+
+// ============================================
+// UPDATE ASOCIACION CIVIL CLIENT
+// ============================================
+
+/**
+ * Update an asociación civil client's data
+ */
+export async function updateAsociacionCivilClient(
+	clientId: string,
+	data: Partial<AsociacionCivilClientFormData>,
+): Promise<ActionResult<void>> {
+	if (!uuidSchema.safeParse(clientId).success) {
+		return { success: false, error: "ID de cliente inválido" };
+	}
+
+	const sanitized = nullsToUndefined(data as Record<string, unknown>);
+	const validation = asociacionCivilClientFormSchema.partial().safeParse(sanitized);
+	if (!validation.success) {
+		return { success: false, error: formatearErrorZod(validation.error) };
+	}
+
+	try {
+		const { supabase } = await authorizeClientEdit(clientId);
+
+		const { data: clientData, error: clientError } = await supabase
+			.from("clients")
+			.select("id, client_type")
+			.eq("id", clientId)
+			.single();
+
+		if (clientError || !clientData) {
+			return { success: false, error: "Cliente no encontrado" };
+		}
+
+		if (clientData.client_type !== "asociacion_civil") {
+			return { success: false, error: "Este cliente no es de tipo asociación civil" };
+		}
+
+		const normalized = normalizeAsociacionCivilClientData(data as Record<string, unknown>);
+		Object.assign(data, normalized);
+
+		const { error: updateError } = await supabase
+			.from("asociacion_civil_clients")
+			.update({
+				nombre_asociacion: data.nombre_asociacion,
+				sigla: data.sigla || null,
+				tipo_asociacion: data.tipo_asociacion,
+				rubro_actividad: data.rubro_actividad,
+				nit: data.nit || null,
+				numero_personeria_juridica: data.numero_personeria_juridica,
+				entidad_otorgante_personeria: data.entidad_otorgante_personeria,
+				direccion: data.direccion,
+				correo_electronico: data.correo_electronico || null,
+				telefono: data.telefono || null,
+				nombre_representante: data.nombre_representante,
+				apellido_representante: data.apellido_representante,
+				cargo_representante: data.cargo_representante,
+				ci_representante: data.ci_representante,
+				extension_ci_representante: data.extension_ci_representante || null,
+			})
+			.eq("client_id", clientId);
+
+		if (updateError) {
+			console.error("[updateAsociacionCivilClient] Asociación civil update error:", updateError);
+			await captureError(
+				updateError,
+				"updateAsociacionCivilClient:db",
+				{ clientId },
+				{ feature: "guardar-cliente" },
+			);
+			return { success: false, error: "Error al actualizar datos de la asociación" };
+		}
+
+		revalidatePath("/clientes");
+		revalidatePath(`/clientes/${clientId}`);
+		return { success: true, data: undefined };
+	} catch (error) {
+		console.error("[updateAsociacionCivilClient] Error:", error);
+		await captureError(error, "updateAsociacionCivilClient", { clientId }, { feature: "guardar-cliente" });
 		return {
 			success: false,
 			error: error instanceof Error ? error.message : "Error desconocido",
