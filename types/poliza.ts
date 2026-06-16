@@ -933,6 +933,11 @@ export type EquipoExcelImportResult = {
 		fila: number;
 		errores: string[];
 	}>;
+	// Avisos no bloqueantes (p.ej. tipo/marca no reconocidos en el catálogo, se dejaron vacíos)
+	advertencias?: Array<{
+		fila: number;
+		advertencias: string[];
+	}>;
 };
 
 // ============================================

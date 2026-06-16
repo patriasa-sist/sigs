@@ -316,7 +316,7 @@ export function EquipoModal({ equipo, onGuardar, onCancelar }: Props) {
 						<div className="space-y-2">
 							<Label htmlFor="tipo_equipo">Tipo de Equipo</Label>
 							<Select
-								value={formData.tipo_equipo_id || undefined}
+								value={formData.tipo_equipo_id ?? ""}
 								onValueChange={(value) => handleChange("tipo_equipo_id", value)}
 							>
 								<SelectTrigger>
@@ -336,7 +336,7 @@ export function EquipoModal({ equipo, onGuardar, onCancelar }: Props) {
 						<div className="space-y-2">
 							<Label htmlFor="marca">Marca</Label>
 							<Select
-								value={formData.marca_equipo_id || undefined}
+								value={formData.marca_equipo_id ?? ""}
 								onValueChange={(value) => handleChange("marca_equipo_id", value)}
 							>
 								<SelectTrigger>

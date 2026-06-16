@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback, memo } from "react";
 import {
 	ChevronRight,
 	ChevronLeft,
@@ -39,6 +39,75 @@ type Props = {
 	onAnterior: () => void;
 };
 
+const FORMATO_MONEDA = { minimumFractionDigits: 2, maximumFractionDigits: 2 } as const;
+
+type EquipoRowProps = {
+	equipo: EquipoIndustrial;
+	index: number;
+	tipoNombre: string;
+	marcaNombre: string;
+	onEditar: (equipo: EquipoIndustrial, index: number) => void;
+	onEliminar: (index: number) => void;
+};
+
+/**
+ * Fila de equipo memoizada: recibe los nombres ya resueltos como strings y
+ * handlers estables, de modo que escribir en otros campos del paso (o cargar
+ * cientos de equipos) no obliga a repintar todas las filas.
+ */
+const EquipoRow = memo(function EquipoRow({
+	equipo,
+	index,
+	tipoNombre,
+	marcaNombre,
+	onEditar,
+	onEliminar,
+}: EquipoRowProps) {
+	const marcaModelo = [marcaNombre, equipo.modelo].filter(Boolean).join(" ") || "-";
+
+	return (
+		<tr className="hover:bg-muted/50">
+			<td className="px-2.5 py-1.5 font-medium text-foreground whitespace-nowrap">{equipo.nro_serie}</td>
+			<td className="px-2.5 py-1.5 text-muted-foreground">{tipoNombre}</td>
+			<td className="px-2.5 py-1.5 text-muted-foreground">{marcaModelo}</td>
+			<td className="px-2.5 py-1.5 text-muted-foreground text-right">{equipo.ano || "-"}</td>
+			<td className="px-2.5 py-1.5 text-foreground text-right whitespace-nowrap">
+				{equipo.valor_asegurado.toLocaleString("es-BO", FORMATO_MONEDA)}
+			</td>
+			<td className="px-2.5 py-1.5 text-foreground text-right whitespace-nowrap">
+				{equipo.franquicia.toLocaleString("es-BO", FORMATO_MONEDA)}
+			</td>
+			<td className="px-2.5 py-1.5 text-center">
+				<span
+					className={`inline-flex px-1.5 py-0.5 font-medium rounded-full ${
+						equipo.uso === "publico" ? "bg-info/15 text-info" : "bg-success/15 text-success"
+					}`}
+				>
+					{equipo.uso === "publico" ? "Público" : "Particular"}
+				</span>
+			</td>
+			<td className="px-2.5 py-1.5 text-right text-foreground whitespace-nowrap">
+				{equipo.coaseguro?.toLocaleString("es-BO", FORMATO_MONEDA)}%
+			</td>
+			<td className="px-2.5 py-1.5 text-center">
+				<div className="flex items-center justify-center gap-1">
+					<Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onEditar(equipo, index)}>
+						<Edit className="h-3.5 w-3.5" />
+					</Button>
+					<Button
+						variant="ghost"
+						size="icon"
+						className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+						onClick={() => onEliminar(index)}
+					>
+						<Trash2 className="h-3.5 w-3.5" />
+					</Button>
+				</div>
+			</td>
+		</tr>
+	);
+});
+
 export function RamosTecnicosForm({ datos, onChange, onSiguiente, onAnterior }: Props) {
 	const [valorAsegurado, setValorAsegurado] = useState<string>(
 		datos?.valor_asegurado ? String(datos.valor_asegurado) : "",
@@ -49,6 +118,7 @@ export function RamosTecnicosForm({ datos, onChange, onSiguiente, onAnterior }: 
 	const [equipoEditando, setEquipoEditando] = useState<EquipoIndustrial | null>(null);
 	const [indexEditando, setIndexEditando] = useState<number | null>(null);
 	const [errores, setErrores] = useState<string[]>([]);
+	const [advertencias, setAdvertencias] = useState<string[]>([]);
 	const [importando, setImportando] = useState(false);
 	const [equipoAEliminar, setEquipoAEliminar] = useState<number | null>(null);
 
@@ -86,19 +156,10 @@ export function RamosTecnicosForm({ datos, onChange, onSiguiente, onAnterior }: 
 		}
 	};
 
-	// Función para obtener el nombre del tipo de equipo por ID
-	const obtenerNombreTipo = (id?: string): string => {
-		if (!id) return "-";
-		const tipo = tiposEquipo.find((t) => t.id === id);
-		return tipo ? tipo.nombre : id;
-	};
-
-	// Función para obtener el nombre de la marca por ID
-	const obtenerNombreMarca = (id?: string): string => {
-		if (!id) return "-";
-		const marca = marcas.find((m) => m.id === id);
-		return marca ? marca.nombre : id;
-	};
+	// Mapas id → nombre para lookup O(1) en cada fila (en vez de .find() O(n) por celda,
+	// que con cientos de equipos repintaba lentísimo en cada render).
+	const tiposMap = useMemo(() => new Map(tiposEquipo.map((t) => [t.id, t.nombre])), [tiposEquipo]);
+	const marcasMap = useMemo(() => new Map(marcas.map((m) => [m.id, m.nombre])), [marcas]);
 
 	// Validar números de serie únicos
 	const validarNrosSerieUnicos = (equiposLista: EquipoIndustrial[]): { valido: boolean; errores: string[] } => {
@@ -150,17 +211,17 @@ export function RamosTecnicosForm({ datos, onChange, onSiguiente, onAnterior }: 
 		setModalAbierto(true);
 	};
 
-	// Abrir modal para editar
-	const handleEditar = (equipo: EquipoIndustrial, index: number) => {
+	// Abrir modal para editar (estable para no romper la memoización de las filas)
+	const handleEditar = useCallback((equipo: EquipoIndustrial, index: number) => {
 		setEquipoEditando(equipo);
 		setIndexEditando(index);
 		setModalAbierto(true);
-	};
+	}, []);
 
 	// Eliminar equipo (pide confirmación vía AlertDialog)
-	const handleEliminar = (index: number) => {
+	const handleEliminar = useCallback((index: number) => {
 		setEquipoAEliminar(index);
-	};
+	}, []);
 
 	const confirmarEliminar = () => {
 		if (equipoAEliminar === null) return;
@@ -181,9 +242,15 @@ export function RamosTecnicosForm({ datos, onChange, onSiguiente, onAnterior }: 
 
 		setImportando(true);
 		setErrores([]);
+		setAdvertencias([]);
 
 		try {
-			const resultado = await importarEquiposDesdeExcel(file);
+			const resultado = await importarEquiposDesdeExcel(file, { marcas, tiposEquipo });
+
+			// Avisos no bloqueantes (tipo/marca no reconocidos, etc.)
+			if (resultado.advertencias && resultado.advertencias.length > 0) {
+				setAdvertencias(resultado.advertencias.map((a) => `Fila ${a.fila}: ${a.advertencias.join(" ")}`));
+			}
 
 			if (resultado.exito && resultado.equipos_validos.length > 0) {
 				// Combinar con equipos existentes
@@ -371,6 +438,22 @@ export function RamosTecnicosForm({ datos, onChange, onSiguiente, onAnterior }: 
 				</div>
 			)}
 
+			{/* Advertencias (no bloqueantes) */}
+			{advertencias.length > 0 && (
+				<div className="mb-6 p-4 bg-warning/10 border border-warning/30 rounded-lg">
+					<h4 className="text-sm font-semibold text-warning-foreground mb-2">Advertencias de importación:</h4>
+					<p className="text-xs text-warning-foreground mb-2">
+						Los equipos se importaron, pero revise estos datos y complételos manualmente si corresponde
+						(p.ej. tipos o marcas que no existen en el catálogo).
+					</p>
+					<ul className="text-sm text-warning-foreground space-y-1">
+						{advertencias.map((adv, i) => (
+							<li key={i}>• {adv}</li>
+						))}
+					</ul>
+				</div>
+			)}
+
 			{/* Tabla de equipos */}
 			{equipos.length === 0 ? (
 				<div className="text-center py-12 border-2 border-dashed rounded-lg">
@@ -380,100 +463,57 @@ export function RamosTecnicosForm({ datos, onChange, onSiguiente, onAnterior }: 
 				</div>
 			) : (
 				<div className="overflow-x-auto border rounded-lg mb-6">
-					<table className="w-full">
+					<table className="w-full text-xs">
 						<thead className="bg-muted/50">
 							<tr>
-								<th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+								<th className="px-2.5 py-2 text-left font-medium text-muted-foreground uppercase">
 									Nº Serie
 								</th>
-								<th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+								<th className="px-2.5 py-2 text-left font-medium text-muted-foreground uppercase">
 									Tipo
 								</th>
-								<th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+								<th className="px-2.5 py-2 text-left font-medium text-muted-foreground uppercase">
 									Marca/Modelo
 								</th>
-								<th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+								<th className="px-2.5 py-2 text-right font-medium text-muted-foreground uppercase">
 									Año
 								</th>
-								<th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase">
-									Valor Asegurado
+								<th className="px-2.5 py-2 text-right font-medium text-muted-foreground uppercase">
+									Valor Aseg.
 								</th>
-								<th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase">
+								<th className="px-2.5 py-2 text-right font-medium text-muted-foreground uppercase">
 									Franquicia
 								</th>
-								<th className="px-4 py-3 text-center text-xs font-medium text-muted-foreground uppercase">
+								<th className="px-2.5 py-2 text-center font-medium text-muted-foreground uppercase">
 									Uso
 								</th>
-								<th className="px-4 py-3 text-center text-xs font-medium text-muted-foreground uppercase">
-									Coaseguro (%)
+								<th className="px-2.5 py-2 text-right font-medium text-muted-foreground uppercase">
+									Coas.
 								</th>
-								<th className="px-4 py-3 text-center text-xs font-medium text-muted-foreground uppercase">
+								<th className="px-2.5 py-2 text-center font-medium text-muted-foreground uppercase">
 									Acciones
 								</th>
 							</tr>
 						</thead>
 						<tbody className="divide-y">
 							{equipos.map((equipo, index) => (
-								<tr key={index} className="hover:bg-muted/50">
-									<td className="px-4 py-3 font-medium text-foreground">{equipo.nro_serie}</td>
-									<td className="px-4 py-3 text-sm text-muted-foreground">
-										{obtenerNombreTipo(equipo.tipo_equipo_id)}
-									</td>
-									<td className="px-4 py-3 text-sm text-muted-foreground">
-										{obtenerNombreMarca(equipo.marca_equipo_id)}
-										{equipo.modelo ? ` ${equipo.modelo}` : ""}
-									</td>
-									<td className="px-4 py-3 text-sm text-muted-foreground">{equipo.ano || "-"}</td>
-									<td className="px-4 py-3 text-sm text-foreground text-right">
-										{equipo.valor_asegurado.toLocaleString("es-BO", {
-											minimumFractionDigits: 2,
-											maximumFractionDigits: 2,
-										})}
-									</td>
-									<td className="px-4 py-3 text-sm text-foreground text-right">
-										{equipo.franquicia.toLocaleString("es-BO", {
-											minimumFractionDigits: 2,
-											maximumFractionDigits: 2,
-										})}
-									</td>
-									<td className="px-4 py-3 text-center">
-										<span
-											className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-												equipo.uso === "publico"
-													? "bg-info/15 text-info"
-													: "bg-success/15 text-success"
-											}`}
-										>
-											{equipo.uso === "publico" ? "Público" : "Particular"}
-										</span>
-									</td>
-									<td className="px-4 py-3 text-center text-sm text-foreground">
-										{equipo.coaseguro?.toLocaleString("es-BO", {
-											minimumFractionDigits: 2,
-											maximumFractionDigits: 2,
-										})}
-										%
-									</td>
-									<td className="px-4 py-3 text-center">
-										<div className="flex items-center justify-center gap-2">
-											<Button
-												variant="ghost"
-												size="sm"
-												onClick={() => handleEditar(equipo, index)}
-											>
-												<Edit className="h-4 w-4" />
-											</Button>
-											<Button
-												variant="ghost"
-												size="sm"
-												onClick={() => handleEliminar(index)}
-												className="text-destructive hover:text-destructive hover:bg-destructive/10"
-											>
-												<Trash2 className="h-4 w-4" />
-											</Button>
-										</div>
-									</td>
-								</tr>
+								<EquipoRow
+									key={index}
+									equipo={equipo}
+									index={index}
+									tipoNombre={
+										equipo.tipo_equipo_id
+											? (tiposMap.get(equipo.tipo_equipo_id) ?? equipo.tipo_equipo_id)
+											: "-"
+									}
+									marcaNombre={
+										equipo.marca_equipo_id
+											? (marcasMap.get(equipo.marca_equipo_id) ?? equipo.marca_equipo_id)
+											: ""
+									}
+									onEditar={handleEditar}
+									onEliminar={handleEliminar}
+								/>
 							))}
 						</tbody>
 					</table>

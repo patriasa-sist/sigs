@@ -5,6 +5,19 @@ import type { EquipoIndustrial, EquipoExcelImportResult } from "@/types/poliza";
 import { EQUIPO_RULES } from "./validationConstants";
 
 /**
+ * Catálogos para resolver nombres (Excel) a IDs (UUID de la BD).
+ * La plantilla usa nombres legibles (ej. "Excavadora", "Caterpillar") pero la BD
+ * almacena tipo_equipo_id / marca_equipo_id como UUID (FK a catálogos). Sin esta
+ * resolución, el texto crudo del Excel llega a una columna uuid y el guardado falla
+ * con "invalid input syntax for type uuid".
+ */
+type CatalogoItem = { id: string; nombre: string };
+export type CatalogosEquipo = {
+	marcas?: CatalogoItem[];
+	tiposEquipo?: CatalogoItem[];
+};
+
+/**
  * Nombres de columnas esperados en el Excel (case-insensitive)
  */
 const COLUMNAS_ESPERADAS = {
@@ -33,6 +46,33 @@ function normalizarNombreColumna(nombre: string): string {
 		.trim()
 		.normalize("NFD")
 		.replace(/[\u0300-\u036f]/g, ""); // Eliminar acentos
+}
+
+type ResolverCatalogo = (valor?: string) => string | undefined;
+
+/**
+ * Construye un resolver nombre-normalizado \u2192 id a partir de un cat\u00e1logo.
+ * - Si el valor coincide con un nombre del cat\u00e1logo \u2192 devuelve su id.
+ * - Si ya es un UUID v\u00e1lido del cat\u00e1logo \u2192 lo conserva.
+ * - Si no coincide con nada \u2192 undefined (campo opcional, no se inserta texto inv\u00e1lido).
+ */
+function construirResolverCatalogo(items: CatalogoItem[] = []): ResolverCatalogo {
+	const porNombre = new Map<string, string>();
+	const idsValidos = new Set<string>();
+
+	for (const item of items) {
+		porNombre.set(normalizarNombreColumna(item.nombre), item.id);
+		idsValidos.add(item.id);
+	}
+
+	return (valor?: string): string | undefined => {
+		if (!valor) return undefined;
+		const normalizado = normalizarNombreColumna(valor);
+		const porNombreMatch = porNombre.get(normalizado);
+		if (porNombreMatch) return porNombreMatch;
+		if (idsValidos.has(valor)) return valor;
+		return undefined;
+	};
 }
 
 /**
@@ -91,8 +131,14 @@ function convertirAString(valor: unknown): string | undefined {
 /**
  * Parsea una fila del Excel a EquipoIndustrial
  */
-function parsearFilaEquipo(fila: unknown[], mapa: Record<string, number>): Partial<EquipoIndustrial> {
+function parsearFilaEquipo(
+	fila: unknown[],
+	mapa: Record<string, number>,
+	resolverTipo: ResolverCatalogo,
+	resolverMarca: ResolverCatalogo,
+): { equipo: Partial<EquipoIndustrial>; advertencias: string[] } {
 	const equipo: Partial<EquipoIndustrial> = {};
+	const advertencias: string[] = [];
 
 	// Campos obligatorios
 	if (mapa.nro_serie !== undefined) {
@@ -129,12 +175,23 @@ function parsearFilaEquipo(fila: unknown[], mapa: Record<string, number>): Parti
 		equipo.placa = convertirAString(fila[mapa.placa]);
 	}
 
+	// tipo_equipo y marca vienen como NOMBRE en el Excel pero la BD guarda UUID
+	// (FK a catálogos). Resolvemos nombre → id; si el nombre no coincide con ningún
+	// catálogo, dejamos el campo vacío y avisamos al usuario.
 	if (mapa.tipo_equipo !== undefined) {
-		equipo.tipo_equipo_id = convertirAString(fila[mapa.tipo_equipo]);
+		const tipoTexto = convertirAString(fila[mapa.tipo_equipo]);
+		equipo.tipo_equipo_id = resolverTipo(tipoTexto);
+		if (tipoTexto && !equipo.tipo_equipo_id) {
+			advertencias.push(`Tipo de equipo "${tipoTexto}" no reconocido; se dejó vacío.`);
+		}
 	}
 
 	if (mapa.marca_equipo !== undefined) {
-		equipo.marca_equipo_id = convertirAString(fila[mapa.marca_equipo]);
+		const marcaTexto = convertirAString(fila[mapa.marca_equipo]);
+		equipo.marca_equipo_id = resolverMarca(marcaTexto);
+		if (marcaTexto && !equipo.marca_equipo_id) {
+			advertencias.push(`Marca "${marcaTexto}" no reconocida; se dejó vacía.`);
+		}
 	}
 
 	if (mapa.modelo !== undefined) {
@@ -158,7 +215,7 @@ function parsearFilaEquipo(fila: unknown[], mapa: Record<string, number>): Parti
 		equipo.plaza_circulacion = convertirAString(fila[mapa.plaza_circulacion]);
 	}
 
-	return equipo;
+	return { equipo, advertencias };
 }
 
 /**
@@ -221,8 +278,15 @@ function validarEquipoIndustrial(equipo: Partial<EquipoIndustrial>): {
 /**
  * Importa equipos industriales desde un archivo Excel usando ExcelJS
  */
-export async function importarEquiposDesdeExcel(archivo: File): Promise<EquipoExcelImportResult> {
+export async function importarEquiposDesdeExcel(
+	archivo: File,
+	catalogos: CatalogosEquipo = {},
+): Promise<EquipoExcelImportResult> {
 	try {
+		// Resolvers nombre → UUID para campos que son FK a catálogos
+		const resolverTipo = construirResolverCatalogo(catalogos.tiposEquipo);
+		const resolverMarca = construirResolverCatalogo(catalogos.marcas);
+
 		// Convertir File a ArrayBuffer
 		const arrayBuffer = await archivo.arrayBuffer();
 
@@ -285,6 +349,7 @@ export async function importarEquiposDesdeExcel(archivo: File): Promise<EquipoEx
 
 		const equipos_validos: EquipoIndustrial[] = [];
 		const errores: Array<{ fila: number; errores: string[] }> = [];
+		const advertencias: Array<{ fila: number; advertencias: string[] }> = [];
 
 		// Procesar filas de datos (desde la segunda fila)
 		worksheet.eachRow((row, rowNumber) => {
@@ -304,13 +369,22 @@ export async function importarEquiposDesdeExcel(archivo: File): Promise<EquipoEx
 				return;
 			}
 
-			const equipoParcial = parsearFilaEquipo(valores, mapa);
+			const { equipo: equipoParcial, advertencias: advertenciasFila } = parsearFilaEquipo(
+				valores,
+				mapa,
+				resolverTipo,
+				resolverMarca,
+			);
 
 			// Validar equipo
 			const validacion = validarEquipoIndustrial(equipoParcial);
 
 			if (validacion.valido) {
 				equipos_validos.push(equipoParcial as EquipoIndustrial);
+				// Solo reportamos advertencias de equipos que sí se importaron
+				if (advertenciasFila.length > 0) {
+					advertencias.push({ fila: rowNumber, advertencias: advertenciasFila });
+				}
 			} else {
 				errores.push({
 					fila: rowNumber,
@@ -323,6 +397,7 @@ export async function importarEquiposDesdeExcel(archivo: File): Promise<EquipoEx
 			exito: equipos_validos.length > 0,
 			equipos_validos,
 			errores,
+			advertencias,
 		};
 	} catch (error) {
 		console.error("Error procesando Excel:", error);
