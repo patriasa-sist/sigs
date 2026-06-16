@@ -1426,7 +1426,10 @@ function ClubClientGeneral({ data, isEditing = false, onFieldChange }: ClubClien
 				/>
 				{data.nit && <InfoRow label="NIT" value={data.nit} />}
 				{data.numero_registro_vipfe && <InfoRow label="N° Registro VIPFE" value={data.numero_registro_vipfe} />}
-				<InfoRow label="Tipo de Registro" value={CLUB_REGISTRY_LABELS[data.tipo_registro] ?? data.tipo_registro} />
+				<InfoRow
+					label="Tipo de Registro"
+					value={CLUB_REGISTRY_LABELS[data.tipo_registro] ?? data.tipo_registro}
+				/>
 				<InfoRow label="Entidad Emisora" value={data.entidad_registro} />
 				<InfoRow label="Número de Registro" value={data.numero_registro} />
 			</InfoSection>

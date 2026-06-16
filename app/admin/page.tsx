@@ -16,6 +16,7 @@ import {
 	Settings,
 	Trash2,
 	Undo2,
+	UserX,
 } from "lucide-react";
 
 const adminSections = [
@@ -125,6 +126,13 @@ const adminSections = [
 				icon: Undo2,
 				label: "Revertir Pagos",
 				description: "Borrar el pago de una cuota registrado por error (abonos, comprobantes y notas)",
+			},
+			{
+				href: "/admin/clientes",
+				icon: UserX,
+				label: "Eliminar Clientes",
+				description:
+					"Borrar permanentemente un cliente sin pólizas y todo su rastro (bloqueado si tiene pólizas)",
 			},
 		],
 	},

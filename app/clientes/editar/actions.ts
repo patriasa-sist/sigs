@@ -484,10 +484,7 @@ export async function updateUnipersonalClient(
 /**
  * Update an ONG client's data
  */
-export async function updateOngClient(
-	clientId: string,
-	data: Partial<OngClientFormData>,
-): Promise<ActionResult<void>> {
+export async function updateOngClient(clientId: string, data: Partial<OngClientFormData>): Promise<ActionResult<void>> {
 	if (!uuidSchema.safeParse(clientId).success) {
 		return { success: false, error: "ID de cliente inválido" };
 	}

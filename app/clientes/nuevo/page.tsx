@@ -490,9 +490,30 @@ export default function NuevoClientePage() {
 
 	// Handle client type selection
 	const handleClientTypeSelect = (type: ClientType) => {
+		// Al cambiar a un tipo distinto, descartar los datos de cualquier formulario
+		// previo para que no queden valores "fantasma" de otro tipo de cliente
+		// (cada tipo tiene su propio useForm y no se limpiaban entre sí).
+		const isTypeChange = clientType !== null && clientType !== type;
+		if (isTypeChange) {
+			naturalForm.reset();
+			partnerForm.reset();
+			unipersonalForm.reset();
+			juridicForm.reset({ legal_representatives: [] });
+			ongForm.reset({ pais_origen: "BOLIVIA" });
+			clubForm.reset();
+			asociacionCivilForm.reset();
+			setDuplicadoDocumento(null);
+			setDuplicadoNit(null);
+			setDuplicadoRegistroClub(null);
+			setDuplicadoPersoneriaAsoc(null);
+			clearDraft();
+		}
+
 		setClientType(type);
 		setValidatedSections([]);
-		handleAutoSave();
+		// En el primer select (sin cambio de tipo) persistimos el borrador inicial;
+		// tras un cambio de tipo el borrador se regenera en el próximo blur.
+		if (!isTypeChange) handleAutoSave();
 	};
 
 	// Handle cancel (pide confirmación vía AlertDialog)
