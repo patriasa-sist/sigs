@@ -465,6 +465,28 @@ export async function actualizarPoliza(
 				}
 			}
 		} else if (formState.modalidad_pago.tipo === "contado") {
+			// Limpiar cuotas sobrantes no pagadas de un plan a crédito previo:
+			// contado solo conserva la cuota única (numero_cuota === 1). Sin esto,
+			// al cambiar crédito → contado las cuotas 2..N quedaban huérfanas y el
+			// plan de pagos seguía mostrando el total viejo.
+			const idsCuotasSobrantes = (currentPagos || [])
+				.filter((p) => p.numero_cuota !== 1 && p.estado !== "pagado")
+				.map((p) => p.id);
+			if (idsCuotasSobrantes.length > 0) {
+				const supabaseAdmin = createAdminClient();
+				const { error: deleteError } = await supabaseAdmin
+					.from("polizas_pagos")
+					.delete()
+					.in("id", idsCuotasSobrantes);
+				if (deleteError) {
+					console.error("[actualizarPoliza] Error deleting leftover credito cuotas:", deleteError);
+					return {
+						success: false,
+						error: mapSupabaseError(deleteError, "Error al limpiar cuotas anteriores"),
+					};
+				}
+			}
+
 			const cuotaUnica = formState.modalidad_pago.cuota_unica;
 			// Retroactiva sin prima registrada (cuota 0): no crear cuota (CHECK monto > 0)
 			if (!cuotaUnica || cuotaUnica <= 0) {
@@ -488,6 +510,7 @@ export async function actualizarPoliza(
 								fecha_vencimiento: formState.modalidad_pago.fecha_pago_unico,
 								estado: "pendiente",
 								fecha_pago: null,
+								observaciones: null,
 							})
 							.eq("id", cuotaExistente.id);
 
