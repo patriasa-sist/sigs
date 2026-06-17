@@ -3,6 +3,7 @@
 import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
 import { checkPermission, getDataScopeFilter } from "@/utils/auth/helpers";
+import { resolverNombresCliente } from "@/utils/polizas/resolverNombresCliente";
 
 async function checkTeamLeaderForPolicy(
 	supabase: Awaited<ReturnType<typeof createClient>>,
@@ -130,22 +131,9 @@ export async function obtenerAnexosPendientes(): Promise<{
 
 		const clientIds = [...new Set((polizasClients || []).map((p) => p.client_id))];
 
-		const [{ data: clients }, { data: naturalClients }, { data: juridicClients }, { data: unipersonalClients }] =
-			await Promise.all([
-				supabase.from("clients").select("id, client_type").in("id", clientIds),
-				supabase
-					.from("natural_clients")
-					.select("client_id, primer_nombre, primer_apellido, numero_documento")
-					.in("client_id", clientIds),
-				supabase.from("juridic_clients").select("client_id, razon_social").in("client_id", clientIds),
-				supabase.from("unipersonal_clients").select("client_id, razon_social").in("client_id", clientIds),
-			]);
-
+		// Resolver nombres de clientes de todos los tipos en batch
+		const clientNombresMap = await resolverNombresCliente(supabase, clientIds);
 		const polizaClientMap = new Map((polizasClients || []).map((p) => [p.id, p.client_id]));
-		const clientsMap = new Map(clients?.map((c) => [c.id, c]) || []);
-		const naturalMap = new Map(naturalClients?.map((c) => [c.client_id, c]) || []);
-		const juridicMap = new Map(juridicClients?.map((c) => [c.client_id, c]) || []);
-		const unipersonalMap = new Map(unipersonalClients?.map((c) => [c.client_id, c]) || []);
 
 		// Obtener montos de ajuste
 		const anexoIds = anexosFiltrados.map((a) => a.id);
@@ -169,20 +157,7 @@ export async function obtenerAnexosPendientes(): Promise<{
 			const creador = a.creador as unknown as { full_name: string; email: string } | null;
 
 			const clientId = polizaClientMap.get(poliza.id);
-			const client = clientId ? clientsMap.get(clientId) : null;
-			let client_name = "Desconocido";
-
-			if (client?.client_type === "natural" || client?.client_type === "unipersonal") {
-				const nc = naturalMap.get(clientId!);
-				if (nc) client_name = `${nc.primer_nombre} ${nc.primer_apellido}`;
-				if (client?.client_type === "unipersonal") {
-					const uc = unipersonalMap.get(clientId!);
-					if (uc) client_name = `${client_name} (${uc.razon_social})`;
-				}
-			} else if (client?.client_type === "juridica") {
-				const jc = juridicMap.get(clientId!);
-				if (jc) client_name = jc.razon_social;
-			}
+			const client_name = (clientId ? clientNombresMap.get(clientId)?.name : null) || "Desconocido";
 
 			return {
 				id: a.id,

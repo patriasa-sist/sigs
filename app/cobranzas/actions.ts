@@ -6,6 +6,7 @@ import { checkPermission, getDataScopeFilter } from "@/utils/auth/helpers";
 import { obtenerEjecutivosFiltro } from "@/utils/ejecutivos";
 import { obtenerEstadoReal } from "@/utils/estadoCuota";
 import { obtenerDetalleRamo } from "@/utils/polizas/detalleRamo";
+import { resolverNombresCliente } from "@/utils/polizas/resolverNombresCliente";
 import type {
 	CuotaPago,
 	PolizaConPagos,
@@ -45,34 +46,6 @@ import type {
 	CobranzaSortField,
 } from "@/types/cobranza";
 import type { CuotaAnexoPropia } from "@/types/anexo";
-
-// Helper types for Supabase query results
-// Note: natural_clients and juridic_clients are 1:1 relationships, not arrays
-type ClientQueryResult = {
-	id: string;
-	client_type: "natural" | "juridica" | "unipersonal";
-	natural_clients: {
-		primer_nombre?: string;
-		segundo_nombre?: string;
-		primer_apellido?: string;
-		segundo_apellido?: string;
-		numero_documento?: string;
-		celular?: string;
-		correo_electronico?: string;
-	} | null;
-	juridic_clients: {
-		razon_social?: string;
-		nit?: string;
-		telefono?: string;
-		correo_electronico?: string;
-	} | null;
-	unipersonal_clients: {
-		razon_social?: string;
-		nit?: string;
-		telefono_comercial?: string;
-		correo_electronico_comercial?: string;
-	} | null;
-} | null;
 
 /**
  * Helper function to verify that the user has cobranza or admin role
@@ -195,12 +168,7 @@ export async function obtenerPolizasConPendientes(
 			.select(
 				`id, numero_poliza, ramo, prima_total, moneda, estado,
 				inicio_vigencia, fin_vigencia, modalidad_pago,
-				client:clients!client_id (
-					id, client_type,
-					natural_clients (primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, numero_documento),
-					juridic_clients (razon_social, nit),
-					unipersonal_clients (razon_social, nit)
-				),
+				client:clients!client_id (id, client_type),
 				compania:companias_aseguradoras!compania_aseguradora_id (id, nombre),
 				responsable:profiles!responsable_id (id, full_name),
 				regional:regionales!regional_id (id, nombre)`,
@@ -297,6 +265,12 @@ export async function obtenerPolizasConPendientes(
 		}
 
 		// ── Construir lista de pólizas ────────────────────────────────────
+		// Resolver nombre/documento de todos los tipos de cliente en batch
+		const clientNombresMap = await resolverNombresCliente(
+			supabase,
+			(polizas || []).map((p) => (p.client as { id?: string } | null)?.id || ""),
+		);
+
 		const polizasConPagos: PolizaConPagos[] = [];
 
 		for (const poliza of polizas || []) {
@@ -311,34 +285,10 @@ export async function obtenerPolizasConPendientes(
 			// Omitir pólizas sin cuotas pendientes (a menos que se pidan pagadas)
 			if (!incluirPagadas && s.cuotas_pendientes === 0 && s.cuotas_vencidas === 0) continue;
 
-			const clientData = poliza.client as unknown as ClientQueryResult;
-			let nombreCompleto = "N/A";
-			let documento = "N/A";
-
-			if (clientData) {
-				if (clientData.client_type === "natural" || clientData.client_type === "unipersonal") {
-					const natural = clientData.natural_clients;
-					if (natural) {
-						nombreCompleto = `${natural.primer_nombre || ""} ${natural.segundo_nombre || ""} ${
-							natural.primer_apellido || ""
-						} ${natural.segundo_apellido || ""}`.trim();
-						documento = natural.numero_documento || "N/A";
-					}
-					if (clientData.client_type === "unipersonal") {
-						const unipersonal = clientData.unipersonal_clients;
-						if (unipersonal) {
-							nombreCompleto = `${nombreCompleto} (${unipersonal.razon_social || ""})`.trim();
-							documento = unipersonal.nit || documento;
-						}
-					}
-				} else {
-					const juridic = clientData.juridic_clients;
-					if (juridic) {
-						nombreCompleto = juridic.razon_social || "N/A";
-						documento = juridic.nit || "N/A";
-					}
-				}
-			}
+			const clientData = poliza.client as { id?: string; client_type?: string } | null;
+			const info = clientData?.id ? clientNombresMap.get(clientData.id) : undefined;
+			const nombreCompleto = info?.name || "N/A";
+			const documento = info?.ci || "N/A";
 
 			polizasConPagos.push({
 				id: poliza.id,
@@ -745,22 +695,7 @@ export async function exportarReporte(filtros: ExportFilters): Promise<CobranzaS
 			regional_id,
 			client:clients!client_id (
 				id,
-				client_type,
-				natural_clients (
-					primer_nombre,
-					segundo_nombre,
-					primer_apellido,
-					segundo_apellido,
-					numero_documento
-				),
-				juridic_clients (
-					razon_social,
-					nit
-				),
-				unipersonal_clients (
-					razon_social,
-					nit
-				)
+				client_type
 			),
 			compania:companias_aseguradoras!compania_aseguradora_id (
 				nombre
@@ -806,36 +741,17 @@ export async function exportarReporte(filtros: ExportFilters): Promise<CobranzaS
 		// Policies with no cuotas get a single row with empty quota fields
 		const exportRows: ExportRow[] = [];
 
+		// Resolver nombre/documento de todos los tipos de cliente en batch
+		const clientNombresMap = await resolverNombresCliente(
+			supabase,
+			(polizas || []).map((p) => (p.client as { id?: string } | null)?.id || ""),
+		);
+
 		for (const poliza of polizas || []) {
-			const clientData = poliza.client as unknown as ClientQueryResult;
-
-			let cliente = "N/A";
-			let ciNit = "N/A";
-
-			if (clientData) {
-				if (clientData.client_type === "natural" || clientData.client_type === "unipersonal") {
-					const natural = clientData.natural_clients;
-					if (natural) {
-						cliente = `${natural.primer_nombre || ""} ${natural.segundo_nombre || ""} ${
-							natural.primer_apellido || ""
-						} ${natural.segundo_apellido || ""}`.trim();
-						ciNit = natural.numero_documento || "N/A";
-					}
-					if (clientData.client_type === "unipersonal") {
-						const unipersonal = clientData.unipersonal_clients;
-						if (unipersonal) {
-							cliente = `${cliente} (${unipersonal.razon_social || ""})`.trim();
-							ciNit = unipersonal.nit || ciNit;
-						}
-					}
-				} else {
-					const juridic = clientData.juridic_clients;
-					if (juridic) {
-						cliente = juridic.razon_social || "N/A";
-						ciNit = juridic.nit || "N/A";
-					}
-				}
-			}
+			const clientId = (poliza.client as { id?: string } | null)?.id;
+			const info = clientId ? clientNombresMap.get(clientId) : undefined;
+			const cliente = info?.name || "N/A";
+			const ciNit = info?.ci || "N/A";
 
 			const cuotas = (
 				(poliza.cuotas || []) as Array<{
@@ -1035,7 +951,10 @@ export async function obtenerDetallePolizaParaCuotas(polizaId: string): Promise<
 					client_type,
 					natural_clients(primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, numero_documento, celular, correo_electronico),
 					juridic_clients(razon_social, nit, telefono, correo_electronico),
-					unipersonal_clients(razon_social, nit, telefono_comercial, correo_electronico_comercial)
+					unipersonal_clients(razon_social, nit, telefono_comercial, correo_electronico_comercial),
+					ong_clients(nombre_ong, nit, telefono, correo_electronico),
+					club_clients(nombre_club, nit, telefono, correo_electronico),
+					asociacion_civil_clients(nombre_asociacion, nit, telefono, correo_electronico)
 				),
 				compania:companias_aseguradoras!compania_aseguradora_id(id, nombre),
 				responsable:profiles!responsable_id(id, full_name),
@@ -1079,12 +998,23 @@ export async function obtenerDetallePolizaParaCuotas(polizaId: string): Promise<
 					};
 				}
 			}
-		} else {
+		} else if (poliza.client.client_type === "juridica") {
 			const juridic = poliza.client.juridic_clients;
 			if (juridic) {
 				contacto = {
 					telefono: juridic.telefono || null,
 					correo: juridic.correo_electronico || null,
+					celular: null,
+				};
+			}
+		} else {
+			// ONG, club deportivo y asociación civil: mismas columnas de contacto
+			const org =
+				poliza.client.ong_clients || poliza.client.club_clients || poliza.client.asociacion_civil_clients;
+			if (org) {
+				contacto = {
+					telefono: org.telefono || null,
+					correo: org.correo_electronico || null,
 					celular: null,
 				};
 			}
@@ -1258,7 +1188,15 @@ export async function obtenerDetallePolizaParaCuotas(polizaId: string): Promise<
 						}
 						return nombre;
 					}
-					return poliza.client.juridic_clients?.razon_social || "N/A";
+					if (poliza.client.client_type === "juridica") {
+						return poliza.client.juridic_clients?.razon_social || "N/A";
+					}
+					return (
+						poliza.client.ong_clients?.nombre_ong ||
+						poliza.client.club_clients?.nombre_club ||
+						poliza.client.asociacion_civil_clients?.nombre_asociacion ||
+						"N/A"
+					);
 				})(),
 				documento: (() => {
 					if (poliza.client.client_type === "natural") {
@@ -1271,7 +1209,15 @@ export async function obtenerDetallePolizaParaCuotas(polizaId: string): Promise<
 							"N/A"
 						);
 					}
-					return poliza.client.juridic_clients?.nit || "N/A";
+					if (poliza.client.client_type === "juridica") {
+						return poliza.client.juridic_clients?.nit || "N/A";
+					}
+					return (
+						poliza.client.ong_clients?.nit ||
+						poliza.client.club_clients?.nit ||
+						poliza.client.asociacion_civil_clients?.nit ||
+						"N/A"
+					);
 				})(),
 			},
 			compania: {
@@ -2142,13 +2088,19 @@ export async function obtenerCobranzasPaginadas(
 				);
 			}
 
-			const [natRes, jurRes, uniRes, anexoRes] = await Promise.all([
+			const [natRes, jurRes, uniRes, ongRes, clubRes, asocRes, anexoRes] = await Promise.all([
 				natQuery,
 				supabase.from("juridic_clients").select("client_id").or(`razon_social.ilike.%${q}%,nit.ilike.%${q}%`),
 				supabase
 					.from("unipersonal_clients")
 					.select("client_id")
 					.or(`razon_social.ilike.%${q}%,nit.ilike.%${q}%`),
+				supabase.from("ong_clients").select("client_id").or(`nombre_ong.ilike.%${q}%,nit.ilike.%${q}%`),
+				supabase.from("club_clients").select("client_id").or(`nombre_club.ilike.%${q}%,nit.ilike.%${q}%`),
+				supabase
+					.from("asociacion_civil_clients")
+					.select("client_id")
+					.or(`nombre_asociacion.ilike.%${q}%,nit.ilike.%${q}%`),
 				// Mejora #3: buscar por número de anexo → devuelve la póliza madre
 				supabase.from("polizas_anexos").select("poliza_id").ilike("numero_anexo", `%${q}%`),
 			]);
@@ -2156,6 +2108,9 @@ export async function obtenerCobranzasPaginadas(
 				...(natRes.data?.map((r) => r.client_id) ?? []),
 				...(jurRes.data?.map((r) => r.client_id) ?? []),
 				...(uniRes.data?.map((r) => r.client_id) ?? []),
+				...(ongRes.data?.map((r) => r.client_id) ?? []),
+				...(clubRes.data?.map((r) => r.client_id) ?? []),
+				...(asocRes.data?.map((r) => r.client_id) ?? []),
 			];
 			searchAnexoPolizaIds = [...new Set(anexoRes.data?.map((r) => r.poliza_id) ?? [])];
 		}
@@ -2222,12 +2177,7 @@ export async function obtenerCobranzasPaginadas(
 			.select(
 				`
 				id,
-				client:clients!client_id (
-					id, client_type,
-					natural_clients (primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, numero_documento),
-					juridic_clients (razon_social, nit),
-					unipersonal_clients (razon_social, nit)
-				),
+				client:clients!client_id (id, client_type),
 				compania:companias_aseguradoras!compania_aseguradora_id (id, nombre),
 				responsable:profiles!responsable_id (id, full_name),
 				regional:regionales!regional_id (id, nombre)
@@ -2238,32 +2188,19 @@ export async function obtenerCobranzasPaginadas(
 		// Indexar por id para O(1) lookup
 		const detalleMap = new Map((detalle ?? []).map((d) => [d.id, d]));
 
+		// Resolver nombre/documento de todos los tipos de cliente en batch
+		const clientNombresMap = await resolverNombresCliente(
+			supabase,
+			resumen.map((r) => r.client_id),
+		);
+
 		// ── Construir PolizaConPagos desde vista + detalle ─────────────────
 		const polizas: PolizaConPagos[] = resumen.map((r) => {
 			const d = detalleMap.get(r.id);
-			const clientData = d?.client as unknown as ClientQueryResult;
-
-			let nombreCompleto = "N/A";
-			let documento = "N/A";
-
-			if (clientData) {
-				if (clientData.client_type === "natural" || clientData.client_type === "unipersonal") {
-					const natural = clientData.natural_clients;
-					if (natural) {
-						nombreCompleto =
-							`${natural.primer_nombre || ""} ${natural.segundo_nombre || ""} ${natural.primer_apellido || ""} ${natural.segundo_apellido || ""}`.trim();
-						documento = natural.numero_documento || "N/A";
-					}
-					if (clientData.client_type === "unipersonal" && clientData.unipersonal_clients) {
-						const uc = clientData.unipersonal_clients;
-						nombreCompleto = `${nombreCompleto} (${uc.razon_social || ""})`.trim();
-						documento = uc.nit || documento;
-					}
-				} else if (clientData.client_type === "juridica" && clientData.juridic_clients) {
-					nombreCompleto = clientData.juridic_clients.razon_social || "N/A";
-					documento = clientData.juridic_clients.nit || "N/A";
-				}
-			}
+			const clientData = d?.client as { id?: string; client_type?: string } | null;
+			const info = r.client_id ? clientNombresMap.get(r.client_id) : undefined;
+			const nombreCompleto = info?.name || "N/A";
+			const documento = info?.ci || "N/A";
 
 			return {
 				id: r.id,

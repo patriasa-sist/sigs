@@ -5,6 +5,7 @@ import { createAdminClient } from "@/utils/supabase/admin";
 import { revalidatePath } from "next/cache";
 import { getDataScopeFilter } from "@/utils/auth/helpers";
 import { generateFinalStoragePath } from "@/utils/fileUpload";
+import { resolverNombresCliente } from "@/utils/polizas/resolverNombresCliente";
 import type {
 	AnexoFormState,
 	PolizaResumenAnexo,
@@ -177,21 +178,11 @@ export async function buscarPolizasParaAnexo(query: string): Promise<{
 			return { success: true, polizas: [] };
 		}
 
-		// Obtener nombres de clientes
-		const clientIds = [...new Set(polizas.map((p) => p.client_id))];
-
-		const [{ data: clients }, { data: naturalClients }, { data: juridicClients }] = await Promise.all([
-			supabase.from("clients").select("id, client_type").in("id", clientIds),
-			supabase
-				.from("natural_clients")
-				.select("client_id, primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, numero_documento")
-				.in("client_id", clientIds),
-			supabase.from("juridic_clients").select("client_id, razon_social, nit").in("client_id", clientIds),
-		]);
-
-		const clientsMap = new Map(clients?.map((c) => [c.id, c]) || []);
-		const naturalMap = new Map(naturalClients?.map((c) => [c.client_id, c]) || []);
-		const juridicMap = new Map(juridicClients?.map((c) => [c.client_id, c]) || []);
+		// Obtener nombres de clientes (todos los tipos)
+		const clientNombresMap = await resolverNombresCliente(
+			supabase,
+			polizas.map((p) => p.client_id),
+		);
 
 		// Verificar si tienen anulación pendiente/activa
 		const polizaIds = polizas.map((p) => p.id);
@@ -205,25 +196,9 @@ export async function buscarPolizasParaAnexo(query: string): Promise<{
 		const polizasConAnulacion = new Set(anulaciones?.map((a) => a.poliza_id) || []);
 
 		const resultado: PolizaResumenAnexo[] = polizas.map((p) => {
-			const client = clientsMap.get(p.client_id);
-			let client_name = "Desconocido";
-			let client_ci = "-";
-
-			if (client?.client_type === "natural") {
-				const nc = naturalMap.get(p.client_id);
-				if (nc) {
-					client_name = [nc.primer_nombre, nc.segundo_nombre, nc.primer_apellido, nc.segundo_apellido]
-						.filter(Boolean)
-						.join(" ");
-					client_ci = nc.numero_documento || "-";
-				}
-			} else if (client?.client_type === "juridica") {
-				const jc = juridicMap.get(p.client_id);
-				if (jc) {
-					client_name = jc.razon_social;
-					client_ci = jc.nit || "-";
-				}
-			}
+			const info = clientNombresMap.get(p.client_id);
+			const client_name = info?.name || "Desconocido";
+			const client_ci = info?.ci || "-";
 
 			const compania = p.companias_aseguradoras as unknown as { nombre: string } | null;
 
@@ -317,39 +292,10 @@ export async function obtenerDatosParaAnexo(
 			return { success: false, error: "Solo se pueden crear anexos en pólizas activas" };
 		}
 
-		// Obtener nombre del cliente
-		const { data: client } = await supabase
-			.from("clients")
-			.select("id, client_type")
-			.eq("id", poliza.client_id)
-			.single();
-
-		let client_name = "Desconocido";
-		let client_ci = "-";
-
-		if (client?.client_type === "natural") {
-			const { data: nc } = await supabase
-				.from("natural_clients")
-				.select("primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, numero_documento")
-				.eq("client_id", poliza.client_id)
-				.single();
-			if (nc) {
-				client_name = [nc.primer_nombre, nc.segundo_nombre, nc.primer_apellido, nc.segundo_apellido]
-					.filter(Boolean)
-					.join(" ");
-				client_ci = nc.numero_documento || "-";
-			}
-		} else if (client?.client_type === "juridica") {
-			const { data: jc } = await supabase
-				.from("juridic_clients")
-				.select("razon_social, nit")
-				.eq("client_id", poliza.client_id)
-				.single();
-			if (jc) {
-				client_name = jc.razon_social;
-				client_ci = jc.nit || "-";
-			}
-		}
+		// Obtener nombre del cliente (todos los tipos)
+		const info = (await resolverNombresCliente(supabase, [poliza.client_id])).get(poliza.client_id);
+		const client_name = info?.name || "Desconocido";
+		const client_ci = info?.ci || "-";
 
 		// Verificar anulación pendiente/activa (sin contar el anexo en edición)
 		const anexosRelevantes = (anexosResult.data || []).filter((a) => a.id !== opciones?.excluirAnexoId);
