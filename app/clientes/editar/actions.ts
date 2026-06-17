@@ -61,6 +61,13 @@ function nullsToUndefined<T extends Record<string, unknown>>(obj: T): T {
 
 export type ActionResult<T> = { success: true; data: T } | { success: false; error: string };
 
+// Mensaje cuando un UPDATE pasa por RLS pero no afecta filas (0 rows, sin error de
+// Supabase). Ocurre si la política RLS de la tabla no autoriza al usuario sobre esa
+// fila aunque authorizeClientEdit sí lo haya dejado avanzar. Sin esta guarda la UI
+// mostraría "guardado" sin que se aplique ningún cambio.
+const ERROR_RLS_SIN_CAMBIOS =
+	"No se aplicaron los cambios: no tiene permiso para editar este cliente en la base de datos (RLS). Avise a un administrador.";
+
 // ============================================
 // AUTHORIZATION
 // ============================================
@@ -205,7 +212,7 @@ export async function updateNaturalClient(
 		Object.assign(data, normalized);
 
 		// Update natural_clients table
-		const { error: updateNaturalError } = await supabase
+		const { data: updatedNatural, error: updateNaturalError } = await supabase
 			.from("natural_clients")
 			.update({
 				primer_nombre: data.primer_nombre,
@@ -232,7 +239,8 @@ export async function updateNaturalClient(
 				nit: data.nit || null,
 				domicilio_comercial: data.domicilio_comercial || null,
 			})
-			.eq("client_id", clientId);
+			.eq("client_id", clientId)
+			.select("client_id");
 
 		if (updateNaturalError) {
 			console.error("[updateNaturalClient] Natural client update error:", updateNaturalError);
@@ -243,6 +251,10 @@ export async function updateNaturalClient(
 				{ feature: "guardar-cliente" },
 			);
 			return { success: false, error: "Error al actualizar datos personales" };
+		}
+
+		if (!updatedNatural || updatedNatural.length === 0) {
+			return { success: false, error: ERROR_RLS_SIN_CAMBIOS };
 		}
 
 		revalidatePath("/clientes");
@@ -306,7 +318,7 @@ export async function updateJuridicClient(
 		Object.assign(data, normalized);
 
 		// Update juridic_clients table
-		const { error: updateJuridicError } = await supabase
+		const { data: updatedJuridic, error: updateJuridicError } = await supabase
 			.from("juridic_clients")
 			.update({
 				razon_social: data.razon_social,
@@ -320,7 +332,8 @@ export async function updateJuridicClient(
 				correo_electronico: data.correo_electronico || null,
 				telefono: data.telefono || null,
 			})
-			.eq("client_id", clientId);
+			.eq("client_id", clientId)
+			.select("client_id");
 
 		if (updateJuridicError) {
 			console.error("[updateJuridicClient] Juridic client update error:", updateJuridicError);
@@ -331,6 +344,10 @@ export async function updateJuridicClient(
 				{ feature: "guardar-cliente" },
 			);
 			return { success: false, error: "Error al actualizar datos de la empresa" };
+		}
+
+		if (!updatedJuridic || updatedJuridic.length === 0) {
+			return { success: false, error: ERROR_RLS_SIN_CAMBIOS };
 		}
 
 		revalidatePath("/clientes");
@@ -393,7 +410,7 @@ export async function updateUnipersonalClient(
 		Object.assign(data, normalized);
 
 		// Update natural_clients table (personal data)
-		const { error: updateNaturalError } = await supabase
+		const { data: updatedNatural, error: updateNaturalError } = await supabase
 			.from("natural_clients")
 			.update({
 				primer_nombre: data.primer_nombre,
@@ -417,7 +434,8 @@ export async function updateUnipersonalClient(
 				cargo: data.cargo || null,
 				anio_ingreso: data.anio_ingreso || null,
 			})
-			.eq("client_id", clientId);
+			.eq("client_id", clientId)
+			.select("client_id");
 
 		if (updateNaturalError) {
 			console.error("[updateUnipersonalClient] Natural client update error:", updateNaturalError);
@@ -428,6 +446,10 @@ export async function updateUnipersonalClient(
 				{ feature: "guardar-cliente" },
 			);
 			return { success: false, error: "Error al actualizar datos personales" };
+		}
+
+		if (!updatedNatural || updatedNatural.length === 0) {
+			return { success: false, error: ERROR_RLS_SIN_CAMBIOS };
 		}
 
 		// Update unipersonal_clients table (commercial data)
@@ -515,7 +537,7 @@ export async function updateOngClient(clientId: string, data: Partial<OngClientF
 		const normalized = normalizeOngClientData(data as Record<string, unknown>);
 		Object.assign(data, normalized);
 
-		const { error: updateError } = await supabase
+		const { data: updatedOng, error: updateError } = await supabase
 			.from("ong_clients")
 			.update({
 				nombre_ong: data.nombre_ong,
@@ -533,12 +555,17 @@ export async function updateOngClient(clientId: string, data: Partial<OngClientF
 				ci_representante: data.ci_representante,
 				extension_ci_representante: data.extension_ci_representante || null,
 			})
-			.eq("client_id", clientId);
+			.eq("client_id", clientId)
+			.select("client_id");
 
 		if (updateError) {
 			console.error("[updateOngClient] ONG client update error:", updateError);
 			await captureError(updateError, "updateOngClient:db", { clientId }, { feature: "guardar-cliente" });
 			return { success: false, error: "Error al actualizar datos de la ONG" };
+		}
+
+		if (!updatedOng || updatedOng.length === 0) {
+			return { success: false, error: ERROR_RLS_SIN_CAMBIOS };
 		}
 
 		revalidatePath("/clientes");
@@ -595,7 +622,7 @@ export async function updateClubClient(
 		const normalized = normalizeClubClientData(data as Record<string, unknown>);
 		Object.assign(data, normalized);
 
-		const { error: updateError } = await supabase
+		const { data: updatedClub, error: updateError } = await supabase
 			.from("club_clients")
 			.update({
 				nombre_club: data.nombre_club,
@@ -615,12 +642,17 @@ export async function updateClubClient(
 				ci_representante: data.ci_representante,
 				extension_ci_representante: data.extension_ci_representante || null,
 			})
-			.eq("client_id", clientId);
+			.eq("client_id", clientId)
+			.select("client_id");
 
 		if (updateError) {
 			console.error("[updateClubClient] Club client update error:", updateError);
 			await captureError(updateError, "updateClubClient:db", { clientId }, { feature: "guardar-cliente" });
 			return { success: false, error: "Error al actualizar datos del club" };
+		}
+
+		if (!updatedClub || updatedClub.length === 0) {
+			return { success: false, error: ERROR_RLS_SIN_CAMBIOS };
 		}
 
 		revalidatePath("/clientes");
@@ -677,7 +709,7 @@ export async function updateAsociacionCivilClient(
 		const normalized = normalizeAsociacionCivilClientData(data as Record<string, unknown>);
 		Object.assign(data, normalized);
 
-		const { error: updateError } = await supabase
+		const { data: updatedAsociacion, error: updateError } = await supabase
 			.from("asociacion_civil_clients")
 			.update({
 				nombre_asociacion: data.nombre_asociacion,
@@ -696,7 +728,8 @@ export async function updateAsociacionCivilClient(
 				ci_representante: data.ci_representante,
 				extension_ci_representante: data.extension_ci_representante || null,
 			})
-			.eq("client_id", clientId);
+			.eq("client_id", clientId)
+			.select("client_id");
 
 		if (updateError) {
 			console.error("[updateAsociacionCivilClient] Asociación civil update error:", updateError);
@@ -707,6 +740,10 @@ export async function updateAsociacionCivilClient(
 				{ feature: "guardar-cliente" },
 			);
 			return { success: false, error: "Error al actualizar datos de la asociación" };
+		}
+
+		if (!updatedAsociacion || updatedAsociacion.length === 0) {
+			return { success: false, error: ERROR_RLS_SIN_CAMBIOS };
 		}
 
 		revalidatePath("/clientes");
