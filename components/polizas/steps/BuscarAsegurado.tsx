@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Search, User, Building2, CheckCircle2, ChevronRight } from "lucide-react";
 import type { AseguradoSeleccionado, ClienteNatural, ClienteJuridico } from "@/types/poliza";
+import { LABEL_TIPO_CLIENTE } from "@/types/poliza";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { createClient } from "@/utils/supabase/client";
@@ -19,6 +20,9 @@ type ClientsJoin = { id: string; client_type: string; status: string; created_at
 type NaturalClientRow = ClienteNatural & { clients: ClientsJoin };
 type JuridicClientRow = ClienteJuridico & { clients: ClientsJoin };
 type UnipersonalClientRow = { razon_social: string; nit: string; clients: ClientsJoin };
+type OngClientRow = { nombre_ong: string; nit: string; clients: ClientsJoin };
+type ClubClientRow = { nombre_club: string; nit: string; clients: ClientsJoin };
+type AsocClientRow = { nombre_asociacion: string; nit: string; clients: ClientsJoin };
 
 export function BuscarAsegurado({ asegurado, onAseguradoSeleccionado, onSiguiente }: Props) {
 	const [busqueda, setBusqueda] = useState("");
@@ -65,6 +69,18 @@ export function BuscarAsegurado({ asegurado, onAseguradoSeleccionado, onSiguient
 				.from("unipersonal_clients")
 				.select("razon_social, nit, clients!inner(id, client_type, status, created_at)")
 				.eq("clients.status", "active");
+			let ongQuery = supabase
+				.from("ong_clients")
+				.select("nombre_ong, nit, clients!inner(id, client_type, status, created_at)")
+				.eq("clients.status", "active");
+			let clubQuery = supabase
+				.from("club_clients")
+				.select("nombre_club, nit, clients!inner(id, client_type, status, created_at)")
+				.eq("clients.status", "active");
+			let asocQuery = supabase
+				.from("asociacion_civil_clients")
+				.select("nombre_asociacion, nit, clients!inner(id, client_type, status, created_at)")
+				.eq("clients.status", "active");
 			for (const p of palabras) {
 				natQuery = natQuery.or(
 					`primer_nombre.ilike.%${p}%,` +
@@ -75,26 +91,45 @@ export function BuscarAsegurado({ asegurado, onAseguradoSeleccionado, onSiguient
 				);
 				jurQuery = jurQuery.or(`razon_social.ilike.%${p}%,nit.ilike.%${p}%`);
 				uniQuery = uniQuery.or(`razon_social.ilike.%${p}%,nit.ilike.%${p}%`);
+				ongQuery = ongQuery.or(`nombre_ong.ilike.%${p}%,nit.ilike.%${p}%`);
+				clubQuery = clubQuery.or(`nombre_club.ilike.%${p}%,nit.ilike.%${p}%`);
+				asocQuery = asocQuery.or(`nombre_asociacion.ilike.%${p}%,nit.ilike.%${p}%`);
 			}
 
-			const [naturalesResult, juridicosResult, unipersonalesResult] = await Promise.all([
-				natQuery
-					.order("created_at", { referencedTable: "clients", ascending: false })
-					.limit(15)
-					.overrideTypes<NaturalClientRow[], { merge: false }>(),
-				jurQuery
-					.order("created_at", { referencedTable: "clients", ascending: false })
-					.limit(10)
-					.overrideTypes<JuridicClientRow[], { merge: false }>(),
-				uniQuery
-					.order("created_at", { referencedTable: "clients", ascending: false })
-					.limit(10)
-					.overrideTypes<UnipersonalClientRow[], { merge: false }>(),
-			]);
+			const [naturalesResult, juridicosResult, unipersonalesResult, ongsResult, clubsResult, asociacionesResult] =
+				await Promise.all([
+					natQuery
+						.order("created_at", { referencedTable: "clients", ascending: false })
+						.limit(15)
+						.overrideTypes<NaturalClientRow[], { merge: false }>(),
+					jurQuery
+						.order("created_at", { referencedTable: "clients", ascending: false })
+						.limit(10)
+						.overrideTypes<JuridicClientRow[], { merge: false }>(),
+					uniQuery
+						.order("created_at", { referencedTable: "clients", ascending: false })
+						.limit(10)
+						.overrideTypes<UnipersonalClientRow[], { merge: false }>(),
+					ongQuery
+						.order("created_at", { referencedTable: "clients", ascending: false })
+						.limit(10)
+						.overrideTypes<OngClientRow[], { merge: false }>(),
+					clubQuery
+						.order("created_at", { referencedTable: "clients", ascending: false })
+						.limit(10)
+						.overrideTypes<ClubClientRow[], { merge: false }>(),
+					asocQuery
+						.order("created_at", { referencedTable: "clients", ascending: false })
+						.limit(10)
+						.overrideTypes<AsocClientRow[], { merge: false }>(),
+				]);
 
 			if (naturalesResult.error) throw naturalesResult.error;
 			if (juridicosResult.error) throw juridicosResult.error;
 			if (unipersonalesResult.error) throw unipersonalesResult.error;
+			if (ongsResult.error) throw ongsResult.error;
+			if (clubsResult.error) throw clubsResult.error;
+			if (asociacionesResult.error) throw asociacionesResult.error;
 
 			const naturales: AseguradoSeleccionado[] = (naturalesResult.data || []).map((nc) => {
 				const nombre_completo = [nc.primer_nombre, nc.segundo_nombre, nc.primer_apellido, nc.segundo_apellido]
@@ -132,7 +167,37 @@ export function BuscarAsegurado({ asegurado, onAseguradoSeleccionado, onSiguient
 				documento: uc.nit,
 			}));
 
-			const todos = [...naturales, ...juridicos, ...unipersonales].sort(
+			const ongs: AseguradoSeleccionado[] = (ongsResult.data || []).map((oc) => ({
+				id: oc.clients.id,
+				client_type: "ong" as const,
+				status: oc.clients.status as "active" | "inactive" | "suspended",
+				created_at: oc.clients.created_at,
+				detalles: null,
+				nombre_completo: oc.nombre_ong,
+				documento: oc.nit,
+			}));
+
+			const clubs: AseguradoSeleccionado[] = (clubsResult.data || []).map((cc) => ({
+				id: cc.clients.id,
+				client_type: "club" as const,
+				status: cc.clients.status as "active" | "inactive" | "suspended",
+				created_at: cc.clients.created_at,
+				detalles: null,
+				nombre_completo: cc.nombre_club,
+				documento: cc.nit,
+			}));
+
+			const asociaciones: AseguradoSeleccionado[] = (asociacionesResult.data || []).map((ac) => ({
+				id: ac.clients.id,
+				client_type: "asociacion_civil" as const,
+				status: ac.clients.status as "active" | "inactive" | "suspended",
+				created_at: ac.clients.created_at,
+				detalles: null,
+				nombre_completo: ac.nombre_asociacion,
+				documento: ac.nit,
+			}));
+
+			const todos = [...naturales, ...juridicos, ...unipersonales, ...ongs, ...clubs, ...asociaciones].sort(
 				(a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
 			);
 
@@ -203,7 +268,7 @@ export function BuscarAsegurado({ asegurado, onAseguradoSeleccionado, onSiguient
 							<div>
 								<p className="font-semibold text-base text-foreground">{asegurado.nombre_completo}</p>
 								<p className="text-sm text-muted-foreground">
-									{asegurado.client_type === "natural" ? "Persona Natural" : "Persona Jurídica"}
+									{LABEL_TIPO_CLIENTE[asegurado.client_type]}
 									{" · "}
 									{asegurado.client_type === "natural"
 										? (asegurado.detalles as ClienteNatural)?.tipo_documento
@@ -262,9 +327,7 @@ export function BuscarAsegurado({ asegurado, onAseguradoSeleccionado, onSiguient
 										<div className="flex-1">
 											<p className="font-medium">{cliente.nombre_completo}</p>
 											<p className="text-sm text-muted-foreground">
-												{cliente.client_type === "natural"
-													? "Persona Natural"
-													: "Persona Jurídica"}
+												{LABEL_TIPO_CLIENTE[cliente.client_type]}
 												{" · "}
 												{cliente.documento}
 											</p>

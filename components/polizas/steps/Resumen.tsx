@@ -25,6 +25,7 @@ import type {
 	DatosTransporte,
 	DatosAeronavegacion,
 } from "@/types/poliza";
+import { LABEL_TIPO_CLIENTE } from "@/types/poliza";
 import { validarDatosBasicos, validarModalidadPago, ramoRequiereDatosEspecificos } from "@/utils/polizaValidation";
 import { DOCUMENTOS_OBLIGATORIOS } from "@/utils/validationConstants";
 import { Button } from "@/components/ui/button";
@@ -372,12 +373,7 @@ export function Resumen({ formState, onAnterior, onEditarPaso, onGuardar, guarda
 									<div className="text-sm text-muted-foreground space-y-1">
 										<p className="font-medium text-foreground">{asegurado.nombre_completo}</p>
 										<p>Documento: {asegurado.documento}</p>
-										<p>
-											Tipo:{" "}
-											{asegurado.client_type === "natural"
-												? "Persona Natural"
-												: "Persona Jurídica"}
-										</p>
+										<p>Tipo: {LABEL_TIPO_CLIENTE[asegurado.client_type]}</p>
 									</div>
 								)}
 							</div>

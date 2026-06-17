@@ -3,6 +3,7 @@
 import { createClient } from "@/utils/supabase/server";
 import { getDataScopeFilter } from "@/utils/auth/helpers";
 import { obtenerEjecutivosFiltro } from "@/utils/ejecutivos";
+import { resolverNombresCliente } from "@/utils/polizas/resolverNombresCliente";
 import type { CuotaConsolidada, CuotaVigenciaCorrida, CuotaAnexoPropia } from "@/types/anexo";
 
 export type PolizaListItem = {
@@ -497,82 +498,10 @@ export async function obtenerPolizas(params: ObtenerPolizasParams = {}) {
 		if (!polizas?.length) return { success: true, polizas: [], total: count ?? 0 };
 
 		// Obtener info de clientes solo para la página actual (todos los tipos)
-		const clientIds = [...new Set(polizas.map((p) => p.client_id))];
-		const [clientsRes, natInfoRes, jurInfoRes, uniInfoRes, ongInfoRes, clubInfoRes, asocInfoRes] =
-			await Promise.all([
-				supabase.from("clients").select("id, client_type").in("id", clientIds),
-				supabase
-					.from("natural_clients")
-					.select(
-						"client_id, primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, numero_documento",
-					)
-					.in("client_id", clientIds),
-				supabase.from("juridic_clients").select("client_id, razon_social, nit").in("client_id", clientIds),
-				supabase.from("unipersonal_clients").select("client_id, razon_social, nit").in("client_id", clientIds),
-				supabase.from("ong_clients").select("client_id, nombre_ong, nit").in("client_id", clientIds),
-				supabase.from("club_clients").select("client_id, nombre_club, nit").in("client_id", clientIds),
-				supabase
-					.from("asociacion_civil_clients")
-					.select("client_id, nombre_asociacion, nit")
-					.in("client_id", clientIds),
-			]);
-
-		const porClientId = <T extends { client_id: string }>(rows: T[] | null) =>
-			new Map((rows ?? []).map((r) => [r.client_id, r]));
-		const naturalClientsMap = porClientId(natInfoRes.data);
-		const juridicClientsMap = porClientId(jurInfoRes.data);
-		const unipersonalClientsMap = porClientId(uniInfoRes.data);
-		const ongClientsMap = porClientId(ongInfoRes.data);
-		const clubClientsMap = porClientId(clubInfoRes.data);
-		const asocClientsMap = porClientId(asocInfoRes.data);
-
-		// Resolver nombre/documento según el tipo de cliente
-		const clientInfoMap = new Map<string, { name: string; ci: string }>();
-		for (const c of clientsRes.data ?? []) {
-			let name = "Cliente Desconocido";
-			let ci = "-";
-			if (c.client_type === "natural" || c.client_type === "unipersonal") {
-				const nc = naturalClientsMap.get(c.id);
-				if (nc) {
-					name = [nc.primer_nombre, nc.segundo_nombre, nc.primer_apellido, nc.segundo_apellido]
-						.filter(Boolean)
-						.join(" ");
-					ci = nc.numero_documento || "-";
-				}
-				if (c.client_type === "unipersonal") {
-					const uni = unipersonalClientsMap.get(c.id);
-					if (uni) {
-						name = `${name} (${uni.razon_social})`;
-						ci = uni.nit || ci;
-					}
-				}
-			} else if (c.client_type === "juridica") {
-				const jc = juridicClientsMap.get(c.id);
-				if (jc) {
-					name = jc.razon_social;
-					ci = jc.nit || "-";
-				}
-			} else if (c.client_type === "ong") {
-				const oc = ongClientsMap.get(c.id);
-				if (oc) {
-					name = oc.nombre_ong;
-					ci = oc.nit || "-";
-				}
-			} else if (c.client_type === "club") {
-				const cc = clubClientsMap.get(c.id);
-				if (cc) {
-					name = cc.nombre_club;
-					ci = cc.nit || "-";
-				}
-			} else if (c.client_type === "asociacion_civil") {
-				const ac = asocClientsMap.get(c.id);
-				if (ac) {
-					name = ac.nombre_asociacion;
-					ci = ac.nit || "-";
-				}
-			}
-			clientInfoMap.set(c.id, { name, ci });
-		}
+		const clientInfoMap = await resolverNombresCliente(
+			supabase,
+			polizas.map((p) => p.client_id),
+		);
 
 		const polizasFormateadas = polizas.map((p) =>
 			mapPolizaToListItem(p as Parameters<typeof mapPolizaToListItem>[0], clientInfoMap),
@@ -662,13 +591,7 @@ export async function obtenerDetallePoliza(polizaId: string) {
 				profiles!polizas_responsable_id_fkey (full_name),
 				regionales!polizas_regional_id_fkey (nombre),
 				regional_asegurado:regionales!polizas_regional_asegurado_id_fkey (nombre),
-				categorias (nombre),
-				client:clients!client_id (
-					id, client_type,
-					natural_clients (primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, numero_documento),
-					juridic_clients (razon_social, nit),
-					unipersonal_clients (razon_social, nit)
-				)
+				categorias (nombre)
 			`,
 			)
 			.eq("id", polizaId)
@@ -685,45 +608,11 @@ export async function obtenerDetallePoliza(polizaId: string) {
 			return { success: false, error: "No tiene acceso a esta póliza" };
 		}
 
-		// Obtener información del cliente (ya viene en el join inicial)
-		type EmbeddedClient = {
-			id: string;
-			client_type: "natural" | "juridica" | "unipersonal";
-			natural_clients: {
-				primer_nombre?: string;
-				segundo_nombre?: string;
-				primer_apellido?: string;
-				segundo_apellido?: string;
-				numero_documento?: string;
-			} | null;
-			juridic_clients: { razon_social?: string; nit?: string } | null;
-			unipersonal_clients: { razon_social?: string; nit?: string } | null;
-		} | null;
-		const embeddedClient = poliza.client as unknown as EmbeddedClient;
-
-		let client_name = "Cliente Desconocido";
-		let client_ci = "-";
-
-		if (embeddedClient?.client_type === "natural" || embeddedClient?.client_type === "unipersonal") {
-			const nc = embeddedClient.natural_clients;
-			if (nc) {
-				const nombres = [nc.primer_nombre, nc.segundo_nombre].filter(Boolean).join(" ");
-				const apellidos = [nc.primer_apellido, nc.segundo_apellido].filter(Boolean).join(" ");
-				client_name = `${nombres} ${apellidos}`.trim();
-				client_ci = nc.numero_documento || "-";
-			}
-			if (embeddedClient.client_type === "unipersonal" && embeddedClient.unipersonal_clients) {
-				const uc = embeddedClient.unipersonal_clients;
-				client_name = `${client_name} (${uc.razon_social || ""})`.trim();
-				client_ci = uc.nit || client_ci;
-			}
-		} else if (embeddedClient?.client_type === "juridica") {
-			const jc = embeddedClient.juridic_clients;
-			if (jc) {
-				client_name = jc.razon_social || "Cliente Desconocido";
-				client_ci = jc.nit || "-";
-			}
-		}
+		// Obtener información del cliente (todos los tipos: natural, unipersonal,
+		// jurídica, ONG, club deportivo y asociación civil)
+		const infoCliente = (await resolverNombresCliente(supabase, [poliza.client_id])).get(poliza.client_id);
+		const client_name = infoCliente?.name || "Cliente Desconocido";
+		const client_ci = infoCliente?.ci || "-";
 
 		// Obtener pagos
 		const { data: pagos } = await supabase
@@ -795,32 +684,11 @@ export async function obtenerDetallePoliza(polizaId: string) {
 				.eq("poliza_id", polizaId);
 
 			if (aseguradosData && aseguradosData.length > 0) {
-				// Resolver nombres de clientes
-				const clientIds = aseguradosData.map((a) => a.client_id);
-				const { data: clients } = await supabase.from("clients").select("id, client_type").in("id", clientIds);
-
-				const clientMap = new Map<string, { name: string; ci: string }>();
-				for (const c of clients || []) {
-					if (c.client_type === "natural" || c.client_type === "unipersonal") {
-						const { data: nc } = await supabase
-							.from("natural_clients")
-							.select("primer_nombre, primer_apellido, numero_documento")
-							.eq("client_id", c.id)
-							.single();
-						if (nc)
-							clientMap.set(c.id, {
-								name: `${nc.primer_nombre} ${nc.primer_apellido}`,
-								ci: nc.numero_documento || "-",
-							});
-					} else if (c.client_type === "juridica") {
-						const { data: jc } = await supabase
-							.from("juridic_clients")
-							.select("razon_social, nit")
-							.eq("client_id", c.id)
-							.single();
-						if (jc) clientMap.set(c.id, { name: jc.razon_social, ci: jc.nit || "-" });
-					}
-				}
+				// Resolver nombres de clientes (todos los tipos)
+				const clientMap = await resolverNombresCliente(
+					supabase,
+					aseguradosData.map((a) => a.client_id),
+				);
 
 				asegurados_salud = aseguradosData.map((a) => ({
 					id: a.id,
@@ -884,38 +752,15 @@ export async function obtenerDetallePoliza(polizaId: string) {
 				.eq("poliza_id", polizaId);
 
 			if (asegIncendio && asegIncendio.length > 0) {
-				const resolved: PolizaDetalle["incendio_asegurados"] = [];
-				for (const a of asegIncendio) {
-					const { data: cl } = await supabase
-						.from("clients")
-						.select("client_type")
-						.eq("id", a.client_id)
-						.single();
-					let name = "Desconocido",
-						ci = "-";
-					if (cl?.client_type === "natural") {
-						const { data: nc } = await supabase
-							.from("natural_clients")
-							.select("primer_nombre, primer_apellido, numero_documento")
-							.eq("client_id", a.client_id)
-							.single();
-						if (nc) {
-							name = `${nc.primer_nombre} ${nc.primer_apellido}`;
-							ci = nc.numero_documento || "-";
-						}
-					} else if (cl?.client_type === "juridica") {
-						const { data: jc } = await supabase
-							.from("juridic_clients")
-							.select("razon_social, nit")
-							.eq("client_id", a.client_id)
-							.single();
-						if (jc) {
-							name = jc.razon_social;
-							ci = jc.nit || "-";
-						}
-					}
-					resolved.push({ id: a.id, client_name: name, client_ci: ci });
-				}
+				const clientMap = await resolverNombresCliente(
+					supabase,
+					asegIncendio.map((a) => a.client_id),
+				);
+				const resolved: PolizaDetalle["incendio_asegurados"] = asegIncendio.map((a) => ({
+					id: a.id,
+					client_name: clientMap.get(a.client_id)?.name || "Desconocido",
+					client_ci: clientMap.get(a.client_id)?.ci || "-",
+				}));
 				incendio_asegurados = resolved;
 			}
 		}
@@ -958,39 +803,15 @@ export async function obtenerDetallePoliza(polizaId: string) {
 				.eq("poliza_id", polizaId);
 
 			if (asegRV && asegRV.length > 0) {
-				const resolved: PolizaDetalle["riesgos_varios_asegurados"] = [];
-				for (const a of asegRV) {
-					const { data: cl } = await supabase
-						.from("clients")
-						.select("client_type")
-						.eq("id", a.client_id)
-						.single();
-					let name = "Desconocido",
-						ci = "-";
-					if (cl?.client_type === "natural") {
-						const { data: nc } = await supabase
-							.from("natural_clients")
-							.select("primer_nombre, primer_apellido, numero_documento")
-							.eq("client_id", a.client_id)
-							.single();
-						if (nc) {
-							name = `${nc.primer_nombre} ${nc.primer_apellido}`;
-							ci = nc.numero_documento || "-";
-						}
-					} else if (cl?.client_type === "juridica") {
-						const { data: jc } = await supabase
-							.from("juridic_clients")
-							.select("razon_social, nit")
-							.eq("client_id", a.client_id)
-							.single();
-						if (jc) {
-							name = jc.razon_social;
-							ci = jc.nit || "-";
-						}
-					}
-					resolved.push({ id: a.id, client_name: name, client_ci: ci });
-				}
-				riesgos_varios_asegurados = resolved;
+				const clientMap = await resolverNombresCliente(
+					supabase,
+					asegRV.map((a) => a.client_id),
+				);
+				riesgos_varios_asegurados = asegRV.map((a) => ({
+					id: a.id,
+					client_name: clientMap.get(a.client_id)?.name || "Desconocido",
+					client_ci: clientMap.get(a.client_id)?.ci || "-",
+				}));
 			}
 		}
 
@@ -1084,33 +905,11 @@ export async function obtenerDetallePoliza(polizaId: string) {
 				.eq("poliza_id", polizaId);
 
 			if (asegNivelData && asegNivelData.length > 0) {
-				const clientIds = [...new Set(asegNivelData.map((a) => a.client_id))];
-				const clientMap = new Map<string, { name: string; ci: string }>();
-
-				// Batch resolve client names
-				const { data: clients } = await supabase.from("clients").select("id, client_type").in("id", clientIds);
-
-				for (const c of clients || []) {
-					if (c.client_type === "natural" || c.client_type === "unipersonal") {
-						const { data: nc } = await supabase
-							.from("natural_clients")
-							.select("primer_nombre, primer_apellido, numero_documento")
-							.eq("client_id", c.id)
-							.single();
-						if (nc)
-							clientMap.set(c.id, {
-								name: `${nc.primer_nombre} ${nc.primer_apellido}`,
-								ci: nc.numero_documento || "-",
-							});
-					} else if (c.client_type === "juridica") {
-						const { data: jc } = await supabase
-							.from("juridic_clients")
-							.select("razon_social, nit")
-							.eq("client_id", c.id)
-							.single();
-						if (jc) clientMap.set(c.id, { name: jc.razon_social, ci: jc.nit || "-" });
-					}
-				}
+				// Batch resolve client names (todos los tipos)
+				const clientMap = await resolverNombresCliente(
+					supabase,
+					asegNivelData.map((a) => a.client_id),
+				);
 
 				asegurados_nivel = asegNivelData.map((a) => ({
 					id: a.id,
@@ -1830,59 +1629,23 @@ export async function buscarPolizas(query: string) {
 			return { success: true, polizas: [] };
 		}
 
-		// Obtener información de clientes
-		const clientIds = [...new Set(polizas.map((p) => p.client_id))];
-
-		const { data: clients } = await supabase.from("clients").select("id, client_type").in("id", clientIds);
-
-		const { data: naturalClients } = await supabase
-			.from("natural_clients")
-			.select("client_id, primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, numero_documento")
-			.in("client_id", clientIds);
-
-		const { data: juridicClients } = await supabase
-			.from("juridic_clients")
-			.select("client_id, razon_social, nit")
-			.in("client_id", clientIds);
-
-		// Crear mapas
-		const clientsMap = new Map(clients?.map((c) => [c.id, c]) || []);
-		const naturalClientsMap = new Map(naturalClients?.map((c) => [c.client_id, c]) || []);
-		const juridicClientsMap = new Map(juridicClients?.map((c) => [c.client_id, c]) || []);
+		// Obtener información de clientes (todos los tipos)
+		const clientMap = await resolverNombresCliente(
+			supabase,
+			polizas.map((p) => p.client_id),
+		);
 
 		// Mapear datos
 		const polizasFormateadas: PolizaListItem[] = polizas.map((poliza) => {
-			const client = clientsMap.get(poliza.client_id);
-			let client_name = "Cliente Desconocido";
-			let client_ci = "-";
-
-			if (client?.client_type === "natural") {
-				const naturalClient = naturalClientsMap.get(poliza.client_id);
-				if (naturalClient) {
-					const nombres = [naturalClient.primer_nombre, naturalClient.segundo_nombre]
-						.filter(Boolean)
-						.join(" ");
-					const apellidos = [naturalClient.primer_apellido, naturalClient.segundo_apellido]
-						.filter(Boolean)
-						.join(" ");
-					client_name = `${nombres} ${apellidos}`.trim();
-					client_ci = naturalClient.numero_documento || "-";
-				}
-			} else if (client?.client_type === "juridica") {
-				const juridicClient = juridicClientsMap.get(poliza.client_id);
-				if (juridicClient) {
-					client_name = juridicClient.razon_social;
-					client_ci = juridicClient.nit || "-";
-				}
-			}
+			const info = clientMap.get(poliza.client_id);
 
 			return {
 				id: poliza.id,
 				numero_poliza: poliza.numero_poliza,
 				ramo: poliza.ramo,
 				client_id: poliza.client_id,
-				client_name,
-				client_ci,
+				client_name: info?.name || "Cliente Desconocido",
+				client_ci: info?.ci || "-",
 				compania_nombre: (poliza.companias_aseguradoras as { nombre?: string } | null)?.nombre || "-",
 				inicio_vigencia: poliza.inicio_vigencia,
 				fin_vigencia: poliza.fin_vigencia,

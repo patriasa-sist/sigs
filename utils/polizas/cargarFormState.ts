@@ -162,12 +162,72 @@ export async function cargarPolizaFormState(
 
 			asegurado = {
 				id: client.id,
-				client_type: client.client_type === "unipersonal" ? "natural" : "natural",
+				client_type: "natural",
 				status: client.status,
 				created_at: client.created_at,
 				detalles: naturalClient,
 				nombre_completo,
 				documento,
+			};
+		} else if (client.client_type === "ong") {
+			const { data: ongClient } = await supabase
+				.from("ong_clients")
+				.select("nombre_ong, nit")
+				.eq("client_id", poliza.client_id)
+				.single();
+
+			if (!ongClient) {
+				return { success: false, error: "Datos del cliente no encontrados" };
+			}
+
+			asegurado = {
+				id: client.id,
+				client_type: "ong",
+				status: client.status,
+				created_at: client.created_at,
+				detalles: null,
+				nombre_completo: ongClient.nombre_ong,
+				documento: ongClient.nit || "-",
+			};
+		} else if (client.client_type === "club") {
+			const { data: clubClient } = await supabase
+				.from("club_clients")
+				.select("nombre_club, nit")
+				.eq("client_id", poliza.client_id)
+				.single();
+
+			if (!clubClient) {
+				return { success: false, error: "Datos del cliente no encontrados" };
+			}
+
+			asegurado = {
+				id: client.id,
+				client_type: "club",
+				status: client.status,
+				created_at: client.created_at,
+				detalles: null,
+				nombre_completo: clubClient.nombre_club,
+				documento: clubClient.nit || "-",
+			};
+		} else if (client.client_type === "asociacion_civil") {
+			const { data: asocClient } = await supabase
+				.from("asociacion_civil_clients")
+				.select("nombre_asociacion, nit")
+				.eq("client_id", poliza.client_id)
+				.single();
+
+			if (!asocClient) {
+				return { success: false, error: "Datos del cliente no encontrados" };
+			}
+
+			asegurado = {
+				id: client.id,
+				client_type: "asociacion_civil",
+				status: client.status,
+				created_at: client.created_at,
+				detalles: null,
+				nombre_completo: asocClient.nombre_asociacion,
+				documento: asocClient.nit || "-",
 			};
 		} else {
 			const { data: juridicClient } = await supabase

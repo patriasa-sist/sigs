@@ -119,9 +119,21 @@ export type ClienteJuridico = {
 	telefono?: string;
 };
 
+export type ClientTypePoliza = "natural" | "juridica" | "unipersonal" | "ong" | "club" | "asociacion_civil";
+
+// Etiqueta de display por tipo de cliente (paso 1 / resumen).
+export const LABEL_TIPO_CLIENTE: Record<ClientTypePoliza, string> = {
+	natural: "Persona Natural",
+	juridica: "Persona Jurídica",
+	unipersonal: "Empresa Unipersonal",
+	ong: "ONG",
+	club: "Club Deportivo",
+	asociacion_civil: "Asociación Civil",
+};
+
 export type ClienteBase = {
 	id: string;
-	client_type: "natural" | "juridica";
+	client_type: ClientTypePoliza;
 	status: "active" | "inactive" | "suspended";
 	created_at: string;
 };
