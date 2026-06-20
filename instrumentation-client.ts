@@ -22,6 +22,7 @@ Sentry.init({
 		"Failed to fetch",
 		"Load failed",
 		"NetworkError",
+		/network error/i,
 		"AbortError",
 		// Next.js navigation (no son errores reales)
 		"NEXT_REDIRECT",
@@ -29,6 +30,20 @@ Sentry.init({
 		// ResizeObserver (bug de browsers, inofensivo)
 		"ResizeObserver loop",
 	],
+
+	// Los breadcrumbs de UI traen la lista completa de clases de Tailwind del elemento,
+	// haciendo ilegible la traza. Recortamos el mensaje a tag + #id + [atributo] (lo útil
+	// para identificar el elemento) y descartamos las clases.
+	beforeBreadcrumb(breadcrumb) {
+		const { category, message } = breadcrumb;
+		if ((category === "ui.click" || category === "ui.input") && typeof message === "string") {
+			const tag = message.split(/[.[#]/)[0];
+			const id = message.match(/#[\w-]+/)?.[0] ?? "";
+			const attr = message.match(/\[[^\]]*\]/)?.[0] ?? "";
+			breadcrumb.message = `${tag}${id}${attr}`;
+		}
+		return breadcrumb;
+	},
 });
 
 // Identificar usuario en Sentry al cargar la app (lazy import para evitar problemas de módulos)
