@@ -33,6 +33,8 @@ type Props = {
 	niveles: NivelGenerico[];
 	roles?: RolOption[];
 	hideRol?: boolean;
+	/** Rol pre-seleccionado al agregar (cuando no se edita un beneficiario existente). */
+	rolInicial?: string;
 	titulo?: string;
 	descripcionRoles?: string;
 	onGuardar: (datos: DatosPersonaMinima) => void;
@@ -54,6 +56,7 @@ export function BeneficiarioModal({
 	niveles,
 	roles = ROLES_DEFAULT,
 	hideRol = false,
+	rolInicial,
 	titulo,
 	descripcionRoles,
 	onGuardar,
@@ -67,7 +70,7 @@ export function BeneficiarioModal({
 			fecha_nacimiento: undefined,
 			genero: undefined,
 			nivel_id: niveles[0]?.id || "",
-			rol: hideRol ? undefined : roles[0]?.value || "conyugue",
+			rol: hideRol ? undefined : rolInicial || roles[0]?.value || "conyugue",
 		},
 	);
 

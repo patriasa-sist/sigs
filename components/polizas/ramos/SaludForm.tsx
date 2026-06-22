@@ -92,6 +92,7 @@ export function SaludForm({
 	const [titularEditando, setTitularEditando] = useState<TitularSalud | null>(null);
 	const [mostrarModalFamiliar, setMostrarModalFamiliar] = useState(false);
 	const [familiarEditando, setFamiliarEditando] = useState<FamiliarSalud | null>(null);
+	const [rolFamiliarInicial, setRolFamiliarInicial] = useState<"conyugue" | "descendiente">("descendiente");
 	const [contextoFamiliar, setContextoFamiliar] = useState<ContextoFamiliar | null>(null);
 	const [titularesExpandidos, setTitularesExpandidos] = useState<Set<string>>(new Set());
 	const [errores, setErrores] = useState<Record<string, string>>({});
@@ -233,14 +234,20 @@ export function SaludForm({
 	};
 
 	// ===== FUNCIONES FAMILIARES =====
-	const abrirModalFamiliarContratante = (familiar?: FamiliarSalud) => {
+	const abrirModalFamiliarContratante = (rol: "conyugue" | "descendiente", familiar?: FamiliarSalud) => {
 		setFamiliarEditando(familiar ?? null);
+		setRolFamiliarInicial(familiar?.rol ?? rol);
 		setContextoFamiliar({ tipo: "contratante" });
 		setMostrarModalFamiliar(true);
 	};
 
-	const abrirModalFamiliarTitular = (titularId: string, familiar?: FamiliarSalud) => {
+	const abrirModalFamiliarTitular = (
+		titularId: string,
+		rol: "conyugue" | "descendiente",
+		familiar?: FamiliarSalud,
+	) => {
 		setFamiliarEditando(familiar ?? null);
+		setRolFamiliarInicial(familiar?.rol ?? rol);
 		setContextoFamiliar({ tipo: "titular", titularId });
 		setMostrarModalFamiliar(true);
 	};
@@ -866,13 +873,9 @@ export function SaludForm({
 									renderFamiliares(
 										contratante.conyugue,
 										contratante.descendientes || [],
-										() => abrirModalFamiliarContratante(),
-										() => {
-											setFamiliarEditando(null);
-											setContextoFamiliar({ tipo: "contratante" });
-											setMostrarModalFamiliar(true);
-										},
-										(f) => abrirModalFamiliarContratante(f),
+										() => abrirModalFamiliarContratante("conyugue"),
+										() => abrirModalFamiliarContratante("descendiente"),
+										(f) => abrirModalFamiliarContratante(f.rol, f),
 										(f) => eliminarFamiliarContratante(f),
 									)}
 							</div>
@@ -1017,9 +1020,9 @@ export function SaludForm({
 											{renderFamiliares(
 												titular.conyugue,
 												titular.descendientes,
-												() => abrirModalFamiliarTitular(titular.id),
-												() => abrirModalFamiliarTitular(titular.id),
-												(f) => abrirModalFamiliarTitular(titular.id, f),
+												() => abrirModalFamiliarTitular(titular.id, "conyugue"),
+												() => abrirModalFamiliarTitular(titular.id, "descendiente"),
+												(f) => abrirModalFamiliarTitular(titular.id, f.rol, f),
 												(f) => eliminarFamiliarTitular(titular.id, f),
 											)}
 										</div>
@@ -1097,6 +1100,7 @@ export function SaludForm({
 					moneda={moneda}
 					niveles={niveles}
 					hideRol={false}
+					rolInicial={rolFamiliarInicial}
 					roles={[
 						{ value: "conyugue", label: "Cónyuge" },
 						{ value: "descendiente", label: "Descendiente" },
