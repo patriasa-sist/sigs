@@ -405,8 +405,14 @@ export default function PolizaDetallePage() {
 								<p className="text-sm text-foreground mt-1">{poliza.ramo}</p>
 							</div>
 							<div>
-								<label className="text-xs font-medium text-muted-foreground">Director de cartera</label>
-								<p className="text-sm text-foreground mt-1">{poliza.director_cartera_nombre || "—"}</p>
+								<label className="text-xs font-medium text-muted-foreground">Producto</label>
+								<p className="text-sm text-foreground mt-1">
+									{poliza.producto_nombre
+										? poliza.producto_codigo
+											? `${poliza.producto_nombre} (${poliza.producto_codigo})`
+											: poliza.producto_nombre
+										: "—"}
+								</p>
 							</div>
 							<div>
 								<label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5 mb-1">
@@ -416,12 +422,16 @@ export default function PolizaDetallePage() {
 								<p className="text-sm text-foreground mt-1">{poliza.regional_nombre}</p>
 							</div>
 							<div>
-								<label className="text-xs font-medium text-muted-foreground">Ejecutivo comercial</label>
-								<p className="text-sm text-foreground mt-1">{poliza.responsable_nombre}</p>
+								<label className="text-xs font-medium text-muted-foreground">Director de cartera</label>
+								<p className="text-sm text-foreground mt-1">{poliza.director_cartera_nombre || "—"}</p>
 							</div>
 							<div>
 								<label className="text-xs font-medium text-muted-foreground">Categoría</label>
 								<p className="text-sm text-foreground mt-1">{poliza.categoria_nombre || "—"}</p>
+							</div>
+							<div>
+								<label className="text-xs font-medium text-muted-foreground">Ejecutivo comercial</label>
+								<p className="text-sm text-foreground mt-1">{poliza.responsable_nombre}</p>
 							</div>
 						</div>
 					</div>

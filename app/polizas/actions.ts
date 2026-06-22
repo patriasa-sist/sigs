@@ -37,6 +37,8 @@ export type PolizaDetalle = PolizaListItem & {
 	prima_neta_manual: boolean;
 	prima_neta_ajuste_motivo: string | null;
 	categoria_nombre: string;
+	producto_nombre: string | null;
+	producto_codigo: string | null;
 	// Audit and validation fields
 	creador_nombre: string | null;
 	validado_por: string | null;
@@ -591,7 +593,8 @@ export async function obtenerDetallePoliza(polizaId: string) {
 				profiles!polizas_responsable_id_fkey (full_name),
 				regionales!polizas_regional_id_fkey (nombre),
 				regional_asegurado:regionales!polizas_regional_asegurado_id_fkey (nombre),
-				categorias (nombre)
+				categorias (nombre),
+				producto:productos_aseguradoras!producto_id (codigo_producto, nombre_producto)
 			`,
 			)
 			.eq("id", polizaId)
@@ -1513,6 +1516,8 @@ export async function obtenerDetallePoliza(polizaId: string) {
 			responsable_nombre: (poliza.profiles as { full_name?: string } | null)?.full_name || "-",
 			regional_nombre: (poliza.regionales as { nombre?: string } | null)?.nombre || "-",
 			categoria_nombre: (poliza.categorias as { nombre?: string } | null)?.nombre || "-",
+			producto_nombre: (poliza.producto as { nombre_producto?: string } | null)?.nombre_producto || null,
+			producto_codigo: (poliza.producto as { codigo_producto?: string } | null)?.codigo_producto || null,
 			created_at: poliza.created_at,
 			creador_nombre,
 			validado_por: poliza.validado_por || null,
