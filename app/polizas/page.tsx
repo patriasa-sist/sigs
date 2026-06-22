@@ -21,6 +21,7 @@ import {
 	SlidersHorizontal,
 	ChevronRight,
 	RotateCcw,
+	AlertTriangle,
 } from "lucide-react";
 import { formatCurrency, formatDate } from "@/utils/formatters";
 
@@ -90,6 +91,9 @@ export default function PolizasPage() {
 	const [currentPage, setCurrentPage] = useState(1);
 	const [totalRecords, setTotalRecords] = useState(0);
 	const [isLoading, setIsLoading] = useState(true);
+	const [loadError, setLoadError] = useState<string | null>(null);
+	// Se incrementa al pulsar "Reintentar" para re-disparar la carga de datos.
+	const [reloadKey, setReloadKey] = useState(0);
 
 	const [searchQuery, setSearchQuery] = useState("");
 	const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
@@ -106,18 +110,19 @@ export default function PolizasPage() {
 		};
 	}, [searchQuery]);
 
-	// Cargar opciones de filtros una sola vez
+	// Cargar opciones de filtros (se reintenta junto con la lista)
 	useEffect(() => {
 		obtenerFiltrosPolizas().then((result) => {
 			if (result.success && result.data) setFiltrosData(result.data);
 		});
-	}, []);
+	}, [reloadKey]);
 
 	// Cargar pólizas cuando cambian filtros o búsqueda — resetea a página 1
 	useEffect(() => {
 		let cancelled = false;
 		setCurrentPage(1);
 		setIsLoading(true);
+		setLoadError(null);
 
 		obtenerPolizas({
 			page: 1,
@@ -133,6 +138,8 @@ export default function PolizasPage() {
 			if (result.success) {
 				setPolizas(result.polizas);
 				setTotalRecords(result.total);
+			} else {
+				setLoadError(result.error || "No se pudieron cargar las pólizas.");
 			}
 			setIsLoading(false);
 		});
@@ -147,11 +154,13 @@ export default function PolizasPage() {
 		filters.estado,
 		filters.responsable_id,
 		filters.categoria_id,
+		reloadKey,
 	]);
 
 	const handlePageChange = async (page: number) => {
 		setCurrentPage(page);
 		setIsLoading(true);
+		setLoadError(null);
 		window.scrollTo({ top: 0, behavior: "smooth" });
 
 		const result = await obtenerPolizas({
@@ -168,6 +177,8 @@ export default function PolizasPage() {
 		if (result.success) {
 			setPolizas(result.polizas);
 			setTotalRecords(result.total);
+		} else {
+			setLoadError(result.error || "No se pudieron cargar las pólizas.");
 		}
 		setIsLoading(false);
 	};
@@ -197,9 +208,11 @@ export default function PolizasPage() {
 					<p className="text-sm text-muted-foreground mt-0.5">
 						{isLoading
 							? "Cargando…"
-							: totalRecords > 0
-								? `${totalRecords} pólizas encontradas`
-								: "Gestión de pólizas de seguros"}
+							: loadError
+								? "Error de conexión"
+								: totalRecords > 0
+									? `${totalRecords} pólizas encontradas`
+									: "Gestión de pólizas de seguros"}
 					</p>
 				</div>
 				<div className="flex items-center gap-2 shrink-0">
@@ -425,6 +438,19 @@ export default function PolizasPage() {
 			<Card>
 				{isLoading ? (
 					<SkeletonTable />
+				) : loadError ? (
+					<CardContent className="flex flex-col items-center justify-center py-20">
+						<AlertTriangle className="h-10 w-10 text-destructive/40 mb-3" />
+						<p className="text-sm font-medium text-foreground">No se pudieron cargar las pólizas</p>
+						<p className="text-xs text-muted-foreground mt-1 max-w-md text-center">
+							Puede deberse a una conexión lenta o inestable con el servidor. Verifica tu conexión a
+							internet e inténtalo de nuevo.
+						</p>
+						<Button variant="outline" size="sm" className="mt-4" onClick={() => setReloadKey((k) => k + 1)}>
+							<RotateCcw className="h-4 w-4" />
+							Reintentar
+						</Button>
+					</CardContent>
 				) : polizas.length === 0 ? (
 					<CardContent className="flex flex-col items-center justify-center py-20">
 						<FileText className="h-10 w-10 text-muted-foreground/25 mb-3" />
