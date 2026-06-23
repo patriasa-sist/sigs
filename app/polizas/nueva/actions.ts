@@ -778,11 +778,11 @@ export async function guardarPoliza(formState: PolizaFormState) {
 
 		// Extraer campos ramo-específicos que se guardan en la tabla polizas
 		const datosEsp = formState.datos_especificos?.datos;
-		const ramosConRegionalAsegurado = ["Salud", "Vida", "Accidentes Personales", "Sepelio"];
+		// El "Regional Asegurado" lo usan varios ramos (Salud, Vida, AP, Sepelio, Incendio).
+		// Se persiste siempre que el form del ramo lo incluya en sus datos; sin lista de ramos,
+		// que ya se había desincronizado (omitía "Incendio y Aliados" y lo guardaba como null).
 		const regionalAseguradoId =
-			ramosConRegionalAsegurado.includes(formState.datos_especificos?.tipo_ramo ?? "") &&
-			datosEsp &&
-			"regional_asegurado_id" in datosEsp
+			datosEsp && "regional_asegurado_id" in datosEsp
 				? (datosEsp as { regional_asegurado_id: string }).regional_asegurado_id || null
 				: null;
 		const tieneMaternidad =
