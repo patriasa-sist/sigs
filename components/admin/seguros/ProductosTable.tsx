@@ -89,8 +89,10 @@ export function ProductosTable({ data, aseguradoras, ramos }: ProductosTableProp
 	};
 
 	const formatPercent = (value: number) => {
-		return `${(value * 100).toFixed(1)}%`;
+		return `${(value * 100).toFixed(2)}%`;
 	};
+
+	const formatFactor = (value: number) => value.toFixed(2);
 
 	return (
 		<div className="space-y-4">
@@ -199,10 +201,10 @@ export function ProductosTable({ data, aseguradoras, ramos }: ProductosTableProp
 										</span>
 									</TableCell>
 									<TableCell className="hidden xl:table-cell text-right">
-										{producto.factor_contado}
+										{formatFactor(producto.factor_contado)}
 									</TableCell>
 									<TableCell className="hidden xl:table-cell text-right">
-										{producto.factor_credito}
+										{formatFactor(producto.factor_credito)}
 									</TableCell>
 									<TableCell className="text-right font-medium">
 										{formatPercent(producto.porcentaje_comision)}
