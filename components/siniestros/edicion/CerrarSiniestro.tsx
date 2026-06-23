@@ -52,6 +52,74 @@ const MOTIVOS_RECHAZO: MotivoRechazo[] = ["Mora", "Incumplimiento", "Sin cobertu
 const MOTIVOS_DECLINACION: MotivoDeclinacion[] = ["Solicitud cliente", "Pagó otra póliza"];
 const MONEDAS: Moneda[] = ["Bs", "USD", "USDT", "UFV"];
 
+// Zona de drop reutilizable para subir un documento. Declarada a nivel de módulo (no dentro
+// del componente) para no recrearla en cada render, lo que reiniciaría su estado `dragging`.
+function DropZone({
+	id,
+	file,
+	accept,
+	hint,
+	onFile,
+	onRemove,
+}: {
+	id: string;
+	file: DocumentoSiniestro | null;
+	accept: string;
+	hint: string;
+	onFile: (e: React.ChangeEvent<HTMLInputElement>) => void;
+	onRemove: () => void;
+}) {
+	const [dragging, setDragging] = useState(false);
+
+	const handleDrop = (e: React.DragEvent) => {
+		e.preventDefault();
+		setDragging(false);
+		const f = e.dataTransfer.files?.[0];
+		if (!f) return;
+		const synth = { target: { files: e.dataTransfer.files } } as unknown as React.ChangeEvent<HTMLInputElement>;
+		onFile(synth);
+	};
+
+	if (file) {
+		return (
+			<div className="flex items-center gap-3 p-3 rounded-lg border bg-secondary/30">
+				<FileText className="h-5 w-5 text-primary flex-shrink-0" />
+				<div className="flex-1 min-w-0">
+					<p className="text-sm font-medium truncate">{file.nombre_archivo}</p>
+					<p className="text-xs text-muted-foreground">
+						{file.tamano_bytes ? (file.tamano_bytes / 1024).toFixed(1) : 0} KB
+					</p>
+				</div>
+				<Button variant="ghost" size="sm" onClick={onRemove} type="button" className="flex-shrink-0">
+					<X className="h-4 w-4" />
+				</Button>
+			</div>
+		);
+	}
+
+	return (
+		<label
+			htmlFor={id}
+			className={`flex flex-col items-center justify-center gap-2 p-6 rounded-lg border-2 border-dashed cursor-pointer transition-colors ${
+				dragging ? "border-primary bg-primary/5" : "border-border hover:border-primary/50 hover:bg-secondary/30"
+			}`}
+			onDragOver={(e) => {
+				e.preventDefault();
+				setDragging(true);
+			}}
+			onDragLeave={() => setDragging(false)}
+			onDrop={handleDrop}
+		>
+			<Upload className="h-8 w-8 text-muted-foreground" />
+			<div className="text-center">
+				<p className="text-sm font-medium text-foreground">Arrastra aquí o haz clic para seleccionar</p>
+				<p className="text-xs text-muted-foreground mt-0.5">{hint}</p>
+			</div>
+			<input id={id} type="file" accept={accept} className="sr-only" onChange={onFile} />
+		</label>
+	);
+}
+
 export default function CerrarSiniestro({ siniestroId, numeroPoliza, ramo }: CerrarSiniestroProps) {
 	const router = useRouter();
 	const esSalud = !!ramo?.toLowerCase().includes("salud");
@@ -408,75 +476,6 @@ export default function CerrarSiniestro({ siniestroId, numeroPoliza, ramo }: Cer
 		} finally {
 			setLoading(false);
 		}
-	};
-
-	// Zona de drop reutilizable
-	const DropZone = ({
-		id,
-		file,
-		accept,
-		hint,
-		onFile,
-		onRemove,
-	}: {
-		id: string;
-		file: DocumentoSiniestro | null;
-		accept: string;
-		hint: string;
-		onFile: (e: React.ChangeEvent<HTMLInputElement>) => void;
-		onRemove: () => void;
-	}) => {
-		const [dragging, setDragging] = useState(false);
-
-		const handleDrop = (e: React.DragEvent) => {
-			e.preventDefault();
-			setDragging(false);
-			const f = e.dataTransfer.files?.[0];
-			if (!f) return;
-			const synth = { target: { files: e.dataTransfer.files } } as unknown as React.ChangeEvent<HTMLInputElement>;
-			onFile(synth);
-		};
-
-		if (file) {
-			return (
-				<div className="flex items-center gap-3 p-3 rounded-lg border bg-secondary/30">
-					<FileText className="h-5 w-5 text-primary flex-shrink-0" />
-					<div className="flex-1 min-w-0">
-						<p className="text-sm font-medium truncate">{file.nombre_archivo}</p>
-						<p className="text-xs text-muted-foreground">
-							{file.tamano_bytes ? (file.tamano_bytes / 1024).toFixed(1) : 0} KB
-						</p>
-					</div>
-					<Button variant="ghost" size="sm" onClick={onRemove} type="button" className="flex-shrink-0">
-						<X className="h-4 w-4" />
-					</Button>
-				</div>
-			);
-		}
-
-		return (
-			<label
-				htmlFor={id}
-				className={`flex flex-col items-center justify-center gap-2 p-6 rounded-lg border-2 border-dashed cursor-pointer transition-colors ${
-					dragging
-						? "border-primary bg-primary/5"
-						: "border-border hover:border-primary/50 hover:bg-secondary/30"
-				}`}
-				onDragOver={(e) => {
-					e.preventDefault();
-					setDragging(true);
-				}}
-				onDragLeave={() => setDragging(false)}
-				onDrop={handleDrop}
-			>
-				<Upload className="h-8 w-8 text-muted-foreground" />
-				<div className="text-center">
-					<p className="text-sm font-medium text-foreground">Arrastra aquí o haz clic para seleccionar</p>
-					<p className="text-xs text-muted-foreground mt-0.5">{hint}</p>
-				</div>
-				<input id={id} type="file" accept={accept} className="sr-only" onChange={onFile} />
-			</label>
-		);
 	};
 
 	return (

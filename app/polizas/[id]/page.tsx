@@ -37,7 +37,7 @@ import {
 	ShieldAlert,
 	Users,
 } from "lucide-react";
-import { formatCurrency, formatDate } from "@/utils/formatters";
+import { formatCurrency, formatDate, calcularVigencia } from "@/utils/formatters";
 import Link from "next/link";
 import { toast } from "sonner";
 
@@ -2215,12 +2215,10 @@ export default function PolizaDetallePage() {
 									Vigencia
 								</p>
 								{(() => {
-									const start = new Date(poliza.inicio_vigencia).getTime();
-									const end = new Date(poliza.fin_vigencia).getTime();
-									const now = Date.now();
-									const progress = Math.min(100, Math.max(0, ((now - start) / (end - start)) * 100));
-									const daysLeft = Math.ceil((end - now) / (1000 * 60 * 60 * 24));
-									const isExpired = daysLeft <= 0;
+									const { progress, daysLeft, isExpired } = calcularVigencia(
+										poliza.inicio_vigencia,
+										poliza.fin_vigencia,
+									);
 									const isCritical = daysLeft > 0 && daysLeft <= 30;
 									const barColor = isExpired
 										? "bg-red-500"

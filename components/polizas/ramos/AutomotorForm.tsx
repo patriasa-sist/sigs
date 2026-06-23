@@ -125,33 +125,32 @@ export function AutomotorForm({ datos, onChange, onSiguiente, onAnterior }: Prop
 
 	// Cargar catálogos al montar el componente
 	useEffect(() => {
+		const cargarCatalogos = async () => {
+			try {
+				const supabase = createClient();
+
+				const [{ data: tiposData, error: errorTipos }, { data: marcasData, error: errorMarcas }] =
+					await Promise.all([
+						supabase.from("tipos_vehiculo").select("*").eq("activo", true).order("nombre"),
+						supabase.from("marcas_vehiculo").select("*").eq("activo", true).order("nombre"),
+					]);
+
+				if (errorTipos) {
+					console.error("Error cargando tipos de vehículo:", errorTipos);
+				}
+
+				if (errorMarcas) {
+					console.error("Error cargando marcas:", errorMarcas);
+				}
+
+				setTiposVehiculo(tiposData || []);
+				setMarcas(marcasData || []);
+			} catch (error) {
+				console.error("Error cargando catálogos:", error);
+			}
+		};
 		cargarCatalogos();
 	}, []);
-
-	const cargarCatalogos = async () => {
-		try {
-			const supabase = createClient();
-
-			const [{ data: tiposData, error: errorTipos }, { data: marcasData, error: errorMarcas }] =
-				await Promise.all([
-					supabase.from("tipos_vehiculo").select("*").eq("activo", true).order("nombre"),
-					supabase.from("marcas_vehiculo").select("*").eq("activo", true).order("nombre"),
-				]);
-
-			if (errorTipos) {
-				console.error("Error cargando tipos de vehículo:", errorTipos);
-			}
-
-			if (errorMarcas) {
-				console.error("Error cargando marcas:", errorMarcas);
-			}
-
-			setTiposVehiculo(tiposData || []);
-			setMarcas(marcasData || []);
-		} catch (error) {
-			console.error("Error cargando catálogos:", error);
-		}
-	};
 
 	// Mapas id → nombre para lookup O(1) en cada fila (en vez de .find() O(n) por celda,
 	// que con cientos de vehículos repintaba lentísimo en cada render).

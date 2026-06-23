@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useLiveSync } from "@/hooks/useLiveSync";
 import {
 	ChevronRight,
@@ -124,8 +124,9 @@ export function ModalidadPago({
 	const [advertencias, setAdvertencias] = useState<Record<string, string>>({});
 
 	// Metadata de pago de la carga inicial (modo edición): ids de cuotas en BD y
-	// flags de pagado. Se preservan al recomponer el objeto de modalidad.
-	const flagsInicialesRef = useRef(datos);
+	// flags de pagado. Snapshot congelado con useState (solo getter) para preservarlo
+	// al recomponer el objeto de modalidad y poder leerlo en el render sin un ref.
+	const [flagsIniciales] = useState(datos);
 
 	// Estado para feedback visual en modo edición
 	const [datosActualizados, setDatosActualizados] = useState<boolean>(false);
@@ -297,7 +298,7 @@ export function ModalidadPago({
 	 * Única fuente de verdad usada por "Continuar" y por el live-sync con el padre.
 	 */
 	const construirDatosPago = (): ModalidadPagoType & { comision_empresa?: number; comision_encargado?: number } => {
-		const inicial = flagsInicialesRef.current;
+		const inicial = flagsIniciales;
 
 		// Póliza SIN PRIMA PROPIA: contado degenerado (prima 0, sin cuotas reales).
 		// La prima, si existe, llega por anexos de inclusión.
@@ -559,13 +560,13 @@ export function ModalidadPago({
 			)}
 
 			{/* Aviso: prima neta ajustada manualmente por un admin */}
-			{mode === "edit" && flagsInicialesRef.current?.prima_neta_manual && (
+			{mode === "edit" && flagsIniciales?.prima_neta_manual && (
 				<div className="mb-4 p-3 bg-warning/10 border border-warning/30 rounded-lg flex items-start gap-2">
 					<AlertTriangle className="h-5 w-5 text-warning flex-shrink-0 mt-0.5" />
 					<p className="text-sm text-warning-foreground">
 						Esta póliza tiene la prima neta <strong>ajustada manualmente</strong> por un administrador
-						{flagsInicialesRef.current.prima_neta_ajuste_motivo
-							? ` (motivo: ${flagsInicialesRef.current.prima_neta_ajuste_motivo})`
+						{flagsIniciales.prima_neta_ajuste_motivo
+							? ` (motivo: ${flagsIniciales.prima_neta_ajuste_motivo})`
 							: ""}
 						. Si no cambias la prima total, el producto ni la modalidad, los montos ajustados se conservan
 						al guardar; si los cambias, se recalculan automáticamente y el ajuste se descarta.

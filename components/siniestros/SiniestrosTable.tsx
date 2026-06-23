@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowUpDown, ArrowUp, ArrowDown, ChevronRight, FileText, AlertTriangle } from "lucide-react";
 import { StatusBadge } from "@/components/ui/status-badge";
 import type { SiniestroVistaConEstado } from "@/types/siniestro";
-import { formatDate } from "@/utils/formatters";
+import { formatDate, diasTranscurridosDesde } from "@/utils/formatters";
 
 type SortField =
 	| "fecha_siniestro"
@@ -136,7 +136,7 @@ function SiniestrosTable({ siniestros, sortField, sortDirection, onSort }: Sinie
 								{siniestros.map((siniestro) => {
 									const requiereAtencion = siniestro.requiere_atencion === true;
 									const diasSinActualizar = requiereAtencion
-										? Math.floor((Date.now() - new Date(siniestro.updated_at).getTime()) / 86400000)
+										? diasTranscurridosDesde(siniestro.updated_at)
 										: 0;
 
 									return (
@@ -248,9 +248,7 @@ function SiniestrosTable({ siniestros, sortField, sortDirection, onSort }: Sinie
 			<div className="md:hidden space-y-3">
 				{siniestros.map((siniestro) => {
 					const requiereAtencion = siniestro.requiere_atencion === true;
-					const diasSinActualizar = requiereAtencion
-						? Math.floor((Date.now() - new Date(siniestro.updated_at).getTime()) / 86400000)
-						: 0;
+					const diasSinActualizar = requiereAtencion ? diasTranscurridosDesde(siniestro.updated_at) : 0;
 
 					return (
 						<Link key={siniestro.id} href={`/siniestros/editar/${siniestro.id}`} className="block">

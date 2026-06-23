@@ -27,19 +27,19 @@ export function DatePicker({
 	disabled = false,
 	className,
 }: DatePickerProps) {
-	const [inputValue, setInputValue] = React.useState("");
+	const [inputValue, setInputValue] = React.useState(date ? format(date, "dd/MM/yyyy") : "");
 	const [isValid, setIsValid] = React.useState(true);
 
-	// Sync input with date prop
-	React.useEffect(() => {
-		if (date) {
-			setInputValue(format(date, "dd/MM/yyyy"));
-			setIsValid(true);
-		} else {
-			setInputValue("");
-			setIsValid(true);
-		}
-	}, [date]);
+	// Sincronizar el input cuando el prop `date` cambia externamente, ajustando el estado
+	// en render (sin effect). Comparamos por timestamp para no re-sincronizar cuando el
+	// padre recrea el objeto Date con el mismo valor (evita pisar lo que el usuario escribe).
+	const dateKey = date ? date.getTime() : null;
+	const [prevDateKey, setPrevDateKey] = React.useState(dateKey);
+	if (dateKey !== prevDateKey) {
+		setPrevDateKey(dateKey);
+		setInputValue(date ? format(date, "dd/MM/yyyy") : "");
+		setIsValid(true);
+	}
 
 	const parseDate = (value: string): Date | null => {
 		// Remove any non-digit characters

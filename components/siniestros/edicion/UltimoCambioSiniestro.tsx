@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Clock, ExternalLink } from "lucide-react";
@@ -23,14 +22,8 @@ const ACCION_LABELS: Record<string, string> = {
 };
 
 export default function UltimoCambioSiniestro({ historial, onVerHistorialCompleto }: UltimoCambioSiniestroProps) {
-	const [ultimoCambio, setUltimoCambio] = useState<HistorialSiniestro | null>(null);
-
-	useEffect(() => {
-		if (historial && historial.length > 0) {
-			// El historial ya viene ordenado por fecha descendente
-			setUltimoCambio(historial[0]);
-		}
-	}, [historial]);
+	// El historial ya viene ordenado por fecha descendente: el último cambio es el primero.
+	const ultimoCambio = historial && historial.length > 0 ? historial[0] : null;
 
 	if (!ultimoCambio) {
 		return null;

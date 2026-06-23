@@ -6,6 +6,7 @@ import { obtenerPolizasPendientes } from "./actions";
 import { obtenerAnexosPendientes } from "@/app/gerencia/validacion-anexos/actions";
 import { Card } from "@/components/ui/card";
 import { CheckSquare, FileText, GitPullRequest, Banknote } from "lucide-react";
+import { diasTranscurridosDesde } from "@/utils/formatters";
 
 export const metadata = {
 	title: "Validación - Gerencia",
@@ -41,9 +42,7 @@ export default async function ValidacionPage() {
 		if (!oldest || fecha < oldest) return fecha;
 		return oldest;
 	}, null);
-	const diasEsperandoMax = polizaMasAntigua
-		? Math.floor((Date.now() - new Date(polizaMasAntigua).getTime()) / (1000 * 60 * 60 * 24))
-		: 0;
+	const diasEsperandoMax = polizaMasAntigua ? diasTranscurridosDesde(polizaMasAntigua) : 0;
 
 	return (
 		<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-8">

@@ -125,6 +125,34 @@ export function toExcelDateLaPaz(date: string | Date | null | undefined): Date |
 }
 
 /**
+ * Días calendario transcurridos desde una fecha/timestamp ISO hasta el momento actual.
+ *
+ * Pensada para indicadores tipo "hace N días" o "sin actualizar en N días". Encapsula
+ * `Date.now()` en una función de módulo (no en el cuerpo de un componente) para no
+ * disparar la regla de pureza del React Compiler al usarla durante el render.
+ */
+export function diasTranscurridosDesde(fechaISO: string): number {
+	return Math.floor((Date.now() - new Date(fechaISO).getTime()) / 86400000);
+}
+
+/**
+ * A partir de las fechas de inicio y fin de vigencia, calcula el progreso transcurrido
+ * (0–100), los días restantes (negativo si ya venció) y si está vencida. Encapsula
+ * `Date.now()` fuera del render para no disparar la regla de pureza del React Compiler.
+ */
+export function calcularVigencia(
+	inicioISO: string,
+	finISO: string,
+): { progress: number; daysLeft: number; isExpired: boolean } {
+	const start = new Date(inicioISO).getTime();
+	const end = new Date(finISO).getTime();
+	const now = Date.now();
+	const progress = Math.min(100, Math.max(0, ((now - start) / (end - start)) * 100));
+	const daysLeft = Math.ceil((end - now) / 86400000);
+	return { progress, daysLeft, isExpired: daysLeft <= 0 };
+}
+
+/**
  * Formatea solo la hora (HH:mm) de un timestamp en zona horaria de La Paz (UTC-4).
  */
 export function formatHoraLaPaz(date: string | Date | null | undefined): string {

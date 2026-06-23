@@ -45,35 +45,34 @@ export function VehiculoModal({ vehiculo, onGuardar, onCancelar }: Props) {
 
 	// Cargar catálogos
 	useEffect(() => {
+		const cargarCatalogos = async () => {
+			try {
+				const supabase = createClient();
+
+				const [{ data: tiposData, error: errorTipos }, { data: marcasData, error: errorMarcas }] =
+					await Promise.all([
+						supabase.from("tipos_vehiculo").select("*").eq("activo", true).order("nombre"),
+						supabase.from("marcas_vehiculo").select("*").eq("activo", true).order("nombre"),
+					]);
+
+				if (errorTipos) {
+					console.error("Error cargando tipos de vehículo:", errorTipos);
+				}
+
+				if (errorMarcas) {
+					console.error("Error cargando marcas:", errorMarcas);
+				}
+
+				setTiposVehiculo(tiposData || []);
+				setMarcas(marcasData || []);
+			} catch (error) {
+				console.error("Error cargando catálogos:", error);
+			} finally {
+				setCargando(false);
+			}
+		};
 		cargarCatalogos();
 	}, []);
-
-	const cargarCatalogos = async () => {
-		try {
-			const supabase = createClient();
-
-			const [{ data: tiposData, error: errorTipos }, { data: marcasData, error: errorMarcas }] =
-				await Promise.all([
-					supabase.from("tipos_vehiculo").select("*").eq("activo", true).order("nombre"),
-					supabase.from("marcas_vehiculo").select("*").eq("activo", true).order("nombre"),
-				]);
-
-			if (errorTipos) {
-				console.error("Error cargando tipos de vehículo:", errorTipos);
-			}
-
-			if (errorMarcas) {
-				console.error("Error cargando marcas:", errorMarcas);
-			}
-
-			setTiposVehiculo(tiposData || []);
-			setMarcas(marcasData || []);
-		} catch (error) {
-			console.error("Error cargando catálogos:", error);
-		} finally {
-			setCargando(false);
-		}
-	};
 
 	const handleChange = (campo: keyof VehiculoAutomotor, valor: string | number | undefined) => {
 		setFormData((prev) => ({

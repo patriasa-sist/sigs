@@ -98,35 +98,34 @@ export function EquipoModal({ equipo, onGuardar, onCancelar }: Props) {
 
 	// Cargar catálogos
 	useEffect(() => {
+		const cargarCatalogos = async () => {
+			try {
+				const supabase = createClient();
+
+				const [{ data: tiposData, error: errorTipos }, { data: marcasData, error: errorMarcas }] =
+					await Promise.all([
+						supabase.from("tipos_equipo").select("*").eq("activo", true).order("nombre"),
+						supabase.from("marcas_equipo").select("*").eq("activo", true).order("nombre"),
+					]);
+
+				if (errorTipos) {
+					console.error("Error cargando tipos de equipo:", errorTipos);
+				}
+
+				if (errorMarcas) {
+					console.error("Error cargando marcas de equipo:", errorMarcas);
+				}
+
+				setTiposEquipo(tiposData || []);
+				setMarcas(marcasData || []);
+			} catch (error) {
+				console.error("Error cargando catálogos:", error);
+			} finally {
+				setCargando(false);
+			}
+		};
 		cargarCatalogos();
 	}, []);
-
-	const cargarCatalogos = async () => {
-		try {
-			const supabase = createClient();
-
-			const [{ data: tiposData, error: errorTipos }, { data: marcasData, error: errorMarcas }] =
-				await Promise.all([
-					supabase.from("tipos_equipo").select("*").eq("activo", true).order("nombre"),
-					supabase.from("marcas_equipo").select("*").eq("activo", true).order("nombre"),
-				]);
-
-			if (errorTipos) {
-				console.error("Error cargando tipos de equipo:", errorTipos);
-			}
-
-			if (errorMarcas) {
-				console.error("Error cargando marcas de equipo:", errorMarcas);
-			}
-
-			setTiposEquipo(tiposData || []);
-			setMarcas(marcasData || []);
-		} catch (error) {
-			console.error("Error cargando catálogos:", error);
-		} finally {
-			setCargando(false);
-		}
-	};
 
 	const handleChange = (campo: keyof EquipoIndustrial, valor: string | number | undefined) => {
 		setFormData((prev) => ({

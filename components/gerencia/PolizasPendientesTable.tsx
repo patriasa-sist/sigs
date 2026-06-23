@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { CheckCircle, XCircle, ChevronRight, Inbox } from "lucide-react";
 import { PolizaValidacionDrawer } from "./PolizaValidacionDrawer";
-import { formatCurrency } from "@/utils/formatters";
+import { formatCurrency, diasTranscurridosDesde } from "@/utils/formatters";
 
 type PolizaPendiente = {
 	id: string;
@@ -146,10 +146,7 @@ export default function PolizasPendientesTable({ polizas: initialPolizas }: Prop
 								<TableCell className="py-3">
 									<span
 										className={`text-sm font-medium ${
-											Math.floor(
-												(Date.now() - new Date(poliza.created_at).getTime()) /
-													(1000 * 60 * 60 * 24),
-											) >= 3
+											diasTranscurridosDesde(poliza.created_at) >= 3
 												? "text-amber-700"
 												: "text-muted-foreground"
 										}`}
@@ -195,9 +192,7 @@ export default function PolizasPendientesTable({ polizas: initialPolizas }: Prop
 			{/* Tarjetas movil (< md) */}
 			<div className="md:hidden space-y-3">
 				{polizas.map((poliza) => {
-					const dias = Math.floor(
-						(Date.now() - new Date(poliza.created_at).getTime()) / (1000 * 60 * 60 * 24),
-					);
+					const dias = diasTranscurridosDesde(poliza.created_at);
 					return (
 						<button
 							key={poliza.id}

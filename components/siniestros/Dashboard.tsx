@@ -11,6 +11,7 @@ import type { SiniestroVistaConEstado, SiniestrosStats, EstadoSiniestro } from "
 import StatsCards from "./StatsCards";
 import SiniestrosTable from "./SiniestrosTable";
 import ExportarSiniestros from "./ExportarSiniestros";
+import { diasTranscurridosDesde } from "@/utils/formatters";
 
 type SortField =
 	| "fecha_siniestro"
@@ -236,9 +237,7 @@ export default function Dashboard({ siniestrosIniciales, statsIniciales }: Dashb
 								</p>
 								<div className="mt-2 space-y-1">
 									{siniestrosConAtencion.slice(0, 3).map((s) => {
-										const dias = Math.floor(
-											(Date.now() - new Date(s.updated_at).getTime()) / 86400000,
-										);
+										const dias = diasTranscurridosDesde(s.updated_at);
 										return (
 											<Link
 												key={s.id}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { ChevronRight, ChevronLeft, CheckCircle2, Plus, Trash2, Users, Home, Edit2, AlertCircle } from "lucide-react";
 import type {
 	DatosRiesgosVarios,
@@ -65,18 +65,14 @@ export function RiesgosVariosForm({ datos, moneda, onChange, onSiguiente, onAnte
 	const [bienEditando, setBienEditando] = useState<number | null>(null);
 	const [direccionBien, setDireccionBien] = useState("");
 	const [itemsBien, setItemsBien] = useState<ItemRiesgosVarios[]>([]);
-	const [valorTotalDeclarado, setValorTotalDeclarado] = useState<number>(0);
 	const [esPrimerRiesgo, setEsPrimerRiesgo] = useState(false);
 
 	const [mostrarBuscador, setMostrarBuscador] = useState(false);
 	const [errores, setErrores] = useState<Record<string, string>>({});
 	const [bienAEliminar, setBienAEliminar] = useState<number | null>(null);
 
-	// Calcular valor total cuando cambian los items del modal
-	useEffect(() => {
-		const total = itemsBien.reduce((sum, item) => sum + item.monto, 0);
-		setValorTotalDeclarado(total);
-	}, [itemsBien]);
+	// El valor total declarado del bien en edición es la suma de sus items (derivado).
+	const valorTotalDeclarado = itemsBien.reduce((sum, item) => sum + item.monto, 0);
 
 	// Calcular valor asegurado total (suma de todos los bienes)
 	const valorAseguradoTotal = bienes.reduce((sum, bien) => sum + bien.valor_total_declarado, 0);
@@ -87,13 +83,11 @@ export function RiesgosVariosForm({ datos, moneda, onChange, onSiguiente, onAnte
 			setBienEditando(index);
 			setDireccionBien(bien.direccion);
 			setItemsBien(bien.items);
-			setValorTotalDeclarado(bien.valor_total_declarado);
 			setEsPrimerRiesgo(bien.es_primer_riesgo);
 		} else {
 			setBienEditando(null);
 			setDireccionBien("");
 			setItemsBien([]);
-			setValorTotalDeclarado(0);
 			setEsPrimerRiesgo(false);
 		}
 		setMostrarModalBien(true);
