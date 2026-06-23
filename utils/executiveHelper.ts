@@ -34,17 +34,31 @@ export interface Firmante {
 export async function obtenerFirmantes(): Promise<Firmante[]> {
 	try {
 		const supabase = createClient();
-		const { data, error } = await supabase
+
+		// RPC SECURITY DEFINER: roster GLOBAL de firmantes, sin la RLS de profiles.
+		// Necesario porque vencimientos lo usan agente/comercial, cuya RLS solo les deja
+		// leer su propio perfil + su equipo; así faltaban firmantes válidos (p.ej. Carmen)
+		// y la resolución caía al fallback legacy estampando una firma equivocada.
+		const { data, error } = await supabase.rpc("obtener_firmantes");
+		if (!error && data) {
+			return (data as Firmante[]) || [];
+		}
+		if (error) {
+			console.error("Error cargando firmantes (rpc):", error);
+		}
+
+		// Fallback: query directo sujeto a RLS (mejor el subconjunto visible que nada).
+		const { data: fb, error: fbError } = await supabase
 			.from("profiles")
 			.select("id, full_name, acronimo, cargo, telefono, email, firma_url, role")
 			.not("firma_url", "is", null)
 			.order("full_name");
 
-		if (error) {
-			console.error("Error cargando firmantes:", error);
+		if (fbError) {
+			console.error("Error cargando firmantes (fallback):", fbError);
 			return [];
 		}
-		return (data as Firmante[]) || [];
+		return (fb as Firmante[]) || [];
 	} catch (error) {
 		console.error("Error inesperado cargando firmantes:", error);
 		return [];
@@ -68,10 +82,23 @@ export function legacyFirmantes(): Firmante[] {
 	}));
 }
 
+/** Tokens significativos de un nombre (minúsculas, >2 chars) para comparar por solapamiento. */
+function tokensNombre(nombre: string): string[] {
+	return nombre
+		.toLowerCase()
+		.split(/\s+/)
+		.filter((t) => t.length > 2);
+}
+
 /**
  * Coincidencia tolerante de un nombre (texto libre del Excel) contra full_name.
- * Orden: coincidencia exacta → coincidencia parcial por partes del nombre (>2 chars).
- * NOTA: si dos perfiles comparten el primer nombre, el parcial es ambiguo y toma el primero;
+ * Orden: coincidencia exacta → mayor solapamiento de tokens del nombre (>2 chars).
+ *
+ * Se elige al firmante que comparte MÁS palabras con el texto buscado, no el primero
+ * que comparta una sola. Esto evita que, p.ej., "Carmen Rosario Ferrufino Howard" se
+ * resuelva a "Diego Gandarillas Ferrufino" solo por compartir el apellido "Ferrufino":
+ * Carmen comparte 3 tokens (carmen/ferrufino/howard) y gana sobre el que comparte 1.
+ * NOTA: ante empate real de tokens (dos perfiles igual de parecidos) se toma el primero;
  * en ese caso el texto del Excel debe ser más específico (nombre completo).
  */
 export function findFirmante(nombre: string | undefined | null, firmantes: Firmante[]): Firmante | null {
@@ -83,12 +110,18 @@ export function findFirmante(nombre: string | undefined | null, firmantes: Firma
 	const exact = firmantes.find((f) => (f.full_name || "").toLowerCase() === search);
 	if (exact) return exact;
 
-	// Coincidencia parcial: alguna parte del nombre (>2 chars) contenida en la búsqueda o viceversa
-	const partial = firmantes.find((f) => {
-		const parts = (f.full_name || "").toLowerCase().split(" ");
-		return parts.some((part) => part.length > 2 && (search.includes(part) || part.includes(search)));
-	});
-	return partial || null;
+	// Mayor solapamiento de tokens: cuántas palabras del full_name aparecen en el texto buscado.
+	const searchTokens = new Set(tokensNombre(search));
+	let best: Firmante | null = null;
+	let bestScore = 0;
+	for (const f of firmantes) {
+		const score = tokensNombre(f.full_name || "").filter((t) => searchTokens.has(t)).length;
+		if (score > bestScore) {
+			bestScore = score;
+			best = f;
+		}
+	}
+	return bestScore > 0 ? best : null;
 }
 
 /**
