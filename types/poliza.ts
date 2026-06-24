@@ -746,7 +746,7 @@ export type PolizaDB = {
 	motivo_rechazo?: string; // Razón del rechazo por gerencia
 	rechazado_por?: string; // UUID del gerente/admin que rechazó
 	fecha_rechazo?: string; // Fecha y hora del rechazo
-	puede_editar_hasta?: string; // Ventana de edición permitida (1 día desde rechazo)
+	puede_editar_hasta?: string; // Ventana de edición permitida (72 horas desde rechazo)
 	es_renovacion?: boolean; // Indica si es renovación de otra póliza
 	nro_poliza_anterior?: string; // Número de la póliza anterior (texto libre)
 	created_at: string;

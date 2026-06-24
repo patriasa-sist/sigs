@@ -322,7 +322,7 @@ export async function obtenerDetallePolizaParaValidacion(polizaId: string) {
 
 /**
  * Rechaza una póliza con motivo obligatorio
- * Cambia el estado a "rechazada" y otorga permiso de edición por 1 día
+ * Cambia el estado a "rechazada" y otorga permiso de edición por 72 horas
  */
 export async function rechazarPoliza(polizaId: string, motivo: string) {
 	const supabase = await createClient();
@@ -389,9 +389,9 @@ export async function rechazarPoliza(polizaId: string, motivo: string) {
 			return { success: false, error: "La póliza no está pendiente de validación" };
 		}
 
-		// Calcular ventana de edición (1 día desde ahora)
+		// Calcular ventana de edición (72 horas desde ahora)
 		const puedeEditarHasta = new Date();
-		puedeEditarHasta.setDate(puedeEditarHasta.getDate() + 1);
+		puedeEditarHasta.setHours(puedeEditarHasta.getHours() + 72);
 
 		// Actualizar póliza a estado rechazada con todos los campos de trazabilidad
 		const { error: updateError } = await supabase
