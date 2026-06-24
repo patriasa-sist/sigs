@@ -2,6 +2,8 @@
 
 import { createClient } from "@/utils/supabase/server";
 import { checkPermission, getDataScopeFilter } from "@/utils/auth/helpers";
+import { resolverNombresCliente } from "@/utils/polizas/resolverNombresCliente";
+import { hoyLaPaz } from "@/utils/formatters";
 import type {
 	ExportProduccionFilters,
 	ExportProduccionRow,
@@ -13,6 +15,9 @@ import type {
 	ProduccionServerResponse,
 	ExportComisionesDirectorFilters,
 	ExportComisionesDirectorRow,
+	ExportVencimientosFilters,
+	ExportVencimientosRow,
+	ExportVencimientosResponse,
 } from "@/types/reporte";
 
 /**
@@ -1234,6 +1239,174 @@ export async function exportarComisionesDirector(
 		};
 	} catch (error) {
 		console.error("Error exporting comisiones director:", error);
+		return {
+			success: false,
+			error: error instanceof Error ? error.message : "Error desconocido",
+		};
+	}
+}
+
+// ============================================
+// REPORTE DE VENCIMIENTOS (pólizas por vencer en un rango)
+// ============================================
+
+/** Diferencia en días entre dos fechas YYYY-MM-DD (hasta - desde), sin TZ. */
+function diferenciaDias(desde: string, hasta: string): number {
+	const d = desde.match(/^(\d{4})-(\d{2})-(\d{2})/);
+	const h = hasta.match(/^(\d{4})-(\d{2})-(\d{2})/);
+	if (!d || !h) return 0;
+	const desdeMs = Date.UTC(Number(d[1]), Number(d[2]) - 1, Number(d[3]));
+	const hastaMs = Date.UTC(Number(h[1]), Number(h[2]) - 1, Number(h[3]));
+	return Math.round((hastaMs - desdeMs) / (1000 * 60 * 60 * 24));
+}
+
+/**
+ * Exporta el reporte de pólizas por vencer dentro de un rango de fechas
+ * (filtra por fin_vigencia). Aplica los mismos filtros y data scoping que el
+ * resto de los reportes: comercial/agente solo ven datos de su equipo.
+ */
+export async function exportarVencimientos(
+	filtros: ExportVencimientosFilters,
+): Promise<ProduccionServerResponse<ExportVencimientosResponse>> {
+	const permiso = await verificarPermisoExportar();
+	if (!permiso.authorized) {
+		return { success: false, error: permiso.error };
+	}
+
+	const supabase = await createClient();
+	const scope = await getDataScopeFilter("polizas");
+
+	try {
+		const fechaDesde = filtros.fecha_desde;
+		const fechaHasta = filtros.fecha_hasta;
+
+		// Resolver miembros de equipo si se filtra por equipo
+		let memberIds: string[] | null = null;
+		if (filtros.equipo_id) {
+			const { data: teamMemberIds } = await supabase
+				.from("equipo_miembros")
+				.select("user_id")
+				.eq("equipo_id", filtros.equipo_id);
+
+			if (teamMemberIds && teamMemberIds.length > 0) {
+				memberIds = teamMemberIds.map((m) => m.user_id);
+			}
+		}
+
+		let query = supabase.from("polizas").select(`
+			id,
+			client_id,
+			numero_poliza,
+			ramo,
+			moneda,
+			prima_total,
+			estado,
+			inicio_vigencia,
+			fin_vigencia,
+			responsable_id,
+			producto:productos_aseguradoras!producto_id (
+				nombre_producto
+			),
+			compania:companias_aseguradoras!compania_aseguradora_id (
+				nombre
+			),
+			responsable:profiles!responsable_id (
+				full_name
+			),
+			regional:regionales!regional_id (
+				nombre
+			)
+		`);
+
+		// Pólizas cuyo fin de vigencia cae dentro del rango seleccionado
+		query = query.gte("fin_vigencia", fechaDesde);
+		query = query.lte("fin_vigencia", fechaHasta);
+
+		// Data scoping: comercial/agente solo ven datos de su equipo
+		if (scope.needsScoping) {
+			query = query.in("responsable_id", scope.teamMemberIds);
+		}
+
+		// Por defecto solo pólizas vigentes ("activa"); "all" incluye todas
+		if (filtros.estado_poliza && filtros.estado_poliza !== "all") {
+			query = query.eq("estado", filtros.estado_poliza);
+		}
+		if (filtros.regional_id) {
+			query = query.eq("regional_id", filtros.regional_id);
+		}
+		if (filtros.compania_id) {
+			query = query.eq("compania_aseguradora_id", filtros.compania_id);
+		}
+		if (memberIds) {
+			query = query.in("responsable_id", memberIds);
+		}
+
+		const { data, error } = await query.order("fin_vigencia", { ascending: true });
+
+		if (error) {
+			console.error("Error fetching polizas for vencimientos report:", error);
+			return { success: false, error: "Error al obtener pólizas para el reporte" };
+		}
+
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		const polizas = (data || []) as Array<any>;
+
+		// Resolver nombre/documento de cliente para los 6 tipos en batch
+		const nombresMap = await resolverNombresCliente(
+			supabase,
+			polizas.map((p: { client_id: string }) => p.client_id),
+		);
+
+		const hoy = hoyLaPaz();
+
+		const rows: ExportVencimientosRow[] = polizas.map(
+			(p: {
+				client_id: string;
+				numero_poliza: string;
+				ramo: string;
+				moneda: string;
+				prima_total: number;
+				estado: string;
+				inicio_vigencia: string;
+				fin_vigencia: string;
+				producto?: { nombre_producto?: string } | null;
+				compania?: { nombre?: string } | null;
+				responsable?: { full_name?: string } | null;
+				regional?: { nombre?: string } | null;
+			}) => {
+				const info = nombresMap.get(p.client_id);
+				return {
+					numero_poliza: p.numero_poliza || "N/A",
+					cliente: info?.name || "Cliente Desconocido",
+					ci_nit: info?.ci || "-",
+					compania: p.compania?.nombre || "N/A",
+					ramo: p.ramo || "N/A",
+					responsable: p.responsable?.full_name || "N/A",
+					regional: p.regional?.nombre || "N/A",
+					estado: p.estado || "N/A",
+					moneda: p.moneda || "Bs",
+					prima_total: Number(p.prima_total) || 0,
+					inicio_vigencia: p.inicio_vigencia || "",
+					fin_vigencia: p.fin_vigencia || "",
+					dias_para_vencer: p.fin_vigencia ? diferenciaDias(hoy, p.fin_vigencia) : 0,
+					producto: p.producto?.nombre_producto || "N/A",
+				};
+			},
+		);
+
+		return {
+			success: true,
+			data: {
+				data: rows,
+				meta: {
+					usuario_email: permiso.email,
+					fecha_desde: fechaDesde,
+					fecha_hasta: fechaHasta,
+				},
+			},
+		};
+	} catch (error) {
+		console.error("Error exporting vencimientos report:", error);
 		return {
 			success: false,
 			error: error instanceof Error ? error.message : "Error desconocido",

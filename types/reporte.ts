@@ -136,6 +136,41 @@ export type ExportComisionesDirectorRow = {
 };
 
 // ============================================
+// REPORTE DE VENCIMIENTOS (pólizas por vencer en un rango)
+// ============================================
+
+export type ExportVencimientosFilters = {
+	fecha_desde: string; // YYYY-MM-DD
+	fecha_hasta: string; // YYYY-MM-DD
+	estado_poliza?: "activa" | "all";
+	regional_id?: string;
+	compania_id?: string;
+	equipo_id?: string;
+};
+
+export type ExportVencimientosRow = {
+	numero_poliza: string;
+	cliente: string;
+	ci_nit: string;
+	compania: string;
+	ramo: string;
+	responsable: string;
+	regional: string;
+	estado: string;
+	moneda: string;
+	prima_total: number;
+	inicio_vigencia: string;
+	fin_vigencia: string;
+	dias_para_vencer: number;
+	producto: string;
+};
+
+export type ExportVencimientosResponse = {
+	data: ExportVencimientosRow[];
+	meta: ExportReporteMeta;
+};
+
+// ============================================
 // DATOS DE FILTROS (compartidos)
 // ============================================
 

@@ -5,6 +5,7 @@ import ExportarContable from "@/components/reportes/ExportarContable";
 import ExportarAMLC from "@/components/reportes/ExportarAMLC";
 import ExportarAPS from "@/components/reportes/ExportarAPS";
 import ExportarComisionesDirector from "@/components/reportes/ExportarComisionesDirector";
+import ExportarVencimientos from "@/components/reportes/ExportarVencimientos";
 import {
 	obtenerRegionales,
 	obtenerCompanias,
@@ -63,6 +64,7 @@ export default async function ReportesPage() {
 							equipos={equipos}
 							directores={directores}
 						/>
+						<ExportarVencimientos regionales={regionales} companias={companias} equipos={equipos} />
 					</>
 				)}
 				{aps.allowed && <ExportarAPS />}
