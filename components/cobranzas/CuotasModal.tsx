@@ -60,6 +60,7 @@ function EstadoBadge({ estado }: { estado: string }) {
 		vencido: "bg-rose-50  text-rose-800  border-rose-200",
 		parcial: "bg-orange-50 text-orange-800 border-orange-200",
 		pagado: "bg-teal-50  text-teal-800  border-teal-200",
+		anulada: "bg-secondary text-muted-foreground border-border line-through",
 	};
 	return (
 		<span
@@ -1084,6 +1085,233 @@ export default function CuotasModal({ poliza, open, onClose, onSelectQuota, isAd
 							</div>
 						</div>
 					)}
+
+					{/* Cobro de Vigencia Corrida (póliza anulada): saldo cobrable del endoso */}
+					{polizaExtendida?.vigencia_corrida_cobrable &&
+						polizaExtendida.vigencia_corrida_cobrable.length > 0 && (
+							<div className="mt-4">
+								<h3 className="text-sm font-semibold mb-2 text-purple-700 flex items-center gap-1.5">
+									<span className="inline-block w-2 h-2 rounded-full bg-purple-500" />
+									Cobro de Vigencia Corrida
+								</h3>
+								<div className="border border-purple-200 rounded-lg overflow-x-auto">
+									<table className="w-full text-sm">
+										<thead className="bg-purple-50">
+											<tr>
+												<th className="px-4 py-2 text-left text-xs font-medium text-purple-700">
+													Anexo
+												</th>
+												<th className="px-4 py-2 text-left text-xs font-medium text-purple-700">
+													Concepto
+												</th>
+												<th className="px-4 py-2 text-left text-xs font-medium text-purple-700">
+													Monto
+												</th>
+												<th className="px-4 py-2 text-left text-xs font-medium text-purple-700">
+													Vencimiento
+												</th>
+												<th className="px-4 py-2 text-left text-xs font-medium text-purple-700">
+													Estado
+												</th>
+												<th className="px-4 py-2 text-right text-xs font-medium text-purple-700">
+													Acciones
+												</th>
+											</tr>
+										</thead>
+										<tbody className="divide-y divide-purple-100">
+											{polizaExtendida.vigencia_corrida_cobrable.map((vc) => {
+												const abonosVc = polizaExtendida.abonos_por_cuota?.[vc.id] ?? [];
+												const abonadoVc = abonosVc.reduce((s, a) => s + a.monto, 0);
+												const notasCount =
+													polizaExtendida.notas_por_cuota?.[vc.id]?.length ?? 0;
+												const pagable = vc.estado !== "pagado";
+												const isExpanded = expandedCuotas.has(vc.id);
+												return (
+													<Fragment key={vc.id}>
+														<tr className="hover:bg-purple-50/50">
+															<td className="px-4 py-2 text-xs font-medium text-purple-800">
+																{vc.numero_anexo}
+															</td>
+															<td className="px-4 py-2 text-xs">
+																<div className="flex items-center gap-1">
+																	{abonosVc.length > 0 ? (
+																		<button
+																			onClick={() => toggleExpand(vc.id)}
+																			className="text-muted-foreground hover:text-foreground"
+																			title={
+																				isExpanded
+																					? "Ocultar abonos"
+																					: `Ver ${abonosVc.length} abono(s)`
+																			}
+																		>
+																			{isExpanded ? (
+																				<ChevronDown className="h-4 w-4" />
+																			) : (
+																				<ChevronRight className="h-4 w-4" />
+																			)}
+																		</button>
+																	) : (
+																		<span className="inline-block w-4" />
+																	)}
+																	Vigencia corrida
+																</div>
+															</td>
+															<td className="px-4 py-2 text-xs font-medium tabular-nums">
+																{poliza.moneda} {formatCurrency(vc.monto)}
+																{abonadoVc > 0.01 && abonadoVc < vc.monto - 0.01 && (
+																	<span className="block text-[11px] font-normal text-muted-foreground">
+																		abonado {formatCurrency(abonadoVc)}
+																	</span>
+																)}
+															</td>
+															<td className="px-4 py-2 text-xs">
+																{vc.fecha_vencimiento
+																	? formatearFecha(vc.fecha_vencimiento, "corto")
+																	: "—"}
+															</td>
+															<td className="px-4 py-2">
+																<EstadoBadge estado={vc.estado} />
+															</td>
+															<td className="px-4 py-2">
+																<div className="flex items-center justify-end gap-1.5 flex-wrap">
+																	{pagable && (
+																		<Button
+																			size="sm"
+																			variant="default"
+																			onClick={() => {
+																				setPagoAnexoTarget({
+																					id: vc.id,
+																					numero_anexo: vc.numero_anexo,
+																					numero_cuota: vc.numero_cuota,
+																					monto: vc.monto,
+																				});
+																				setPagoAnexoOpen(true);
+																			}}
+																		>
+																			Registrar Pago
+																		</Button>
+																	)}
+																	{pagable && (
+																		<Button
+																			size="sm"
+																			variant="outline"
+																			onClick={() =>
+																				handleOpenProrroga(
+																					{
+																						id: vc.id,
+																						numero_cuota: vc.numero_cuota,
+																						monto: vc.monto,
+																						fecha_vencimiento:
+																							vc.fecha_vencimiento,
+																					},
+																					true,
+																				)
+																			}
+																		>
+																			Prórroga
+																		</Button>
+																	)}
+																	<Button
+																		size="icon"
+																		variant="ghost"
+																		className="h-8 w-8 relative"
+																		title="Notas"
+																		onClick={() => {
+																			setNotasTarget({
+																				anexoPagoId: vc.id,
+																				label: `Vigencia corrida · Anexo ${vc.numero_anexo}`,
+																			});
+																			setNotasOpen(true);
+																		}}
+																	>
+																		<StickyNote className="h-4 w-4 text-muted-foreground" />
+																		{notasCount > 0 && (
+																			<span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-[10px] leading-none rounded-full h-4 min-w-4 px-1 flex items-center justify-center">
+																				{notasCount}
+																			</span>
+																		)}
+																	</Button>
+																</div>
+															</td>
+														</tr>
+
+														{isExpanded && abonosVc.length > 0 && (
+															<tr className="bg-purple-50/40">
+																<td colSpan={6} className="px-4 py-2">
+																	<div className="pl-6 space-y-1.5">
+																		<p className="text-xs font-medium text-muted-foreground">
+																			Abonos ({abonosVc.length}) — {poliza.moneda}{" "}
+																			{formatCurrency(abonadoVc)} de{" "}
+																			{formatCurrency(vc.monto)}
+																		</p>
+																		{abonosVc.map((abono, idx) => (
+																			<div
+																				key={abono.id}
+																				className="flex items-center gap-3 text-sm bg-card border border-border rounded-md px-3 py-1.5"
+																			>
+																				<span className="text-xs text-muted-foreground w-6">
+																					#{idx + 1}
+																				</span>
+																				<span className="font-medium tabular-nums">
+																					{poliza.moneda}{" "}
+																					{formatCurrency(abono.monto)}
+																				</span>
+																				<span className="text-xs text-muted-foreground">
+																					{formatearFecha(
+																						abono.fecha_pago,
+																						"corto",
+																					)}
+																				</span>
+																				{abono.autor && (
+																					<span className="text-xs text-muted-foreground truncate hidden sm:inline">
+																						· {abono.autor}
+																					</span>
+																				)}
+																				<div className="ml-auto flex items-center gap-1">
+																					{abono.tiene_comprobante ? (
+																						<Button
+																							size="sm"
+																							variant="ghost"
+																							className="gap-1 h-7"
+																							onClick={() =>
+																								handleVerComprobanteAbono(
+																									abono.id,
+																								)
+																							}
+																							disabled={
+																								loadingComprobante ===
+																								abono.id
+																							}
+																							title="Ver comprobante"
+																						>
+																							{loadingComprobante ===
+																							abono.id ? (
+																								<Loader2 className="h-4 w-4 animate-spin" />
+																							) : (
+																								<Paperclip className="h-4 w-4" />
+																							)}
+																							Comprobante
+																						</Button>
+																					) : (
+																						<span className="text-xs text-muted-foreground">
+																							Sin comprobante
+																						</span>
+																					)}
+																				</div>
+																			</div>
+																		))}
+																	</div>
+																</td>
+															</tr>
+														)}
+													</Fragment>
+												);
+											})}
+										</tbody>
+									</table>
+								</div>
+							</div>
+						)}
 
 					{/* Footer */}
 					<div className="flex justify-end pt-1">

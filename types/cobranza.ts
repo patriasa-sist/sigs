@@ -78,7 +78,7 @@ export type PolizaConPagos = {
 	ramo: string;
 	prima_total: number;
 	moneda: Moneda;
-	estado: "pendiente" | "activa" | "vencida" | "cancelada" | "renovada" | "rechazada";
+	estado: "pendiente" | "activa" | "vencida" | "cancelada" | "renovada" | "rechazada" | "anulada";
 	inicio_vigencia: string; // ISO date string
 	fin_vigencia: string; // ISO date string
 	modalidad_pago: "contado" | "credito";
@@ -565,6 +565,9 @@ export type PolizaConPagosExtendida = PolizaConPagos & {
 	director_cartera?: string | null;
 	// Cuotas propias de anexos de inclusión (independientes de las cuotas de la póliza madre)
 	cuotas_inclusion?: CuotaAnexoPropia[];
+	// Cobros de vigencia corrida pendientes de anexos de anulación (póliza anulada).
+	// Reusa la forma de CuotaAnexoPropia; se cobran como una cuota de anexo más.
+	vigencia_corrida_cobrable?: CuotaAnexoPropia[];
 	// Notas estructuradas por cuota, indexadas por id de cuota (de póliza o de anexo)
 	notas_por_cuota?: Record<string, CuotaNota[]>;
 	// Abonos por cuota, indexados por id de cuota (de póliza o de anexo)

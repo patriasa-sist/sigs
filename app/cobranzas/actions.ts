@@ -162,17 +162,17 @@ export async function obtenerPolizasConPendientes(
 			.toISOString()
 			.split("T")[0];
 
-		// ── Round 1: polizas (sin cuotas) + cobrados del mes en paralelo ────
+		// ── Round 1: polizas (sin cuotas) + cobrados del mes + VC cobro en paralelo ──
+		const POLIZA_SELECT = `id, numero_poliza, ramo, prima_total, moneda, estado,
+			inicio_vigencia, fin_vigencia, modalidad_pago,
+			client:clients!client_id (id, client_type),
+			compania:companias_aseguradoras!compania_aseguradora_id (id, nombre),
+			responsable:profiles!responsable_id (id, full_name),
+			regional:regionales!regional_id (id, nombre)`;
+
 		let polizasQueryBase = supabase
 			.from("polizas")
-			.select(
-				`id, numero_poliza, ramo, prima_total, moneda, estado,
-				inicio_vigencia, fin_vigencia, modalidad_pago,
-				client:clients!client_id (id, client_type),
-				compania:companias_aseguradoras!compania_aseguradora_id (id, nombre),
-				responsable:profiles!responsable_id (id, full_name),
-				regional:regionales!regional_id (id, nombre)`,
-			)
+			.select(POLIZA_SELECT)
 			.eq("estado", "activa")
 			.order("numero_poliza", { ascending: true });
 
@@ -190,17 +190,55 @@ export async function obtenerPolizasConPendientes(
 			cobradosQueryBase = cobradosQueryBase.in("poliza.responsable_id", scope.teamMemberIds);
 		}
 
-		const [{ data: polizas, error: polizasError }, { data: cuotasCobradas }] = await Promise.all([
-			polizasQueryBase,
-			cobradosQueryBase,
-		]);
+		// Cobros de vigencia corrida pendientes (anexos de anulación activos). Sus
+		// pólizas están 'anulada' pero el saldo sigue siendo cobrable.
+		const vcCobroQuery = supabase
+			.from("polizas_anexos_pagos")
+			.select("monto, fecha_vencimiento, estado, polizas_anexos!inner (poliza_id, estado)")
+			.eq("tipo", "vigencia_corrida")
+			.eq("direccion", "cobro")
+			.neq("estado", "pagado")
+			.eq("polizas_anexos.estado", "activo");
+
+		const [{ data: polizas, error: polizasError }, { data: cuotasCobradas }, { data: vcCobroRows }] =
+			await Promise.all([polizasQueryBase, cobradosQueryBase, vcCobroQuery]);
 
 		if (polizasError) {
 			console.error("Error fetching policies:", polizasError);
 			return { success: false, error: "Error al obtener pólizas" };
 		}
 
-		const polizaIds = (polizas || []).map((p) => p.id);
+		// Agregar el cobro de vigencia corrida por póliza (anuladas cobrables).
+		const vcByPoliza = new Map<string, { total: number; count: number; proxima: string | null }>();
+		for (const r of vcCobroRows || []) {
+			const pid = (r.polizas_anexos as unknown as { poliza_id: string }).poliza_id;
+			const cur = vcByPoliza.get(pid) ?? { total: 0, count: 0, proxima: null };
+			cur.total += Number(r.monto);
+			cur.count += 1;
+			if (r.fecha_vencimiento && (!cur.proxima || r.fecha_vencimiento < cur.proxima)) {
+				cur.proxima = r.fecha_vencimiento;
+			}
+			vcByPoliza.set(pid, cur);
+		}
+
+		// Traer las pólizas anuladas que tienen ese cobro pendiente (con scope).
+		const anuladaConVcIds = [...vcByPoliza.keys()];
+		let polizasAnuladas: NonNullable<typeof polizas> = [];
+		if (anuladaConVcIds.length > 0) {
+			let anuladaQuery = supabase
+				.from("polizas")
+				.select(POLIZA_SELECT)
+				.in("id", anuladaConVcIds)
+				.eq("estado", "anulada");
+			if (scope.needsScoping) {
+				anuladaQuery = anuladaQuery.in("responsable_id", scope.teamMemberIds);
+			}
+			const { data: anuladas } = await anuladaQuery;
+			polizasAnuladas = anuladas || [];
+		}
+
+		const polizasAll = [...(polizas || []), ...polizasAnuladas];
+		const polizaIds = polizasAll.map((p) => p.id);
 
 		// ── Round 2: resumen de cuotas (solo campos necesarios, sin JSONB) ───
 		const { data: cuotaRows } =
@@ -248,6 +286,8 @@ export async function obtenerPolizasConPendientes(
 			}
 			const s = cuotasByPoliza.get(c.poliza_id)!;
 			const estado = estadoEfectivo(c);
+			// Las cuotas anuladas (por una anulación de póliza) no se cobran ni cuentan.
+			if (estado === "anulada") continue;
 			if (estado === "pagado") {
 				s.total_pagado += c.monto;
 			} else {
@@ -264,16 +304,34 @@ export async function obtenerPolizasConPendientes(
 			}
 		}
 
+		// Inyectar el cobro de vigencia corrida pendiente como saldo cobrable de la
+		// póliza anulada (cuenta como cuota pendiente para que no se omita la póliza).
+		for (const [pid, vc] of vcByPoliza) {
+			const s = cuotasByPoliza.get(pid) ?? {
+				cuotas_pendientes: 0,
+				cuotas_vencidas: 0,
+				total_pendiente: 0,
+				total_pagado: 0,
+				proxima_fecha: null,
+			};
+			s.total_pendiente += vc.total;
+			s.cuotas_pendientes += vc.count;
+			if (vc.proxima && (!s.proxima_fecha || vc.proxima < s.proxima_fecha)) {
+				s.proxima_fecha = vc.proxima;
+			}
+			cuotasByPoliza.set(pid, s);
+		}
+
 		// ── Construir lista de pólizas ────────────────────────────────────
 		// Resolver nombre/documento de todos los tipos de cliente en batch
 		const clientNombresMap = await resolverNombresCliente(
 			supabase,
-			(polizas || []).map((p) => (p.client as { id?: string } | null)?.id || ""),
+			polizasAll.map((p) => (p.client as { id?: string } | null)?.id || ""),
 		);
 
 		const polizasConPagos: PolizaConPagos[] = [];
 
-		for (const poliza of polizas || []) {
+		for (const poliza of polizasAll) {
 			const s = cuotasByPoliza.get(poliza.id) ?? {
 				cuotas_pendientes: 0,
 				cuotas_vencidas: 0,
@@ -1024,20 +1082,25 @@ export async function obtenerDetallePolizaParaCuotas(polizaId: string): Promise<
 		// Despacho acento-insensible compartido; cubre todos los ramos con tabla de detalle.
 		const datos_ramo = await obtenerDetalleRamo(supabase, polizaId, poliza.ramo);
 
-		// Calculate totals
+		// Calculate totals. Las cuotas anuladas (póliza anulada) no se cobran ni cuentan.
 		const cuotas = (poliza.cuotas || []) as CuotaPago[];
 		const todayStr = new Date().toISOString().split("T")[0];
 		const total_pagado = cuotas
 			.filter((c: CuotaPago) => c.estado === "pagado")
 			.reduce((sum: number, c: CuotaPago) => sum + c.monto, 0);
-		const total_pendiente = cuotas
-			.filter((c: CuotaPago) => c.estado !== "pagado")
+		let total_pendiente = cuotas
+			.filter((c: CuotaPago) => c.estado !== "pagado" && c.estado !== "anulada")
 			.reduce((sum: number, c: CuotaPago) => sum + c.monto, 0);
 		const cuotas_pendientes = cuotas.filter((c: CuotaPago) => c.estado === "pendiente").length;
 		const cuotas_vencidas = cuotas.filter((c: CuotaPago) => obtenerEstadoReal(c) === "vencido").length;
 		const proxima_fecha_vencimiento =
 			cuotas
-				.filter((c: CuotaPago) => obtenerEstadoReal(c) !== "pagado" && c.fecha_vencimiento >= todayStr)
+				.filter(
+					(c: CuotaPago) =>
+						obtenerEstadoReal(c) !== "pagado" &&
+						obtenerEstadoReal(c) !== "anulada" &&
+						c.fecha_vencimiento >= todayStr,
+				)
 				.sort((a, b) => a.fecha_vencimiento.localeCompare(b.fecha_vencimiento))[0]?.fecha_vencimiento ?? null;
 
 		// Cuotas propias de anexos de inclusión activos
@@ -1081,11 +1144,58 @@ export async function obtenerDetallePolizaParaCuotas(polizaId: string): Promise<
 				});
 		}
 
+		// Cobros de vigencia corrida pendientes (anexos de anulación activos). La
+		// póliza está anulada pero este saldo sigue siendo cobrable; se trata como
+		// una cuota de anexo más (abonos vía anexo_pago_id).
+		let vigencia_corrida_cobrable: CuotaAnexoPropia[] | undefined;
+		const { data: vcCobroPagos } = await supabase
+			.from("polizas_anexos_pagos")
+			.select(
+				`
+				id, anexo_id, numero_cuota, monto, fecha_vencimiento, fecha_vencimiento_original, estado, observaciones,
+				polizas_anexos!inner (id, numero_anexo, estado)
+			`,
+			)
+			.eq("polizas_anexos.poliza_id", polizaId)
+			.eq("polizas_anexos.estado", "activo")
+			.eq("tipo", "vigencia_corrida")
+			.eq("direccion", "cobro");
+
+		if (vcCobroPagos && vcCobroPagos.length > 0) {
+			vigencia_corrida_cobrable = vcCobroPagos
+				.map((p) => {
+					const info = p.polizas_anexos as unknown as { id: string; numero_anexo: string };
+					return {
+						id: p.id,
+						anexo_id: info.id,
+						numero_anexo: info.numero_anexo,
+						numero_cuota: p.numero_cuota ?? 0,
+						monto: Number(p.monto),
+						fecha_vencimiento: p.fecha_vencimiento || "",
+						fecha_vencimiento_original: p.fecha_vencimiento_original || null,
+						estado:
+							(p.estado || "pendiente") === "pendiente" &&
+							p.fecha_vencimiento &&
+							p.fecha_vencimiento < todayStr
+								? "vencido"
+								: p.estado || "pendiente",
+						observaciones: p.observaciones || undefined,
+					};
+				})
+				.sort((a, b) => a.numero_anexo.localeCompare(b.numero_anexo));
+
+			// El saldo cobrable de vigencia corrida suma al pendiente de la póliza
+			// (en una anulación es lo único que queda por cobrar).
+			total_pendiente += vigencia_corrida_cobrable
+				.filter((v) => v.estado !== "pagado")
+				.reduce((s, v) => s + v.monto, 0);
+		}
+
 		// Notas estructuradas por cuota (Mejora #1): cuotas de póliza y de anexo
 		const notas_por_cuota: Record<string, CuotaNota[]> = {};
 		{
 			const pagoIds = (cuotas as CuotaPago[]).map((c) => c.id);
-			const anexoPagoIds = (cuotas_inclusion ?? []).map((c) => c.id);
+			const anexoPagoIds = [...(cuotas_inclusion ?? []), ...(vigencia_corrida_cobrable ?? [])].map((c) => c.id);
 			const orParts: string[] = [];
 			if (pagoIds.length > 0) orParts.push(`pago_id.in.(${pagoIds.join(",")})`);
 			if (anexoPagoIds.length > 0) orParts.push(`anexo_pago_id.in.(${anexoPagoIds.join(",")})`);
@@ -1113,7 +1223,7 @@ export async function obtenerDetallePolizaParaCuotas(polizaId: string): Promise<
 		const abonos_por_cuota: Record<string, AbonoCuota[]> = {};
 		{
 			const pagoIds = (cuotas as CuotaPago[]).map((c) => c.id);
-			const anexoPagoIds = (cuotas_inclusion ?? []).map((c) => c.id);
+			const anexoPagoIds = [...(cuotas_inclusion ?? []), ...(vigencia_corrida_cobrable ?? [])].map((c) => c.id);
 			const orParts: string[] = [];
 			if (pagoIds.length > 0) orParts.push(`pago_id.in.(${pagoIds.join(",")})`);
 			if (anexoPagoIds.length > 0) orParts.push(`anexo_pago_id.in.(${anexoPagoIds.join(",")})`);
@@ -1241,6 +1351,7 @@ export async function obtenerDetallePolizaParaCuotas(polizaId: string): Promise<
 			contacto,
 			datos_ramo,
 			cuotas_inclusion,
+			vigencia_corrida_cobrable,
 			notas_por_cuota,
 			abonos_por_cuota,
 			director_cartera: (() => {
