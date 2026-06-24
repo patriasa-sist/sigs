@@ -27,6 +27,11 @@ export type TipoAnexo = "inclusion" | "exclusion" | "anulacion";
 export type EstadoAnexo = "pendiente" | "activo" | "rechazado";
 export type PasoAnexo = 1 | 2 | 3 | 4 | 5;
 
+// Dirección del ajuste de una anulación. La vigencia corrida se guarda siempre
+// en positivo; la dirección define si suma a cobrar (cobro) o si es una prima a
+// favor del cliente que se gestiona por fuera (devolucion, informativa).
+export type DireccionVigenciaCorrida = "cobro" | "devolucion";
+
 // ============================================
 // PASO 1: BÚSQUEDA DE PÓLIZA
 // ============================================
@@ -124,7 +129,8 @@ export type PlanPagoInclusion = {
 };
 
 export type VigenciaCorrida = {
-	monto: number;
+	monto: number; // siempre positivo (magnitud); el signo lo da `direccion`
+	direccion: DireccionVigenciaCorrida; // cobro | devolucion
 	fecha_vencimiento: string; // ISO date
 	observaciones: string;
 };
@@ -235,8 +241,9 @@ export type AnexoPagoDB = {
 	tipo: "ajuste" | "vigencia_corrida" | "cuota_propia";
 	numero_cuota?: number;
 	monto: number;
+	direccion?: DireccionVigenciaCorrida | null; // solo para vigencia_corrida
 	fecha_vencimiento?: string;
-	estado: "pendiente" | "pagado" | "vencido";
+	estado: "pendiente" | "pagado" | "vencido" | "anulada";
 	observaciones?: string;
 	created_at: string;
 };
@@ -266,7 +273,8 @@ export type CuotaConsolidada = {
 export type CuotaVigenciaCorrida = {
 	anexo_id: string;
 	numero_anexo: string;
-	monto: number;
+	monto: number; // magnitud (positivo); el signo se deriva de `direccion`
+	direccion: DireccionVigenciaCorrida;
 	fecha_vencimiento: string;
 	estado: string;
 	observaciones?: string;

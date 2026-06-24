@@ -4,7 +4,7 @@ import { createClient } from "@/utils/supabase/server";
 import { getDataScopeFilter } from "@/utils/auth/helpers";
 import { obtenerEjecutivosFiltro } from "@/utils/ejecutivos";
 import { resolverNombresCliente } from "@/utils/polizas/resolverNombresCliente";
-import type { CuotaConsolidada, CuotaVigenciaCorrida, CuotaAnexoPropia } from "@/types/anexo";
+import type { CuotaConsolidada, CuotaVigenciaCorrida, CuotaAnexoPropia, DireccionVigenciaCorrida } from "@/types/anexo";
 
 export type PolizaListItem = {
 	id: string;
@@ -1348,7 +1348,7 @@ export async function obtenerDetallePoliza(polizaId: string) {
 				.select(
 					`
 					id, anexo_id, cuota_original_id, tipo, numero_cuota,
-					monto, fecha_vencimiento, estado, observaciones,
+					monto, direccion, fecha_vencimiento, estado, observaciones,
 					polizas_anexos!inner (id, numero_anexo, tipo_anexo, estado)
 				`,
 				)
@@ -1426,7 +1426,9 @@ export async function obtenerDetallePoliza(polizaId: string) {
 					return {
 						anexo_id: info.id,
 						numero_anexo: info.numero_anexo,
-						monto: Number(p.monto),
+						monto: Math.abs(Number(p.monto)),
+						direccion: ((p.direccion as DireccionVigenciaCorrida | null) ??
+							"cobro") as DireccionVigenciaCorrida,
 						fecha_vencimiento: p.fecha_vencimiento || "",
 						estado: p.estado || "pendiente",
 						observaciones: p.observaciones || undefined,

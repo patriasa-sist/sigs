@@ -35,6 +35,7 @@ import {
 } from "@/app/polizas/anexos/actions";
 import { validarAnexo, rechazarAnexo } from "@/app/gerencia/validacion-anexos/actions";
 import { formatDate, formatCurrency } from "@/utils/formatters";
+import { describirAporteAnexo, signoPagoAnexo } from "@/utils/polizas/aporteAnexo";
 import type { AnexoResumen } from "@/types/anexo";
 
 type Props = {
@@ -321,21 +322,33 @@ export default function AnexoDetalleSection({ polizaId, moneda, puedeValidar, on
 
 									{/* Summary bar */}
 									<div className="mt-4 flex items-center gap-6 text-sm text-gray-600">
-										{(anexo.monto_ajuste_total ?? 0) !== 0 && (
-											<span>
-												Ajuste:{" "}
-												<span
-													className={`font-semibold ${
-														(anexo.monto_ajuste_total ?? 0) >= 0
-															? "text-green-600"
-															: "text-red-600"
-													}`}
-												>
-													{(anexo.monto_ajuste_total ?? 0) >= 0 ? "+" : ""}
-													{formatCurrency(anexo.monto_ajuste_total ?? 0, moneda)}
-												</span>
-											</span>
-										)}
+										{(anexo.monto_ajuste_total ?? 0) !== 0 &&
+											(() => {
+												const neto = anexo.monto_ajuste_total ?? 0;
+												const aporte = describirAporteAnexo(anexo.tipo_anexo, neto);
+												return (
+													<span>
+														{aporte.etiqueta}:{" "}
+														<span
+															className={`font-semibold ${
+																aporte.tono === "negativo"
+																	? "text-red-600"
+																	: aporte.tono === "positivo"
+																		? "text-green-600"
+																		: "text-gray-600"
+															}`}
+														>
+															{neto >= 0 ? "+" : ""}
+															{formatCurrency(neto, moneda)}
+														</span>
+														{aporte.informativo && (
+															<span className="ml-1 text-xs text-gray-400">
+																(se paga por fuera)
+															</span>
+														)}
+													</span>
+												);
+											})()}
 										{anexo.cantidad_documentos > 0 && (
 											<span>
 												{anexo.cantidad_documentos} documento
@@ -460,49 +473,73 @@ export default function AnexoDetalleSection({ polizaId, moneda, puedeValidar, on
 																	</tr>
 																</thead>
 																<tbody className="divide-y">
-																	{detalle.pagos.map((pago) => (
-																		<tr key={pago.id} className="hover:bg-gray-50">
-																			<td className="px-4 py-2">
-																				<Badge
-																					variant="outline"
-																					className={
-																						pago.tipo === "vigencia_corrida"
-																							? "bg-purple-100 text-purple-700 border-purple-200"
-																							: "bg-blue-100 text-blue-700 border-blue-200"
-																					}
-																				>
-																					{pago.tipo === "vigencia_corrida"
-																						? "Vigencia Corrida"
-																						: "Ajuste"}
-																				</Badge>
-																			</td>
-																			<td className="px-4 py-2">
-																				{pago.numero_cuota != null
-																					? `Cuota ${pago.numero_cuota}`
-																					: "-"}
-																			</td>
-																			<td className="px-4 py-2 text-right font-semibold">
-																				<span
-																					className={
-																						pago.monto >= 0
-																							? "text-green-600"
-																							: "text-red-600"
-																					}
-																				>
-																					{pago.monto >= 0 ? "+" : ""}
-																					{formatCurrency(pago.monto, moneda)}
-																				</span>
-																			</td>
-																			<td className="px-4 py-2">
-																				{pago.fecha_vencimiento
-																					? formatDate(pago.fecha_vencimiento)
-																					: "-"}
-																			</td>
-																			<td className="px-4 py-2 text-gray-600">
-																				{pago.observaciones || "-"}
-																			</td>
-																		</tr>
-																	))}
+																	{detalle.pagos.map((pago) => {
+																		// El monto se guarda en positivo; el signo real lo
+																		// da la dirección (devolución = a favor del cliente).
+																		const montoFirmado = signoPagoAnexo({
+																			tipo: pago.tipo,
+																			monto: pago.monto,
+																			direccion: pago.direccion,
+																		});
+																		const esDevolucion =
+																			pago.tipo === "vigencia_corrida" &&
+																			pago.direccion === "devolucion";
+																		return (
+																			<tr
+																				key={pago.id}
+																				className="hover:bg-gray-50"
+																			>
+																				<td className="px-4 py-2">
+																					<Badge
+																						variant="outline"
+																						className={
+																							pago.tipo ===
+																							"vigencia_corrida"
+																								? "bg-purple-100 text-purple-700 border-purple-200"
+																								: "bg-blue-100 text-blue-700 border-blue-200"
+																						}
+																					>
+																						{pago.tipo ===
+																						"vigencia_corrida"
+																							? esDevolucion
+																								? "Devolución"
+																								: "Vigencia Corrida"
+																							: "Ajuste"}
+																					</Badge>
+																				</td>
+																				<td className="px-4 py-2">
+																					{pago.numero_cuota != null
+																						? `Cuota ${pago.numero_cuota}`
+																						: "-"}
+																				</td>
+																				<td className="px-4 py-2 text-right font-semibold">
+																					<span
+																						className={
+																							montoFirmado >= 0
+																								? "text-green-600"
+																								: "text-red-600"
+																						}
+																					>
+																						{montoFirmado >= 0 ? "+" : ""}
+																						{formatCurrency(
+																							montoFirmado,
+																							moneda,
+																						)}
+																					</span>
+																				</td>
+																				<td className="px-4 py-2">
+																					{pago.fecha_vencimiento
+																						? formatDate(
+																								pago.fecha_vencimiento,
+																							)
+																						: "-"}
+																				</td>
+																				<td className="px-4 py-2 text-gray-600">
+																					{pago.observaciones || "-"}
+																				</td>
+																			</tr>
+																		);
+																	})}
 																</tbody>
 															</table>
 														</div>

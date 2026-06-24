@@ -4,6 +4,8 @@ import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
 import { checkPermission, getDataScopeFilter } from "@/utils/auth/helpers";
 import { resolverNombresCliente } from "@/utils/polizas/resolverNombresCliente";
+import { netoAporteAnexo, type PagoAnexoLite } from "@/utils/polizas/aporteAnexo";
+import { anularCuotasPorAnulacion } from "@/utils/polizas/anulacionCuotas";
 
 async function checkTeamLeaderForPolicy(
 	supabase: Awaited<ReturnType<typeof createClient>>,
@@ -135,16 +137,28 @@ export async function obtenerAnexosPendientes(): Promise<{
 		const clientNombresMap = await resolverNombresCliente(supabase, clientIds);
 		const polizaClientMap = new Map((polizasClients || []).map((p) => [p.id, p.client_id]));
 
-		// Obtener montos de ajuste
+		// Obtener montos de ajuste (neto firmado vía fuente única de verdad:
+		// cobro suma, devolución resta, exclusión resta, inclusión suma).
 		const anexoIds = anexosFiltrados.map((a) => a.id);
 		const { data: pagos } = await supabase
 			.from("polizas_anexos_pagos")
-			.select("anexo_id, monto")
+			.select("anexo_id, tipo, monto, direccion")
 			.in("anexo_id", anexoIds);
 
-		const montoMap = new Map<string, number>();
+		const pagosPorAnexo = new Map<string, PagoAnexoLite[]>();
 		(pagos || []).forEach((p) => {
-			montoMap.set(p.anexo_id, (montoMap.get(p.anexo_id) || 0) + Number(p.monto));
+			const arr = pagosPorAnexo.get(p.anexo_id) || [];
+			arr.push({
+				tipo: p.tipo as PagoAnexoLite["tipo"],
+				monto: Number(p.monto),
+				direccion: p.direccion as PagoAnexoLite["direccion"],
+			});
+			pagosPorAnexo.set(p.anexo_id, arr);
+		});
+
+		const montoMap = new Map<string, number>();
+		pagosPorAnexo.forEach((lista, anexoId) => {
+			montoMap.set(anexoId, netoAporteAnexo(lista));
 		});
 
 		const resultado: AnexoPendiente[] = anexosFiltrados.map((a) => {
@@ -251,7 +265,9 @@ export async function validarAnexo(anexoId: string): Promise<{
 			return { success: false, error: "Error al validar el anexo" };
 		}
 
-		// Si es anulación, cambiar estado de la póliza a 'anulada'
+		// Si es anulación, la póliza queda muerta en todo sentido: estado
+		// 'anulada' y sus cuotas no pagadas (póliza madre + cuotas propias de
+		// inclusiones activas) pasan a 'anulada' para que dejen de cobrarse.
 		if (anexo.tipo_anexo === "anulacion") {
 			const { error: polizaError } = await supabase
 				.from("polizas")
@@ -261,6 +277,12 @@ export async function validarAnexo(anexoId: string): Promise<{
 			if (polizaError) {
 				console.error("Error anulando póliza:", polizaError);
 				return { success: false, error: "Anexo validado pero error al anular la póliza" };
+			}
+
+			const { error: cuotasError } = await anularCuotasPorAnulacion(supabase, anexo.poliza_id, anexoId);
+			if (cuotasError) {
+				console.error("Error anulando cuotas de la póliza:", cuotasError);
+				return { success: false, error: "Póliza anulada pero error al anular sus cuotas pendientes" };
 			}
 		}
 

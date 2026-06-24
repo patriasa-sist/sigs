@@ -6,7 +6,7 @@ import type { CuotaAnexoPropia } from "@/types/anexo";
 // ============================================
 
 /** Estados posibles de una cuota de pago */
-export type EstadoPago = "pendiente" | "pagado" | "vencido" | "parcial";
+export type EstadoPago = "pendiente" | "pagado" | "vencido" | "parcial" | "anulada";
 
 /** Monedas soportadas en el sistema */
 export type Moneda = "Bs" | "USD" | "USDT" | "UFV";

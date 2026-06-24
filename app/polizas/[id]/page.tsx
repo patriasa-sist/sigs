@@ -162,6 +162,7 @@ export default function PolizaDetallePage() {
 			pagado: "bg-green-100 text-green-800 border-green-200",
 			vencido: "bg-red-100 text-red-800 border-red-200",
 			parcial: "bg-blue-100 text-blue-800 border-blue-200",
+			anulada: "bg-gray-100 text-gray-500 border-gray-200",
 		};
 		return styles[estado as keyof typeof styles] || "bg-gray-100 text-gray-800 border-gray-200";
 	};
@@ -172,6 +173,7 @@ export default function PolizaDetallePage() {
 			pagado: "Pagado",
 			vencido: "Vencido",
 			parcial: "Parcial",
+			anulada: "Anulada",
 		};
 		return labels[estado as keyof typeof labels] || estado;
 	};
@@ -275,11 +277,15 @@ export default function PolizaDetallePage() {
 	};
 
 	// Calcular estadísticas de pagos
-	const totalPagos = poliza.pagos.length;
+	// Las cuotas anuladas (por una anulación de póliza) no cuentan ni como
+	// pendientes ni en el monto por cobrar.
+	const totalPagos = poliza.pagos.filter((p) => p.estado !== "anulada").length;
 	const pagosPagados = poliza.pagos.filter((p) => p.estado === "pagado").length;
 	const pagosPendientes = poliza.pagos.filter((p) => p.estado === "pendiente").length;
 	const montoPagado = poliza.pagos.filter((p) => p.estado === "pagado").reduce((sum, p) => sum + p.monto, 0);
-	const montoPendiente = poliza.pagos.filter((p) => p.estado !== "pagado").reduce((sum, p) => sum + p.monto, 0);
+	const montoPendiente = poliza.pagos
+		.filter((p) => p.estado !== "pagado" && p.estado !== "anulada")
+		.reduce((sum, p) => sum + p.monto, 0);
 
 	return (
 		<div className="container mx-auto px-4 py-8 max-w-7xl">
@@ -1928,7 +1934,13 @@ export default function PolizaDetallePage() {
 																<span className="text-gray-400">-</span>
 															)}
 														</td>
-														<td className="px-4 py-3 text-sm font-semibold text-blue-900 text-right bg-blue-50/50">
+														<td
+															className={`px-4 py-3 text-sm font-semibold text-right bg-blue-50/50 ${
+																cuota.estado === "anulada"
+																	? "text-gray-400 line-through"
+																	: "text-blue-900"
+															}`}
+														>
 															{formatCurrency(cuota.monto_consolidado, poliza.moneda)}
 														</td>
 														<td className="px-4 py-3 text-sm text-gray-600">
@@ -1991,14 +2003,34 @@ export default function PolizaDetallePage() {
 														className="px-4 py-3 text-sm font-medium text-purple-800"
 														colSpan={2}
 													>
-														<span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-700 border border-purple-200 mr-2">
-															Vigencia Corrida
+														<span
+															className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium border mr-2 ${
+																vc.direccion === "devolucion"
+																	? "bg-amber-100 text-amber-700 border-amber-200"
+																	: "bg-purple-100 text-purple-700 border-purple-200"
+															}`}
+														>
+															{vc.direccion === "devolucion"
+																? "Devolución"
+																: "Vigencia Corrida"}
 														</span>
 														{vc.numero_anexo}
+														{vc.direccion === "devolucion" && (
+															<span className="ml-2 text-xs text-gray-400">
+																a favor del cliente · se paga por fuera
+															</span>
+														)}
 													</td>
 													<td className="px-4 py-3" />
 													<td className="px-4 py-3" />
-													<td className="px-4 py-3 text-sm font-semibold text-purple-900 text-right">
+													<td
+														className={`px-4 py-3 text-sm font-semibold text-right ${
+															vc.direccion === "devolucion"
+																? "text-red-600"
+																: "text-purple-900"
+														}`}
+													>
+														{vc.direccion === "devolucion" ? "-" : "+"}
 														{formatCurrency(vc.monto, poliza.moneda)}
 													</td>
 													<td className="px-4 py-3 text-sm text-gray-600">

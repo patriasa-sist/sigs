@@ -6,6 +6,8 @@ import { revalidatePath } from "next/cache";
 import { getDataScopeFilter } from "@/utils/auth/helpers";
 import { generateFinalStoragePath } from "@/utils/fileUpload";
 import { resolverNombresCliente } from "@/utils/polizas/resolverNombresCliente";
+import { netoAporteAnexo, type PagoAnexoLite } from "@/utils/polizas/aporteAnexo";
+import { restaurarCuotasPorAnulacion } from "@/utils/polizas/anulacionCuotas";
 import type {
 	AnexoFormState,
 	PolizaResumenAnexo,
@@ -18,6 +20,7 @@ import type {
 	AnexoItemChange,
 	CuotaAjuste,
 	MotivoErrorEdicionAnexo,
+	DireccionVigenciaCorrida,
 } from "@/types/anexo";
 import type {
 	VehiculoAutomotor,
@@ -707,15 +710,22 @@ export async function guardarAnexo(formState: AnexoFormState): Promise<{
 			// Pagos del anexo
 			if (formState.config.tipo_anexo === "anulacion") {
 				if (formState.vigencia_corrida && formState.vigencia_corrida.monto > 0) {
+					// El monto se guarda SIEMPRE en positivo; la dirección define el
+					// signo: cobro (saldo a cobrar) o devolución (a favor del cliente).
+					const direccion: DireccionVigenciaCorrida =
+						formState.vigencia_corrida.direccion === "devolucion" ? "devolucion" : "cobro";
 					const { error: pagoError } = await supabase.from("polizas_anexos_pagos").insert({
 						anexo_id: anexo.id,
 						cuota_original_id: null,
 						tipo: "vigencia_corrida",
 						numero_cuota: 0,
-						monto: formState.vigencia_corrida.monto,
+						monto: Math.abs(formState.vigencia_corrida.monto),
+						direccion,
 						fecha_vencimiento: formState.vigencia_corrida.fecha_vencimiento,
 						estado: "pendiente",
-						observaciones: formState.vigencia_corrida.observaciones?.trim() || "Cobro vigencia corrida",
+						observaciones:
+							formState.vigencia_corrida.observaciones?.trim() ||
+							(direccion === "devolucion" ? "Devolución a favor del cliente" : "Cobro vigencia corrida"),
 					});
 
 					throwIfAnexoError(pagoError, "Error al guardar vigencia corrida");
@@ -1068,15 +1078,30 @@ export async function obtenerAnexosPoliza(polizaId: string): Promise<{
 			docCountMap.set(d.anexo_id, (docCountMap.get(d.anexo_id) || 0) + 1);
 		});
 
-		// Obtener montos de ajuste por anexo
+		// Obtener montos de ajuste por anexo (neto firmado: cobro suma, devolución
+		// resta, exclusión resta, inclusión suma — vía fuente única de verdad).
 		const { data: pagosAnexos } =
 			anexoIds.length > 0
-				? await supabase.from("polizas_anexos_pagos").select("anexo_id, monto").in("anexo_id", anexoIds)
+				? await supabase
+						.from("polizas_anexos_pagos")
+						.select("anexo_id, tipo, monto, direccion")
+						.in("anexo_id", anexoIds)
 				: { data: [] };
 
-		const montoAjusteMap = new Map<string, number>();
+		const pagosPorAnexo = new Map<string, PagoAnexoLite[]>();
 		(pagosAnexos || []).forEach((p) => {
-			montoAjusteMap.set(p.anexo_id, (montoAjusteMap.get(p.anexo_id) || 0) + Number(p.monto));
+			const arr = pagosPorAnexo.get(p.anexo_id) || [];
+			arr.push({
+				tipo: p.tipo as PagoAnexoLite["tipo"],
+				monto: Number(p.monto),
+				direccion: p.direccion as PagoAnexoLite["direccion"],
+			});
+			pagosPorAnexo.set(p.anexo_id, arr);
+		});
+
+		const montoAjusteMap = new Map<string, number>();
+		pagosPorAnexo.forEach((pagos, anexoId) => {
+			montoAjusteMap.set(anexoId, netoAporteAnexo(pagos));
 		});
 
 		const resultado: AnexoResumen[] = (anexos || []).map((a) => {
@@ -1137,7 +1162,7 @@ export async function obtenerCuotasConsolidadas(polizaId: string): Promise<{
 				.select(
 					`
 					id, anexo_id, cuota_original_id, tipo, numero_cuota,
-					monto, fecha_vencimiento, estado, observaciones,
+					monto, direccion, fecha_vencimiento, estado, observaciones,
 					polizas_anexos!inner (id, numero_anexo, tipo_anexo, estado)
 				`,
 				)
@@ -1211,13 +1236,14 @@ export async function obtenerCuotasConsolidadas(polizaId: string): Promise<{
 				return a.numero_cuota - b.numero_cuota;
 			});
 
-		// Vigencia corrida de anulaciones
+		// Vigencia corrida de anulaciones (monto en positivo + dirección)
 		const vc: CuotaVigenciaCorrida[] = vigenciaCorrida.map((p) => {
 			const info = p.polizas_anexos as unknown as { id: string; numero_anexo: string };
 			return {
 				anexo_id: info.id,
 				numero_anexo: info.numero_anexo,
-				monto: Number(p.monto),
+				monto: Math.abs(Number(p.monto)),
+				direccion: ((p.direccion as DireccionVigenciaCorrida | null) ?? "cobro") as DireccionVigenciaCorrida,
 				fecha_vencimiento: p.fecha_vencimiento || "",
 				estado: p.estado || "pendiente",
 				observaciones: p.observaciones || undefined,
@@ -1247,6 +1273,7 @@ export type AnexoDetallePago = {
 	tipo: "ajuste" | "vigencia_corrida";
 	numero_cuota: number | null;
 	monto: number;
+	direccion: DireccionVigenciaCorrida | null;
 	fecha_vencimiento: string | null;
 	estado: string;
 	observaciones: string | null;
@@ -1319,7 +1346,7 @@ export async function obtenerDetalleAnexo(anexoId: string): Promise<{
 		const [pagosResult, docsResult, ...userResults] = await Promise.all([
 			supabase
 				.from("polizas_anexos_pagos")
-				.select("id, tipo, numero_cuota, monto, fecha_vencimiento, estado, observaciones")
+				.select("id, tipo, numero_cuota, monto, direccion, fecha_vencimiento, estado, observaciones")
 				.eq("anexo_id", anexoId)
 				.order("numero_cuota", { ascending: true }),
 			supabase
@@ -1364,6 +1391,7 @@ export async function obtenerDetalleAnexo(anexoId: string): Promise<{
 				tipo: p.tipo as "ajuste" | "vigencia_corrida",
 				numero_cuota: p.numero_cuota,
 				monto: Number(p.monto),
+				direccion: (p.direccion as DireccionVigenciaCorrida | null) ?? null,
 				fecha_vencimiento: p.fecha_vencimiento,
 				estado: p.estado || "pendiente",
 				observaciones: p.observaciones,
@@ -2012,7 +2040,7 @@ export async function obtenerAnexoParaEdicion(anexoId: string): Promise<{
 			cargarItemsCambioAnexo(supabase, anexoId, datosPoliza.poliza.ramo),
 			supabase
 				.from("polizas_anexos_pagos")
-				.select("id, cuota_original_id, tipo, numero_cuota, monto, fecha_vencimiento, observaciones")
+				.select("id, cuota_original_id, tipo, numero_cuota, monto, direccion, fecha_vencimiento, observaciones")
 				.eq("anexo_id", anexoId)
 				.order("numero_cuota", { ascending: true }),
 			supabase
@@ -2061,11 +2089,13 @@ export async function obtenerAnexoParaEdicion(anexoId: string): Promise<{
 			};
 		});
 
-		// Anulación: vigencia corrida
+		// Anulación: vigencia corrida (monto en positivo + dirección)
 		const vc = pagos.find((p) => p.tipo === "vigencia_corrida");
 		const vigenciaCorrida = vc
 			? {
-					monto: Number(vc.monto),
+					monto: Math.abs(Number(vc.monto)),
+					direccion: ((vc.direccion as DireccionVigenciaCorrida | null) ??
+						"cobro") as DireccionVigenciaCorrida,
 					fecha_vencimiento: vc.fecha_vencimiento || "",
 					observaciones: vc.observaciones || "",
 				}
@@ -2198,19 +2228,25 @@ export async function actualizarAnexo(
 			cuota_original_id: string | null;
 			numero_cuota: number | null;
 			monto: number;
+			direccion: DireccionVigenciaCorrida | null;
 			fecha_vencimiento: string | null;
 			observaciones: string;
 		};
 		const nuevosPagos: PagoNuevo[] = [];
 		if (anexo.tipo_anexo === "anulacion") {
 			if (formState.vigencia_corrida && formState.vigencia_corrida.monto > 0) {
+				const direccion: DireccionVigenciaCorrida =
+					formState.vigencia_corrida.direccion === "devolucion" ? "devolucion" : "cobro";
 				nuevosPagos.push({
 					tipo: "vigencia_corrida",
 					cuota_original_id: null,
 					numero_cuota: 0,
-					monto: formState.vigencia_corrida.monto,
+					monto: Math.abs(formState.vigencia_corrida.monto),
+					direccion,
 					fecha_vencimiento: formState.vigencia_corrida.fecha_vencimiento,
-					observaciones: formState.vigencia_corrida.observaciones?.trim() || "Cobro vigencia corrida",
+					observaciones:
+						formState.vigencia_corrida.observaciones?.trim() ||
+						(direccion === "devolucion" ? "Devolución a favor del cliente" : "Cobro vigencia corrida"),
 				});
 			}
 		} else if (anexo.tipo_anexo === "inclusion") {
@@ -2221,6 +2257,7 @@ export async function actualizarAnexo(
 					cuota_original_id: null,
 					numero_cuota: c.numero_cuota,
 					monto: c.monto,
+					direccion: null,
 					fecha_vencimiento: c.fecha_vencimiento,
 					observaciones:
 						plan.modalidad === "contado"
@@ -2235,6 +2272,7 @@ export async function actualizarAnexo(
 					cuota_original_id: c.cuota_original_id,
 					numero_cuota: c.numero_cuota,
 					monto: -Math.abs(c.monto_delta),
+					direccion: null,
 					fecha_vencimiento: c.fecha_vencimiento,
 					observaciones: "Descuento por exclusión",
 				});
@@ -2243,18 +2281,23 @@ export async function actualizarAnexo(
 
 		const { data: pagosExistentes, error: pagosExistentesError } = await supabase
 			.from("polizas_anexos_pagos")
-			.select("id, tipo, cuota_original_id, numero_cuota, monto, fecha_vencimiento, estado, fecha_pago")
+			.select(
+				"id, tipo, cuota_original_id, numero_cuota, monto, direccion, fecha_vencimiento, estado, fecha_pago",
+			)
 			.eq("anexo_id", anexoId);
 		throwIfAnexoError(pagosExistentesError, "Error al verificar los pagos del anexo");
 
+		// La dirección entra en la clave: cambiar cobro↔devolución es un cambio
+		// financiero (revierte un anexo activo a pendiente y reactiva la póliza).
 		const clavePago = (p: {
 			tipo: string;
 			cuota_original_id: string | null;
 			numero_cuota: number | null;
 			monto: number;
+			direccion?: string | null;
 			fecha_vencimiento: string | null;
 		}) =>
-			`${p.tipo}|${p.cuota_original_id || ""}|${p.numero_cuota ?? ""}|${Number(p.monto).toFixed(2)}|${p.fecha_vencimiento || ""}`;
+			`${p.tipo}|${p.cuota_original_id || ""}|${p.numero_cuota ?? ""}|${Number(p.monto).toFixed(2)}|${p.direccion || ""}|${p.fecha_vencimiento || ""}`;
 
 		const clavesExistentes = (pagosExistentes || []).map(clavePago).sort().join("\n");
 		const clavesNuevas = nuevosPagos.map(clavePago).sort().join("\n");
@@ -2317,6 +2360,12 @@ export async function actualizarAnexo(
 				console.error("Error reactivando póliza tras editar anulación:", polizaError);
 				return { success: false, error: "Anexo actualizado pero no se pudo reactivar la póliza" };
 			}
+			// Devolver las cuotas que esta anulación había marcado 'anulada'.
+			const { error: restaurarError } = await restaurarCuotasPorAnulacion(supabase, anexo.poliza_id, anexoId);
+			if (restaurarError) {
+				console.error("Error restaurando cuotas tras editar anulación:", restaurarError);
+				return { success: false, error: "Anexo actualizado pero no se pudieron restaurar las cuotas" };
+			}
 		}
 
 		// --- REEMPLAZAR ITEMS (siempre) Y PAGOS (solo si cambiaron) ---
@@ -2352,6 +2401,7 @@ export async function actualizarAnexo(
 							tipo: p.tipo,
 							numero_cuota: p.numero_cuota,
 							monto: p.monto,
+							direccion: p.direccion,
 							fecha_vencimiento: p.fecha_vencimiento,
 							estado: "pendiente" as const,
 							observaciones: p.observaciones,

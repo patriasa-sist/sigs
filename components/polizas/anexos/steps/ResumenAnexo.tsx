@@ -195,7 +195,7 @@ export function ResumenAnexo({
 							? "Plan de Pago del Anexo"
 							: config.tipo_anexo === "exclusion"
 								? "Descuento por Exclusión"
-								: "Vigencia Corrida"}
+								: "Ajuste de Anulación"}
 					</h3>
 					<button onClick={() => onEditarPaso(4)} className="text-blue-500 hover:text-blue-700">
 						<Edit className="h-4 w-4" />
@@ -267,19 +267,42 @@ export function ResumenAnexo({
 					<div className="text-sm">
 						{formState.vigencia_corrida && formState.vigencia_corrida.monto > 0 ? (
 							<>
-								<p>
-									Monto:{" "}
-									<span className="font-medium">
-										{formatCurrency(formState.vigencia_corrida.monto, moneda)}
-									</span>
-								</p>
+								{(() => {
+									const esDevolucion = formState.vigencia_corrida.direccion === "devolucion";
+									return (
+										<>
+											<p>
+												Tipo:{" "}
+												<span
+													className={`font-medium ${esDevolucion ? "text-amber-700" : "text-green-700"}`}
+												>
+													{esDevolucion ? "Devolución al cliente" : "Cobro a la correduría"}
+												</span>
+											</p>
+											<p>
+												Monto:{" "}
+												<span
+													className={`font-medium ${esDevolucion ? "text-red-600" : "text-green-600"}`}
+												>
+													{esDevolucion ? "-" : "+"}
+													{formatCurrency(formState.vigencia_corrida.monto, moneda)}
+												</span>
+												{esDevolucion && (
+													<span className="ml-1 text-xs text-gray-400">
+														(se paga por fuera)
+													</span>
+												)}
+											</p>
+										</>
+									);
+								})()}
 								<p>Vencimiento: {formatDate(formState.vigencia_corrida.fecha_vencimiento)}</p>
 								{formState.vigencia_corrida.observaciones && (
 									<p className="text-gray-500">{formState.vigencia_corrida.observaciones}</p>
 								)}
 							</>
 						) : (
-							<p className="text-gray-400">Sin cobro de vigencia corrida</p>
+							<p className="text-gray-400">Sin ajuste de anulación</p>
 						)}
 					</div>
 				)}

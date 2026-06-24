@@ -448,11 +448,19 @@ export function PagosYDocumentos({
 		if (tipoAnexo === "anulacion" && !vigenciaCorrida) {
 			onChangeVigenciaCorrida({
 				monto: 0,
-				fecha_vencimiento: new Date().toISOString().split("T")[0],
+				direccion: "cobro",
+				fecha_vencimiento: fechaDefault(0),
 				observaciones: "",
 			});
 		}
 	}, [tipoAnexo, vigenciaCorrida, onChangeVigenciaCorrida]);
+
+	// Saldo pendiente de la póliza (para advertir si el cobro de vigencia
+	// corrida lo supera; se permite igual por short-rate del endoso).
+	const totalPendienteAnulacion = useMemo(
+		() => cuotasOriginales.filter((c) => c.estado !== "pagado").reduce((s, c) => s + Number(c.monto), 0),
+		[cuotasOriginales],
+	);
 
 	const handleDeltaChange = (idx: number, value: string) => {
 		// El usuario escribe el descuento en positivo; se guarda como delta
@@ -627,16 +635,57 @@ export function PagosYDocumentos({
 			)}
 
 			{/* ===== ANULACIÓN: vigencia corrida ===== */}
-			{tipoAnexo === "anulacion" && (
+			{tipoAnexo === "anulacion" && vigenciaCorrida && (
 				<div className="mb-8">
-					<h3 className="text-sm font-medium mb-3">Cobro de Vigencia Corrida</h3>
+					<h3 className="text-sm font-medium mb-3">Ajuste de Anulación</h3>
 					<p className="text-xs text-gray-500 mb-4">
-						Ingrese el monto correspondiente a los días de vigencia corrida desde el último pago hasta la
-						fecha de anulación.
+						Al validarse la anulación, la póliza queda anulada y sus cuotas pendientes dejan de cobrarse.
+						Registre el ajuste final del endoso: un <strong>cobro</strong> a favor de la correduría o una{" "}
+						<strong>devolución</strong> a favor del cliente.
 					</p>
 
+					{/* Dirección del ajuste: cobro (entra a cobranzas) o devolución (informativa) */}
 					<div className="mb-4">
-						<p className="text-xs font-medium text-gray-500 mb-2">Cuotas pendientes (se congelarán):</p>
+						<Label>Tipo de ajuste</Label>
+						<div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-1">
+							<button
+								type="button"
+								onClick={() => onChangeVigenciaCorrida({ ...vigenciaCorrida, direccion: "cobro" })}
+								className={`rounded-lg border p-3 text-left text-sm transition-colors ${
+									vigenciaCorrida.direccion === "cobro"
+										? "border-green-400 bg-green-50 text-green-800"
+										: "border-gray-200 bg-white text-gray-600 hover:border-gray-300"
+								}`}
+							>
+								<span className="block font-medium">Cobro a la correduría</span>
+								<span className="block text-xs opacity-80">
+									Saldo a cobrar al cliente por la vigencia corrida.
+								</span>
+							</button>
+							<button
+								type="button"
+								onClick={() => onChangeVigenciaCorrida({ ...vigenciaCorrida, direccion: "devolucion" })}
+								className={`rounded-lg border p-3 text-left text-sm transition-colors ${
+									vigenciaCorrida.direccion === "devolucion"
+										? "border-amber-400 bg-amber-50 text-amber-800"
+										: "border-gray-200 bg-white text-gray-600 hover:border-gray-300"
+								}`}
+							>
+								<span className="block font-medium">Devolución al cliente</span>
+								<span className="block text-xs opacity-80">
+									Prima a favor del cliente; se paga por fuera.
+								</span>
+							</button>
+						</div>
+						{vigenciaCorrida.direccion === "devolucion" && (
+							<p className="mt-2 text-xs text-amber-700">
+								La devolución es informativa: no entra al módulo de cobranzas, se gestiona por fuera.
+							</p>
+						)}
+					</div>
+
+					<div className="mb-4">
+						<p className="text-xs font-medium text-gray-500 mb-2">Cuotas que se anularán al validar:</p>
 						<div className="bg-gray-50 border rounded-lg p-3 space-y-1">
 							{cuotasOriginales
 								.filter((c) => c.estado !== "pagado")
@@ -648,63 +697,79 @@ export function PagosYDocumentos({
 										<span className="line-through">{formatCurrency(c.monto, moneda)}</span>
 									</div>
 								))}
-							{cuotasOriginales.filter((c) => c.estado !== "pagado").length === 0 && (
-								<p className="text-sm text-gray-400">Todas las cuotas están pagadas</p>
+							{totalPendienteAnulacion === 0 && (
+								<p className="text-sm text-gray-400">No hay cuotas pendientes</p>
 							)}
 						</div>
 					</div>
 
-					{vigenciaCorrida && (
-						<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-							<div>
-								<Label htmlFor="vc_monto">Monto de Vigencia Corrida ({moneda})</Label>
-								<Input
-									id="vc_monto"
-									type="number"
-									step="0.01"
-									min="0"
-									inputMode="decimal"
-									value={vigenciaCorrida.monto || ""}
-									onChange={(e) =>
-										onChangeVigenciaCorrida({
-											...vigenciaCorrida,
-											monto: Math.max(0, parseFloat(e.target.value) || 0),
-										})
-									}
-									onKeyDown={bloquearSimbolos}
-									placeholder="0.00"
-								/>
-							</div>
-							<div>
-								<Label htmlFor="vc_fecha">Fecha de Vencimiento</Label>
-								<Input
-									id="vc_fecha"
-									type="date"
-									value={vigenciaCorrida.fecha_vencimiento}
-									onChange={(e) =>
-										onChangeVigenciaCorrida({
-											...vigenciaCorrida,
-											fecha_vencimiento: e.target.value,
-										})
-									}
-								/>
-							</div>
-							<div className="md:col-span-2">
-								<Label htmlFor="vc_obs">Observaciones</Label>
-								<Input
-									id="vc_obs"
-									value={vigenciaCorrida.observaciones}
-									onChange={(e) =>
-										onChangeVigenciaCorrida({
-											...vigenciaCorrida,
-											observaciones: e.target.value,
-										})
-									}
-									placeholder="Detalle del cálculo de vigencia corrida..."
-								/>
-							</div>
+					<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+						<div>
+							<Label htmlFor="vc_monto">
+								{vigenciaCorrida.direccion === "devolucion" ? "Monto a devolver" : "Monto a cobrar"} (
+								{moneda})
+							</Label>
+							<Input
+								id="vc_monto"
+								type="number"
+								step="0.01"
+								min="0"
+								inputMode="decimal"
+								value={vigenciaCorrida.monto || ""}
+								onChange={(e) =>
+									onChangeVigenciaCorrida({
+										...vigenciaCorrida,
+										monto: Math.max(0, parseFloat(e.target.value) || 0),
+									})
+								}
+								onKeyDown={bloquearSimbolos}
+								placeholder="0.00"
+							/>
 						</div>
-					)}
+						<div>
+							<Label htmlFor="vc_fecha">
+								{vigenciaCorrida.direccion === "devolucion" ? "Fecha" : "Fecha de Vencimiento"}
+							</Label>
+							<Input
+								id="vc_fecha"
+								type="date"
+								value={vigenciaCorrida.fecha_vencimiento}
+								onChange={(e) =>
+									onChangeVigenciaCorrida({
+										...vigenciaCorrida,
+										fecha_vencimiento: e.target.value,
+									})
+								}
+							/>
+						</div>
+						<div className="md:col-span-2">
+							<Label htmlFor="vc_obs">Observaciones</Label>
+							<Input
+								id="vc_obs"
+								value={vigenciaCorrida.observaciones}
+								onChange={(e) =>
+									onChangeVigenciaCorrida({
+										...vigenciaCorrida,
+										observaciones: e.target.value,
+									})
+								}
+								placeholder="Detalle del cálculo del ajuste..."
+							/>
+						</div>
+					</div>
+
+					{/* Advertencia no bloqueante: el cobro supera el saldo pendiente (short-rate) */}
+					{vigenciaCorrida.direccion === "cobro" &&
+						vigenciaCorrida.monto > totalPendienteAnulacion + 0.005 && (
+							<div className="mt-3 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
+								<AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+								<span>
+									El cobro ({formatCurrency(vigenciaCorrida.monto, moneda)}) supera el saldo pendiente
+									({formatCurrency(totalPendienteAnulacion, moneda)}). Se permite igual; verifique que
+									coincida con el endoso de la aseguradora (short-rate).
+								</span>
+							</div>
+						)}
 				</div>
 			)}
 
