@@ -59,6 +59,19 @@ ALTER TABLE public.polizas_pagos
 COMMENT ON COLUMN public.polizas_pagos.anulada_por_anexo_id IS
 	'Anexo de anulación que dejó esta cuota en estado=anulada. Permite restaurarla con precisión si la anulación se revierte.';
 
+-- 2.5) Permitir 'anulada' en el dominio de estado de ambas tablas de cuotas.
+-- El CHECK original no lo incluía; sin esto fallan la validación de anulación
+-- (anularCuotasPorAnulacion) y el backfill.
+ALTER TABLE public.polizas_pagos DROP CONSTRAINT IF EXISTS polizas_pagos_estado_check;
+ALTER TABLE public.polizas_pagos
+	ADD CONSTRAINT polizas_pagos_estado_check
+	CHECK (estado = ANY (ARRAY['pendiente'::text, 'pagado'::text, 'vencido'::text, 'parcial'::text, 'anulada'::text]));
+
+ALTER TABLE public.polizas_anexos_pagos DROP CONSTRAINT IF EXISTS polizas_anexos_pagos_estado_check;
+ALTER TABLE public.polizas_anexos_pagos
+	ADD CONSTRAINT polizas_anexos_pagos_estado_check
+	CHECK (estado = ANY (ARRAY['pendiente'::text, 'pagado'::text, 'vencido'::text, 'parcial'::text, 'anulada'::text]));
+
 -- 3) estado_real debe respetar 'anulada' -------------------------------------
 -- Un pago real sigue ganando como 'pagado'; luego 'anulada' tiene prioridad
 -- sobre 'parcial'/'vencido'/'pendiente'.

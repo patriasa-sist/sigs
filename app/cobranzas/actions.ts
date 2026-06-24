@@ -238,6 +238,10 @@ export async function obtenerPolizasConPendientes(
 		}
 
 		const polizasAll = [...(polizas || []), ...polizasAnuladas];
+		// Las cuotas regulares de una póliza anulada nunca se cobran (solo su
+		// vigencia corrida), independientemente de su estado (incluso si quedó
+		// alguna 'parcial' o si la anulación es histórica sin backfill).
+		const anuladaIdSet = new Set(polizasAnuladas.map((p) => p.id));
 		const polizaIds = polizasAll.map((p) => p.id);
 
 		// ── Round 2: resumen de cuotas (solo campos necesarios, sin JSONB) ───
@@ -285,6 +289,8 @@ export async function obtenerPolizasConPendientes(
 				});
 			}
 			const s = cuotasByPoliza.get(c.poliza_id)!;
+			// Póliza anulada: sus cuotas regulares no se cobran (solo la vigencia corrida).
+			if (anuladaIdSet.has(c.poliza_id)) continue;
 			const estado = estadoEfectivo(c);
 			// Las cuotas anuladas (por una anulación de póliza) no se cobran ni cuentan.
 			if (estado === "anulada") continue;
@@ -1082,26 +1088,34 @@ export async function obtenerDetallePolizaParaCuotas(polizaId: string): Promise<
 		// Despacho acento-insensible compartido; cubre todos los ramos con tabla de detalle.
 		const datos_ramo = await obtenerDetalleRamo(supabase, polizaId, poliza.ramo);
 
-		// Calculate totals. Las cuotas anuladas (póliza anulada) no se cobran ni cuentan.
+		// Calculate totals. En una póliza anulada las cuotas regulares no se cobran
+		// (solo su vigencia corrida); las cuotas anuladas tampoco cuentan.
 		const cuotas = (poliza.cuotas || []) as CuotaPago[];
+		const polizaAnulada = poliza.estado === "anulada";
 		const todayStr = new Date().toISOString().split("T")[0];
 		const total_pagado = cuotas
 			.filter((c: CuotaPago) => c.estado === "pagado")
 			.reduce((sum: number, c: CuotaPago) => sum + c.monto, 0);
-		let total_pendiente = cuotas
-			.filter((c: CuotaPago) => c.estado !== "pagado" && c.estado !== "anulada")
-			.reduce((sum: number, c: CuotaPago) => sum + c.monto, 0);
-		const cuotas_pendientes = cuotas.filter((c: CuotaPago) => c.estado === "pendiente").length;
-		const cuotas_vencidas = cuotas.filter((c: CuotaPago) => obtenerEstadoReal(c) === "vencido").length;
-		const proxima_fecha_vencimiento =
-			cuotas
-				.filter(
-					(c: CuotaPago) =>
-						obtenerEstadoReal(c) !== "pagado" &&
-						obtenerEstadoReal(c) !== "anulada" &&
-						c.fecha_vencimiento >= todayStr,
-				)
-				.sort((a, b) => a.fecha_vencimiento.localeCompare(b.fecha_vencimiento))[0]?.fecha_vencimiento ?? null;
+		let total_pendiente = polizaAnulada
+			? 0
+			: cuotas
+					.filter((c: CuotaPago) => c.estado !== "pagado" && c.estado !== "anulada")
+					.reduce((sum: number, c: CuotaPago) => sum + c.monto, 0);
+		const cuotas_pendientes = polizaAnulada ? 0 : cuotas.filter((c: CuotaPago) => c.estado === "pendiente").length;
+		const cuotas_vencidas = polizaAnulada
+			? 0
+			: cuotas.filter((c: CuotaPago) => obtenerEstadoReal(c) === "vencido").length;
+		const proxima_fecha_vencimiento = polizaAnulada
+			? null
+			: (cuotas
+					.filter(
+						(c: CuotaPago) =>
+							obtenerEstadoReal(c) !== "pagado" &&
+							obtenerEstadoReal(c) !== "anulada" &&
+							c.fecha_vencimiento >= todayStr,
+					)
+					.sort((a, b) => a.fecha_vencimiento.localeCompare(b.fecha_vencimiento))[0]?.fecha_vencimiento ??
+				null);
 
 		// Cuotas propias de anexos de inclusión activos
 		let cuotas_inclusion: CuotaAnexoPropia[] | undefined;

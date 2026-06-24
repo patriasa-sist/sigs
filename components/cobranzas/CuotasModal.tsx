@@ -609,30 +609,32 @@ export default function CuotasModal({ poliza, open, onClose, onSelectQuota, isAd
 														{/* Acciones */}
 														<td className="px-4 py-3">
 															<div className="flex items-center justify-end gap-1.5 flex-wrap">
-																{/* Primary: Registrar Pago */}
-																{puedeRegistrarPago(estadoReal) && (
-																	<Button
-																		size="sm"
-																		variant="default"
-																		onClick={() => {
-																			onSelectQuota(cuota);
-																			onClose();
-																		}}
-																	>
-																		Registrar Pago
-																	</Button>
-																)}
+																{/* Primary: Registrar Pago (no en pólizas anuladas: sus cuotas no se cobran) */}
+																{poliza?.estado !== "anulada" &&
+																	puedeRegistrarPago(estadoReal) && (
+																		<Button
+																			size="sm"
+																			variant="default"
+																			onClick={() => {
+																				onSelectQuota(cuota);
+																				onClose();
+																			}}
+																		>
+																			Registrar Pago
+																		</Button>
+																	)}
 
 																{/* Secondary: Prórroga */}
-																{puedeProrroga(estadoReal) && (
-																	<Button
-																		size="sm"
-																		variant="outline"
-																		onClick={() => handleOpenProrroga(cuota)}
-																	>
-																		Prórroga
-																	</Button>
-																)}
+																{poliza?.estado !== "anulada" &&
+																	puedeProrroga(estadoReal) && (
+																		<Button
+																			size="sm"
+																			variant="outline"
+																			onClick={() => handleOpenProrroga(cuota)}
+																		>
+																			Prórroga
+																		</Button>
+																	)}
 
 																{/* Ghost: WhatsApp */}
 																{polizaExtendida && hasPhone && (
