@@ -323,6 +323,7 @@ export async function actualizarPoliza(
 			comision_encargado?: number;
 		};
 		const sinPrimaPropia = formState.datos_basicos.tipo_prima === "sin_prima_propia";
+		const esRetro = formState.datos_basicos.es_retroactiva === true;
 
 		// Extraer campos ramo-específicos que se guardan en la tabla polizas
 		const datosEsp = formState.datos_especificos?.datos;
@@ -488,8 +489,9 @@ export async function actualizarPoliza(
 			}
 
 			const cuotaUnica = formState.modalidad_pago.cuota_unica;
-			// Retroactiva sin prima registrada (cuota 0): no crear cuota (CHECK monto > 0)
-			if (!cuotaUnica || cuotaUnica <= 0) {
+			// Carga retroactiva al contado: la cuota ya fue cobrada antes de cargar la póliza,
+			// no se registra (solo prima total para trazabilidad). Igual que cuota 0 / sin prima.
+			if (esRetro || !cuotaUnica || cuotaUnica <= 0) {
 				// Si quedó una cuota previa no pagada, eliminarla
 				const cuotaPrevia = currentPagos?.find((p) => p.numero_cuota === 1 && p.estado !== "pagado");
 				if (cuotaPrevia) {

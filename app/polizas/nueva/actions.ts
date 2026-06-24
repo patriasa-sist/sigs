@@ -125,6 +125,10 @@ async function insertarPagos(supabase: SupabaseClient, polizaId: string, formSta
 	const esRetro = formState.datos_basicos?.es_retroactiva === true;
 
 	if (formState.modalidad_pago.tipo === "contado") {
+		// Carga retroactiva al contado: la cuota única ya fue cobrada antes de cargar la
+		// póliza, por lo que NO se registra (igual que las cuotas ya cobradas en crédito).
+		// La póliza conserva la prima total para trazabilidad, sin ítem de cobranza.
+		if (esRetro) return;
 		// Sin prima registrada (cuota 0): no insertar cuota (polizas_pagos exige monto > 0)
 		if (!formState.modalidad_pago.cuota_unica || formState.modalidad_pago.cuota_unica <= 0) {
 			return;

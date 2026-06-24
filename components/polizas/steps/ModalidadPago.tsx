@@ -598,6 +598,18 @@ export function ModalidadPago({
 
 				{/* PAGO AL CONTADO */}
 				<TabsContent value="contado" className="space-y-6 mt-6">
+					{/* Carga retroactiva: la cuota única ya fue cobrada, no se registra en cobranza */}
+					{esRetroactiva && !sinPrimaPropia && (
+						<div className="p-3 bg-primary/5 border border-primary/30 rounded-lg flex items-start gap-2">
+							<AlertCircle className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
+							<p className="text-xs text-muted-foreground">
+								Carga histórica al contado: el monto sirve para registrar la prima total de la póliza,
+								pero <strong>la cuota no se generará en Cobranza</strong> (se asume ya cobrada antes de
+								cargar la póliza). La póliza queda sin ítem pendiente.
+							</p>
+						</div>
+					)}
+
 					{/* Show paid indicator */}
 					{cuotaUnicaPagada && (
 						<div className="p-3 bg-success/10 border border-success/30 rounded-lg flex items-center gap-2">
