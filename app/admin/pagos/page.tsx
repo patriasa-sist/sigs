@@ -1,12 +1,12 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Undo2 } from "lucide-react";
+import { Wallet } from "lucide-react";
 import RevertirPagoPanel from "@/components/admin/pagos/RevertirPagoPanel";
 
 export const metadata = {
-	title: "Revertir Pagos - Administración",
-	description: "Revertir pagos de cuotas registrados por error (borrado permanente).",
+	title: "Administrar Pagos - Administración",
+	description: "Corregir la fecha de pago o revertir pagos de cuotas registrados por error.",
 };
 
 export default async function AdminPagosPage() {
@@ -22,18 +22,33 @@ export default async function AdminPagosPage() {
 	return (
 		<div className="flex-1 w-full flex flex-col gap-6">
 			<div className="flex items-center gap-4">
-				<Undo2 className="h-8 w-8 text-destructive" />
+				<Wallet className="h-8 w-8 text-primary" />
 				<div>
-					<h1 className="text-3xl font-bold text-gray-900">Revertir Pagos</h1>
+					<h1 className="text-3xl font-bold text-gray-900">Administrar Pagos</h1>
 					<p className="text-gray-500">
-						Borra por completo el pago de una cuota registrado por error y la devuelve a estado pendiente.
+						Corregí la fecha de pago de una cuota cargada con un error de tipeo, o revertí por completo un
+						pago registrado por error.
 					</p>
 				</div>
 			</div>
 
+			<Card className="border-border bg-secondary/40">
+				<CardHeader className="pb-3">
+					<CardTitle className="text-sm text-foreground">Corregir fecha de pago</CardTitle>
+				</CardHeader>
+				<CardContent className="text-sm text-muted-foreground space-y-1">
+					<p>• Ajusta la fecha de pago de los abonos de una cuota sin borrar nada (no afecta los montos).</p>
+					<p>
+						• La &quot;F. Pago&quot; de la cuota se recalcula a partir de los abonos. Útil para subsanar
+						errores de tipeo de cobranzas.
+					</p>
+					<p>• Queda registrada en el historial de la póliza con tu usuario y el motivo.</p>
+				</CardContent>
+			</Card>
+
 			<Card className="border-destructive/30 bg-destructive/5">
 				<CardHeader className="pb-3">
-					<CardTitle className="text-sm text-destructive">Acción destructiva</CardTitle>
+					<CardTitle className="text-sm text-destructive">Revertir pago — acción destructiva</CardTitle>
 				</CardHeader>
 				<CardContent className="text-sm text-destructive/90 space-y-1">
 					<p>

@@ -37,6 +37,19 @@ export interface RevertirPagoResultado {
 	notas_borradas: number;
 }
 
+export interface AbonoAdminRow {
+	id: string;
+	monto: number;
+	fecha_pago: string | null;
+	observaciones: string | null;
+	created_at: string;
+}
+
+export interface CorregirFechaCambio {
+	abono_id: string;
+	fecha_pago: string; // YYYY-MM-DD
+}
+
 /**
  * Garantiza que el usuario actual es admin. Esta utilidad es destructiva y de
  * uso exclusivo de administradores (mismo criterio que la eliminación nuclear).
@@ -381,4 +394,186 @@ export async function revertirPagoCuota(
 			notas_borradas: notasCount,
 		},
 	};
+}
+
+/**
+ * Devuelve los abonos de una cuota (propia o de anexo) para corregir la fecha de
+ * pago. Los abonos son la fuente de verdad del libro de abonos; la "F. Pago" que
+ * se muestra se deriva de ellos.
+ */
+export async function obtenerAbonosCuotaAdmin(
+	cuotaId: string,
+	tipo: CuotaTipo,
+): Promise<ActionResult<AbonoAdminRow[]>> {
+	const auth = await requireAdmin();
+	if (!auth.ok) return { success: false, error: auth.error };
+
+	const supabase = await createClient();
+	const columnaCuota = tipo === "poliza" ? "pago_id" : "anexo_pago_id";
+
+	const { data, error } = await supabase
+		.from("polizas_pagos_abonos")
+		.select("id, monto, fecha_pago, observaciones, created_at")
+		.eq(columnaCuota, cuotaId)
+		.order("created_at", { ascending: true });
+
+	if (error) {
+		console.error("[admin/pagos] Error cargando abonos:", error);
+		return { success: false, error: "Error al cargar los abonos de la cuota." };
+	}
+
+	const filas: AbonoAdminRow[] = (data ?? []).map((a) => ({
+		id: a.id,
+		monto: Number(a.monto),
+		fecha_pago: a.fecha_pago,
+		observaciones: a.observaciones,
+		created_at: a.created_at,
+	}));
+
+	return { success: true, data: filas };
+}
+
+const FECHA_ISO_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * Corrige la fecha de pago de uno o más abonos de una cuota (típicamente un error
+ * de tipeo en cobranzas) y recalcula la fecha_pago/estado de la cuota a partir de
+ * sus abonos. NO borra nada: solo ajusta fechas. Queda registrado en el historial.
+ */
+export async function corregirFechasPagoCuota(
+	cuotaId: string,
+	tipo: CuotaTipo,
+	cambios: CorregirFechaCambio[],
+	motivo: string,
+): Promise<ActionResult<{ abonos_corregidos: number; fecha_pago_cuota: string | null }>> {
+	const auth = await requireAdmin();
+	if (!auth.ok) return { success: false, error: auth.error };
+
+	const motivoLimpio = motivo.trim();
+	if (motivoLimpio.length < 10) {
+		return { success: false, error: "El motivo debe tener al menos 10 caracteres." };
+	}
+	if (cambios.length === 0) {
+		return { success: false, error: "No hay cambios de fecha que aplicar." };
+	}
+	for (const c of cambios) {
+		if (!FECHA_ISO_RE.test(c.fecha_pago)) {
+			return { success: false, error: "Hay una fecha con formato inválido." };
+		}
+	}
+
+	const admin = createAdminClient();
+	const columnaCuota = tipo === "poliza" ? "pago_id" : "anexo_pago_id";
+
+	// Datos de la cuota + póliza (para validar y para el historial)
+	let polizaId: string;
+	let descripcionCuota: string;
+	let montoCuota: number;
+	if (tipo === "poliza") {
+		const { data: cuota, error } = await admin
+			.from("polizas_pagos")
+			.select("id, poliza_id, numero_cuota, monto")
+			.eq("id", cuotaId)
+			.single();
+		if (error || !cuota) return { success: false, error: "Cuota no encontrada." };
+		polizaId = cuota.poliza_id;
+		montoCuota = Number(cuota.monto);
+		descripcionCuota = `cuota ${cuota.numero_cuota ?? "?"} de póliza`;
+	} else {
+		const { data: cuota, error } = await admin
+			.from("polizas_anexos_pagos")
+			.select("id, numero_cuota, monto, anexo_id, polizas_anexos!inner ( poliza_id, numero_anexo )")
+			.eq("id", cuotaId)
+			.single();
+		if (error || !cuota) return { success: false, error: "Cuota de anexo no encontrada." };
+		const anexo = Array.isArray(cuota.polizas_anexos) ? cuota.polizas_anexos[0] : cuota.polizas_anexos;
+		polizaId = anexo?.poliza_id;
+		montoCuota = Number(cuota.monto);
+		descripcionCuota = `cuota ${cuota.numero_cuota ?? "?"} del anexo ${anexo?.numero_anexo ?? "?"}`;
+	}
+
+	// Aplicar las correcciones de fecha en cada abono (acotando por la cuota para
+	// no tocar abonos de otra cuota si llegara un id incorrecto).
+	let corregidos = 0;
+	for (const cambio of cambios) {
+		const { data: updated, error: errAbono } = await admin
+			.from("polizas_pagos_abonos")
+			.update({ fecha_pago: cambio.fecha_pago })
+			.eq("id", cambio.abono_id)
+			.eq(columnaCuota, cuotaId)
+			.select("id");
+		if (errAbono) {
+			console.error("[admin/pagos] Error corrigiendo fecha de abono:", errAbono);
+			return { success: false, error: "Error al corregir la fecha de un abono." };
+		}
+		corregidos += updated?.length ?? 0;
+	}
+
+	if (corregidos === 0) {
+		return { success: false, error: "Ningún abono coincidió con la cuota indicada." };
+	}
+
+	// Recalcular fecha_pago/estado de la cuota a partir de TODOS sus abonos.
+	const { data: abonos } = await admin
+		.from("polizas_pagos_abonos")
+		.select("monto, fecha_pago")
+		.eq(columnaCuota, cuotaId);
+	const abonado = (abonos ?? []).reduce((s, a) => s + Number(a.monto), 0);
+	const fechas = (abonos ?? []).map((a) => a.fecha_pago).filter((f): f is string => Boolean(f));
+	const maxFecha = fechas.length > 0 ? fechas.reduce((max, f) => (f > max ? f : max)) : null;
+
+	let estado: "pendiente" | "parcial" | "pagado";
+	let fechaPagoCuota: string | null;
+	if (abonado >= montoCuota - 0.01) {
+		estado = "pagado";
+		fechaPagoCuota = maxFecha;
+	} else if (abonado > 0) {
+		estado = "parcial";
+		fechaPagoCuota = null;
+	} else {
+		estado = "pendiente";
+		fechaPagoCuota = null;
+	}
+
+	if (tipo === "poliza") {
+		const { error: errCuota } = await admin
+			.from("polizas_pagos")
+			.update({ estado, fecha_pago: fechaPagoCuota })
+			.eq("id", cuotaId);
+		if (errCuota) {
+			console.error("[admin/pagos] Error recalculando cuota:", errCuota);
+			return { success: false, error: "Fechas corregidas pero falló el recálculo de la cuota. Revisar." };
+		}
+	} else {
+		const { error: errCuota } = await admin
+			.from("polizas_anexos_pagos")
+			.update({
+				estado,
+				fecha_pago: fechaPagoCuota,
+				updated_by: auth.userId,
+				updated_at: new Date().toISOString(),
+			})
+			.eq("id", cuotaId);
+		if (errCuota) {
+			console.error("[admin/pagos] Error recalculando cuota de anexo:", errCuota);
+			return { success: false, error: "Fechas corregidas pero falló el recálculo de la cuota. Revisar." };
+		}
+	}
+
+	// Registrar en el historial de la póliza
+	if (polizaId) {
+		await admin.from("polizas_historial_ediciones").insert({
+			poliza_id: polizaId,
+			accion: "edicion",
+			usuario_id: auth.userId,
+			campos_modificados: ["fecha_pago"],
+			descripcion: `Fecha de pago corregida por admin (${descripcionCuota}). ${corregidos} abono(s) ajustado(s); F. Pago de la cuota: ${fechaPagoCuota ?? "—"}. Motivo: ${motivoLimpio}`,
+		});
+	}
+
+	revalidatePath("/cobranzas");
+	revalidatePath("/admin/pagos");
+	if (polizaId) revalidatePath(`/polizas/${polizaId}`);
+
+	return { success: true, data: { abonos_corregidos: corregidos, fecha_pago_cuota: fechaPagoCuota } };
 }

@@ -124,8 +124,9 @@ const adminSections = [
 			{
 				href: "/admin/pagos",
 				icon: Undo2,
-				label: "Revertir Pagos",
-				description: "Borrar el pago de una cuota registrado por error (abonos, comprobantes y notas)",
+				label: "Administrar Pagos",
+				description:
+					"Corregir la fecha de pago (error de tipeo) o revertir por completo un pago registrado por error",
 			},
 			{
 				href: "/admin/clientes",

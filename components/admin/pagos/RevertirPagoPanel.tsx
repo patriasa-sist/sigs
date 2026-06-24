@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { Loader2, Search, AlertTriangle, ExternalLink, ChevronLeft } from "lucide-react";
+import { Loader2, Search, AlertTriangle, ExternalLink, ChevronLeft, CalendarCog } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,9 +25,12 @@ import { formatCurrency, formatDate } from "@/utils/formatters";
 import {
 	buscarPolizasAdmin,
 	obtenerCuotasConPagoAdmin,
+	obtenerAbonosCuotaAdmin,
 	revertirPagoCuota,
+	corregirFechasPagoCuota,
 	type PolizaPagoAdminRow,
 	type CuotaPagoAdminRow,
+	type AbonoAdminRow,
 } from "@/app/admin/pagos/actions";
 
 const ESTADO_BADGE_VARIANT: Record<string, "secondary" | "default" | "outline" | "destructive"> = {
@@ -51,6 +54,14 @@ export default function RevertirPagoPanel() {
 	const [motivo, setMotivo] = useState("");
 	const [confirmo, setConfirmo] = useState(false);
 	const [revirtiendo, setRevirtiendo] = useState(false);
+
+	// Corrección de fecha de pago
+	const [cuotaCorregir, setCuotaCorregir] = useState<CuotaPagoAdminRow | null>(null);
+	const [abonos, setAbonos] = useState<AbonoAdminRow[]>([]);
+	const [fechas, setFechas] = useState<Record<string, string>>({});
+	const [cargandoAbonos, setCargandoAbonos] = useState(false);
+	const [motivoCorregir, setMotivoCorregir] = useState("");
+	const [corrigiendo, setCorrigiendo] = useState(false);
 
 	async function ejecutarBusqueda(e: React.FormEvent) {
 		e.preventDefault();
@@ -121,6 +132,63 @@ export default function RevertirPagoPanel() {
 		cerrarConfirmacion();
 	}
 
+	async function abrirCorreccion(cuota: CuotaPagoAdminRow) {
+		setCuotaCorregir(cuota);
+		setAbonos([]);
+		setFechas({});
+		setMotivoCorregir("");
+		setCargandoAbonos(true);
+		const result = await obtenerAbonosCuotaAdmin(cuota.id, cuota.tipo);
+		setCargandoAbonos(false);
+		if (!result.success) {
+			toast.error(result.error);
+			setCuotaCorregir(null);
+			return;
+		}
+		setAbonos(result.data);
+		setFechas(Object.fromEntries(result.data.map((a) => [a.id, a.fecha_pago ?? ""])));
+	}
+
+	function cerrarCorreccion() {
+		setCuotaCorregir(null);
+		setAbonos([]);
+		setFechas({});
+		setMotivoCorregir("");
+	}
+
+	async function confirmarCorreccion() {
+		if (!cuotaCorregir) return;
+		if (motivoCorregir.trim().length < 10) {
+			toast.error("El motivo debe tener al menos 10 caracteres.");
+			return;
+		}
+		// Solo los abonos cuya fecha cambió respecto a la original
+		const cambios = abonos
+			.filter((a) => fechas[a.id] && fechas[a.id] !== (a.fecha_pago ?? ""))
+			.map((a) => ({ abono_id: a.id, fecha_pago: fechas[a.id] }));
+		if (cambios.length === 0) {
+			toast.error("No cambiaste ninguna fecha.");
+			return;
+		}
+		setCorrigiendo(true);
+		const result = await corregirFechasPagoCuota(cuotaCorregir.id, cuotaCorregir.tipo, cambios, motivoCorregir);
+		setCorrigiendo(false);
+		if (!result.success) {
+			toast.error(result.error);
+			return;
+		}
+		toast.success(
+			`Fecha corregida en ${result.data.abonos_corregidos} abono(s). F. Pago de la cuota: ${
+				result.data.fecha_pago_cuota ? formatDate(result.data.fecha_pago_cuota) : "—"
+			}.`,
+		);
+		// Reflejar la nueva F. Pago en la tabla sin recargar
+		setCuotas((prev) =>
+			prev.map((c) => (c.id === cuotaCorregir.id ? { ...c, fecha_pago: result.data.fecha_pago_cuota } : c)),
+		);
+		cerrarCorreccion();
+	}
+
 	function etiquetaCuota(c: CuotaPagoAdminRow): string {
 		if (c.tipo === "anexo") {
 			return `Anexo ${c.numero_anexo ?? "?"} · cuota ${c.numero_cuota ?? "—"}`;
@@ -174,7 +242,7 @@ export default function RevertirPagoPanel() {
 									<TableHead className="text-center">Abonos</TableHead>
 									<TableHead className="text-center">Comprob.</TableHead>
 									<TableHead className="text-center">Notas</TableHead>
-									<TableHead className="text-right">Acción</TableHead>
+									<TableHead className="text-right">Acciones</TableHead>
 								</TableRow>
 							</TableHeader>
 							<TableBody>
@@ -196,13 +264,19 @@ export default function RevertirPagoPanel() {
 										<TableCell className="text-center">{c.cantidad_comprobantes}</TableCell>
 										<TableCell className="text-center">{c.cantidad_notas}</TableCell>
 										<TableCell className="text-right">
-											<Button
-												variant="destructive"
-												size="sm"
-												onClick={() => abrirConfirmacion(c)}
-											>
-												Revertir
-											</Button>
+											<div className="flex items-center justify-end gap-2">
+												<Button variant="outline" size="sm" onClick={() => abrirCorreccion(c)}>
+													<CalendarCog className="h-4 w-4 mr-1" />
+													Corregir fecha
+												</Button>
+												<Button
+													variant="destructive"
+													size="sm"
+													onClick={() => abrirConfirmacion(c)}
+												>
+													Revertir
+												</Button>
+											</div>
 										</TableCell>
 									</TableRow>
 								))}
@@ -212,6 +286,7 @@ export default function RevertirPagoPanel() {
 				)}
 
 				{renderDialog()}
+				{renderCorregirDialog()}
 			</div>
 		);
 	}
@@ -280,6 +355,113 @@ export default function RevertirPagoPanel() {
 			{renderDialog()}
 		</div>
 	);
+
+	function renderCorregirDialog() {
+		const hayCambios = abonos.some((a) => fechas[a.id] && fechas[a.id] !== (a.fecha_pago ?? ""));
+		return (
+			<AlertDialog open={Boolean(cuotaCorregir)} onOpenChange={(open) => !open && cerrarCorreccion()}>
+				<AlertDialogContent className="max-w-lg">
+					<AlertDialogHeader>
+						<AlertDialogTitle className="flex items-center gap-2">
+							<CalendarCog className="h-5 w-5 text-primary" />
+							Corregir fecha de pago
+						</AlertDialogTitle>
+						<AlertDialogDescription asChild>
+							<div className="space-y-3 text-left">
+								{cuotaCorregir && (
+									<div className="rounded-md bg-muted p-3 text-sm">
+										<span className="text-muted-foreground">Cuota:</span>{" "}
+										<strong>{etiquetaCuota(cuotaCorregir)}</strong> ·{" "}
+										{formatCurrency(cuotaCorregir.monto)}
+									</div>
+								)}
+
+								{cargandoAbonos ? (
+									<div className="flex items-center justify-center py-6 text-muted-foreground">
+										<Loader2 className="h-5 w-5 animate-spin mr-2" />
+										Cargando abonos...
+									</div>
+								) : abonos.length === 0 ? (
+									<div className="text-sm text-muted-foreground py-4">
+										Esta cuota no tiene abonos para corregir.
+									</div>
+								) : (
+									<div className="space-y-2">
+										<p className="text-xs text-muted-foreground">
+											Ajustá la fecha de cada abono. La &quot;F. Pago&quot; de la cuota se
+											recalcula a partir de ellos.
+										</p>
+										{abonos.map((a, i) => (
+											<div
+												key={a.id}
+												className="flex items-center justify-between gap-3 rounded-md border p-2"
+											>
+												<div className="text-sm">
+													<div className="font-medium">
+														Abono {i + 1} · {formatCurrency(a.monto)}
+													</div>
+													{a.observaciones && (
+														<div className="text-xs text-muted-foreground line-clamp-1">
+															{a.observaciones}
+														</div>
+													)}
+												</div>
+												<Input
+													type="date"
+													className="w-40"
+													value={fechas[a.id] ?? ""}
+													onChange={(e) =>
+														setFechas((prev) => ({ ...prev, [a.id]: e.target.value }))
+													}
+													disabled={corrigiendo}
+												/>
+											</div>
+										))}
+									</div>
+								)}
+
+								<div className="space-y-2">
+									<Label htmlFor="motivo-corregir" className="text-sm">
+										Motivo de la corrección <span className="text-destructive">*</span>
+									</Label>
+									<Textarea
+										id="motivo-corregir"
+										value={motivoCorregir}
+										onChange={(e) => setMotivoCorregir(e.target.value)}
+										placeholder="Ej: Cobranzas tipeó mal la fecha de pago; el cobro fue el 28/01/2026."
+										rows={2}
+										disabled={corrigiendo}
+									/>
+									<p className="text-xs text-muted-foreground">
+										Mínimo 10 caracteres. Queda registrado en el historial de la póliza.
+									</p>
+								</div>
+							</div>
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel disabled={corrigiendo}>Cancelar</AlertDialogCancel>
+						<AlertDialogAction
+							onClick={(e) => {
+								e.preventDefault();
+								confirmarCorreccion();
+							}}
+							disabled={corrigiendo || !hayCambios || motivoCorregir.trim().length < 10}
+						>
+							{corrigiendo ? (
+								<>
+									<Loader2 className="h-4 w-4 animate-spin mr-2" />
+									Guardando...
+								</>
+							) : (
+								"Guardar fecha"
+							)}
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
+		);
+	}
 
 	function renderDialog() {
 		return (
