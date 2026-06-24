@@ -342,7 +342,8 @@ export async function rechazarPoliza(polizaId: string, motivo: string) {
 			return { success: false, error: "No autenticado" };
 		}
 
-		const { allowed } = await checkPermission("polizas.validar");
+		const { allowed, profile } = await checkPermission("polizas.validar");
+		const esAdmin = profile?.role === "admin";
 
 		const { needsScoping, teamMemberIds } = await getDataScopeFilter("polizas");
 
@@ -385,8 +386,16 @@ export async function rechazarPoliza(polizaId: string, motivo: string) {
 			}
 		}
 
-		if (poliza.estado !== "pendiente") {
-			return { success: false, error: "La póliza no está pendiente de validación" };
+		// Estados rechazables:
+		// - 'pendiente': flujo normal de validación de gerencia/líder.
+		// - 'activa': rechazo de una póliza YA validada, reservado a admins. Sirve
+		//   para forzar la re-validación (al editarse vuelve a 'pendiente' y se
+		//   re-reporta a la APS) cuando un cambio real así lo exige.
+		if (poliza.estado === "activa" && !esAdmin) {
+			return { success: false, error: "Solo un administrador puede rechazar una póliza ya validada" };
+		}
+		if (poliza.estado !== "pendiente" && poliza.estado !== "activa") {
+			return { success: false, error: "La póliza no está en un estado que permita el rechazo" };
 		}
 
 		// Calcular ventana de edición (72 horas desde ahora)

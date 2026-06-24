@@ -152,7 +152,7 @@ export function RechazoPolizaModal({ isOpen, onClose, onConfirm, poliza, isLoadi
 						<div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 px-3.5 py-3">
 							<AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
 							<div className="text-xs text-amber-800 leading-relaxed">
-								<span className="font-semibold">El creador tendrá 24 horas para editar.</span> La póliza
+								<span className="font-semibold">El creador tendrá 72 horas para editar.</span> La póliza
 								quedará marcada como rechazada y podrá ser corregida y reenviada a validación.
 							</div>
 						</div>

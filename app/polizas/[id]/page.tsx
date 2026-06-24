@@ -371,6 +371,20 @@ export default function PolizaDetallePage() {
 								</Button>
 							</>
 						)}
+						{/* Rechazo de una póliza YA validada: solo admin. Devuelve la póliza
+						    al flujo de validación (rechazada → pendiente al editarse) para
+						    re-reportarla a la APS cuando un cambio real lo exige. */}
+						{isAdmin && poliza.estado === "activa" && (
+							<Button
+								variant="destructive"
+								size="sm"
+								onClick={() => setShowRechazoModal(true)}
+								disabled={validationLoading !== null}
+							>
+								<XCircle className="h-4 w-4" />
+								{validationLoading === "rechazar" ? "Rechazando…" : "Rechazar"}
+							</Button>
+						)}
 					</div>
 				</div>
 			</div>
