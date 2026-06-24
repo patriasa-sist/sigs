@@ -5,11 +5,11 @@
  *
  * Key behaviors:
  * - Verifies edit permission before any operation
- * - A validated policy (estado='activa') resets to 'pendiente' ONLY when
- *   financial/classificatory fields change (prima, comisiones, moneda,
- *   modalidad/cuotas, producto, compañía, ramo, tipo_prima, es_retroactiva);
- *   cosmetic edits preserve estado and fecha_validacion so production already
- *   reported to APS is not re-reported in a later period
+ * - A validated policy (estado='activa') NEVER resets to 'pendiente' on edit,
+ *   regardless of which fields change (financial or cosmetic). This preserves
+ *   fecha_validacion so production already reported to APS is never re-reported
+ *   in a later period. Re-validation only happens through an explicit admin
+ *   rejection (which moves it to 'rechazada' → 'pendiente' on resubmit).
  * - A 'rechazada' policy always resets to 'pendiente' (fix-and-resubmit flow)
  * - Clears validation fields (validado_por, fecha_validacion) when resetting
  * - Audit trail is automatically captured by database triggers
@@ -60,16 +60,6 @@ function mapSupabaseError(
 // ============================================
 // HELPER FUNCTIONS
 // ============================================
-
-/**
- * Compara montos tolerando null/undefined y ruido de punto flotante:
- * la BD guarda 2 decimales mientras el formulario recalcula con precisión
- * completa, así que se redondea a centavos antes de comparar.
- */
-function montosIguales(a: unknown, b: unknown): boolean {
-	const normalizar = (v: unknown) => (v == null ? null : Math.round(Number(v) * 100) / 100);
-	return normalizar(a) === normalizar(b);
-}
 
 /**
  * Verifica si un usuario es líder de equipo para el responsable de una póliza.
@@ -229,9 +219,8 @@ export async function obtenerPolizaParaEdicion(polizaId: string): Promise<Action
 
 /**
  * Updates an existing policy with new data
- * - Resets a policy that was 'activa' to 'pendiente' only if financial or
- *   classificatory fields changed (see header comment); cosmetic edits
- *   preserve estado and fecha_validacion
+ * - Never resets a policy that was 'activa' to 'pendiente' on edit; an active
+ *   policy only returns to validation through an explicit admin rejection
  * - Always resets a 'rechazada' policy to 'pendiente'
  * - Clears validation fields when resetting
  * - Updates related records (payments, vehicles, documents)
@@ -395,34 +384,13 @@ export async function actualizarPoliza(
 			}
 		}
 
-		// Cambio financiero/clasificatorio: campos que consumen los reportes
-		// regulatorios (APS/Producción/Contable). Solo estos obligan a revalidar
-		// una póliza activa; una edición cosmética (placa, nombre del asegurado,
-		// documentos, vigencia) preserva estado y fecha_validacion para no
-		// re-reportar a la APS en un período posterior producción ya reportada.
-		// Se compara contra updatePayload (no formState) para respetar la
-		// preservación del ajuste manual de prima neta.
-		const cambioFinanciero =
-			currentPoliza.compania_aseguradora_id !== updatePayload.compania_aseguradora_id ||
-			currentPoliza.producto_id !== updatePayload.producto_id ||
-			currentPoliza.ramo !== updatePayload.ramo ||
-			currentPoliza.moneda !== updatePayload.moneda ||
-			currentPoliza.modalidad_pago !== updatePayload.modalidad_pago ||
-			(currentPoliza.tipo_prima ?? "directa") !== updatePayload.tipo_prima ||
-			(currentPoliza.es_retroactiva ?? false) !== updatePayload.es_retroactiva ||
-			(currentPoliza.usar_factores_contado ?? false) !== updatePayload.usar_factores_contado ||
-			!montosIguales(currentPoliza.prima_total, updatePayload.prima_total) ||
-			!montosIguales(currentPoliza.prima_neta, updatePayload.prima_neta) ||
-			!montosIguales(currentPoliza.comision, updatePayload.comision) ||
-			!montosIguales(currentPoliza.comision_empresa, updatePayload.comision_empresa) ||
-			!montosIguales(currentPoliza.comision_encargado, updatePayload.comision_encargado);
-
-		const esActiva = currentPoliza.estado === "activa";
-
-		// Rechazada siempre vuelve a 'pendiente' (flujo de corrección y reenvío);
-		// activa solo ante cambio financiero. El cambio en cuotas también cuenta,
-		// pero se detecta más abajo, después de escribir los pagos.
-		if (currentPoliza.estado === "rechazada" || (esActiva && cambioFinanciero)) {
+		// Una póliza 'activa' (ya validada) NUNCA vuelve a 'pendiente' al editarse,
+		// sin importar qué campos cambien. Así fecha_validacion se mantiene fija y
+		// la producción ya reportada a la APS no se re-reporta en un período
+		// posterior. La única vía de revalidación es un rechazo explícito de un
+		// admin/gerencia (estado='rechazada'), que reinicia el flujo aquí abajo.
+		// Rechazada siempre vuelve a 'pendiente' (flujo de corrección y reenvío).
+		if (currentPoliza.estado === "rechazada") {
 			updatePayload.estado = "pendiente";
 			updatePayload.validado_por = null;
 			updatePayload.fecha_validacion = null;
@@ -1407,22 +1375,9 @@ export async function actualizarPoliza(
 			});
 		}
 
-		// El plan de pagos también es cambio financiero: si la póliza activa no
-		// fue reseteada por el update principal, resetearla aquí (las cuotas solo
-		// pueden compararse después de escribirse).
-		if (esActiva && !cambioFinanciero && cuotasCambiaron) {
-			const { error: resetError } = await supabase
-				.from("polizas")
-				.update({ estado: "pendiente", validado_por: null, fecha_validacion: null })
-				.eq("id", polizaId);
-			if (resetError) {
-				console.error("[actualizarPoliza] Error reseteando validación por cambio de cuotas:", resetError);
-				return {
-					success: false,
-					error: mapSupabaseError(resetError, "Error al actualizar el estado de la póliza"),
-				};
-			}
-		}
+		// Nota: editar el plan de pagos de una póliza activa ya NO la regresa a
+		// 'pendiente' (solo un rechazo de admin reinicia la validación). El cambio
+		// de cuotas se registra arriba en el historial para dejar audit trail.
 
 		// Revalidate paths
 		revalidatePath(`/polizas/${polizaId}`);
