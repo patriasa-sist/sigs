@@ -542,6 +542,7 @@ export function NuevaPolizaForm({ mode = "create", polizaId, initialData }: Nuev
 				{pasoMaximo >= 6 && (
 					<Resumen
 						formState={formState}
+						mode={mode}
 						onAnterior={() => retrocederDesde(6)}
 						onEditarPaso={handleActualizarPaso}
 						onGuardar={handleGuardar}

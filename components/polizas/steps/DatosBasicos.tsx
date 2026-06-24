@@ -446,9 +446,10 @@ export function DatosBasicos({ datos, onChange, onSiguiente, onAnterior }: Props
 							</Label>
 						</div>
 						<p className="text-xs text-muted-foreground mt-1 ml-7">
-							Para registrar pólizas anteriores y dar trazabilidad a siniestros. Permite registrar la
-							prima total real pero cargar solo las cuotas que aún están pendientes de cobro (las cuotas
-							ya cobradas antes de cargar la póliza no se registran).
+							Para registrar pólizas anteriores y dar trazabilidad a siniestros. Registre la prima total
+							real, pero cargue <strong>solo las cuotas pendientes del mes vigente en adelante</strong>:
+							las cuotas de meses ya pasados (ya cobradas antes de cargar la póliza) no se registran. El
+							sistema no permite cargar cuotas con vencimiento de más de 30 días atrás.
 						</p>
 					</div>
 				)}

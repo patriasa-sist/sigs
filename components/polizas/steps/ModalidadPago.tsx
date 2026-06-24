@@ -32,6 +32,7 @@ import {
 	validarFechasDentroVigencia,
 } from "@/utils/polizaValidation";
 import { POLIZA_RULES } from "@/utils/validationConstants";
+import { hoyLaPaz } from "@/utils/formatters";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -404,8 +405,13 @@ export function ModalidadPago({
 			return;
 		}
 
-		// Validar campos requeridos (retroactiva: prima opcional)
-		const validacion = validarModalidadPago(datosPago, tipoPrima, esRetroactiva);
+		// Validar campos requeridos (retroactiva: prima opcional).
+		// En creación/renovación se bloquean cuotas ya vencidas (ventana de gracia de
+		// 30 días); en edición no, porque las pólizas en curso sí tienen cuotas pasadas.
+		const validacion = validarModalidadPago(datosPago, tipoPrima, esRetroactiva, {
+			bloquearCuotasVencidas: mode !== "edit",
+			hoy: hoyLaPaz(),
+		});
 		if (!validacion.valido) {
 			const nuevosErrores: Record<string, string> = {};
 			validacion.errores.forEach((error) => {
@@ -833,9 +839,10 @@ export function ModalidadPago({
 								/>
 								<p className="text-xs text-muted-foreground">
 									Use la prima total real de la póliza arriba y aquí el importe de cada cuota que aún
-									está <strong>pendiente de cobro</strong>. Al generar, se crearán solo esas cuotas
-									(las ya cobradas antes de cargar la póliza no se registran). Si lo deja vacío, las
-									cuotas se calculan dividiendo la prima total.
+									está <strong>pendiente de cobro</strong>. Se cargan únicamente las cuotas del{" "}
+									<strong>mes vigente en adelante</strong>; las de meses ya pasados (ya cobradas) no
+									se registran y el sistema bloquea cuotas con más de 30 días de atraso. Si lo deja
+									vacío, las cuotas se calculan dividiendo la prima total.
 								</p>
 							</div>
 						)}

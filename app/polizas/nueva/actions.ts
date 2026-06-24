@@ -5,7 +5,8 @@ import { createAdminClient } from "@/utils/supabase/admin";
 import { revalidatePath } from "next/cache";
 import { getDataScopeFilter } from "@/utils/auth/helpers";
 import { generateFinalStoragePath } from "@/utils/fileUpload";
-import { ramoRequiereDatosEspecificos } from "@/utils/polizaValidation";
+import { ramoRequiereDatosEspecificos, DIAS_GRACIA_CUOTA_VENCIDA } from "@/utils/polizaValidation";
+import { hoyLaPaz, restarDiasISO } from "@/utils/formatters";
 import type { PolizaFormState } from "@/types/poliza";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -124,6 +125,17 @@ async function insertarPagos(supabase: SupabaseClient, polizaId: string, formSta
 	// Las cuotas se guardan como PENDIENTES para que Cobranza las gestione normalmente.
 	const esRetro = formState.datos_basicos?.es_retroactiva === true;
 
+	// Guardrail server-side (defensa en profundidad; el mismo que la UI bloquea en
+	// Resumen/Modalidad): una póliza NUEVA no registra cuotas ya vencidas. Solo se
+	// admiten cuotas del mes vigente en adelante, con una ventana de gracia de 30 días
+	// para pólizas recién recibidas. La edición tiene su propio action y no pasa por acá.
+	const limiteCuota = restarDiasISO(hoyLaPaz(), DIAS_GRACIA_CUOTA_VENCIDA);
+	const cuotaFueraDeVentana = (fecha?: string | null) => !!fecha && fecha < limiteCuota;
+	const errorCuotaVencida = () =>
+		new Error(
+			`No se pueden registrar cuotas vencidas hace más de ${DIAS_GRACIA_CUOTA_VENCIDA} días en una póliza nueva. Cargue solo cuotas del mes vigente en adelante; las ya cobradas no se registran.`,
+		);
+
 	if (formState.modalidad_pago.tipo === "contado") {
 		// Carga retroactiva al contado: la cuota única ya fue cobrada antes de cargar la
 		// póliza, por lo que NO se registra (igual que las cuotas ya cobradas en crédito).
@@ -132,6 +144,9 @@ async function insertarPagos(supabase: SupabaseClient, polizaId: string, formSta
 		// Sin prima registrada (cuota 0): no insertar cuota (polizas_pagos exige monto > 0)
 		if (!formState.modalidad_pago.cuota_unica || formState.modalidad_pago.cuota_unica <= 0) {
 			return;
+		}
+		if (cuotaFueraDeVentana(formState.modalidad_pago.fecha_pago_unico)) {
+			throw errorCuotaVencida();
 		}
 		const { error: errorPago } = await supabase.from("polizas_pagos").insert({
 			poliza_id: polizaId,
@@ -157,6 +172,12 @@ async function insertarPagos(supabase: SupabaseClient, polizaId: string, formSta
 		let numeroCuotaActual = 1;
 
 		if (formState.modalidad_pago.cuota_inicial > 0) {
+			if (
+				formState.modalidad_pago.cuota_inicial_pagada !== true &&
+				cuotaFueraDeVentana(formState.modalidad_pago.fecha_inicio_cuotas)
+			) {
+				throw errorCuotaVencida();
+			}
 			cuotas.push({
 				poliza_id: polizaId,
 				numero_cuota: numeroCuotaActual,
@@ -170,6 +191,10 @@ async function insertarPagos(supabase: SupabaseClient, polizaId: string, formSta
 		}
 
 		formState.modalidad_pago.cuotas.forEach((cuota) => {
+			// Las cuotas marcadas como pagadas (histórico ya cobrado) no se vetan por fecha.
+			if (cuota.estado !== "pagado" && cuotaFueraDeVentana(cuota.fecha_vencimiento)) {
+				throw errorCuotaVencida();
+			}
 			cuotas.push({
 				poliza_id: polizaId,
 				numero_cuota: numeroCuotaActual,

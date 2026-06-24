@@ -73,6 +73,19 @@ export function hoyLaPaz(): string {
 }
 
 /**
+ * Resta `dias` a una fecha `date` (string YYYY-MM-DD) y devuelve otra YYYY-MM-DD.
+ * Cálculo puro y a prueba de zona horaria (usa UTC al mediodía), pensado para
+ * obtener límites de comparación de fechas (ej: "hoy − 30 días"). No usar para
+ * mostrar; es solo para comparar contra columnas `date`.
+ */
+export function restarDiasISO(fechaISO: string, dias: number): string {
+	const [y, m, d] = fechaISO.split("-").map(Number);
+	const base = new Date(Date.UTC(y, m - 1, d, 12, 0, 0));
+	base.setUTCDate(base.getUTCDate() - dias);
+	return base.toISOString().slice(0, 10);
+}
+
+/**
  * Formatea un timestamp (timestamptz / ISO con hora, p.ej. created_at,
  * updated_at, fecha_cierre) mostrando solo la fecha en zona horaria de La Paz.
  *

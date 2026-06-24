@@ -21,6 +21,15 @@ import {
 	VALIDATION_MESSAGES,
 	DOCUMENTOS_OBLIGATORIOS,
 } from "./validationConstants";
+import { formatDate, restarDiasISO } from "./formatters";
+
+/**
+ * Ventana de gracia (días) para el guardrail de cuotas vencidas al CREAR/RENOVAR.
+ * Una póliza nueva solo debe cargar cuotas del mes vigente en adelante, pero se
+ * tolera este atraso para pólizas recién recibidas que ya estaban pendientes de
+ * cobro desde hace pocos días. NO aplica en edición.
+ */
+export const DIAS_GRACIA_CUOTA_VENCIDA = 30;
 
 /**
  * Indica si un ramo tiene formulario específico implementado (Paso 3) y por lo
@@ -288,6 +297,7 @@ export function validarModalidadPago(
 	pago: Partial<ModalidadPago>,
 	tipoPrima: TipoPrima = "directa",
 	esRetroactiva = false,
+	opciones?: { bloquearCuotasVencidas?: boolean; hoy?: string; diasGracia?: number },
 ): ValidationResult {
 	const errores: ValidationError[] = [];
 
@@ -422,6 +432,60 @@ export function validarModalidadPago(
 					)}) no coincide con prima total (${totalEsperado.toFixed(2)})`,
 				});
 			}
+		}
+	}
+
+	// Guardrail de CREACIÓN/RENOVACIÓN: una póliza nueva no debe cargar cuotas ya
+	// vencidas (caso típico: se carga una histórica con todo el cronograma viejo y
+	// las cuotas pasadas aparecen como "Vencido" en Cobranza). Se tolera una ventana
+	// de gracia (default 30 días) para pólizas recién recibidas, atrasadas pocos días
+	// pero aún pendientes de cobro. NO aplica en edición (las pólizas en curso sí
+	// tienen cuotas pasadas legítimas) ni a cuotas ya marcadas como pagadas.
+	if (opciones?.bloquearCuotasVencidas && opciones.hoy) {
+		const dias = opciones.diasGracia ?? DIAS_GRACIA_CUOTA_VENCIDA;
+		const limite = restarDiasISO(opciones.hoy, dias);
+
+		if (pago.tipo === "contado") {
+			if (
+				pago.cuota_unica &&
+				pago.cuota_unica > 0 &&
+				pago.cuota_pagada !== true &&
+				pago.fecha_pago_unico &&
+				pago.fecha_pago_unico < limite
+			) {
+				errores.push({
+					campo: "fecha_pago_unico",
+					mensaje: `La fecha de pago (${formatDate(
+						pago.fecha_pago_unico,
+					)}) está vencida hace más de ${dias} días. En una póliza nueva solo se registran cuotas del mes vigente en adelante; las ya cobradas no se cargan.`,
+				});
+			}
+		} else if (pago.tipo === "credito") {
+			if (
+				pago.cuota_inicial &&
+				pago.cuota_inicial > 0 &&
+				pago.cuota_inicial_pagada !== true &&
+				pago.fecha_inicio_cuotas &&
+				pago.fecha_inicio_cuotas < limite
+			) {
+				errores.push({
+					campo: "fecha_inicio_cuotas",
+					mensaje: `La cuota inicial vence el ${formatDate(
+						pago.fecha_inicio_cuotas,
+					)}, hace más de ${dias} días. En una póliza nueva solo se cargan cuotas pendientes del mes vigente en adelante.`,
+				});
+			}
+			pago.cuotas?.forEach((cuota, index) => {
+				if (cuota.estado === "pagado") return;
+				if (cuota.fecha_vencimiento && cuota.fecha_vencimiento < limite) {
+					errores.push({
+						campo: `cuota_${index}_fecha`,
+						mensaje: `La cuota ${cuota.numero} vence el ${formatDate(
+							cuota.fecha_vencimiento,
+						)}, hace más de ${dias} días. En una póliza nueva solo se cargan cuotas pendientes del mes vigente en adelante; las ya cobradas no se registran.`,
+					});
+				}
+			});
 		}
 	}
 

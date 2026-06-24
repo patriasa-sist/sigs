@@ -28,6 +28,7 @@ import type {
 import { LABEL_TIPO_CLIENTE } from "@/types/poliza";
 import { validarDatosBasicos, validarModalidadPago, ramoRequiereDatosEspecificos } from "@/utils/polizaValidation";
 import { DOCUMENTOS_OBLIGATORIOS } from "@/utils/validationConstants";
+import { hoyLaPaz } from "@/utils/formatters";
 import { Button } from "@/components/ui/button";
 import {
 	AlertDialog,
@@ -62,9 +63,10 @@ type Props = {
 	onEditarPaso: (paso: PasoFormulario) => void;
 	onGuardar: () => Promise<void>;
 	guardando?: boolean; // Estado de carga desde el padre
+	mode?: "create" | "edit" | "renovacion"; // En edición no se bloquean cuotas con fecha pasada
 };
 
-export function Resumen({ formState, onAnterior, onEditarPaso, onGuardar, guardando = false }: Props) {
+export function Resumen({ formState, onAnterior, onEditarPaso, onGuardar, guardando = false, mode = "create" }: Props) {
 	const [advertencias, setAdvertencias] = useState<AdvertenciaPoliza[]>([]);
 	const [productoNombre, setProductoNombre] = useState<string | null>(null);
 
@@ -112,6 +114,7 @@ export function Resumen({ formState, onAnterior, onEditarPaso, onGuardar, guarda
 				formState.modalidad_pago,
 				formState.datos_basicos?.tipo_prima ?? "directa",
 				formState.datos_basicos?.es_retroactiva ?? false,
+				{ bloquearCuotasVencidas: mode !== "edit", hoy: hoyLaPaz() },
 			);
 			if (!validacionPago.valido) {
 				validacionPago.errores.forEach((error) => {
@@ -231,7 +234,7 @@ export function Resumen({ formState, onAnterior, onEditarPaso, onGuardar, guarda
 		}
 
 		setAdvertencias(nuevasAdvertencias);
-	}, [formState]);
+	}, [formState, mode]);
 
 	// Generar advertencias al cargar
 	useEffect(() => {
