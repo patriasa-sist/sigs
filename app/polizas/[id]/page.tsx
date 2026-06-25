@@ -281,13 +281,25 @@ export default function PolizaDetallePage() {
 	// Calcular estadísticas de pagos
 	// Las cuotas anuladas (por una anulación de póliza) no cuentan ni como
 	// pendientes ni en el monto por cobrar.
-	const totalPagos = poliza.pagos.filter((p) => p.estado !== "anulada").length;
-	const pagosPagados = poliza.pagos.filter((p) => p.estado === "pagado").length;
-	const pagosPendientes = poliza.pagos.filter((p) => p.estado === "pendiente").length;
-	const montoPagado = poliza.pagos.filter((p) => p.estado === "pagado").reduce((sum, p) => sum + p.monto, 0);
-	const montoPendiente = poliza.pagos
-		.filter((p) => p.estado !== "pagado" && p.estado !== "anulada")
-		.reduce((sum, p) => sum + p.monto, 0);
+	// Cuando hay anexos, las métricas usan el plan CONSOLIDADO (con descuentos de
+	// exclusión aplicados): las cuotas saldadas no suman al pendiente y el monto
+	// pendiente refleja el consolidado, no la prima bruta. Para el monto pagado se
+	// usa el monto original (el dinero que realmente entró, sin restarle descuento).
+	const cuotasStats = poliza.cuotas_consolidadas
+		? poliza.cuotas_consolidadas.map((c) => ({
+				estado: c.estado,
+				montoCobrable: Math.max(c.monto_consolidado, 0),
+				montoPagado: c.monto_original,
+			}))
+		: poliza.pagos.map((p) => ({ estado: p.estado, montoCobrable: p.monto, montoPagado: p.monto }));
+
+	const totalPagos = cuotasStats.filter((c) => c.estado !== "anulada").length;
+	const pagosPagados = cuotasStats.filter((c) => c.estado === "pagado").length;
+	const pagosPendientes = cuotasStats.filter((c) => c.estado === "pendiente").length;
+	const montoPagado = cuotasStats.filter((c) => c.estado === "pagado").reduce((sum, c) => sum + c.montoPagado, 0);
+	const montoPendiente = cuotasStats
+		.filter((c) => c.estado !== "pagado" && c.estado !== "anulada" && c.estado !== "saldado")
+		.reduce((sum, c) => sum + c.montoCobrable, 0);
 
 	return (
 		<div className="container mx-auto px-4 py-8 max-w-7xl">
