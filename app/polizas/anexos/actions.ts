@@ -1394,14 +1394,22 @@ export async function obtenerCuotasConsolidadas(polizaId: string): Promise<{
 		const cuotasConsolidadas: CuotaConsolidada[] = cuotasOriginales.map((cuota) => {
 			const ajustesCuota = ajustesPorCuota.get(cuota.id) || [];
 			const montoAjustes = ajustesCuota.reduce((sum, a) => sum + Number(a.monto), 0);
+			const montoConsolidado = Number(cuota.monto) + montoAjustes;
+			const estadoBase = cuota.estado || "pendiente";
+			// Si el descuento de exclusión deja el consolidado en 0 y la cuota no
+			// estaba pagada/anulada, queda "saldado" (consistente con cobranzas).
+			const estado =
+				estadoBase !== "pagado" && estadoBase !== "anulada" && montoAjustes < 0 && montoConsolidado <= 0.01
+					? "saldado"
+					: estadoBase;
 			return {
 				cuota_original_id: cuota.id,
 				numero_cuota: cuota.numero_cuota,
 				monto_original: Number(cuota.monto),
 				monto_ajustes: montoAjustes,
-				monto_consolidado: Number(cuota.monto) + montoAjustes,
+				monto_consolidado: montoConsolidado,
 				fecha_vencimiento: cuota.fecha_vencimiento,
-				estado: cuota.estado || "pendiente",
+				estado,
 				fecha_pago: cuota.fecha_pago || undefined,
 				ajustes: ajustesCuota.map((a) => {
 					const info = a.polizas_anexos as unknown as {
@@ -1425,6 +1433,12 @@ export async function obtenerCuotasConsolidadas(polizaId: string): Promise<{
 			.map((p) => {
 				const info = p.polizas_anexos as unknown as { id: string; numero_anexo: string };
 				const descuento = descuentoPorInclusion.get(p.id) || 0;
+				const estadoBase = p.estado || "pendiente";
+				// Saldada por exclusión si el descuento cubre la cuota y no estaba pagada.
+				const estado =
+					estadoBase !== "pagado" && estadoBase !== "anulada" && descuento >= Number(p.monto) - 0.01
+						? "saldado"
+						: estadoBase;
 				return {
 					id: p.id,
 					anexo_id: info.id,
@@ -1433,7 +1447,7 @@ export async function obtenerCuotasConsolidadas(polizaId: string): Promise<{
 					monto: Number(p.monto),
 					monto_descuento: descuento > 0 ? descuento : undefined,
 					fecha_vencimiento: p.fecha_vencimiento || "",
-					estado: p.estado || "pendiente",
+					estado,
 					observaciones: p.observaciones || undefined,
 				};
 			})
