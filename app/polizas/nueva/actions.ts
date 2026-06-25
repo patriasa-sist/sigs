@@ -28,7 +28,7 @@ function mapSupabaseError(
 			// Unique constraint violation
 			const target = msg + detail;
 			if (target.includes("numero_poliza")) {
-				return "Ya existe una póliza con ese número de póliza. Verifique el número ingresado.";
+				return "Ya existe una póliza de esta compañía con ese número y la misma fecha de inicio de vigencia. Si es una renovación, verifique que la vigencia sea la del nuevo período.";
 			}
 			return `${context}: dato duplicado${detail ? ` — ${detail}` : ""}`;
 		}
@@ -793,6 +793,28 @@ export async function guardarPoliza(formState: PolizaFormState) {
 		if (scope.needsScoping && formState.datos_basicos.responsable_id) {
 			if (!scope.teamMemberIds.includes(formState.datos_basicos.responsable_id)) {
 				return { success: false, error: "Solo puede asignar como responsable a un miembro de su equipo" };
+			}
+		}
+
+		// Regla de negocio: dos pólizas NUEVAS no pueden compartir número.
+		// Un número repetido solo es válido como renovación (la compañía reemite
+		// el mismo número en un nuevo período). El índice compuesto en BD ya impide
+		// el duplicado exacto (compañía + número + inicio_vigencia); aquí exigimos
+		// además que, si el número ya existe para esa compañía, sea una renovación.
+		if (!formState.datos_basicos.es_renovacion) {
+			const { data: existente } = await supabase
+				.from("polizas")
+				.select("id")
+				.eq("compania_aseguradora_id", formState.datos_basicos.compania_aseguradora_id)
+				.eq("numero_poliza", formState.datos_basicos.numero_poliza)
+				.limit(1)
+				.maybeSingle();
+			if (existente) {
+				return {
+					success: false,
+					error:
+						"Ya existe una póliza de esta compañía con ese número. Si se trata de una renovación, use el botón Renovar desde la póliza original (o márquela como renovación).",
+				};
 			}
 		}
 
