@@ -103,14 +103,37 @@ export type AnexoItemsCambio =
 // PASO 4: AJUSTE DE PAGOS
 // ============================================
 
-// Para exclusiones: descuento aplicado a cuota original (puede estar pagada)
+// Para exclusiones: descuento repartido sobre una cuota descontable. La cuota
+// objetivo puede ser de la póliza madre (cuota_original_id) o de un anexo de
+// inclusión activo (cuota_anexo_pago_id) — exactamente uno. El descuento nunca
+// excede el saldo cobrable de la cuota (no genera devolución) y solo aplica a
+// cuotas no pagadas.
 export type CuotaAjuste = {
-	cuota_original_id: string;
+	origen: "madre" | "inclusion";
+	cuota_original_id: string | null; // cuota madre (polizas_pagos)
+	cuota_anexo_pago_id: string | null; // cuota de inclusión (polizas_anexos_pagos)
+	numero_anexo?: string | null; // anexo de inclusión de origen (solo origen=inclusion)
 	numero_cuota: number;
-	monto_original: number;
+	monto_original: number; // monto bruto de la cuota
+	saldo_disponible: number; // saldo cobrable restante = tope del descuento
 	monto_delta: number; // siempre negativo para exclusiones
 	fecha_vencimiento: string;
-	estado_original: string; // pendiente, pagado, vencido, parcial
+	estado_original: string; // pendiente, vencido, parcial (nunca pagado)
+};
+
+// Cuota sobre la que una exclusión puede repartir descuento: madre o de
+// inclusión activa, con su saldo cobrable ya calculado (descuentos previos y
+// abonos descontados). Las cuotas pagadas no son descontables.
+export type CuotaDescontable = {
+	origen: "madre" | "inclusion";
+	cuota_original_id: string | null;
+	cuota_anexo_pago_id: string | null;
+	numero_anexo: string | null;
+	numero_cuota: number;
+	monto: number; // bruto
+	saldo_disponible: number; // cobrable restante (tope del descuento)
+	fecha_vencimiento: string;
+	estado: string;
 };
 
 // Para inclusiones: cuota propia del anexo (independiente de la póliza madre)
@@ -169,6 +192,9 @@ export type AnexoFormState = {
 export type DatosPolizaParaAnexo = {
 	poliza: PolizaResumenAnexo;
 	cuotas: CuotaOriginalInfo[];
+	// Cuotas descontables para exclusión (madre + inclusiones activas, con saldo
+	// cobrable ya calculado). Solo se llena para el flujo de exclusión.
+	cuotas_descontables?: CuotaDescontable[];
 	// Items existentes del ramo (para mostrar como contexto)
 	items_actuales: ItemsActualesRamo | null;
 	// Anexos previos activos
@@ -238,6 +264,7 @@ export type AnexoPagoDB = {
 	id: string;
 	anexo_id: string;
 	cuota_original_id?: string;
+	cuota_anexo_pago_id?: string | null; // ajuste de exclusión sobre cuota de inclusión
 	tipo: "ajuste" | "vigencia_corrida" | "cuota_propia";
 	numero_cuota?: number;
 	monto: number;
@@ -286,7 +313,8 @@ export type CuotaAnexoPropia = {
 	anexo_id: string;
 	numero_anexo: string;
 	numero_cuota: number;
-	monto: number;
+	monto: number; // bruto de la inclusión
+	monto_descuento?: number; // descuentos de exclusión aplicados (positivo); reduce el cobrable
 	fecha_vencimiento: string;
 	fecha_vencimiento_original?: string | null; // Fecha original antes de prórrogas
 	estado: string;

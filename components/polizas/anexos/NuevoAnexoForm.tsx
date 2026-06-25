@@ -233,6 +233,7 @@ export function NuevoAnexoForm({ mode = "create", anexoId, anexoEstado, initialF
 				<PagosYDocumentos
 					tipoAnexo={formState.config!.tipo_anexo}
 					cuotasOriginales={datosPoliza.cuotas}
+					cuotasDescontables={datosPoliza.cuotas_descontables || []}
 					planPagoInclusion={formState.plan_pago_inclusion}
 					cuotasAjuste={formState.cuotas_ajuste}
 					vigenciaCorrida={formState.vigencia_corrida}

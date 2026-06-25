@@ -60,6 +60,7 @@ function EstadoBadge({ estado }: { estado: string }) {
 		vencido: "bg-rose-50  text-rose-800  border-rose-200",
 		parcial: "bg-orange-50 text-orange-800 border-orange-200",
 		pagado: "bg-teal-50  text-teal-800  border-teal-200",
+		saldado: "bg-emerald-50 text-emerald-800 border-emerald-200",
 		anulada: "bg-secondary text-muted-foreground border-border line-through",
 	};
 	return (
@@ -525,7 +526,6 @@ export default function CuotasModal({ poliza, open, onClose, onSelectQuota, isAd
 									</thead>
 									<tbody>
 										{cuotasToRender.map((cuota) => {
-											const estadoReal = obtenerEstadoReal(cuota);
 											const hasPhone = !!(
 												polizaExtendida?.contacto?.celular ||
 												polizaExtendida?.contacto?.telefono
@@ -533,6 +533,17 @@ export default function CuotasModal({ poliza, open, onClose, onSelectQuota, isAd
 											const hasEmail = !!polizaExtendida?.contacto?.correo;
 											const abonos = polizaExtendida?.abonos_por_cuota?.[cuota.id] ?? [];
 											const abonado = abonos.reduce((s, a) => s + a.monto, 0);
+											// Descuento de exclusión activo: reduce el cobrable; si lo cubre
+											// todo, la cuota queda "saldada" (no se cobra, no es dinero).
+											// Una cuota ya pagada se respeta como tal (el descuento es no-op,
+											// no se devuelve dinero).
+											const descuento = cuota.monto_descuento ?? 0;
+											const estadoBase = obtenerEstadoReal(cuota);
+											const saldadaExcl =
+												estadoBase !== "pagado" &&
+												descuento > 0 &&
+												descuento + abonado >= cuota.monto - 0.01;
+											const estadoReal = saldadaExcl ? "saldado" : estadoBase;
 											const isExpanded = expandedCuotas.has(cuota.id);
 
 											return (
@@ -576,6 +587,13 @@ export default function CuotasModal({ poliza, open, onClose, onSelectQuota, isAd
 															{abonado > 0.01 && abonado < cuota.monto - 0.01 && (
 																<div className="text-xs font-normal text-muted-foreground">
 																	abonado {formatCurrency(abonado)}
+																</div>
+															)}
+															{descuento > 0.01 && estadoBase !== "pagado" && (
+																<div className="text-xs font-normal text-emerald-700">
+																	{saldadaExcl
+																		? `saldada por exclusión`
+																		: `descuento ${formatCurrency(descuento)}`}
 																</div>
 															)}
 														</td>
@@ -831,7 +849,9 @@ export default function CuotasModal({ poliza, open, onClose, onSelectQuota, isAd
 											const abonosAnexo = polizaExtendida.abonos_por_cuota?.[ci.id] ?? [];
 											const abonadoAnexo = abonosAnexo.reduce((s, a) => s + a.monto, 0);
 											const notasCount = polizaExtendida.notas_por_cuota?.[ci.id]?.length ?? 0;
-											const pagable = ci.estado !== "pagado";
+											const descuentoCi = ci.monto_descuento ?? 0;
+											// 'saldado' = descuento de exclusión cubre la cuota: no cobrable.
+											const pagable = ci.estado !== "pagado" && ci.estado !== "saldado";
 											const hasPhone = !!(
 												polizaExtendida?.contacto?.celular ||
 												polizaExtendida?.contacto?.telefono
@@ -876,6 +896,13 @@ export default function CuotasModal({ poliza, open, onClose, onSelectQuota, isAd
 																	abonado {formatCurrency(abonadoAnexo)}
 																</span>
 															)}
+															{descuentoCi > 0.01 && ci.estado !== "pagado" && (
+																<span className="block text-[11px] font-normal text-emerald-700">
+																	{ci.estado === "saldado"
+																		? "saldada por exclusión"
+																		: `descuento ${formatCurrency(descuentoCi)}`}
+																</span>
+															)}
 														</td>
 														<td className="px-4 py-2 text-xs">
 															{ci.fecha_vencimiento
@@ -890,15 +917,7 @@ export default function CuotasModal({ poliza, open, onClose, onSelectQuota, isAd
 															)}
 														</td>
 														<td className="px-4 py-2">
-															<EstadoBadge
-																estado={
-																	ci.estado as
-																		| "pendiente"
-																		| "pagado"
-																		| "vencido"
-																		| "parcial"
-																}
-															/>
+															<EstadoBadge estado={ci.estado} />
 														</td>
 														<td className="px-4 py-2">
 															<div className="flex items-center justify-end gap-1.5 flex-wrap">

@@ -11,6 +11,7 @@ import { createClient } from "@/utils/supabase/client";
 import { generateTempStoragePath, inferirContentType } from "@/utils/fileUpload";
 import type {
 	CuotaAjuste,
+	CuotaDescontable,
 	CuotaOriginalInfo,
 	CuotaPropia,
 	PlanPagoInclusion,
@@ -25,6 +26,7 @@ const BUCKET = "polizas-documentos";
 type Props = {
 	tipoAnexo: TipoAnexo;
 	cuotasOriginales: CuotaOriginalInfo[];
+	cuotasDescontables: CuotaDescontable[];
 	planPagoInclusion: PlanPagoInclusion | null;
 	cuotasAjuste: CuotaAjuste[];
 	vigenciaCorrida: VigenciaCorrida | null;
@@ -296,6 +298,68 @@ function SeccionPlanInclusion({
 
 // ── Sección exclusión ─────────────────────────────────────────────────────────
 
+// Una fila de la tabla de exclusión. `idx` es el índice en el array global
+// cuotasAjuste para que los handlers ubiquen la cuota.
+function FilaAjuste({
+	cuota,
+	idx,
+	moneda,
+	onChangeDelta,
+	onChangeFecha,
+}: {
+	cuota: CuotaAjuste;
+	idx: number;
+	moneda: Moneda;
+	onChangeDelta: (idx: number, v: string) => void;
+	onChangeFecha: (idx: number, v: string) => void;
+}) {
+	const descuento = Math.abs(cuota.monto_delta);
+	const saldoRestante = cuota.saldo_disponible - descuento;
+	const saldada = saldoRestante <= 0.005 && descuento > 0;
+	return (
+		<tr>
+			<td className="px-4 py-2">{cuota.numero_cuota}</td>
+			<td className="px-4 py-2">
+				<Input
+					type="date"
+					value={cuota.fecha_vencimiento}
+					onChange={(e) => onChangeFecha(idx, e.target.value)}
+					className="w-36"
+				/>
+			</td>
+			<td className="px-4 py-2 text-right text-muted-foreground">
+				{formatCurrency(cuota.saldo_disponible, moneda)}
+			</td>
+			<td className="px-4 py-2 text-right">
+				<Input
+					type="number"
+					step="0.01"
+					min="0"
+					max={cuota.saldo_disponible}
+					inputMode="decimal"
+					value={descuento || ""}
+					onChange={(e) => onChangeDelta(idx, e.target.value)}
+					onKeyDown={bloquearSimbolos}
+					className="w-32 text-right ml-auto"
+					placeholder="0.00"
+				/>
+			</td>
+			<td className="px-4 py-2 text-right font-medium">{formatCurrency(saldoRestante, moneda)}</td>
+			<td className="px-4 py-2 text-center">
+				{saldada ? (
+					<Badge variant="outline" className="bg-green-100 text-green-700">
+						saldada
+					</Badge>
+				) : (
+					<Badge variant="outline" className="bg-yellow-100 text-yellow-700">
+						{cuota.estado_original}
+					</Badge>
+				)}
+			</td>
+		</tr>
+	);
+}
+
 function SeccionAjusteExclusion({
 	cuotasAjuste,
 	moneda,
@@ -308,79 +372,129 @@ function SeccionAjusteExclusion({
 	onChangeFecha: (idx: number, v: string) => void;
 }) {
 	const totalDelta = cuotasAjuste.reduce((s, c) => s + c.monto_delta, 0);
+	// Conservamos el índice global de cada cuota para los handlers.
+	const indexadas = cuotasAjuste.map((cuota, idx) => ({ cuota, idx }));
+	const madre = indexadas.filter((x) => x.cuota.origen === "madre");
+	const inclusion = indexadas.filter((x) => x.cuota.origen === "inclusion");
+
+	const encabezado = (
+		<thead className="bg-gray-50">
+			<tr>
+				<th className="text-left px-4 py-2">#</th>
+				<th className="text-left px-4 py-2">Vencimiento</th>
+				<th className="text-right px-4 py-2">Saldo Cobrable</th>
+				<th className="text-right px-4 py-2">Descuento</th>
+				<th className="text-right px-4 py-2">Saldo Restante</th>
+				<th className="text-center px-4 py-2">Estado</th>
+			</tr>
+		</thead>
+	);
+
+	if (cuotasAjuste.length === 0) {
+		return (
+			<div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 flex items-start gap-2 text-xs text-amber-700">
+				<Info className="h-3 w-3 mt-0.5 flex-shrink-0" />
+				No hay cuotas con saldo cobrable sobre las que repartir el descuento. La exclusión no puede rebajar
+				cuotas ya pagadas (eso implicaría una devolución, que no se maneja por aquí).
+			</div>
+		);
+	}
 
 	return (
 		<div className="space-y-3">
 			<p className="text-xs text-gray-500">
-				Ingrese el descuento que corresponde a cada cuota afectada por la exclusión; se <strong>restará</strong>{" "}
-				del monto original. Puede aplicarse a cualquier cuota, incluso las ya pagadas.
+				Reparta el descuento de la exclusión sobre las cuotas pendientes (de la póliza madre y de inclusiones);
+				se <strong>resta</strong> del saldo cobrable. Una cuota que llega a 0 queda <strong>saldada</strong> y
+				el cliente ya no la paga. El descuento por fila no puede superar su saldo cobrable (nunca hay
+				devolución).
 			</p>
 
-			<div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 flex items-start gap-2 text-xs text-amber-700">
-				<Info className="h-3 w-3 mt-0.5 flex-shrink-0" />
-				Las cuotas ya pagadas se muestran con badge verde — el descuento se registra igualmente para mantener
-				los reportes de producción correctos.
-			</div>
+			{madre.length > 0 && (
+				<div>
+					<h4 className="text-xs font-semibold mb-1 text-gray-600">Cuotas de la póliza madre</h4>
+					<div className="border rounded-lg overflow-x-auto">
+						<table className="w-full text-sm">
+							{encabezado}
+							<tbody className="divide-y">
+								{madre.map(({ cuota, idx }) => (
+									<FilaAjuste
+										key={cuota.cuota_original_id}
+										cuota={cuota}
+										idx={idx}
+										moneda={moneda}
+										onChangeDelta={onChangeDelta}
+										onChangeFecha={onChangeFecha}
+									/>
+								))}
+							</tbody>
+						</table>
+					</div>
+				</div>
+			)}
 
-			<div className="border rounded-lg overflow-x-auto">
-				<table className="w-full text-sm">
-					<thead className="bg-gray-50">
-						<tr>
-							<th className="text-left px-4 py-2">#</th>
-							<th className="text-left px-4 py-2">Vencimiento</th>
-							<th className="text-right px-4 py-2">Monto Original</th>
-							<th className="text-right px-4 py-2">Descuento</th>
-							<th className="text-right px-4 py-2">Monto Ajustado</th>
-							<th className="text-center px-4 py-2">Estado</th>
-						</tr>
-					</thead>
-					<tbody className="divide-y">
-						{cuotasAjuste.map((cuota, idx) => (
-							<tr key={cuota.cuota_original_id}>
-								<td className="px-4 py-2">{cuota.numero_cuota}</td>
-								<td className="px-4 py-2">
-									<Input
-										type="date"
-										value={cuota.fecha_vencimiento}
-										onChange={(e) => onChangeFecha(idx, e.target.value)}
-										className="w-36"
-									/>
-								</td>
-								<td className="px-4 py-2 text-right">{formatCurrency(cuota.monto_original, moneda)}</td>
-								<td className="px-4 py-2 text-right">
-									<Input
-										type="number"
-										step="0.01"
-										min="0"
-										max={cuota.monto_original}
-										inputMode="decimal"
-										value={Math.abs(cuota.monto_delta) || ""}
-										onChange={(e) => onChangeDelta(idx, e.target.value)}
-										onKeyDown={bloquearSimbolos}
-										className="w-32 text-right ml-auto"
-										placeholder="0.00"
-									/>
-								</td>
-								<td className="px-4 py-2 text-right font-medium">
-									{formatCurrency(cuota.monto_original + cuota.monto_delta, moneda)}
-								</td>
-								<td className="px-4 py-2 text-center">
-									<Badge
-										variant="outline"
-										className={
-											cuota.estado_original === "pagado"
-												? "bg-green-100 text-green-700"
-												: "bg-yellow-100 text-yellow-700"
-										}
-									>
-										{cuota.estado_original}
-									</Badge>
-								</td>
-							</tr>
-						))}
-					</tbody>
-				</table>
-			</div>
+			{inclusion.length > 0 && (
+				<div>
+					<h4 className="text-xs font-semibold mb-1 text-green-700">Cuotas de inclusiones</h4>
+					<div className="border border-green-200 rounded-lg overflow-x-auto">
+						<table className="w-full text-sm">
+							{encabezado}
+							<tbody className="divide-y divide-green-100">
+								{inclusion.map(({ cuota, idx }) => (
+									<tr key={cuota.cuota_anexo_pago_id} className="bg-green-50/40">
+										<td className="px-4 py-2">
+											<span className="text-xs text-green-700">{cuota.numero_anexo}</span> ·{" "}
+											{cuota.numero_cuota}
+										</td>
+										<td className="px-4 py-2">
+											<Input
+												type="date"
+												value={cuota.fecha_vencimiento}
+												onChange={(e) => onChangeFecha(idx, e.target.value)}
+												className="w-36"
+											/>
+										</td>
+										<td className="px-4 py-2 text-right text-muted-foreground">
+											{formatCurrency(cuota.saldo_disponible, moneda)}
+										</td>
+										<td className="px-4 py-2 text-right">
+											<Input
+												type="number"
+												step="0.01"
+												min="0"
+												max={cuota.saldo_disponible}
+												inputMode="decimal"
+												value={Math.abs(cuota.monto_delta) || ""}
+												onChange={(e) => onChangeDelta(idx, e.target.value)}
+												onKeyDown={bloquearSimbolos}
+												className="w-32 text-right ml-auto"
+												placeholder="0.00"
+											/>
+										</td>
+										<td className="px-4 py-2 text-right font-medium">
+											{formatCurrency(
+												cuota.saldo_disponible - Math.abs(cuota.monto_delta),
+												moneda,
+											)}
+										</td>
+										<td className="px-4 py-2 text-center">
+											{cuota.saldo_disponible - Math.abs(cuota.monto_delta) <= 0.005 &&
+											Math.abs(cuota.monto_delta) > 0 ? (
+												<Badge variant="outline" className="bg-green-100 text-green-700">
+													saldada
+												</Badge>
+											) : (
+												<Badge variant="outline" className="bg-yellow-100 text-yellow-700">
+													{cuota.estado_original}
+												</Badge>
+											)}
+										</td>
+									</tr>
+								))}
+							</tbody>
+						</table>
+					</div>
+				</div>
+			)}
 
 			{cuotasAjuste.some((c) => c.monto_delta !== 0) && (
 				<div className="text-right">
@@ -398,6 +512,7 @@ function SeccionAjusteExclusion({
 export function PagosYDocumentos({
 	tipoAnexo,
 	cuotasOriginales,
+	cuotasDescontables,
 	planPagoInclusion,
 	cuotasAjuste,
 	vigenciaCorrida,
@@ -428,20 +543,25 @@ export function PagosYDocumentos({
 		}
 	}, [tipoAnexo, planPagoInclusion, onChangePlanPagoInclusion]);
 
-	// Inicializar cuotas ajuste para exclusión
+	// Inicializar cuotas ajuste para exclusión, sobre las cuotas descontables
+	// (madre + inclusiones activas, cada una con su saldo cobrable).
 	useEffect(() => {
-		if (tipoAnexo === "exclusion" && cuotasAjuste.length === 0 && cuotasOriginales.length > 0) {
-			const iniciales: CuotaAjuste[] = cuotasOriginales.map((c) => ({
-				cuota_original_id: c.id,
+		if (tipoAnexo === "exclusion" && cuotasAjuste.length === 0 && cuotasDescontables.length > 0) {
+			const iniciales: CuotaAjuste[] = cuotasDescontables.map((c) => ({
+				origen: c.origen,
+				cuota_original_id: c.cuota_original_id,
+				cuota_anexo_pago_id: c.cuota_anexo_pago_id,
+				numero_anexo: c.numero_anexo,
 				numero_cuota: c.numero_cuota,
 				monto_original: c.monto,
+				saldo_disponible: c.saldo_disponible,
 				monto_delta: 0,
 				fecha_vencimiento: c.fecha_vencimiento,
 				estado_original: c.estado,
 			}));
 			onChangeCuotas(iniciales);
 		}
-	}, [tipoAnexo, cuotasAjuste.length, cuotasOriginales, onChangeCuotas]);
+	}, [tipoAnexo, cuotasAjuste.length, cuotasDescontables, onChangeCuotas]);
 
 	// Inicializar vigencia corrida para anulación
 	useEffect(() => {
@@ -464,8 +584,8 @@ export function PagosYDocumentos({
 
 	const handleDeltaChange = (idx: number, value: string) => {
 		// El usuario escribe el descuento en positivo; se guarda como delta
-		// negativo, sin exceder el monto original de la cuota.
-		const descuento = Math.min(Math.abs(parseFloat(value) || 0), cuotasAjuste[idx].monto_original);
+		// negativo, sin exceder el saldo cobrable de la cuota (nunca devolución).
+		const descuento = Math.min(Math.abs(parseFloat(value) || 0), cuotasAjuste[idx].saldo_disponible);
 		const updated = [...cuotasAjuste];
 		updated[idx] = { ...updated[idx], monto_delta: -descuento };
 		onChangeCuotas(updated);
@@ -574,11 +694,14 @@ export function PagosYDocumentos({
 		}
 
 		if (tipoAnexo === "exclusion") {
-			if (cuotasAjuste.some((c) => c.monto_delta > 0)) {
-				newErrors.push("Los descuentos de exclusión deben restar al monto de la cuota, no sumarlo");
+			if (cuotasAjuste.every((c) => c.monto_delta === 0)) {
+				newErrors.push("Debe repartir el descuento de la exclusión en al menos una cuota");
 			}
-			if (cuotasAjuste.some((c) => Math.abs(c.monto_delta) > c.monto_original + 0.005)) {
-				newErrors.push("El descuento no puede exceder el monto original de la cuota");
+			if (cuotasAjuste.some((c) => c.monto_delta > 0)) {
+				newErrors.push("Los descuentos de exclusión deben restar al saldo de la cuota, no sumarlo");
+			}
+			if (cuotasAjuste.some((c) => Math.abs(c.monto_delta) > c.saldo_disponible + 0.005)) {
+				newErrors.push("El descuento de una cuota no puede exceder su saldo cobrable");
 			}
 		}
 

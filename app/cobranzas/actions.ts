@@ -487,10 +487,15 @@ export async function registrarPago(registro: RegistroPago): Promise<RegistrarPa
 			.select("monto")
 			.eq("pago_id", registro.cuota_id);
 		const abonadoPrev = (abonosPrev ?? []).reduce((s, a) => s + Number(a.monto), 0);
-		const saldo = montoCuota - abonadoPrev;
+		// El descuento de exclusión activo reduce el saldo cobrable (no es dinero).
+		const descuento = await descuentoExclusionCuota(supabase, { pagoId: registro.cuota_id });
+		const saldo = montoCuota - abonadoPrev - descuento;
 
 		if (saldo <= 0.01) {
-			return { success: false, error: "Esta cuota ya está totalmente pagada" };
+			return {
+				success: false,
+				error: "Esta cuota ya no tiene saldo por cobrar (pagada o saldada por exclusión)",
+			};
 		}
 
 		const montoPagado = registro.monto_pagado;
@@ -988,6 +993,57 @@ export async function obtenerOpcionesFiltroExport(): Promise<CobranzaServerRespo
 // NEW SERVER ACTIONS - COBRANZAS IMPROVEMENTS
 // =============================================
 
+type SupaCliente = Awaited<ReturnType<typeof createClient>>;
+
+/**
+ * Descuentos de exclusión activos de una póliza, agrupados por cuota objetivo:
+ * `madre` por id de polizas_pagos (cuota_original_id) e `inclusion` por id de
+ * polizas_anexos_pagos (cuota_anexo_pago_id). El descuento es la magnitud
+ * positiva; reduce el saldo cobrable de la cuota sin tocar su monto bruto.
+ */
+async function cargarDescuentosExclusion(
+	supabase: SupaCliente,
+	polizaId: string,
+): Promise<{ madre: Map<string, number>; inclusion: Map<string, number> }> {
+	const { data } = await supabase
+		.from("polizas_anexos_pagos")
+		.select("cuota_original_id, cuota_anexo_pago_id, monto, polizas_anexos!inner (poliza_id, estado)")
+		.eq("tipo", "ajuste")
+		.eq("polizas_anexos.poliza_id", polizaId)
+		.eq("polizas_anexos.estado", "activo");
+	const madre = new Map<string, number>();
+	const inclusion = new Map<string, number>();
+	for (const r of data || []) {
+		// Solo ajustes negativos son descuentos (ignora parche legacy de inclusión positivo).
+		if (Number(r.monto) >= 0) continue;
+		const m = -Number(r.monto);
+		if (r.cuota_original_id) {
+			madre.set(r.cuota_original_id, (madre.get(r.cuota_original_id) || 0) + m);
+		} else if (r.cuota_anexo_pago_id) {
+			inclusion.set(r.cuota_anexo_pago_id, (inclusion.get(r.cuota_anexo_pago_id) || 0) + m);
+		}
+	}
+	return { madre, inclusion };
+}
+
+/** Descuento de exclusión activo sobre una sola cuota (madre o de inclusión). */
+async function descuentoExclusionCuota(
+	supabase: SupaCliente,
+	target: { pagoId?: string; anexoPagoId?: string },
+): Promise<number> {
+	let q = supabase
+		.from("polizas_anexos_pagos")
+		.select("monto, polizas_anexos!inner (estado)")
+		.eq("tipo", "ajuste")
+		.eq("polizas_anexos.estado", "activo");
+	q = target.pagoId
+		? q.eq("cuota_original_id", target.pagoId)
+		: q.eq("cuota_anexo_pago_id", target.anexoPagoId as string);
+	const { data } = await q;
+	// Solo ajustes negativos cuentan como descuento.
+	return (data || []).reduce((s, r) => s + (Number(r.monto) < 0 ? -Number(r.monto) : 0), 0);
+}
+
 /**
  * MEJORA #3: Obtener detalle extendido de póliza para visualización de cuotas
  * Incluye: contacto del cliente y datos específicos según el ramo
@@ -1090,7 +1146,17 @@ export async function obtenerDetallePolizaParaCuotas(polizaId: string): Promise<
 
 		// Calculate totals. En una póliza anulada las cuotas regulares no se cobran
 		// (solo su vigencia corrida); las cuotas anuladas tampoco cuentan.
-		const cuotas = (poliza.cuotas || []) as CuotaPago[];
+		// Descuentos de exclusión activos: reducen el saldo cobrable de las cuotas
+		// (madre y de inclusión). Una cuota cuyo descuento cubre todo su monto queda
+		// "saldada": no se cobra y no cuenta como dinero recibido.
+		const descuentos = await cargarDescuentosExclusion(supabase, polizaId);
+		const cuotas = (poliza.cuotas || []).map((c: CuotaPago) => {
+			const desc = descuentos.madre.get(c.id) || 0;
+			return desc > 0 ? { ...c, monto_descuento: desc } : c;
+		}) as CuotaPago[];
+		// Saldada por exclusión cuando el descuento cubre el monto bruto (coherente
+		// con el cálculo de pendiente, que no descuenta abonos parciales).
+		const saldadaPorExclusion = (c: CuotaPago) => (c.monto_descuento || 0) >= c.monto - 0.01;
 		const polizaAnulada = poliza.estado === "anulada";
 		const todayStr = new Date().toISOString().split("T")[0];
 		const total_pagado = cuotas
@@ -1100,11 +1166,13 @@ export async function obtenerDetallePolizaParaCuotas(polizaId: string): Promise<
 			? 0
 			: cuotas
 					.filter((c: CuotaPago) => c.estado !== "pagado" && c.estado !== "anulada")
-					.reduce((sum: number, c: CuotaPago) => sum + c.monto, 0);
-		const cuotas_pendientes = polizaAnulada ? 0 : cuotas.filter((c: CuotaPago) => c.estado === "pendiente").length;
+					.reduce((sum: number, c: CuotaPago) => sum + Math.max(c.monto - (c.monto_descuento || 0), 0), 0);
+		const cuotas_pendientes = polizaAnulada
+			? 0
+			: cuotas.filter((c: CuotaPago) => c.estado === "pendiente" && !saldadaPorExclusion(c)).length;
 		const cuotas_vencidas = polizaAnulada
 			? 0
-			: cuotas.filter((c: CuotaPago) => obtenerEstadoReal(c) === "vencido").length;
+			: cuotas.filter((c: CuotaPago) => obtenerEstadoReal(c) === "vencido" && !saldadaPorExclusion(c)).length;
 		const proxima_fecha_vencimiento = polizaAnulada
 			? null
 			: (cuotas
@@ -1112,6 +1180,7 @@ export async function obtenerDetallePolizaParaCuotas(polizaId: string): Promise<
 						(c: CuotaPago) =>
 							obtenerEstadoReal(c) !== "pagado" &&
 							obtenerEstadoReal(c) !== "anulada" &&
+							!saldadaPorExclusion(c) &&
 							c.fecha_vencimiento >= todayStr,
 					)
 					.sort((a, b) => a.fecha_vencimiento.localeCompare(b.fecha_vencimiento))[0]?.fecha_vencimiento ??
@@ -1135,20 +1204,27 @@ export async function obtenerDetallePolizaParaCuotas(polizaId: string): Promise<
 			cuotas_inclusion = anexosPagosInclusion
 				.map((p) => {
 					const info = p.polizas_anexos as unknown as { id: string; numero_anexo: string };
+					const monto = Number(p.monto);
+					const descuento = descuentos.inclusion.get(p.id) || 0;
+					const estadoBase = p.estado || "pendiente";
+					// Si ya está pagada, el descuento es no-op (el dinero entró, no se
+					// devuelve): se respeta 'pagado'. Solo salda cuotas no pagadas.
+					const saldada = estadoBase !== "pagado" && descuento >= monto - 0.01;
 					return {
 						id: p.id,
 						anexo_id: info.id,
 						numero_anexo: info.numero_anexo,
 						numero_cuota: p.numero_cuota ?? 0,
-						monto: Number(p.monto),
+						monto,
+						monto_descuento: descuento > 0 ? descuento : undefined,
 						fecha_vencimiento: p.fecha_vencimiento || "",
 						fecha_vencimiento_original: p.fecha_vencimiento_original || null,
-						estado:
-							(p.estado || "pendiente") === "pendiente" &&
-							p.fecha_vencimiento &&
-							p.fecha_vencimiento < todayStr
+						// Saldada por exclusión = no cobrable; si no, vencido por fecha.
+						estado: saldada
+							? "saldado"
+							: estadoBase === "pendiente" && p.fecha_vencimiento && p.fecha_vencimiento < todayStr
 								? "vencido"
-								: p.estado || "pendiente",
+								: estadoBase,
 						observaciones: p.observaciones || undefined,
 					};
 				})
@@ -1868,6 +1944,8 @@ export async function obtenerAbonosCuota(cuotaId: string): Promise<CobranzaServe
 			.eq("pago_id", cuotaId)
 			.order("created_at", { ascending: true });
 
+		const descuento = await descuentoExclusionCuota(supabase, { pagoId: cuotaId });
+
 		const abonoIds = (abonosRows ?? []).map((a) => a.id as string);
 		const comprobanteAbonoIds = new Set<string>();
 		if (abonoIds.length > 0) {
@@ -1894,7 +1972,7 @@ export async function obtenerAbonosCuota(cuotaId: string): Promise<CobranzaServe
 
 		const monto = Number(cuota.monto);
 		const abonado = abonos.reduce((s, a) => s + a.monto, 0);
-		return { success: true, data: { monto, abonado, saldo: monto - abonado, abonos } };
+		return { success: true, data: { monto, abonado, saldo: Math.max(monto - abonado - descuento, 0), abonos } };
 	} catch (error) {
 		return { success: false, error: error instanceof Error ? error.message : "Error desconocido" };
 	}
@@ -1929,10 +2007,15 @@ export async function registrarPagoAnexo(registro: RegistroPagoAnexo): Promise<R
 			.select("monto")
 			.eq("anexo_pago_id", registro.anexo_pago_id);
 		const abonadoPrev = (abonosPrev ?? []).reduce((s, a) => s + Number(a.monto), 0);
-		const saldo = montoCuota - abonadoPrev;
+		// El descuento de exclusión activo reduce el saldo cobrable (no es dinero).
+		const descuento = await descuentoExclusionCuota(supabase, { anexoPagoId: registro.anexo_pago_id });
+		const saldo = montoCuota - abonadoPrev - descuento;
 
 		if (saldo <= 0.01) {
-			return { success: false, error: "Esta cuota de anexo ya está totalmente pagada" };
+			return {
+				success: false,
+				error: "Esta cuota de anexo ya no tiene saldo por cobrar (pagada o saldada por exclusión)",
+			};
 		}
 
 		const montoPagado = registro.monto_pagado;
@@ -2006,6 +2089,8 @@ export async function obtenerAbonosAnexoCuota(anexoPagoId: string): Promise<Cobr
 			.eq("anexo_pago_id", anexoPagoId)
 			.order("created_at", { ascending: true });
 
+		const descuento = await descuentoExclusionCuota(supabase, { anexoPagoId });
+
 		const abonoIds = (abonosRows ?? []).map((a) => a.id as string);
 		const comprobanteAbonoIds = new Set<string>();
 		if (abonoIds.length > 0) {
@@ -2032,7 +2117,7 @@ export async function obtenerAbonosAnexoCuota(anexoPagoId: string): Promise<Cobr
 
 		const monto = Number(cuota.monto);
 		const abonado = abonos.reduce((s, a) => s + a.monto, 0);
-		return { success: true, data: { monto, abonado, saldo: monto - abonado, abonos } };
+		return { success: true, data: { monto, abonado, saldo: Math.max(monto - abonado - descuento, 0), abonos } };
 	} catch (error) {
 		return { success: false, error: error instanceof Error ? error.message : "Error desconocido" };
 	}

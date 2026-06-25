@@ -19,6 +19,7 @@ import type {
 	PlanPagoInclusion,
 	AnexoItemChange,
 	CuotaAjuste,
+	CuotaDescontable,
 	MotivoErrorEdicionAnexo,
 	DireccionVigenciaCorrida,
 } from "@/types/anexo";
@@ -312,6 +313,15 @@ export async function obtenerDatosParaAnexo(
 		const anexosActivos = anexosRelevantes.filter((a) => a.estado === "activo");
 		const itemsActuales = await cargarItemsActualesRamo(supabase, polizaId, poliza.ramo, anexosActivos);
 
+		// Cuotas descontables para exclusión: madre + inclusiones activas, con su
+		// saldo cobrable ya neto de abonos y de descuentos de OTRAS exclusiones.
+		const cuotasDescontables = await cargarCuotasDescontables(
+			supabase,
+			polizaId,
+			cuotasResult.data || [],
+			opciones?.excluirAnexoId,
+		);
+
 		const datos: DatosPolizaParaAnexo = {
 			poliza: {
 				id: poliza.id,
@@ -336,6 +346,7 @@ export async function obtenerDatosParaAnexo(
 				estado: c.estado || "pendiente",
 				fecha_pago: c.fecha_pago || undefined,
 			})),
+			cuotas_descontables: cuotasDescontables,
 			items_actuales: itemsActuales,
 			anexos_activos: (anexosResult.data || []).map((a) => {
 				const profile = a.profiles as unknown as { full_name: string } | null;
@@ -358,6 +369,218 @@ export async function obtenerDatosParaAnexo(
 		console.error("Error obteniendo datos para anexo:", error);
 		return { success: false, error: error instanceof Error ? error.message : "Error desconocido" };
 	}
+}
+
+/**
+ * Cuotas sobre las que una exclusión puede repartir descuento: cuotas de la
+ * póliza madre (polizas_pagos) y cuotas propias de inclusiones activas
+ * (polizas_anexos_pagos tipo cuota_propia). Cada una trae su saldo cobrable ya
+ * neto de abonos reales y de descuentos de OTRAS exclusiones activas (se excluye
+ * el propio anexo en edición). Solo cuotas NO pagadas y con saldo > 0; nunca se
+ * descuenta una cuota saldada/pagada porque eso implicaría devolución.
+ */
+async function cargarCuotasDescontables(
+	supabase: Awaited<ReturnType<typeof createClient>>,
+	polizaId: string,
+	cuotasMadre: { id: string; numero_cuota: number; monto: number; fecha_vencimiento: string; estado: string }[],
+	excluirAnexoId?: string,
+): Promise<CuotaDescontable[]> {
+	// Cuotas propias de inclusiones activas y ajustes de exclusión activos.
+	const { data: pagosAnexos } = await supabase
+		.from("polizas_anexos_pagos")
+		.select(
+			`
+			id, anexo_id, tipo, cuota_original_id, cuota_anexo_pago_id, numero_cuota,
+			monto, fecha_vencimiento, estado,
+			polizas_anexos!inner (id, numero_anexo, tipo_anexo, estado, poliza_id)
+			`,
+		)
+		.eq("polizas_anexos.poliza_id", polizaId)
+		.eq("polizas_anexos.estado", "activo")
+		.in("tipo", ["cuota_propia", "ajuste"]);
+
+	const filas = pagosAnexos || [];
+	type FilaAnexo = (typeof filas)[number] & {
+		polizas_anexos: { id: string; numero_anexo: string; tipo_anexo: string; estado: string };
+	};
+	const filasT = filas as unknown as FilaAnexo[];
+
+	// Descuentos de exclusión ya aplicados (excluyendo el anexo en edición).
+	const descuentoMadre = new Map<string, number>();
+	const descuentoInclusion = new Map<string, number>();
+	for (const f of filasT) {
+		if (f.tipo !== "ajuste") continue;
+		if (excluirAnexoId && f.polizas_anexos.id === excluirAnexoId) continue;
+		// Solo los ajustes negativos son descuentos de exclusión; ignorar cualquier
+		// ajuste positivo residual (parche legacy de inclusiones pre cuota_propia).
+		if (Number(f.monto) >= 0) continue;
+		const magnitud = -Number(f.monto);
+		if (f.cuota_original_id) {
+			descuentoMadre.set(f.cuota_original_id, (descuentoMadre.get(f.cuota_original_id) || 0) + magnitud);
+		} else if (f.cuota_anexo_pago_id) {
+			descuentoInclusion.set(
+				f.cuota_anexo_pago_id,
+				(descuentoInclusion.get(f.cuota_anexo_pago_id) || 0) + magnitud,
+			);
+		}
+	}
+
+	const cuotasInclusion = filasT.filter((f) => f.tipo === "cuota_propia");
+
+	// Abonos reales por cuota (madre y de inclusión).
+	const madreIds = cuotasMadre.map((c) => c.id);
+	const inclusionIds = cuotasInclusion.map((c) => c.id);
+	const [abonosMadreRes, abonosInclusionRes] = await Promise.all([
+		madreIds.length
+			? supabase.from("polizas_pagos_abonos").select("pago_id, monto").in("pago_id", madreIds)
+			: Promise.resolve({ data: [] as { pago_id: string; monto: number }[] }),
+		inclusionIds.length
+			? supabase.from("polizas_pagos_abonos").select("anexo_pago_id, monto").in("anexo_pago_id", inclusionIds)
+			: Promise.resolve({ data: [] as { anexo_pago_id: string; monto: number }[] }),
+	]);
+	const abonoMadre = new Map<string, number>();
+	for (const a of abonosMadreRes.data || []) {
+		if (!a.pago_id) continue;
+		abonoMadre.set(a.pago_id, (abonoMadre.get(a.pago_id) || 0) + Number(a.monto));
+	}
+	const abonoInclusion = new Map<string, number>();
+	for (const a of abonosInclusionRes.data || []) {
+		if (!a.anexo_pago_id) continue;
+		abonoInclusion.set(a.anexo_pago_id, (abonoInclusion.get(a.anexo_pago_id) || 0) + Number(a.monto));
+	}
+
+	const noDescontable = (estado: string) => estado === "pagado" || estado === "anulada";
+	const descontables: CuotaDescontable[] = [];
+
+	for (const c of cuotasMadre) {
+		if (noDescontable(c.estado)) continue;
+		const saldo = Number(c.monto) - (abonoMadre.get(c.id) || 0) - (descuentoMadre.get(c.id) || 0);
+		if (saldo <= 0.005) continue;
+		descontables.push({
+			origen: "madre",
+			cuota_original_id: c.id,
+			cuota_anexo_pago_id: null,
+			numero_anexo: null,
+			numero_cuota: c.numero_cuota,
+			monto: Number(c.monto),
+			saldo_disponible: saldo,
+			fecha_vencimiento: c.fecha_vencimiento,
+			estado: c.estado,
+		});
+	}
+
+	for (const c of cuotasInclusion) {
+		const estado = c.estado || "pendiente";
+		if (noDescontable(estado)) continue;
+		const saldo = Number(c.monto) - (abonoInclusion.get(c.id) || 0) - (descuentoInclusion.get(c.id) || 0);
+		if (saldo <= 0.005) continue;
+		descontables.push({
+			origen: "inclusion",
+			cuota_original_id: null,
+			cuota_anexo_pago_id: c.id,
+			numero_anexo: c.polizas_anexos.numero_anexo,
+			numero_cuota: c.numero_cuota ?? 0,
+			monto: Number(c.monto),
+			saldo_disponible: saldo,
+			fecha_vencimiento: c.fecha_vencimiento || "",
+			estado,
+		});
+	}
+
+	// Orden estable: madre primero por número de cuota, luego inclusiones por anexo.
+	descontables.sort((a, b) => {
+		if (a.origen !== b.origen) return a.origen === "madre" ? -1 : 1;
+		if (a.origen === "inclusion" && a.numero_anexo !== b.numero_anexo) {
+			return (a.numero_anexo || "").localeCompare(b.numero_anexo || "");
+		}
+		return a.numero_cuota - b.numero_cuota;
+	});
+
+	return descontables;
+}
+
+type AjustePagoInsert = {
+	anexo_id: string;
+	cuota_original_id: string | null;
+	cuota_anexo_pago_id: string | null;
+	tipo: "ajuste";
+	numero_cuota: number;
+	monto: number;
+	fecha_vencimiento: string | null;
+	estado: "pendiente";
+	observaciones: string;
+};
+
+/**
+ * Valida los descuentos de una exclusión contra el saldo cobrable autoritativo
+ * del servidor (madre + inclusiones, neto de abonos y de OTRAS exclusiones) y
+ * construye las filas de polizas_anexos_pagos a insertar. Cada ajuste cuelga de
+ * la cuota madre (cuota_original_id) o de inclusión (cuota_anexo_pago_id). El
+ * descuento nunca puede exceder el saldo cobrable (no hay devolución).
+ */
+async function construirPagosAjusteExclusion(
+	supabase: Awaited<ReturnType<typeof createClient>>,
+	polizaId: string,
+	anexoId: string,
+	cuotasAjuste: CuotaAjuste[],
+	excluirAnexoId?: string,
+): Promise<{ ok: true; rows: AjustePagoInsert[] } | { ok: false; error: string }> {
+	const cuotasConDelta = cuotasAjuste.filter((c) => c.monto_delta !== 0);
+	if (cuotasConDelta.length === 0) return { ok: true, rows: [] };
+
+	const { data: cuotasMadreRaw } = await supabase
+		.from("polizas_pagos")
+		.select("id, numero_cuota, monto, fecha_vencimiento, estado")
+		.eq("poliza_id", polizaId);
+	const cuotasMadre = (cuotasMadreRaw || []).map((c) => ({
+		id: c.id as string,
+		numero_cuota: c.numero_cuota as number,
+		monto: Number(c.monto),
+		fecha_vencimiento: (c.fecha_vencimiento as string) || "",
+		estado: (c.estado as string) || "pendiente",
+	}));
+
+	const descontables = await cargarCuotasDescontables(supabase, polizaId, cuotasMadre, excluirAnexoId);
+	const saldoMadre = new Map(
+		descontables.filter((d) => d.origen === "madre").map((d) => [d.cuota_original_id, d.saldo_disponible]),
+	);
+	const saldoInclusion = new Map(
+		descontables.filter((d) => d.origen === "inclusion").map((d) => [d.cuota_anexo_pago_id, d.saldo_disponible]),
+	);
+
+	const rows: AjustePagoInsert[] = [];
+	for (const c of cuotasConDelta) {
+		if (c.monto_delta > 0) {
+			return { ok: false, error: `El descuento de la cuota ${c.numero_cuota} debe restar, no sumar` };
+		}
+		const targetId = c.origen === "madre" ? c.cuota_original_id : c.cuota_anexo_pago_id;
+		const saldo =
+			c.origen === "madre" ? saldoMadre.get(c.cuota_original_id) : saldoInclusion.get(c.cuota_anexo_pago_id);
+		if (!targetId || saldo === undefined) {
+			return {
+				ok: false,
+				error: `La cuota ${c.numero_cuota} no está disponible para descuento (pagada, anulada o inexistente)`,
+			};
+		}
+		if (Math.abs(c.monto_delta) > saldo + 0.005) {
+			return {
+				ok: false,
+				error: `El descuento de la cuota ${c.numero_cuota} excede su saldo cobrable (${saldo.toFixed(2)})`,
+			};
+		}
+		rows.push({
+			anexo_id: anexoId,
+			cuota_original_id: c.origen === "madre" ? c.cuota_original_id : null,
+			cuota_anexo_pago_id: c.origen === "inclusion" ? c.cuota_anexo_pago_id : null,
+			tipo: "ajuste",
+			numero_cuota: c.numero_cuota,
+			monto: -Math.abs(c.monto_delta),
+			fecha_vencimiento: c.fecha_vencimiento,
+			estado: "pendiente",
+			observaciones: "Descuento por exclusión",
+		});
+	}
+	return { ok: true, rows };
 }
 
 /**
@@ -734,48 +957,19 @@ export async function guardarAnexo(formState: AnexoFormState): Promise<{
 				// Inclusión: cuotas propias del anexo, independientes de la póliza madre
 				await guardarCuotasInclusion(supabase, anexo.id, formState.plan_pago_inclusion!);
 			} else {
-				// Exclusión: descuentos sobre cuotas originales (incluso pagadas).
-				// El monto se normaliza a negativo y no puede exceder la cuota original.
-				const cuotasConDelta = formState.cuotas_ajuste.filter((c) => c.monto_delta !== 0);
-				if (cuotasConDelta.length > 0) {
-					const { data: cuotasOriginales, error: cuotasError } = await supabase
-						.from("polizas_pagos")
-						.select("id, monto")
-						.eq("poliza_id", formState.poliza_id)
-						.in(
-							"id",
-							cuotasConDelta.map((c) => c.cuota_original_id),
-						);
-					throwIfAnexoError(cuotasError, "Error al verificar las cuotas de la póliza");
-
-					const montoPorCuota = new Map(
-						(cuotasOriginales || []).map((c) => [c.id as string, Number(c.monto)]),
-					);
-					for (const c of cuotasConDelta) {
-						const montoOriginal = montoPorCuota.get(c.cuota_original_id);
-						if (montoOriginal === undefined) {
-							throw new Error(`La cuota ${c.numero_cuota} no pertenece a esta póliza`);
-						}
-						if (Math.abs(c.monto_delta) > montoOriginal + 0.005) {
-							throw new Error(
-								`El descuento de la cuota ${c.numero_cuota} excede su monto original (${montoOriginal.toFixed(2)})`,
-							);
-						}
-					}
-
-					const pagosInsert = cuotasConDelta.map((c) => ({
-						anexo_id: anexo.id,
-						cuota_original_id: c.cuota_original_id,
-						tipo: "ajuste" as const,
-						numero_cuota: c.numero_cuota,
-						monto: -Math.abs(c.monto_delta),
-						fecha_vencimiento: c.fecha_vencimiento,
-						estado: "pendiente" as const,
-						observaciones: "Descuento por exclusión",
-					}));
-
-					const { error: pagosError } = await supabase.from("polizas_anexos_pagos").insert(pagosInsert);
-
+				// Exclusión: descuentos repartidos sobre cuotas descontables (madre +
+				// inclusiones), validados contra el saldo cobrable autoritativo.
+				const construido = await construirPagosAjusteExclusion(
+					supabase,
+					formState.poliza_id,
+					anexo.id,
+					formState.cuotas_ajuste,
+				);
+				if (!construido.ok) {
+					throw new Error(construido.error);
+				}
+				if (construido.rows.length > 0) {
+					const { error: pagosError } = await supabase.from("polizas_anexos_pagos").insert(construido.rows);
 					throwIfAnexoError(pagosError, "Error al guardar descuentos de exclusión");
 				}
 			}
@@ -1161,7 +1355,7 @@ export async function obtenerCuotasConsolidadas(polizaId: string): Promise<{
 				.from("polizas_anexos_pagos")
 				.select(
 					`
-					id, anexo_id, cuota_original_id, tipo, numero_cuota,
+					id, anexo_id, cuota_original_id, cuota_anexo_pago_id, tipo, numero_cuota,
 					monto, direccion, fecha_vencimiento, estado, observaciones,
 					polizas_anexos!inner (id, numero_anexo, tipo_anexo, estado)
 				`,
@@ -1178,13 +1372,22 @@ export async function obtenerCuotasConsolidadas(polizaId: string): Promise<{
 		const cuotasPropias = pagosAnexos.filter((p) => p.tipo === "cuota_propia");
 		const vigenciaCorrida = pagosAnexos.filter((p) => p.tipo === "vigencia_corrida");
 
-		// Agrupar ajustes de exclusión por cuota_original_id
+		// Agrupar ajustes de exclusión: por cuota madre (cuota_original_id) y por
+		// cuota de inclusión (cuota_anexo_pago_id).
 		const ajustesPorCuota = new Map<string, typeof ajustes>();
+		const descuentoPorInclusion = new Map<string, number>();
 		for (const ajuste of ajustes) {
-			if (!ajuste.cuota_original_id) continue;
-			const existing = ajustesPorCuota.get(ajuste.cuota_original_id) || [];
-			existing.push(ajuste);
-			ajustesPorCuota.set(ajuste.cuota_original_id, existing);
+			if (ajuste.cuota_original_id) {
+				const existing = ajustesPorCuota.get(ajuste.cuota_original_id) || [];
+				existing.push(ajuste);
+				ajustesPorCuota.set(ajuste.cuota_original_id, existing);
+			} else if (ajuste.cuota_anexo_pago_id && Number(ajuste.monto) < 0) {
+				// Solo ajustes negativos descuentan una cuota de inclusión.
+				descuentoPorInclusion.set(
+					ajuste.cuota_anexo_pago_id,
+					(descuentoPorInclusion.get(ajuste.cuota_anexo_pago_id) || 0) + -Number(ajuste.monto),
+				);
+			}
 		}
 
 		// Cuotas de la póliza madre con descuentos de exclusión aplicados
@@ -1216,16 +1419,19 @@ export async function obtenerCuotasConsolidadas(polizaId: string): Promise<{
 			};
 		});
 
-		// Cuotas propias de anexos de inclusión (independientes de la póliza madre)
+		// Cuotas propias de anexos de inclusión (independientes de la póliza madre),
+		// con los descuentos de exclusión que las apuntan ya aplicados.
 		const inclusion: CuotaAnexoPropia[] = cuotasPropias
 			.map((p) => {
 				const info = p.polizas_anexos as unknown as { id: string; numero_anexo: string };
+				const descuento = descuentoPorInclusion.get(p.id) || 0;
 				return {
 					id: p.id,
 					anexo_id: info.id,
 					numero_anexo: info.numero_anexo,
 					numero_cuota: p.numero_cuota ?? 0,
 					monto: Number(p.monto),
+					monto_descuento: descuento > 0 ? descuento : undefined,
 					fecha_vencimiento: p.fecha_vencimiento || "",
 					estado: p.estado || "pendiente",
 					observaciones: p.observaciones || undefined,
@@ -2040,7 +2246,9 @@ export async function obtenerAnexoParaEdicion(anexoId: string): Promise<{
 			cargarItemsCambioAnexo(supabase, anexoId, datosPoliza.poliza.ramo),
 			supabase
 				.from("polizas_anexos_pagos")
-				.select("id, cuota_original_id, tipo, numero_cuota, monto, direccion, fecha_vencimiento, observaciones")
+				.select(
+					"id, cuota_original_id, cuota_anexo_pago_id, tipo, numero_cuota, monto, direccion, fecha_vencimiento, observaciones",
+				)
 				.eq("anexo_id", anexoId)
 				.order("numero_cuota", { ascending: true }),
 			supabase
@@ -2071,21 +2279,40 @@ export async function obtenerAnexoParaEdicion(anexoId: string): Promise<{
 			};
 		}
 
-		// Exclusión: descuentos existentes mapeados sobre todas las cuotas originales
-		const ajustes = new Map(
+		// Exclusión: descuentos existentes mapeados sobre las cuotas descontables
+		// (madre + inclusiones). El saldo disponible ya excluye los deltas de este
+		// mismo anexo (obtenerDatosParaAnexo recibió excluirAnexoId), así que el
+		// tope para reasignar es saldo_disponible.
+		const ajustesMadre = new Map(
 			pagos
 				.filter((p) => p.tipo === "ajuste" && p.cuota_original_id)
 				.map((p) => [p.cuota_original_id as string, p]),
 		);
-		const cuotasAjuste: CuotaAjuste[] = datosPoliza.cuotas.map((c) => {
-			const ajuste = ajustes.get(c.id);
+		const ajustesInclusion = new Map(
+			pagos
+				.filter((p) => p.tipo === "ajuste" && p.cuota_anexo_pago_id)
+				.map((p) => [p.cuota_anexo_pago_id as string, p]),
+		);
+		const cuotasAjuste: CuotaAjuste[] = (datosPoliza.cuotas_descontables || []).map((d) => {
+			const ajuste =
+				d.origen === "madre"
+					? d.cuota_original_id
+						? ajustesMadre.get(d.cuota_original_id)
+						: undefined
+					: d.cuota_anexo_pago_id
+						? ajustesInclusion.get(d.cuota_anexo_pago_id)
+						: undefined;
 			return {
-				cuota_original_id: c.id,
-				numero_cuota: c.numero_cuota,
-				monto_original: c.monto,
+				origen: d.origen,
+				cuota_original_id: d.cuota_original_id,
+				cuota_anexo_pago_id: d.cuota_anexo_pago_id,
+				numero_anexo: d.numero_anexo,
+				numero_cuota: d.numero_cuota,
+				monto_original: d.monto,
+				saldo_disponible: d.saldo_disponible,
 				monto_delta: ajuste ? Number(ajuste.monto) : 0,
-				fecha_vencimiento: ajuste?.fecha_vencimiento || c.fecha_vencimiento,
-				estado_original: c.estado,
+				fecha_vencimiento: ajuste?.fecha_vencimiento || d.fecha_vencimiento,
+				estado_original: d.estado,
 			};
 		});
 
@@ -2190,32 +2417,20 @@ export async function actualizarAnexo(
 			return { success: false, error: "El documento de anexo es obligatorio" };
 		}
 
-		// Validar descuentos de exclusión ANTES de tocar datos
+		// Validar descuentos de exclusión contra el saldo cobrable autoritativo
+		// (excluyendo los propios deltas de este anexo para que su cupo se libere).
 		const cuotasConDelta =
 			anexo.tipo_anexo === "exclusion" ? formState.cuotas_ajuste.filter((c) => c.monto_delta !== 0) : [];
-		if (cuotasConDelta.length > 0) {
-			const { data: cuotasOriginales, error: cuotasError } = await supabase
-				.from("polizas_pagos")
-				.select("id, monto")
-				.eq("poliza_id", anexo.poliza_id)
-				.in(
-					"id",
-					cuotasConDelta.map((c) => c.cuota_original_id),
-				);
-			throwIfAnexoError(cuotasError, "Error al verificar las cuotas de la póliza");
-
-			const montoPorCuota = new Map((cuotasOriginales || []).map((c) => [c.id as string, Number(c.monto)]));
-			for (const c of cuotasConDelta) {
-				const montoOriginal = montoPorCuota.get(c.cuota_original_id);
-				if (montoOriginal === undefined) {
-					return { success: false, error: `La cuota ${c.numero_cuota} no pertenece a esta póliza` };
-				}
-				if (Math.abs(c.monto_delta) > montoOriginal + 0.005) {
-					return {
-						success: false,
-						error: `El descuento de la cuota ${c.numero_cuota} excede su monto original (${montoOriginal.toFixed(2)})`,
-					};
-				}
+		if (anexo.tipo_anexo === "exclusion") {
+			const validacion = await construirPagosAjusteExclusion(
+				supabase,
+				anexo.poliza_id,
+				anexoId,
+				formState.cuotas_ajuste,
+				anexoId,
+			);
+			if (!validacion.ok) {
+				return { success: false, error: validacion.error };
 			}
 		}
 
@@ -2226,6 +2441,7 @@ export async function actualizarAnexo(
 		type PagoNuevo = {
 			tipo: "vigencia_corrida" | "cuota_propia" | "ajuste";
 			cuota_original_id: string | null;
+			cuota_anexo_pago_id: string | null;
 			numero_cuota: number | null;
 			monto: number;
 			direccion: DireccionVigenciaCorrida | null;
@@ -2240,6 +2456,7 @@ export async function actualizarAnexo(
 				nuevosPagos.push({
 					tipo: "vigencia_corrida",
 					cuota_original_id: null,
+					cuota_anexo_pago_id: null,
 					numero_cuota: 0,
 					monto: Math.abs(formState.vigencia_corrida.monto),
 					direccion,
@@ -2255,6 +2472,7 @@ export async function actualizarAnexo(
 				nuevosPagos.push({
 					tipo: "cuota_propia",
 					cuota_original_id: null,
+					cuota_anexo_pago_id: null,
 					numero_cuota: c.numero_cuota,
 					monto: c.monto,
 					direccion: null,
@@ -2269,7 +2487,8 @@ export async function actualizarAnexo(
 			for (const c of cuotasConDelta) {
 				nuevosPagos.push({
 					tipo: "ajuste",
-					cuota_original_id: c.cuota_original_id,
+					cuota_original_id: c.origen === "madre" ? c.cuota_original_id : null,
+					cuota_anexo_pago_id: c.origen === "inclusion" ? c.cuota_anexo_pago_id : null,
 					numero_cuota: c.numero_cuota,
 					monto: -Math.abs(c.monto_delta),
 					direccion: null,
@@ -2282,22 +2501,24 @@ export async function actualizarAnexo(
 		const { data: pagosExistentes, error: pagosExistentesError } = await supabase
 			.from("polizas_anexos_pagos")
 			.select(
-				"id, tipo, cuota_original_id, numero_cuota, monto, direccion, fecha_vencimiento, estado, fecha_pago",
+				"id, tipo, cuota_original_id, cuota_anexo_pago_id, numero_cuota, monto, direccion, fecha_vencimiento, estado, fecha_pago",
 			)
 			.eq("anexo_id", anexoId);
 		throwIfAnexoError(pagosExistentesError, "Error al verificar los pagos del anexo");
 
-		// La dirección entra en la clave: cambiar cobro↔devolución es un cambio
-		// financiero (revierte un anexo activo a pendiente y reactiva la póliza).
+		// La dirección y la cuota objetivo (madre o inclusión) entran en la clave:
+		// cambiar cobro↔devolución o reapuntar el descuento es un cambio financiero
+		// (revierte un anexo activo a pendiente y reactiva la póliza).
 		const clavePago = (p: {
 			tipo: string;
 			cuota_original_id: string | null;
+			cuota_anexo_pago_id?: string | null;
 			numero_cuota: number | null;
 			monto: number;
 			direccion?: string | null;
 			fecha_vencimiento: string | null;
 		}) =>
-			`${p.tipo}|${p.cuota_original_id || ""}|${p.numero_cuota ?? ""}|${Number(p.monto).toFixed(2)}|${p.direccion || ""}|${p.fecha_vencimiento || ""}`;
+			`${p.tipo}|${p.cuota_original_id || ""}|${p.cuota_anexo_pago_id || ""}|${p.numero_cuota ?? ""}|${Number(p.monto).toFixed(2)}|${p.direccion || ""}|${p.fecha_vencimiento || ""}`;
 
 		const clavesExistentes = (pagosExistentes || []).map(clavePago).sort().join("\n");
 		const clavesNuevas = nuevosPagos.map(clavePago).sort().join("\n");
@@ -2398,6 +2619,7 @@ export async function actualizarAnexo(
 						nuevosPagos.map((p) => ({
 							anexo_id: anexoId,
 							cuota_original_id: p.cuota_original_id,
+							cuota_anexo_pago_id: p.cuota_anexo_pago_id,
 							tipo: p.tipo,
 							numero_cuota: p.numero_cuota,
 							monto: p.monto,

@@ -20,6 +20,7 @@ export type CuotaPago = {
 	poliza_id: string;
 	numero_cuota: number;
 	monto: number;
+	monto_descuento?: number; // descuentos de exclusión activos (positivo); reduce el cobrable
 	fecha_vencimiento: string; // ISO date string
 	fecha_pago: string | null; // ISO date string
 	estado: EstadoPago; // Estado manual (se mantiene para compatibilidad)
