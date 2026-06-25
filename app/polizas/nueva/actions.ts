@@ -127,7 +127,7 @@ async function insertarPagos(supabase: SupabaseClient, polizaId: string, formSta
 
 	// Guardrail server-side (defensa en profundidad; el mismo que la UI bloquea en
 	// Resumen/Modalidad): una póliza NUEVA no registra cuotas ya vencidas. Solo se
-	// admiten cuotas del mes vigente en adelante, con una ventana de gracia de 30 días
+	// admiten cuotas del mes vigente en adelante, con una ventana de gracia de 60 días
 	// para pólizas recién recibidas. La edición tiene su propio action y no pasa por acá.
 	const limiteCuota = restarDiasISO(hoyLaPaz(), DIAS_GRACIA_CUOTA_VENCIDA);
 	const cuotaFueraDeVentana = (fecha?: string | null) => !!fecha && fecha < limiteCuota;

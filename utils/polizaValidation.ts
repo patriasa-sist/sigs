@@ -29,7 +29,7 @@ import { formatDate, restarDiasISO } from "./formatters";
  * tolera este atraso para pólizas recién recibidas que ya estaban pendientes de
  * cobro desde hace pocos días. NO aplica en edición.
  */
-export const DIAS_GRACIA_CUOTA_VENCIDA = 30;
+export const DIAS_GRACIA_CUOTA_VENCIDA = 60;
 
 /**
  * Indica si un ramo tiene formulario específico implementado (Paso 3) y por lo
@@ -438,7 +438,7 @@ export function validarModalidadPago(
 	// Guardrail de CREACIÓN/RENOVACIÓN: una póliza nueva no debe cargar cuotas ya
 	// vencidas (caso típico: se carga una histórica con todo el cronograma viejo y
 	// las cuotas pasadas aparecen como "Vencido" en Cobranza). Se tolera una ventana
-	// de gracia (default 30 días) para pólizas recién recibidas, atrasadas pocos días
+	// de gracia (default 60 días) para pólizas recién recibidas, atrasadas pocos días
 	// pero aún pendientes de cobro. NO aplica en edición (las pólizas en curso sí
 	// tienen cuotas pasadas legítimas) ni a cuotas ya marcadas como pagadas.
 	if (opciones?.bloquearCuotasVencidas && opciones.hoy) {

@@ -407,7 +407,7 @@ export function ModalidadPago({
 
 		// Validar campos requeridos (retroactiva: prima opcional).
 		// En creación/renovación se bloquean cuotas ya vencidas (ventana de gracia de
-		// 30 días); en edición no, porque las pólizas en curso sí tienen cuotas pasadas.
+		// 60 días); en edición no, porque las pólizas en curso sí tienen cuotas pasadas.
 		const validacion = validarModalidadPago(datosPago, tipoPrima, esRetroactiva, {
 			bloquearCuotasVencidas: mode !== "edit",
 			hoy: hoyLaPaz(),
@@ -841,7 +841,7 @@ export function ModalidadPago({
 									Use la prima total real de la póliza arriba y aquí el importe de cada cuota que aún
 									está <strong>pendiente de cobro</strong>. Se cargan únicamente las cuotas del{" "}
 									<strong>mes vigente en adelante</strong>; las de meses ya pasados (ya cobradas) no
-									se registran y el sistema bloquea cuotas con más de 30 días de atraso. Si lo deja
+									se registran y el sistema bloquea cuotas con más de 60 días de atraso. Si lo deja
 									vacío, las cuotas se calculan dividiendo la prima total.
 								</p>
 							</div>
