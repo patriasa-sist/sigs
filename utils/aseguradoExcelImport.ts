@@ -26,12 +26,19 @@ function normalizarNombreColumna(nombre: string): string {
 	return nombre.toLowerCase().trim().normalize("NFD").replace(/[̀-ͯ]/g, "");
 }
 
+function coincideEncabezado(headerNormalizado: string, variante: string): boolean {
+	const v = normalizarNombreColumna(variante);
+	// Coincidencia exacta o con sufijo descriptivo, p.ej. "Nivel (Nivel 1 | Nivel 2)".
+	// El delimitador " "/"(" evita falsos positivos como "id" → "identidad".
+	return headerNormalizado === v || headerNormalizado.startsWith(`${v} `) || headerNormalizado.startsWith(`${v}(`);
+}
+
 function mapearColumnas(headers: string[]): Record<string, number> {
 	const mapa: Record<string, number> = {};
 	headers.forEach((header, index) => {
 		const headerNormalizado = normalizarNombreColumna(header);
 		Object.entries(COLUMNAS_ESPERADAS).forEach(([campo, variantes]) => {
-			if (variantes.some((v) => normalizarNombreColumna(v) === headerNormalizado)) {
+			if (variantes.some((v) => coincideEncabezado(headerNormalizado, v))) {
 				mapa[campo] = index;
 			}
 		});
@@ -76,14 +83,24 @@ function parsearGenero(valor: unknown): "M" | "F" | "Otro" | undefined {
 	return undefined;
 }
 
-function resolverNivelId(valorNivel: unknown, niveles: NivelCobertura[]): string {
-	if (!niveles.length) return "";
+function resolverNivelId(
+	valorNivel: unknown,
+	niveles: NivelCobertura[],
+): { nivel_id: string; error?: string } {
+	if (!niveles.length) return { nivel_id: "" };
+	// Sin valor: cae al primer nivel (válido cuando solo hay uno configurado).
 	if (valorNivel === null || valorNivel === undefined || String(valorNivel).trim() === "") {
-		return niveles[0].id;
+		return { nivel_id: niveles[0].id };
 	}
 	const str = String(valorNivel).trim().toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
 	const encontrado = niveles.find((n) => n.nombre.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "") === str);
-	return encontrado ? encontrado.id : niveles[0].id;
+	if (encontrado) return { nivel_id: encontrado.id };
+	return {
+		nivel_id: niveles[0].id,
+		error: `Nivel "${String(valorNivel).trim()}" no coincide con ninguno configurado (${niveles
+			.map((n) => n.nombre)
+			.join(", ")})`,
+	};
 }
 
 function validarAsegurado(datos: Partial<AseguradoAPVida>): { valido: boolean; errores: string[] } {
@@ -157,6 +174,8 @@ export async function importarAseguradosDesdeExcel(
 			const filaVacia = valores.every((v) => v === null || v === undefined || v === "");
 			if (filaVacia) return;
 
+			const nivelResuelto = resolverNivelId(mapa.nivel !== undefined ? valores[mapa.nivel] : undefined, niveles);
+
 			const parcial: Partial<AseguradoAPVida> = {
 				id: crypto.randomUUID(),
 				nombre_completo:
@@ -165,14 +184,17 @@ export async function importarAseguradosDesdeExcel(
 				fecha_nacimiento:
 					mapa.fecha_nacimiento !== undefined ? parsearFecha(valores[mapa.fecha_nacimiento]) : undefined,
 				genero: mapa.genero !== undefined ? parsearGenero(valores[mapa.genero]) : undefined,
-				nivel_id: resolverNivelId(mapa.nivel !== undefined ? valores[mapa.nivel] : undefined, niveles),
+				nivel_id: nivelResuelto.nivel_id,
 			};
 
 			const validacion = validarAsegurado(parcial);
-			if (validacion.valido) {
+			const erroresFila = [...validacion.errores];
+			if (nivelResuelto.error) erroresFila.push(nivelResuelto.error);
+
+			if (erroresFila.length === 0) {
 				asegurados_validos.push(parcial as AseguradoAPVida);
 			} else {
-				errores.push({ fila: rowNumber, errores: validacion.errores });
+				errores.push({ fila: rowNumber, errores: erroresFila });
 			}
 		});
 
