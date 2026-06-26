@@ -69,5 +69,9 @@ export function describirAporteAnexo(tipoAnexo: TipoAnexo, neto: number): Aporte
 	if (tipoAnexo === "exclusion") {
 		return { etiqueta: "Descuenta", informativo: false, tono: "negativo" };
 	}
+	if (tipoAnexo === "reemplazo") {
+		// Un reemplazo no tiene impacto contable: neto siempre 0.
+		return { etiqueta: "Reemplazo", informativo: false, tono: "neutro" };
+	}
 	return { etiqueta: "Ajuste", informativo: false, tono: neto >= 0 ? "positivo" : "negativo" };
 }

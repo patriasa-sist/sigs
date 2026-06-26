@@ -12,6 +12,9 @@ import type {
 	DocumentoPoliza,
 	AdvertenciaPoliza,
 	Moneda,
+	NivelSalud,
+	NivelCobertura,
+	NivelAPNave,
 } from "./poliza";
 
 // Motivo por el que un anexo no se pudo abrir para edición, para que la UI
@@ -23,7 +26,7 @@ export type MotivoErrorEdicionAnexo = "permiso" | "estado" | "no_encontrado" | "
 // TIPOS BASE
 // ============================================
 
-export type TipoAnexo = "inclusion" | "exclusion" | "anulacion";
+export type TipoAnexo = "inclusion" | "exclusion" | "anulacion" | "reemplazo";
 export type EstadoAnexo = "pendiente" | "activo" | "rechazado";
 export type PasoAnexo = 1 | 2 | 3 | 4 | 5;
 
@@ -197,8 +200,20 @@ export type DatosPolizaParaAnexo = {
 	cuotas_descontables?: CuotaDescontable[];
 	// Items existentes del ramo (para mostrar como contexto)
 	items_actuales: ItemsActualesRamo | null;
+	// Niveles de cobertura ya configurados en la póliza (para que la inclusión
+	// de un item nuevo lo mapee a un nivel existente). Solo aplica a ramos con
+	// niveles (Salud, Vida/AP/Sepelio, Aeronavegación/Naves).
+	niveles: NivelesPolizaAnexo;
 	// Anexos previos activos
 	anexos_activos: AnexoResumen[];
+};
+
+// Niveles de cobertura existentes de la póliza, por familia de ramo. Cada lista
+// se llena solo para el ramo correspondiente; el resto va vacía.
+export type NivelesPolizaAnexo = {
+	salud: NivelSalud[]; // polizas_salud_niveles
+	cobertura: NivelCobertura[]; // polizas_niveles (Vida / AP / Sepelio)
+	naves_ap: NivelAPNave[]; // polizas_aeronavegacion_niveles_ap
 };
 
 export type CuotaOriginalInfo = {

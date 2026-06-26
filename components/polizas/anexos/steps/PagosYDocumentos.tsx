@@ -723,7 +723,9 @@ export function PagosYDocumentos({
 			? "Plan de Pago del Anexo"
 			: tipoAnexo === "exclusion"
 				? "Descuento por Exclusión"
-				: "Vigencia Corrida y Documentos";
+				: tipoAnexo === "reemplazo"
+					? "Documentos del Reemplazo"
+					: "Vigencia Corrida y Documentos";
 
 	return (
 		<div className="bg-white border rounded-lg p-6 shadow-sm">

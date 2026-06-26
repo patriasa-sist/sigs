@@ -38,7 +38,7 @@ async function checkTeamLeaderForPolicy(
 export type AnexoPendiente = {
 	id: string;
 	numero_anexo: string;
-	tipo_anexo: "inclusion" | "exclusion" | "anulacion";
+	tipo_anexo: "inclusion" | "exclusion" | "anulacion" | "reemplazo";
 	fecha_anexo: string;
 	fecha_efectiva: string;
 	observaciones: string | null;

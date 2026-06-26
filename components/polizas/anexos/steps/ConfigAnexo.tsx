@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronRight, ChevronLeft, Plus, Minus, XCircle, AlertTriangle } from "lucide-react";
+import { ChevronRight, ChevronLeft, Plus, Minus, XCircle, AlertTriangle, ArrowLeftRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -33,6 +33,14 @@ const TIPOS_ANEXO = [
 		icon: Minus,
 		color: "border-orange-200 bg-orange-50 text-orange-700",
 		selectedColor: "border-orange-500 bg-orange-100 ring-2 ring-orange-500",
+	},
+	{
+		value: "reemplazo" as const,
+		label: "Reemplazo",
+		description: "Cambiar un item por otro (sale uno, entra uno). No afecta la prima ni las cuotas.",
+		icon: ArrowLeftRight,
+		color: "border-blue-200 bg-blue-50 text-blue-700",
+		selectedColor: "border-blue-500 bg-blue-100 ring-2 ring-blue-500",
 	},
 	{
 		value: "anulacion" as const,
@@ -82,7 +90,7 @@ export function ConfigAnexo({
 
 		setErrores([]);
 		onChange({
-			tipo_anexo: tipoAnexo as "inclusion" | "exclusion" | "anulacion",
+			tipo_anexo: tipoAnexo as "inclusion" | "exclusion" | "anulacion" | "reemplazo",
 			numero_anexo: numeroAnexo.trim(),
 			fecha_efectiva: fechaEfectiva,
 			observaciones: observaciones.trim(),
@@ -102,7 +110,7 @@ export function ConfigAnexo({
 			{/* Tipo de Anexo */}
 			<div className="mb-6">
 				<Label className="text-sm font-medium mb-3 block">Tipo de Anexo</Label>
-				<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+				<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
 					{TIPOS_ANEXO.map((tipo) => {
 						const Icon = tipo.icon;
 						const isSelected = tipoAnexo === tipo.value;

@@ -222,6 +222,8 @@ export function NuevoAnexoForm({ mode = "create", anexoId, anexoEstado, initialF
 					ramo={formState.poliza_resumen!.ramo}
 					itemsActuales={datosPoliza.items_actuales}
 					itemsCambio={formState.items_cambio}
+					niveles={datosPoliza.niveles}
+					moneda={formState.poliza_resumen!.moneda}
 					onChange={(items) => setFormState((prev) => ({ ...prev, items_cambio: items }))}
 					onSiguiente={() => setFormState((prev) => ({ ...prev, paso_actual: 4 }))}
 					onAnterior={() => setFormState((prev) => ({ ...prev, paso_actual: 2 }))}

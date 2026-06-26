@@ -9,6 +9,7 @@ import { resolverNombresCliente } from "@/utils/polizas/resolverNombresCliente";
 import { netoAporteAnexo, type PagoAnexoLite } from "@/utils/polizas/aporteAnexo";
 import { restaurarCuotasPorAnulacion } from "@/utils/polizas/anulacionCuotas";
 import type {
+	TipoAnexo,
 	AnexoFormState,
 	PolizaResumenAnexo,
 	DatosPolizaParaAnexo,
@@ -22,6 +23,7 @@ import type {
 	CuotaDescontable,
 	MotivoErrorEdicionAnexo,
 	DireccionVigenciaCorrida,
+	NivelesPolizaAnexo,
 } from "@/types/anexo";
 import type {
 	VehiculoAutomotor,
@@ -33,11 +35,24 @@ import type {
 	BienAseguradoRiesgosVarios,
 	AseguradoConNivel,
 	DocumentoPoliza,
+	NivelSalud,
+	NivelCobertura,
+	NivelAPNave,
 } from "@/types/poliza";
 
 // ============================================
 // HELPERS
 // ============================================
+
+// Cuenta inclusiones/exclusiones de items_cambio (para validar el reemplazo).
+function contarItemsCambio(items: AnexoFormState["items_cambio"]): { incl: number; excl: number } {
+	if (!items) return { incl: 0, excl: 0 };
+	const lista = items.tipo_ramo === "Salud" ? [...items.items_asegurados, ...items.items_beneficiarios] : items.items;
+	return {
+		incl: lista.filter((i) => i.accion === "inclusion").length,
+		excl: lista.filter((i) => i.accion === "exclusion").length,
+	};
+}
 
 function mapAnexoError(
 	error: { code?: string; message?: string; details?: string; hint?: string } | null | undefined,
@@ -322,6 +337,10 @@ export async function obtenerDatosParaAnexo(
 			opciones?.excluirAnexoId,
 		);
 
+		// Niveles de cobertura ya configurados en la póliza (para mapear el item
+		// nuevo de una inclusión a un nivel existente).
+		const niveles = await cargarNivelesPoliza(supabase, polizaId, poliza.ramo);
+
 		const datos: DatosPolizaParaAnexo = {
 			poliza: {
 				id: poliza.id,
@@ -348,6 +367,7 @@ export async function obtenerDatosParaAnexo(
 			})),
 			cuotas_descontables: cuotasDescontables,
 			items_actuales: itemsActuales,
+			niveles,
 			anexos_activos: (anexosResult.data || []).map((a) => {
 				const profile = a.profiles as unknown as { full_name: string } | null;
 				return {
@@ -584,6 +604,55 @@ async function construirPagosAjusteExclusion(
 }
 
 /**
+ * Carga los niveles de cobertura ya configurados en la póliza, por familia de
+ * ramo. Permite que una inclusión mapee el item nuevo a un nivel existente (no
+ * se crean niveles desde un anexo). Solo el ramo correspondiente trae datos.
+ */
+async function cargarNivelesPoliza(
+	supabase: Awaited<ReturnType<typeof createClient>>,
+	polizaId: string,
+	ramo: string,
+): Promise<NivelesPolizaAnexo> {
+	const ramoLower = ramo.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+
+	const vacio: NivelesPolizaAnexo = { salud: [], cobertura: [], naves_ap: [] };
+
+	if (ramoLower.includes("salud") || ramoLower.includes("enfermedad")) {
+		const { data } = await supabase
+			.from("polizas_salud_niveles")
+			.select("id, nombre, monto")
+			.eq("poliza_id", polizaId);
+		return { ...vacio, salud: (data || []) as NivelSalud[] };
+	}
+
+	if (ramoLower.includes("vida") || ramoLower.includes("sepelio") || ramoLower.includes("defuncion")) {
+		const { data } = await supabase
+			.from("polizas_niveles")
+			.select("id, nombre, prima_nivel, coberturas")
+			.eq("poliza_id", polizaId);
+		return { ...vacio, cobertura: (data || []) as NivelCobertura[] };
+	}
+
+	if (ramoLower.includes("accidente") && ramoLower.includes("personal")) {
+		const { data } = await supabase
+			.from("polizas_niveles")
+			.select("id, nombre, prima_nivel, coberturas")
+			.eq("poliza_id", polizaId);
+		return { ...vacio, cobertura: (data || []) as NivelCobertura[] };
+	}
+
+	if (ramoLower.includes("aeronavegacion") || ramoLower.includes("nave") || ramoLower.includes("embarcacion")) {
+		const { data } = await supabase
+			.from("polizas_aeronavegacion_niveles_ap")
+			.select("id, nombre, monto_muerte_accidental, monto_invalidez, monto_gastos_medicos")
+			.eq("poliza_id", polizaId);
+		return { ...vacio, naves_ap: (data || []) as NivelAPNave[] };
+	}
+
+	return vacio;
+}
+
+/**
  * Carga los items actuales del ramo de una póliza para mostrar como contexto.
  * Incluye items originales + items agregados por anexos de inclusión activos,
  * y excluye items removidos por anexos de exclusión activos.
@@ -599,8 +668,14 @@ async function cargarItemsActualesRamo(
 		.normalize("NFD")
 		.replace(/[\u0300-\u036f]/g, "");
 
-	const inclusionIds = anexosActivos.filter((a) => a.tipo_anexo === "inclusion").map((a) => a.id);
-	const exclusionIds = anexosActivos.filter((a) => a.tipo_anexo === "exclusion").map((a) => a.id);
+	// Un reemplazo aporta items por ambos lados: sus filas accion='inclusion' se
+	// suman y sus filas accion='exclusion' se quitan, igual que inclusión/exclusión.
+	const inclusionIds = anexosActivos
+		.filter((a) => a.tipo_anexo === "inclusion" || a.tipo_anexo === "reemplazo")
+		.map((a) => a.id);
+	const exclusionIds = anexosActivos
+		.filter((a) => a.tipo_anexo === "exclusion" || a.tipo_anexo === "reemplazo")
+		.map((a) => a.id);
 
 	if (ramoLower.includes("automotor")) {
 		const { data } = await supabase.from("polizas_automotor_vehiculos").select("*").eq("poliza_id", polizaId);
@@ -902,6 +977,17 @@ export async function guardarAnexo(formState: AnexoFormState): Promise<{
 			}
 		}
 
+		// Reemplazo: exactamente un item que sale y uno que entra (sin impacto contable)
+		if (formState.config.tipo_anexo === "reemplazo") {
+			const { incl, excl } = contarItemsCambio(formState.items_cambio);
+			if (excl !== 1 || incl !== 1) {
+				return {
+					success: false,
+					error: "El reemplazo requiere exactamente un item que sale (exclusión) y uno que entra (inclusión).",
+				};
+			}
+		}
+
 		// Verificar documento obligatorio
 		const docsValidos = formState.documentos.filter((d) => d.storage_path && d.upload_status === "uploaded");
 		if (docsValidos.length === 0) {
@@ -956,7 +1042,7 @@ export async function guardarAnexo(formState: AnexoFormState): Promise<{
 			} else if (formState.config.tipo_anexo === "inclusion") {
 				// Inclusión: cuotas propias del anexo, independientes de la póliza madre
 				await guardarCuotasInclusion(supabase, anexo.id, formState.plan_pago_inclusion!);
-			} else {
+			} else if (formState.config.tipo_anexo === "exclusion") {
 				// Exclusión: descuentos repartidos sobre cuotas descontables (madre +
 				// inclusiones), validados contra el saldo cobrable autoritativo.
 				const construido = await construirPagosAjusteExclusion(
@@ -973,6 +1059,7 @@ export async function guardarAnexo(formState: AnexoFormState): Promise<{
 					throwIfAnexoError(pagosError, "Error al guardar descuentos de exclusión");
 				}
 			}
+			// Reemplazo: sin pagos (no genera prima ni toca cuotas). Solo items.
 
 			// Items del ramo
 			if (formState.items_cambio && formState.config.tipo_anexo !== "anulacion") {
@@ -1420,7 +1507,7 @@ export async function obtenerCuotasConsolidadas(polizaId: string): Promise<{
 					return {
 						anexo_id: info.id,
 						numero_anexo: info.numero_anexo,
-						tipo_anexo: info.tipo_anexo as "inclusion" | "exclusion" | "anulacion",
+						tipo_anexo: info.tipo_anexo as TipoAnexo,
 						monto_delta: Number(a.monto),
 					};
 				}),
@@ -1510,7 +1597,7 @@ export type AnexoDetalleDocumento = {
 export type AnexoDetalle = {
 	id: string;
 	numero_anexo: string;
-	tipo_anexo: "inclusion" | "exclusion" | "anulacion";
+	tipo_anexo: TipoAnexo;
 	fecha_anexo: string;
 	fecha_efectiva: string;
 	estado: string;
@@ -1903,7 +1990,7 @@ async function verifyAnexoEditPermission(anexoId: string) {
 	const anexoData = {
 		id: anexo.id as string,
 		estado: anexo.estado as "pendiente" | "rechazado" | "activo",
-		tipo_anexo: anexo.tipo_anexo as "inclusion" | "exclusion" | "anulacion",
+		tipo_anexo: anexo.tipo_anexo as TipoAnexo,
 		poliza_id: anexo.poliza_id as string,
 		numero_anexo: anexo.numero_anexo as string,
 		fecha_efectiva: anexo.fecha_efectiva as string,
@@ -2425,6 +2512,17 @@ export async function actualizarAnexo(
 			}
 		}
 
+		// Reemplazo: exactamente un item que sale y uno que entra
+		if (anexo.tipo_anexo === "reemplazo") {
+			const { incl, excl } = contarItemsCambio(formState.items_cambio);
+			if (excl !== 1 || incl !== 1) {
+				return {
+					success: false,
+					error: "El reemplazo requiere exactamente un item que sale (exclusión) y uno que entra (inclusión).",
+				};
+			}
+		}
+
 		// Documento obligatorio (existentes que se mantienen o nuevos subidos)
 		const docsValidos = formState.documentos.filter((d) => d.storage_path && d.upload_status === "uploaded");
 		if (docsValidos.length === 0) {
@@ -2497,7 +2595,7 @@ export async function actualizarAnexo(
 							: `Cuota ${c.numero_cuota} de ${plan.cuotas.length} por inclusión`,
 				});
 			}
-		} else {
+		} else if (anexo.tipo_anexo === "exclusion") {
 			for (const c of cuotasConDelta) {
 				nuevosPagos.push({
 					tipo: "ajuste",
@@ -2511,6 +2609,7 @@ export async function actualizarAnexo(
 				});
 			}
 		}
+		// Reemplazo: nuevosPagos queda vacío (no hay pagos asociados).
 
 		const { data: pagosExistentes, error: pagosExistentesError } = await supabase
 			.from("polizas_anexos_pagos")

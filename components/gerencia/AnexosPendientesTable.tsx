@@ -26,6 +26,7 @@ type Props = {
 const TIPO_BADGE = {
 	inclusion: { label: "Inclusión", className: "bg-teal-50 text-teal-800 border-teal-200" },
 	exclusion: { label: "Exclusión", className: "bg-amber-50 text-amber-800 border-amber-200" },
+	reemplazo: { label: "Reemplazo", className: "bg-blue-50 text-blue-800 border-blue-200" },
 	anulacion: { label: "Anulación", className: "bg-rose-50 text-rose-800 border-rose-200" },
 };
 

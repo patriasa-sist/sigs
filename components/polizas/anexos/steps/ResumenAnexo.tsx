@@ -20,6 +20,7 @@ type Props = {
 const TIPO_LABELS = {
 	inclusion: { label: "Inclusión", color: "bg-green-100 text-green-700" },
 	exclusion: { label: "Exclusión", color: "bg-orange-100 text-orange-700" },
+	reemplazo: { label: "Reemplazo", color: "bg-blue-100 text-blue-700" },
 	anulacion: { label: "Anulación", color: "bg-red-100 text-red-700" },
 };
 
@@ -63,6 +64,22 @@ export function ResumenAnexo({
 			advertencias.push({
 				tipo: "warning",
 				mensaje: "No se registraron cambios en items ni descuentos de pago.",
+			});
+		}
+	}
+
+	if (config.tipo_anexo === "reemplazo") {
+		const lista = formState.items_cambio
+			? formState.items_cambio.tipo_ramo === "Salud"
+				? [...formState.items_cambio.items_asegurados, ...formState.items_cambio.items_beneficiarios]
+				: formState.items_cambio.items
+			: [];
+		const incl = lista.filter((i) => i.accion === "inclusion").length;
+		const excl = lista.filter((i) => i.accion === "exclusion").length;
+		if (incl !== 1 || excl !== 1) {
+			advertencias.push({
+				tipo: "error",
+				mensaje: "El reemplazo requiere exactamente un item que sale y uno que entra.",
 			});
 		}
 	}
@@ -195,7 +212,9 @@ export function ResumenAnexo({
 							? "Plan de Pago del Anexo"
 							: config.tipo_anexo === "exclusion"
 								? "Descuento por Exclusión"
-								: "Ajuste de Anulación"}
+								: config.tipo_anexo === "reemplazo"
+									? "Impacto Contable"
+									: "Ajuste de Anulación"}
 					</h3>
 					<button onClick={() => onEditarPaso(4)} className="text-blue-500 hover:text-blue-700">
 						<Edit className="h-4 w-4" />
@@ -302,7 +321,11 @@ export function ResumenAnexo({
 								)}
 							</>
 						) : (
-							<p className="text-gray-400">Sin ajuste de anulación</p>
+							<p className="text-gray-400">
+								{config.tipo_anexo === "reemplazo"
+									? "Sin impacto contable: el reemplazo no genera prima ni modifica cuotas."
+									: "Sin ajuste de anulación"}
+							</p>
 						)}
 					</div>
 				)}
