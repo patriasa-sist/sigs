@@ -404,7 +404,8 @@ export type SiniestroVista = Siniestro & {
 	departamento_nombre: string;
 	departamento_codigo: string;
 
-	// Responsable de la póliza (comercial)
+	// Responsable de la póliza (comercial / ejecutivo)
+	poliza_responsable_id?: string;
 	poliza_responsable_nombre?: string;
 
 	// Responsable del siniestro (NUEVO - usuario asignado al caso)
@@ -626,6 +627,7 @@ export type EstadoActualSiniestro = {
 	estado_actual_codigo?: string;
 	estado_actual_fecha?: string;
 	estado_actual_observacion?: string;
+	ultima_nota?: string | null; // Texto de la observación más reciente del siniestro (vista)
 };
 
 // Siniestro con flag de atención (sin actualizaciones en 10+ días)
@@ -637,6 +639,9 @@ export type SiniestroConEstado = Siniestro &
 export type SiniestroVistaConEstado = SiniestroVista &
 	EstadoActualSiniestro & {
 		requiere_atencion: boolean;
+		// Equipos a los que pertenece el ejecutivo (responsable) de la póliza.
+		// Enriquecido en el server action (no proviene de la vista).
+		poliza_equipo_nombres?: string[];
 	};
 
 // ============================================

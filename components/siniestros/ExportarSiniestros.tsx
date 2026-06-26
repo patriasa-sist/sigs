@@ -15,6 +15,8 @@ interface ExportarSiniestrosProps {
 		estadoFiltro?: string;
 		ramoFiltro?: string;
 		departamentoFiltro?: string;
+		ejecutivoFiltro?: string;
+		equipoFiltro?: string;
 	};
 }
 
@@ -40,6 +42,7 @@ export default function ExportarSiniestros({ siniestros, filtrosActivos }: Expor
 
 			// Encabezados
 			const headers = [
+				"Nro Reporte",
 				"Fecha Siniestro",
 				"Fecha Reporte",
 				"Número Póliza",
@@ -52,13 +55,14 @@ export default function ExportarSiniestros({ siniestros, filtrosActivos }: Expor
 				"Monto Reserva",
 				"Moneda",
 				"Compañía",
-				"Responsable",
+				"Usuario Siniestros",
 				"Documentos",
 				"Observaciones",
 				"Creado por",
 				"Fecha Creación",
-				"Etapa",
+				"Último Estado",
 				"Último Movimiento",
+				"Última Nota",
 			];
 
 			// Agregar encabezados con estilo
@@ -74,6 +78,7 @@ export default function ExportarSiniestros({ siniestros, filtrosActivos }: Expor
 			// Datos
 			siniestros.forEach((siniestro) => {
 				worksheet.addRow([
+					siniestro.codigo_siniestro || "—",
 					toExcelDateLaPaz(siniestro.fecha_siniestro),
 					toExcelDateLaPaz(siniestro.fecha_reporte),
 					siniestro.numero_poliza,
@@ -93,11 +98,12 @@ export default function ExportarSiniestros({ siniestros, filtrosActivos }: Expor
 					toExcelDateLaPaz(siniestro.fecha_creacion),
 					siniestro.estado_actual_nombre || "—",
 					siniestro.updated_at ? toExcelDateLaPaz(siniestro.updated_at) : "—",
+					siniestro.ultima_nota || "—",
 				]);
 			});
 
 			// Formatear columnas de fechas
-			const dateColumns = [1, 2, 17, 19]; // Fecha Siniestro, Fecha Reporte, Fecha Creación, Último Movimiento
+			const dateColumns = [2, 3, 18, 20]; // Fecha Siniestro, Fecha Reporte, Fecha Creación, Último Movimiento
 			dateColumns.forEach((colNum) => {
 				const column = worksheet.getColumn(colNum);
 				column.numFmt = "dd/mm/yyyy";
@@ -105,25 +111,27 @@ export default function ExportarSiniestros({ siniestros, filtrosActivos }: Expor
 			});
 
 			// Formatear columna de montos
-			const montoColumn = worksheet.getColumn(10); // Monto Reserva
+			const montoColumn = worksheet.getColumn(11); // Monto Reserva
 			montoColumn.numFmt = "#,##0.00";
 			montoColumn.width = 14;
 
 			// Ajustar anchos de columnas
-			worksheet.getColumn(3).width = 18; // Número Póliza
-			worksheet.getColumn(4).width = 18; // Ramo
-			worksheet.getColumn(5).width = 30; // Cliente
-			worksheet.getColumn(6).width = 15; // Documento
-			worksheet.getColumn(7).width = 12; // Estado
-			worksheet.getColumn(8).width = 15; // Departamento
-			worksheet.getColumn(9).width = 35; // Lugar del Hecho
-			worksheet.getColumn(11).width = 8; // Moneda
-			worksheet.getColumn(12).width = 25; // Compañía
-			worksheet.getColumn(13).width = 25; // Responsable
-			worksheet.getColumn(14).width = 10; // Documentos
-			worksheet.getColumn(15).width = 12; // Observaciones
-			worksheet.getColumn(16).width = 25; // Creado por
-			worksheet.getColumn(18).width = 18; // Etapa
+			worksheet.getColumn(1).width = 14; // Nro Reporte
+			worksheet.getColumn(4).width = 18; // Número Póliza
+			worksheet.getColumn(5).width = 18; // Ramo
+			worksheet.getColumn(6).width = 30; // Cliente
+			worksheet.getColumn(7).width = 15; // Documento
+			worksheet.getColumn(8).width = 12; // Estado
+			worksheet.getColumn(9).width = 15; // Departamento
+			worksheet.getColumn(10).width = 35; // Lugar del Hecho
+			worksheet.getColumn(12).width = 8; // Moneda
+			worksheet.getColumn(13).width = 25; // Compañía
+			worksheet.getColumn(14).width = 25; // Usuario Siniestros
+			worksheet.getColumn(15).width = 10; // Documentos
+			worksheet.getColumn(16).width = 12; // Observaciones
+			worksheet.getColumn(17).width = 25; // Creado por
+			worksheet.getColumn(19).width = 18; // Último Estado
+			worksheet.getColumn(21).width = 40; // Última Nota
 
 			// Aplicar bordes a todas las celdas con datos
 			worksheet.eachRow((row, rowNumber) => {
@@ -174,6 +182,12 @@ export default function ExportarSiniestros({ siniestros, filtrosActivos }: Expor
 				}
 				if (filtrosActivos.departamentoFiltro && filtrosActivos.departamentoFiltro !== "todos") {
 					summarySheet.addRow(["Departamento filtrado:", filtrosActivos.departamentoFiltro]);
+				}
+				if (filtrosActivos.ejecutivoFiltro && filtrosActivos.ejecutivoFiltro !== "todos") {
+					summarySheet.addRow(["Ejecutivo (póliza) filtrado:", filtrosActivos.ejecutivoFiltro]);
+				}
+				if (filtrosActivos.equipoFiltro && filtrosActivos.equipoFiltro !== "todos") {
+					summarySheet.addRow(["Equipo filtrado:", filtrosActivos.equipoFiltro]);
 				}
 
 				summarySheet.getColumn(1).width = 25;

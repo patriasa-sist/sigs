@@ -1938,6 +1938,41 @@ export async function obtenerSiniestrosConAtencion(): Promise<ObtenerSiniestrosR
 		// Calcular estadísticas
 		const siniestros = (data || []) as SiniestroVistaConEstado[];
 
+		// Enriquecer cada siniestro con los equipos del ejecutivo (responsable) de la
+		// póliza, para habilitar el filtro por equipo del reporte. equipo_miembros y
+		// equipos son tablas pequeñas; se acotan a los ejecutivos presentes (2 queries).
+		const ejecutivoIds = [
+			...new Set(siniestros.map((s) => s.poliza_responsable_id).filter((id): id is string => !!id)),
+		];
+
+		if (ejecutivoIds.length > 0) {
+			const { data: miembros } = await supabase
+				.from("equipo_miembros")
+				.select("user_id, equipo_id")
+				.in("user_id", ejecutivoIds);
+
+			const equipoIds = [...new Set((miembros || []).map((m) => m.equipo_id as string))];
+			const { data: equipos } = equipoIds.length
+				? await supabase.from("equipos").select("id, nombre").in("id", equipoIds)
+				: { data: [] as { id: string; nombre: string }[] };
+
+			const nombrePorEquipo = new Map((equipos || []).map((e) => [e.id as string, e.nombre as string]));
+			const equiposPorUsuario = new Map<string, string[]>();
+			for (const m of miembros || []) {
+				const nombre = nombrePorEquipo.get(m.equipo_id as string);
+				if (!nombre) continue;
+				const arr = equiposPorUsuario.get(m.user_id as string) ?? [];
+				arr.push(nombre);
+				equiposPorUsuario.set(m.user_id as string, arr);
+			}
+
+			for (const s of siniestros) {
+				s.poliza_equipo_nombres = s.poliza_responsable_id
+					? (equiposPorUsuario.get(s.poliza_responsable_id) ?? [])
+					: [];
+			}
+		}
+
 		const stats: SiniestrosStats = {
 			total_abiertos: siniestros.filter((s) => s.estado === "abierto").length,
 			total_cerrados_mes: siniestros.filter((s) => {

@@ -53,6 +53,8 @@ export default function Dashboard({ siniestrosIniciales, statsIniciales }: Dashb
 	const [departamentoFiltro, setDepartamentoFiltro] = useState<string>("todos");
 	const [responsableFiltro, setResponsableFiltro] = useState<string>("todos");
 	const [companiaFiltro, setCompaniaFiltro] = useState<string>("todos");
+	const [ejecutivoFiltro, setEjecutivoFiltro] = useState<string>("todos");
+	const [equipoFiltro, setEquipoFiltro] = useState<string>("todos");
 
 	// Banner de atención
 	const [bannerVisible, setBannerVisible] = useState(true);
@@ -71,6 +73,8 @@ export default function Dashboard({ siniestrosIniciales, statsIniciales }: Dashb
 		departamentoFiltro,
 		responsableFiltro,
 		companiaFiltro,
+		ejecutivoFiltro,
+		equipoFiltro,
 	].filter((f) => f !== "todos").length;
 
 	const handleSort = (field: SortField) => {
@@ -89,6 +93,8 @@ export default function Dashboard({ siniestrosIniciales, statsIniciales }: Dashb
 		setDepartamentoFiltro("todos");
 		setResponsableFiltro("todos");
 		setCompaniaFiltro("todos");
+		setEjecutivoFiltro("todos");
+		setEquipoFiltro("todos");
 		setCurrentPage(1);
 	};
 
@@ -131,6 +137,21 @@ export default function Dashboard({ siniestrosIniciales, statsIniciales }: Dashb
 			).sort(),
 		[siniestros],
 	);
+	const ejecutivosUnicos = useMemo(
+		() =>
+			Array.from(
+				new Set(
+					siniestros
+						.map((s) => s.poliza_responsable_nombre)
+						.filter((e): e is string => e !== undefined && e !== null),
+				),
+			).sort(),
+		[siniestros],
+	);
+	const equiposUnicos = useMemo(
+		() => Array.from(new Set(siniestros.flatMap((s) => s.poliza_equipo_nombres ?? []))).sort(),
+		[siniestros],
+	);
 
 	const filteredData = useMemo(() => {
 		return siniestros.filter((s) => {
@@ -152,6 +173,8 @@ export default function Dashboard({ siniestrosIniciales, statsIniciales }: Dashb
 			const matchesDpto = departamentoFiltro === "todos" || s.departamento_nombre === departamentoFiltro;
 			const matchesResp = responsableFiltro === "todos" || s.responsable_nombre === responsableFiltro;
 			const matchesComp = companiaFiltro === "todos" || s.compania_nombre === companiaFiltro;
+			const matchesEjecutivo = ejecutivoFiltro === "todos" || s.poliza_responsable_nombre === ejecutivoFiltro;
+			const matchesEquipo = equipoFiltro === "todos" || (s.poliza_equipo_nombres ?? []).includes(equipoFiltro);
 
 			return (
 				matchesSearch &&
@@ -160,7 +183,9 @@ export default function Dashboard({ siniestrosIniciales, statsIniciales }: Dashb
 				matchesRamo &&
 				matchesDpto &&
 				matchesResp &&
-				matchesComp
+				matchesComp &&
+				matchesEjecutivo &&
+				matchesEquipo
 			);
 		});
 	}, [
@@ -172,6 +197,8 @@ export default function Dashboard({ siniestrosIniciales, statsIniciales }: Dashb
 		departamentoFiltro,
 		responsableFiltro,
 		companiaFiltro,
+		ejecutivoFiltro,
+		equipoFiltro,
 	]);
 
 	const sortedData = useMemo(() => {
@@ -322,6 +349,8 @@ export default function Dashboard({ siniestrosIniciales, statsIniciales }: Dashb
 								estadoFiltro,
 								ramoFiltro,
 								departamentoFiltro,
+								ejecutivoFiltro,
+								equipoFiltro,
 							}}
 						/>
 					</div>
@@ -458,6 +487,54 @@ export default function Dashboard({ siniestrosIniciales, statsIniciales }: Dashb
 											{companiasUnicas.map((c) => (
 												<SelectItem key={c} value={c}>
 													{c}
+												</SelectItem>
+											))}
+										</SelectContent>
+									</Select>
+								</div>
+
+								<div>
+									<label className="text-xs text-muted-foreground mb-1.5 block">
+										Ejecutivo (póliza)
+									</label>
+									<Select
+										value={ejecutivoFiltro}
+										onValueChange={(v) => {
+											setEjecutivoFiltro(v);
+											setCurrentPage(1);
+										}}
+									>
+										<SelectTrigger>
+											<SelectValue placeholder="Todos" />
+										</SelectTrigger>
+										<SelectContent>
+											<SelectItem value="todos">Todos los ejecutivos</SelectItem>
+											{ejecutivosUnicos.map((e) => (
+												<SelectItem key={e} value={e}>
+													{e}
+												</SelectItem>
+											))}
+										</SelectContent>
+									</Select>
+								</div>
+
+								<div>
+									<label className="text-xs text-muted-foreground mb-1.5 block">Equipo</label>
+									<Select
+										value={equipoFiltro}
+										onValueChange={(v) => {
+											setEquipoFiltro(v);
+											setCurrentPage(1);
+										}}
+									>
+										<SelectTrigger>
+											<SelectValue placeholder="Todos" />
+										</SelectTrigger>
+										<SelectContent>
+											<SelectItem value="todos">Todos los equipos</SelectItem>
+											{equiposUnicos.map((eq) => (
+												<SelectItem key={eq} value={eq}>
+													{eq}
 												</SelectItem>
 											))}
 										</SelectContent>
