@@ -326,9 +326,9 @@ export const ALLOWED_FILE_TYPES = [
 export const ALLOWED_FILE_EXTENSIONS = [".pdf", ".jpg", ".jpeg", ".png", ".doc", ".docx"] as const;
 
 /**
- * Maximum file size in bytes (10MB)
+ * Maximum file size in bytes (15MB)
  */
-export const MAX_FILE_SIZE = 10 * 1024 * 1024;
+export const MAX_FILE_SIZE = 15 * 1024 * 1024;
 
 /**
  * Human-readable file size

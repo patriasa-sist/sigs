@@ -38,6 +38,7 @@ import {
 	validateFile,
 	formatFileSize,
 	validateClientDocuments,
+	MAX_FILE_SIZE,
 	type ClienteDocumentoFormState,
 } from "@/types/clienteDocumento";
 import { createClient } from "@/utils/supabase/client";
@@ -192,7 +193,7 @@ export function ClienteDocumentUploadEdit({ clientId, clientType, isAdmin = fals
 			"application/msword": [".doc"],
 			"application/vnd.openxmlformats-officedocument.wordprocessingml.document": [".docx"],
 		},
-		maxSize: 10 * 1024 * 1024, // 10MB
+		maxSize: MAX_FILE_SIZE,
 		multiple: false,
 		disabled: isUploading,
 	});
@@ -403,7 +404,7 @@ export function ClienteDocumentUploadEdit({ clientId, clientType, isAdmin = fals
 										<p className="text-sm text-gray-600 mb-1">
 											Arrastre un archivo aquí o haga clic para seleccionar
 										</p>
-										<p className="text-xs text-gray-500">PDF, JPG, PNG, DOC, DOCX (máx. 10MB)</p>
+										<p className="text-xs text-gray-500">PDF, JPG, PNG, DOC, DOCX (máx. 15MB)</p>
 									</>
 								)}
 							</>

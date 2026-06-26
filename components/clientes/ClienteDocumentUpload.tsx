@@ -16,6 +16,7 @@ import {
 	formatFileSize,
 	validateClientDocuments,
 	NON_EXCEPTABLE_DOCUMENTS,
+	MAX_FILE_SIZE,
 } from "@/types/clienteDocumento";
 
 type Props = {
@@ -107,7 +108,7 @@ export function ClienteDocumentUpload({ clientType, documentos, onDocumentosChan
 			"application/msword": [".doc"],
 			"application/vnd.openxmlformats-officedocument.wordprocessingml.document": [".docx"],
 		},
-		maxSize: 10 * 1024 * 1024,
+		maxSize: MAX_FILE_SIZE,
 		multiple: true,
 	});
 
@@ -250,7 +251,7 @@ export function ClienteDocumentUpload({ clientType, documentos, onDocumentosChan
 							<p className="text-sm text-muted-foreground mb-1">
 								Arrastre archivos aquí o haga clic para seleccionar
 							</p>
-							<p className="text-xs text-muted-foreground/70">PDF, JPG, PNG, DOC, DOCX (máx. 10MB)</p>
+							<p className="text-xs text-muted-foreground/70">PDF, JPG, PNG, DOC, DOCX (máx. 15MB)</p>
 						</>
 					)}
 				</div>
