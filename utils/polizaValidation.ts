@@ -440,8 +440,10 @@ export function validarModalidadPago(
 	// las cuotas pasadas aparecen como "Vencido" en Cobranza). Se tolera una ventana
 	// de gracia (default 60 días) para pólizas recién recibidas, atrasadas pocos días
 	// pero aún pendientes de cobro. NO aplica en edición (las pólizas en curso sí
-	// tienen cuotas pasadas legítimas) ni a cuotas ya marcadas como pagadas.
-	if (opciones?.bloquearCuotasVencidas && opciones.hoy) {
+	// tienen cuotas pasadas legítimas) ni a cuotas ya marcadas como pagadas. Tampoco
+	// aplica a pólizas retroactivas: por definición son históricas y su cronograma
+	// legítimamente arranca en fechas pasadas.
+	if (opciones?.bloquearCuotasVencidas && opciones.hoy && !esRetroactiva) {
 		const dias = opciones.diasGracia ?? DIAS_GRACIA_CUOTA_VENCIDA;
 		const limite = restarDiasISO(opciones.hoy, dias);
 
