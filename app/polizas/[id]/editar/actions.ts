@@ -1287,7 +1287,32 @@ export async function actualizarPoliza(
 			}
 		}
 
-		// 4. Handle new documents (uploaded client-side to temp/)
+		// 4. Soft-delete documentos existentes que el usuario quitó durante la edición.
+		// Los documentos que se conservan llegan en formState con su `id` de BD; cualquier
+		// documento activo en BD cuyo id ya no esté presente fue removido en la UI.
+		// IMPORTANTE: este paso DEBE correr ANTES de insertar los documentos nuevos. Los
+		// documentos nuevos no traen `id` de form, así que su `id` recién creado en BD nunca
+		// estaría en `idsConservados` y serían descartados de inmediato (bug de orden previo).
+		const idsConservados = new Set(formState.documentos.filter((d) => d.id).map((d) => d.id));
+
+		const { data: docsActuales } = await supabase
+			.from("polizas_documentos")
+			.select("id")
+			.eq("poliza_id", polizaId)
+			.eq("estado", "activo");
+
+		const docsRemovidos = (docsActuales || []).filter((d) => !idsConservados.has(d.id));
+
+		for (const doc of docsRemovidos) {
+			const { error: descartarError } = await supabase.rpc("descartar_documento", {
+				documento_id: doc.id,
+			});
+			if (descartarError) {
+				console.error("[actualizarPoliza] Error descartando documento removido:", descartarError);
+			}
+		}
+
+		// 4b. Handle new documents (uploaded client-side to temp/)
 		const newDocuments = formState.documentos.filter(
 			(d) => d.storage_path && d.upload_status === "uploaded" && !d.id,
 		);
@@ -1313,28 +1338,6 @@ export async function actualizarPoliza(
 				tamano_bytes: documento.tamano_bytes,
 				estado: "activo",
 			});
-		}
-
-		// 4b. Soft-delete documentos existentes que el usuario quitó durante la edición.
-		// Los documentos que se conservan llegan en formState con su `id` de BD; cualquier
-		// documento activo en BD cuyo id ya no esté presente fue removido en la UI.
-		const idsConservados = new Set(formState.documentos.filter((d) => d.id).map((d) => d.id));
-
-		const { data: docsActuales } = await supabase
-			.from("polizas_documentos")
-			.select("id")
-			.eq("poliza_id", polizaId)
-			.eq("estado", "activo");
-
-		const docsRemovidos = (docsActuales || []).filter((d) => !idsConservados.has(d.id));
-
-		for (const doc of docsRemovidos) {
-			const { error: descartarError } = await supabase.rpc("descartar_documento", {
-				documento_id: doc.id,
-			});
-			if (descartarError) {
-				console.error("[actualizarPoliza] Error descartando documento removido:", descartarError);
-			}
 		}
 
 		// Nota: El historial de la tabla polizas es manejado por el trigger 'trigger_historial_polizas'
