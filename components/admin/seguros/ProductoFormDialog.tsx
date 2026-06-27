@@ -72,7 +72,7 @@ export function ProductoFormDialog({
 			nombre_producto: producto?.nombre_producto || "",
 			factor_contado: producto?.factor_contado?.toString() || "35",
 			factor_credito: producto?.factor_credito?.toString() || "40",
-			porcentaje_comision: producto ? (producto.porcentaje_comision * 100).toString() : "15",
+			porcentaje_comision: producto ? parseFloat((producto.porcentaje_comision * 100).toFixed(4)).toString() : "15",
 			regional: producto?.regional || "",
 		},
 	});
@@ -115,7 +115,7 @@ export function ProductoFormDialog({
 				nombre_producto: producto?.nombre_producto || "",
 				factor_contado: producto?.factor_contado?.toString() || "",
 				factor_credito: producto?.factor_credito?.toString() || "",
-				porcentaje_comision: producto ? (producto.porcentaje_comision * 100).toString() : "15",
+				porcentaje_comision: producto ? parseFloat((producto.porcentaje_comision * 100).toFixed(4)).toString() : "15",
 				regional: producto?.regional || "Santa Cruz",
 			});
 		}
@@ -311,7 +311,7 @@ export function ProductoFormDialog({
 										<FormControl>
 											<Input
 												type="number"
-												step="0.01"
+												step="any"
 												placeholder="35"
 												className="min-w-0"
 												{...field}
@@ -333,7 +333,7 @@ export function ProductoFormDialog({
 										<FormControl>
 											<Input
 												type="number"
-												step="0.01"
+												step="any"
 												placeholder="40"
 												className="min-w-0"
 												{...field}
@@ -355,7 +355,7 @@ export function ProductoFormDialog({
 										<FormControl>
 											<Input
 												type="number"
-												step="0.1"
+												step="any"
 												placeholder="15"
 												className="min-w-0"
 												{...field}
