@@ -27,6 +27,10 @@ export function ProductosTable({ data, aseguradoras, ramos }: ProductosTableProp
 	const [filterAseguradora, setFilterAseguradora] = useState<string>("all");
 	const [filterRamo, setFilterRamo] = useState<string>("all");
 
+	// Código APS compuesto: código de ramo + código de producto (ej. "9105" + "00" → "910500")
+	const codigoApsDe = (producto: ProductoConRelaciones) =>
+		`${producto.tipos_seguros?.codigo ?? ""}${producto.codigo_producto ?? ""}`;
+
 	const filteredData = useMemo(() => {
 		return data.filter((producto) => {
 			// Filter by active status
@@ -47,11 +51,14 @@ export function ProductosTable({ data, aseguradoras, ramos }: ProductosTableProp
 			// Filter by search
 			if (search) {
 				const searchLower = search.toLowerCase();
+				// Búsqueda numérica por código APS compuesto, tolerante a guiones/espacios (ej. "910500" o "9105-00")
+				const searchDigits = searchLower.replace(/\D/g, "");
 				return (
 					producto.nombre_producto.toLowerCase().includes(searchLower) ||
 					producto.codigo_producto.toLowerCase().includes(searchLower) ||
 					producto.companias_aseguradoras?.nombre.toLowerCase().includes(searchLower) ||
-					producto.tipos_seguros?.nombre.toLowerCase().includes(searchLower)
+					producto.tipos_seguros?.nombre.toLowerCase().includes(searchLower) ||
+					(searchDigits.length > 0 && codigoApsDe(producto).includes(searchDigits))
 				);
 			}
 
@@ -102,7 +109,7 @@ export function ProductosTable({ data, aseguradoras, ramos }: ProductosTableProp
 					<div className="relative w-full sm:w-72">
 						<Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
 						<Input
-							placeholder="Buscar productos..."
+							placeholder="Buscar por nombre o código (ej. 910500)..."
 							value={search}
 							onChange={(e) => setSearch(e.target.value)}
 							className="pl-9"
@@ -174,7 +181,7 @@ export function ProductosTable({ data, aseguradoras, ramos }: ProductosTableProp
 								<TableRow key={producto.id} className="align-top">
 									<TableCell>
 										<code className="text-xs bg-muted px-2 py-1 rounded">
-											{producto.codigo_producto}
+											{codigoApsDe(producto) || producto.codigo_producto}
 										</code>
 									</TableCell>
 									<TableCell className="whitespace-normal">
