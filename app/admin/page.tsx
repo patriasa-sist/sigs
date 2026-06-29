@@ -17,6 +17,7 @@ import {
 	Trash2,
 	Undo2,
 	UserX,
+	CalendarClock,
 } from "lucide-react";
 
 const adminSections = [
@@ -134,6 +135,13 @@ const adminSections = [
 				label: "Eliminar Clientes",
 				description:
 					"Borrar permanentemente un cliente sin pólizas y todo su rastro (bloqueado si tiene pólizas)",
+			},
+			{
+				href: "/admin/excepciones",
+				icon: CalendarClock,
+				label: "Ventanas de Excepción",
+				description:
+					"Permitir cargar clientes sin documentos durante una ventana acotada, por rol o por usuario",
 			},
 		],
 	},
