@@ -14,10 +14,15 @@ type Props = {
 	equipo: EquipoIndustrial | null;
 	onGuardar: (equipo: EquipoIndustrial) => void;
 	onCancelar: () => void;
+	// En anexos (inclusión/reemplazo) el valor asegurado puede ser 0.
+	permitirCeroAsegurado?: boolean;
 };
 
 // Validación de equipo industrial
-function validarEquipoIndustrial(equipo: Partial<EquipoIndustrial>): {
+function validarEquipoIndustrial(
+	equipo: Partial<EquipoIndustrial>,
+	permitirCeroAsegurado = false,
+): {
 	valido: boolean;
 	errores: Array<{ campo: string; mensaje: string }>;
 } {
@@ -32,7 +37,11 @@ function validarEquipoIndustrial(equipo: Partial<EquipoIndustrial>): {
 		errores.push({ campo: "nro_chasis", mensaje: "El número de chasis es requerido" });
 	}
 
-	if (equipo.valor_asegurado === undefined || equipo.valor_asegurado <= 0) {
+	if (permitirCeroAsegurado) {
+		if (equipo.valor_asegurado === undefined || equipo.valor_asegurado === null || equipo.valor_asegurado < 0) {
+			errores.push({ campo: "valor_asegurado", mensaje: "El valor asegurado debe ser mayor o igual a 0" });
+		}
+	} else if (equipo.valor_asegurado === undefined || equipo.valor_asegurado <= 0) {
 		errores.push({ campo: "valor_asegurado", mensaje: "El valor asegurado debe ser mayor a 0" });
 	}
 
@@ -71,7 +80,7 @@ function validarEquipoIndustrial(equipo: Partial<EquipoIndustrial>): {
 	};
 }
 
-export function EquipoModal({ equipo, onGuardar, onCancelar }: Props) {
+export function EquipoModal({ equipo, onGuardar, onCancelar, permitirCeroAsegurado = false }: Props) {
 	const [formData, setFormData] = useState<Partial<EquipoIndustrial>>(
 		equipo || {
 			nro_serie: "",
@@ -142,7 +151,7 @@ export function EquipoModal({ equipo, onGuardar, onCancelar }: Props) {
 	};
 
 	const handleGuardar = () => {
-		const validacion = validarEquipoIndustrial(formData);
+		const validacion = validarEquipoIndustrial(formData, permitirCeroAsegurado);
 
 		if (!validacion.valido) {
 			const nuevosErrores: Record<string, string> = {};

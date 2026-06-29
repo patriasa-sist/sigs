@@ -199,8 +199,14 @@ export function validarDatosBasicos(datos: Partial<DatosBasicosPoliza>): Validat
 
 /**
  * Valida un vehículo automotor (Paso 3)
+ *
+ * `permitirCeroAsegurado` relaja la regla del valor asegurado para el flujo de
+ * anexos (inclusión/reemplazo), donde un ítem puede registrarse con valor 0.
  */
-export function validarVehiculoAutomotor(vehiculo: Partial<VehiculoAutomotor>): ValidationResult {
+export function validarVehiculoAutomotor(
+	vehiculo: Partial<VehiculoAutomotor>,
+	opciones?: { permitirCeroAsegurado?: boolean },
+): ValidationResult {
 	const errores: ValidationError[] = [];
 
 	// Campos obligatorios
@@ -208,7 +214,15 @@ export function validarVehiculoAutomotor(vehiculo: Partial<VehiculoAutomotor>): 
 		errores.push({ campo: "placa", mensaje: "Placa es requerida" });
 	}
 
-	if (!vehiculo.valor_asegurado || vehiculo.valor_asegurado <= 0) {
+	if (opciones?.permitirCeroAsegurado) {
+		if (
+			vehiculo.valor_asegurado === undefined ||
+			vehiculo.valor_asegurado === null ||
+			vehiculo.valor_asegurado < 0
+		) {
+			errores.push({ campo: "valor_asegurado", mensaje: "Valor asegurado debe ser mayor o igual a 0" });
+		}
+	} else if (!vehiculo.valor_asegurado || vehiculo.valor_asegurado <= 0) {
 		errores.push({ campo: "valor_asegurado", mensaje: "Valor asegurado debe ser mayor a 0" });
 	}
 

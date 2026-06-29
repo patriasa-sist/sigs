@@ -15,9 +15,11 @@ type Props = {
 	vehiculo: VehiculoAutomotor | null;
 	onGuardar: (vehiculo: VehiculoAutomotor) => void;
 	onCancelar: () => void;
+	// En anexos (inclusión/reemplazo) el valor asegurado puede ser 0.
+	permitirCeroAsegurado?: boolean;
 };
 
-export function VehiculoModal({ vehiculo, onGuardar, onCancelar }: Props) {
+export function VehiculoModal({ vehiculo, onGuardar, onCancelar, permitirCeroAsegurado = false }: Props) {
 	const [formData, setFormData] = useState<Partial<VehiculoAutomotor>>(
 		vehiculo || {
 			placa: "",
@@ -89,7 +91,7 @@ export function VehiculoModal({ vehiculo, onGuardar, onCancelar }: Props) {
 	};
 
 	const handleGuardar = () => {
-		const validacion = validarVehiculoAutomotor(formData);
+		const validacion = validarVehiculoAutomotor(formData, { permitirCeroAsegurado });
 
 		if (!validacion.valido) {
 			const nuevosErrores: Record<string, string> = {};

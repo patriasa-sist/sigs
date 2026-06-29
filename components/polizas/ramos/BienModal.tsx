@@ -25,12 +25,21 @@ type Props = {
 	moneda?: string;
 	onGuardar: (bien: BienGenerico) => void;
 	onCancelar: () => void;
+	// En anexos (inclusión/reemplazo) el valor total declarado puede ser 0.
+	permitirCeroAsegurado?: boolean;
 };
 
 // Modal de captura de un bien asegurado (dirección + items con monto + primer
 // riesgo). Reutilizado por la inclusión de Incendio y Riesgos Varios en anexos,
 // con la misma lógica que el modal inline de creación de pólizas.
-export function BienModal({ bien, itemsDisponibles, moneda = "Bs", onGuardar, onCancelar }: Props) {
+export function BienModal({
+	bien,
+	itemsDisponibles,
+	moneda = "Bs",
+	onGuardar,
+	onCancelar,
+	permitirCeroAsegurado = false,
+}: Props) {
 	const [direccion, setDireccion] = useState(bien?.direccion || "");
 	const [items, setItems] = useState<{ nombre: string; monto: number }[]>(bien?.items || []);
 	const [esPrimerRiesgo, setEsPrimerRiesgo] = useState(bien?.es_primer_riesgo || false);
@@ -60,7 +69,7 @@ export function BienModal({ bien, itemsDisponibles, moneda = "Bs", onGuardar, on
 			toast.error("Debe agregar al menos un item asegurado");
 			return;
 		}
-		if (valorTotalDeclarado <= 0) {
+		if (!permitirCeroAsegurado && valorTotalDeclarado <= 0) {
 			toast.error("El valor total declarado debe ser mayor a 0");
 			return;
 		}

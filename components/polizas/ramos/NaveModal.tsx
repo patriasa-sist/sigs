@@ -14,12 +14,14 @@ type Props = {
 	tipoNave: "aeronave" | "embarcacion";
 	onGuardar: (nave: NaveEmbarcacion) => void;
 	onCancelar: () => void;
+	// En anexos (inclusión/reemplazo) el valor del casco puede ser 0.
+	permitirCeroAsegurado?: boolean;
 };
 
 const ANO_ACTUAL = new Date().getFullYear();
 const ANO_MIN = 1950;
 
-export function NaveModal({ nave, nivelesAP, tipoNave, onGuardar, onCancelar }: Props) {
+export function NaveModal({ nave, nivelesAP, tipoNave, onGuardar, onCancelar, permitirCeroAsegurado = false }: Props) {
 	const [formData, setFormData] = useState<Partial<NaveEmbarcacion>>(
 		nave || {
 			matricula: "",
@@ -80,7 +82,11 @@ export function NaveModal({ nave, nivelesAP, tipoNave, onGuardar, onCancelar }: 
 		if (formData.nro_tripulantes === undefined || formData.nro_tripulantes < 1) {
 			nuevosErrores.nro_tripulantes = "Debe haber al menos 1 tripulante";
 		}
-		if (!formData.valor_casco || formData.valor_casco <= 0) {
+		if (permitirCeroAsegurado) {
+			if (formData.valor_casco === undefined || formData.valor_casco === null || formData.valor_casco < 0) {
+				nuevosErrores.valor_casco = "El valor del casco debe ser mayor o igual a 0";
+			}
+		} else if (!formData.valor_casco || formData.valor_casco <= 0) {
 			nuevosErrores.valor_casco = "El valor del casco debe ser mayor a 0";
 		}
 		if (formData.valor_responsabilidad_civil === undefined || formData.valor_responsabilidad_civil < 0) {

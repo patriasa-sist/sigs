@@ -528,6 +528,7 @@ function AnexoAutomotor({
 			{modalAbierto && (
 				<VehiculoModal
 					vehiculo={vehiculoEditando}
+					permitirCeroAsegurado
 					onGuardar={(vehiculo) => {
 						let newInclusiones: AnexoItemChange<VehiculoAutomotor>[];
 						if (indexEditando !== null) {
@@ -700,6 +701,7 @@ function AnexoRamosTecnicos({
 			{modalAbierto && (
 				<EquipoModal
 					equipo={equipoEditando}
+					permitirCeroAsegurado
 					onGuardar={(equipo) => {
 						let newInclusiones: AnexoItemChange<EquipoIndustrial>[];
 						if (indexEditando !== null) {
@@ -884,6 +886,7 @@ function AnexoAeronavegacion({
 					nave={naveEditando}
 					nivelesAP={nivelesAP}
 					tipoNave={tipoNave}
+					permitirCeroAsegurado
 					onGuardar={(nave) => {
 						let newInclusiones: AnexoItemChange<NaveEmbarcacion>[];
 						if (indexEditando !== null) {
@@ -1397,6 +1400,7 @@ function AnexoBienes<T extends BienAseguradoIncendio | BienAseguradoRiesgosVario
 					bien={null}
 					itemsDisponibles={itemsDisponibles}
 					moneda={moneda}
+					permitirCeroAsegurado
 					onGuardar={(bien: BienGenerico) => {
 						const nuevo = { accion: "inclusion", data: bien as unknown as T } as AnexoItemChange<T>;
 						emit(selectedIds, [...inclusiones, nuevo]);
