@@ -374,6 +374,51 @@ export default function AnexoDetalleSection({ polizaId, moneda, puedeValidar, on
 											</div>
 										) : detalle ? (
 											<>
+												{/* Resumen financiero (inclusión / exclusión) */}
+												{detalle.prima_total != null && (
+													<div>
+														<h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
+															<CreditCard className="h-5 w-5" />
+															Resumen Financiero
+														</h3>
+														<div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+															{(
+																[
+																	["Prima Total", detalle.prima_total],
+																	["Prima Neta", detalle.prima_neta],
+																	["Comisión", detalle.comision_empresa],
+																] as const
+															).map(([label, valor]) => {
+																const v = valor ?? 0;
+																return (
+																	<div
+																		key={label}
+																		className="border rounded-lg p-4 bg-gray-50"
+																	>
+																		<p className="text-xs font-medium text-gray-500">
+																			{label}
+																		</p>
+																		<p
+																			className={`text-lg font-bold ${
+																				v < 0 ? "text-red-600" : "text-gray-900"
+																			}`}
+																		>
+																			{v >= 0 ? "+" : ""}
+																			{formatCurrency(v, moneda)}
+																		</p>
+																	</div>
+																);
+															})}
+														</div>
+														{detalle.tipo_anexo === "exclusion" && (
+															<p className="text-xs text-gray-400 mt-2">
+																La exclusión reduce la producción de la póliza (montos
+																en negativo).
+															</p>
+														)}
+													</div>
+												)}
+
 												{/* Items del ramo */}
 												{detalle.items.length > 0 && (
 													<div>

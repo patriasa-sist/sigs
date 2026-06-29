@@ -8,6 +8,7 @@ import { generateFinalStoragePath } from "@/utils/fileUpload";
 import { resolverNombresCliente } from "@/utils/polizas/resolverNombresCliente";
 import { netoAporteAnexo, type PagoAnexoLite } from "@/utils/polizas/aporteAnexo";
 import { restaurarCuotasPorAnulacion } from "@/utils/polizas/anulacionCuotas";
+import { calcularComisionesConProducto } from "@/utils/polizaValidation";
 import type {
 	TipoAnexo,
 	AnexoFormState,
@@ -38,6 +39,7 @@ import type {
 	NivelSalud,
 	NivelCobertura,
 	NivelAPNave,
+	ProductoAseguradora,
 } from "@/types/poliza";
 
 // ============================================
@@ -604,6 +606,80 @@ async function construirPagosAjusteExclusion(
 }
 
 /**
+ * Calcula el desglose financiero (prima total/neta + comisiones) de un anexo de
+ * inclusión o exclusión, espejando el cálculo de la póliza con el producto de la
+ * madre (mismo `calcularComisionesConProducto`). La inclusión usa la modalidad
+ * de su propio plan; la exclusión, la de la póliza madre. La exclusión devuelve
+ * montos NEGATIVOS (reduce producción). Devuelve null para tipos sin prima
+ * propia (reemplazo/anulación), si no hay prima, o si falta el producto.
+ */
+async function computarPrimaAnexo(
+	supabase: Awaited<ReturnType<typeof createClient>>,
+	polizaId: string,
+	tipoAnexo: TipoAnexo,
+	planInclusion: PlanPagoInclusion | null,
+	cuotasAjuste: CuotaAjuste[],
+): Promise<{
+	prima_total: number;
+	prima_neta: number;
+	comision: number;
+	comision_empresa: number;
+	comision_encargado: number;
+} | null> {
+	if (tipoAnexo !== "inclusion" && tipoAnexo !== "exclusion") return null;
+
+	let grossFirmado: number;
+	if (tipoAnexo === "inclusion") {
+		if (!planInclusion || planInclusion.prima_total <= 0) return null;
+		grossFirmado = planInclusion.prima_total;
+	} else {
+		const descuento = cuotasAjuste.reduce((s, c) => s + Math.abs(c.monto_delta), 0);
+		if (descuento <= 0) return null;
+		grossFirmado = -descuento;
+	}
+
+	const { data: pol } = await supabase
+		.from("polizas")
+		.select(
+			"modalidad_pago, usar_factores_contado, producto:productos_aseguradoras!producto_id(factor_contado, factor_credito, porcentaje_comision)",
+		)
+		.eq("id", polizaId)
+		.single();
+
+	const productoRaw = (pol as { producto?: unknown } | null)?.producto as
+		| { factor_contado: number; factor_credito: number; porcentaje_comision: number }
+		| null
+		| undefined;
+	if (!productoRaw) return null;
+
+	// usar_factores_contado fuerza el factor de contado en cualquier modalidad.
+	const usarContado =
+		tipoAnexo === "inclusion"
+			? planInclusion!.modalidad === "contado" || pol?.usar_factores_contado === true
+			: pol?.modalidad_pago === "contado" || pol?.usar_factores_contado === true;
+
+	const calc = calcularComisionesConProducto({
+		prima_total: Math.abs(grossFirmado),
+		modalidad_pago: usarContado ? "contado" : "credito",
+		producto: {
+			factor_contado: Number(productoRaw.factor_contado),
+			factor_credito: Number(productoRaw.factor_credito),
+			porcentaje_comision: Number(productoRaw.porcentaje_comision),
+		} as unknown as ProductoAseguradora,
+	});
+
+	const signo = grossFirmado < 0 ? -1 : 1;
+	const r2 = (n: number) => Math.round(n * 100) / 100;
+	return {
+		prima_total: r2(grossFirmado),
+		prima_neta: r2(signo * calc.prima_neta),
+		comision: r2(signo * calc.comision_empresa),
+		comision_empresa: r2(signo * calc.comision_empresa),
+		comision_encargado: r2(signo * calc.comision_encargado),
+	};
+}
+
+/**
  * Carga los niveles de cobertura ya configurados en la póliza, por familia de
  * ramo. Permite que una inclusión mapee el item nuevo a un nivel existente (no
  * se crean niveles desde un anexo). Solo el ramo correspondiente trae datos.
@@ -994,6 +1070,18 @@ export async function guardarAnexo(formState: AnexoFormState): Promise<{
 			return { success: false, error: "El documento de anexo es obligatorio" };
 		}
 
+		// Desglose financiero del anexo (prima total/neta + comisiones), espejando
+		// el cálculo de la póliza. Inclusión positivo, exclusión negativo; null
+		// para reemplazo/anulación. Se persiste para el detalle, la consolidación
+		// en la póliza y el reporte de producción.
+		const primaFields = await computarPrimaAnexo(
+			supabase,
+			formState.poliza_id,
+			formState.config.tipo_anexo,
+			formState.plan_pago_inclusion ?? null,
+			formState.cuotas_ajuste ?? [],
+		);
+
 		// --- INSERTAR ANEXO ---
 		const { data: anexo, error: anexoError } = await supabase
 			.from("polizas_anexos")
@@ -1006,6 +1094,7 @@ export async function guardarAnexo(formState: AnexoFormState): Promise<{
 				observaciones: formState.config.observaciones?.trim() || null,
 				estado: "pendiente",
 				created_by: user.id,
+				...(primaFields ?? {}),
 			})
 			.select("id")
 			.single();
@@ -1610,6 +1699,13 @@ export type AnexoDetalle = {
 	rechazador_nombre: string | null;
 	fecha_rechazo: string | null;
 	ramo: string;
+	// Desglose financiero del anexo (inclusión positivo, exclusión negativo).
+	// null para reemplazo/anulación o anexos previos a su cálculo.
+	prima_total: number | null;
+	prima_neta: number | null;
+	comision: number | null;
+	comision_empresa: number | null;
+	comision_encargado: number | null;
 	items: AnexoDetalleItem[];
 	pagos: AnexoDetallePago[];
 	documentos: AnexoDetalleDocumento[];
@@ -1637,6 +1733,7 @@ export async function obtenerDetalleAnexo(anexoId: string): Promise<{
 				estado, observaciones, created_at,
 				fecha_validacion, motivo_rechazo, fecha_rechazo,
 				created_by, validado_por, rechazado_por,
+				prima_total, prima_neta, comision, comision_empresa, comision_encargado,
 				polizas!poliza_id ( ramo )
 			`,
 			)
@@ -1692,6 +1789,11 @@ export async function obtenerDetalleAnexo(anexoId: string): Promise<{
 			rechazador_nombre: (userResults[2]?.data as { full_name: string } | null)?.full_name || null,
 			fecha_rechazo: anexo.fecha_rechazo,
 			ramo,
+			prima_total: anexo.prima_total != null ? Number(anexo.prima_total) : null,
+			prima_neta: anexo.prima_neta != null ? Number(anexo.prima_neta) : null,
+			comision: anexo.comision != null ? Number(anexo.comision) : null,
+			comision_empresa: anexo.comision_empresa != null ? Number(anexo.comision_empresa) : null,
+			comision_encargado: anexo.comision_encargado != null ? Number(anexo.comision_encargado) : null,
 			items,
 			pagos: (pagosResult.data || []).map((p) => ({
 				id: p.id,
@@ -2653,6 +2755,16 @@ export async function actualizarAnexo(
 			}
 		}
 
+		// Recalcular el desglose financiero del anexo (puede haber cambiado la
+		// prima de la inclusión o el descuento de la exclusión).
+		const primaFields = await computarPrimaAnexo(
+			supabase,
+			anexo.poliza_id,
+			anexo.tipo_anexo,
+			formState.plan_pago_inclusion ?? null,
+			formState.cuotas_ajuste ?? [],
+		);
+
 		// --- ACTUALIZAR ANEXO PRINCIPAL ---
 		const camposBase = {
 			numero_anexo: formState.config.numero_anexo.trim(),
@@ -2660,6 +2772,11 @@ export async function actualizarAnexo(
 			observaciones: formState.config.observaciones?.trim() || null,
 			updated_by: user.id,
 			updated_at: new Date().toISOString(),
+			prima_total: primaFields?.prima_total ?? null,
+			prima_neta: primaFields?.prima_neta ?? null,
+			comision: primaFields?.comision ?? null,
+			comision_empresa: primaFields?.comision_empresa ?? null,
+			comision_encargado: primaFields?.comision_encargado ?? null,
 		};
 		const { error: updateError } = await supabase
 			.from("polizas_anexos")
