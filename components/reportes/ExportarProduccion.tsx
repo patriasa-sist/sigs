@@ -135,10 +135,13 @@ export default function ExportarProduccion({ regionales, companias, equipos }: F
 				{ header: "Cliente", key: "cliente", width: 30 },
 				{ header: "CI/NIT", key: "ci_nit", width: 15 },
 				{ header: "Director de Cartera", key: "director_cartera", width: 22 },
+				// Nombres agrupados, seguidos de sus códigos (entre Director de Cartera y Responsable)
 				{ header: "Compañía", key: "compania", width: 25 },
-				{ header: "Cod Cia APS", key: "cod_aps", width: 12 },
 				{ header: "Ramo", key: "ramo", width: 20 },
+				{ header: "Producto", key: "producto", width: 25 },
+				{ header: "Cod Cia APS", key: "cod_aps", width: 12 },
 				{ header: "Cod Ramo APS", key: "cod_ramo_aps", width: 13 },
+				{ header: "Cod Producto", key: "cod_producto", width: 13 },
 				{ header: "Responsable", key: "responsable", width: 25 },
 				{ header: "Regional", key: "regional", width: 15 },
 				{ header: "Prima Total", key: "prima_total", width: 14 },
@@ -156,8 +159,6 @@ export default function ExportarProduccion({ regionales, companias, equipos }: F
 				{ header: "Fecha Producción Sistema", key: "fecha_produccion_sistema", width: 22 },
 				{ header: "Persona Registro", key: "persona_registro", width: 25 },
 				{ header: "Categoría", key: "categoria", width: 20 },
-				{ header: "Producto", key: "producto", width: 25 },
-				{ header: "Cod Producto", key: "cod_producto", width: 13 },
 			];
 
 			// Aplicar anchos de columna
