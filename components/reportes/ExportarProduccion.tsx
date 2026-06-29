@@ -125,8 +125,10 @@ export default function ExportarProduccion({ regionales, companias, equipos }: F
 			// Fila vacía separadora
 			worksheet.addRow([]);
 
-			// ---- Definir columnas de datos (fila 7 será el header) ----
-			const DATA_HEADER_ROW = 7;
+			// ---- Definir columnas de datos ----
+			// Fila 7: banda de grupo (Bolivianos / Dólares). Fila 8: encabezados de columna.
+			const GROUP_HEADER_ROW = 7;
+			const DATA_HEADER_ROW = 8;
 			const columns = [
 				{ header: "N°", key: "__nro", width: 6 },
 				{ header: "N° Póliza", key: "numero_poliza", width: 15 },
@@ -145,15 +147,15 @@ export default function ExportarProduccion({ regionales, companias, equipos }: F
 				{ header: "Cod Producto", key: "cod_producto", width: 13 },
 				{ header: "Responsable", key: "responsable", width: 25 },
 				{ header: "Regional", key: "regional", width: 15 },
-				{ header: "Prima Total", key: "prima_total", width: 14 },
-				{ header: "Prima Neta", key: "prima_neta", width: 14 },
-				{ header: "Comisión Empresa", key: "comision_empresa", width: 16 },
+				{ header: "Moneda", key: "moneda", width: 10 },
+				{ header: "Prima Total (Bs)", key: "__prima_total_bs", width: 15 },
+				{ header: "Prima Neta (Bs)", key: "__prima_neta_bs", width: 15 },
+				{ header: "Comisión Empresa (Bs)", key: "__comision_empresa_bs", width: 18 },
 				{ header: "Prima Total (USD)", key: "__prima_total_usd", width: 15 },
 				{ header: "Prima Neta (USD)", key: "__prima_neta_usd", width: 15 },
 				{ header: "Comisión Empresa (USD)", key: "__comision_empresa_usd", width: 18 },
 				{ header: "Factor Prima Neta", key: "factor_prima_neta", width: 15 },
 				{ header: "% Comisión", key: "porcentaje_comision", width: 12 },
-				{ header: "Moneda", key: "moneda", width: 10 },
 				{ header: "Valor Asegurado", key: "valor_asegurado", width: 16 },
 				{ header: "Cuotas", key: "cantidad_cuotas", width: 10 },
 				{ header: "Cuota Inicial", key: "cuota_inicial", width: 14 },
@@ -184,35 +186,54 @@ export default function ExportarProduccion({ regionales, companias, equipos }: F
 			dataHeaderRow.alignment = { vertical: "middle", horizontal: "center" };
 			dataHeaderRow.height = 20;
 
-			const greenColumnIndices = columns
-				.map((col, i) =>
-					["prima_neta", "comision_empresa", "factor_prima_neta", "porcentaje_comision"].includes(col.key)
-						? i + 1
-						: -1,
-				)
-				.filter((i) => i > 0);
+			// Bloques de moneda: cada importe aparece en Bs y en USD; se resalta el nativo.
+			const BS_KEYS = ["__prima_total_bs", "__prima_neta_bs", "__comision_empresa_bs"];
+			const USD_KEYS = ["__prima_total_usd", "__prima_neta_usd", "__comision_empresa_usd"];
+			const colIdxDe = (key: string) => columns.findIndex((c) => c.key === key) + 1;
+			const bsBlockIndices = BS_KEYS.map(colIdxDe);
+			const usdBlockIndices = USD_KEYS.map(colIdxDe);
+			const GREEN = "FF2E7D32"; // banda/encabezado Bs
+			const PURPLE = "FF7E57C2"; // banda/encabezado USD
+			const GREEN_SOFT = "FFE2EFDA"; // celda Bs cuando es la moneda original
+			const PURPLE_SOFT = "FFEDE7F6"; // celda USD cuando es la moneda original
 
-			const purpleColumnIndices = columns
-				.map((col, i) =>
-					["__prima_total_usd", "__prima_neta_usd", "__comision_empresa_usd"].includes(col.key) ? i + 1 : -1,
-				)
-				.filter((i) => i > 0);
-
-			// Encabezado de las columnas dolarizadas en morado (las demás van en verde)
-			purpleColumnIndices.forEach((colIdx) => {
+			// Encabezados del bloque USD en morado (los de Bs quedan en el verde por defecto)
+			usdBlockIndices.forEach((colIdx) => {
 				dataHeaderRow.getCell(colIdx).fill = {
 					type: "pattern",
 					pattern: "solid",
-					fgColor: { argb: "FF7E57C2" },
+					fgColor: { argb: PURPLE },
 				};
 			});
 
-			// Tipo de cambio para las columnas dolarizadas (Bs ÷ TC → USD; USD/USDT sin cambio)
+			// Banda superior que agrupa cada bloque (BOLIVIANOS / DÓLARES)
+			const groupHeaderRow = worksheet.getRow(GROUP_HEADER_ROW);
+			groupHeaderRow.height = 18;
+			const pintarBanda = (indices: number[], texto: string, color: string) => {
+				const desde = Math.min(...indices);
+				const hasta = Math.max(...indices);
+				worksheet.mergeCells(GROUP_HEADER_ROW, desde, GROUP_HEADER_ROW, hasta);
+				const celda = groupHeaderRow.getCell(desde);
+				celda.value = texto;
+				celda.fill = { type: "pattern", pattern: "solid", fgColor: { argb: color } };
+				celda.font = { bold: true, color: { argb: "FFFFFFFF" } };
+				celda.alignment = { vertical: "middle", horizontal: "center" };
+			};
+			pintarBanda(bsBlockIndices, "BOLIVIANOS (Bs)", GREEN);
+			pintarBanda(usdBlockIndices, "DÓLARES (USD)", PURPLE);
+
+			// Tipo de cambio. USD/USDT ya están en dólares; Bs/UFV se tratan como Bs.
 			const tc = Number(tipoCambio) > 0 ? Number(tipoCambio) : 6.96;
+			const esUsd = (moneda: string) => moneda === "USD" || moneda === "USDT";
 			const aUsd = (monto: number | null, moneda: string): number => {
 				const v = monto != null ? Number(monto) : 0;
 				if (!Number.isFinite(v)) return 0;
-				return moneda === "USD" || moneda === "USDT" ? v : v / tc;
+				return esUsd(moneda) ? v : v / tc;
+			};
+			const aBs = (monto: number | null, moneda: string): number => {
+				const v = monto != null ? Number(monto) : 0;
+				if (!Number.isFinite(v)) return 0;
+				return esUsd(moneda) ? v * tc : v;
 			};
 
 			// Escribir filas de datos
@@ -220,7 +241,11 @@ export default function ExportarProduccion({ regionales, companias, equipos }: F
 				const values = columns.map((col) => {
 					// Correlativo secuencial según el orden (por fecha de registro) que viene del server
 					if (col.key === "__nro") return rowIndex + 1;
-					// Columnas dolarizadas (USD)
+					// Bloque Bolivianos (USD→Bs ×TC; Bs/UFV sin cambio)
+					if (col.key === "__prima_total_bs") return aBs(row.prima_total, row.moneda);
+					if (col.key === "__prima_neta_bs") return aBs(row.prima_neta, row.moneda);
+					if (col.key === "__comision_empresa_bs") return aBs(row.comision_empresa, row.moneda);
+					// Bloque Dólares (Bs→USD ÷TC; USD/USDT sin cambio)
 					if (col.key === "__prima_total_usd") return aUsd(row.prima_total, row.moneda);
 					if (col.key === "__prima_neta_usd") return aUsd(row.prima_neta, row.moneda);
 					if (col.key === "__comision_empresa_usd") return aUsd(row.comision_empresa, row.moneda);
@@ -245,19 +270,14 @@ export default function ExportarProduccion({ regionales, companias, equipos }: F
 
 				const excelRow = worksheet.addRow(values);
 
-				greenColumnIndices.forEach((colIdx) => {
+				// Resaltar el bloque de la moneda original; el otro queda en blanco (es el convertido)
+				const indicesNativos = esUsd(row.moneda) ? usdBlockIndices : bsBlockIndices;
+				const colorNativo = esUsd(row.moneda) ? PURPLE_SOFT : GREEN_SOFT;
+				indicesNativos.forEach((colIdx) => {
 					excelRow.getCell(colIdx).fill = {
 						type: "pattern",
 						pattern: "solid",
-						fgColor: { argb: "FFE2EFDA" },
-					};
-				});
-
-				purpleColumnIndices.forEach((colIdx) => {
-					excelRow.getCell(colIdx).fill = {
-						type: "pattern",
-						pattern: "solid",
-						fgColor: { argb: "FFEDE7F6" },
+						fgColor: { argb: colorNativo },
 					};
 				});
 			});
@@ -277,9 +297,9 @@ export default function ExportarProduccion({ regionales, companias, equipos }: F
 
 			// Formato numérico
 			const numericKeys = [
-				"prima_total",
-				"prima_neta",
-				"comision_empresa",
+				"__prima_total_bs",
+				"__prima_neta_bs",
+				"__comision_empresa_bs",
 				"__prima_total_usd",
 				"__prima_neta_usd",
 				"__comision_empresa_usd",
