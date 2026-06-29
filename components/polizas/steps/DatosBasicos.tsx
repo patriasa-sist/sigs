@@ -500,19 +500,18 @@ export function DatosBasicos({ datos, onChange, onSiguiente, onAnterior }: Props
 					<Label htmlFor="ramo">
 						Ramo <span className="text-destructive">*</span>
 					</Label>
-					<Select value={formData.ramo} onValueChange={(value) => handleChange("ramo", value)}>
-						<SelectTrigger className={errores.ramo ? "border-destructive" : ""}>
-							<SelectValue placeholder="Seleccione un ramo" />
-						</SelectTrigger>
-						<SelectContent>
-							{tiposSeguros.map((tipo) => (
-								<SelectItem key={tipo.id} value={tipo.nombre}>
-									<span className="font-mono text-xs text-muted-foreground">({tipo.codigo})</span>{" "}
-									{tipo.nombre}
-								</SelectItem>
-							))}
-						</SelectContent>
-					</Select>
+					<Combobox
+						options={tiposSeguros.map((tipo) => ({
+							value: tipo.nombre,
+							label: `(${tipo.codigo}) ${tipo.nombre}`,
+						}))}
+						value={formData.ramo}
+						onChange={(value) => handleChange("ramo", value)}
+						placeholder="Seleccione un ramo"
+						searchPlaceholder="Buscar por código o nombre..."
+						emptyText="Sin ramos."
+						className={errores.ramo ? "border-destructive" : ""}
+					/>
 					{errores.ramo && <p className="text-sm text-destructive">{errores.ramo}</p>}
 				</div>
 
