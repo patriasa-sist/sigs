@@ -30,6 +30,8 @@ import {
 	calcularPrimaNetaYComision,
 	calcularComisionesConProducto,
 	validarFechasDentroVigencia,
+	esProductoDesgravamen,
+	DIAS_GRACIA_VIGENCIA_DESGRAVAMEN,
 } from "@/utils/polizaValidation";
 import { POLIZA_RULES } from "@/utils/validationConstants";
 import { hoyLaPaz } from "@/utils/formatters";
@@ -439,9 +441,16 @@ export function ModalidadPago({
 				? !datosPago.cuota_unica || datosPago.cuota_unica <= 0
 				: datosPago.cuotas.length === 0;
 
-		// Validar fechas contra vigencia (advertencia que bloquea)
+		// Validar fechas contra vigencia (advertencia que bloquea). Desgravamen
+		// tolera cuotas hasta 40 días después del fin de vigencia (cobro corrido).
 		if (inicioVigencia && finVigencia && !sinPrimaRegistrada) {
-			const validacionVigencia = validarFechasDentroVigencia(datosPago, inicioVigencia, finVigencia);
+			const diasGraciaFin = esProductoDesgravamen(producto) ? DIAS_GRACIA_VIGENCIA_DESGRAVAMEN : 0;
+			const validacionVigencia = validarFechasDentroVigencia(
+				datosPago,
+				inicioVigencia,
+				finVigencia,
+				diasGraciaFin,
+			);
 			if (!validacionVigencia.valido) {
 				const nuevasAdvertencias: Record<string, string> = {};
 				validacionVigencia.errores.forEach((error) => {

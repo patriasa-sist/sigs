@@ -32,6 +32,27 @@ import { formatDate, restarDiasISO } from "./formatters";
 export const DIAS_GRACIA_CUOTA_VENCIDA = 60;
 
 /**
+ * Desgravamen: el cobro de la prima puede correr más allá del fin de vigencia.
+ * Para este ramo se toleran cuotas (madre y anexos) con vencimiento hasta este
+ * número de días DESPUÉS del fin de vigencia de la póliza.
+ */
+export const DIAS_GRACIA_VIGENCIA_DESGRAVAMEN = 40;
+
+/**
+ * Tipos de seguro de desgravamen, por id de `tipos_seguros` (códigos APS 9348
+ * "largo plazo" = id 35 y 9349 "corto plazo" = id 36). Fuente única para
+ * identificar el ramo desgravamen desde el producto seleccionado.
+ */
+export const TIPO_SEGURO_IDS_DESGRAVAMEN: readonly number[] = [35, 36];
+
+/** Indica si el producto seleccionado corresponde a un ramo de desgravamen. */
+export function esProductoDesgravamen(producto?: { tipo_seguro_id?: number | null } | null): boolean {
+	return (
+		!!producto && producto.tipo_seguro_id != null && TIPO_SEGURO_IDS_DESGRAVAMEN.includes(producto.tipo_seguro_id)
+	);
+}
+
+/**
  * Indica si un ramo tiene formulario específico implementado (Paso 3) y por lo
  * tanto requiere datos_especificos antes de guardar.
  * Única fuente de verdad para esta regla (usada en Resumen, server actions y
@@ -514,17 +535,24 @@ export function validarModalidadPago(
  * Esta es una validación de advertencia, no bloquea el guardado
  * NOTA: deliberadamente NO se valida que las fechas de pago sean futuras;
  * las pólizas en curso pueden registrar cuotas con fechas ya pasadas.
+ *
+ * `diasGraciaFin` corre el límite superior N días más allá del fin de vigencia
+ * (desgravamen, cuyo cobro puede extenderse tras la vigencia). 0 = sin gracia.
  */
 export function validarFechasDentroVigencia(
 	pago: ModalidadPago,
 	inicio_vigencia: string,
 	fin_vigencia: string,
+	diasGraciaFin = 0,
 ): ValidationResult {
 	const errores: ValidationError[] = [];
 	const fechaInicio = new Date(inicio_vigencia);
 	const fechaFin = new Date(fin_vigencia);
 	fechaInicio.setHours(0, 0, 0, 0);
 	fechaFin.setHours(0, 0, 0, 0);
+	if (diasGraciaFin > 0) {
+		fechaFin.setDate(fechaFin.getDate() + diasGraciaFin);
+	}
 
 	if (pago.tipo === "contado") {
 		const fechaPago = new Date(pago.fecha_pago_unico);
