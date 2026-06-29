@@ -511,6 +511,7 @@ export function NuevaPolizaForm({ mode = "create", polizaId, initialData }: Nuev
 						mode={mode === "edit" ? "edit" : "create"}
 						tipoPrima={formState.datos_basicos?.tipo_prima ?? "directa"}
 						esRetroactiva={formState.datos_basicos?.es_retroactiva ?? false}
+						monedaPoliza={formState.datos_basicos?.moneda}
 						onChange={(datos) => {
 							setFormState((prev) => ({
 								...prev,

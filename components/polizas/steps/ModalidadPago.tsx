@@ -50,9 +50,18 @@ type Props = {
 	mode?: "create" | "edit"; // Modo del formulario
 	tipoPrima?: TipoPrima; // "sin_prima_propia" → permite prima 0 y 0 cuotas (madre/open-cover)
 	esRetroactiva?: boolean; // Carga histórica → permite marcar cuotas como ya pagadas
+	monedaPoliza?: Moneda; // Moneda definida en Datos Básicos (paso 2); aquí solo se visualiza
 	onChange: (datos: ModalidadPagoType) => void;
 	onSiguiente: () => void;
 	onAnterior: () => void;
+};
+
+// Etiquetas legibles de moneda (la moneda se elige en Datos Básicos; aquí solo se muestra)
+const MONEDA_LABELS: Record<string, string> = {
+	Bs: "Bolivianos (Bs)",
+	USD: "Dólares (USD)",
+	USDT: "Tether (USDT)",
+	UFV: "UFV",
 };
 
 // Helper to check if any cuota is paid
@@ -78,6 +87,7 @@ export function ModalidadPago({
 	mode = "create",
 	tipoPrima = "directa",
 	esRetroactiva = false,
+	monedaPoliza,
 	onChange,
 	onSiguiente,
 	onAnterior,
@@ -120,7 +130,9 @@ export function ModalidadPago({
 	const [montoPorCuotaRetro, setMontoPorCuotaRetro] = useState<number>(0);
 
 	// Estado común
-	const [moneda, setMoneda] = useState<Moneda>(datos?.moneda || "Bs");
+	// La moneda se define en Datos Básicos (paso 2). Aquí es de solo lectura: se deriva
+	// del prop y se muestra, evitando la desincronización que provocaba el estado local.
+	const moneda: Moneda = monedaPoliza ?? datos?.moneda ?? "Bs";
 	const [errores, setErrores] = useState<Record<string, string>>({});
 	const [advertencias, setAdvertencias] = useState<Record<string, string>>({});
 
@@ -491,23 +503,13 @@ export function ModalidadPago({
 					</div>
 				</div>
 
-				{/* Moneda */}
+				{/* Moneda (definida en Datos Básicos, solo lectura) */}
 				<div className="max-w-xs space-y-2">
-					<Label htmlFor="moneda_sin_prima">
-						Moneda <span className="text-destructive">*</span>
-					</Label>
-					<Select value={moneda} onValueChange={(value) => setMoneda(value as Moneda)}>
-						<SelectTrigger className={errores.moneda ? "border-destructive" : ""}>
-							<SelectValue />
-						</SelectTrigger>
-						<SelectContent>
-							<SelectItem value="Bs">Bolivianos (Bs)</SelectItem>
-							<SelectItem value="USD">Dólares (USD)</SelectItem>
-							<SelectItem value="USDT">Tether (USDT)</SelectItem>
-							<SelectItem value="UFV">UFV</SelectItem>
-						</SelectContent>
-					</Select>
-					{errores.moneda && <p className="text-sm text-destructive">{errores.moneda}</p>}
+					<Label>Moneda</Label>
+					<div className="flex h-9 items-center rounded-md border border-border bg-muted px-3 text-sm font-medium text-foreground">
+						{MONEDA_LABELS[moneda] ?? moneda}
+					</div>
+					<p className="text-xs text-muted-foreground">Definida en Datos Básicos</p>
 				</div>
 
 				{/* Botones de navegación */}
@@ -693,23 +695,13 @@ export function ModalidadPago({
 							)}
 						</div>
 
-						{/* Moneda */}
+						{/* Moneda (definida en Datos Básicos, solo lectura) */}
 						<div className="space-y-2">
-							<Label htmlFor="moneda">
-								Moneda <span className="text-destructive">*</span>
-							</Label>
-							<Select value={moneda} onValueChange={(value) => setMoneda(value as Moneda)}>
-								<SelectTrigger className={errores.moneda ? "border-destructive" : ""}>
-									<SelectValue />
-								</SelectTrigger>
-								<SelectContent>
-									<SelectItem value="Bs">Bolivianos (Bs)</SelectItem>
-									<SelectItem value="USD">Dólares (USD)</SelectItem>
-									<SelectItem value="USDT">Tether (USDT)</SelectItem>
-									<SelectItem value="UFV">UFV</SelectItem>
-								</SelectContent>
-							</Select>
-							{errores.moneda && <p className="text-sm text-destructive">{errores.moneda}</p>}
+							<Label>Moneda</Label>
+							<div className="flex h-9 items-center rounded-md border border-border bg-muted px-3 text-sm font-medium text-foreground">
+								{MONEDA_LABELS[moneda] ?? moneda}
+							</div>
+							<p className="text-xs text-muted-foreground">Definida en Datos Básicos</p>
 						</div>
 					</div>
 
@@ -796,23 +788,13 @@ export function ModalidadPago({
 							{errores.prima_total && <p className="text-sm text-destructive">{errores.prima_total}</p>}
 						</div>
 
-						{/* Moneda */}
+						{/* Moneda (definida en Datos Básicos, solo lectura) */}
 						<div className="space-y-2">
-							<Label htmlFor="moneda_credito">
-								Moneda <span className="text-destructive">*</span>
-							</Label>
-							<Select value={moneda} onValueChange={(value) => setMoneda(value as Moneda)}>
-								<SelectTrigger className={errores.moneda ? "border-destructive" : ""}>
-									<SelectValue />
-								</SelectTrigger>
-								<SelectContent>
-									<SelectItem value="Bs">Bolivianos (Bs)</SelectItem>
-									<SelectItem value="USD">Dólares (USD)</SelectItem>
-									<SelectItem value="USDT">Tether (USDT)</SelectItem>
-									<SelectItem value="UFV">UFV</SelectItem>
-								</SelectContent>
-							</Select>
-							{errores.moneda && <p className="text-sm text-destructive">{errores.moneda}</p>}
+							<Label>Moneda</Label>
+							<div className="flex h-9 items-center rounded-md border border-border bg-muted px-3 text-sm font-medium text-foreground">
+								{MONEDA_LABELS[moneda] ?? moneda}
+							</div>
+							<p className="text-xs text-muted-foreground">Definida en Datos Básicos</p>
 						</div>
 
 						{/* Carga retroactiva: monto fijo por cuota pendiente */}
