@@ -769,6 +769,11 @@ export async function exportarProduccionNuevo(
 		if (filtros.compania_id) {
 			anexoQuery = anexoQuery.eq("poliza.compania_aseguradora_id", filtros.compania_id);
 		}
+		// Mismo filtro de estado que las pólizas: los anexos cuya póliza no coincide vuelven con
+		// poliza=null y se descartan abajo (if (!pol) continue), igual que el resto de filtros anidados.
+		if (filtros.estado_poliza && filtros.estado_poliza !== "all") {
+			anexoQuery = anexoQuery.eq("poliza.estado", filtros.estado_poliza);
+		}
 		if (memberIds) {
 			anexoQuery = anexoQuery.in("poliza.responsable_id", memberIds);
 		}

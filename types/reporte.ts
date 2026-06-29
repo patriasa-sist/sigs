@@ -12,7 +12,7 @@ export type ExportProduccionFilters = {
 	/** Rango de fechas personalizado (override mes/anio si ambos presentes) */
 	fecha_desde?: string; // YYYY-MM-DD
 	fecha_hasta?: string; // YYYY-MM-DD
-	estado_poliza?: "activa" | "all";
+	estado_poliza?: "activa" | "pendiente" | "rechazada" | "all";
 	regional_id?: string;
 	compania_id?: string;
 	equipo_id?: string;

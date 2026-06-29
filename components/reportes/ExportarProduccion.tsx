@@ -27,7 +27,7 @@ export default function ExportarProduccion({ regionales, companias, equipos }: F
 
 	const [fechaDesde, setFechaDesde] = useState<string>(defaults.desde);
 	const [fechaHasta, setFechaHasta] = useState<string>(defaults.hasta);
-	const [estadoPoliza, setEstadoPoliza] = useState<"activa" | "all">("all");
+	const [estadoPoliza, setEstadoPoliza] = useState<"activa" | "pendiente" | "rechazada" | "all">("all");
 	const [regionalId, setRegionalId] = useState<string>("");
 	const [companiaId, setCompaniaId] = useState<string>("");
 	const [equipoId, setEquipoId] = useState<string>("");
@@ -352,7 +352,9 @@ export default function ExportarProduccion({ regionales, companias, equipos }: F
 							<Label className="text-sm">Estado Póliza</Label>
 							<Select
 								value={estadoPoliza}
-								onValueChange={(value) => setEstadoPoliza(value as "activa" | "all")}
+								onValueChange={(value) =>
+									setEstadoPoliza(value as "activa" | "pendiente" | "rechazada" | "all")
+								}
 							>
 								<SelectTrigger className="w-full truncate">
 									<SelectValue />
@@ -360,6 +362,8 @@ export default function ExportarProduccion({ regionales, companias, equipos }: F
 								<SelectContent>
 									<SelectItem value="all">Todas</SelectItem>
 									<SelectItem value="activa">Solo Activas</SelectItem>
+									<SelectItem value="pendiente">Solo Pendientes</SelectItem>
+									<SelectItem value="rechazada">Solo Rechazadas</SelectItem>
 								</SelectContent>
 							</Select>
 						</div>
