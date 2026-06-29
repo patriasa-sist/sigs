@@ -19,6 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Combobox } from "@/components/ui/combobox";
 import { createClient } from "@/utils/supabase/client";
 import { DirectorCarteraDropdown } from "@/components/shared/DirectorCarteraDropdown";
 
@@ -477,21 +478,18 @@ export function DatosBasicos({ datos, onChange, onSiguiente, onAnterior }: Props
 					<Label htmlFor="compania">
 						Compañía Aseguradora <span className="text-destructive">*</span>
 					</Label>
-					<Select
+					<Combobox
+						options={companias.map((compania) => ({
+							value: compania.id,
+							label: compania.codigo != null ? `(${compania.codigo}) ${compania.nombre}` : compania.nombre,
+						}))}
 						value={formData.compania_aseguradora_id}
-						onValueChange={(value) => handleChange("compania_aseguradora_id", value)}
-					>
-						<SelectTrigger className={errores.compania_aseguradora_id ? "border-destructive" : ""}>
-							<SelectValue placeholder="Seleccione una compañía" />
-						</SelectTrigger>
-						<SelectContent>
-							{companias.map((compania) => (
-								<SelectItem key={compania.id} value={compania.id}>
-									{compania.nombre}
-								</SelectItem>
-							))}
-						</SelectContent>
-					</Select>
+						onChange={(value) => handleChange("compania_aseguradora_id", value)}
+						placeholder="Seleccione una compañía"
+						searchPlaceholder="Buscar por código o nombre..."
+						emptyText="Sin compañías."
+						className={errores.compania_aseguradora_id ? "border-destructive" : ""}
+					/>
 					{errores.compania_aseguradora_id && (
 						<p className="text-sm text-destructive">{errores.compania_aseguradora_id}</p>
 					)}

@@ -7,6 +7,7 @@
 export type CompaniaAseguradora = {
 	id: string;
 	nombre: string;
+	codigo?: number | null; // código APS de la compañía (ej. 108 = Alianza)
 	activo: boolean;
 	created_at?: string;
 };
