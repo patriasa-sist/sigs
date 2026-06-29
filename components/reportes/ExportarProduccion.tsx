@@ -108,11 +108,15 @@ export default function ExportarProduccion({ regionales, companias, equipos }: F
 			const fechaDesdeFormatted = new Date(meta.fecha_desde + "T00:00:00").toLocaleDateString("es-BO");
 			const fechaHastaFormatted = new Date(meta.fecha_hasta + "T00:00:00").toLocaleDateString("es-BO");
 
+			// Tipo de cambio aplicado (USD/USDT ya están en dólares; Bs/UFV se tratan como Bs).
+			const tc = Number(tipoCambio) > 0 ? Number(tipoCambio) : 6.96;
+
 			const metaRows = [
 				["Fecha de reporte:", fechaReporte],
 				["Usuario:", meta.usuario_email],
 				["Rango de fechas:", `${fechaDesdeFormatted} - ${fechaHastaFormatted}`],
 				["Cantidad de pólizas:", rows.length.toString()],
+				["Tipo de cambio (Bs/USD):", tc.toLocaleString("es-BO", { minimumFractionDigits: 2 })],
 				["Filtros aplicados:", filtrosAplicados.length > 0 ? filtrosAplicados.join(", ") : "Ninguno"],
 			];
 
@@ -126,9 +130,9 @@ export default function ExportarProduccion({ regionales, companias, equipos }: F
 			worksheet.addRow([]);
 
 			// ---- Definir columnas de datos ----
-			// Fila 7: banda de grupo (Bolivianos / Dólares). Fila 8: encabezados de columna.
-			const GROUP_HEADER_ROW = 7;
-			const DATA_HEADER_ROW = 8;
+			// Tras las metaRows + 1 fila separadora van la banda de grupo y luego los encabezados.
+			const GROUP_HEADER_ROW = metaRows.length + 2;
+			const DATA_HEADER_ROW = metaRows.length + 3;
 			const columns = [
 				{ header: "N°", key: "__nro", width: 6 },
 				{ header: "N° Póliza", key: "numero_poliza", width: 15 },
@@ -222,8 +226,6 @@ export default function ExportarProduccion({ regionales, companias, equipos }: F
 			pintarBanda(bsBlockIndices, "BOLIVIANOS (Bs)", GREEN);
 			pintarBanda(usdBlockIndices, "DÓLARES (USD)", PURPLE);
 
-			// Tipo de cambio. USD/USDT ya están en dólares; Bs/UFV se tratan como Bs.
-			const tc = Number(tipoCambio) > 0 ? Number(tipoCambio) : 6.96;
 			const esUsd = (moneda: string) => moneda === "USD" || moneda === "USDT";
 			const aUsd = (monto: number | null, moneda: string): number => {
 				const v = monto != null ? Number(monto) : 0;
