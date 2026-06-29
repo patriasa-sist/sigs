@@ -516,6 +516,27 @@ function extraerDatosCliente(clientData: ClientQueryResult | null): {
 	};
 }
 
+// Supabase corta cada request en 1000 filas. Pagina con .range() hasta traerlas todas.
+// Reutilizar el builder es seguro: postgrest-js hace range()->searchParams.set y then()
+// relanza el fetch, así que cada await re-ejecuta la consulta con el nuevo rango.
+async function fetchAllPaginated(
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	query: { range: (from: number, to: number) => PromiseLike<{ data: any[] | null; error: any }> },
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+): Promise<{ data: any[]; error: any }> {
+	const PAGE_SIZE = 1000;
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	const all: any[] = [];
+	for (let from = 0; ; from += PAGE_SIZE) {
+		const { data, error } = await query.range(from, from + PAGE_SIZE - 1);
+		if (error) return { data: all, error };
+		const batch = data ?? [];
+		all.push(...batch);
+		if (batch.length < PAGE_SIZE) break;
+	}
+	return { data: all, error: null };
+}
+
 /**
  * Exporta el reporte de producción (una fila por póliza + anexos validados)
  * Aplica data scoping: comercial/agente solo ven datos de su equipo.
@@ -752,10 +773,13 @@ export async function exportarProduccionNuevo(
 			anexoQuery = anexoQuery.in("poliza.responsable_id", memberIds);
 		}
 
-		// Ejecutar ambas consultas en paralelo
+		// Ejecutar ambas consultas en paralelo, paginadas (Supabase corta en 1000 filas/request,
+		// lo que hacía que rangos multi-mes con >1000 registros se truncaran silenciosamente).
+		// Se ordena por "id" (único) para que la paginación sea estable; el orden final del
+		// reporte se aplica luego en memoria (rows.sort por fecha de registro).
 		const [polizasRes, anexosRes] = await Promise.all([
-			polizaQuery.order("numero_poliza", { ascending: true }),
-			anexoQuery.order("fecha_anexo", { ascending: true }),
+			fetchAllPaginated(polizaQuery.order("id", { ascending: true })),
+			fetchAllPaginated(anexoQuery.order("id", { ascending: true })),
 		]);
 
 		if (polizasRes.error) {
