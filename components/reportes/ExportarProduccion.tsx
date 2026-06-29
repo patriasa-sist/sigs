@@ -136,8 +136,9 @@ export default function ExportarProduccion({ regionales, companias, equipos }: F
 				{ header: "CI/NIT", key: "ci_nit", width: 15 },
 				{ header: "Director de Cartera", key: "director_cartera", width: 22 },
 				{ header: "Compañía", key: "compania", width: 25 },
-				{ header: "Cod APS", key: "cod_aps", width: 10 },
+				{ header: "Cod Cia APS", key: "cod_aps", width: 12 },
 				{ header: "Ramo", key: "ramo", width: 20 },
+				{ header: "Cod Ramo APS", key: "cod_ramo_aps", width: 13 },
 				{ header: "Responsable", key: "responsable", width: 25 },
 				{ header: "Regional", key: "regional", width: 15 },
 				{ header: "Prima Total", key: "prima_total", width: 14 },
@@ -156,6 +157,7 @@ export default function ExportarProduccion({ regionales, companias, equipos }: F
 				{ header: "Persona Registro", key: "persona_registro", width: 25 },
 				{ header: "Categoría", key: "categoria", width: 20 },
 				{ header: "Producto", key: "producto", width: 25 },
+				{ header: "Cod Producto", key: "cod_producto", width: 13 },
 			];
 
 			// Aplicar anchos de columna
@@ -276,8 +278,8 @@ export default function ExportarProduccion({ regionales, companias, equipos }: F
 					<div>
 						<CardTitle className="text-lg">Reporte de Producción</CardTitle>
 						<CardDescription>
-							Una fila por póliza/anexo con director de cartera, valor asegurado, cod APS y fechas de
-							emisión
+							Una fila por póliza/anexo con director de cartera, valor asegurado, códigos APS (compañía,
+							ramo, producto) y fechas de emisión
 						</CardDescription>
 					</div>
 				</div>

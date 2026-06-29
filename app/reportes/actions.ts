@@ -583,7 +583,11 @@ export async function exportarProduccionNuevo(
 				factor_contado,
 				factor_credito,
 				porcentaje_comision,
-				nombre_producto
+				nombre_producto,
+				codigo_producto,
+				tipo_seguro:tipos_seguros!tipo_seguro_id (
+					codigo
+				)
 			),
 			created_by_profile:profiles!created_by (
 				full_name
@@ -684,7 +688,11 @@ export async function exportarProduccionNuevo(
 					factor_contado,
 					factor_credito,
 					porcentaje_comision,
-					nombre_producto
+					nombre_producto,
+					codigo_producto,
+					tipo_seguro:tipos_seguros!tipo_seguro_id (
+						codigo
+					)
 				),
 				categoria:categorias!categoria_id (
 					nombre
@@ -838,6 +846,12 @@ export async function exportarProduccionNuevo(
 			};
 		}
 
+		// Código de ramo APS (ej. "9105" → "91-05"), tomado del tipo de seguro del producto
+		const formatRamoAps = (ramoCodigo: string | null | undefined): string | null => {
+			if (!ramoCodigo) return null;
+			return ramoCodigo.length === 4 ? `${ramoCodigo.slice(0, 2)}-${ramoCodigo.slice(2)}` : ramoCodigo;
+		};
+
 		// Construir filas de pólizas
 		const rows: ExportProduccionNuevoRow[] = polizas.map(
 			(p: {
@@ -862,6 +876,8 @@ export async function exportarProduccionNuevo(
 					factor_credito: number;
 					porcentaje_comision: number;
 					nombre_producto?: string;
+					codigo_producto?: string | null;
+					tipo_seguro?: { codigo?: string | null } | null;
 				} | null;
 				created_by_profile?: { full_name?: string } | null;
 				categoria?: { nombre?: string } | null;
@@ -892,6 +908,8 @@ export async function exportarProduccionNuevo(
 					director_cartera: dc ? `${dc.nombre} ${dc.apellidos}`.trim() : "N/A",
 					compania: p.compania?.nombre || "N/A",
 					cod_aps: p.compania?.codigo ?? null,
+					cod_ramo_aps: formatRamoAps(p.producto?.tipo_seguro?.codigo),
+					cod_producto: p.producto?.codigo_producto ?? null,
 					ramo: p.ramo,
 					responsable: p.responsable?.full_name || "N/A",
 					regional: p.regional?.nombre || "N/A",
@@ -941,6 +959,8 @@ export async function exportarProduccionNuevo(
 				director_cartera: dc ? `${dc.nombre} ${dc.apellidos}`.trim() : "N/A",
 				compania: pol.compania?.nombre || "N/A",
 				cod_aps: pol.compania?.codigo ?? null,
+				cod_ramo_aps: formatRamoAps(pol.producto?.tipo_seguro?.codigo),
+				cod_producto: pol.producto?.codigo_producto ?? null,
 				ramo: pol.ramo,
 				responsable: pol.responsable?.full_name || "N/A",
 				regional: pol.regional?.nombre || "N/A",

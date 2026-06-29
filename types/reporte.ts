@@ -68,7 +68,8 @@ export type ExportProduccionNuevoRow = {
 	ci_nit: string;
 	director_cartera: string;
 	compania: string;
-	cod_aps: number | null;
+	cod_aps: number | null; // código de la compañía (APS)
+	cod_ramo_aps: string | null; // código de ramo APS (ej. "91-05")
 	ramo: string;
 	responsable: string;
 	regional: string;
@@ -93,6 +94,7 @@ export type ExportProduccionNuevoRow = {
 	persona_registro: string;
 	categoria: string;
 	producto: string;
+	cod_producto: string | null; // código de producto de la aseguradora
 };
 
 // ============================================
