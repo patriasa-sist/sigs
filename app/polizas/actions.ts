@@ -271,6 +271,11 @@ export type PolizaDetalle = PolizaListItem & {
 	cuotas_inclusion?: CuotaAnexoPropia[];
 	vigencia_corrida?: CuotaVigenciaCorrida[];
 	monto_ajustes_total?: number;
+	// Producción consolidada: suma firmada de la prima de los anexos activos
+	// (inclusión +, exclusión −) para sumar a la prima de la póliza madre.
+	anexos_prima_total?: number;
+	anexos_prima_neta?: number;
+	anexos_comision?: number;
 };
 
 /**
@@ -1081,6 +1086,7 @@ export async function obtenerDetallePoliza(polizaId: string) {
 						`
 					id, numero_anexo, tipo_anexo, estado, created_at,
 					fecha_validacion, fecha_rechazo, motivo_rechazo,
+					prima_total, prima_neta, comision,
 					creador:profiles!created_by (full_name),
 					validador:profiles!validado_por (full_name),
 					rechazador:profiles!rechazado_por (full_name)
@@ -1115,6 +1121,20 @@ export async function obtenerDetallePoliza(polizaId: string) {
 
 		const anexosActivosFiltrados = (anexosActivos || []).filter((a) => a.estado === "activo");
 		const tiene_anexos_activos = anexosActivosFiltrados.length > 0;
+
+		// Producción consolidada: suma firmada de la prima de los anexos activos
+		// (inclusión +, exclusión −; null = sin prima propia → 0).
+		const sumaAnexo = (campo: "prima_total" | "prima_neta" | "comision") =>
+			anexosActivosFiltrados.reduce(
+				(sum, a) =>
+					sum +
+					((a as Record<string, unknown>)[campo] != null ? Number((a as Record<string, unknown>)[campo]) : 0),
+				0,
+			);
+		const anexos_prima_total = tiene_anexos_activos ? sumaAnexo("prima_total") : undefined;
+		const anexos_prima_neta = tiene_anexos_activos ? sumaAnexo("prima_neta") : undefined;
+		const anexos_comision = tiene_anexos_activos ? sumaAnexo("comision") : undefined;
+
 		let cuotas_consolidadas: CuotaConsolidada[] | undefined;
 		let cuotas_inclusion: CuotaAnexoPropia[] | undefined;
 		let vigencia_corrida: CuotaVigenciaCorrida[] | undefined;
@@ -1560,6 +1580,9 @@ export async function obtenerDetallePoliza(polizaId: string) {
 			cuotas_inclusion,
 			vigencia_corrida,
 			monto_ajustes_total,
+			anexos_prima_total,
+			anexos_prima_neta,
+			anexos_comision,
 		};
 
 		// Obtener rol del usuario actual

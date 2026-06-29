@@ -2184,19 +2184,22 @@ export default function PolizaDetallePage() {
 								<p className="text-xs text-muted-foreground capitalize mt-1">{poliza.modalidad_pago}</p>
 							</div>
 
-							{/* Ajustes por anexos */}
-							{poliza.monto_ajustes_total != null && poliza.monto_ajustes_total !== 0 && (
+							{/* Producción consolidada con anexos */}
+							{poliza.tiene_anexos_activos && (poliza.anexos_prima_total ?? 0) !== 0 && (
 								<div className="py-4">
-									<p className="text-xs text-muted-foreground mb-1">Ajuste por Anexos</p>
+									<p className="text-xs text-muted-foreground mb-1">Prima de Anexos</p>
 									<p
-										className={`text-base font-semibold ${poliza.monto_ajustes_total >= 0 ? "text-emerald-600" : "text-red-600"}`}
+										className={`text-base font-semibold ${(poliza.anexos_prima_total ?? 0) >= 0 ? "text-emerald-600" : "text-red-600"}`}
 									>
-										{poliza.monto_ajustes_total >= 0 ? "+" : ""}
-										{formatCurrency(poliza.monto_ajustes_total, poliza.moneda)}
+										{(poliza.anexos_prima_total ?? 0) >= 0 ? "+" : ""}
+										{formatCurrency(poliza.anexos_prima_total ?? 0, poliza.moneda)}
 									</p>
-									<p className="text-xs text-muted-foreground mt-3 mb-1">Prima Consolidada</p>
+									<p className="text-xs text-muted-foreground mt-3 mb-1">Prima Total Consolidada</p>
 									<p className="text-xl font-bold text-primary">
-										{formatCurrency(poliza.prima_total + poliza.monto_ajustes_total, poliza.moneda)}
+										{formatCurrency(
+											poliza.prima_total + (poliza.anexos_prima_total ?? 0),
+											poliza.moneda,
+										)}
 									</p>
 								</div>
 							)}
@@ -2228,12 +2231,34 @@ export default function PolizaDetallePage() {
 											Ajuste manual
 										</span>
 									)}
+									{poliza.tiene_anexos_activos && (poliza.anexos_prima_neta ?? 0) !== 0 && (
+										<p className="text-xs text-muted-foreground mt-1">
+											Consolidada:{" "}
+											<span className="font-semibold text-foreground">
+												{formatCurrency(
+													poliza.prima_neta + (poliza.anexos_prima_neta ?? 0),
+													poliza.moneda,
+												)}
+											</span>
+										</p>
+									)}
 								</div>
 								<div>
 									<p className="text-xs text-muted-foreground mb-0.5">Comisión</p>
 									<p className="text-sm font-semibold text-foreground">
 										{formatCurrency(poliza.comision, poliza.moneda)}
 									</p>
+									{poliza.tiene_anexos_activos && (poliza.anexos_comision ?? 0) !== 0 && (
+										<p className="text-xs text-muted-foreground mt-1">
+											Consolidada:{" "}
+											<span className="font-semibold text-foreground">
+												{formatCurrency(
+													poliza.comision + (poliza.anexos_comision ?? 0),
+													poliza.moneda,
+												)}
+											</span>
+										</p>
+									)}
 								</div>
 							</div>
 
