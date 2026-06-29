@@ -686,6 +686,10 @@ export async function exportarProduccionNuevo(
 			tipo_anexo,
 			fecha_anexo,
 			created_at,
+			prima_total,
+			prima_neta,
+			comision,
+			comision_empresa,
 			created_by_profile:profiles!created_by (
 				full_name
 			),
@@ -972,10 +976,20 @@ export async function exportarProduccionNuevo(
 
 			const { cliente, ciNit } = extraerDatosCliente(pol.client as ClientQueryResult | null);
 			const dc = pol.director_cartera;
-			const financieros = extraerFinancieros(pol, pol.producto);
+			// El anexo reporta su PROPIA producción (prima/comisión calculadas en #14),
+			// no la de la póliza madre. Inclusión suma, exclusión resta (montos firmados);
+			// el factor/porcentaje de referencia siguen viniendo del producto de la madre.
+			const financieros = extraerFinancieros(
+				{
+					prima_neta: anexo.prima_neta ?? null,
+					comision: anexo.comision ?? null,
+					comision_empresa: anexo.comision_empresa ?? null,
+					modalidad_pago: pol.modalidad_pago,
+					usar_factores_contado: pol.usar_factores_contado,
+				},
+				pol.producto,
+			);
 
-			const valorAseg = valorAseguradoMap.get(pol.id) ?? null;
-			const ramoTieneTabla = pol.ramo in RAMO_VALOR_ASEGURADO_MAP;
 			const cuotasInfo = cuotasMap.get(pol.id);
 
 			rows.push({
@@ -993,10 +1007,12 @@ export async function exportarProduccionNuevo(
 				ramo: pol.ramo,
 				responsable: pol.responsable?.full_name || "N/A",
 				regional: pol.regional?.nombre || "N/A",
-				prima_total: Number(pol.prima_total),
+				prima_total: Number(anexo.prima_total ?? 0),
 				...financieros,
 				moneda: pol.moneda || "Bs",
-				valor_asegurado: ramoTieneTabla ? valorAseg : Number(pol.prima_total),
+				// El valor asegurado del anexo (suma de sus ítems) no se agrega aquí; se
+				// deja vacío para no arrastrar el de la póliza madre.
+				valor_asegurado: null,
 				cantidad_cuotas: cuotasInfo?.cantidad ?? 1,
 				cuota_inicial: cuotasInfo?.cuota_inicial ?? null,
 				inicio_vigencia: pol.inicio_vigencia || "",
