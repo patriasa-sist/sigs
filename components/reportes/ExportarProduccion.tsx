@@ -32,6 +32,7 @@ export default function ExportarProduccion({ regionales, companias, equipos }: F
 	const [companiaId, setCompaniaId] = useState<string>("");
 	const [equipoId, setEquipoId] = useState<string>("");
 	const [excluirRetroactivas, setExcluirRetroactivas] = useState<boolean>(false);
+	const [tipoCambio, setTipoCambio] = useState<string>("6.96");
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
@@ -147,6 +148,9 @@ export default function ExportarProduccion({ regionales, companias, equipos }: F
 				{ header: "Prima Total", key: "prima_total", width: 14 },
 				{ header: "Prima Neta", key: "prima_neta", width: 14 },
 				{ header: "Comisión Empresa", key: "comision_empresa", width: 16 },
+				{ header: "Prima Total (USD)", key: "__prima_total_usd", width: 15 },
+				{ header: "Prima Neta (USD)", key: "__prima_neta_usd", width: 15 },
+				{ header: "Comisión Empresa (USD)", key: "__comision_empresa_usd", width: 18 },
 				{ header: "Factor Prima Neta", key: "factor_prima_neta", width: 15 },
 				{ header: "% Comisión", key: "porcentaje_comision", width: 12 },
 				{ header: "Moneda", key: "moneda", width: 10 },
@@ -188,11 +192,38 @@ export default function ExportarProduccion({ regionales, companias, equipos }: F
 				)
 				.filter((i) => i > 0);
 
+			const purpleColumnIndices = columns
+				.map((col, i) =>
+					["__prima_total_usd", "__prima_neta_usd", "__comision_empresa_usd"].includes(col.key) ? i + 1 : -1,
+				)
+				.filter((i) => i > 0);
+
+			// Encabezado de las columnas dolarizadas en morado (las demás van en verde)
+			purpleColumnIndices.forEach((colIdx) => {
+				dataHeaderRow.getCell(colIdx).fill = {
+					type: "pattern",
+					pattern: "solid",
+					fgColor: { argb: "FF7E57C2" },
+				};
+			});
+
+			// Tipo de cambio para las columnas dolarizadas (Bs ÷ TC → USD; USD/USDT sin cambio)
+			const tc = Number(tipoCambio) > 0 ? Number(tipoCambio) : 6.96;
+			const aUsd = (monto: number | null, moneda: string): number => {
+				const v = monto != null ? Number(monto) : 0;
+				if (!Number.isFinite(v)) return 0;
+				return moneda === "USD" || moneda === "USDT" ? v : v / tc;
+			};
+
 			// Escribir filas de datos
 			rows.forEach((row, rowIndex) => {
 				const values = columns.map((col) => {
 					// Correlativo secuencial según el orden (por fecha de registro) que viene del server
 					if (col.key === "__nro") return rowIndex + 1;
+					// Columnas dolarizadas (USD)
+					if (col.key === "__prima_total_usd") return aUsd(row.prima_total, row.moneda);
+					if (col.key === "__prima_neta_usd") return aUsd(row.prima_neta, row.moneda);
+					if (col.key === "__comision_empresa_usd") return aUsd(row.comision_empresa, row.moneda);
 					const val = row[col.key as keyof typeof row];
 					// Formatear fechas
 					if (
@@ -221,6 +252,14 @@ export default function ExportarProduccion({ regionales, companias, equipos }: F
 						fgColor: { argb: "FFE2EFDA" },
 					};
 				});
+
+				purpleColumnIndices.forEach((colIdx) => {
+					excelRow.getCell(colIdx).fill = {
+						type: "pattern",
+						pattern: "solid",
+						fgColor: { argb: "FFEDE7F6" },
+					};
+				});
 			});
 
 			// Bordes en filas de datos (desde header hasta última fila)
@@ -237,7 +276,16 @@ export default function ExportarProduccion({ regionales, companias, equipos }: F
 			}
 
 			// Formato numérico
-			const numericKeys = ["prima_total", "prima_neta", "comision_empresa", "valor_asegurado", "cuota_inicial"];
+			const numericKeys = [
+				"prima_total",
+				"prima_neta",
+				"comision_empresa",
+				"__prima_total_usd",
+				"__prima_neta_usd",
+				"__comision_empresa_usd",
+				"valor_asegurado",
+				"cuota_inicial",
+			];
 			numericKeys.forEach((key) => {
 				const colIdx = columns.findIndex((c) => c.key === key) + 1;
 				if (colIdx > 0) {
@@ -374,6 +422,17 @@ export default function ExportarProduccion({ regionales, companias, equipos }: F
 									))}
 								</SelectContent>
 							</Select>
+						</div>
+
+						<div className="space-y-1.5">
+							<Label className="text-sm">TC (Bs/USD)</Label>
+							<Input
+								type="number"
+								step="0.01"
+								min="0"
+								value={tipoCambio}
+								onChange={(e) => setTipoCambio(e.target.value)}
+							/>
 						</div>
 					</div>
 
