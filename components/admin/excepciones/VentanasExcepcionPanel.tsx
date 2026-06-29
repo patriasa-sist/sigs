@@ -27,10 +27,10 @@ import {
 	extenderVentana,
 	cerrarVentana,
 	eliminarVentana,
-	ROLES_VENTANA,
 	type VentanaRow,
 	type UsuarioOption,
 } from "@/app/admin/excepciones/actions";
+import { ROLES_VENTANA } from "@/app/admin/excepciones/constants";
 import { formatFechaLaPaz } from "@/utils/formatters";
 
 const ROL_LABEL: Record<string, string> = {
