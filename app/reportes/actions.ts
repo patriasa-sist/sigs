@@ -960,8 +960,14 @@ export async function exportarProduccionNuevo(
 			});
 		}
 
-		// Ordenar por número de póliza
-		rows.sort((a, b) => a.numero_poliza.localeCompare(b.numero_poliza));
+		// Ordenar por fecha de registro en el sistema (producción) y, como desempate, por número de póliza.
+		// El correlativo del Excel se asigna luego según este orden.
+		rows.sort((a, b) => {
+			const fa = a.fecha_produccion_sistema || "";
+			const fb = b.fecha_produccion_sistema || "";
+			if (fa !== fb) return fa.localeCompare(fb);
+			return a.numero_poliza.localeCompare(b.numero_poliza);
+		});
 
 		return {
 			success: true,

@@ -127,6 +127,7 @@ export default function ExportarProduccion({ regionales, companias, equipos }: F
 			// ---- Definir columnas de datos (fila 7 será el header) ----
 			const DATA_HEADER_ROW = 7;
 			const columns = [
+				{ header: "N°", key: "__nro", width: 6 },
 				{ header: "N° Póliza", key: "numero_poliza", width: 15 },
 				{ header: "N° Anexo", key: "numero_anexo", width: 12 },
 				{ header: "Tipo", key: "tipo_poliza", width: 14 },
@@ -185,8 +186,10 @@ export default function ExportarProduccion({ regionales, companias, equipos }: F
 				.filter((i) => i > 0);
 
 			// Escribir filas de datos
-			rows.forEach((row) => {
+			rows.forEach((row, rowIndex) => {
 				const values = columns.map((col) => {
+					// Correlativo secuencial según el orden (por fecha de registro) que viene del server
+					if (col.key === "__nro") return rowIndex + 1;
 					const val = row[col.key as keyof typeof row];
 					// Formatear fechas
 					if (
