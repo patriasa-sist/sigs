@@ -6,6 +6,7 @@ import { checkPermission, getDataScopeFilter } from "@/utils/auth/helpers";
 import { resolverNombresCliente } from "@/utils/polizas/resolverNombresCliente";
 import { netoAporteAnexo, type PagoAnexoLite } from "@/utils/polizas/aporteAnexo";
 import { anularCuotasPorAnulacion } from "@/utils/polizas/anulacionCuotas";
+import { ESTADO_ANEXO } from "@/types/anexo";
 
 async function checkTeamLeaderForPolicy(
 	supabase: Awaited<ReturnType<typeof createClient>>,
@@ -100,7 +101,7 @@ export async function obtenerAnexosPendientes(): Promise<{
 				creador:profiles!created_by (full_name, email)
 			`,
 			)
-			.eq("estado", "pendiente")
+			.eq("estado", ESTADO_ANEXO.PENDIENTE)
 			.order("created_at", { ascending: false });
 
 		const { data: anexos, error } = await query;

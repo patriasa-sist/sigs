@@ -3,6 +3,7 @@
 import { createClient } from "@/utils/supabase/server";
 import { checkPermission } from "@/utils/auth/helpers";
 import { captureError } from "@/utils/sentry";
+import { ESTADO_ANEXO } from "@/types/anexo";
 
 // ============================================================================
 // REPORTES APS
@@ -194,7 +195,7 @@ export async function obtenerDatosAPS(filtros: APSFiltros): Promise<APSResponse>
 				.from("polizas_anexos")
 				.select(`id, poliza:polizas!poliza_id (${POLIZA_FINANCIERA_SELECT})`)
 				.eq("tipo_anexo", "anulacion")
-				.eq("estado", "activo")
+				.eq("estado", ESTADO_ANEXO.ACTIVO)
 				.gte("fecha_validacion", desdeTs)
 				.lte("fecha_validacion", hastaTs)
 				.order("id", { ascending: true })

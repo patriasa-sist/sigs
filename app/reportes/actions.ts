@@ -4,6 +4,7 @@ import { createClient } from "@/utils/supabase/server";
 import { checkPermission, getDataScopeFilter } from "@/utils/auth/helpers";
 import { resolverNombresCliente } from "@/utils/polizas/resolverNombresCliente";
 import { hoyLaPaz } from "@/utils/formatters";
+import { ESTADO_ANEXO } from "@/types/anexo";
 import type {
 	ExportProduccionFilters,
 	ExportProduccionRow,
@@ -758,7 +759,9 @@ export async function exportarProduccionNuevo(
 			)
 		`);
 
-		anexoQuery = anexoQuery.eq("estado", "activa");
+		// Solo anexos validados. Usar la constante: el anexo usa "activo" (no "activa"
+		// como la póliza) y el literal equivocado fallaba en silencio.
+		anexoQuery = anexoQuery.eq("estado", ESTADO_ANEXO.ACTIVO);
 		anexoQuery = anexoQuery.gte("fecha_anexo", fechaDesde);
 		anexoQuery = anexoQuery.lte("fecha_anexo", fechaHasta);
 

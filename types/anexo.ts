@@ -27,7 +27,18 @@ export type MotivoErrorEdicionAnexo = "permiso" | "estado" | "no_encontrado" | "
 // ============================================
 
 export type TipoAnexo = "inclusion" | "exclusion" | "anulacion" | "reemplazo";
-export type EstadoAnexo = "pendiente" | "activo" | "rechazado";
+/**
+ * Estados de un anexo. Fuente ÚNICA del valor: en los filtros de query usar
+ * `ESTADO_ANEXO.*` y no literales sueltos. OJO: el anexo usa "activo" (masculino),
+ * distinto de la póliza ("activa"); un literal mal escrito en un `.eq("estado",…)`
+ * falla en silencio porque supabase-js no está tipado.
+ */
+export const ESTADO_ANEXO = {
+	PENDIENTE: "pendiente",
+	ACTIVO: "activo",
+	RECHAZADO: "rechazado",
+} as const;
+export type EstadoAnexo = (typeof ESTADO_ANEXO)[keyof typeof ESTADO_ANEXO];
 export type PasoAnexo = 1 | 2 | 3 | 4 | 5;
 
 // Dirección del ajuste de una anulación. La vigencia corrida se guarda siempre

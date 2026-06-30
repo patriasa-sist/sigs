@@ -5,6 +5,7 @@ import { getDataScopeFilter } from "@/utils/auth/helpers";
 import { obtenerEjecutivosFiltro } from "@/utils/ejecutivos";
 import { resolverNombresCliente } from "@/utils/polizas/resolverNombresCliente";
 import type { CuotaConsolidada, CuotaVigenciaCorrida, CuotaAnexoPropia, DireccionVigenciaCorrida } from "@/types/anexo";
+import { ESTADO_ANEXO } from "@/types/anexo";
 
 export type PolizaListItem = {
 	id: string;
@@ -1119,7 +1120,7 @@ export async function obtenerDetallePoliza(polizaId: string) {
 		// CONSOLIDACIÓN DE ANEXOS ACTIVOS
 		// ============================================
 
-		const anexosActivosFiltrados = (anexosActivos || []).filter((a) => a.estado === "activo");
+		const anexosActivosFiltrados = (anexosActivos || []).filter((a) => a.estado === ESTADO_ANEXO.ACTIVO);
 		const tiene_anexos_activos = anexosActivosFiltrados.length > 0;
 
 		// Producción consolidada: suma firmada de la prima de los anexos activos
