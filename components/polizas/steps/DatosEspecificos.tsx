@@ -16,6 +16,7 @@ import { AeronavegacionForm } from "../ramos/AeronavegacionForm";
 import { SepelioForm } from "../ramos/SepelioForm";
 import { VidaForm } from "../ramos/VidaForm";
 import { AccidentesPersonalesForm } from "../ramos/AccidentesPersonalesForm";
+import { DesgravamenForm } from "../ramos/DesgravamenForm";
 
 type Props = {
 	ramo: string;
@@ -256,6 +257,24 @@ export function DatosEspecificos({
 						onChange({
 							tipo_ramo: "Sepelio",
 							datos: datosSepelio,
+						});
+					}}
+					onSiguiente={onSiguiente}
+					onAnterior={onAnterior}
+				/>
+			);
+		}
+
+		// Desgravamen (hipotecario corto/largo plazo) — formulario mínimo (valor asegurado, puede ser 0)
+		if (ramoNormalizado.includes("desgravamen")) {
+			return (
+				<DesgravamenForm
+					datos={datos?.tipo_ramo === "Desgravamen" ? datos.datos : null}
+					moneda={moneda}
+					onChange={(datosDesgravamen) => {
+						onChange({
+							tipo_ramo: "Desgravamen",
+							datos: datosDesgravamen,
 						});
 					}}
 					onSiguiente={onSiguiente}

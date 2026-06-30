@@ -788,6 +788,22 @@ export async function cargarPolizaFormState(
 			};
 		}
 
+		// Desgravamen (valor asegurado, puede ser 0)
+		if (ramoLower.includes("desgravamen")) {
+			const { data: desgData } = await supabase
+				.from("polizas_desgravamen")
+				.select("valor_asegurado")
+				.eq("poliza_id", polizaId)
+				.single();
+
+			datos_especificos = {
+				tipo_ramo: "Desgravamen",
+				datos: {
+					valor_asegurado: desgData?.valor_asegurado ?? 0,
+				},
+			};
+		}
+
 		// Transportes
 		if (ramoLower.includes("transporte")) {
 			const { data: transporte, error: errorTransporte } = await supabase

@@ -80,6 +80,7 @@ export function ramoRequiereDatosEspecificos(ramo: string): boolean {
 		ramoNorm.includes("vida") ||
 		ramoNorm.includes("sepelio") ||
 		ramoNorm.includes("defuncion") ||
+		ramoNorm.includes("desgravamen") ||
 		(ramoNorm.includes("riesgo") && ramoNorm.includes("vario")) ||
 		(ramoNorm.includes("ramo") && ramoNorm.includes("tecnico"))
 	);

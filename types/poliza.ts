@@ -364,6 +364,13 @@ export type DatosResponsabilidadCivil = {
 	// REMOVED: asegurados (no es necesario para este ramo)
 };
 
+// --- DESGRAVAMEN ---
+// Ramo mínimo: solo valor asegurado, que puede ser 0 (la prima suele venir por
+// anexos de inclusión sobre una póliza madre sin prima propia).
+export type DatosDesgravamen = {
+	valor_asegurado: number;
+};
+
 // --- RIESGOS VARIOS MISCELÁNEOS ---
 // Sistema de bienes por ubicación con items asegurables (mismo patrón que Incendio)
 
@@ -592,6 +599,7 @@ export type DatosEspecificosPoliza =
 	| { tipo_ramo: "Accidentes Personales"; datos: DatosAccidentesPersonales }
 	| { tipo_ramo: "Vida"; datos: DatosVida }
 	| { tipo_ramo: "Sepelio"; datos: DatosSepelio }
+	| { tipo_ramo: "Desgravamen"; datos: DatosDesgravamen }
 	| { tipo_ramo: "Otro"; datos: Record<string, unknown> }; // Genérico para otros ramos
 
 // ============================================

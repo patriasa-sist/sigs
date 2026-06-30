@@ -1048,6 +1048,22 @@ export default function PolizaDetallePage() {
 						</div>
 					)}
 
+					{/* Desgravamen */}
+					{poliza.desgravamen && (
+						<div className="bg-card rounded-lg border border-border p-5">
+							<h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-4 flex items-center gap-2">
+								<Shield className="h-5 w-5" />
+								Desgravamen
+							</h2>
+							<div>
+								<label className="text-xs font-medium text-muted-foreground">Valor Asegurado</label>
+								<p className="text-sm font-semibold text-foreground mt-1">
+									{formatCurrency(poliza.desgravamen.valor_asegurado, poliza.moneda)}
+								</p>
+							</div>
+						</div>
+					)}
+
 					{/* Responsabilidad Civil */}
 					{poliza.responsabilidad_civil && (
 						<div className="bg-card rounded-lg border border-border p-5">

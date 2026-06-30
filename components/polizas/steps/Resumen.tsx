@@ -21,6 +21,7 @@ import type {
 	DatosIncendio,
 	DatosRiesgosVarios,
 	DatosResponsabilidadCivil,
+	DatosDesgravamen,
 	DatosRamosTecnicos,
 	DatosTransporte,
 	DatosAeronavegacion,
@@ -717,6 +718,17 @@ export function Resumen({ formState, onAnterior, onEditarPaso, onGuardar, guarda
 											).valor_asegurado.toLocaleString("es-BO")}{" "}
 											{modalidad_pago?.moneda || "Bs"}
 										</div>
+									</div>
+								)}
+
+								{/* Desgravamen */}
+								{datos_especificos?.tipo_ramo === "Desgravamen" && (
+									<div className="text-sm text-muted-foreground">
+										<span className="font-medium text-foreground">Valor Asegurado:</span>{" "}
+										{(datos_especificos.datos as DatosDesgravamen).valor_asegurado.toLocaleString(
+											"es-BO",
+										)}{" "}
+										{modalidad_pago?.moneda || "Bs"}
 									</div>
 								)}
 

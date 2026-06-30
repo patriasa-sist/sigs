@@ -1002,6 +1002,20 @@ export async function actualizarPoliza(
 			}
 		}
 
+		// 3e-bis. Update/insert Desgravamen (fila 1:1; valor asegurado puede ser 0)
+		if (formState.datos_especificos?.tipo_ramo === "Desgravamen") {
+			const { error: errDesg } = await supabase.from("polizas_desgravamen").upsert(
+				{
+					poliza_id: polizaId,
+					valor_asegurado: formState.datos_especificos.datos.valor_asegurado,
+				},
+				{ onConflict: "poliza_id" },
+			);
+			if (errDesg) {
+				return { success: false, error: `Error al actualizar datos de desgravamen: ${errDesg.message}` };
+			}
+		}
+
 		// 3f. Update Transporte data (fila 1:1 — UPDATE si existe, si no INSERT; sin política DELETE)
 		if (formState.datos_especificos?.tipo_ramo === "Transportes") {
 			const datosTransporte = formState.datos_especificos.datos;

@@ -604,6 +604,16 @@ async function insertarDatosRamo(supabase: SupabaseClient, polizaId: string, for
 		}
 	}
 
+	// Desgravamen (valor asegurado, puede ser 0)
+	if (formState.datos_especificos.tipo_ramo === "Desgravamen") {
+		const { error: errorDesg } = await supabase.from("polizas_desgravamen").insert({
+			poliza_id: polizaId,
+			valor_asegurado: formState.datos_especificos.datos.valor_asegurado,
+		});
+
+		throwIfError(errorDesg, "Error al guardar datos de desgravamen");
+	}
+
 	// Vida, Sepelio, Accidentes Personales (niveles compartidos)
 	if (
 		formState.datos_especificos.tipo_ramo === "Vida" ||
@@ -812,8 +822,7 @@ export async function guardarPoliza(formState: PolizaFormState) {
 			if (existente) {
 				return {
 					success: false,
-					error:
-						"Ya existe una póliza de esta compañía con ese número. Si se trata de una renovación, use el botón Renovar desde la póliza original (o márquela como renovación).",
+					error: "Ya existe una póliza de esta compañía con ese número. Si se trata de una renovación, use el botón Renovar desde la póliza original (o márquela como renovación).",
 				};
 			}
 		}

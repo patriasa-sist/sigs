@@ -141,6 +141,8 @@ export type PolizaDetalle = PolizaListItem & {
 		client_name: string;
 		client_ci: string;
 	}>;
+	// Desgravamen (valor asegurado, puede ser 0)
+	desgravamen?: { valor_asegurado: number } | null;
 	// Responsabilidad Civil
 	responsabilidad_civil?: {
 		tipo_poliza: string;
@@ -821,6 +823,19 @@ export async function obtenerDetallePoliza(polizaId: string) {
 					client_name: clientMap.get(a.client_id)?.name || "Desconocido",
 					client_ci: clientMap.get(a.client_id)?.ci || "-",
 				}));
+			}
+		}
+
+		// --- DESGRAVAMEN ---
+		let desgravamen: PolizaDetalle["desgravamen"];
+		if (ramoLower.includes("desgravamen")) {
+			const { data: desgData } = await supabase
+				.from("polizas_desgravamen")
+				.select("valor_asegurado")
+				.eq("poliza_id", polizaId)
+				.single();
+			if (desgData) {
+				desgravamen = { valor_asegurado: Number(desgData.valor_asegurado) };
 			}
 		}
 
@@ -1566,6 +1581,7 @@ export async function obtenerDetallePoliza(polizaId: string) {
 			incendio_asegurados,
 			riesgos_varios_bienes,
 			riesgos_varios_asegurados,
+			desgravamen,
 			responsabilidad_civil,
 			niveles_cobertura,
 			asegurados_nivel,

@@ -452,6 +452,14 @@ const RAMO_VALOR_ASEGURADO_MAP: Record<string, { table: string; sumColumn: strin
 		table: "polizas_aeronavegacion_naves",
 		sumColumn: "valor_casco",
 	},
+	"Desgravamen hipotecario corto plazo": {
+		table: "polizas_desgravamen",
+		sumColumn: "valor_asegurado",
+	},
+	"Desgravamen hipotecario largo plazo": {
+		table: "polizas_desgravamen",
+		sumColumn: "valor_asegurado",
+	},
 };
 
 /**
