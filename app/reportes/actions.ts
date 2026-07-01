@@ -462,34 +462,49 @@ const RAMO_VALOR_ASEGURADO_MAP: Record<string, { table: string; sumColumn: strin
 	},
 };
 
+// Tablas espejo de anexos por ramo (mismas columnas de valor que la madre). El
+// signo lo da la columna `accion` de cada ítem: inclusión suma, exclusión resta.
+// RC/Transporte/Salud/Vida no tienen tabla espejo de ítems → no aportan valor.
+const ANEXO_VALOR_ASEGURADO_MAP: Record<string, { table: string; sumColumn: string }> = {
+	Automotores: { table: "polizas_anexos_automotor_vehiculos", sumColumn: "valor_asegurado" },
+	"Ramos técnicos": { table: "polizas_anexos_ramos_tecnicos_equipos", sumColumn: "valor_asegurado" },
+	"Incendio y aliados": { table: "polizas_anexos_incendio_bienes", sumColumn: "valor_total_declarado" },
+	"Riesgos varios misceláneos": { table: "polizas_anexos_riesgos_varios_bienes", sumColumn: "valor_total_declarado" },
+	Aeronavegación: { table: "polizas_anexos_aeronavegacion_naves", sumColumn: "valor_casco" },
+};
+
 /**
- * Obtiene el valor asegurado para un conjunto de pólizas, agrupado por poliza_id
+ * Valor asegurado FIRMADO que aporta cada anexo, agrupado por anexo_id.
+ * Suma los ítems de la tabla espejo del ramo: inclusión (+), exclusión (−). Un
+ * reemplazo (1 sale / 1 entra) queda en su neto. Solo cubre ramos con tabla
+ * espejo de ítems; el resto no aporta valor (queda fuera del mapa → null). La
+ * tabla madre no se muta al validar anexos, así que no hay doble conteo.
  */
-async function obtenerValoresAsegurados(
+async function obtenerValoresAseguradosAnexos(
 	supabase: Awaited<ReturnType<typeof createClient>>,
-	polizaIds: string[],
+	anexoIds: string[],
 	ramos: Set<string>,
 ): Promise<Map<string, number>> {
 	const valorMap = new Map<string, number>();
-	if (polizaIds.length === 0) return valorMap;
+	if (anexoIds.length === 0) return valorMap;
 
-	// Determinar qué tablas necesitamos consultar
 	const tablesToQuery = new Set<{ table: string; sumColumn: string }>();
 	for (const ramo of ramos) {
-		const mapping = RAMO_VALOR_ASEGURADO_MAP[ramo];
+		const mapping = ANEXO_VALOR_ASEGURADO_MAP[ramo];
 		if (mapping) tablesToQuery.add(mapping);
 	}
 
-	// Consultar cada tabla en paralelo
 	const queries = Array.from(tablesToQuery).map(async ({ table, sumColumn }) => {
-		const { data } = await supabase.from(table).select("*").in("poliza_id", polizaIds);
+		const { data } = await fetchAllPaginated(
+			supabase.from(table).select(`anexo_id, accion, ${sumColumn}`).in("anexo_id", anexoIds),
+		);
 
-		if (data) {
-			for (const row of data) {
-				const pid = (row as Record<string, unknown>).poliza_id as string;
-				const val = Number((row as Record<string, unknown>)[sumColumn] ?? 0);
-				valorMap.set(pid, (valorMap.get(pid) || 0) + val);
-			}
+		for (const row of data) {
+			const r = row as Record<string, unknown>;
+			const aid = r.anexo_id as string;
+			const magnitud = Number(r[sumColumn] ?? 0);
+			const signo = r.accion === "exclusion" ? -1 : 1;
+			valorMap.set(aid, (valorMap.get(aid) || 0) + signo * magnitud);
 		}
 	});
 
@@ -598,6 +613,7 @@ export async function exportarProduccionNuevo(
 			prima_neta,
 			comision,
 			comision_empresa,
+			valor_asegurado_total,
 			modalidad_pago,
 			usar_factores_contado,
 			inicio_vigencia,
@@ -816,10 +832,17 @@ export async function exportarProduccionNuevo(
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		const anexos = (anexosRes.data || []) as Array<any>;
 
-		// Obtener valores asegurados para las pólizas
+		// El valor asegurado de la madre viaja denormalizado en
+		// polizas.valor_asegurado_total (mantenido por triggers), así el reporte no
+		// consulta las tablas de ítems. Los anexos sí se calculan aparte.
 		const polizaIds = polizas.map((p: { id: string }) => p.id);
-		const ramosSet = new Set(polizas.map((p: { ramo: string }) => p.ramo));
-		const valorAseguradoMap = await obtenerValoresAsegurados(supabase, polizaIds, ramosSet);
+
+		// Valor asegurado firmado que aporta cada anexo (inclusión +, exclusión −)
+		const anexoIds = anexos.map((a: { id: string }) => a.id);
+		const anexoRamosSet = new Set(
+			anexos.map((a: { poliza?: { ramo?: string } }) => a.poliza?.ramo).filter((r): r is string => Boolean(r)),
+		);
+		const valorAseguradoAnexoMap = await obtenerValoresAseguradosAnexos(supabase, anexoIds, anexoRamosSet);
 
 		// Obtener cantidad de cuotas y cuota inicial por póliza
 		const cuotasMap = new Map<string, { cantidad: number; cuota_inicial: number | null }>();
@@ -907,6 +930,7 @@ export async function exportarProduccionNuevo(
 				prima_neta: number | null;
 				comision: number | null;
 				comision_empresa: number | null;
+				valor_asegurado_total: number | null;
 				modalidad_pago: "contado" | "credito";
 				usar_factores_contado?: boolean;
 				inicio_vigencia: string;
@@ -938,8 +962,8 @@ export async function exportarProduccionNuevo(
 				const dc = p.director_cartera;
 				const financieros = extraerFinancieros(p, p.producto);
 
-				const valorAseg = valorAseguradoMap.get(p.id) ?? null;
 				const ramoTieneTabla = p.ramo in RAMO_VALOR_ASEGURADO_MAP;
+				const valorAseg = p.valor_asegurado_total != null ? Number(p.valor_asegurado_total) : null;
 				const cuotasInfo = cuotasMap.get(p.id);
 
 				return {
@@ -1021,9 +1045,11 @@ export async function exportarProduccionNuevo(
 				prima_total: Number(anexo.prima_total ?? 0),
 				...financieros,
 				moneda: pol.moneda || "Bs",
-				// El valor asegurado del anexo (suma de sus ítems) no se agrega aquí; se
-				// deja vacío para no arrastrar el de la póliza madre.
-				valor_asegurado: null,
+				// Valor asegurado PROPIO del anexo (firmado): inclusión suma, exclusión resta.
+				// Sumar la columna a lo largo de la póliza (madre + anexos) da el total
+				// consolidado. Ramos sin tabla espejo de ítems quedan en null.
+				valor_asegurado:
+					pol.ramo in ANEXO_VALOR_ASEGURADO_MAP ? (valorAseguradoAnexoMap.get(anexo.id) ?? null) : null,
 				cantidad_cuotas: cuotasInfo?.cantidad ?? 1,
 				cuota_inicial: cuotasInfo?.cuota_inicial ?? null,
 				inicio_vigencia: pol.inicio_vigencia || "",
