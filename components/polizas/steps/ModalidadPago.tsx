@@ -312,7 +312,12 @@ export function ModalidadPago({
 	 * Compone el objeto de modalidad de pago a partir del estado local actual.
 	 * Única fuente de verdad usada por "Continuar" y por el live-sync con el padre.
 	 */
-	const construirDatosPago = (): ModalidadPagoType & { comision_empresa?: number; comision_encargado?: number } => {
+	const construirDatosPago = (): ModalidadPagoType & {
+		comision_empresa?: number;
+		comision_encargado?: number;
+		factor_usado?: number;
+		porcentaje_comision?: number;
+	} => {
 		const inicial = flagsIniciales;
 
 		// Póliza SIN PRIMA PROPIA: contado degenerado (prima 0, sin cuotas reales).
@@ -327,7 +332,12 @@ export function ModalidadPago({
 			};
 		}
 
-		let datosPago: ModalidadPagoType & { comision_empresa?: number; comision_encargado?: number };
+		let datosPago: ModalidadPagoType & {
+			comision_empresa?: number;
+			comision_encargado?: number;
+			factor_usado?: number;
+			porcentaje_comision?: number;
+		};
 
 		if (tipoPago === "contado") {
 			datosPago = {
@@ -364,10 +374,14 @@ export function ModalidadPago({
 			};
 		}
 
-		// Agregar campos de comisión del producto si está disponible
+		// Agregar campos de comisión del producto si está disponible. El factor y el
+		// % se persisten para que el reporte/detalle muestren el valor EXACTO usado
+		// (el factor del producto puede cambiar después). Ver utils/polizas/factorDerivado.
 		if (calculos) {
 			datosPago.comision_empresa = calculos.comision_empresa;
 			datosPago.comision_encargado = calculos.comision_encargado;
+			datosPago.factor_usado = calculos.factor_usado;
+			datosPago.porcentaje_comision = calculos.porcentaje_comision;
 		}
 
 		return datosPago;
@@ -391,6 +405,8 @@ export function ModalidadPago({
 		comision,
 		calculos?.comision_empresa,
 		calculos?.comision_encargado,
+		calculos?.factor_usado,
+		calculos?.porcentaje_comision,
 		inicioVigencia,
 	]);
 

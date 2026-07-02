@@ -625,6 +625,8 @@ async function computarPrimaAnexo(
 	comision: number;
 	comision_empresa: number;
 	comision_encargado: number;
+	factor_prima_neta: number;
+	porcentaje_comision: number;
 } | null> {
 	if (tipoAnexo !== "inclusion" && tipoAnexo !== "exclusion") return null;
 
@@ -676,6 +678,9 @@ async function computarPrimaAnexo(
 		comision: r2(signo * calc.comision_empresa),
 		comision_empresa: r2(signo * calc.comision_empresa),
 		comision_encargado: r2(signo * calc.comision_encargado),
+		// Factor y % son tasas (no llevan signo): valor EXACTO usado, congelado.
+		factor_prima_neta: calc.factor_usado,
+		porcentaje_comision: calc.porcentaje_comision,
 	};
 }
 
@@ -1706,6 +1711,9 @@ export type AnexoDetalle = {
 	comision: number | null;
 	comision_empresa: number | null;
 	comision_encargado: number | null;
+	// Factor (porcentaje) y % de comisión (fracción) EXACTOS usados, congelados.
+	factor_prima_neta: number | null;
+	porcentaje_comision: number | null;
 	items: AnexoDetalleItem[];
 	pagos: AnexoDetallePago[];
 	documentos: AnexoDetalleDocumento[];
@@ -1734,6 +1742,7 @@ export async function obtenerDetalleAnexo(anexoId: string): Promise<{
 				fecha_validacion, motivo_rechazo, fecha_rechazo,
 				created_by, validado_por, rechazado_por,
 				prima_total, prima_neta, comision, comision_empresa, comision_encargado,
+				factor_prima_neta, porcentaje_comision,
 				polizas!poliza_id ( ramo )
 			`,
 			)
@@ -1794,6 +1803,8 @@ export async function obtenerDetalleAnexo(anexoId: string): Promise<{
 			comision: anexo.comision != null ? Number(anexo.comision) : null,
 			comision_empresa: anexo.comision_empresa != null ? Number(anexo.comision_empresa) : null,
 			comision_encargado: anexo.comision_encargado != null ? Number(anexo.comision_encargado) : null,
+			factor_prima_neta: anexo.factor_prima_neta != null ? Number(anexo.factor_prima_neta) : null,
+			porcentaje_comision: anexo.porcentaje_comision != null ? Number(anexo.porcentaje_comision) : null,
 			items,
 			pagos: (pagosResult.data || []).map((p) => ({
 				id: p.id,
@@ -2777,6 +2788,8 @@ export async function actualizarAnexo(
 			comision: primaFields?.comision ?? null,
 			comision_empresa: primaFields?.comision_empresa ?? null,
 			comision_encargado: primaFields?.comision_encargado ?? null,
+			factor_prima_neta: primaFields?.factor_prima_neta ?? null,
+			porcentaje_comision: primaFields?.porcentaje_comision ?? null,
 		};
 		const { error: updateError } = await supabase
 			.from("polizas_anexos")

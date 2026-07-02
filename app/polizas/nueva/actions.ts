@@ -833,6 +833,8 @@ export async function guardarPoliza(formState: PolizaFormState) {
 			comision?: number;
 			comision_empresa?: number;
 			comision_encargado?: number;
+			factor_usado?: number;
+			porcentaje_comision?: number;
 		};
 		const sinPrimaPropia = formState.datos_basicos.tipo_prima === "sin_prima_propia";
 
@@ -872,6 +874,10 @@ export async function guardarPoliza(formState: PolizaFormState) {
 				comision: sinPrimaPropia ? null : pagoData.comision_empresa || pagoData.comision || null,
 				comision_empresa: sinPrimaPropia ? null : pagoData.comision_empresa || null,
 				comision_encargado: sinPrimaPropia ? null : pagoData.comision_encargado || null,
+				// Factor y % congelados: valor EXACTO usado al calcular (el producto
+				// puede cambiar después). El reporte/detalle los leen de aquí.
+				factor_prima_neta: sinPrimaPropia ? null : (pagoData.factor_usado ?? null),
+				porcentaje_comision: sinPrimaPropia ? null : (pagoData.porcentaje_comision ?? null),
 				usar_factores_contado:
 					formState.modalidad_pago.tipo === "credito" &&
 					formState.modalidad_pago.usar_factores_contado === true,

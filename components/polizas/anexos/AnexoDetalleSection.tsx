@@ -36,6 +36,7 @@ import {
 import { validarAnexo, rechazarAnexo } from "@/app/gerencia/validacion-anexos/actions";
 import { formatDate, formatCurrency } from "@/utils/formatters";
 import { describirAporteAnexo, signoPagoAnexo } from "@/utils/polizas/aporteAnexo";
+import { derivarFactorPrimaNeta, derivarPorcentajeComision } from "@/utils/polizas/factorDerivado";
 import type { AnexoResumen } from "@/types/anexo";
 
 type Props = {
@@ -382,33 +383,77 @@ export default function AnexoDetalleSection({ polizaId, moneda, puedeValidar, on
 															Resumen Financiero
 														</h3>
 														<div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-															{(
-																[
-																	["Prima Total", detalle.prima_total],
-																	["Prima Neta", detalle.prima_neta],
-																	["Comisión", detalle.comision_empresa],
-																] as const
-															).map(([label, valor]) => {
-																const v = valor ?? 0;
+															{(() => {
+																// Preferir el valor EXACTO guardado; derivar solo como fallback para anexos
+																// previos a la persistencia del factor. porcentaje_comision se guarda como
+																// fracción (×100 para mostrar); derivarPorcentajeComision ya devuelve %.
+																const trim = (n: number) => Number(n.toFixed(6));
+																const factorRaw =
+																	detalle.factor_prima_neta ??
+																	derivarFactorPrimaNeta(
+																		detalle.prima_total,
+																		detalle.prima_neta,
+																	);
+																const comisionPctRaw =
+																	detalle.porcentaje_comision != null
+																		? detalle.porcentaje_comision * 100
+																		: derivarPorcentajeComision(
+																				detalle.prima_neta,
+																				detalle.comision_empresa,
+																			);
+																const factor =
+																	factorRaw != null ? trim(factorRaw) : null;
+																const comisionPct =
+																	comisionPctRaw != null
+																		? trim(comisionPctRaw)
+																		: null;
 																return (
-																	<div
-																		key={label}
-																		className="border rounded-lg p-4 bg-gray-50"
-																	>
-																		<p className="text-xs font-medium text-gray-500">
-																			{label}
-																		</p>
-																		<p
-																			className={`text-lg font-bold ${
-																				v < 0 ? "text-red-600" : "text-gray-900"
-																			}`}
+																	[
+																		["Prima Total", detalle.prima_total, null],
+																		[
+																			"Prima Neta",
+																			detalle.prima_neta,
+																			factor != null
+																				? `Factor: ${factor}%`
+																				: null,
+																		],
+																		[
+																			"Comisión",
+																			detalle.comision_empresa,
+																			comisionPct != null
+																				? `${comisionPct}%`
+																				: null,
+																		],
+																	] as const
+																).map(([label, valor, hint]) => {
+																	const v = valor ?? 0;
+																	return (
+																		<div
+																			key={label}
+																			className="border rounded-lg p-4 bg-gray-50"
 																		>
-																			{v >= 0 ? "+" : ""}
-																			{formatCurrency(v, moneda)}
-																		</p>
-																	</div>
-																);
-															})}
+																			<p className="text-xs font-medium text-gray-500">
+																				{label}
+																				{hint && (
+																					<span className="ml-1 font-normal text-gray-400">
+																						({hint})
+																					</span>
+																				)}
+																			</p>
+																			<p
+																				className={`text-lg font-bold ${
+																					v < 0
+																						? "text-red-600"
+																						: "text-gray-900"
+																				}`}
+																			>
+																				{v >= 0 ? "+" : ""}
+																				{formatCurrency(v, moneda)}
+																			</p>
+																		</div>
+																	);
+																});
+															})()}
 														</div>
 														{detalle.tipo_anexo === "exclusion" && (
 															<p className="text-xs text-gray-400 mt-2">

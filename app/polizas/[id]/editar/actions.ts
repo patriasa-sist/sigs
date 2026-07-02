@@ -278,7 +278,7 @@ export async function actualizarPoliza(
 		const { data: currentPoliza, error: fetchError } = await supabase
 			.from("polizas")
 			.select(
-				"estado, modalidad_pago, prima_total, producto_id, usar_factores_contado, prima_neta_manual, prima_neta, comision, comision_empresa, comision_encargado, compania_aseguradora_id, ramo, moneda, tipo_prima, es_retroactiva",
+				"estado, modalidad_pago, prima_total, producto_id, usar_factores_contado, prima_neta_manual, prima_neta, comision, comision_empresa, comision_encargado, factor_prima_neta, porcentaje_comision, compania_aseguradora_id, ramo, moneda, tipo_prima, es_retroactiva",
 			)
 			.eq("id", polizaId)
 			.single();
@@ -310,6 +310,8 @@ export async function actualizarPoliza(
 			comision?: number;
 			comision_empresa?: number;
 			comision_encargado?: number;
+			factor_usado?: number;
+			porcentaje_comision?: number;
 		};
 		const sinPrimaPropia = formState.datos_basicos.tipo_prima === "sin_prima_propia";
 		const esRetro = formState.datos_basicos.es_retroactiva === true;
@@ -349,6 +351,9 @@ export async function actualizarPoliza(
 			comision: sinPrimaPropia ? null : pagoData.comision_empresa || pagoData.comision || null,
 			comision_empresa: sinPrimaPropia ? null : pagoData.comision_empresa || null,
 			comision_encargado: sinPrimaPropia ? null : pagoData.comision_encargado || null,
+			// Factor y % congelados con el valor EXACTO recalculado en esta edición.
+			factor_prima_neta: sinPrimaPropia ? null : (pagoData.factor_usado ?? null),
+			porcentaje_comision: sinPrimaPropia ? null : (pagoData.porcentaje_comision ?? null),
 			usar_factores_contado:
 				formState.modalidad_pago.tipo === "credito" && formState.modalidad_pago.usar_factores_contado === true,
 			tipo_prima: formState.datos_basicos.tipo_prima ?? "directa",
@@ -381,6 +386,9 @@ export async function actualizarPoliza(
 				updatePayload.comision = currentPoliza.comision;
 				updatePayload.comision_empresa = currentPoliza.comision_empresa;
 				updatePayload.comision_encargado = currentPoliza.comision_encargado;
+				// El factor/% también quedan con lo ajustado a mano (efectivo, no del producto).
+				updatePayload.factor_prima_neta = currentPoliza.factor_prima_neta;
+				updatePayload.porcentaje_comision = currentPoliza.porcentaje_comision;
 			}
 		}
 

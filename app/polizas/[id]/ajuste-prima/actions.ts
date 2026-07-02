@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/utils/supabase/server";
 import { calcularComisionesConProducto } from "@/utils/polizaValidation";
+import { derivarFactorPrimaNeta } from "@/utils/polizas/factorDerivado";
 import type { ProductoAseguradora } from "@/types/poliza";
 
 // ============================================
@@ -26,6 +27,7 @@ export type AjustePrimaNetaInput = {
 };
 
 const redondear = (n: number) => Math.round(n * 100) / 100;
+const redondear6 = (n: number) => Math.round(n * 1e6) / 1e6;
 
 /**
  * Verifica que el usuario actual sea admin. El ajuste manual de montos es
@@ -186,14 +188,20 @@ export async function ajustarPrimaNeta(polizaId: string, input: AjustePrimaNetaI
 			}
 		}
 
+		// Factor/% EFECTIVOS del ajuste manual: derivados de los montos ajustados
+		// (no del producto), para que reconcilien con la prima neta guardada.
+		const primaNetaAjustada = redondear(input.prima_neta);
+		const comisionAjustada = redondear(input.comision_empresa);
 		const { error: updateError } = await supabase
 			.from("polizas")
 			.update({
 				prima_total: nuevaPrimaTotal,
-				prima_neta: redondear(input.prima_neta),
-				comision: redondear(input.comision_empresa),
-				comision_empresa: redondear(input.comision_empresa),
+				prima_neta: primaNetaAjustada,
+				comision: comisionAjustada,
+				comision_empresa: comisionAjustada,
 				comision_encargado: redondear(input.comision_encargado),
+				factor_prima_neta: derivarFactorPrimaNeta(nuevaPrimaTotal, primaNetaAjustada),
+				porcentaje_comision: primaNetaAjustada !== 0 ? redondear6(comisionAjustada / primaNetaAjustada) : null,
 				prima_neta_manual: true,
 				prima_neta_ajuste_motivo: motivo,
 			})
@@ -268,6 +276,8 @@ export async function restablecerPrimaNeta(polizaId: string): Promise<ActionResu
 				comision: calculo.comision_empresa,
 				comision_empresa: calculo.comision_empresa,
 				comision_encargado: calculo.comision_encargado,
+				factor_prima_neta: calculo.factor_usado,
+				porcentaje_comision: calculo.porcentaje_comision,
 				prima_neta_manual: false,
 				prima_neta_ajuste_motivo: null,
 			})
