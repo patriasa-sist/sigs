@@ -1,13 +1,26 @@
 import { createServerClient } from "@supabase/ssr";
+import type { JwtPayload } from "@supabase/supabase-js";
 import { NextResponse, type NextRequest } from "next/server";
 import type { Permission } from "@/utils/auth/helpers";
 import * as Sentry from "@sentry/nextjs";
 
 /**
+ * Errores esperables del ciclo de vida de la sesión (expiró y no se pudo
+ * refrescar, sesión eliminada, etc.): el usuario simplemente vuelve a
+ * loguearse. No son bugs, así que no se reportan a Sentry.
+ */
+const EXPECTED_AUTH_ERROR_CODES = new Set([
+	"refresh_token_not_found",
+	"refresh_token_already_used",
+	"session_expired",
+	"session_not_found",
+]);
+
+/**
  * Rutas protegidas por permiso.
  * Cada ruta requiere que el usuario tenga el permiso especificado en su JWT.
  * Si el valor es un array, basta con tener UNO de los permisos (OR).
- * Admin bypasea todas las verificaciones (hardcoded en getUserPermissionsFromSession).
+ * Admin bypasea todas las verificaciones (hardcoded más abajo).
  */
 const PROTECTED_ROUTES: Record<string, Permission | Permission[]> = {
 	"/admin/anexos": "anexos.eliminar",
@@ -33,34 +46,6 @@ const PUBLIC_ROUTES = [
 	"/unauthorized",
 	"/profile",
 ] as const;
-
-/**
- * Decodifica el payload del JWT y extrae los datos del usuario.
- * Retorna rol y permisos sin consulta a BD.
- */
-function decodeJWTPayload(accessToken: string): { user_role: string | null; user_permissions: string[] } {
-	try {
-		const payload = accessToken.split(".")[1];
-		if (!payload) return { user_role: null, user_permissions: [] };
-
-		const decoded = JSON.parse(
-			Buffer.from(payload.replace(/-/g, "+").replace(/_/g, "/"), "base64").toString("utf-8")
-		);
-
-		return {
-			user_role: decoded.user_role || null,
-			user_permissions: decoded.user_permissions || [],
-		};
-	} catch (error) {
-		console.error("[Middleware] Error decoding JWT", {
-			message: error instanceof Error ? error.message : String(error),
-		});
-		Sentry.captureException(error, {
-			extra: { context: "jwt_decode_failure" },
-		});
-		return { user_role: null, user_permissions: [] };
-	}
-}
 
 export async function updateSession(request: NextRequest) {
 	let supabaseResponse = NextResponse.next({
@@ -88,34 +73,51 @@ export async function updateSession(request: NextRequest) {
 		}
 	);
 
-	// Get current user and session in a single call
-	const {
-		data: { user },
-	} = await supabase.auth.getUser();
-
 	const url = request.nextUrl.clone();
 	const pathname = url.pathname;
+
+	// Verifica el JWT LOCALMENTE: firma ES256 contra el JWKS del proyecto, cacheado
+	// en memoria del proceso (GLOBAL_JWKS en auth-js) — sin round trip al servidor de
+	// Auth en cada request, a diferencia de getUser(). Internamente pasa por
+	// getSession(), que refresca el token expirado y reescribe cookies vía setAll
+	// cuando corresponde. Los claims custom (user_role, user_permissions) llegan
+	// verificados, no solo decodificados.
+	// Sin sesión (visitante anónimo) devuelve { data: null, error: null } — no es error.
+	// Ante cualquier fallo real (firma inválida, JWKS/refresh inaccesible) se reporta
+	// y se trata al usuario como no autenticado, igual que hacía getUser().
+	let claims: JwtPayload | null = null;
+	try {
+		const { data, error } = await supabase.auth.getClaims();
+		if (error) {
+			if (!error.code || !EXPECTED_AUTH_ERROR_CODES.has(error.code)) {
+				Sentry.captureException(error, {
+					extra: { context: "middleware_get_claims", pathname },
+				});
+			}
+		} else {
+			claims = data?.claims ?? null;
+		}
+	} catch (error) {
+		// getClaims relanza los errores que no son de auth; si escapara del
+		// middleware, TODAS las rutas responderían 500.
+		Sentry.captureException(error, {
+			extra: { context: "middleware_get_claims_throw", pathname },
+		});
+	}
 
 	// Check if route is public
 	const isPublicRoute = PUBLIC_ROUTES.some((route) => pathname === route || pathname.startsWith(route + "/"));
 
 	// If user is not authenticated and trying to access protected route
-	if (!user && !isPublicRoute) {
+	if (!claims && !isPublicRoute) {
 		url.pathname = "/auth/login";
 		return NextResponse.redirect(url);
 	}
 
 	// If user is authenticated, check permission-based access
-	if (user) {
-		const {
-			data: { session },
-		} = await supabase.auth.getSession();
-
-		const { user_role: userRole, user_permissions: userPermissions } = session?.access_token
-			? decodeJWTPayload(session.access_token)
-			: { user_role: "invitado", user_permissions: [] as string[] };
-
-		const effectiveRole = userRole || "invitado";
+	if (claims) {
+		const effectiveRole: string = claims.user_role || "invitado";
+		const userPermissions: string[] = claims.user_permissions || [];
 
 		// Find the most specific matching route (longer path = more specific)
 		const matchingRoutes = Object.entries(PROTECTED_ROUTES)
@@ -139,7 +141,7 @@ export async function updateSession(request: NextRequest) {
 				const { count } = await supabase
 					.from("equipo_miembros")
 					.select("*", { count: "exact", head: true })
-					.eq("user_id", user.id)
+					.eq("user_id", claims.sub)
 					.eq("rol_equipo", "lider");
 				hasPermission = (count ?? 0) > 0;
 			}
@@ -164,4 +166,4 @@ export async function updateSession(request: NextRequest) {
 	return supabaseResponse;
 }
 
-// El matcher de rutas vive en middleware.ts en la raíz del proyecto (Next solo lee el config de ahí).
+// El matcher de rutas vive en proxy.ts en la raíz del proyecto (Next solo lee el config de ahí).
