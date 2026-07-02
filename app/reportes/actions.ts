@@ -623,6 +623,7 @@ export async function exportarProduccionNuevo(
 			estado,
 			fecha_validacion,
 			es_renovacion,
+			es_retroactiva,
 			responsable_id,
 			producto_id,
 			producto:productos_aseguradoras!producto_id (
@@ -939,6 +940,7 @@ export async function exportarProduccionNuevo(
 				created_at: string;
 				fecha_validacion: string | null;
 				es_renovacion: boolean;
+				es_retroactiva: boolean;
 				producto?: {
 					factor_contado: number;
 					factor_credito: number;
@@ -970,6 +972,7 @@ export async function exportarProduccionNuevo(
 					numero_poliza: p.numero_poliza,
 					numero_anexo: null,
 					tipo_poliza: (p.es_renovacion ? "Renovada" : "Nueva") as TipoPolizaReporte,
+					retroactiva: (p.es_retroactiva ? "Sí" : "") as "Sí" | "",
 					validacion: p.fecha_validacion ? ("Validado" as const) : ("Por validar" as const),
 					cliente,
 					ci_nit: ciNit,
@@ -1031,6 +1034,8 @@ export async function exportarProduccionNuevo(
 				numero_poliza: pol.numero_poliza,
 				numero_anexo: anexo.numero_anexo,
 				tipo_poliza: tipoAnexoMap[anexo.tipo_anexo] || anexo.tipo_anexo,
+				// El anexo es producción propia del período; el flag retroactivo es de la madre
+				retroactiva: "" as const,
 				validacion: "Validado" as const,
 				cliente,
 				ci_nit: ciNit,

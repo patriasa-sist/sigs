@@ -40,6 +40,7 @@ export default function ExportarAPS() {
 	const [fechaDesde, setFechaDesde] = useState<string>(rangoInicial.desde);
 	const [fechaHasta, setFechaHasta] = useState<string>(rangoInicial.hasta);
 	const [tipoCambio, setTipoCambio] = useState<string>("6.96");
+	const [excluirRetroactivas, setExcluirRetroactivas] = useState<boolean>(true);
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [lastMeta, setLastMeta] = useState<{ polizas_ingreso: number; polizas_egreso: number } | null>(null);
@@ -64,6 +65,7 @@ export default function ExportarAPS() {
 				fecha_desde: fechaDesde,
 				fecha_hasta: fechaHasta,
 				tipo_cambio: tc,
+				excluir_retroactivas: excluirRetroactivas,
 			});
 			if (!result.success) {
 				setError(result.error);
@@ -147,6 +149,18 @@ export default function ExportarAPS() {
 							/>
 						</div>
 					</div>
+
+					<label className="mt-4 flex items-center gap-2 text-sm cursor-pointer w-fit">
+						<input
+							type="checkbox"
+							className="h-4 w-4"
+							checked={excluirRetroactivas}
+							onChange={(e) => setExcluirRetroactivas(e.target.checked)}
+						/>
+						<span className="text-muted-foreground">
+							Excluir pólizas cargadas retroactivamente (históricas)
+						</span>
+					</label>
 				</div>
 
 				<div className="rounded-md border bg-muted/30 px-4 py-3">
@@ -157,8 +171,8 @@ export default function ExportarAPS() {
 						))}
 					</div>
 					<p className="text-xs text-muted-foreground mt-2">
-						No incluye pólizas pendientes de validación ni retroactivas. Montos en Bs (USD convertido al
-						tipo de cambio indicado).
+						No incluye pólizas pendientes de validación. Montos en Bs (USD convertido al tipo de cambio
+						indicado).
 					</p>
 				</div>
 

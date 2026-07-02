@@ -9,7 +9,10 @@ import { ESTADO_ANEXO } from "@/types/anexo";
 // REPORTES APS
 // Consolida producción para la Autoridad de Fiscalización (APS):
 // - Ingreso: pólizas validadas en el período (fecha_validacion), excluyendo
-//   pendientes, rechazadas y retroactivas (ya reportadas en meses pasados).
+//   pendientes y rechazadas. Las retroactivas (ya reportadas en meses pasados)
+//   se excluyen por defecto, pero el filtro es configurable. El egreso no las
+//   filtra: una anulación validada en el período se reporta siempre, sin
+//   importar cuándo se reportó el ingreso original.
 // - Egreso: pólizas anuladas en el período (fecha_validacion del anexo de
 //   anulación), revirtiendo los montos completos de la póliza.
 // Todos los montos se devuelven en Bs (USD convertido con el tipo de cambio
@@ -42,6 +45,7 @@ export type APSFiltros = {
 	fecha_desde: string; // YYYY-MM-DD
 	fecha_hasta: string; // YYYY-MM-DD
 	tipo_cambio: number; // Bs por USD
+	excluir_retroactivas?: boolean; // default true: omitidas por ya haberse reportado antes
 };
 
 export type APSResponse = { success: true; data: APSDatos } | { success: false; error: string };
@@ -172,17 +176,19 @@ export async function obtenerDatosAPS(filtros: APSFiltros): Promise<APSResponse>
 			(padres ?? []).map((p) => [p.codigo as string, p.nombre as string]),
 		);
 
-		// INGRESO: pólizas validadas en el período (excluye retroactivas: ya reportadas)
+		// INGRESO: pólizas validadas en el período
+		const excluirRetroactivas = filtros.excluir_retroactivas !== false;
 		const polizasIngreso: PolizaFinanciera[] = [];
 		for (let from = 0; ; from += PAGE_SIZE) {
-			const { data, error } = await supabase
+			let query = supabase
 				.from("polizas")
 				.select(POLIZA_FINANCIERA_SELECT)
 				.gte("fecha_validacion", desdeTs)
-				.lte("fecha_validacion", hastaTs)
-				.eq("es_retroactiva", false)
-				.order("id", { ascending: true })
-				.range(from, from + PAGE_SIZE - 1);
+				.lte("fecha_validacion", hastaTs);
+			if (excluirRetroactivas) {
+				query = query.eq("es_retroactiva", false);
+			}
+			const { data, error } = await query.order("id", { ascending: true }).range(from, from + PAGE_SIZE - 1);
 			if (error) throw error;
 			polizasIngreso.push(...((data ?? []) as unknown as PolizaFinanciera[]));
 			if (!data || data.length < PAGE_SIZE) break;

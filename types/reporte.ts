@@ -63,6 +63,8 @@ export type ExportProduccionNuevoRow = {
 	numero_poliza: string;
 	numero_anexo: string | null;
 	tipo_poliza: TipoPolizaReporte;
+	// Independiente del tipo: una retroactiva puede ser Nueva o Renovada
+	retroactiva: "Sí" | "";
 	validacion: "Validado" | "Por validar";
 	cliente: string;
 	ci_nit: string;
