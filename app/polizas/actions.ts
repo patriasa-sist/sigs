@@ -33,6 +33,9 @@ export type PolizaDetalle = PolizaListItem & {
 	comision: number;
 	comision_empresa: number | null;
 	comision_encargado: number | null;
+	// Factor (porcentaje) y % de comisión (fracción) EXACTOS usados al calcular.
+	factor_prima_neta: number | null;
+	porcentaje_comision: number | null;
 	tipo_prima: string;
 	// Ajuste manual de prima neta (admin)
 	prima_neta_manual: boolean;
@@ -1541,6 +1544,8 @@ export async function obtenerDetallePoliza(polizaId: string) {
 			comision: poliza.comision,
 			comision_empresa: poliza.comision_empresa ?? null,
 			comision_encargado: poliza.comision_encargado ?? null,
+			factor_prima_neta: poliza.factor_prima_neta ?? null,
+			porcentaje_comision: poliza.porcentaje_comision ?? null,
 			tipo_prima: poliza.tipo_prima ?? "directa",
 			prima_neta_manual: poliza.prima_neta_manual ?? false,
 			prima_neta_ajuste_motivo: poliza.prima_neta_ajuste_motivo ?? null,

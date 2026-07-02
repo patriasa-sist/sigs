@@ -38,6 +38,7 @@ import {
 	Users,
 } from "lucide-react";
 import { formatCurrency, formatDate, calcularVigencia } from "@/utils/formatters";
+import { derivarFactorPrimaNeta, derivarPorcentajeComision } from "@/utils/polizas/factorDerivado";
 import Link from "next/link";
 import { toast } from "sonner";
 
@@ -300,6 +301,18 @@ export default function PolizaDetallePage() {
 	const montoPendiente = cuotasStats
 		.filter((c) => c.estado !== "pagado" && c.estado !== "anulada" && c.estado !== "saldado")
 		.reduce((sum, c) => sum + c.montoCobrable, 0);
+
+	// Factor de prima neta (porcentaje) y % de comisión con que se calculó la MADRE.
+	// Se lee el valor EXACTO guardado; fallback a derivación para pólizas previas a
+	// la persistencia. porcentaje_comision se guarda como fracción → ×100 para mostrar.
+	const trim6 = (n: number) => Number(n.toFixed(6));
+	const factorMadreRaw = poliza.factor_prima_neta ?? derivarFactorPrimaNeta(poliza.prima_total, poliza.prima_neta);
+	const factorMadre = factorMadreRaw != null ? trim6(factorMadreRaw) : null;
+	const pctComisionMadreRaw =
+		poliza.porcentaje_comision != null
+			? poliza.porcentaje_comision * 100
+			: derivarPorcentajeComision(poliza.prima_neta, poliza.comision_empresa ?? poliza.comision);
+	const pctComisionMadre = pctComisionMadreRaw != null ? trim6(pctComisionMadreRaw) : null;
 
 	return (
 		<div className="container mx-auto px-4 py-8 max-w-7xl">
@@ -2224,7 +2237,14 @@ export default function PolizaDetallePage() {
 							<div className="py-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
 								<div>
 									<div className="flex items-center gap-1.5 mb-0.5">
-										<p className="text-xs text-muted-foreground">Prima Neta</p>
+										<p className="text-xs text-muted-foreground">
+											Prima Neta
+											{factorMadre != null && (
+												<span className="ml-1 font-normal text-muted-foreground/70">
+													(Factor: {factorMadre}%)
+												</span>
+											)}
+										</p>
 										{isAdmin && poliza.tipo_prima !== "sin_prima_propia" && (
 											<button
 												type="button"
@@ -2260,7 +2280,14 @@ export default function PolizaDetallePage() {
 									)}
 								</div>
 								<div>
-									<p className="text-xs text-muted-foreground mb-0.5">Comisión</p>
+									<p className="text-xs text-muted-foreground mb-0.5">
+										Comisión
+										{pctComisionMadre != null && (
+											<span className="ml-1 font-normal text-muted-foreground/70">
+												({pctComisionMadre}%)
+											</span>
+										)}
+									</p>
 									<p className="text-sm font-semibold text-foreground">
 										{formatCurrency(poliza.comision, poliza.moneda)}
 									</p>

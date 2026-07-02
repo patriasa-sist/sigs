@@ -50,6 +50,14 @@ export type DireccionVigenciaCorrida = "cobro" | "devolucion";
 // PASO 1: BÚSQUEDA DE PÓLIZA
 // ============================================
 
+// Factores del producto de la madre, usados para el cálculo automático en vivo
+// del plan de pago de un anexo (mismo cálculo que computarPrimaAnexo en el server).
+export type ProductoFactoresAnexo = {
+	factor_contado: number;
+	factor_credito: number;
+	porcentaje_comision: number;
+};
+
 export type PolizaResumenAnexo = {
 	id: string;
 	numero_poliza: string;
@@ -64,6 +72,10 @@ export type PolizaResumenAnexo = {
 	estado: string;
 	modalidad_pago: "contado" | "credito";
 	tiene_anulacion_pendiente: boolean;
+	// Presentes solo al cargar el detalle (obtenerDatosParaAnexo), para el cálculo
+	// automático en vivo del plan de pago. Ausentes en la búsqueda de pólizas.
+	usar_factores_contado?: boolean;
+	producto?: ProductoFactoresAnexo | null;
 };
 
 // ============================================

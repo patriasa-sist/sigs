@@ -15,10 +15,12 @@ import type {
 	CuotaOriginalInfo,
 	CuotaPropia,
 	PlanPagoInclusion,
+	ProductoFactoresAnexo,
 	VigenciaCorrida,
 	TipoAnexo,
 } from "@/types/anexo";
-import type { DocumentoPoliza, Moneda } from "@/types/poliza";
+import type { CalculoComisionResult, DocumentoPoliza, Moneda, ProductoAseguradora } from "@/types/poliza";
+import { calcularComisionesConProducto } from "@/utils/polizaValidation";
 import { formatCurrency, formatDate } from "@/utils/formatters";
 
 const BUCKET = "polizas-documentos";
@@ -32,6 +34,9 @@ type Props = {
 	vigenciaCorrida: VigenciaCorrida | null;
 	documentos: DocumentoPoliza[];
 	moneda: Moneda;
+	// Producto de la madre + flag, para el cálculo automático en vivo del plan de inclusión.
+	producto?: ProductoFactoresAnexo | null;
+	usarFactoresContado?: boolean;
 	userId: string | null;
 	onChangePlanPagoInclusion: (plan: PlanPagoInclusion | null) => void;
 	onChangeCuotas: (cuotas: CuotaAjuste[]) => void;
@@ -100,10 +105,14 @@ function computarCuotas(
 function SeccionPlanInclusion({
 	plan,
 	moneda,
+	producto,
+	usarFactoresContado,
 	onChange,
 }: {
 	plan: PlanPagoInclusion;
 	moneda: Moneda;
+	producto?: ProductoFactoresAnexo | null;
+	usarFactoresContado?: boolean;
 	onChange: (p: PlanPagoInclusion) => void;
 }) {
 	const recalcular = (
@@ -152,6 +161,19 @@ function SeccionPlanInclusion({
 
 	const totalCuotas = plan.cuotas.reduce((s, c) => s + c.monto, 0);
 	const diferencia = Math.abs(totalCuotas - plan.prima_total);
+
+	// Cálculo automático en vivo (mismo espejo que computarPrimaAnexo en el server):
+	// factor del producto de la madre; contado si el plan es contado o la madre fuerza contado.
+	const usarContado = plan.modalidad === "contado" || usarFactoresContado === true;
+	const calc: CalculoComisionResult | null =
+		producto && plan.prima_total > 0
+			? calcularComisionesConProducto({
+					prima_total: plan.prima_total,
+					modalidad_pago: usarContado ? "contado" : "credito",
+					producto: producto as unknown as ProductoAseguradora,
+				})
+			: null;
+	const fmt = (n: number) => Number(n.toFixed(6));
 
 	return (
 		<div className="space-y-5">
@@ -227,6 +249,44 @@ function SeccionPlanInclusion({
 					</>
 				)}
 			</div>
+
+			{/* Cálculos automáticos (factor/prima neta/comisión) — igual que en la póliza */}
+			{calc && (
+				<div className="rounded-lg border bg-gray-50 p-4">
+					<h4 className="mb-3 text-sm font-semibold text-gray-900">
+						Cálculos Automáticos
+						<span className="ml-2 text-xs font-normal text-gray-500">(sobre la prima del anexo)</span>
+					</h4>
+					<div className="grid grid-cols-1 gap-4 text-sm md:grid-cols-3">
+						<div>
+							<p className="font-medium text-gray-500">Prima Total</p>
+							<p className="text-lg font-bold text-gray-900">
+								{formatCurrency(plan.prima_total, moneda)}
+							</p>
+						</div>
+						<div>
+							<p className="font-medium text-gray-500">
+								Prima Neta
+								<span className="ml-1 text-xs font-normal text-gray-400">
+									(Factor: {fmt(calc.factor_usado)}%)
+								</span>
+							</p>
+							<p className="text-lg font-bold text-gray-900">{formatCurrency(calc.prima_neta, moneda)}</p>
+						</div>
+						<div>
+							<p className="font-medium text-gray-500">
+								Comisión
+								<span className="ml-1 text-xs font-normal text-gray-400">
+									({fmt(calc.porcentaje_comision * 100)}%)
+								</span>
+							</p>
+							<p className="text-lg font-bold text-gray-900">
+								{formatCurrency(calc.comision_empresa, moneda)}
+							</p>
+						</div>
+					</div>
+				</div>
+			)}
 
 			{/* Tabla de cuotas */}
 			{plan.cuotas.length > 0 && (
@@ -518,6 +578,8 @@ export function PagosYDocumentos({
 	vigenciaCorrida,
 	documentos,
 	moneda,
+	producto,
+	usarFactoresContado,
 	userId,
 	onChangePlanPagoInclusion,
 	onChangeCuotas,
@@ -742,6 +804,8 @@ export function PagosYDocumentos({
 					<SeccionPlanInclusion
 						plan={planPagoInclusion}
 						moneda={moneda}
+						producto={producto}
+						usarFactoresContado={usarFactoresContado}
 						onChange={onChangePlanPagoInclusion}
 					/>
 				</div>

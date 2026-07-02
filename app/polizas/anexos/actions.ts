@@ -277,8 +277,9 @@ export async function obtenerDatosParaAnexo(
 				.select(
 					`
 					id, numero_poliza, ramo, client_id, prima_total, moneda,
-					inicio_vigencia, fin_vigencia, estado, modalidad_pago,
-					companias_aseguradoras!compania_aseguradora_id (nombre)
+					inicio_vigencia, fin_vigencia, estado, modalidad_pago, usar_factores_contado,
+					companias_aseguradoras!compania_aseguradora_id (nombre),
+					producto:productos_aseguradoras!producto_id (factor_contado, factor_credito, porcentaje_comision)
 				`,
 				)
 				.eq("id", polizaId)
@@ -357,6 +358,21 @@ export async function obtenerDatosParaAnexo(
 				fin_vigencia: poliza.fin_vigencia,
 				estado: poliza.estado,
 				modalidad_pago: poliza.modalidad_pago,
+				usar_factores_contado: poliza.usar_factores_contado ?? false,
+				producto: (() => {
+					const pr = poliza.producto as unknown as {
+						factor_contado: number;
+						factor_credito: number;
+						porcentaje_comision: number;
+					} | null;
+					return pr
+						? {
+								factor_contado: Number(pr.factor_contado),
+								factor_credito: Number(pr.factor_credito),
+								porcentaje_comision: Number(pr.porcentaje_comision),
+							}
+						: null;
+				})(),
 				tiene_anulacion_pendiente: tieneAnulacion,
 			},
 			cuotas: (cuotasResult.data || []).map((c) => ({
