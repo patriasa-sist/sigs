@@ -30,7 +30,7 @@ export default function UltimoCambioSiniestro({ historial, onVerHistorialComplet
 	}
 
 	return (
-		<Card className="border-l-4 border-l-blue-500 bg-blue-50/30 dark:bg-blue-950/10">
+		<Card className="border-l-4 border-l-blue-500 bg-blue-50/30">
 			<CardContent className="p-4 space-y-2">
 				<div className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">
 					<Clock className="h-3.5 w-3.5 text-blue-600" />
@@ -43,9 +43,7 @@ export default function UltimoCambioSiniestro({ historial, onVerHistorialComplet
 					{ultimoCambio.accion === "cambio_estado" && ultimoCambio.valor_nuevo && (
 						<p className="text-sm mt-1">
 							Estado cambiado a:{" "}
-							<span className="font-medium text-blue-600 dark:text-blue-400">
-								{ultimoCambio.valor_nuevo}
-							</span>
+							<span className="font-medium text-blue-600">{ultimoCambio.valor_nuevo}</span>
 						</p>
 					)}
 
@@ -59,7 +57,7 @@ export default function UltimoCambioSiniestro({ historial, onVerHistorialComplet
 				{ultimoCambio.accion !== "cambio_estado" &&
 					ultimoCambio.detalles &&
 					typeof ultimoCambio.detalles === "object" && (
-						<div className="text-xs bg-white dark:bg-gray-900 rounded-md p-2 border">
+						<div className="text-xs bg-white rounded-md p-2 border">
 							{Object.entries(ultimoCambio.detalles).map(([key, value]) => (
 								<div key={key} className="text-muted-foreground">
 									<span className="font-medium">{key}:</span> {String(value)}

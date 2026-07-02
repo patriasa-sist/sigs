@@ -105,9 +105,7 @@ export default function HistorialCronologico({ historial }: HistorialCronologico
 								{/* Content */}
 								<div
 									className={`p-3 rounded-lg border ${
-										index === 0
-											? "bg-blue-50/50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800"
-											: "bg-secondary/30"
+										index === 0 ? "bg-blue-50/50 border-blue-200" : "bg-secondary/30"
 									}`}
 								>
 									<div className="flex items-start justify-between gap-2 mb-2">
@@ -134,9 +132,7 @@ export default function HistorialCronologico({ historial }: HistorialCronologico
 										<div className="mt-2 text-sm">
 											<p className="text-muted-foreground">
 												Estado cambiado a:{" "}
-												<span className="font-medium text-blue-600 dark:text-blue-400">
-													{item.valor_nuevo}
-												</span>
+												<span className="font-medium text-blue-600">{item.valor_nuevo}</span>
 											</p>
 										</div>
 									)}
@@ -163,7 +159,7 @@ export default function HistorialCronologico({ historial }: HistorialCronologico
 											{item.valor_nuevo && (
 												<div className="mt-1 text-xs">
 													<span className="text-muted-foreground">Valor nuevo: </span>
-													<span className="font-medium text-green-600 dark:text-green-400">
+													<span className="font-medium text-green-600">
 														{item.valor_nuevo}
 													</span>
 												</div>

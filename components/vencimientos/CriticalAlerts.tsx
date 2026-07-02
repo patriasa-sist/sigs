@@ -270,7 +270,7 @@ function CriticalRecordCard({ record, isSelected, onSelect, urgencyLevel }: Crit
 	return (
 		<div
 			className={`
-        border-b border-gray-200 last:border-b-0 p-4 hover:bg-white/50 cursor-pointer transition-colors
+        border-b border-gray-200 last:border-b-0 p-4 hover:bg-white/50 dark:hover:bg-white/5 cursor-pointer transition-colors
         border-l-4 ${urgencyColors[urgencyLevel]}
         ${isSelected ? "bg-blue-50 border-l-blue-500" : ""}
       `}

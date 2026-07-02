@@ -86,7 +86,7 @@ export default function AgregarObservacion({
 					/>
 
 					{estadoSiniestro !== "abierto" && (
-						<p className="text-sm text-amber-600 dark:text-amber-400">
+						<p className="text-sm text-amber-600">
 							No se pueden agregar observaciones a siniestros cerrados
 						</p>
 					)}
@@ -125,9 +125,7 @@ export default function AgregarObservacion({
 								<div
 									key={obs.id || `obs-${index}`}
 									className={`p-4 rounded-lg border ${
-										index === 0
-											? "bg-blue-50/50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800"
-											: "bg-secondary/30"
+										index === 0 ? "bg-blue-50/50 border-blue-200" : "bg-secondary/30"
 									}`}
 								>
 									<div className="flex items-start justify-between gap-2 mb-2">

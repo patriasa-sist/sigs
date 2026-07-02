@@ -25,9 +25,9 @@ export default function SeleccionarPoliza({
 			</CardHeader>
 			<CardContent className="space-y-4">
 				{/* Instrucciones */}
-				<div className="flex items-start gap-2 text-sm bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
-					<AlertCircle className="h-4 w-4 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
-					<div className="text-blue-900 dark:text-blue-100">
+				<div className="flex items-start gap-2 text-sm bg-blue-50 border border-blue-200 rounded-lg p-3">
+					<AlertCircle className="h-4 w-4 text-blue-600 flex-shrink-0 mt-0.5" />
+					<div className="text-blue-900">
 						<p className="font-medium mb-1">Instrucciones:</p>
 						<ul className="list-disc list-inside space-y-1 text-sm">
 							<li>Solo se pueden registrar siniestros en pólizas con estado &quot;activa&quot;</li>

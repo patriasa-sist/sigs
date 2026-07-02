@@ -227,7 +227,7 @@ export default function RegistrarSiniestroForm() {
 	return (
 		<div className="max-w-7xl mx-auto">
 			{/* Sticky header */}
-			<div className="sticky top-0 z-20 bg-[#F1F4F9] border-b border-[#E2E8F0] -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 pt-4 pb-4 mb-6">
+			<div className="sticky top-0 z-20 bg-background border-b border-border -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 pt-4 pb-4 mb-6">
 				<div className="flex items-center justify-between gap-4 max-w-7xl mx-auto">
 					<div className="flex items-center gap-3 min-w-0">
 						<button
@@ -237,7 +237,7 @@ export default function RegistrarSiniestroForm() {
 							<ChevronLeft className="h-4 w-4" />
 							Siniestros
 						</button>
-						<span className="text-[#CBD5E1]">/</span>
+						<span className="text-input">/</span>
 						<FileWarning className="h-5 w-5 text-primary shrink-0" />
 						<div className="min-w-0">
 							<h1 className="text-xl font-semibold text-foreground leading-tight">Registrar Siniestro</h1>

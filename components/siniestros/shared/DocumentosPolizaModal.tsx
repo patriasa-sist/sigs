@@ -67,9 +67,9 @@ export default function DocumentosPolizaModal({
 
 				<div className="space-y-3 mt-4">
 					{documentos.length === 0 ? (
-						<div className="flex items-start gap-2 text-sm bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
-							<AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
-							<div className="text-amber-900 dark:text-amber-100">
+						<div className="flex items-start gap-2 text-sm bg-amber-50 border border-amber-200 rounded-lg p-4">
+							<AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+							<div className="text-amber-900">
 								<p className="font-medium mb-1">No hay documentos disponibles</p>
 								<p className="text-sm">
 									Esta póliza no tiene documentos cargados en el sistema. Los documentos pueden

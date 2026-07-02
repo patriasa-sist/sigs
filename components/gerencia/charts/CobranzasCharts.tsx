@@ -21,17 +21,17 @@ import type { EstadisticasCobranzas } from "@/types/gerencia";
 
 /* ── Design-system chart colors ── */
 const ESTADO_CHART_COLORS: Record<string, string> = {
-	pendiente: "oklch(0.70 0.11 80)", // warm amber
-	pagado: "oklch(0.575 0.098 175)", // teal accent
-	vencido: "oklch(0.62 0.12 25)", // soft coral
-	parcial: "oklch(0.55 0.08 280)", // muted indigo
+	pendiente: "var(--chart-3)", // warm amber
+	pagado: "var(--chart-2)", // teal accent
+	vencido: "var(--chart-4)", // soft coral
+	parcial: "var(--chart-5)", // muted indigo
 };
-const ESTADO_CHART_FALLBACK = "oklch(0.37 0.065 225)";
+const ESTADO_CHART_FALLBACK = "var(--chart-1)";
 
-const GRID_STROKE = "oklch(0.925 0.008 260)";
-const AXIS_COLOR = "oklch(0.555 0.025 260)";
-const TOOLTIP_BG = "oklch(0.988 0.003 260)";
-const TOOLTIP_BORDER = "oklch(0.925 0.008 260)";
+const GRID_STROKE = "var(--border)";
+const AXIS_COLOR = "var(--muted-foreground)";
+const TOOLTIP_BG = "var(--popover)";
+const TOOLTIP_BORDER = "var(--border)";
 
 const ESTADO_LABELS: Record<string, string> = {
 	pendiente: "Pendiente",
@@ -45,10 +45,10 @@ function formatCurrency(value: number): string {
 }
 
 const AGING_COLORS = [
-	"oklch(0.575 0.098 175)", // 1-30 teal accent (low urgency)
-	"oklch(0.70 0.11 80)", // 31-60 amber
-	"oklch(0.62 0.12 25)", // 61-90 coral
-	"oklch(0.45 0.14 20)", // 90+ deep red
+	"var(--chart-2)", // 1-30 teal accent (low urgency)
+	"var(--chart-3)", // 31-60 amber
+	"var(--chart-4)", // 61-90 coral
+	"var(--destructive)", // 90+ deep red
 ];
 
 export default function CobranzasCharts({ data, periodoLabel }: { data: EstadisticasCobranzas; periodoLabel: string }) {
@@ -119,18 +119,8 @@ export default function CobranzasCharts({ data, periodoLabel }: { data: Estadist
 									iconSize={10}
 									wrapperStyle={{ fontSize: 12, color: AXIS_COLOR }}
 								/>
-								<Bar
-									dataKey="cobrado"
-									name="Cobrado"
-									fill="oklch(0.575 0.098 175)"
-									radius={[4, 4, 0, 0]}
-								/>
-								<Bar
-									dataKey="pendiente"
-									name="Pendiente"
-									fill="oklch(0.70 0.11 80)"
-									radius={[4, 4, 0, 0]}
-								/>
+								<Bar dataKey="cobrado" name="Cobrado" fill="var(--chart-2)" radius={[4, 4, 0, 0]} />
+								<Bar dataKey="pendiente" name="Pendiente" fill="var(--chart-3)" radius={[4, 4, 0, 0]} />
 							</BarChart>
 						</ResponsiveContainer>
 					</CardContent>

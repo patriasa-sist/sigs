@@ -55,7 +55,7 @@ export default function LoginPage() {
 	return (
 		<div className="flex h-screen overflow-hidden">
 			{/* ── Brand panel (desktop only) ──────────────────────────── */}
-			<div className="hidden lg:flex lg:w-[42%] bg-primary flex-col justify-between p-10 relative overflow-hidden select-none">
+			<div className="hidden lg:flex lg:w-[42%] bg-brand flex-col justify-between p-10 relative overflow-hidden select-none">
 				{/* Decorative geometry */}
 				<div className="absolute -top-24 -right-24 w-96 h-96 rounded-full bg-white/[0.04]" />
 				<div className="absolute top-1/3 -right-16 w-56 h-56 rounded-full bg-white/[0.04]" />
@@ -106,6 +106,7 @@ export default function LoginPage() {
 							alt="Patria S.A."
 							width={180}
 							height={46}
+							className="dark:brightness-0 dark:invert"
 							style={{ height: "2.75rem", width: "auto" }}
 						/>
 					</div>

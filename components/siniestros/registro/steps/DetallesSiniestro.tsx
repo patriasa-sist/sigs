@@ -205,11 +205,9 @@ export default function DetallesSiniestroStep({
 							<p className="text-sm text-destructive">{errores.fecha_siniestro}</p>
 						)}
 						{advertenciaFechaReporte && (
-							<div className="flex items-start gap-2 text-sm bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-2">
+							<div className="flex items-start gap-2 text-sm bg-amber-50 border border-amber-200 rounded-lg p-2">
 								<AlertCircle className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
-								<p className="text-amber-900 dark:text-amber-100">
-									El siniestro ocurrió hace más de 10 días
-								</p>
+								<p className="text-amber-900">El siniestro ocurrió hace más de 10 días</p>
 							</div>
 						)}
 						<p className="text-xs text-muted-foreground">Fecha en que ocurrió el siniestro</p>

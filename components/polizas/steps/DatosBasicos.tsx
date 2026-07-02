@@ -481,7 +481,8 @@ export function DatosBasicos({ datos, onChange, onSiguiente, onAnterior }: Props
 					<Combobox
 						options={companias.map((compania) => ({
 							value: compania.id,
-							label: compania.codigo != null ? `(${compania.codigo}) ${compania.nombre}` : compania.nombre,
+							label:
+								compania.codigo != null ? `(${compania.codigo}) ${compania.nombre}` : compania.nombre,
 						}))}
 						value={formData.compania_aseguradora_id}
 						onChange={(value) => handleChange("compania_aseguradora_id", value)}

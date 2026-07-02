@@ -140,9 +140,9 @@ export default function CoberturasStepComponent({
 
 				{/* Advertencia si no hay ninguna cobertura */}
 				{totalCoberturas === 0 && (
-					<div className="flex items-start gap-2 text-sm bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
-						<AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
-						<p className="text-amber-900 dark:text-amber-100">
+					<div className="flex items-start gap-2 text-sm bg-amber-50 border border-amber-200 rounded-lg p-3">
+						<AlertCircle className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
+						<p className="text-amber-900">
 							Debes indicar al menos una cobertura (escríbela arriba o selecciónala del catálogo) para
 							continuar.
 						</p>

@@ -79,6 +79,46 @@ Chart 4   Soft Coral     oklch(0.62 0.12 25)     — Quaternary metric
 Chart 5   Muted Indigo   oklch(0.55 0.08 280)    — Quinary metric
 ```
 
+> En código, los charts NUNCA hardcodean estos valores: usan `var(--chart-1)`…`var(--chart-5)`
+> (y `var(--border)` / `var(--muted-foreground)` / `var(--popover)` para grids, ejes y tooltips)
+> para que se adapten al tema activo.
+
+### 2.4 Dark Mode — "oscuro suave"
+
+El sistema tiene un tema oscuro suave activable por usuario (toggle en la navbar: Claro / Oscuro / Sistema,
+implementado con `next-themes`, atributo `class`, default **light**). Filosofía: mismas reglas low-fatigue
+del tema claro, invertidas — nunca negro puro, texto off-white sin glare, acentos teal desaturados.
+
+```
+ROLE              OKLCH (.dark)                  NOTA
+─────────────────────────────────────────────────────────────────────────────
+Background        oklch(0.165 0.013 245)         Slate-petrol profundo, no negro
+Card / Surface    oklch(0.21 0.013 245)          Un paso más claro que el fondo
+Popover           oklch(0.235 0.013 245)         Tercer nivel de elevación
+Foreground        oklch(0.895 0.008 250)         Off-white suave (no #FFF)
+Primary           oklch(0.62 0.085 205)          Petrol aclarado (el #004F69 no contrasta en oscuro)
+Brand             oklch(0.32 0.05 228)           Superficie petrol FIJA (login, headers de marca)
+```
+
+Reglas clave:
+
+- **Tokens semánticos primero**: `bg-card`, `text-foreground`, `border-border`, success/warning/info…
+  se adaptan solos. El código nuevo NO debe usar paleta cruda de Tailwind ni hex inlineados.
+- **Capa de compatibilidad** (`globals.css`): el código legacy con paleta cruda (`bg-red-50`,
+  `text-slate-700`, `border-amber-200`…) se adapta automáticamente porque dentro de `.dark` se
+  remapean las variables `--color-*` de Tailwind v4: tonos 50–300 → superficies/bordes oscuros
+  tintados; 600–900 → texto claro tintado; 400/500/950 no se tocan. Además hay shims puntuales:
+  `bg-white` → `var(--card)`, y los botones sólidos `bg-{red|green|blue|amber}-600/700` conservan
+  una versión oscura con texto blanco.
+- **No escribir `dark:*` con paleta cruda** (`dark:bg-gray-900`, `dark:text-amber-100`): choca con el
+  remapeo. Si un caso necesita ajuste manual en oscuro, usar tokens (`dark:bg-card`) o rediseñar con
+  tokens semánticos.
+- **`bg-brand`**: superficie petrol de marca que se mantiene oscura en ambos temas (panel del login,
+  header de vencimientos) — siempre admite contenido blanco encima.
+- **Logo**: `patria-horizontal.png` es oscuro; sobre superficies que cambian de tema lleva
+  `dark:brightness-0 dark:invert` (silueta blanca). Sobre `bg-brand` se usa el filtro inline blanco.
+- Los PDF (cartas, reportes APS, fichas RRHH) y los Excel exportados NO se tematizan: siempre claros.
+
 ---
 
 ## 3. Typography

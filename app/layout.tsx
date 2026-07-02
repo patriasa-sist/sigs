@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import "./globals.css";
@@ -24,6 +24,13 @@ export const metadata: Metadata = {
 	manifest: "/site.webmanifest",
 };
 
+export const viewport: Viewport = {
+	themeColor: [
+		{ media: "(prefers-color-scheme: light)", color: "#F1F4F9" },
+		{ media: "(prefers-color-scheme: dark)", color: "#14171C" },
+	],
+};
+
 const geistSans = Geist({
 	variable: "--font-geist-sans",
 	display: "swap",
@@ -38,13 +45,7 @@ export default function RootLayout({
 	return (
 		<html lang="es" suppressHydrationWarning>
 			<body className={`${geistSans.className} antialiased`}>
-				<ThemeProvider
-					attribute="class"
-					defaultTheme="system"
-					forcedTheme="clear"
-					enableSystem
-					disableTransitionOnChange
-				>
+				<ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
 					<ConditionalNavbar />
 					{children}
 					<Analytics />

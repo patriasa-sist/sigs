@@ -90,9 +90,9 @@ export default function DocumentosInicialesStep({
 			</CardHeader>
 			<CardContent className="space-y-4">
 				{/* Información */}
-				<div className="flex items-start gap-2 text-sm bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
-					<AlertCircle className="h-4 w-4 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
-					<div className="text-blue-900 dark:text-blue-100">
+				<div className="flex items-start gap-2 text-sm bg-blue-50 border border-blue-200 rounded-lg p-3">
+					<AlertCircle className="h-4 w-4 text-blue-600 flex-shrink-0 mt-0.5" />
+					<div className="text-blue-900">
 						<p className="font-medium mb-1">Organiza tus documentos por tipo con Drag & Drop</p>
 						<p className="text-xs">
 							Selecciona un tipo de documento en el menú lateral. Luego arrastra y suelta archivos en el
@@ -206,9 +206,9 @@ export default function DocumentosInicialesStep({
 
 				{/* Advertencia si no hay documentos */}
 				{documentos.length === 0 && (
-					<div className="flex items-start gap-2 text-sm bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
-						<AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
-						<p className="text-amber-900 dark:text-amber-100">
+					<div className="flex items-start gap-2 text-sm bg-amber-50 border border-amber-200 rounded-lg p-3">
+						<AlertCircle className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
+						<p className="text-amber-900">
 							No has agregado ningún documento inicial. Aunque es opcional, se recomienda adjuntar al
 							menos las fotografías del siniestro y el formulario de denuncia para agilizar el proceso.
 						</p>

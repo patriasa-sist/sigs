@@ -1720,7 +1720,7 @@ export default function NuevoClientePage() {
 	return (
 		<div className="max-w-7xl mx-auto pt-6">
 			{/* Sticky header */}
-			<div className="sticky top-0 z-20 bg-[#F1F4F9] border-b border-[#E2E8F0] -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 pt-4 pb-4 mb-6">
+			<div className="sticky top-0 z-20 bg-background border-b border-border -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 pt-4 pb-4 mb-6">
 				<div className="flex items-center justify-between gap-4 max-w-7xl mx-auto">
 					<div className="flex items-center gap-3 min-w-0">
 						<button
@@ -1730,7 +1730,7 @@ export default function NuevoClientePage() {
 							<ChevronLeft className="h-4 w-4" />
 							Clientes
 						</button>
-						<span className="text-[#CBD5E1]">/</span>
+						<span className="text-input">/</span>
 						<Users className="h-6 w-6 text-primary shrink-0" />
 						<div className="min-w-0">
 							<h1 className="text-xl font-semibold text-foreground leading-tight">
@@ -1798,7 +1798,7 @@ export default function NuevoClientePage() {
 									<div key={i} className="relative">
 										{i < sidebarSections.length - 1 && (
 											<div
-												className={`absolute left-[15px] top-8 w-px h-3 ${isCompleted ? "bg-[#0D9488]/40" : hasFailed ? "bg-rose-300" : "bg-border"}`}
+												className={`absolute left-[15px] top-8 w-px h-3 ${isCompleted ? "bg-success/40" : hasFailed ? "bg-rose-300" : "bg-border"}`}
 											/>
 										)}
 										<div
@@ -1807,7 +1807,7 @@ export default function NuevoClientePage() {
 											<div
 												className={`w-[22px] h-[22px] shrink-0 rounded-md flex items-center justify-center text-xs font-semibold mt-0.5 transition-colors ${
 													isCompleted
-														? "bg-[#0D9488] text-white"
+														? "bg-success text-success-foreground"
 														: hasFailed
 															? "bg-rose-500 text-white"
 															: isActive

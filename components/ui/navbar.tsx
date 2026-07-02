@@ -40,6 +40,7 @@ import {
 } from "@/components/ui/sheet";
 import Image from "next/image";
 import Link from "next/link";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { signOut } from "@/app/auth/login/actions";
 import type { Permission } from "@/utils/auth/helpers";
 
@@ -247,7 +248,7 @@ export function Navbar() {
 						width={0}
 						height={0}
 						sizes="120px"
-						className="h-8 w-auto"
+						className="h-8 w-auto dark:brightness-0 dark:invert"
 						priority
 					/>
 					<span className="text-[10px] text-muted-foreground font-mono leading-none">v{version}</span>
@@ -270,6 +271,9 @@ export function Navbar() {
 
 				{/* Spacer para empujar el avatar a la derecha en móvil */}
 				<div className="flex-1 lg:hidden" />
+
+				{/* Tema claro/oscuro */}
+				<ThemeToggle />
 
 				{/* User menu */}
 				<DropdownMenu>

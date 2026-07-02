@@ -133,7 +133,7 @@ export default function CambiarResponsable({
 								<Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
 							</div>
 						) : usuarios.length === 0 ? (
-							<div className="flex items-start gap-2 text-sm text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
+							<div className="flex items-start gap-2 text-sm text-amber-600 bg-amber-50 border border-amber-200 rounded-lg p-3">
 								<AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
 								<p>No hay usuarios disponibles con permisos de siniestros</p>
 							</div>
@@ -159,7 +159,7 @@ export default function CambiarResponsable({
 					</div>
 
 					{/* Info */}
-					<div className="flex items-start gap-2 text-xs text-muted-foreground bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+					<div className="flex items-start gap-2 text-xs text-muted-foreground bg-blue-50 border border-blue-200 rounded-lg p-3">
 						<AlertCircle className="h-3 w-3 flex-shrink-0 mt-0.5" />
 						<p>
 							Solo usuarios con rol <strong>siniestros</strong>, <strong>comercial</strong> o{" "}

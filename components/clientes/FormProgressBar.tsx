@@ -88,7 +88,7 @@ export function FormProgressBar({ currentStep, clientType, completedSections }: 
 					const fillPercent = totalSegments > 0 ? (completedCount / totalSegments) * 100 : 0;
 					return (
 						<div
-							className="absolute top-5 left-6 h-0.5 bg-[#004F69] transition-all duration-500"
+							className="absolute top-5 left-6 h-0.5 bg-primary transition-all duration-500"
 							style={{ width: `calc(${fillPercent}% * (100% - 3rem) / 100%)` }}
 							aria-hidden="true"
 						/>
@@ -102,9 +102,9 @@ export function FormProgressBar({ currentStep, clientType, completedSections }: 
 							className={cn(
 								"w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 text-sm font-bold select-none",
 								step.completed
-									? "bg-[#0D9488] text-white shadow-sm"
+									? "bg-success text-success-foreground shadow-sm"
 									: step.active
-										? "bg-[#004F69] text-white shadow-md ring-4 ring-[#004F69]/20"
+										? "bg-primary text-primary-foreground shadow-md ring-4 ring-primary/20"
 										: "bg-white text-slate-400 border-2 border-slate-300",
 							)}
 						>
@@ -116,9 +116,9 @@ export function FormProgressBar({ currentStep, clientType, completedSections }: 
 							className={cn(
 								"text-xs font-medium text-center leading-tight max-w-[80px]",
 								step.completed
-									? "text-[#0D9488]"
+									? "text-success"
 									: step.active
-										? "text-[#004F69] font-semibold"
+										? "text-primary font-semibold"
 										: "text-slate-400",
 							)}
 						>

@@ -19,31 +19,25 @@ import { DollarSign, TrendingUp, Percent, FileText } from "lucide-react";
 import type { EstadisticasProduccion } from "@/types/gerencia";
 
 const MONEDA_COLORS: Record<string, string> = {
-	Bs: "oklch(0.37 0.065 225)",
-	USD: "oklch(0.575 0.098 175)",
-	USDT: "oklch(0.70 0.11 80)",
-	UFV: "oklch(0.55 0.08 280)",
+	Bs: "var(--chart-1)",
+	USD: "var(--chart-2)",
+	USDT: "var(--chart-3)",
+	UFV: "var(--chart-5)",
 };
-const MONEDA_FALLBACK = "oklch(0.62 0.12 25)";
+const MONEDA_FALLBACK = "var(--chart-4)";
 
-const CHART_COLORS = [
-	"oklch(0.37 0.065 225)",
-	"oklch(0.575 0.098 175)",
-	"oklch(0.70 0.11 80)",
-	"oklch(0.62 0.12 25)",
-	"oklch(0.55 0.08 280)",
-];
+const CHART_COLORS = ["var(--chart-1)", "var(--chart-2)", "var(--chart-3)", "var(--chart-4)", "var(--chart-5)"];
 
 const COLOCACION_COLORS = {
-	nuevas: "oklch(0.37 0.065 225)",
-	renovadas: "oklch(0.575 0.098 175)",
-	anuladas: "oklch(0.62 0.12 25)",
+	nuevas: "var(--chart-1)",
+	renovadas: "var(--chart-2)",
+	anuladas: "var(--chart-4)",
 };
 
-const GRID_STROKE = "oklch(0.925 0.008 260)";
-const AXIS_COLOR = "oklch(0.555 0.025 260)";
-const TOOLTIP_BG = "oklch(0.988 0.003 260)";
-const TOOLTIP_BORDER = "oklch(0.925 0.008 260)";
+const GRID_STROKE = "var(--border)";
+const AXIS_COLOR = "var(--muted-foreground)";
+const TOOLTIP_BG = "var(--popover)";
+const TOOLTIP_BORDER = "var(--border)";
 
 function formatCurrency(value: number): string {
 	return value.toLocaleString("es-BO", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
@@ -68,7 +62,7 @@ function renderCustomLabel(props: {
 		<text
 			x={x}
 			y={y}
-			fill="oklch(0.555 0.025 260)"
+			fill="var(--muted-foreground)"
 			textAnchor={x > cx ? "start" : "end"}
 			dominantBaseline="central"
 			fontSize={12}
@@ -498,7 +492,7 @@ export default function ProduccionCharts({
 									label: "Creadas",
 									value: funnelProduccion.total,
 									pct: 100,
-									barColor: "oklch(0.37 0.065 225)",
+									barColor: "var(--chart-1)",
 									textColor: "text-primary",
 									bg: "bg-primary/10",
 									border: "border-primary/25",
@@ -510,7 +504,7 @@ export default function ProduccionCharts({
 										funnelProduccion.total > 0
 											? (funnelProduccion.activas / funnelProduccion.total) * 100
 											: 0,
-									barColor: "oklch(0.575 0.098 175)",
+									barColor: "var(--chart-2)",
 									textColor: "text-teal-700",
 									bg: "bg-teal-500/10",
 									border: "border-teal-400/30",
@@ -522,7 +516,7 @@ export default function ProduccionCharts({
 										funnelProduccion.total > 0
 											? (funnelProduccion.pendientes / funnelProduccion.total) * 100
 											: 0,
-									barColor: "oklch(0.70 0.11 80)",
+									barColor: "var(--chart-3)",
 									textColor: "text-amber-700",
 									bg: "bg-amber-400/10",
 									border: "border-amber-400/30",
@@ -534,7 +528,7 @@ export default function ProduccionCharts({
 										funnelProduccion.total > 0
 											? (funnelProduccion.canceladas / funnelProduccion.total) * 100
 											: 0,
-									barColor: "oklch(0.62 0.12 25)",
+									barColor: "var(--chart-4)",
 									textColor: "text-red-700",
 									bg: "bg-red-500/8",
 									border: "border-red-400/25",
@@ -543,7 +537,7 @@ export default function ProduccionCharts({
 									label: "Tasa aprobación",
 									value: null,
 									pct: funnelProduccion.tasa_aprobacion,
-									barColor: "oklch(0.37 0.065 225)",
+									barColor: "var(--chart-1)",
 									textColor: "text-foreground",
 									bg: "bg-muted/40",
 									border: "border-border",

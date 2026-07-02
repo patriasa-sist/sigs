@@ -74,11 +74,7 @@ export default function CoberturaSelector({
 	}
 
 	if (error) {
-		return (
-			<div className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
-				{error}
-			</div>
-		);
+		return <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-4">{error}</div>;
 	}
 
 	return (

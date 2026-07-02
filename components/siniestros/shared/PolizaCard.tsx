@@ -112,7 +112,7 @@ export default function PolizaCard({ poliza, onDeselect, showDeselectButton = tr
 							<p className="text-sm text-muted-foreground">Número de Póliza</p>
 							<p className="text-xl font-bold">{poliza.numero_poliza}</p>
 						</div>
-						<span className="bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 px-3 py-1 rounded-full text-sm font-medium">
+						<span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
 							{poliza.ramo}
 						</span>
 					</div>
@@ -133,7 +133,7 @@ export default function PolizaCard({ poliza, onDeselect, showDeselectButton = tr
 										href={`https://wa.me/591${poliza.cliente.celular.replace(/\D/g, "")}`}
 										target="_blank"
 										rel="noopener noreferrer"
-										className="flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 hover:underline"
+										className="flex items-center gap-1 text-xs text-blue-600 hover:underline"
 									>
 										<Phone className="h-3 w-3" />
 										{poliza.cliente.celular}
@@ -142,7 +142,7 @@ export default function PolizaCard({ poliza, onDeselect, showDeselectButton = tr
 								{poliza.cliente.correo_electronico && (
 									<a
 										href={`mailto:${poliza.cliente.correo_electronico}`}
-										className="flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 hover:underline"
+										className="flex items-center gap-1 text-xs text-blue-600 hover:underline"
 									>
 										<Mail className="h-3 w-3" />
 										{poliza.cliente.correo_electronico}
@@ -247,9 +247,9 @@ export default function PolizaCard({ poliza, onDeselect, showDeselectButton = tr
 
 							{/* Alerta si hay cuotas vencidas o en mora */}
 							{(cuotasVencidas > 0 || cuotasEnMora > 0) && (
-								<div className="flex items-start gap-2 text-sm bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
-									<AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
-									<div className="text-red-900 dark:text-red-100">
+								<div className="flex items-start gap-2 text-sm bg-red-50 border border-red-200 rounded-lg p-3">
+									<AlertTriangle className="h-4 w-4 text-red-600 flex-shrink-0 mt-0.5" />
+									<div className="text-red-900">
 										<p className="font-medium">Cliente con pagos atrasados</p>
 										<div className="text-xs mt-1 space-y-0.5">
 											{cuotasEnMora > 0 && (
@@ -310,9 +310,9 @@ export default function PolizaCard({ poliza, onDeselect, showDeselectButton = tr
 											const enMora = estadoCuota === "mora";
 											// Énfasis de texto solo para atrasos reales: rojo (mora), ámbar (vencida)
 											const emphTextClass = enMora
-												? "text-red-700 dark:text-red-300"
+												? "text-red-700"
 												: esVencida
-													? "text-amber-700 dark:text-amber-300"
+													? "text-amber-700"
 													: "";
 
 											return (
@@ -320,13 +320,13 @@ export default function PolizaCard({ poliza, onDeselect, showDeselectButton = tr
 													key={cuota.id}
 													className={`grid grid-cols-12 gap-2 text-xs p-2 rounded border ${
 														enMora
-															? "bg-red-100 dark:bg-red-950/40 border-red-300 dark:border-red-700"
+															? "bg-red-100 border-red-300"
 															: esVencida
-																? "bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800"
+																? "bg-amber-50 border-amber-200"
 																: estadoCuota === "parcial"
-																	? "bg-orange-50 dark:bg-orange-950/20 border-orange-200 dark:border-orange-800"
+																	? "bg-orange-50 border-orange-200"
 																	: esPagada
-																		? "bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800"
+																		? "bg-green-50 border-green-200"
 																		: "bg-secondary/20 border-secondary"
 													}`}
 												>
@@ -341,31 +341,25 @@ export default function PolizaCard({ poliza, onDeselect, showDeselectButton = tr
 													<div className="col-span-3 flex items-center gap-1">
 														{esPagada ? (
 															<>
-																<CheckCircle className="h-3 w-3 text-green-600 dark:text-green-400 flex-shrink-0" />
-																<span className="text-green-700 dark:text-green-300">
-																	Pagada
-																</span>
+																<CheckCircle className="h-3 w-3 text-green-600 flex-shrink-0" />
+																<span className="text-green-700">Pagada</span>
 															</>
 														) : enMora ? (
 															<>
-																<XCircle className="h-3 w-3 text-red-700 dark:text-red-300 flex-shrink-0" />
-																<span className="text-red-800 dark:text-red-200 font-bold">
-																	MORA
-																</span>
+																<XCircle className="h-3 w-3 text-red-700 flex-shrink-0" />
+																<span className="text-red-800 font-bold">MORA</span>
 															</>
 														) : esVencida ? (
 															<>
-																<AlertTriangle className="h-3 w-3 text-amber-600 dark:text-amber-400 flex-shrink-0" />
-																<span className="text-amber-700 dark:text-amber-300 font-medium">
+																<AlertTriangle className="h-3 w-3 text-amber-600 flex-shrink-0" />
+																<span className="text-amber-700 font-medium">
 																	Vencida
 																</span>
 															</>
 														) : estadoCuota === "parcial" ? (
 															<>
-																<Clock className="h-3 w-3 text-orange-600 dark:text-orange-400 flex-shrink-0" />
-																<span className="text-orange-700 dark:text-orange-300">
-																	Parcial
-																</span>
+																<Clock className="h-3 w-3 text-orange-600 flex-shrink-0" />
+																<span className="text-orange-700">Parcial</span>
 															</>
 														) : (
 															<>
@@ -399,7 +393,7 @@ export default function PolizaCard({ poliza, onDeselect, showDeselectButton = tr
 															</span>
 															{tieneProrrogas && (
 																<span
-																	className="flex items-center gap-0.5 text-amber-600 dark:text-amber-400"
+																	className="flex items-center gap-0.5 text-amber-600"
 																	title={`${cuota.prorrogas_historial?.length} prórroga(s) aplicada(s)`}
 																>
 																	<AlertTriangle className="h-3 w-3" />
@@ -407,7 +401,7 @@ export default function PolizaCard({ poliza, onDeselect, showDeselectButton = tr
 															)}
 														</div>
 														{tieneProrrogas && cuota.fecha_vencimiento_original && (
-															<span className="text-[10px] text-amber-600 dark:text-amber-400">
+															<span className="text-[10px] text-amber-600">
 																Original: {formatDate(cuota.fecha_vencimiento_original)}
 															</span>
 														)}

@@ -232,9 +232,9 @@ export default function AgregarDocumentos({
 			)}
 
 			{estadoSiniestro !== "abierto" && (
-				<div className="flex items-start gap-2 text-sm bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
-					<AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
-					<div className="text-amber-900 dark:text-amber-100">
+				<div className="flex items-start gap-2 text-sm bg-amber-50 border border-amber-200 rounded-lg p-3">
+					<AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+					<div className="text-amber-900">
 						<p className="font-medium">Siniestro cerrado</p>
 						<p className="text-sm">No se pueden agregar documentos a siniestros cerrados</p>
 					</div>

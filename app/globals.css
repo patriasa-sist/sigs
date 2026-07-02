@@ -49,6 +49,11 @@
 	--color-warning-foreground: var(--warning-foreground);
 	--color-info: var(--info);
 	--color-info-foreground: var(--info-foreground);
+
+	/* Brand: superficie petrol fija (login, headers de marca) — NO cambia entre temas claros/oscuros
+	   más allá de un leve ajuste; siempre admite contenido blanco encima */
+	--color-brand: var(--brand);
+	--color-brand-foreground: var(--brand-foreground);
 }
 
 /* ============================================================
@@ -60,6 +65,7 @@
    ============================================================ */
 
 :root {
+	color-scheme: light;
 	--radius: 0.625rem;
 
 	/* ── Surfaces ────────────────────────────────────────────── */
@@ -104,6 +110,10 @@
 	--info: oklch(0.52 0.1 250); /* calm blue */
 	--info-foreground: oklch(0.975 0.005 250);
 
+	/* ── Brand (superficie petrol fija con contenido blanco) ── */
+	--brand: oklch(0.37 0.065 225);
+	--brand-foreground: oklch(0.975 0.008 225);
+
 	/* ── Charts — muted, professional ───────────────────────── */
 	--chart-1: oklch(0.37 0.065 225); /* petrol teal */
 	--chart-2: oklch(0.575 0.098 175); /* teal accent */
@@ -123,59 +133,347 @@
 }
 
 /* ============================================================
-   Dark Theme (kept coherent, but app forces light via
-   ThemeProvider forcedTheme="clear")
+   PETROL CORPORATE — Soft Dark Theme
+   Oscuro "suave": superficies slate-petrol profundas (nunca
+   negro puro), texto off-white sin deslumbrar, acentos teal
+   desaturados. Contraste moderado a propósito.
    ============================================================ */
 
 .dark {
-	--background: oklch(0.17 0.02 260);
-	--foreground: oklch(0.93 0.006 260);
+	color-scheme: dark;
 
-	--card: oklch(0.22 0.015 260);
-	--card-foreground: oklch(0.93 0.006 260);
+	/* ── Surfaces ────────────────────────────────────────────── */
+	--background: oklch(0.165 0.013 245);
+	--foreground: oklch(0.895 0.008 250); /* off-white suave, sin glare */
 
-	--popover: oklch(0.24 0.015 260);
-	--popover-foreground: oklch(0.93 0.006 260);
+	--card: oklch(0.21 0.013 245);
+	--card-foreground: oklch(0.895 0.008 250);
 
-	--primary: oklch(0.575 0.1 175); /* accent teal in dark */
-	--primary-foreground: oklch(0.17 0.02 260);
+	--popover: oklch(0.235 0.013 245);
+	--popover-foreground: oklch(0.895 0.008 250);
 
-	--secondary: oklch(0.25 0.012 260);
-	--secondary-foreground: oklch(0.85 0.008 260);
+	/* ── Primary — petrol teal aclarado para superficies oscuras ── */
+	--primary: oklch(0.62 0.085 205);
+	--primary-foreground: oklch(0.15 0.025 225);
 
-	--muted: oklch(0.25 0.012 260);
-	--muted-foreground: oklch(0.65 0.015 260);
+	/* ── Secondary ──────────────────────────────────────────── */
+	--secondary: oklch(0.26 0.012 250);
+	--secondary-foreground: oklch(0.82 0.01 250);
 
-	--accent: oklch(0.28 0.012 260);
-	--accent-foreground: oklch(0.85 0.008 260);
+	/* ── Muted ──────────────────────────────────────────────── */
+	--muted: oklch(0.26 0.012 250);
+	--muted-foreground: oklch(0.66 0.015 250);
 
-	--destructive: oklch(0.6 0.18 25);
+	/* ── Accent ─────────────────────────────────────────────── */
+	--accent: oklch(0.29 0.014 250);
+	--accent-foreground: oklch(0.87 0.02 210);
 
+	/* ── Destructive ────────────────────────────────────────── */
+	--destructive: oklch(0.62 0.15 25);
+
+	/* ── Borders & Inputs ───────────────────────────────────── */
 	--border: oklch(1 0 0 / 10%);
-	--input: oklch(1 0 0 / 15%);
-	--ring: oklch(0.575 0.1 175 / 35%);
+	--input: oklch(1 0 0 / 14%);
+	--ring: oklch(0.62 0.085 205 / 40%);
 
-	--success: oklch(0.65 0.12 175);
-	--success-foreground: oklch(0.17 0.02 260);
-	--warning: oklch(0.72 0.14 70);
-	--warning-foreground: oklch(0.17 0.02 260);
-	--info: oklch(0.6 0.12 250);
-	--info-foreground: oklch(0.17 0.02 260);
+	/* ── Extended Semantic ──────────────────────────────────── */
+	--success: oklch(0.67 0.1 175);
+	--success-foreground: oklch(0.16 0.03 180);
+	--warning: oklch(0.74 0.12 75);
+	--warning-foreground: oklch(0.22 0.05 70);
+	--info: oklch(0.65 0.1 250);
+	--info-foreground: oklch(0.16 0.03 250);
 
-	--chart-1: oklch(0.575 0.1 175);
-	--chart-2: oklch(0.5 0.08 225);
-	--chart-3: oklch(0.72 0.14 70);
-	--chart-4: oklch(0.65 0.15 25);
-	--chart-5: oklch(0.6 0.1 280);
+	/* ── Brand: se mantiene petrol profundo (contenido blanco) ── */
+	--brand: oklch(0.32 0.05 228);
+	--brand-foreground: oklch(0.975 0.008 225);
 
-	--sidebar: oklch(0.2 0.015 260);
-	--sidebar-foreground: oklch(0.93 0.006 260);
-	--sidebar-primary: oklch(0.575 0.1 175);
-	--sidebar-primary-foreground: oklch(0.17 0.02 260);
-	--sidebar-accent: oklch(0.25 0.025 180);
-	--sidebar-accent-foreground: oklch(0.85 0.02 180);
+	/* ── Charts ─────────────────────────────────────────────── */
+	--chart-1: oklch(0.58 0.09 220);
+	--chart-2: oklch(0.65 0.1 175);
+	--chart-3: oklch(0.75 0.11 80);
+	--chart-4: oklch(0.68 0.13 25);
+	--chart-5: oklch(0.62 0.09 280);
+
+	/* ── Sidebar ────────────────────────────────────────────── */
+	--sidebar: oklch(0.21 0.013 245);
+	--sidebar-foreground: oklch(0.895 0.008 250);
+	--sidebar-primary: oklch(0.62 0.085 205);
+	--sidebar-primary-foreground: oklch(0.15 0.025 225);
+	--sidebar-accent: oklch(0.29 0.014 250);
+	--sidebar-accent-foreground: oklch(0.87 0.02 210);
 	--sidebar-border: oklch(1 0 0 / 10%);
-	--sidebar-ring: oklch(0.575 0.1 175 / 35%);
+	--sidebar-ring: oklch(0.62 0.085 205 / 40%);
+}
+
+/* ============================================================
+   CAPA DE COMPATIBILIDAD DARK — paleta cruda de Tailwind
+   Todavía existe código legacy con clases de paleta cruda
+   (bg-red-50, text-slate-700, border-amber-200…). En Tailwind
+   v4 esas utilidades compilan a var(--color-*), así que aquí
+   se redefinen esas variables dentro de .dark:
+
+   · 50/100  (fondos claros)  → superficies oscuras tintadas
+   · 200/300 (bordes claros)  → bordes oscuros tintados
+   · 600–900 (texto oscuro)   → texto claro tintado
+   · 400/500 y 950 NO se tocan (funcionan en ambos temas; 950
+     se usa como fondo oscuro intencional)
+
+   El código NUEVO debe usar tokens semánticos, no esta capa.
+   ============================================================ */
+
+.dark {
+	/* ── Neutrales ── */
+	/* slate */
+	--color-slate-50: oklch(0.225 0.006 257);
+	--color-slate-100: oklch(0.26 0.008 257);
+	--color-slate-200: oklch(0.32 0.01 257);
+	--color-slate-300: oklch(0.38 0.012 257);
+	--color-slate-600: oklch(0.72 0.014 257);
+	--color-slate-700: oklch(0.77 0.012 257);
+	--color-slate-800: oklch(0.84 0.009 257);
+	--color-slate-900: oklch(0.9 0.006 257);
+	/* gray */
+	--color-gray-50: oklch(0.225 0.006 264);
+	--color-gray-100: oklch(0.26 0.008 264);
+	--color-gray-200: oklch(0.32 0.01 264);
+	--color-gray-300: oklch(0.38 0.012 264);
+	--color-gray-600: oklch(0.72 0.014 264);
+	--color-gray-700: oklch(0.77 0.012 264);
+	--color-gray-800: oklch(0.84 0.009 264);
+	--color-gray-900: oklch(0.9 0.006 264);
+	/* zinc */
+	--color-zinc-50: oklch(0.225 0.005 286);
+	--color-zinc-100: oklch(0.26 0.006 286);
+	--color-zinc-200: oklch(0.32 0.008 286);
+	--color-zinc-300: oklch(0.38 0.01 286);
+	--color-zinc-600: oklch(0.72 0.012 286);
+	--color-zinc-700: oklch(0.77 0.01 286);
+	--color-zinc-800: oklch(0.84 0.008 286);
+	--color-zinc-900: oklch(0.9 0.005 286);
+	/* neutral */
+	--color-neutral-50: oklch(0.225 0 0);
+	--color-neutral-100: oklch(0.26 0 0);
+	--color-neutral-200: oklch(0.32 0 0);
+	--color-neutral-300: oklch(0.38 0 0);
+	--color-neutral-600: oklch(0.72 0 0);
+	--color-neutral-700: oklch(0.77 0 0);
+	--color-neutral-800: oklch(0.84 0 0);
+	--color-neutral-900: oklch(0.9 0 0);
+	/* stone */
+	--color-stone-50: oklch(0.225 0.004 58);
+	--color-stone-100: oklch(0.26 0.005 58);
+	--color-stone-200: oklch(0.32 0.007 58);
+	--color-stone-300: oklch(0.38 0.009 58);
+	--color-stone-600: oklch(0.72 0.011 58);
+	--color-stone-700: oklch(0.77 0.009 58);
+	--color-stone-800: oklch(0.84 0.007 58);
+	--color-stone-900: oklch(0.9 0.005 58);
+
+	/* ── Colores ── */
+	/* red */
+	--color-red-50: oklch(0.26 0.045 25);
+	--color-red-100: oklch(0.3 0.055 25);
+	--color-red-200: oklch(0.36 0.065 25);
+	--color-red-300: oklch(0.44 0.075 25);
+	--color-red-600: oklch(0.75 0.115 25);
+	--color-red-700: oklch(0.8 0.1 25);
+	--color-red-800: oklch(0.85 0.085 25);
+	--color-red-900: oklch(0.89 0.065 25);
+	/* orange */
+	--color-orange-50: oklch(0.26 0.045 47);
+	--color-orange-100: oklch(0.3 0.055 47);
+	--color-orange-200: oklch(0.36 0.065 47);
+	--color-orange-300: oklch(0.44 0.075 47);
+	--color-orange-600: oklch(0.75 0.115 47);
+	--color-orange-700: oklch(0.8 0.1 47);
+	--color-orange-800: oklch(0.85 0.085 47);
+	--color-orange-900: oklch(0.89 0.065 47);
+	/* amber */
+	--color-amber-50: oklch(0.26 0.045 70);
+	--color-amber-100: oklch(0.3 0.055 70);
+	--color-amber-200: oklch(0.36 0.065 70);
+	--color-amber-300: oklch(0.44 0.075 70);
+	--color-amber-600: oklch(0.75 0.115 70);
+	--color-amber-700: oklch(0.8 0.1 70);
+	--color-amber-800: oklch(0.85 0.085 70);
+	--color-amber-900: oklch(0.89 0.065 70);
+	/* yellow */
+	--color-yellow-50: oklch(0.26 0.045 86);
+	--color-yellow-100: oklch(0.3 0.055 86);
+	--color-yellow-200: oklch(0.36 0.065 86);
+	--color-yellow-300: oklch(0.44 0.075 86);
+	--color-yellow-600: oklch(0.75 0.115 86);
+	--color-yellow-700: oklch(0.8 0.1 86);
+	--color-yellow-800: oklch(0.85 0.085 86);
+	--color-yellow-900: oklch(0.89 0.065 86);
+	/* lime */
+	--color-lime-50: oklch(0.26 0.045 131);
+	--color-lime-100: oklch(0.3 0.055 131);
+	--color-lime-200: oklch(0.36 0.065 131);
+	--color-lime-300: oklch(0.44 0.075 131);
+	--color-lime-600: oklch(0.75 0.115 131);
+	--color-lime-700: oklch(0.8 0.1 131);
+	--color-lime-800: oklch(0.85 0.085 131);
+	--color-lime-900: oklch(0.89 0.065 131);
+	/* green */
+	--color-green-50: oklch(0.26 0.045 150);
+	--color-green-100: oklch(0.3 0.055 150);
+	--color-green-200: oklch(0.36 0.065 150);
+	--color-green-300: oklch(0.44 0.075 150);
+	--color-green-600: oklch(0.75 0.115 150);
+	--color-green-700: oklch(0.8 0.1 150);
+	--color-green-800: oklch(0.85 0.085 150);
+	--color-green-900: oklch(0.89 0.065 150);
+	/* emerald */
+	--color-emerald-50: oklch(0.26 0.045 163);
+	--color-emerald-100: oklch(0.3 0.055 163);
+	--color-emerald-200: oklch(0.36 0.065 163);
+	--color-emerald-300: oklch(0.44 0.075 163);
+	--color-emerald-600: oklch(0.75 0.115 163);
+	--color-emerald-700: oklch(0.8 0.1 163);
+	--color-emerald-800: oklch(0.85 0.085 163);
+	--color-emerald-900: oklch(0.89 0.065 163);
+	/* teal */
+	--color-teal-50: oklch(0.26 0.045 183);
+	--color-teal-100: oklch(0.3 0.055 183);
+	--color-teal-200: oklch(0.36 0.065 183);
+	--color-teal-300: oklch(0.44 0.075 183);
+	--color-teal-600: oklch(0.75 0.115 183);
+	--color-teal-700: oklch(0.8 0.1 183);
+	--color-teal-800: oklch(0.85 0.085 183);
+	--color-teal-900: oklch(0.89 0.065 183);
+	/* cyan */
+	--color-cyan-50: oklch(0.26 0.045 215);
+	--color-cyan-100: oklch(0.3 0.055 215);
+	--color-cyan-200: oklch(0.36 0.065 215);
+	--color-cyan-300: oklch(0.44 0.075 215);
+	--color-cyan-600: oklch(0.75 0.115 215);
+	--color-cyan-700: oklch(0.8 0.1 215);
+	--color-cyan-800: oklch(0.85 0.085 215);
+	--color-cyan-900: oklch(0.89 0.065 215);
+	/* sky */
+	--color-sky-50: oklch(0.26 0.045 237);
+	--color-sky-100: oklch(0.3 0.055 237);
+	--color-sky-200: oklch(0.36 0.065 237);
+	--color-sky-300: oklch(0.44 0.075 237);
+	--color-sky-600: oklch(0.75 0.115 237);
+	--color-sky-700: oklch(0.8 0.1 237);
+	--color-sky-800: oklch(0.85 0.085 237);
+	--color-sky-900: oklch(0.89 0.065 237);
+	/* blue */
+	--color-blue-50: oklch(0.26 0.045 260);
+	--color-blue-100: oklch(0.3 0.055 260);
+	--color-blue-200: oklch(0.36 0.065 260);
+	--color-blue-300: oklch(0.44 0.075 260);
+	--color-blue-600: oklch(0.75 0.115 260);
+	--color-blue-700: oklch(0.8 0.1 260);
+	--color-blue-800: oklch(0.85 0.085 260);
+	--color-blue-900: oklch(0.89 0.065 260);
+	/* indigo */
+	--color-indigo-50: oklch(0.26 0.045 277);
+	--color-indigo-100: oklch(0.3 0.055 277);
+	--color-indigo-200: oklch(0.36 0.065 277);
+	--color-indigo-300: oklch(0.44 0.075 277);
+	--color-indigo-600: oklch(0.75 0.115 277);
+	--color-indigo-700: oklch(0.8 0.1 277);
+	--color-indigo-800: oklch(0.85 0.085 277);
+	--color-indigo-900: oklch(0.89 0.065 277);
+	/* violet */
+	--color-violet-50: oklch(0.26 0.045 293);
+	--color-violet-100: oklch(0.3 0.055 293);
+	--color-violet-200: oklch(0.36 0.065 293);
+	--color-violet-300: oklch(0.44 0.075 293);
+	--color-violet-600: oklch(0.75 0.115 293);
+	--color-violet-700: oklch(0.8 0.1 293);
+	--color-violet-800: oklch(0.85 0.085 293);
+	--color-violet-900: oklch(0.89 0.065 293);
+	/* purple */
+	--color-purple-50: oklch(0.26 0.045 304);
+	--color-purple-100: oklch(0.3 0.055 304);
+	--color-purple-200: oklch(0.36 0.065 304);
+	--color-purple-300: oklch(0.44 0.075 304);
+	--color-purple-600: oklch(0.75 0.115 304);
+	--color-purple-700: oklch(0.8 0.1 304);
+	--color-purple-800: oklch(0.85 0.085 304);
+	--color-purple-900: oklch(0.89 0.065 304);
+	/* fuchsia */
+	--color-fuchsia-50: oklch(0.26 0.045 322);
+	--color-fuchsia-100: oklch(0.3 0.055 322);
+	--color-fuchsia-200: oklch(0.36 0.065 322);
+	--color-fuchsia-300: oklch(0.44 0.075 322);
+	--color-fuchsia-600: oklch(0.75 0.115 322);
+	--color-fuchsia-700: oklch(0.8 0.1 322);
+	--color-fuchsia-800: oklch(0.85 0.085 322);
+	--color-fuchsia-900: oklch(0.89 0.065 322);
+	/* pink */
+	--color-pink-50: oklch(0.26 0.045 354);
+	--color-pink-100: oklch(0.3 0.055 354);
+	--color-pink-200: oklch(0.36 0.065 354);
+	--color-pink-300: oklch(0.44 0.075 354);
+	--color-pink-600: oklch(0.75 0.115 354);
+	--color-pink-700: oklch(0.8 0.1 354);
+	--color-pink-800: oklch(0.85 0.085 354);
+	--color-pink-900: oklch(0.89 0.065 354);
+	/* rose */
+	--color-rose-50: oklch(0.26 0.045 16);
+	--color-rose-100: oklch(0.3 0.055 16);
+	--color-rose-200: oklch(0.36 0.065 16);
+	--color-rose-300: oklch(0.44 0.075 16);
+	--color-rose-600: oklch(0.75 0.115 16);
+	--color-rose-700: oklch(0.8 0.1 16);
+	--color-rose-800: oklch(0.85 0.085 16);
+	--color-rose-900: oklch(0.89 0.065 16);
+}
+
+/* Shims puntuales de la capa de compatibilidad:
+   · bg-white legacy (modales/tarjetas a mano) → superficie card
+   · botones sólidos bg-*-600/700 con text-white → versión oscura
+     que mantiene el contraste (el remapeo de arriba aclara esos
+     tonos porque su uso dominante es texto) */
+.dark .bg-white {
+	background-color: var(--card);
+}
+
+.dark .bg-red-600,
+.dark .hover\:bg-red-600:hover {
+	background-color: oklch(0.51 0.16 25);
+	color: oklch(0.98 0.005 25);
+}
+.dark .bg-red-700,
+.dark .hover\:bg-red-700:hover {
+	background-color: oklch(0.46 0.15 25);
+	color: oklch(0.98 0.005 25);
+}
+.dark .bg-green-600,
+.dark .hover\:bg-green-600:hover {
+	background-color: oklch(0.52 0.13 150);
+	color: oklch(0.98 0.005 150);
+}
+.dark .bg-green-700,
+.dark .hover\:bg-green-700:hover {
+	background-color: oklch(0.47 0.12 150);
+	color: oklch(0.98 0.005 150);
+}
+.dark .bg-blue-600,
+.dark .hover\:bg-blue-600:hover {
+	background-color: oklch(0.5 0.15 255);
+	color: oklch(0.98 0.005 255);
+}
+.dark .bg-blue-700,
+.dark .hover\:bg-blue-700:hover {
+	background-color: oklch(0.45 0.14 255);
+	color: oklch(0.98 0.005 255);
+}
+.dark .bg-amber-600,
+.dark .hover\:bg-amber-600:hover {
+	background-color: oklch(0.55 0.11 60);
+	color: oklch(0.98 0.005 60);
+}
+.dark .bg-amber-700,
+.dark .hover\:bg-amber-700:hover {
+	background-color: oklch(0.5 0.1 55);
+	color: oklch(0.98 0.005 55);
 }
 
 @layer base {

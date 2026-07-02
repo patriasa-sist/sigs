@@ -228,7 +228,7 @@ export default function DocumentUploader({
 
 			{/* Mensaje de error */}
 			{error && (
-				<div className="flex items-start gap-2 text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
+				<div className="flex items-start gap-2 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-3">
 					<AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
 					<p>{error}</p>
 				</div>

@@ -21,17 +21,17 @@ import type { EstadisticasSiniestros } from "@/types/gerencia";
 
 /* ── Design-system chart colors ── */
 const CHART_COLORS = [
-	"oklch(0.37 0.065 225)", // chart-1 petrol teal
-	"oklch(0.575 0.098 175)", // chart-2 teal accent
-	"oklch(0.70 0.11 80)", // chart-3 warm amber
-	"oklch(0.62 0.12 25)", // chart-4 soft coral
-	"oklch(0.55 0.08 280)", // chart-5 muted indigo
+	"var(--chart-1)", // chart-1 petrol teal
+	"var(--chart-2)", // chart-2 teal accent
+	"var(--chart-3)", // chart-3 warm amber
+	"var(--chart-4)", // chart-4 soft coral
+	"var(--chart-5)", // chart-5 muted indigo
 ];
 
-const GRID_STROKE = "oklch(0.925 0.008 260)";
-const AXIS_COLOR = "oklch(0.555 0.025 260)";
-const TOOLTIP_BG = "oklch(0.988 0.003 260)";
-const TOOLTIP_BORDER = "oklch(0.925 0.008 260)";
+const GRID_STROKE = "var(--border)";
+const AXIS_COLOR = "var(--muted-foreground)";
+const TOOLTIP_BG = "var(--popover)";
+const TOOLTIP_BORDER = "var(--border)";
 
 function formatCurrency(value: number): string {
 	return value.toLocaleString("es-BO", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
@@ -119,13 +119,13 @@ export default function SiniestrosCharts({
 										<Bar
 											dataKey="abiertos"
 											name="Abiertos"
-											fill="oklch(0.62 0.12 25)"
+											fill="var(--chart-4)"
 											radius={[4, 4, 0, 0]}
 										/>
 										<Bar
 											dataKey="cerrados"
 											name="Cerrados"
-											fill="oklch(0.575 0.098 175)"
+											fill="var(--chart-2)"
 											radius={[4, 4, 0, 0]}
 										/>
 									</BarChart>

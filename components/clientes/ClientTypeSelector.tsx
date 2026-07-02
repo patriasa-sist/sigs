@@ -62,11 +62,11 @@ const CLIENT_OPTIONS: {
 
 export function ClientTypeSelector({ selectedType, onSelect }: ClientTypeSelectorProps) {
 	return (
-		<div className="rounded-lg border border-[#E2E8F0] bg-[#FAFBFD] overflow-hidden shadow-sm">
+		<div className="rounded-lg border border-border bg-card overflow-hidden shadow-sm">
 			{/* Header */}
-			<div className="px-5 py-4 border-b border-[#E2E8F0] flex items-center gap-3">
-				<div className="w-[3px] h-5 rounded-full bg-[#004F69]" />
-				<h2 className="text-base font-semibold text-[#1E293B]">Tipo de Cliente</h2>
+			<div className="px-5 py-4 border-b border-border flex items-center gap-3">
+				<div className="w-[3px] h-5 rounded-full bg-primary" />
+				<h2 className="text-base font-semibold text-foreground">Tipo de Cliente</h2>
 				<span className="ml-auto text-sm text-slate-400">Seleccione una categoría</span>
 			</div>
 
@@ -81,10 +81,10 @@ export function ClientTypeSelector({ selectedType, onSelect }: ClientTypeSelecto
 							onClick={() => onSelect(type)}
 							className={cn(
 								"group relative flex flex-col items-start text-left p-5 rounded-lg border-2 transition-all duration-200 outline-none",
-								"focus-visible:ring-2 focus-visible:ring-[#004F69]/30 focus-visible:ring-offset-1",
+								"focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-1",
 								isSelected
-									? "border-[#004F69] bg-[#004F69]/[0.04] shadow-sm"
-									: "border-slate-200 bg-white hover:border-[#004F69]/50 hover:bg-slate-50",
+									? "border-primary bg-primary/[0.04] shadow-sm"
+									: "border-slate-200 bg-white hover:border-primary/50 hover:bg-slate-50",
 							)}
 						>
 							{/* Radio indicator */}
@@ -92,11 +92,11 @@ export function ClientTypeSelector({ selectedType, onSelect }: ClientTypeSelecto
 								className={cn(
 									"absolute top-4 right-4 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-200",
 									isSelected
-										? "border-[#004F69] bg-[#004F69]"
-										: "border-slate-300 bg-white group-hover:border-[#004F69]/60",
+										? "border-primary bg-primary"
+										: "border-slate-300 bg-white group-hover:border-primary/60",
 								)}
 							>
-								{isSelected && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
+								{isSelected && <Check className="w-3 h-3 text-primary-foreground" strokeWidth={3} />}
 							</div>
 
 							{/* Icon container — 48px */}
@@ -104,8 +104,8 @@ export function ClientTypeSelector({ selectedType, onSelect }: ClientTypeSelecto
 								className={cn(
 									"w-12 h-12 rounded-lg flex items-center justify-center mb-4 transition-colors duration-200",
 									isSelected
-										? "bg-[#004F69] text-white"
-										: "bg-slate-100 text-slate-500 group-hover:bg-[#004F69]/10 group-hover:text-[#004F69]",
+										? "bg-primary text-primary-foreground"
+										: "bg-slate-100 text-slate-500 group-hover:bg-primary/10 group-hover:text-primary",
 								)}
 							>
 								<Icon className="w-6 h-6" strokeWidth={1.75} />
@@ -115,7 +115,7 @@ export function ClientTypeSelector({ selectedType, onSelect }: ClientTypeSelecto
 							<span
 								className={cn(
 									"text-[0.9375rem] font-semibold leading-snug transition-colors duration-200",
-									isSelected ? "text-[#004F69]" : "text-[#1E293B]",
+									isSelected ? "text-primary" : "text-foreground",
 								)}
 							>
 								{label}
@@ -129,7 +129,7 @@ export function ClientTypeSelector({ selectedType, onSelect }: ClientTypeSelecto
 								className={cn(
 									"mt-4 text-xs font-medium px-2.5 py-1 rounded-md border transition-colors duration-200",
 									isSelected
-										? "bg-[#004F69]/8 text-[#004F69] border-[#004F69]/25"
+										? "bg-primary/8 text-primary border-primary/25"
 										: "bg-slate-100 text-slate-500 border-slate-200",
 								)}
 							>

@@ -149,7 +149,7 @@ export default function HomePage() {
 
 	return (
 		<div className="min-h-screen bg-gray-50">
-			<header className="patria-gradient shadow-lg bg-slate-700">
+			<header className="bg-brand shadow-lg">
 				<div className="w-full mx-auto px-4 sm:px-6 lg:px-8">
 					<div className="flex items-center justify-between h-16">
 						{currentView !== "upload" && (

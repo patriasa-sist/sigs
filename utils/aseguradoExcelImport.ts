@@ -83,10 +83,7 @@ function parsearGenero(valor: unknown): "M" | "F" | "Otro" | undefined {
 	return undefined;
 }
 
-function resolverNivelId(
-	valorNivel: unknown,
-	niveles: NivelCobertura[],
-): { nivel_id: string; error?: string } {
+function resolverNivelId(valorNivel: unknown, niveles: NivelCobertura[]): { nivel_id: string; error?: string } {
 	if (!niveles.length) return { nivel_id: "" };
 	// Sin valor: cae al primer nivel (válido cuando solo hay uno configurado).
 	if (valorNivel === null || valorNivel === undefined || String(valorNivel).trim() === "") {

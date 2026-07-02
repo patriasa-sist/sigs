@@ -108,9 +108,7 @@ export default function BuscarPoliza({ onPolizaSelect, polizaSeleccionada }: Bus
 			</div>
 
 			{error && (
-				<div className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
-					{error}
-				</div>
+				<div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-3">{error}</div>
 			)}
 
 			{resultados.length > 0 && (
@@ -132,7 +130,7 @@ export default function BuscarPoliza({ onPolizaSelect, polizaSeleccionada }: Bus
 											<h4 className="font-semibold text-base">
 												Póliza N° {poliza.numero_poliza}
 											</h4>
-											<span className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 px-2 py-1 rounded">
+											<span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
 												{poliza.ramo}
 											</span>
 										</div>
@@ -170,7 +168,7 @@ export default function BuscarPoliza({ onPolizaSelect, polizaSeleccionada }: Bus
 													{poliza.asegurados.slice(0, 3).map((aseg, idx) => (
 														<span
 															key={idx}
-															className="text-xs bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded"
+															className="text-xs bg-gray-100 px-2 py-1 rounded"
 														>
 															{aseg.tipo === "vehiculo" ? (
 																<>Placa: {aseg.placa}</>
