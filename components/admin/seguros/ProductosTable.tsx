@@ -99,7 +99,8 @@ export function ProductosTable({ data, aseguradoras, ramos }: ProductosTableProp
 		return `${(value * 100).toFixed(2)}%`;
 	};
 
-	const formatFactor = (value: number) => value.toFixed(2);
+	// Muestra hasta 6 decimales, recortando ceros finales (35.0000 → "35", 1.259950 → "1.25995")
+	const formatFactor = (value: number) => parseFloat(value.toFixed(6)).toString();
 
 	return (
 		<div className="space-y-4">
