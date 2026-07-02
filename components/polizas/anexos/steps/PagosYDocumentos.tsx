@@ -34,9 +34,10 @@ type Props = {
 	vigenciaCorrida: VigenciaCorrida | null;
 	documentos: DocumentoPoliza[];
 	moneda: Moneda;
-	// Producto de la madre + flag, para el cálculo automático en vivo del plan de inclusión.
+	// Producto + flags de la madre, para el cálculo automático en vivo (inclusión y exclusión).
 	producto?: ProductoFactoresAnexo | null;
 	usarFactoresContado?: boolean;
+	modalidadMadre?: "contado" | "credito";
 	userId: string | null;
 	onChangePlanPagoInclusion: (plan: PlanPagoInclusion | null) => void;
 	onChangeCuotas: (cuotas: CuotaAjuste[]) => void;
@@ -423,15 +424,36 @@ function FilaAjuste({
 function SeccionAjusteExclusion({
 	cuotasAjuste,
 	moneda,
+	producto,
+	usarFactoresContado,
+	modalidadMadre,
 	onChangeDelta,
 	onChangeFecha,
 }: {
 	cuotasAjuste: CuotaAjuste[];
 	moneda: Moneda;
+	producto?: ProductoFactoresAnexo | null;
+	usarFactoresContado?: boolean;
+	modalidadMadre?: "contado" | "credito";
 	onChangeDelta: (idx: number, v: string) => void;
 	onChangeFecha: (idx: number, v: string) => void;
 }) {
 	const totalDelta = cuotasAjuste.reduce((s, c) => s + c.monto_delta, 0);
+
+	// Cálculo automático en vivo de la exclusión (mismo espejo que computarPrimaAnexo):
+	// usa la modalidad de la MADRE (o contado si la madre fuerza contado) sobre el
+	// descuento total; los montos van en NEGATIVO porque la exclusión reduce producción.
+	const descuento = Math.abs(totalDelta);
+	const usarContado = modalidadMadre === "contado" || usarFactoresContado === true;
+	const calc: CalculoComisionResult | null =
+		producto && descuento > 0
+			? calcularComisionesConProducto({
+					prima_total: descuento,
+					modalidad_pago: usarContado ? "contado" : "credito",
+					producto: producto as unknown as ProductoAseguradora,
+				})
+			: null;
+	const fmt = (n: number) => Number(n.toFixed(6));
 	// Conservamos el índice global de cada cuota para los handlers.
 	const indexadas = cuotasAjuste.map((cuota, idx) => ({ cuota, idx }));
 	const madre = indexadas.filter((x) => x.cuota.origen === "madre");
@@ -556,13 +578,54 @@ function SeccionAjusteExclusion({
 				</div>
 			)}
 
-			{cuotasAjuste.some((c) => c.monto_delta !== 0) && (
-				<div className="text-right">
-					<span className="text-sm font-medium">
-						Descuento total: <span className="text-red-600">{formatCurrency(totalDelta, moneda)}</span>
-					</span>
-				</div>
-			)}
+			{cuotasAjuste.some((c) => c.monto_delta !== 0) &&
+				(calc ? (
+					<div className="rounded-lg border bg-gray-50 p-4">
+						<h4 className="mb-3 text-sm font-semibold text-gray-900">
+							Cálculos Automáticos
+							<span className="ml-2 text-xs font-normal text-gray-500">
+								(sobre el descuento de la exclusión)
+							</span>
+						</h4>
+						<div className="grid grid-cols-1 gap-4 text-sm md:grid-cols-3">
+							<div>
+								<p className="font-medium text-gray-500">Descuento Total</p>
+								<p className="text-lg font-bold text-red-600">{formatCurrency(-descuento, moneda)}</p>
+							</div>
+							<div>
+								<p className="font-medium text-gray-500">
+									Prima Neta
+									<span className="ml-1 text-xs font-normal text-gray-400">
+										(Factor: {fmt(calc.factor_usado)}%)
+									</span>
+								</p>
+								<p className="text-lg font-bold text-red-600">
+									{formatCurrency(-calc.prima_neta, moneda)}
+								</p>
+							</div>
+							<div>
+								<p className="font-medium text-gray-500">
+									Comisión
+									<span className="ml-1 text-xs font-normal text-gray-400">
+										({fmt(calc.porcentaje_comision * 100)}%)
+									</span>
+								</p>
+								<p className="text-lg font-bold text-red-600">
+									{formatCurrency(-calc.comision_empresa, moneda)}
+								</p>
+							</div>
+						</div>
+						<p className="mt-2 text-xs text-gray-400">
+							La exclusión reduce la producción de la póliza (montos en negativo).
+						</p>
+					</div>
+				) : (
+					<div className="text-right">
+						<span className="text-sm font-medium">
+							Descuento total: <span className="text-red-600">{formatCurrency(totalDelta, moneda)}</span>
+						</span>
+					</div>
+				))}
 		</div>
 	);
 }
@@ -580,6 +643,7 @@ export function PagosYDocumentos({
 	moneda,
 	producto,
 	usarFactoresContado,
+	modalidadMadre,
 	userId,
 	onChangePlanPagoInclusion,
 	onChangeCuotas,
@@ -817,6 +881,9 @@ export function PagosYDocumentos({
 					<SeccionAjusteExclusion
 						cuotasAjuste={cuotasAjuste}
 						moneda={moneda}
+						producto={producto}
+						usarFactoresContado={usarFactoresContado}
+						modalidadMadre={modalidadMadre}
 						onChangeDelta={handleDeltaChange}
 						onChangeFecha={handleFechaAjusteChange}
 					/>

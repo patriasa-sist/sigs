@@ -243,6 +243,7 @@ export function NuevoAnexoForm({ mode = "create", anexoId, anexoEstado, initialF
 					moneda={formState.poliza_resumen!.moneda}
 					producto={datosPoliza.poliza.producto ?? null}
 					usarFactoresContado={datosPoliza.poliza.usar_factores_contado ?? false}
+					modalidadMadre={datosPoliza.poliza.modalidad_pago}
 					userId={userId}
 					onChangePlanPagoInclusion={handleChangePlanPagoInclusion}
 					onChangeCuotas={handleChangeCuotas}
