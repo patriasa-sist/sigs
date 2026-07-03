@@ -11,16 +11,15 @@ import type { ProductoAseguradora } from "@/types/poliza";
 // ============================================
 // Para casos excepcionales (descuento interno, pago en otra divisa) donde
 // el factor del producto no refleja los montos reales. Evita duplicar
-// productos de aseguradora de un solo uso. Si la prima total cambia, la
-// diferencia se reparte proporcionalmente entre las cuotas NO pagadas para
-// que lo cobrado siga cuadrando. El trigger de historial registra el cambio
-// (usuario, fecha, motivo) automáticamente.
+// productos de aseguradora de un solo uso. La prima total NUNCA se toca
+// desde aquí (afecta cuotas de cobranza; se modifica editando la póliza).
+// El trigger de historial registra el cambio (usuario, fecha, motivo)
+// automáticamente.
 
 type ActionResult = { success: true } | { success: false; error: string };
 
 export type AjustePrimaNetaInput = {
 	prima_neta: number;
-	prima_total: number;
 	comision_empresa: number;
 	comision_encargado: number;
 	motivo: string;
@@ -54,10 +53,9 @@ async function verifyAdmin() {
 }
 
 /**
- * Sobreescribe los montos autocalculados de una póliza (prima neta,
- * comisiones y opcionalmente prima total). Si la prima total cambia, la
- * diferencia se redistribuye proporcionalmente entre las cuotas no pagadas
- * (las pagadas nunca se tocan). No cambia el estado de la póliza.
+ * Sobreescribe los montos autocalculados de una póliza (prima neta y
+ * comisiones). La prima total y las cuotas no se tocan. No cambia el
+ * estado de la póliza.
  */
 export async function ajustarPrimaNeta(polizaId: string, input: AjustePrimaNetaInput): Promise<ActionResult> {
 	try {
@@ -69,9 +67,6 @@ export async function ajustarPrimaNeta(polizaId: string, input: AjustePrimaNetaI
 		}
 		if (!Number.isFinite(input.prima_neta) || input.prima_neta <= 0) {
 			return { success: false, error: "La prima neta debe ser un monto mayor a 0" };
-		}
-		if (!Number.isFinite(input.prima_total) || input.prima_total <= 0) {
-			return { success: false, error: "La prima total debe ser un monto mayor a 0" };
 		}
 		if (!Number.isFinite(input.comision_empresa) || input.comision_empresa < 0) {
 			return { success: false, error: "La comisión empresa debe ser un monto válido (0 o mayor)" };
@@ -96,111 +91,20 @@ export async function ajustarPrimaNeta(polizaId: string, input: AjustePrimaNetaI
 			};
 		}
 
-		const nuevaPrimaTotal = redondear(input.prima_total);
-		const delta = redondear(nuevaPrimaTotal - Number(poliza.prima_total));
-
-		// Si la prima total cambia, repartir la diferencia entre cuotas no pagadas
-		if (Math.abs(delta) >= 0.01) {
-			const { data: cuotas, error: cuotasError } = await supabase
-				.from("polizas_pagos")
-				.select("id, monto, estado, numero_cuota")
-				.eq("poliza_id", polizaId)
-				.order("numero_cuota", { ascending: true });
-
-			if (cuotasError) {
-				return { success: false, error: "Error al leer las cuotas de la póliza" };
-			}
-
-			const pendientes = (cuotas || []).filter((c) => c.estado !== "pagado");
-			if (pendientes.length === 0) {
-				return {
-					success: false,
-					error: "No hay cuotas pendientes que puedan absorber la diferencia de prima total. Ajusta las cuotas desde Cobranzas o mantén la prima total actual.",
-				};
-			}
-
-			const sumaPendientes = pendientes.reduce((acc, c) => acc + Number(c.monto), 0);
-			if (sumaPendientes <= 0) {
-				return { success: false, error: "Las cuotas pendientes no tienen montos válidos para redistribuir" };
-			}
-
-			// Abonos parciales ya registrados: una cuota nunca puede quedar por
-			// debajo de lo ya abonado
-			const { data: abonos } = await supabase
-				.from("polizas_pagos_abonos")
-				.select("pago_id, monto")
-				.in(
-					"pago_id",
-					pendientes.map((c) => c.id),
-				);
-			const abonadoPorCuota = new Map<string, number>();
-			for (const a of abonos || []) {
-				abonadoPorCuota.set(a.pago_id, (abonadoPorCuota.get(a.pago_id) || 0) + Number(a.monto));
-			}
-
-			// Reparto proporcional del delta; la última cuota absorbe el residuo de redondeo
-			let deltaAcumulado = 0;
-			const nuevosMontos: Array<{ id: string; numero_cuota: number; monto: number }> = pendientes.map(
-				(cuota, idx) => {
-					let parte: number;
-					if (idx === pendientes.length - 1) {
-						parte = redondear(delta - deltaAcumulado);
-					} else {
-						parte = redondear(delta * (Number(cuota.monto) / sumaPendientes));
-						deltaAcumulado = redondear(deltaAcumulado + parte);
-					}
-					return {
-						id: cuota.id,
-						numero_cuota: cuota.numero_cuota,
-						monto: redondear(Number(cuota.monto) + parte),
-					};
-				},
-			);
-
-			for (const nm of nuevosMontos) {
-				if (nm.monto <= 0) {
-					return {
-						success: false,
-						error: `El ajuste dejaría la cuota ${nm.numero_cuota} con monto ${nm.monto.toFixed(2)} (debe ser mayor a 0). Reduce la diferencia o ajusta las cuotas desde la edición de la póliza.`,
-					};
-				}
-				const abonado = abonadoPorCuota.get(nm.id) || 0;
-				if (nm.monto < abonado) {
-					return {
-						success: false,
-						error: `El ajuste dejaría la cuota ${nm.numero_cuota} (${nm.monto.toFixed(2)}) por debajo de lo ya abonado (${abonado.toFixed(2)}). Resuelve los abonos en Cobranzas primero.`,
-					};
-				}
-			}
-
-			for (const nm of nuevosMontos) {
-				const { error: cuotaUpdateError } = await supabase
-					.from("polizas_pagos")
-					.update({ monto: nm.monto })
-					.eq("id", nm.id);
-				if (cuotaUpdateError) {
-					console.error("[ajustarPrimaNeta] Error actualizando cuota:", nm.id, cuotaUpdateError);
-					return {
-						success: false,
-						error: `Error al actualizar la cuota ${nm.numero_cuota}. Revisa las cuotas de la póliza antes de reintentar.`,
-					};
-				}
-			}
-		}
-
 		// Factor/% EFECTIVOS del ajuste manual: derivados de los montos ajustados
 		// (no del producto), para que reconcilien con la prima neta guardada.
+		// La prima total queda la vigente en BD (nunca se toca desde aquí).
+		const primaTotalVigente = Number(poliza.prima_total);
 		const primaNetaAjustada = redondear(input.prima_neta);
 		const comisionAjustada = redondear(input.comision_empresa);
 		const { error: updateError } = await supabase
 			.from("polizas")
 			.update({
-				prima_total: nuevaPrimaTotal,
 				prima_neta: primaNetaAjustada,
 				comision: comisionAjustada,
 				comision_empresa: comisionAjustada,
 				comision_encargado: redondear(input.comision_encargado),
-				factor_prima_neta: derivarFactorPrimaNeta(nuevaPrimaTotal, primaNetaAjustada),
+				factor_prima_neta: derivarFactorPrimaNeta(primaTotalVigente, primaNetaAjustada),
 				porcentaje_comision: primaNetaAjustada !== 0 ? redondear6(comisionAjustada / primaNetaAjustada) : null,
 				prima_neta_manual: true,
 				prima_neta_ajuste_motivo: motivo,

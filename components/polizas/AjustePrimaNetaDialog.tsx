@@ -36,31 +36,26 @@ interface AjustePrimaNetaDialogProps {
 /**
  * Ajuste manual de prima neta (solo admin). Para casos excepcionales donde
  * el factor del producto no aplica (descuento interno, pago en otra divisa).
- * Al escribir la nueva prima neta se sugieren prima total y comisiones
- * proporcionales (editables). Si la prima total cambia, la diferencia se
- * reparte entre las cuotas no pagadas para que la cobranza siga cuadrando.
+ * Al escribir la nueva prima neta se sugieren comisiones proporcionales
+ * (editables). La prima total NO se toca desde aquí: cambiarla afecta las
+ * cuotas de cobranza, así que solo se modifica editando la póliza.
  */
 export function AjustePrimaNetaDialog({ isOpen, onClose, onSuccess, poliza }: AjustePrimaNetaDialogProps) {
 	const [primaNeta, setPrimaNeta] = useState("");
-	const [primaTotal, setPrimaTotal] = useState("");
 	const [comisionEmpresa, setComisionEmpresa] = useState("");
 	const [comisionEncargado, setComisionEncargado] = useState("");
-	const [primaTotalTocada, setPrimaTotalTocada] = useState(false);
 	const [comisionesTocadas, setComisionesTocadas] = useState(false);
 	const [motivo, setMotivo] = useState("");
 	const [loading, setLoading] = useState<"guardar" | "restablecer" | null>(null);
 
 	const comisionEmpresaActual = poliza.comision_empresa ?? poliza.comision;
 	const cuotasPendientes = poliza.pagos.filter((p) => p.estado !== "pagado");
-	const sumaPagadas = poliza.pagos.filter((p) => p.estado === "pagado").reduce((acc, p) => acc + Number(p.monto), 0);
 
 	useEffect(() => {
 		if (isOpen) {
 			setPrimaNeta(poliza.prima_neta != null ? String(poliza.prima_neta) : "");
-			setPrimaTotal(String(poliza.prima_total));
 			setComisionEmpresa(comisionEmpresaActual != null ? String(comisionEmpresaActual) : "");
 			setComisionEncargado(poliza.comision_encargado != null ? String(poliza.comision_encargado) : "");
-			setPrimaTotalTocada(false);
 			setComisionesTocadas(false);
 			setMotivo(poliza.prima_neta_manual ? poliza.prima_neta_ajuste_motivo || "" : "");
 			setLoading(null);
@@ -70,9 +65,9 @@ export function AjustePrimaNetaDialog({ isOpen, onClose, onSuccess, poliza }: Aj
 
 	const redondear = (n: number) => Math.round(n * 100) / 100;
 
-	// Al cambiar la prima neta, sugerir prima total y comisiones manteniendo
-	// las proporciones actuales de la póliza (hasta que el admin edite esos
-	// campos a mano)
+	// Al cambiar la prima neta, sugerir comisiones manteniendo las proporciones
+	// actuales de la póliza (hasta que el admin las edite a mano). La prima
+	// total NO se toca: se edita de forma independiente.
 	const handlePrimaNetaChange = (valor: string) => {
 		setPrimaNeta(valor);
 
@@ -81,10 +76,6 @@ export function AjustePrimaNetaDialog({ isOpen, onClose, onSuccess, poliza }: Aj
 		if (poliza.prima_neta == null || poliza.prima_neta <= 0) return;
 
 		const k = nueva / poliza.prima_neta;
-
-		if (!primaTotalTocada) {
-			setPrimaTotal(String(redondear(poliza.prima_total * k)));
-		}
 
 		if (!comisionesTocadas && comisionEmpresaActual != null) {
 			const empresaSugerida = redondear(comisionEmpresaActual * k);
@@ -97,26 +88,15 @@ export function AjustePrimaNetaDialog({ isOpen, onClose, onSuccess, poliza }: Aj
 	};
 
 	const primaNetaNum = parseFloat(primaNeta);
-	const primaTotalNum = parseFloat(primaTotal);
-	const deltaPrimaTotal =
-		Number.isFinite(primaTotalNum) && primaTotalNum > 0 ? redondear(primaTotalNum - poliza.prima_total) : 0;
-	const cambiaCuotas = Math.abs(deltaPrimaTotal) >= 0.01;
-	const sinCuotasParaAjustar = cambiaCuotas && cuotasPendientes.length === 0;
-	const superaPrimaTotal =
-		Number.isFinite(primaNetaNum) && Number.isFinite(primaTotalNum) && primaNetaNum > primaTotalNum;
+	const superaPrimaTotal = Number.isFinite(primaNetaNum) && primaNetaNum > poliza.prima_total;
 
 	const handleGuardar = async () => {
 		const prima_neta = parseFloat(primaNeta);
-		const prima_total = parseFloat(primaTotal);
 		const comision_empresa = parseFloat(comisionEmpresa);
 		const comision_encargado = parseFloat(comisionEncargado);
 
 		if (!Number.isFinite(prima_neta) || prima_neta <= 0) {
 			toast.error("Ingresa una prima neta válida mayor a 0");
-			return;
-		}
-		if (!Number.isFinite(prima_total) || prima_total <= 0) {
-			toast.error("Ingresa una prima total válida mayor a 0");
 			return;
 		}
 		if (!Number.isFinite(comision_empresa) || comision_empresa < 0) {
@@ -125,12 +105,6 @@ export function AjustePrimaNetaDialog({ isOpen, onClose, onSuccess, poliza }: Aj
 		}
 		if (!Number.isFinite(comision_encargado) || comision_encargado < 0) {
 			toast.error("Ingresa una comisión encargado válida (0 o mayor)");
-			return;
-		}
-		if (sinCuotasParaAjustar) {
-			toast.error(
-				"No hay cuotas pendientes que puedan absorber el cambio de prima total. Mantén la prima total actual o ajusta las cuotas desde Cobranzas.",
-			);
 			return;
 		}
 		if (motivo.trim().length < 5) {
@@ -142,7 +116,6 @@ export function AjustePrimaNetaDialog({ isOpen, onClose, onSuccess, poliza }: Aj
 		try {
 			const result = await ajustarPrimaNeta(poliza.id, {
 				prima_neta,
-				prima_total,
 				comision_empresa,
 				comision_encargado,
 				motivo: motivo.trim(),
@@ -245,44 +218,10 @@ export function AjustePrimaNetaDialog({ isOpen, onClose, onSuccess, poliza }: Aj
 								disabled={loading !== null}
 								className="mt-1 tabular-nums"
 							/>
-						</div>
-
-						<div>
-							<Label htmlFor="ajuste-prima-total" className="text-xs">
-								Nueva prima total ({poliza.moneda})
-							</Label>
-							<Input
-								id="ajuste-prima-total"
-								type="number"
-								min="0"
-								step="0.01"
-								value={primaTotal}
-								onChange={(e) => {
-									setPrimaTotalTocada(true);
-									setPrimaTotal(e.target.value);
-								}}
-								disabled={loading !== null}
-								className="mt-1 tabular-nums"
-							/>
 							{superaPrimaTotal && (
 								<p className="text-xs text-warning-foreground bg-warning/10 border border-warning/30 rounded-md px-2 py-1 mt-1.5">
-									La prima neta supera la prima total. Verifica los montos antes de guardar.
-								</p>
-							)}
-							{cambiaCuotas && !sinCuotasParaAjustar && (
-								<p className="text-xs text-info bg-info/10 border border-info/20 rounded-md px-2 py-1 mt-1.5">
-									La diferencia de {deltaPrimaTotal > 0 ? "+" : ""}
-									{formatCurrency(deltaPrimaTotal, poliza.moneda)} se repartirá proporcionalmente
-									entre las {cuotasPendientes.length} cuota{cuotasPendientes.length === 1 ? "" : "s"}{" "}
-									no pagada
-									{cuotasPendientes.length === 1 ? "" : "s"}.
-									{sumaPagadas > 0 && " Las cuotas ya pagadas no se modifican."}
-								</p>
-							)}
-							{sinCuotasParaAjustar && (
-								<p className="text-xs text-destructive bg-destructive/10 border border-destructive/30 rounded-md px-2 py-1 mt-1.5">
-									Todas las cuotas están pagadas: no hay dónde repartir la diferencia de prima total.
-									Mantén la prima total actual o corrige los pagos en Cobranzas.
+									La prima neta supera la prima total de la póliza. Verifica el monto antes de
+									guardar.
 								</p>
 							)}
 						</div>
@@ -326,8 +265,8 @@ export function AjustePrimaNetaDialog({ isOpen, onClose, onSuccess, poliza }: Aj
 							</div>
 						</div>
 						<p className="text-xs text-muted-foreground -mt-1">
-							Prima total y comisiones se sugieren en proporción al cambio de prima neta; puedes
-							corregirlas a mano.
+							Las comisiones se sugieren en proporción al cambio de prima neta; puedes corregirlas a
+							mano. La prima total no se modifica desde aquí.
 						</p>
 
 						<div>
@@ -348,8 +287,8 @@ export function AjustePrimaNetaDialog({ isOpen, onClose, onSuccess, poliza }: Aj
 
 					<p className="text-xs text-muted-foreground leading-relaxed mt-3">
 						El ajuste queda registrado en el historial de la póliza con tu usuario, fecha y motivo. No
-						cambia el estado de la póliza. Restablecer recalcula prima neta y comisiones desde la prima
-						total vigente (no revierte prima total ni cuotas).
+						cambia el estado de la póliza ni toca la prima total ni las cuotas. Restablecer recalcula
+						prima neta y comisiones desde la prima total vigente.
 					</p>
 				</div>
 
