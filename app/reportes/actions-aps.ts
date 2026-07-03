@@ -9,12 +9,15 @@ import { ESTADO_ANEXO } from "@/types/anexo";
 // REPORTES APS
 // Consolida producción para la Autoridad de Fiscalización (APS):
 // - Ingreso: pólizas validadas en el período (fecha_validacion), excluyendo
-//   pendientes y rechazadas. Las retroactivas (ya reportadas en meses pasados)
-//   se excluyen por defecto, pero el filtro es configurable. El egreso no las
-//   filtra: una anulación validada en el período se reporta siempre, sin
-//   importar cuándo se reportó el ingreso original.
+//   pendientes y rechazadas, más los anexos de INCLUSIÓN validados en el
+//   período (prima propia del anexo). Las retroactivas (ya reportadas en meses
+//   pasados) se excluyen por defecto, pero el filtro es configurable; a los
+//   anexos no les aplica: un anexo validado en el período es movimiento nuevo
+//   aunque su póliza madre sea retroactiva (ej. inclusiones de una open-cover).
 // - Egreso: pólizas anuladas en el período (fecha_validacion del anexo de
-//   anulación), revirtiendo los montos completos de la póliza.
+//   anulación), revirtiendo los montos completos de la póliza, más los anexos
+//   de EXCLUSIÓN validados en el período (prima propia, reportada en positivo:
+//   el General la resta).
 // Todos los montos se devuelven en Bs (USD convertido con el tipo de cambio
 // indicado). La agregación es por compañía + código APS + riesgo, donde el
 // código APS = código de ramo (ej. 9105 → "91-05") + código de producto.
@@ -37,7 +40,9 @@ export type APSDatos = {
 	egreso: APSRegistro[];
 	meta: {
 		polizas_ingreso: number;
+		anexos_ingreso: number;
 		polizas_egreso: number;
+		anexos_egreso: number;
 	};
 };
 
@@ -69,6 +74,15 @@ type PolizaFinanciera = {
 	producto: ProductoJoin;
 };
 
+type AnexoFinanciero = {
+	id: string;
+	prima_total: number | null;
+	prima_neta: number | null;
+	comision: number | null;
+	comision_empresa: number | null;
+	poliza: PolizaFinanciera | null;
+};
+
 const PAGE_SIZE = 1000;
 
 const POLIZA_FINANCIERA_SELECT = `
@@ -92,6 +106,52 @@ const POLIZA_FINANCIERA_SELECT = `
 		)
 	)
 `;
+
+/**
+ * Anexos de inclusión/exclusión validados en el período, mapeados como filas
+ * financieras: prima propia del anexo + compañía/producto/moneda de la madre.
+ * Las exclusiones se guardan en negativo y se voltean a positivo (convención
+ * del egreso APS: montos positivos que el General resta). Anexos sin prima
+ * propia registrada (anteriores a la feature) se omiten para no generar filas
+ * en cero.
+ */
+async function obtenerAnexosFinancieros(
+	supabase: Awaited<ReturnType<typeof createClient>>,
+	tipoAnexo: "inclusion" | "exclusion",
+	desdeTs: string,
+	hastaTs: string,
+): Promise<PolizaFinanciera[]> {
+	const signo = tipoAnexo === "exclusion" ? -1 : 1;
+	const resultado: PolizaFinanciera[] = [];
+	for (let from = 0; ; from += PAGE_SIZE) {
+		const { data, error } = await supabase
+			.from("polizas_anexos")
+			.select(
+				`id, prima_total, prima_neta, comision, comision_empresa, poliza:polizas!poliza_id (${POLIZA_FINANCIERA_SELECT})`,
+			)
+			.eq("tipo_anexo", tipoAnexo)
+			.eq("estado", ESTADO_ANEXO.ACTIVO)
+			.gte("fecha_validacion", desdeTs)
+			.lte("fecha_validacion", hastaTs)
+			.order("id", { ascending: true })
+			.range(from, from + PAGE_SIZE - 1);
+		if (error) throw error;
+		for (const anexo of (data ?? []) as unknown as AnexoFinanciero[]) {
+			if (!anexo.poliza) continue;
+			if (anexo.prima_total == null && anexo.prima_neta == null && anexo.comision == null) continue;
+			const conSigno = (v: number | null) => (v != null ? signo * Number(v) : null);
+			resultado.push({
+				...anexo.poliza,
+				prima_total: conSigno(anexo.prima_total),
+				prima_neta: conSigno(anexo.prima_neta),
+				comision: conSigno(anexo.comision),
+				comision_empresa: conSigno(anexo.comision_empresa),
+			});
+		}
+		if (!data || data.length < PAGE_SIZE) break;
+	}
+	return resultado;
+}
 
 function convertirABs(monto: number | null | undefined, moneda: string | null, tipoCambio: number): number {
 	const valor = monto != null ? Number(monto) : 0;
@@ -194,6 +254,9 @@ export async function obtenerDatosAPS(filtros: APSFiltros): Promise<APSResponse>
 			if (!data || data.length < PAGE_SIZE) break;
 		}
 
+		// INGRESO: anexos de inclusión validados en el período (prima propia)
+		const anexosIngreso = await obtenerAnexosFinancieros(supabase, "inclusion", desdeTs, hastaTs);
+
 		// EGRESO: pólizas cuyo anexo de anulación fue validado en el período
 		const polizasEgreso: PolizaFinanciera[] = [];
 		for (let from = 0; ; from += PAGE_SIZE) {
@@ -213,14 +276,19 @@ export async function obtenerDatosAPS(filtros: APSFiltros): Promise<APSResponse>
 			if (!data || data.length < PAGE_SIZE) break;
 		}
 
+		// EGRESO: anexos de exclusión validados en el período (prima propia en positivo)
+		const anexosEgreso = await obtenerAnexosFinancieros(supabase, "exclusion", desdeTs, hastaTs);
+
 		return {
 			success: true,
 			data: {
-				ingreso: agregarRegistros(polizasIngreso, tipoCambio, grupoNombres),
-				egreso: agregarRegistros(polizasEgreso, tipoCambio, grupoNombres),
+				ingreso: agregarRegistros([...polizasIngreso, ...anexosIngreso], tipoCambio, grupoNombres),
+				egreso: agregarRegistros([...polizasEgreso, ...anexosEgreso], tipoCambio, grupoNombres),
 				meta: {
 					polizas_ingreso: polizasIngreso.length,
+					anexos_ingreso: anexosIngreso.length,
 					polizas_egreso: polizasEgreso.length,
+					anexos_egreso: anexosEgreso.length,
 				},
 			},
 		};

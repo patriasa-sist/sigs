@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Download, AlertCircle, FileBarChart } from "lucide-react";
-import { obtenerDatosAPS } from "@/app/reportes/actions-aps";
+import { obtenerDatosAPS, type APSDatos } from "@/app/reportes/actions-aps";
 import { captureError } from "@/utils/sentry";
 
 function toISODate(d: Date): string {
@@ -43,7 +43,7 @@ export default function ExportarAPS() {
 	const [excluirRetroactivas, setExcluirRetroactivas] = useState<boolean>(true);
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
-	const [lastMeta, setLastMeta] = useState<{ polizas_ingreso: number; polizas_egreso: number } | null>(null);
+	const [lastMeta, setLastMeta] = useState<APSDatos["meta"] | null>(null);
 
 	const handleExport = async () => {
 		setError(null);
@@ -105,7 +105,8 @@ export default function ExportarAPS() {
 						<CardTitle className="text-lg">Reportes APS</CardTitle>
 						<CardDescription>
 							Genera los 9 reportes APS: Producción (PDF), Comisión y Prima Neta (Excel), cada uno en
-							variantes Ingreso (pólizas validadas), Egreso (anulaciones) y General (diferencia)
+							variantes Ingreso (pólizas validadas + inclusiones), Egreso (anulaciones + exclusiones) y
+							General (diferencia)
 						</CardDescription>
 					</div>
 				</div>
@@ -180,8 +181,10 @@ export default function ExportarAPS() {
 					<Alert>
 						<FileBarChart className="h-4 w-4" />
 						<AlertDescription>
-							Último reporte: <strong>{lastMeta.polizas_ingreso}</strong> pólizas en Ingreso,{" "}
-							<strong>{lastMeta.polizas_egreso}</strong> anulaciones en Egreso
+							Último reporte: <strong>{lastMeta.polizas_ingreso}</strong> pólizas +{" "}
+							<strong>{lastMeta.anexos_ingreso}</strong> inclusiones en Ingreso,{" "}
+							<strong>{lastMeta.polizas_egreso}</strong> anulaciones +{" "}
+							<strong>{lastMeta.anexos_egreso}</strong> exclusiones en Egreso
 						</AlertDescription>
 					</Alert>
 				)}
