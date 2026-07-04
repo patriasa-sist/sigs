@@ -4,6 +4,7 @@ import { createClient } from "@/utils/supabase/server";
 import { checkPermission } from "@/utils/auth/helpers";
 import { captureError } from "@/utils/sentry";
 import { ESTADO_ANEXO } from "@/types/anexo";
+import { computarPrimaVigenciaCorrida } from "@/utils/polizas/vigenciaCorridaAnulacion";
 
 // ============================================================================
 // REPORTES APS
@@ -17,7 +18,9 @@ import { ESTADO_ANEXO } from "@/types/anexo";
 // - Egreso: pólizas anuladas en el período (fecha_validacion del anexo de
 //   anulación), revirtiendo los montos completos de la póliza, más los anexos
 //   de EXCLUSIÓN validados en el período (prima propia, reportada en positivo:
-//   el General la resta).
+//   el General la resta). Parche contabilidad: si la anulación tiene vigencia
+//   corrida de COBRO, en vez de revertir la póliza completa se declaran los
+//   montos derivados de la VC (ver utils/polizas/vigenciaCorridaAnulacion.ts).
 // Todos los montos se devuelven en Bs (USD convertido con el tipo de cambio
 // indicado). La agregación es por compañía + código APS + riesgo, donde el
 // código APS = código de ramo (ej. 9105 → "91-05") + código de producto.
@@ -68,6 +71,8 @@ type PolizaFinanciera = {
 	prima_neta: number | null;
 	comision: number | null;
 	comision_empresa: number | null;
+	factor_prima_neta: number | null;
+	porcentaje_comision: number | null;
 	moneda: string | null;
 	ramo: string | null;
 	compania: CompaniaJoin;
@@ -91,6 +96,8 @@ const POLIZA_FINANCIERA_SELECT = `
 	prima_neta,
 	comision,
 	comision_empresa,
+	factor_prima_neta,
+	porcentaje_comision,
 	moneda,
 	ramo,
 	compania:companias_aseguradoras!compania_aseguradora_id (
@@ -151,6 +158,31 @@ async function obtenerAnexosFinancieros(
 		if (!data || data.length < PAGE_SIZE) break;
 	}
 	return resultado;
+}
+
+/**
+ * Suma de vigencias corridas de COBRO por anexo de anulación. Las de
+ * devolución no cuentan: esas anulaciones mantienen la reversión completa.
+ */
+async function obtenerVigenciasCorridasCobro(
+	supabase: Awaited<ReturnType<typeof createClient>>,
+	anexoIds: string[],
+): Promise<Map<string, number>> {
+	const vcCobro = new Map<string, number>();
+	for (let i = 0; i < anexoIds.length; i += 500) {
+		const { data, error } = await supabase
+			.from("polizas_anexos_pagos")
+			.select("anexo_id, monto, direccion")
+			.eq("tipo", "vigencia_corrida")
+			.in("anexo_id", anexoIds.slice(i, i + 500));
+		if (error) throw error;
+		for (const pago of (data ?? []) as { anexo_id: string; monto: number | null; direccion: string | null }[]) {
+			if (pago.direccion === "devolucion") continue;
+			const monto = Math.abs(Number(pago.monto ?? 0));
+			if (monto > 0) vcCobro.set(pago.anexo_id, (vcCobro.get(pago.anexo_id) ?? 0) + monto);
+		}
+	}
+	return vcCobro;
 }
 
 function convertirABs(monto: number | null | undefined, moneda: string | null, tipoCambio: number): number {
@@ -258,7 +290,7 @@ export async function obtenerDatosAPS(filtros: APSFiltros): Promise<APSResponse>
 		const anexosIngreso = await obtenerAnexosFinancieros(supabase, "inclusion", desdeTs, hastaTs);
 
 		// EGRESO: pólizas cuyo anexo de anulación fue validado en el período
-		const polizasEgreso: PolizaFinanciera[] = [];
+		const anulaciones: { anexoId: string; poliza: PolizaFinanciera }[] = [];
 		for (let from = 0; ; from += PAGE_SIZE) {
 			const { data, error } = await supabase
 				.from("polizas_anexos")
@@ -270,11 +302,30 @@ export async function obtenerDatosAPS(filtros: APSFiltros): Promise<APSResponse>
 				.order("id", { ascending: true })
 				.range(from, from + PAGE_SIZE - 1);
 			if (error) throw error;
-			for (const anexo of (data ?? []) as unknown as { poliza: PolizaFinanciera | null }[]) {
-				if (anexo.poliza) polizasEgreso.push(anexo.poliza);
+			for (const anexo of (data ?? []) as unknown as { id: string; poliza: PolizaFinanciera | null }[]) {
+				if (anexo.poliza) anulaciones.push({ anexoId: anexo.id, poliza: anexo.poliza });
 			}
 			if (!data || data.length < PAGE_SIZE) break;
 		}
+
+		// Parche contabilidad: anulación con VC de cobro declara los montos
+		// derivados de la VC en lugar de revertir la póliza completa.
+		const vcCobroMap = await obtenerVigenciasCorridasCobro(
+			supabase,
+			anulaciones.map((a) => a.anexoId),
+		);
+		const polizasEgreso: PolizaFinanciera[] = anulaciones.map(({ anexoId, poliza }) => {
+			const montoVC = vcCobroMap.get(anexoId);
+			if (!montoVC) return poliza;
+			const vc = computarPrimaVigenciaCorrida(montoVC, poliza);
+			return {
+				...poliza,
+				prima_total: vc.prima_total,
+				prima_neta: vc.prima_neta,
+				comision: vc.comision,
+				comision_empresa: vc.comision,
+			};
+		});
 
 		// EGRESO: anexos de exclusión validados en el período (prima propia en positivo)
 		const anexosEgreso = await obtenerAnexosFinancieros(supabase, "exclusion", desdeTs, hastaTs);

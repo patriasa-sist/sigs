@@ -4,6 +4,7 @@ import { createClient } from "@/utils/supabase/server";
 import { checkPermission, getDataScopeFilter } from "@/utils/auth/helpers";
 import { resolverNombresCliente } from "@/utils/polizas/resolverNombresCliente";
 import { derivarFactorPrimaNeta, derivarPorcentajeComision } from "@/utils/polizas/factorDerivado";
+import { computarPrimaVigenciaCorrida } from "@/utils/polizas/vigenciaCorridaAnulacion";
 import { hoyLaPaz } from "@/utils/formatters";
 import { ESTADO_ANEXO } from "@/types/anexo";
 import type {
@@ -748,6 +749,8 @@ export async function exportarProduccionNuevo(
 				prima_neta,
 				comision,
 				comision_empresa,
+				factor_prima_neta,
+				porcentaje_comision,
 				modalidad_pago,
 				usar_factores_contado,
 				inicio_vigencia,
@@ -864,6 +867,34 @@ export async function exportarProduccionNuevo(
 			anexos.map((a: { poliza?: { ramo?: string } }) => a.poliza?.ramo).filter((r): r is string => Boolean(r)),
 		);
 		const valorAseguradoAnexoMap = await obtenerValoresAseguradosAnexos(supabase, anexoIds, anexoRamosSet);
+
+		// Parche contabilidad: las anulaciones con vigencia corrida de COBRO
+		// reportan la VC como producción propia en NEGATIVO (las de devolución o
+		// sin VC siguen en cero: la reversión completa vive en el APS Egreso).
+		const anulacionIds = anexos
+			.filter((a: { tipo_anexo: string }) => a.tipo_anexo === "anulacion")
+			.map((a: { id: string }) => a.id);
+		const vcCobroMap = new Map<string, number>();
+		for (let i = 0; i < anulacionIds.length; i += 500) {
+			const { data: vcData, error: vcError } = await supabase
+				.from("polizas_anexos_pagos")
+				.select("anexo_id, monto, direccion")
+				.eq("tipo", "vigencia_corrida")
+				.in("anexo_id", anulacionIds.slice(i, i + 500));
+			if (vcError) {
+				console.error("Error fetching vigencias corridas for production report:", vcError);
+				return { success: false, error: "Error al obtener vigencias corridas para el reporte" };
+			}
+			for (const pago of (vcData ?? []) as {
+				anexo_id: string;
+				monto: number | null;
+				direccion: string | null;
+			}[]) {
+				if (pago.direccion === "devolucion") continue;
+				const monto = Math.abs(Number(pago.monto ?? 0));
+				if (monto > 0) vcCobroMap.set(pago.anexo_id, (vcCobroMap.get(pago.anexo_id) ?? 0) + monto);
+			}
+		}
 
 		// Obtener cantidad de cuotas y cuota inicial por póliza
 		const cuotasMap = new Map<string, { cantidad: number; cuota_inicial: number | null }>();
@@ -1031,14 +1062,28 @@ export async function exportarProduccionNuevo(
 			const dc = pol.director_cartera;
 			// El anexo reporta su PROPIA producción (prima/comisión/factor calculados en #14),
 			// no la de la póliza madre. Inclusión suma, exclusión resta (montos firmados).
-			const financieros = extraerFinancieros({
-				prima_total: anexo.prima_total ?? null,
-				prima_neta: anexo.prima_neta ?? null,
-				comision: anexo.comision ?? null,
-				comision_empresa: anexo.comision_empresa ?? null,
-				factor_prima_neta: anexo.factor_prima_neta ?? null,
-				porcentaje_comision: anexo.porcentaje_comision ?? null,
-			});
+			// Anulación con VC de cobro: la VC en negativo, con los factores de la madre.
+			const montoVC = anexo.tipo_anexo === "anulacion" ? vcCobroMap.get(anexo.id) : undefined;
+			const vc = montoVC ? computarPrimaVigenciaCorrida(montoVC, pol) : null;
+			const financieros = extraerFinancieros(
+				vc
+					? {
+							prima_total: -vc.prima_total,
+							prima_neta: -vc.prima_neta,
+							comision: -vc.comision,
+							comision_empresa: -vc.comision,
+							factor_prima_neta: pol.factor_prima_neta ?? null,
+							porcentaje_comision: pol.porcentaje_comision ?? null,
+						}
+					: {
+							prima_total: anexo.prima_total ?? null,
+							prima_neta: anexo.prima_neta ?? null,
+							comision: anexo.comision ?? null,
+							comision_empresa: anexo.comision_empresa ?? null,
+							factor_prima_neta: anexo.factor_prima_neta ?? null,
+							porcentaje_comision: anexo.porcentaje_comision ?? null,
+						},
+			);
 
 			const cuotasInfo = cuotasMap.get(pol.id);
 
@@ -1059,7 +1104,7 @@ export async function exportarProduccionNuevo(
 				ramo: pol.ramo,
 				responsable: pol.responsable?.full_name || "N/A",
 				regional: pol.regional?.nombre || "N/A",
-				prima_total: Number(anexo.prima_total ?? 0),
+				prima_total: vc ? -vc.prima_total : Number(anexo.prima_total ?? 0),
 				...financieros,
 				moneda: pol.moneda || "Bs",
 				// Valor asegurado PROPIO del anexo (firmado): inclusión suma, exclusión resta.
