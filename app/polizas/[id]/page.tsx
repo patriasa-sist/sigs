@@ -38,6 +38,7 @@ import {
 	Users,
 } from "lucide-react";
 import { formatCurrency, formatDate, calcularVigencia } from "@/utils/formatters";
+import { createClient } from "@/utils/supabase/client";
 import { derivarFactorPrimaNeta, derivarPorcentajeComision } from "@/utils/polizas/factorDerivado";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -57,6 +58,7 @@ export default function PolizaDetallePage() {
 	const [canEdit, setCanEdit] = useState(false);
 	const [isAdmin, setIsAdmin] = useState(false);
 	const [isTeamLeader, setIsTeamLeader] = useState(false);
+	const [tienePermisoValidar, setTienePermisoValidar] = useState(false);
 	const [showPermissionsModal, setShowPermissionsModal] = useState(false);
 	const [showValidarModal, setShowValidarModal] = useState(false);
 	const [showRechazoModal, setShowRechazoModal] = useState(false);
@@ -92,6 +94,22 @@ export default function PolizaDetallePage() {
 		cargarDetalle();
 	}, [cargarDetalle]);
 
+	// Permiso granular polizas.validar desde los claims del JWT (sin consultar la BD)
+	useEffect(() => {
+		const supabase = createClient();
+		supabase.auth.getSession().then(({ data: { session } }) => {
+			if (!session?.access_token) return;
+			try {
+				const payload = session.access_token.split(".")[1];
+				const decoded = JSON.parse(atob(payload.replace(/-/g, "+").replace(/_/g, "/")));
+				const perms: string[] = decoded.user_permissions || [];
+				setTienePermisoValidar(perms.includes("polizas.validar"));
+			} catch {
+				// JWT ilegible: gating conservador (sin permiso)
+			}
+		});
+	}, []);
+
 	const getEstadoStyle = (estado: string) => {
 		const styles = {
 			pendiente: "bg-yellow-100 text-yellow-800 border-yellow-200",
@@ -118,9 +136,10 @@ export default function PolizaDetallePage() {
 		return labels[estado as keyof typeof labels] || estado;
 	};
 
-	// Verificar si el usuario puede validar (admin, usuario o líder de equipo con póliza pendiente)
-	const puedeValidar =
-		(userRole === "admin" || userRole === "usuario" || isTeamLeader) && poliza?.estado === "pendiente";
+	// Verificar si el usuario está autorizado a validar (mismo criterio que /gerencia/validacion:
+	// admin, permiso polizas.validar o líder de equipo)
+	const autorizadoParaValidar = userRole === "admin" || userRole === "usuario" || isTeamLeader || tienePermisoValidar;
+	const puedeValidar = autorizadoParaValidar && poliza?.estado === "pendiente";
 
 	// Abrir modal de confirmación de validación
 	const handleValidar = () => {
@@ -2471,7 +2490,7 @@ export default function PolizaDetallePage() {
 				<AnexoDetalleSection
 					polizaId={polizaId}
 					moneda={poliza.moneda}
-					puedeValidar={userRole === "admin" || userRole === "usuario" || isTeamLeader}
+					puedeValidar={autorizadoParaValidar}
 					onAnexoValidado={cargarDetalle}
 				/>
 			</div>

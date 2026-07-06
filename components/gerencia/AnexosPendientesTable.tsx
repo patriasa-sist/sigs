@@ -1,22 +1,10 @@
 "use client";
 
-import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle, XCircle, Eye, AlertTriangle, Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { CheckCircle, ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
-} from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
-import { toast } from "sonner";
-import { validarAnexo, rechazarAnexo, type AnexoPendiente } from "@/app/gerencia/validacion-anexos/actions";
+import type { AnexoPendiente } from "@/app/gerencia/validacion-anexos/actions";
 import { formatDate } from "@/utils/formatters";
 
 type Props = {
@@ -30,62 +18,11 @@ const TIPO_BADGE = {
 	anulacion: { label: "Anulación", className: "bg-rose-50 text-rose-800 border-rose-200" },
 };
 
-export default function AnexosPendientesTable({ anexos: initialAnexos }: Props) {
+export default function AnexosPendientesTable({ anexos }: Props) {
 	const router = useRouter();
-	const [anexos, setAnexos] = useState(initialAnexos);
-	const [loading, setLoading] = useState<string | null>(null);
 
-	// Dialog states
-	const [dialogOpen, setDialogOpen] = useState(false);
-	const [selectedAnexo, setSelectedAnexo] = useState<AnexoPendiente | null>(null);
-	const [dialogType, setDialogType] = useState<"validar" | "rechazar">("validar");
-	const [motivoRechazo, setMotivoRechazo] = useState("");
-
-	const openDialog = (anexo: AnexoPendiente, type: "validar" | "rechazar") => {
-		setSelectedAnexo(anexo);
-		setDialogType(type);
-		setMotivoRechazo("");
-		setDialogOpen(true);
-	};
-
-	const handleValidar = async () => {
-		if (!selectedAnexo) return;
-		setLoading(selectedAnexo.id);
-		setDialogOpen(false);
-
-		const result = await validarAnexo(selectedAnexo.id);
-		if (result.success) {
-			setAnexos((prev) => prev.filter((a) => a.id !== selectedAnexo.id));
-			toast.success("Anexo validado exitosamente", {
-				description:
-					selectedAnexo.tipo_anexo === "anulacion"
-						? "La póliza ha sido anulada"
-						: `Anexo ${selectedAnexo.numero_anexo} activado`,
-			});
-		} else {
-			toast.error("Error al validar", { description: result.error });
-		}
-		setLoading(null);
-	};
-
-	const handleRechazar = async () => {
-		if (!selectedAnexo) return;
-		if (motivoRechazo.trim().length < 10) {
-			toast.error("Motivo insuficiente", { description: "El motivo debe tener al menos 10 caracteres" });
-			return;
-		}
-
-		setLoading(selectedAnexo.id);
-		setDialogOpen(false);
-
-		const result = await rechazarAnexo(selectedAnexo.id, motivoRechazo);
-		if (result.success) {
-			setAnexos((prev) => prev.filter((a) => a.id !== selectedAnexo.id));
-			toast.success("Anexo rechazado");
-		} else {
-			toast.error("Error al rechazar", { description: result.error });
-		}
-		setLoading(null);
+	const irADetalle = (anexo: AnexoPendiente) => {
+		router.push(`/polizas/${anexo.poliza_id}#anexo-${anexo.id}`);
 	};
 
 	if (anexos.length === 0) {
@@ -113,16 +50,21 @@ export default function AnexosPendientesTable({ anexos: initialAnexos }: Props) 
 							<TableHead className="h-8 text-xs text-right">Ajuste</TableHead>
 							<TableHead className="h-8 text-xs">Creado por</TableHead>
 							<TableHead className="h-8 text-xs">Fecha</TableHead>
-							<TableHead className="h-8 text-xs text-center">Acciones</TableHead>
+							<TableHead className="h-8 w-10">
+								<span className="sr-only">Ver detalle</span>
+							</TableHead>
 						</TableRow>
 					</TableHeader>
 					<TableBody>
 						{anexos.map((anexo) => {
 							const tipoBadge = TIPO_BADGE[anexo.tipo_anexo];
-							const isLoading = loading === anexo.id;
 
 							return (
-								<TableRow key={anexo.id}>
+								<TableRow
+									key={anexo.id}
+									className="cursor-pointer hover:bg-secondary/50"
+									onClick={() => irADetalle(anexo)}
+								>
 									<TableCell className="py-1.5 font-medium">{anexo.numero_anexo}</TableCell>
 									<TableCell className="py-1.5">
 										<Badge variant="outline" className={tipoBadge.className}>
@@ -155,42 +97,8 @@ export default function AnexosPendientesTable({ anexos: initialAnexos }: Props) 
 									</TableCell>
 									<TableCell className="py-1.5">{formatDate(anexo.fecha_anexo)}</TableCell>
 									<TableCell className="py-1.5">
-										<div className="flex justify-center gap-1.5">
-											<Button
-												variant="ghost"
-												size="icon"
-												className="h-8 w-8 text-slate-600 bg-slate-100 hover:text-slate-900 hover:bg-slate-200"
-												onClick={() =>
-													router.push(`/polizas/${anexo.poliza_id}#anexo-${anexo.id}`)
-												}
-												title="Ver en póliza"
-											>
-												<Eye className="h-[18px] w-[18px]" />
-											</Button>
-											<Button
-												variant="ghost"
-												size="icon"
-												className="h-8 w-8 text-teal-700 bg-teal-50 hover:text-teal-800 hover:bg-teal-100"
-												disabled={isLoading}
-												onClick={() => openDialog(anexo, "validar")}
-												title="Validar"
-											>
-												{isLoading ? (
-													<Loader2 className="h-[18px] w-[18px] animate-spin" />
-												) : (
-													<CheckCircle className="h-[18px] w-[18px]" />
-												)}
-											</Button>
-											<Button
-												variant="ghost"
-												size="icon"
-												className="h-8 w-8 text-rose-600 bg-rose-50 hover:text-rose-700 hover:bg-rose-100"
-												disabled={isLoading}
-												onClick={() => openDialog(anexo, "rechazar")}
-												title="Rechazar"
-											>
-												<XCircle className="h-[18px] w-[18px]" />
-											</Button>
+										<div className="flex items-center justify-end">
+											<ChevronRight className="h-[18px] w-[18px] text-muted-foreground" />
 										</div>
 									</TableCell>
 								</TableRow>
@@ -204,9 +112,12 @@ export default function AnexosPendientesTable({ anexos: initialAnexos }: Props) 
 			<div className="md:hidden space-y-3">
 				{anexos.map((anexo) => {
 					const tipoBadge = TIPO_BADGE[anexo.tipo_anexo];
-					const isLoading = loading === anexo.id;
 					return (
-						<div key={anexo.id} className="rounded-lg border bg-card p-3">
+						<button
+							key={anexo.id}
+							onClick={() => irADetalle(anexo)}
+							className="w-full text-left rounded-lg border bg-card p-3 hover:bg-secondary/50 active:bg-secondary/50 transition-colors"
+						>
 							<div className="flex items-start justify-between gap-3">
 								<div className="min-w-0">
 									<div className="font-medium text-sm text-foreground">{anexo.numero_anexo}</div>
@@ -240,101 +151,10 @@ export default function AnexosPendientesTable({ anexos: initialAnexos }: Props) 
 									)}
 								</div>
 							</div>
-							<div className="mt-3 grid grid-cols-3 gap-2">
-								<Button
-									variant="outline"
-									size="sm"
-									className="text-slate-700"
-									onClick={() => router.push(`/polizas/${anexo.poliza_id}#anexo-${anexo.id}`)}
-								>
-									<Eye className="h-4 w-4 mr-1" /> Ver
-								</Button>
-								<Button
-									variant="outline"
-									size="sm"
-									className="text-teal-700 border-teal-200"
-									disabled={isLoading}
-									onClick={() => openDialog(anexo, "validar")}
-								>
-									{isLoading ? (
-										<Loader2 className="h-4 w-4 animate-spin" />
-									) : (
-										<>
-											<CheckCircle className="h-4 w-4 mr-1" /> Validar
-										</>
-									)}
-								</Button>
-								<Button
-									variant="outline"
-									size="sm"
-									className="text-rose-600 border-rose-200"
-									disabled={isLoading}
-									onClick={() => openDialog(anexo, "rechazar")}
-								>
-									<XCircle className="h-4 w-4 mr-1" /> Rechazar
-								</Button>
-							</div>
-						</div>
+						</button>
 					);
 				})}
 			</div>
-
-			{/* Dialog de confirmación */}
-			<Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-				<DialogContent>
-					<DialogHeader>
-						<DialogTitle>{dialogType === "validar" ? "Validar Anexo" : "Rechazar Anexo"}</DialogTitle>
-						<DialogDescription>
-							{dialogType === "validar" ? (
-								<>
-									¿Confirma la validación del anexo <strong>{selectedAnexo?.numero_anexo}</strong>?
-									{selectedAnexo?.tipo_anexo === "anulacion" && (
-										<span className="block mt-2 text-destructive font-medium">
-											<AlertTriangle className="h-4 w-4 inline mr-1" />
-											Esto anulará la póliza permanentemente
-										</span>
-									)}
-								</>
-							) : (
-								<>
-									Ingrese el motivo del rechazo del anexo{" "}
-									<strong>{selectedAnexo?.numero_anexo}</strong>
-								</>
-							)}
-						</DialogDescription>
-					</DialogHeader>
-
-					{dialogType === "rechazar" && (
-						<Textarea
-							value={motivoRechazo}
-							onChange={(e) => setMotivoRechazo(e.target.value)}
-							placeholder="Motivo del rechazo (mínimo 10 caracteres)..."
-							rows={4}
-						/>
-					)}
-
-					<DialogFooter>
-						<Button variant="outline" onClick={() => setDialogOpen(false)}>
-							Cancelar
-						</Button>
-						{dialogType === "validar" ? (
-							<Button onClick={handleValidar} className="bg-green-600 hover:bg-green-700">
-								<CheckCircle className="h-4 w-4 mr-1" />
-								Validar
-							</Button>
-						) : (
-							<Button
-								onClick={handleRechazar}
-								variant="destructive"
-								disabled={motivoRechazo.trim().length < 10}
-							>
-								<XCircle className="h-4 w-4 mr-1" />
-								Rechazar
-							</Button>
-						)}
-					</DialogFooter>
-				</DialogContent>
-			</Dialog>
 		</>
 	);
 }

@@ -1,11 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { CheckCircle, XCircle, ChevronRight, Inbox } from "lucide-react";
-import { PolizaValidacionDrawer } from "./PolizaValidacionDrawer";
+import { ChevronRight, Inbox } from "lucide-react";
 import { formatCurrency, diasTranscurridosDesde } from "@/utils/formatters";
 
 type PolizaPendiente = {
@@ -53,24 +51,11 @@ function urgencyClasses(dateString: string): string {
 	return "";
 }
 
-export default function PolizasPendientesTable({ polizas: initialPolizas }: Props) {
-	const [polizas, setPolizas] = useState(initialPolizas);
-	const [drawerPolizaId, setDrawerPolizaId] = useState<string | null>(null);
-	const [drawerNumero, setDrawerNumero] = useState("");
+export default function PolizasPendientesTable({ polizas }: Props) {
+	const router = useRouter();
 
-	const openDrawer = (p: PolizaPendiente) => {
-		setDrawerNumero(p.numero_poliza);
-		setDrawerPolizaId(p.id);
-	};
-
-	const handleValidated = (id: string) => {
-		setPolizas((prev) => prev.filter((p) => p.id !== id));
-		setDrawerPolizaId(null);
-	};
-
-	const handleRejected = (id: string) => {
-		setPolizas((prev) => prev.filter((p) => p.id !== id));
-		setDrawerPolizaId(null);
+	const irADetalle = (p: PolizaPendiente) => {
+		router.push(`/polizas/${p.id}`);
 	};
 
 	if (polizas.length === 0) {
@@ -101,8 +86,8 @@ export default function PolizasPendientesTable({ polizas: initialPolizas }: Prop
 							</TableHead>
 							<TableHead className="h-9 text-xs font-medium text-muted-foreground">Responsable</TableHead>
 							<TableHead className="h-9 text-xs font-medium text-muted-foreground">Ingresado</TableHead>
-							<TableHead className="h-9 text-xs font-medium text-muted-foreground text-right pr-4">
-								Acción
+							<TableHead className="h-9 w-10 pr-4">
+								<span className="sr-only">Ver detalle</span>
 							</TableHead>
 						</TableRow>
 					</TableHeader>
@@ -111,7 +96,7 @@ export default function PolizasPendientesTable({ polizas: initialPolizas }: Prop
 							<TableRow
 								key={poliza.id}
 								className={`cursor-pointer hover:bg-secondary/50 ${urgencyClasses(poliza.created_at)}`}
-								onClick={() => openDrawer(poliza)}
+								onClick={() => irADetalle(poliza)}
 							>
 								<TableCell className="py-3 px-4 font-mono text-sm font-medium text-foreground">
 									{poliza.numero_poliza}
@@ -155,32 +140,8 @@ export default function PolizasPendientesTable({ polizas: initialPolizas }: Prop
 									</span>
 								</TableCell>
 								<TableCell className="py-3 pr-4">
-									<div className="flex items-center justify-end gap-1.5">
-										<Button
-											variant="ghost"
-											size="icon"
-											className="h-8 w-8 text-teal-700 bg-teal-50 hover:text-teal-800 hover:bg-teal-100"
-											title="Validar directamente"
-											onClick={(e) => {
-												e.stopPropagation();
-												openDrawer(poliza);
-											}}
-										>
-											<CheckCircle className="h-[18px] w-[18px]" />
-										</Button>
-										<Button
-											variant="ghost"
-											size="icon"
-											className="h-8 w-8 text-rose-600 bg-rose-50 hover:text-rose-700 hover:bg-rose-100"
-											title="Rechazar"
-											onClick={(e) => {
-												e.stopPropagation();
-												openDrawer(poliza);
-											}}
-										>
-											<XCircle className="h-[18px] w-[18px]" />
-										</Button>
-										<ChevronRight className="h-[18px] w-[18px] text-muted-foreground ml-1" />
+									<div className="flex items-center justify-end">
+										<ChevronRight className="h-[18px] w-[18px] text-muted-foreground" />
 									</div>
 								</TableCell>
 							</TableRow>
@@ -196,7 +157,7 @@ export default function PolizasPendientesTable({ polizas: initialPolizas }: Prop
 					return (
 						<button
 							key={poliza.id}
-							onClick={() => openDrawer(poliza)}
+							onClick={() => irADetalle(poliza)}
 							className={`w-full text-left rounded-lg border border-border bg-card p-3 hover:bg-secondary/50 active:bg-secondary/50 transition-colors ${urgencyClasses(poliza.created_at)}`}
 						>
 							<div className="flex items-start justify-between gap-3">
@@ -236,14 +197,6 @@ export default function PolizasPendientesTable({ polizas: initialPolizas }: Prop
 					);
 				})}
 			</div>
-
-			<PolizaValidacionDrawer
-				polizaId={drawerPolizaId}
-				numeroPoliza={drawerNumero}
-				onClose={() => setDrawerPolizaId(null)}
-				onValidated={handleValidated}
-				onRejected={handleRejected}
-			/>
 		</>
 	);
 }
