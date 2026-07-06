@@ -23,17 +23,24 @@ motivos:
 link directo a la app con el token hash:
 
 ```html
-<h2>Restablecer contraseña</h2>
-<p>Haz clic abajo para restablecer la contraseña de tu cuenta SIGS:</p>
+<h2>Olvidaste tu contraseña</h2>
+<p>Continua a este link para crear una nueva contraseña:</p>
 <p>
-	<a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=recovery">Restablecer contraseña</a>
+	<a href="{{ .SiteURL }}/auth/reset-password?token_hash={{ .TokenHash }}&type=recovery">Resetear contraseña</a>
 </p>
 <p>Si no solicitaste este cambio, ignora este correo.</p>
 ```
 
-Con `{{ .TokenHash }}` el link va directo a `/auth/confirm` de la app, que lo verifica server-side con
-`supabase.auth.verifyOtp({ type: "recovery", token_hash })` — no depende de PKCE ni del navegador de origen — y
-redirige a `/auth/reset-password` con sesión de recovery en cookies.
+Con `{{ .TokenHash }}` el link va directo a la app y no depende de PKCE ni del navegador de origen. Dos destinos
+válidos (el código soporta ambos):
+
+- `/auth/reset-password?token_hash=...&type=recovery` — la página verifica el token client-side (`verifyOtp` en
+  `app/auth/reset-password/page.tsx`); si expiró muestra "Sesión Expirada". **Es la plantilla aplicada.**
+- `/auth/confirm?token_hash=...&type=recovery` — verificación server-side (`app/auth/confirm/route.ts`) que luego
+  redirige a `/auth/reset-password`.
+
+**IMPORTANTE**: presionar "Save changes" al editar la plantilla — los correos se renderizan al momento del envío con la
+plantilla guardada en ese instante.
 
 ### 2. Verificar URLs
 
