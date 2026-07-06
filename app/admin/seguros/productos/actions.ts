@@ -243,20 +243,8 @@ export async function actualizarProducto(
 export async function desactivarProducto(id: string): Promise<CatalogoActionResult> {
 	const supabase = await createClient();
 
-	// Check if product is in use by active policies
-	const { count: polizasCount } = await supabase
-		.from("polizas")
-		.select("*", { count: "exact", head: true })
-		.eq("producto_id", id)
-		.neq("estado", "cancelada");
-
-	if (polizasCount && polizasCount > 0) {
-		return {
-			success: false,
-			error: `Este producto está siendo usado por ${polizasCount} póliza(s) activa(s). No se puede desactivar.`,
-		};
-	}
-
+	// Las pólizas existentes conservan su producto (los consumidores lo buscan por id
+	// sin filtrar activo); solo deja de ofrecerse para nuevas pólizas.
 	const { error } = await supabase.from("productos_aseguradoras").update({ activo: false }).eq("id", id);
 
 	if (error) {

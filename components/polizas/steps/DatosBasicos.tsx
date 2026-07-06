@@ -247,22 +247,35 @@ export function DatosBasicos({ datos, onChange, onSiguiente, onAnterior }: Props
 					return;
 				}
 
-				setProductos(productosData || []);
+				let listaProductos = productosData || [];
+
+				// Si el producto ya seleccionado (edición/renovación/borrador) no está entre
+				// los activos, verificar si existe inactivo para esta compañía + ramo:
+				// se conserva en la lista para no perder la selección de la póliza.
+				if (formData.producto_id && !listaProductos.find((p) => p.id === formData.producto_id)) {
+					const { data: productoInactivo } = await supabase
+						.from("productos_aseguradoras")
+						.select("*")
+						.eq("id", formData.producto_id)
+						.eq("compania_aseguradora_id", formData.compania_aseguradora_id)
+						.eq("tipo_seguro_id", tipoSeguro.id)
+						.maybeSingle();
+
+					if (productoInactivo) {
+						listaProductos = [...listaProductos, productoInactivo];
+					} else {
+						// El producto no pertenece a esta combinación: limpiar selección
+						setFormData((prev) => ({ ...prev, producto_id: "" }));
+					}
+				}
+
+				setProductos(listaProductos);
 
 				// Si no hay productos disponibles, mostrar error
-				if (!productosData || productosData.length === 0) {
+				if (listaProductos.length === 0) {
 					setErrorProductos(
 						"No hay productos configurados para esta combinación de compañía y ramo. Contacte al administrador.",
 					);
-				}
-
-				// Limpiar producto_id si el producto actual no está en la nueva lista
-				if (
-					formData.producto_id &&
-					productosData &&
-					!productosData.find((p) => p.id === formData.producto_id)
-				) {
-					setFormData((prev) => ({ ...prev, producto_id: "" }));
 				}
 			} catch (error) {
 				console.error("Error en cargarProductos:", error);
@@ -551,6 +564,7 @@ export function DatosBasicos({ datos, onChange, onSiguiente, onAnterior }: Props
 										({producto.codigo_producto})
 									</span>{" "}
 									{producto.nombre_producto}
+									{!producto.activo && <span className="text-xs text-warning"> (inactivo)</span>}
 								</SelectItem>
 							))}
 						</SelectContent>

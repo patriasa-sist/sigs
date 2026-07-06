@@ -238,7 +238,7 @@ export function ProductosTable({ data, aseguradoras, ramos }: ProductosTableProp
 														: reactivarProducto(producto.id)
 												}
 												onSuccess={handleRefresh}
-												warningText="Las pólizas existentes no serán afectadas"
+												warningText="No estará disponible para nuevas pólizas; las pólizas existentes no serán afectadas"
 											/>
 										</div>
 									</TableCell>
