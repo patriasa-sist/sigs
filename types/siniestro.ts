@@ -16,7 +16,7 @@ export type CoberturaCatalogo = {
 };
 
 export type MotivoRechazo = "Mora" | "Incumplimiento" | "Sin cobertura" | "No aplicable";
-export type MotivoDeclinacion = "Solicitud cliente" | "Pagó otra póliza";
+export type MotivoDeclinacion = "Solicitud cliente" | "Pagó otra póliza" | "Cambio de broker";
 export type EstadoSiniestro = "abierto" | "rechazado" | "declinado" | "concluido";
 export type MotivoCierreTipo = "rechazo" | "declinacion" | "indemnizacion";
 export type Moneda = "Bs" | "USD" | "USDT" | "UFV";

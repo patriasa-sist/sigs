@@ -49,7 +49,7 @@ interface CerrarSiniestroProps {
 type TipoCierre = "rechazo" | "declinacion" | "indemnizacion" | "salud";
 
 const MOTIVOS_RECHAZO: MotivoRechazo[] = ["Mora", "Incumplimiento", "Sin cobertura", "No aplicable"];
-const MOTIVOS_DECLINACION: MotivoDeclinacion[] = ["Solicitud cliente", "Pagó otra póliza"];
+const MOTIVOS_DECLINACION: MotivoDeclinacion[] = ["Solicitud cliente", "Pagó otra póliza", "Cambio de broker"];
 const MONEDAS: Moneda[] = ["Bs", "USD", "USDT", "UFV"];
 
 // Zona de drop reutilizable para subir un documento. Declarada a nivel de módulo (no dentro
