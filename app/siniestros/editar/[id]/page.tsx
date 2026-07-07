@@ -27,7 +27,7 @@ export default async function EditarSiniestroPage({ params }: PageProps) {
 		redirect("/siniestros");
 	}
 
-	const { siniestro, coberturas, documentos, observaciones, historial } = result.data;
+	const { siniestro, coberturas, items, documentos, observaciones, historial } = result.data;
 
 	// Determinar si el usuario es admin
 	const esAdmin = profile.role === "admin";
@@ -37,6 +37,7 @@ export default async function EditarSiniestroPage({ params }: PageProps) {
 			<EditarSiniestroForm
 				siniestro={siniestro}
 				coberturas={coberturas}
+				items={items}
 				documentos={documentos}
 				observaciones={observaciones}
 				historial={historial}

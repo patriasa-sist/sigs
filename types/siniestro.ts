@@ -80,6 +80,10 @@ export type DocumentoSiniestroConUsuario = DocumentoSiniestro & {
 
 export type AseguradoDetalle = {
 	tipo: "vehiculo" | "persona" | "bien" | "equipo" | "nave" | "carga";
+	// id de la fila de origen en la tabla espejo del ramo (polizas_automotor_vehiculos,
+	// polizas_beneficiarios, etc.). Referencia estable para marcar el ítem como
+	// siniestrado y reconocerlo después en edición.
+	origen_id?: string;
 	// Para vehículos / equipos / naves
 	placa?: string;
 	modelo?: string;
@@ -95,6 +99,50 @@ export type AseguradoDetalle = {
 	direccion?: string;
 	descripcion?: string;
 };
+
+/**
+ * Descripción legible en una línea de un ítem asegurado. Se persiste como
+ * snapshot en siniestros_items.descripcion (el ítem original puede cambiar o
+ * eliminarse de la póliza, p.ej. por exclusión de anexo).
+ */
+export function describirAseguradoDetalle(aseg: AseguradoDetalle): string {
+	switch (aseg.tipo) {
+		case "persona": {
+			const partes = [aseg.nombre || "Persona asegurada"];
+			if (aseg.documento) partes.push(`CI/Doc: ${aseg.documento}`);
+			if (aseg.relacion) partes.push(aseg.relacion);
+			return partes.join(" · ");
+		}
+		case "bien":
+			return aseg.direccion || "Bien asegurado";
+		case "carga":
+			return [aseg.descripcion || "Carga asegurada", aseg.identificador ? `Factura: ${aseg.identificador}` : null]
+				.filter(Boolean)
+				.join(" · ");
+		default: {
+			// vehiculo | equipo | nave
+			const etiquetaId = aseg.tipo === "equipo" ? "Serie" : aseg.tipo === "nave" ? "Matrícula" : "Chasis";
+			const principal = aseg.placa
+				? `Placa: ${aseg.placa}`
+				: aseg.identificador
+					? `${etiquetaId}: ${aseg.identificador}`
+					: null;
+			const marcaModelo = [aseg.marca, aseg.modelo, aseg.ano].filter(Boolean).join(" ");
+			return [principal, marcaModelo || null].filter(Boolean).join(" · ") || "Ítem asegurado";
+		}
+	}
+}
+
+/**
+ * Clave de identidad de un ítem asegurado para selección/deselección: usa
+ * origen_id cuando existe; si no, una combinación de sus campos distintivos.
+ */
+export function claveAseguradoDetalle(aseg: AseguradoDetalle): string {
+	if (aseg.origen_id) return `${aseg.tipo}:${aseg.origen_id}`;
+	return [aseg.tipo, aseg.placa, aseg.identificador, aseg.nombre, aseg.documento, aseg.direccion, aseg.descripcion]
+		.map((v) => v ?? "")
+		.join("|");
+}
 
 export type ProrrogaCuota = {
 	fecha_anterior: string;
@@ -247,6 +295,9 @@ export type DocumentosIniciales = {
 export type RegistroSiniestroFormState = {
 	paso_actual: 1 | 2 | 3 | 4;
 	poliza_seleccionada: PolizaParaSiniestro | null;
+	// Ítems específicos de la póliza afectados por el siniestro (opcional, 1+).
+	// Se seleccionan del desglose de asegurados en el paso 1.
+	items_siniestrados: AseguradoDetalle[];
 	detalles: DetallesSiniestro | null;
 	coberturas: CoberturasStep | null;
 	documentos_iniciales: DocumentoSiniestro[];
@@ -521,6 +572,7 @@ export type ObtenerSiniestrosResponse = ServerResponse<{
 export type ObtenerSiniestroDetalleResponse = ServerResponse<{
 	siniestro: SiniestroVistaConEstado;
 	coberturas: CoberturaCatalogo[];
+	items: SiniestroItem[];
 	documentos: DocumentoSiniestroConUsuario[];
 	observaciones: ObservacionSiniestro[];
 	historial: HistorialSiniestro[];
@@ -561,6 +613,25 @@ export type BusquedaPolizasResponse = ServerResponse<{
 export type ObtenerAseguradosResponse = ServerResponse<{
 	asegurados: AseguradoDetalle[];
 }>;
+
+// ============================================
+// ÍTEMS SINIESTRADOS (tabla siniestros_items)
+// ============================================
+
+// Ítem específico de la póliza afectado por el siniestro. `descripcion` y
+// `detalle` son snapshots tomados al seleccionarlo (el ítem original puede
+// cambiar o salir de la póliza por anexos sin perder este registro).
+export type SiniestroItem = {
+	id: string;
+	siniestro_id: string;
+	tipo: AseguradoDetalle["tipo"];
+	origen_id?: string | null;
+	descripcion: string;
+	detalle?: AseguradoDetalle | null;
+	created_at: string;
+};
+
+export type ActualizarItemsSiniestroResponse = ServerResponse<void>;
 
 // ============================================
 // COBERTURAS POR RAMO

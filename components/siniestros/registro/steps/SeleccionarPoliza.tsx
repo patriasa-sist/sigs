@@ -4,18 +4,23 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { AlertCircle } from "lucide-react";
 import BuscarPoliza from "@/components/siniestros/shared/BuscarPoliza";
 import PolizaCard from "@/components/siniestros/shared/PolizaCard";
-import type { PolizaParaSiniestro } from "@/types/siniestro";
+import type { PolizaParaSiniestro, AseguradoDetalle } from "@/types/siniestro";
 
 interface SeleccionarPolizaProps {
 	polizaSeleccionada: PolizaParaSiniestro | null;
 	onPolizaSelect: (poliza: PolizaParaSiniestro) => void;
 	onPolizaDeselect: () => void;
+	// Selección opcional de ítems siniestrados dentro del desglose de asegurados
+	itemsSiniestrados: AseguradoDetalle[];
+	onItemsSiniestradosChange: (items: AseguradoDetalle[]) => void;
 }
 
 export default function SeleccionarPoliza({
 	polizaSeleccionada,
 	onPolizaSelect,
 	onPolizaDeselect,
+	itemsSiniestrados,
+	onItemsSiniestradosChange,
 }: SeleccionarPolizaProps) {
 	return (
 		<Card>
@@ -44,7 +49,13 @@ export default function SeleccionarPoliza({
 
 				{/* Póliza seleccionada */}
 				{polizaSeleccionada && (
-					<PolizaCard poliza={polizaSeleccionada} onDeselect={onPolizaDeselect} showDeselectButton={true} />
+					<PolizaCard
+						poliza={polizaSeleccionada}
+						onDeselect={onPolizaDeselect}
+						showDeselectButton={true}
+						itemsSeleccionados={itemsSiniestrados}
+						onItemsSeleccionadosChange={onItemsSiniestradosChange}
+					/>
 				)}
 			</CardContent>
 		</Card>

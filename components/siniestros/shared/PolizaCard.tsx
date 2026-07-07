@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, type ReactNode } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,9 +24,11 @@ import {
 	Package,
 	Home,
 	Users,
+	Check,
 } from "lucide-react";
 import DocumentosPolizaModal from "./DocumentosPolizaModal";
 import { obtenerAseguradosPoliza } from "@/app/siniestros/actions";
+import { claveAseguradoDetalle } from "@/types/siniestro";
 import type { PolizaParaSiniestro, CuotaPago, AseguradoDetalle } from "@/types/siniestro";
 import { formatDate, hoyLaPaz } from "@/utils/formatters";
 
@@ -34,6 +36,10 @@ interface PolizaCardProps {
 	poliza: PolizaParaSiniestro;
 	onDeselect?: () => void;
 	showDeselectButton?: boolean;
+	// Selección opcional de ítems siniestrados (registro de siniestros): si se
+	// pasa el callback, el desglose de asegurados se vuelve seleccionable.
+	itemsSeleccionados?: AseguradoDetalle[];
+	onItemsSeleccionadosChange?: (items: AseguradoDetalle[]) => void;
 }
 
 // Estado mostrado de una cuota. Se DERIVA de las fechas (igual que cobranzas en
@@ -55,7 +61,13 @@ function clasificarCuota(cuota: CuotaPago): EstadoCuotaUI {
 	return "vencida";
 }
 
-export default function PolizaCard({ poliza, onDeselect, showDeselectButton = true }: PolizaCardProps) {
+export default function PolizaCard({
+	poliza,
+	onDeselect,
+	showDeselectButton = true,
+	itemsSeleccionados,
+	onItemsSeleccionadosChange,
+}: PolizaCardProps) {
 	const [showDocumentosModal, setShowDocumentosModal] = useState(false);
 	const [showAllCuotas, setShowAllCuotas] = useState(false);
 
@@ -88,6 +100,21 @@ export default function PolizaCard({ poliza, onDeselect, showDeselectButton = tr
 	// Conteos para la alerta de pagos atrasados (vencida = venció hace <=10 días; mora = >10 días)
 	const cuotasVencidas = poliza.cuotas?.filter((c) => clasificarCuota(c) === "vencida").length || 0;
 	const cuotasEnMora = poliza.cuotas?.filter((c) => clasificarCuota(c) === "mora").length || 0;
+
+	// Selección de ítems siniestrados (solo si el padre pasó el callback)
+	const seleccionable = !!onItemsSeleccionadosChange;
+	const clavesSeleccionadas = new Set((itemsSeleccionados || []).map(claveAseguradoDetalle));
+
+	const toggleItem = (aseg: AseguradoDetalle) => {
+		if (!onItemsSeleccionadosChange) return;
+		const clave = claveAseguradoDetalle(aseg);
+		const actuales = itemsSeleccionados || [];
+		onItemsSeleccionadosChange(
+			clavesSeleccionadas.has(clave)
+				? actuales.filter((i) => claveAseguradoDetalle(i) !== clave)
+				: [...actuales, aseg],
+		);
+	};
 
 	return (
 		<>
@@ -202,6 +229,11 @@ export default function PolizaCard({ poliza, onDeselect, showDeselectButton = tr
 								{asegurados && asegurados.length > 0 && (
 									<span className="text-xs text-muted-foreground">({asegurados.length})</span>
 								)}
+								{seleccionable && clavesSeleccionadas.size > 0 && (
+									<span className="text-xs font-medium text-primary bg-primary/10 px-2 py-0.5 rounded-full">
+										{clavesSeleccionadas.size} seleccionado{clavesSeleccionadas.size !== 1 ? "s" : ""}
+									</span>
+								)}
 							</p>
 							{asegurados && asegurados.length > 6 && (
 								<Button
@@ -215,6 +247,13 @@ export default function PolizaCard({ poliza, onDeselect, showDeselectButton = tr
 							)}
 						</div>
 
+						{seleccionable && asegurados && asegurados.length > 0 && (
+							<p className="text-xs text-muted-foreground mb-2">
+								Opcional: marca el o los ítems afectados por el siniestro. Podrás modificarlos después
+								desde la edición del siniestro.
+							</p>
+						)}
+
 						{loadingAsegurados ? (
 							<div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
 								<Loader2 className="h-4 w-4 animate-spin" />
@@ -227,7 +266,14 @@ export default function PolizaCard({ poliza, onDeselect, showDeselectButton = tr
 						) : (
 							<div className="grid grid-cols-1 md:grid-cols-2 gap-2">
 								{(showAllAsegurados ? asegurados : asegurados.slice(0, 6)).map((aseg, idx) => (
-									<AseguradoItem key={idx} aseg={aseg} moneda={poliza.moneda} />
+									<AseguradoItem
+										key={idx}
+										aseg={aseg}
+										moneda={poliza.moneda}
+										seleccionable={seleccionable}
+										seleccionado={clavesSeleccionadas.has(claveAseguradoDetalle(aseg))}
+										onToggle={() => toggleItem(aseg)}
+									/>
 								))}
 							</div>
 						)}
@@ -452,70 +498,72 @@ export default function PolizaCard({ poliza, onDeselect, showDeselectButton = tr
 	);
 }
 
-// Tarjeta individual del desglose: muestra un asegurado según su tipo (persona, vehículo, bien, etc.)
-function AseguradoItem({ aseg, moneda }: { aseg: AseguradoDetalle; moneda: string }) {
+// Tarjeta individual del desglose: muestra un asegurado según su tipo (persona,
+// vehículo, bien, etc.). En modo seleccionable se comporta como toggle (marca el
+// ítem como afectado por el siniestro).
+function AseguradoItem({
+	aseg,
+	moneda,
+	seleccionable = false,
+	seleccionado = false,
+	onToggle,
+}: {
+	aseg: AseguradoDetalle;
+	moneda: string;
+	seleccionable?: boolean;
+	seleccionado?: boolean;
+	onToggle?: () => void;
+}) {
 	const valor =
 		aseg.valor_asegurado != null
 			? `${moneda} ${aseg.valor_asegurado.toLocaleString("es-BO", { minimumFractionDigits: 2 })}`
 			: null;
 
+	let contenido: ReactNode;
+
 	if (aseg.tipo === "persona") {
-		return (
-			<div className="bg-secondary/30 rounded-lg p-2 text-sm">
-				<div className="flex items-start gap-2">
-					<User className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-0.5" />
-					<div className="min-w-0">
-						<p className="font-medium truncate">{aseg.nombre}</p>
-						{aseg.documento && <p className="text-xs text-muted-foreground">CI/Doc: {aseg.documento}</p>}
-						{aseg.relacion && <p className="text-xs text-muted-foreground">{aseg.relacion}</p>}
-					</div>
+		contenido = (
+			<>
+				<User className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-0.5" />
+				<div className="min-w-0">
+					<p className="font-medium truncate">{aseg.nombre}</p>
+					{aseg.documento && <p className="text-xs text-muted-foreground">CI/Doc: {aseg.documento}</p>}
+					{aseg.relacion && <p className="text-xs text-muted-foreground">{aseg.relacion}</p>}
 				</div>
-			</div>
+			</>
 		);
-	}
-
-	if (aseg.tipo === "bien") {
-		return (
-			<div className="bg-secondary/30 rounded-lg p-2 text-sm">
-				<div className="flex items-start gap-2">
-					<Home className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-0.5" />
-					<div className="min-w-0">
-						<p className="font-medium truncate">{aseg.direccion || "Bien asegurado"}</p>
-						{valor && <p className="text-xs text-muted-foreground">Valor: {valor}</p>}
-					</div>
+	} else if (aseg.tipo === "bien") {
+		contenido = (
+			<>
+				<Home className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-0.5" />
+				<div className="min-w-0">
+					<p className="font-medium truncate">{aseg.direccion || "Bien asegurado"}</p>
+					{valor && <p className="text-xs text-muted-foreground">Valor: {valor}</p>}
 				</div>
-			</div>
+			</>
 		);
-	}
-
-	if (aseg.tipo === "carga") {
-		return (
-			<div className="bg-secondary/30 rounded-lg p-2 text-sm">
-				<div className="flex items-start gap-2">
-					<Package className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-0.5" />
-					<div className="min-w-0">
-						<p className="font-medium truncate">{aseg.descripcion || "Carga asegurada"}</p>
-						{aseg.identificador && (
-							<p className="text-xs text-muted-foreground">Factura: {aseg.identificador}</p>
-						)}
-						{valor && <p className="text-xs text-muted-foreground">Valor: {valor}</p>}
-					</div>
+	} else if (aseg.tipo === "carga") {
+		contenido = (
+			<>
+				<Package className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-0.5" />
+				<div className="min-w-0">
+					<p className="font-medium truncate">{aseg.descripcion || "Carga asegurada"}</p>
+					{aseg.identificador && <p className="text-xs text-muted-foreground">Factura: {aseg.identificador}</p>}
+					{valor && <p className="text-xs text-muted-foreground">Valor: {valor}</p>}
 				</div>
-			</div>
+			</>
 		);
-	}
+	} else {
+		// vehiculo | equipo | nave (ítems con marca/modelo/identificador)
+		const Icon = aseg.tipo === "equipo" ? Wrench : aseg.tipo === "nave" ? Plane : Car;
+		const titulo = aseg.placa
+			? `Placa: ${aseg.placa}`
+			: aseg.identificador
+				? `${aseg.tipo === "equipo" ? "Serie" : "Matrícula"}: ${aseg.identificador}`
+				: aseg.marca || "Ítem asegurado";
 
-	// vehiculo | equipo | nave (ítems con marca/modelo/identificador)
-	const Icon = aseg.tipo === "equipo" ? Wrench : aseg.tipo === "nave" ? Plane : Car;
-	const titulo = aseg.placa
-		? `Placa: ${aseg.placa}`
-		: aseg.identificador
-			? `${aseg.tipo === "equipo" ? "Serie" : "Matrícula"}: ${aseg.identificador}`
-			: aseg.marca || "Ítem asegurado";
-
-	return (
-		<div className="bg-secondary/30 rounded-lg p-2 text-sm">
-			<div className="flex items-start gap-2">
+		contenido = (
+			<>
 				<Icon className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-0.5" />
 				<div className="min-w-0">
 					<p className="font-medium truncate">
@@ -532,7 +580,38 @@ function AseguradoItem({ aseg, moneda }: { aseg: AseguradoDetalle; moneda: strin
 					)}
 					{valor && <p className="text-xs text-muted-foreground">Valor: {valor}</p>}
 				</div>
+			</>
+		);
+	}
+
+	if (!seleccionable) {
+		return (
+			<div className="bg-secondary/30 rounded-lg p-2 text-sm">
+				<div className="flex items-start gap-2">{contenido}</div>
 			</div>
-		</div>
+		);
+	}
+
+	return (
+		<button
+			type="button"
+			onClick={onToggle}
+			aria-pressed={seleccionado}
+			className={`w-full text-left rounded-lg p-2 text-sm border transition-colors ${
+				seleccionado ? "border-primary bg-primary/10" : "border-transparent bg-secondary/30 hover:border-primary/40"
+			}`}
+		>
+			<div className="flex items-start gap-2">
+				<span
+					aria-hidden
+					className={`h-4 w-4 shrink-0 mt-0.5 rounded border flex items-center justify-center transition-colors ${
+						seleccionado ? "bg-primary border-primary text-primary-foreground" : "border-input bg-card"
+					}`}
+				>
+					{seleccionado && <Check className="h-3 w-3" />}
+				</span>
+				{contenido}
+			</div>
+		</button>
 	);
 }

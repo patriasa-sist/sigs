@@ -8,9 +8,12 @@ import { checkPermission, getDataScopeFilter } from "@/utils/auth/helpers";
 import { captureError } from "@/utils/sentry";
 import { generateFinalStoragePath } from "@/utils/fileUpload";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { describirAseguradoDetalle } from "@/types/siniestro";
 import type {
 	RegistroSiniestroFormState,
 	GuardarSiniestroResponse,
+	SiniestroItem,
+	ActualizarItemsSiniestroResponse,
 	ObtenerSiniestrosResponse,
 	ObtenerSiniestroDetalleResponse,
 	SiniestrosStats,
@@ -279,7 +282,23 @@ export async function guardarSiniestro(formState: RegistroSiniestroFormState): P
 			}
 		}
 
-		// 4. Registrar documentos iniciales (ya subidos client-side a Storage en temp/)
+		// 4. Insertar ítems siniestrados seleccionados (opcional): snapshot de los
+		//    ítems del desglose de asegurados marcados como afectados.
+		if (formState.items_siniestrados?.length) {
+			const itemsData = formState.items_siniestrados.map((item) => ({
+				siniestro_id: siniestro.id,
+				tipo: item.tipo,
+				origen_id: item.origen_id ?? null,
+				descripcion: describirAseguradoDetalle(item),
+				detalle: item,
+			}));
+
+			const { error: itemsError } = await supabase.from("siniestros_items").insert(itemsData);
+
+			if (itemsError) throw itemsError;
+		}
+
+		// 5. Registrar documentos iniciales (ya subidos client-side a Storage en temp/)
 		for (const doc of formState.documentos_iniciales) {
 			const usedPath = await moverDocSiniestroAStorageFinal(supabase, siniestro.id, doc);
 			if (!usedPath) continue; // Documento sin subir, se omite
@@ -398,6 +417,21 @@ export async function obtenerSiniestroDetalle(siniestroId: string): Promise<Obte
 					activo: (catalogo?.activo as boolean) || false,
 				};
 			}) || [];
+
+		// Obtener ítems siniestrados. Best-effort: si la tabla aún no existe
+		// (migración pendiente), no rompe el resto del detalle.
+		let items: SiniestroItem[] = [];
+		const { data: itemsRaw, error: itemsError } = await supabase
+			.from("siniestros_items")
+			.select("id, siniestro_id, tipo, origen_id, descripcion, detalle, created_at")
+			.eq("siniestro_id", siniestroId)
+			.order("created_at", { ascending: true });
+
+		if (itemsError) {
+			console.error("Error obteniendo ítems del siniestro:", itemsError);
+		} else {
+			items = (itemsRaw || []) as SiniestroItem[];
+		}
 
 		// Obtener documentos activos
 		const { data: documentosRaw, error: documentosError } = await supabase
@@ -526,6 +560,7 @@ export async function obtenerSiniestroDetalle(siniestroId: string): Promise<Obte
 			data: {
 				siniestro,
 				coberturas,
+				items,
 				documentos,
 				observaciones,
 				historial,
@@ -1242,11 +1277,12 @@ export async function obtenerAseguradosPoliza(polizaId: string, ramo: string): P
 		if (ramoLower.includes("automotor")) {
 			const { data } = await supabase
 				.from("polizas_automotor_vehiculos")
-				.select("placa, modelo, ano, valor_asegurado, nro_chasis, marcas_vehiculo(nombre)")
+				.select("id, placa, modelo, ano, valor_asegurado, nro_chasis, marcas_vehiculo(nombre)")
 				.eq("poliza_id", polizaId);
 			for (const v of data || []) {
 				asegurados.push({
 					tipo: "vehiculo",
+					origen_id: v.id,
 					placa: v.placa || undefined,
 					marca: (v.marcas_vehiculo as { nombre?: string } | null)?.nombre || undefined,
 					modelo: v.modelo || undefined,
@@ -1261,7 +1297,7 @@ export async function obtenerAseguradosPoliza(polizaId: string, ramo: string): P
 		if (ramoLower.includes("responsabilidad civil")) {
 			const { data } = await supabase
 				.from("polizas_rc_vehiculos")
-				.select("placa, modelo, ano, nro_chasis, marca_vehiculo_id")
+				.select("id, placa, modelo, ano, nro_chasis, marca_vehiculo_id")
 				.eq("poliza_id", polizaId);
 			const marcaIds = (data || []).map((v) => v.marca_vehiculo_id).filter(Boolean);
 			const { data: marcas } = marcaIds.length
@@ -1271,6 +1307,7 @@ export async function obtenerAseguradosPoliza(polizaId: string, ramo: string): P
 			for (const v of data || []) {
 				asegurados.push({
 					tipo: "vehiculo",
+					origen_id: v.id,
 					placa: v.placa || undefined,
 					marca: v.marca_vehiculo_id ? marcaMap.get(v.marca_vehiculo_id) || undefined : undefined,
 					modelo: v.modelo || undefined,
@@ -1284,11 +1321,12 @@ export async function obtenerAseguradosPoliza(polizaId: string, ramo: string): P
 		if (ramoLower.includes("técnicos") || ramoLower.includes("tecnicos")) {
 			const { data } = await supabase
 				.from("polizas_ramos_tecnicos_equipos")
-				.select("nro_serie, placa, modelo, ano, valor_asegurado, marcas_equipo(nombre)")
+				.select("id, nro_serie, placa, modelo, ano, valor_asegurado, marcas_equipo(nombre)")
 				.eq("poliza_id", polizaId);
 			for (const e of data || []) {
 				asegurados.push({
 					tipo: "equipo",
+					origen_id: e.id,
 					placa: e.placa || undefined,
 					marca: (e.marcas_equipo as { nombre?: string } | null)?.nombre || undefined,
 					modelo: e.modelo || undefined,
@@ -1303,7 +1341,7 @@ export async function obtenerAseguradosPoliza(polizaId: string, ramo: string): P
 		if (ramoLower.includes("salud") || ramoLower.includes("enfermedad")) {
 			const { data: aseg } = await supabase
 				.from("polizas_salud_asegurados")
-				.select("client_id, rol")
+				.select("id, client_id, rol")
 				.eq("poliza_id", polizaId);
 			const clientMap = await resolverClientesParaDesglose(
 				supabase,
@@ -1313,6 +1351,7 @@ export async function obtenerAseguradosPoliza(polizaId: string, ramo: string): P
 				const c = clientMap.get(a.client_id);
 				asegurados.push({
 					tipo: "persona",
+					origen_id: a.id,
 					nombre: c?.nombre || "Desconocido",
 					documento: c?.documento,
 					relacion: a.rol || "Titular",
@@ -1321,11 +1360,12 @@ export async function obtenerAseguradosPoliza(polizaId: string, ramo: string): P
 
 			const { data: benef } = await supabase
 				.from("polizas_salud_beneficiarios")
-				.select("nombre_completo, carnet, rol")
+				.select("id, nombre_completo, carnet, rol")
 				.eq("poliza_id", polizaId);
 			for (const b of benef || []) {
 				asegurados.push({
 					tipo: "persona",
+					origen_id: b.id,
 					nombre: b.nombre_completo || "Desconocido",
 					documento: b.carnet || undefined,
 					relacion: b.rol || "Beneficiario",
@@ -1341,7 +1381,7 @@ export async function obtenerAseguradosPoliza(polizaId: string, ramo: string): P
 		) {
 			const { data: aseg } = await supabase
 				.from("polizas_asegurados_nivel")
-				.select("client_id, cargo, rol")
+				.select("id, client_id, cargo, rol")
 				.eq("poliza_id", polizaId);
 			const clientMap = await resolverClientesParaDesglose(
 				supabase,
@@ -1351,6 +1391,7 @@ export async function obtenerAseguradosPoliza(polizaId: string, ramo: string): P
 				const c = clientMap.get(a.client_id);
 				asegurados.push({
 					tipo: "persona",
+					origen_id: a.id,
 					nombre: c?.nombre || "Desconocido",
 					documento: c?.documento,
 					relacion: a.rol || a.cargo || "Asegurado",
@@ -1359,11 +1400,12 @@ export async function obtenerAseguradosPoliza(polizaId: string, ramo: string): P
 
 			const { data: benef } = await supabase
 				.from("polizas_beneficiarios")
-				.select("nombre_completo, carnet, rol")
+				.select("id, nombre_completo, carnet, rol")
 				.eq("poliza_id", polizaId);
 			for (const b of benef || []) {
 				asegurados.push({
 					tipo: "persona",
+					origen_id: b.id,
 					nombre: b.nombre_completo || "Desconocido",
 					documento: b.carnet || undefined,
 					relacion: b.rol || "Beneficiario",
@@ -1375,11 +1417,12 @@ export async function obtenerAseguradosPoliza(polizaId: string, ramo: string): P
 		if (ramoLower.includes("incendio")) {
 			const { data: bienes } = await supabase
 				.from("polizas_incendio_bienes")
-				.select("direccion, valor_total_declarado")
+				.select("id, direccion, valor_total_declarado")
 				.eq("poliza_id", polizaId);
 			for (const b of bienes || []) {
 				asegurados.push({
 					tipo: "bien",
+					origen_id: b.id,
 					direccion: b.direccion || undefined,
 					valor_asegurado: b.valor_total_declarado != null ? Number(b.valor_total_declarado) : undefined,
 				});
@@ -1387,7 +1430,7 @@ export async function obtenerAseguradosPoliza(polizaId: string, ramo: string): P
 
 			const { data: aseg } = await supabase
 				.from("polizas_incendio_asegurados")
-				.select("client_id")
+				.select("id, client_id")
 				.eq("poliza_id", polizaId);
 			const clientMap = await resolverClientesParaDesglose(
 				supabase,
@@ -1397,6 +1440,7 @@ export async function obtenerAseguradosPoliza(polizaId: string, ramo: string): P
 				const c = clientMap.get(a.client_id);
 				asegurados.push({
 					tipo: "persona",
+					origen_id: a.id,
 					nombre: c?.nombre || "Desconocido",
 					documento: c?.documento,
 					relacion: "Asegurado adicional",
@@ -1408,11 +1452,12 @@ export async function obtenerAseguradosPoliza(polizaId: string, ramo: string): P
 		if (ramoLower.includes("riesgos varios")) {
 			const { data: bienes } = await supabase
 				.from("polizas_riesgos_varios_bienes")
-				.select("direccion, valor_total_declarado")
+				.select("id, direccion, valor_total_declarado")
 				.eq("poliza_id", polizaId);
 			for (const b of bienes || []) {
 				asegurados.push({
 					tipo: "bien",
+					origen_id: b.id,
 					direccion: b.direccion || undefined,
 					valor_asegurado: b.valor_total_declarado != null ? Number(b.valor_total_declarado) : undefined,
 				});
@@ -1420,7 +1465,7 @@ export async function obtenerAseguradosPoliza(polizaId: string, ramo: string): P
 
 			const { data: aseg } = await supabase
 				.from("polizas_riesgos_varios_asegurados")
-				.select("client_id")
+				.select("id, client_id")
 				.eq("poliza_id", polizaId);
 			const clientMap = await resolverClientesParaDesglose(
 				supabase,
@@ -1430,6 +1475,7 @@ export async function obtenerAseguradosPoliza(polizaId: string, ramo: string): P
 				const c = clientMap.get(a.client_id);
 				asegurados.push({
 					tipo: "persona",
+					origen_id: a.id,
 					nombre: c?.nombre || "Desconocido",
 					documento: c?.documento,
 					relacion: "Asegurado adicional",
@@ -1441,11 +1487,12 @@ export async function obtenerAseguradosPoliza(polizaId: string, ramo: string): P
 		if (ramoLower.includes("transporte")) {
 			const { data } = await supabase
 				.from("polizas_transporte")
-				.select("materia_asegurada, valor_asegurado, factura")
+				.select("id, materia_asegurada, valor_asegurado, factura")
 				.eq("poliza_id", polizaId);
 			for (const t of data || []) {
 				asegurados.push({
 					tipo: "carga",
+					origen_id: t.id,
 					descripcion: t.materia_asegurada || undefined,
 					valor_asegurado: t.valor_asegurado != null ? Number(t.valor_asegurado) : undefined,
 					identificador: t.factura || undefined,
@@ -1462,11 +1509,12 @@ export async function obtenerAseguradosPoliza(polizaId: string, ramo: string): P
 		) {
 			const { data: naves } = await supabase
 				.from("polizas_aeronavegacion_naves")
-				.select("matricula, marca, modelo, ano, serie, valor_casco")
+				.select("id, matricula, marca, modelo, ano, serie, valor_casco")
 				.eq("poliza_id", polizaId);
 			for (const n of naves || []) {
 				asegurados.push({
 					tipo: "nave",
+					origen_id: n.id,
 					marca: n.marca || undefined,
 					modelo: n.modelo || undefined,
 					ano: n.ano?.toString() || undefined,
@@ -1477,7 +1525,7 @@ export async function obtenerAseguradosPoliza(polizaId: string, ramo: string): P
 
 			const { data: aseg } = await supabase
 				.from("polizas_aeronavegacion_asegurados")
-				.select("client_id")
+				.select("id, client_id")
 				.eq("poliza_id", polizaId);
 			const clientMap = await resolverClientesParaDesglose(
 				supabase,
@@ -1487,6 +1535,7 @@ export async function obtenerAseguradosPoliza(polizaId: string, ramo: string): P
 				const c = clientMap.get(a.client_id);
 				asegurados.push({
 					tipo: "persona",
+					origen_id: a.id,
 					nombre: c?.nombre || "Desconocido",
 					documento: c?.documento,
 					relacion: "Asegurado",
@@ -1497,6 +1546,67 @@ export async function obtenerAseguradosPoliza(polizaId: string, ramo: string): P
 		return { success: true, data: { asegurados } };
 	} catch (error) {
 		await captureError(error, "obtenerAseguradosPoliza", { polizaId, ramo });
+		return {
+			success: false,
+			error: error instanceof Error ? error.message : "Error desconocido",
+		};
+	}
+}
+
+/**
+ * Reemplazar los ítems siniestrados de un siniestro (delete + insert).
+ * La selección es opcional: una lista vacía elimina todos los ítems registrados.
+ */
+export async function actualizarItemsSiniestro(
+	siniestroId: string,
+	items: AseguradoDetalle[],
+): Promise<ActualizarItemsSiniestroResponse> {
+	const permiso = await verificarPermisoSiniestros();
+	if (!permiso.authorized) {
+		return { success: false, error: permiso.error };
+	}
+
+	const supabase = await createClient();
+
+	try {
+		const { data: siniestro, error: siniestroError } = await supabase
+			.from("siniestros")
+			.select("id")
+			.eq("id", siniestroId)
+			.single();
+
+		if (siniestroError || !siniestro) {
+			return { success: false, error: "Siniestro no encontrado" };
+		}
+
+		const { error: deleteError } = await supabase
+			.from("siniestros_items")
+			.delete()
+			.eq("siniestro_id", siniestroId);
+
+		if (deleteError) throw deleteError;
+
+		if (items.length > 0) {
+			const itemsData = items.map((item) => ({
+				siniestro_id: siniestroId,
+				tipo: item.tipo,
+				origen_id: item.origen_id ?? null,
+				descripcion: describirAseguradoDetalle(item),
+				detalle: item,
+			}));
+
+			const { error: insertError } = await supabase.from("siniestros_items").insert(itemsData);
+
+			if (insertError) throw insertError;
+		}
+
+		revalidatePath("/siniestros");
+		revalidatePath(`/siniestros/editar/${siniestroId}`);
+
+		return { success: true, data: undefined };
+	} catch (error) {
+		console.error("Error actualizando ítems del siniestro:", error);
+		await captureError(error, "actualizarItemsSiniestro", { siniestroId, num_items: items.length });
 		return {
 			success: false,
 			error: error instanceof Error ? error.message : "Error desconocido",

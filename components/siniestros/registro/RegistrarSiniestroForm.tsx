@@ -36,6 +36,7 @@ import DocumentosInicialesStep from "./steps/DocumentosIniciales";
 import type {
 	RegistroSiniestroFormState,
 	PolizaParaSiniestro,
+	AseguradoDetalle,
 	DetallesSiniestro,
 	CoberturasStep,
 	DocumentoSiniestro,
@@ -51,9 +52,12 @@ const STEP_CONFIG = [
 
 function getStepSummary(paso: number, state: RegistroSiniestroFormState): string | null {
 	switch (paso) {
-		case 1:
+		case 1: {
 			if (!state.poliza_seleccionada) return null;
-			return `${state.poliza_seleccionada.numero_poliza} · ${state.poliza_seleccionada.cliente.nombre_completo}`;
+			const base = `${state.poliza_seleccionada.numero_poliza} · ${state.poliza_seleccionada.cliente.nombre_completo}`;
+			const nItems = state.items_siniestrados.length;
+			return nItems > 0 ? `${base} · ${nItems} ítem${nItems !== 1 ? "s" : ""}` : base;
+		}
 		case 2: {
 			if (!state.detalles?.fecha_siniestro || !state.detalles?.lugar_hecho) return null;
 			const lugar = state.detalles.lugar_hecho.slice(0, 24);
@@ -79,6 +83,7 @@ export default function RegistrarSiniestroForm() {
 	const [formState, setFormState] = useState<RegistroSiniestroFormState>({
 		paso_actual: 1,
 		poliza_seleccionada: null,
+		items_siniestrados: [],
 		detalles: null,
 		coberturas: null,
 		documentos_iniciales: [],
@@ -385,9 +390,15 @@ export default function RegistrarSiniestroForm() {
 						<SeleccionarPoliza
 							polizaSeleccionada={formState.poliza_seleccionada}
 							onPolizaSelect={(poliza: PolizaParaSiniestro) =>
-								setFormState((prev) => ({ ...prev, poliza_seleccionada: poliza }))
+								setFormState((prev) => ({ ...prev, poliza_seleccionada: poliza, items_siniestrados: [] }))
 							}
-							onPolizaDeselect={() => setFormState((prev) => ({ ...prev, poliza_seleccionada: null }))}
+							onPolizaDeselect={() =>
+								setFormState((prev) => ({ ...prev, poliza_seleccionada: null, items_siniestrados: [] }))
+							}
+							itemsSiniestrados={formState.items_siniestrados}
+							onItemsSiniestradosChange={(items: AseguradoDetalle[]) =>
+								setFormState((prev) => ({ ...prev, items_siniestrados: items }))
+							}
 						/>
 					)}
 

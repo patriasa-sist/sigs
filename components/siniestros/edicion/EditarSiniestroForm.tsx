@@ -17,9 +17,11 @@ import UltimoCambioSiniestro from "./UltimoCambioSiniestro";
 import SeccionEstados from "./SeccionEstados";
 import CambiarResponsable from "./CambiarResponsable";
 import DocumentosPorTipo from "./DocumentosPorTipo";
+import ItemsSiniestrados from "./ItemsSiniestrados";
 import type {
 	SiniestroVistaConEstado,
 	CoberturaCatalogo,
+	SiniestroItem,
 	DocumentoSiniestro,
 	ObservacionSiniestro,
 	HistorialSiniestro,
@@ -28,6 +30,7 @@ import type {
 interface EditarSiniestroFormProps {
 	siniestro: SiniestroVistaConEstado;
 	coberturas: CoberturaCatalogo[];
+	items: SiniestroItem[];
 	documentos: DocumentoSiniestro[];
 	observaciones: ObservacionSiniestro[];
 	historial: HistorialSiniestro[];
@@ -37,6 +40,7 @@ interface EditarSiniestroFormProps {
 export default function EditarSiniestroForm({
 	siniestro,
 	coberturas,
+	items,
 	documentos,
 	observaciones,
 	historial,
@@ -170,6 +174,14 @@ export default function EditarSiniestroForm({
 								onVerHistorialCompleto={() => setActiveTab("historial")}
 							/>
 							<ResumenReadonly siniestro={siniestro} coberturas={coberturas} />
+							<ItemsSiniestrados
+								siniestroId={siniestro.id}
+								polizaId={siniestro.poliza_id}
+								ramo={siniestro.ramo}
+								items={items}
+								estadoSiniestro={siniestro.estado}
+								onItemsChange={handleRefresh}
+							/>
 						</TabsContent>
 
 						{/* Documentos */}
