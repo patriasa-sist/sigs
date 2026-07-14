@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { getDataScopeFilter } from "@/utils/auth/helpers";
 import { generateFinalStoragePath } from "@/utils/fileUpload";
 import { resolverNombresCliente } from "@/utils/polizas/resolverNombresCliente";
+import { parseItemsJson } from "@/utils/polizas/itemsJson";
 import { netoAporteAnexo, type PagoAnexoLite } from "@/utils/polizas/aporteAnexo";
 import { restaurarCuotasPorAnulacion } from "@/utils/polizas/anulacionCuotas";
 import { calcularComisionesConProducto } from "@/utils/polizaValidation";
@@ -937,7 +938,11 @@ async function cargarItemsActualesRamo(
 				.select("*")
 				.in("anexo_id", inclusionIds)
 				.eq("accion", "inclusion");
-			if (incluidos) bienes = [...bienes, ...incluidos.map((b) => ({ ...b, _origen_anexo: b.anexo_id }))];
+			if (incluidos)
+				bienes = [
+					...bienes,
+					...incluidos.map((b) => ({ ...b, items: parseItemsJson(b.items), _origen_anexo: b.anexo_id })),
+				];
 		}
 		if (exclusionIds.length > 0) {
 			const { data: excluidos } = await supabase
@@ -966,7 +971,11 @@ async function cargarItemsActualesRamo(
 				.select("*")
 				.in("anexo_id", inclusionIds)
 				.eq("accion", "inclusion");
-			if (incluidos) bienes = [...bienes, ...incluidos.map((b) => ({ ...b, _origen_anexo: b.anexo_id }))];
+			if (incluidos)
+				bienes = [
+					...bienes,
+					...incluidos.map((b) => ({ ...b, items: parseItemsJson(b.items), _origen_anexo: b.anexo_id })),
+				];
 		}
 		if (exclusionIds.length > 0) {
 			const { data: excluidos } = await supabase
@@ -1377,7 +1386,8 @@ async function insertarItemsRamo(
 						direccion: item.data.direccion,
 						valor_total_declarado: item.data.valor_total_declarado,
 						es_primer_riesgo: item.data.es_primer_riesgo,
-						items: JSON.stringify(item.data.items),
+						// La columna es jsonb: pasar el array directo (con JSON.stringify se guarda un string JSON)
+						items: item.data.items,
 					});
 					throwIfAnexoError(error, "Error al guardar bien de incendio del anexo");
 				}
@@ -1395,7 +1405,8 @@ async function insertarItemsRamo(
 						direccion: item.data.direccion,
 						valor_total_declarado: item.data.valor_total_declarado,
 						es_primer_riesgo: item.data.es_primer_riesgo,
-						items: JSON.stringify(item.data.items),
+						// La columna es jsonb: pasar el array directo (con JSON.stringify se guarda un string JSON)
+						items: item.data.items,
 					});
 					throwIfAnexoError(error, "Error al guardar bien de riesgos varios del anexo");
 				}
@@ -2227,17 +2238,6 @@ async function cargarItemsCambioAnexo(
 	ramo: string,
 ): Promise<AnexoFormState["items_cambio"]> {
 	const ramoLower = ramo.toLowerCase();
-
-	const parseItemsJson = <T>(raw: unknown): T[] => {
-		if (typeof raw === "string") {
-			try {
-				return JSON.parse(raw) as T[];
-			} catch {
-				return [];
-			}
-		}
-		return Array.isArray(raw) ? (raw as T[]) : [];
-	};
 
 	if (ramoLower.includes("automotor")) {
 		const { data } = await supabase.from("polizas_anexos_automotor_vehiculos").select("*").eq("anexo_id", anexoId);

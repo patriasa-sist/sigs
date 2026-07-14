@@ -4,6 +4,7 @@ import { createClient } from "@/utils/supabase/server";
 import { getDataScopeFilter } from "@/utils/auth/helpers";
 import { obtenerEjecutivosFiltro } from "@/utils/ejecutivos";
 import { resolverNombresCliente } from "@/utils/polizas/resolverNombresCliente";
+import { parseItemsJson } from "@/utils/polizas/itemsJson";
 import type { CuotaConsolidada, CuotaVigenciaCorrida, CuotaAnexoPropia, DireccionVigenciaCorrida } from "@/types/anexo";
 import { ESTADO_ANEXO } from "@/types/anexo";
 
@@ -1321,7 +1322,7 @@ export async function obtenerDetallePoliza(polizaId: string) {
 							direccion: ab.direccion,
 							valor_total_declarado: Number(ab.valor_total_declarado),
 							es_primer_riesgo: ab.es_primer_riesgo,
-							items: (ab.items as Array<{ nombre: string; monto: number }>) || [],
+							items: parseItemsJson<{ nombre: string; monto: number }>(ab.items),
 							_origen_anexo: nroAnexo,
 						});
 					}
@@ -1348,7 +1349,7 @@ export async function obtenerDetallePoliza(polizaId: string) {
 							direccion: ab.direccion,
 							valor_total_declarado: Number(ab.valor_total_declarado),
 							es_primer_riesgo: ab.es_primer_riesgo,
-							items: (ab.items as Array<{ nombre: string; monto: number }>) || [],
+							items: parseItemsJson<{ nombre: string; monto: number }>(ab.items),
 							_origen_anexo: nroAnexo,
 						});
 					}
