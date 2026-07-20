@@ -12,6 +12,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { PolicyPermissionsModal } from "@/components/polizas/PolicyPermissionsModal";
 import { AjustePrimaNetaDialog } from "@/components/polizas/AjustePrimaNetaDialog";
 import AnexoDetalleSection from "@/components/polizas/anexos/AnexoDetalleSection";
+import AseguradosConsolidados from "@/components/polizas/AseguradosConsolidados";
 import {
 	FileText,
 	ArrowLeft,
@@ -2493,6 +2494,11 @@ export default function PolizaDetallePage() {
 					puedeValidar={autorizadoParaValidar}
 					onAnexoValidado={cargarDetalle}
 				/>
+			</div>
+
+			{/* ── Lista global de asegurados (solo ramos de personas) ──────── */}
+			<div className="mt-5">
+				<AseguradosConsolidados polizaId={polizaId} ramo={poliza.ramo} />
 			</div>
 
 			{/* Validation Confirmation Modal */}
