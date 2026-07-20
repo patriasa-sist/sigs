@@ -13,6 +13,7 @@ import {
 	getComercialUsers,
 } from "@/app/polizas/permisos/actions";
 import type { PolicyEditPermissionViewModel, ComercialUser } from "@/types/policyPermission";
+import { LA_PAZ_TZ } from "@/utils/formatters";
 
 interface PolicyPermissionsModalProps {
 	polizaId: string;
@@ -74,7 +75,8 @@ export function PolicyPermissionsModal({ polizaId, numeroPoliza, isOpen, onClose
 		const result = await grantPolicyEditPermission({
 			poliza_id: polizaId,
 			user_id: selectedUserId,
-			expires_at: expiresAt || undefined,
+			// datetime-local es hora local del navegador; convertir a ISO UTC para timestamptz
+			expires_at: expiresAt ? new Date(expiresAt).toISOString() : undefined,
 			notes: notes || undefined,
 		});
 		if (!result.success) {
@@ -103,6 +105,7 @@ export function PolicyPermissionsModal({ polizaId, numeroPoliza, isOpen, onClose
 
 	const formatDate = (dateString: string) =>
 		new Date(dateString).toLocaleDateString("es-BO", {
+			timeZone: LA_PAZ_TZ,
 			day: "2-digit",
 			month: "2-digit",
 			year: "numeric",

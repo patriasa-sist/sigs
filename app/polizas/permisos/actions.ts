@@ -293,6 +293,22 @@ export async function grantPolicyEditPermission(
 	try {
 		const { supabase, user, isTeamLeader } = await requireAdminOrTeamLeaderForPolicy(input.poliza_id);
 
+		// Validate expiration before touching the DB (CHECK valid_expiration requires expires_at > granted_at)
+		let expiresAtIso: string | null = null;
+		if (input.expires_at) {
+			const exp = new Date(input.expires_at);
+			if (Number.isNaN(exp.getTime())) {
+				return { success: false, error: "Fecha de expiración inválida" };
+			}
+			if (exp.getTime() <= Date.now()) {
+				return {
+					success: false,
+					error: "La fecha de expiración debe ser posterior a la fecha y hora actual",
+				};
+			}
+			expiresAtIso = exp.toISOString();
+		}
+
 		// Verify target user exists and is comercial
 		const { data: targetProfile, error: targetError } = await supabase
 			.from("profiles")
@@ -346,36 +362,59 @@ export async function grantPolicyEditPermission(
 			return { success: false, error: "Póliza no encontrada" };
 		}
 
-		// Check if an active permission already exists
+		// UNIQUE(poliza_id, user_id): at most one row per pair, so fetch it whatever its state
 		const { data: existing } = await supabase
 			.from("policy_edit_permissions")
-			.select("id")
+			.select("id, revoked_at, expires_at")
 			.eq("poliza_id", input.poliza_id)
 			.eq("user_id", input.user_id)
-			.is("revoked_at", null)
-			.single();
+			.maybeSingle();
 
-		if (existing) {
+		const vigente =
+			existing &&
+			!existing.revoked_at &&
+			(!existing.expires_at || new Date(existing.expires_at).getTime() > Date.now());
+
+		if (vigente) {
 			return {
 				success: false,
 				error: `${targetProfile.full_name} ya tiene un permiso activo para esta póliza`,
 			};
 		}
 
-		// Insert new permission
-		const { data, error } = await supabase
-			.from("policy_edit_permissions")
-			.insert({
-				poliza_id: input.poliza_id,
-				user_id: input.user_id,
-				granted_by: user.id,
-				expires_at: input.expires_at || null,
-				notes: input.notes || null,
-			})
-			.select("id")
-			.single();
+		let data: { id: string } | null = null;
+		let error: { message?: string } | null = null;
 
-		if (error) {
+		if (existing) {
+			// Re-grant over a revoked/expired row (a second INSERT would violate the UNIQUE constraint)
+			({ data, error } = await supabase
+				.from("policy_edit_permissions")
+				.update({
+					granted_by: user.id,
+					granted_at: new Date().toISOString(),
+					expires_at: expiresAtIso,
+					notes: input.notes || null,
+					revoked_at: null,
+					revoked_by: null,
+				})
+				.eq("id", existing.id)
+				.select("id")
+				.single());
+		} else {
+			({ data, error } = await supabase
+				.from("policy_edit_permissions")
+				.insert({
+					poliza_id: input.poliza_id,
+					user_id: input.user_id,
+					granted_by: user.id,
+					expires_at: expiresAtIso,
+					notes: input.notes || null,
+				})
+				.select("id")
+				.single());
+		}
+
+		if (error || !data) {
 			console.error("[grantPolicyEditPermission] Insert error:", error);
 			return { success: false, error: "Error al otorgar permiso" };
 		}
