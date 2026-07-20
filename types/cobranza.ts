@@ -573,6 +573,9 @@ export type PolizaConPagosExtendida = PolizaConPagos & {
 	notas_por_cuota?: Record<string, CuotaNota[]>;
 	// Abonos por cuota, indexados por id de cuota (de póliza o de anexo)
 	abonos_por_cuota?: Record<string, AbonoCuota[]>;
+	// Cuotas con comprobante legado sin abono asociado (cargado antes del sistema
+	// de abonos y no cubierto por el backfill), indexadas por id de cuota
+	comprobantes_sin_abono?: Record<string, boolean>;
 };
 
 /**

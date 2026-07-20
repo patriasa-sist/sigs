@@ -27,6 +27,7 @@ import {
 	obtenerDetallePolizaParaCuotas,
 	prepararDatosAvisoMora,
 	obtenerComprobanteAbono,
+	obtenerComprobanteCuotaSinAbono,
 } from "@/app/cobranzas/actions";
 import {
 	enviarRecordatorioWhatsApp,
@@ -225,6 +226,25 @@ export default function CuotasModal({ poliza, open, onClose, onSelectQuota, isAd
 			} else {
 				toast.info("Sin comprobante", {
 					description: response.error || "No se encontró comprobante para este abono",
+				});
+			}
+		} catch {
+			toast.error("Error al obtener comprobante");
+		} finally {
+			setLoadingComprobante(null);
+		}
+	};
+
+	// Comprobante legado cargado antes del sistema de abonos (sin abono asociado)
+	const handleVerComprobanteCuota = async (cuotaId: string) => {
+		setLoadingComprobante(cuotaId);
+		try {
+			const response = await obtenerComprobanteCuotaSinAbono(cuotaId);
+			if (response.success && response.data) {
+				window.open(response.data.publicUrl, "_blank");
+			} else {
+				toast.info("Sin comprobante", {
+					description: response.error || "No se encontró comprobante para esta cuota",
 				});
 			}
 		} catch {
@@ -709,7 +729,29 @@ export default function CuotasModal({ poliza, open, onClose, onSelectQuota, isAd
 																	</Button>
 																)}
 
-																{/* Comprobantes: ver en la sub-fila expandible de abonos (chevron en col. N°) */}
+																{/* Comprobantes: ver en la sub-fila expandible de abonos (chevron en col. N°).
+																	    Fallback: comprobante legado cargado antes del sistema de abonos. */}
+																{polizaExtendida?.comprobantes_sin_abono?.[
+																	cuota.id
+																] && (
+																	<Button
+																		size="sm"
+																		variant="ghost"
+																		className="gap-1 h-8"
+																		onClick={() =>
+																			handleVerComprobanteCuota(cuota.id)
+																		}
+																		disabled={loadingComprobante === cuota.id}
+																		title="Ver comprobante"
+																	>
+																		{loadingComprobante === cuota.id ? (
+																			<Loader2 className="h-4 w-4 animate-spin" />
+																		) : (
+																			<Paperclip className="h-4 w-4" />
+																		)}
+																		Comprobante
+																	</Button>
+																)}
 															</div>
 														</td>
 													</tr>

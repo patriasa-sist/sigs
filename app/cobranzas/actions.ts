@@ -1311,6 +1311,8 @@ export async function obtenerDetallePolizaParaCuotas(polizaId: string): Promise<
 
 		// Abonos por cuota (Mejora #2): historial de pagos parciales con comprobante
 		const abonos_por_cuota: Record<string, AbonoCuota[]> = {};
+		// Comprobantes legados sin abono (cargados antes del sistema de abonos)
+		const comprobantes_sin_abono: Record<string, boolean> = {};
 		{
 			const pagoIds = (cuotas as CuotaPago[]).map((c) => c.id);
 			const anexoPagoIds = [...(cuotas_inclusion ?? []), ...(vigencia_corrida_cobrable ?? [])].map((c) => c.id);
@@ -1350,6 +1352,17 @@ export async function obtenerDetallePolizaParaCuotas(polizaId: string): Promise<
 						autor: autorObj?.full_name ?? null,
 						tiene_comprobante: comprobanteAbonoIds.has(a.id as string),
 					});
+				}
+
+				const { data: compsSinAbono } = await supabase
+					.from("polizas_pagos_comprobantes")
+					.select("pago_id, anexo_pago_id")
+					.or(orParts.join(","))
+					.is("abono_id", null)
+					.eq("estado", "activo");
+				for (const c of compsSinAbono ?? []) {
+					const key = (c.pago_id ?? c.anexo_pago_id) as string | null;
+					if (key) comprobantes_sin_abono[key] = true;
 				}
 			}
 		}
@@ -1444,6 +1457,7 @@ export async function obtenerDetallePolizaParaCuotas(polizaId: string): Promise<
 			vigencia_corrida_cobrable,
 			notas_por_cuota,
 			abonos_por_cuota,
+			comprobantes_sin_abono,
 			director_cartera: (() => {
 				const dc = poliza.director_cartera as { nombre?: string; apellidos?: string } | null;
 				if (!dc) return null;
@@ -1909,6 +1923,65 @@ export async function obtenerComprobanteAbono(
 		};
 	} catch (error) {
 		console.error("Error in obtenerComprobanteAbono:", error);
+		return {
+			success: false,
+			error: error instanceof Error ? error.message : "Error desconocido",
+		};
+	}
+}
+
+/**
+ * Obtiene el comprobante legado de una cuota (cargado antes del sistema de
+ * abonos y sin abono asociado) y retorna una URL firmada temporal.
+ */
+export async function obtenerComprobanteCuotaSinAbono(
+	cuotaId: string,
+): Promise<CobranzaServerResponse<{ comprobante: Comprobante; publicUrl: string }>> {
+	const permiso = await verificarPermisoCobranza();
+	if (!permiso.authorized) {
+		return { success: false, error: permiso.error };
+	}
+
+	const supabase = await createClient();
+
+	try {
+		const { data, error } = await supabase
+			.from("polizas_pagos_comprobantes")
+			.select("*")
+			.or(`pago_id.eq.${cuotaId},anexo_pago_id.eq.${cuotaId}`)
+			.is("abono_id", null)
+			.eq("estado", "activo")
+			.order("uploaded_at", { ascending: false })
+			.limit(1)
+			.maybeSingle();
+
+		if (error) {
+			console.error("Error fetching comprobante:", error);
+			return { success: false, error: "Error al obtener comprobante" };
+		}
+
+		if (!data) {
+			return { success: false, error: "No se encontró comprobante para esta cuota" };
+		}
+
+		const { data: signedUrlData, error: signedUrlError } = await supabase.storage
+			.from("pagos-comprobantes")
+			.createSignedUrl(data.archivo_url, 3600);
+
+		if (signedUrlError || !signedUrlData?.signedUrl) {
+			console.error("Error creating signed URL:", signedUrlError);
+			return { success: false, error: "Error al generar URL de acceso al archivo" };
+		}
+
+		return {
+			success: true,
+			data: {
+				comprobante: data as Comprobante,
+				publicUrl: signedUrlData.signedUrl,
+			},
+		};
+	} catch (error) {
+		console.error("Error in obtenerComprobanteCuotaSinAbono:", error);
 		return {
 			success: false,
 			error: error instanceof Error ? error.message : "Error desconocido",
