@@ -15,6 +15,8 @@ import {
 	UserCheck,
 	ChevronDown,
 	ChevronUp,
+	Download,
+	FileSpreadsheet,
 } from "lucide-react";
 import type {
 	DatosSalud,
@@ -41,6 +43,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { BuscadorClientes } from "../BuscadorClientes";
 import { BeneficiarioModal, type DatosPersonaMinima } from "./BeneficiarioModal";
+import { importarTitularesSaludDesdeExcel, generarTemplateTitularesSaludExcel } from "@/utils/aseguradoExcelImport";
 import { useLiveSync } from "@/hooks/useLiveSync";
 
 type Props = {
@@ -97,6 +100,8 @@ export function SaludForm({
 	const [titularesExpandidos, setTitularesExpandidos] = useState<Set<string>>(new Set());
 	const [errores, setErrores] = useState<Record<string, string>>({});
 	const [confirmacionEliminar, setConfirmacionEliminar] = useState<ConfirmacionEliminar | null>(null);
+	const [importandoTitulares, setImportandoTitulares] = useState(false);
+	const [erroresImport, setErroresImport] = useState<string[]>([]);
 
 	// ===== FUNCIONES NIVELES =====
 	const crearNuevoNivel = () => {
@@ -212,6 +217,53 @@ export function SaludForm({
 
 	const eliminarTitular = (id: string) => {
 		setConfirmacionEliminar({ tipo: "titular", id });
+	};
+
+	const handleDescargarTemplate = async () => {
+		await generarTemplateTitularesSaludExcel(niveles);
+	};
+
+	const handleImportarExcel = async (event: React.ChangeEvent<HTMLInputElement>) => {
+		const archivo = event.target.files?.[0];
+		if (!archivo) return;
+
+		setImportandoTitulares(true);
+		setErroresImport([]);
+
+		try {
+			const resultado = await importarTitularesSaludDesdeExcel(archivo, niveles);
+
+			if (resultado.exito && resultado.titulares_validos.length > 0) {
+				setTitulares((prev) => [...prev, ...resultado.titulares_validos]);
+				// Expandir los titulares importados que traen familiares para que se vean de inmediato
+				setTitularesExpandidos((prev) => {
+					const next = new Set(prev);
+					resultado.titulares_validos.forEach((t) => {
+						if (t.conyugue || t.descendientes.length > 0) next.add(t.id);
+					});
+					return next;
+				});
+
+				const resumen = `Se importaron ${resultado.titulares_validos.length} titular(es) y ${resultado.total_familiares} familiar(es) correctamente.`;
+				if (resultado.errores.length > 0) {
+					const msgs = resultado.errores.map((e) => `Fila ${e.fila}: ${e.errores.join(", ")}`);
+					setErroresImport([resumen, ...msgs]);
+				} else {
+					setErroresImport([resumen]);
+				}
+			} else {
+				setErroresImport(
+					resultado.errores.length > 0
+						? resultado.errores.map((e) => `Fila ${e.fila}: ${e.errores.join(", ")}`)
+						: ["No se pudieron importar titulares del archivo."],
+				);
+			}
+		} catch {
+			setErroresImport(["Error al procesar el archivo Excel."]);
+		} finally {
+			setImportandoTitulares(false);
+			event.target.value = "";
+		}
 	};
 
 	const confirmarEliminar = () => {
@@ -922,16 +974,57 @@ export function SaludForm({
 							)}
 						</p>
 					</div>
-					<Button onClick={abrirModalTitular} disabled={mostrarModalTitular}>
-						<UserPlus className="mr-2 h-4 w-4" />
-						Agregar Titular
-					</Button>
+					<div className="flex items-center gap-2">
+						<Button variant="outline" size="sm" onClick={handleDescargarTemplate}>
+							<Download className="mr-2 h-4 w-4" />
+							Template Excel
+						</Button>
+						<label htmlFor="titular-excel-upload">
+							<Button variant="outline" size="sm" asChild disabled={importandoTitulares}>
+								<span>
+									<FileSpreadsheet className="mr-2 h-4 w-4" />
+									{importandoTitulares ? "Importando..." : "Importar Excel"}
+								</span>
+							</Button>
+							<input
+								id="titular-excel-upload"
+								type="file"
+								accept=".xlsx,.xls"
+								onChange={handleImportarExcel}
+								className="hidden"
+								disabled={importandoTitulares}
+							/>
+						</label>
+						<Button onClick={abrirModalTitular} disabled={mostrarModalTitular}>
+							<UserPlus className="mr-2 h-4 w-4" />
+							Agregar Titular
+						</Button>
+					</div>
 				</div>
 
 				{errores.titulares && (
 					<div className="flex items-center gap-2 p-3 bg-destructive/10 border border-destructive/20 rounded">
 						<AlertTriangle className="h-4 w-4 text-destructive" />
 						<p className="text-sm text-destructive">{errores.titulares}</p>
+					</div>
+				)}
+
+				{erroresImport.length > 0 && (
+					<div className="p-4 bg-warning/10 border border-warning/30 rounded-lg">
+						<div className="flex items-start justify-between gap-2">
+							<ul className="text-sm text-warning-foreground space-y-1 flex-1">
+								{erroresImport.map((msg, i) => (
+									<li key={i}>• {msg}</li>
+								))}
+							</ul>
+							<button
+								type="button"
+								onClick={() => setErroresImport([])}
+								className="text-warning hover:text-warning-foreground text-xs flex-shrink-0"
+							>
+								✕
+							</button>
+						</div>
 					</div>
 				)}
 

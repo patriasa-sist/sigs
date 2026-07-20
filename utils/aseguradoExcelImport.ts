@@ -1,11 +1,14 @@
 import * as ExcelJS from "exceljs";
-import type { AseguradoAPVida, NivelCobertura } from "@/types/poliza";
+import type { AseguradoAPVida, NivelCobertura, TitularSalud, FamiliarSalud, NivelSalud } from "@/types/poliza";
 
 export interface AseguradoImportResult {
 	exito: boolean;
 	asegurados_validos: AseguradoAPVida[];
 	errores: Array<{ fila: number; errores: string[] }>;
 }
+
+// Tipo mínimo común entre NivelCobertura (AP/Vida) y NivelSalud
+type NivelRef = { id: string; nombre: string };
 
 const COLUMNAS_ESPERADAS = {
 	nombre_completo: ["nombre completo", "nombre", "name", "nombre_completo", "nombres y apellidos", "nombres"],
@@ -20,6 +23,7 @@ const COLUMNAS_ESPERADAS = {
 	],
 	genero: ["genero", "genero", "gender", "sexo"],
 	nivel: ["nivel", "nivel de cobertura", "cobertura", "nivel_cobertura", "level"],
+	rol: ["rol", "parentesco", "relacion", "tipo asegurado", "tipo de asegurado"],
 };
 
 function normalizarNombreColumna(nombre: string): string {
@@ -83,7 +87,7 @@ function parsearGenero(valor: unknown): "M" | "F" | "Otro" | undefined {
 	return undefined;
 }
 
-function resolverNivelId(valorNivel: unknown, niveles: NivelCobertura[]): { nivel_id: string; error?: string } {
+function resolverNivelId(valorNivel: unknown, niveles: NivelRef[]): { nivel_id: string; error?: string } {
 	if (!niveles.length) return { nivel_id: "" };
 	// Sin valor: cae al primer nivel (válido cuando solo hay uno configurado).
 	if (valorNivel === null || valorNivel === undefined || String(valorNivel).trim() === "") {
@@ -244,6 +248,234 @@ export async function generarTemplateAseguradosExcel(niveles: NivelCobertura[]):
 	const link = document.createElement("a");
 	link.href = url;
 	link.download = "template_asegurados_accidentes_personales.xlsx";
+	link.click();
+	window.URL.revokeObjectURL(url);
+}
+
+// ============================================
+// SALUD: import jerárquico de titulares con familiares
+// ============================================
+
+export interface TitularesSaludImportResult {
+	exito: boolean;
+	titulares_validos: TitularSalud[];
+	total_familiares: number;
+	errores: Array<{ fila: number; errores: string[] }>;
+}
+
+type RolSalud = "titular" | "conyugue" | "descendiente";
+
+function parsearRolSalud(valor: unknown): RolSalud | null {
+	// Sin valor: se asume titular (permite reusar planillas planas sin columna Rol)
+	if (valor === null || valor === undefined || String(valor).trim() === "") return "titular";
+	const str = String(valor).trim().toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+	if (["titular", "t"].includes(str)) return "titular";
+	if (["conyugue", "conyuge", "esposo", "esposa", "pareja"].includes(str)) return "conyugue";
+	if (["descendiente", "hijo", "hija", "hijo/a", "dependiente"].includes(str)) return "descendiente";
+	return null;
+}
+
+export async function importarTitularesSaludDesdeExcel(
+	archivo: File,
+	niveles: NivelSalud[],
+): Promise<TitularesSaludImportResult> {
+	try {
+		const arrayBuffer = await archivo.arrayBuffer();
+		const workbook = new ExcelJS.Workbook();
+		await workbook.xlsx.load(arrayBuffer);
+
+		const worksheet = workbook.worksheets[0];
+		if (!worksheet) {
+			return {
+				exito: false,
+				titulares_validos: [],
+				total_familiares: 0,
+				errores: [{ fila: 0, errores: ["El archivo no contiene hojas de datos"] }],
+			};
+		}
+
+		if (worksheet.rowCount < 2) {
+			return {
+				exito: false,
+				titulares_validos: [],
+				total_familiares: 0,
+				errores: [{ fila: 0, errores: ["El archivo debe tener encabezados y al menos una fila de datos"] }],
+			};
+		}
+
+		const headerRow = worksheet.getRow(1);
+		const headers: string[] = [];
+		headerRow.eachCell({ includeEmpty: false }, (cell) => {
+			headers.push(String(cell.value || ""));
+		});
+
+		const mapa = mapearColumnas(headers);
+
+		const columnasFaltantes = ["nombre_completo", "carnet"].filter((col) => mapa[col] === undefined);
+		if (columnasFaltantes.length > 0) {
+			return {
+				exito: false,
+				titulares_validos: [],
+				total_familiares: 0,
+				errores: [
+					{
+						fila: 0,
+						errores: [
+							`Columnas obligatorias faltantes: ${columnasFaltantes.join(", ")}. Verifique los nombres de las columnas.`,
+						],
+					},
+				],
+			};
+		}
+
+		const titulares_validos: TitularSalud[] = [];
+		const errores: Array<{ fila: number; errores: string[] }> = [];
+		let total_familiares = 0;
+		// Grupo actual: los familiares se adjuntan al último titular leído.
+		let titularActual: TitularSalud | null = null;
+		let filaTitularInvalido: number | null = null;
+
+		worksheet.eachRow((row, rowNumber) => {
+			if (rowNumber === 1) return;
+
+			const valores: unknown[] = [];
+			row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+				valores[colNumber - 1] = cell.value;
+			});
+
+			const filaVacia = valores.every((v) => v === null || v === undefined || v === "");
+			if (filaVacia) return;
+
+			const rol = mapa.rol !== undefined ? parsearRolSalud(valores[mapa.rol]) : "titular";
+			if (rol === null) {
+				errores.push({
+					fila: rowNumber,
+					errores: [
+						`Rol "${String(valores[mapa.rol]).trim()}" no reconocido (use Titular, Cónyuge o Descendiente)`,
+					],
+				});
+				return;
+			}
+
+			const nivelResuelto = resolverNivelId(mapa.nivel !== undefined ? valores[mapa.nivel] : undefined, niveles);
+
+			const base = {
+				id: crypto.randomUUID(),
+				nombre_completo:
+					mapa.nombre_completo !== undefined ? convertirAString(valores[mapa.nombre_completo]) || "" : "",
+				carnet: mapa.carnet !== undefined ? convertirAString(valores[mapa.carnet]) || "" : "",
+				fecha_nacimiento:
+					mapa.fecha_nacimiento !== undefined ? parsearFecha(valores[mapa.fecha_nacimiento]) : undefined,
+				genero: mapa.genero !== undefined ? parsearGenero(valores[mapa.genero]) : undefined,
+				nivel_id: nivelResuelto.nivel_id,
+			};
+
+			const validacion = validarAsegurado(base);
+			const erroresFila = [...validacion.errores];
+			if (nivelResuelto.error) erroresFila.push(nivelResuelto.error);
+
+			if (rol === "titular") {
+				if (erroresFila.length === 0) {
+					titularActual = { ...base, conyugue: undefined, descendientes: [] };
+					titulares_validos.push(titularActual);
+					filaTitularInvalido = null;
+				} else {
+					errores.push({ fila: rowNumber, errores: erroresFila });
+					titularActual = null;
+					filaTitularInvalido = rowNumber;
+				}
+				return;
+			}
+
+			// Cónyuge o descendiente
+			if (!titularActual) {
+				erroresFila.push(
+					filaTitularInvalido !== null
+						? `El titular de este grupo (fila ${filaTitularInvalido}) tiene errores; corríjalo primero`
+						: "Debe haber una fila con rol Titular antes de este familiar",
+				);
+				errores.push({ fila: rowNumber, errores: erroresFila });
+				return;
+			}
+			if (rol === "conyugue" && titularActual.conyugue) {
+				erroresFila.push(`El titular ${titularActual.nombre_completo} ya tiene un cónyuge`);
+			}
+			if (erroresFila.length > 0) {
+				errores.push({ fila: rowNumber, errores: erroresFila });
+				return;
+			}
+
+			const familiar: FamiliarSalud = { ...base, rol };
+			if (rol === "conyugue") {
+				titularActual.conyugue = familiar;
+			} else {
+				titularActual.descendientes.push(familiar);
+			}
+			total_familiares++;
+		});
+
+		return { exito: titulares_validos.length > 0, titulares_validos, total_familiares, errores };
+	} catch (error) {
+		console.error("Error procesando Excel:", error);
+		return {
+			exito: false,
+			titulares_validos: [],
+			total_familiares: 0,
+			errores: [
+				{
+					fila: 0,
+					errores: [
+						`Error procesando archivo: ${error instanceof Error ? error.message : "Error desconocido"}`,
+					],
+				},
+			],
+		};
+	}
+}
+
+export async function generarTemplateTitularesSaludExcel(niveles: NivelSalud[]): Promise<void> {
+	const nivelesLabel = niveles.length > 0 ? `Nivel (${niveles.map((n) => n.nombre).join(" | ")})` : "Nivel";
+	const nivelEjemplo = niveles[0]?.nombre || "Nivel 1";
+
+	const headers = [
+		"Rol (Titular | Cónyuge | Descendiente)",
+		"Nombre Completo",
+		"Carnet de Identidad",
+		"Fecha de Nacimiento",
+		"Género",
+		nivelesLabel,
+	];
+
+	const filasEjemplo = [
+		["Titular", "Juan Carlos Pérez López", "1234567 LP", "01/01/1985", "M", nivelEjemplo],
+		["Cónyuge", "María Elena Fernández de Pérez", "7654321 LP", "15/03/1987", "F", nivelEjemplo],
+		["Descendiente", "Ana Lucía Pérez Fernández", "9876543 LP", "20/07/2010", "F", nivelEjemplo],
+	];
+
+	const workbook = new ExcelJS.Workbook();
+	const worksheet = workbook.addWorksheet("Titulares");
+
+	worksheet.addRow(headers);
+	filasEjemplo.forEach((fila) => worksheet.addRow(fila));
+
+	const headerRow = worksheet.getRow(1);
+	headerRow.font = { bold: true };
+	headerRow.fill = {
+		type: "pattern",
+		pattern: "solid",
+		fgColor: { argb: "FFD3D3D3" },
+	};
+
+	worksheet.columns.forEach((column) => {
+		if (column) column.width = 28;
+	});
+
+	const buffer = await workbook.xlsx.writeBuffer();
+	const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+	const url = window.URL.createObjectURL(blob);
+	const link = document.createElement("a");
+	link.href = url;
+	link.download = "template_titulares_salud.xlsx";
 	link.click();
 	window.URL.revokeObjectURL(url);
 }
