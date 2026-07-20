@@ -1,7 +1,7 @@
 // app/siniestros/editar/[id]/page.tsx - Página de Edición de Siniestros
 
 import { redirect } from "next/navigation";
-import { requirePermission } from "@/utils/auth/helpers";
+import { hasPermission, requirePermission } from "@/utils/auth/helpers";
 import { obtenerSiniestroDetalle } from "@/app/siniestros/actions";
 import EditarSiniestroForm from "@/components/siniestros/edicion/EditarSiniestroForm";
 
@@ -15,7 +15,9 @@ interface PageProps {
 }
 
 export default async function EditarSiniestroPage({ params }: PageProps) {
-	const profile = await requirePermission("siniestros.editar");
+	// Ver el detalle solo requiere siniestros.ver; sin siniestros.editar se muestra en solo lectura
+	const profile = await requirePermission("siniestros.ver");
+	const puedeEditar = await hasPermission("siniestros.editar");
 
 	// Obtener ID del siniestro desde params
 	const { id: siniestroId } = await params;
@@ -42,6 +44,7 @@ export default async function EditarSiniestroPage({ params }: PageProps) {
 				observaciones={observaciones}
 				historial={historial}
 				esAdmin={esAdmin}
+				soloLectura={!puedeEditar}
 			/>
 		</div>
 	);

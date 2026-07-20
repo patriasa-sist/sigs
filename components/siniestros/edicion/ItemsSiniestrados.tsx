@@ -50,6 +50,7 @@ interface ItemsSiniestradosProps {
 	items: SiniestroItem[];
 	estadoSiniestro: string;
 	onItemsChange: () => void;
+	soloLectura?: boolean;
 }
 
 export default function ItemsSiniestrados({
@@ -59,6 +60,7 @@ export default function ItemsSiniestrados({
 	items,
 	estadoSiniestro,
 	onItemsChange,
+	soloLectura = false,
 }: ItemsSiniestradosProps) {
 	const [open, setOpen] = useState(false);
 	const [loading, setLoading] = useState(false);
@@ -69,7 +71,7 @@ export default function ItemsSiniestrados({
 	const [clavesNoVigentes, setClavesNoVigentes] = useState<Set<string>>(new Set());
 	const [seleccionadas, setSeleccionadas] = useState<Set<string>>(new Set());
 
-	const puedeEditar = estadoSiniestro === "abierto";
+	const puedeEditar = estadoSiniestro === "abierto" && !soloLectura;
 
 	const cargarOpciones = async () => {
 		setLoading(true);
@@ -162,7 +164,10 @@ export default function ItemsSiniestrados({
 							{items.map((item) => {
 								const Icon = ICONO_TIPO[item.tipo] ?? Package;
 								return (
-									<div key={item.id} className="bg-secondary/30 rounded-lg p-3 flex items-start gap-2">
+									<div
+										key={item.id}
+										className="bg-secondary/30 rounded-lg p-3 flex items-start gap-2"
+									>
 										<Icon className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-0.5" />
 										<div className="min-w-0">
 											<p className="text-sm font-medium">{item.descripcion}</p>
@@ -226,7 +231,10 @@ export default function ItemsSiniestrados({
 												<p className="text-xs text-muted-foreground mt-0.5">
 													{ETIQUETA_TIPO[opcion.tipo] ?? opcion.tipo}
 													{clavesNoVigentes.has(clave) && (
-														<span className="text-warning"> · Ya no figura en la póliza</span>
+														<span className="text-warning">
+															{" "}
+															· Ya no figura en la póliza
+														</span>
 													)}
 												</p>
 											</div>

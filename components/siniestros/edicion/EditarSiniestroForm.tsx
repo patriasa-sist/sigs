@@ -35,6 +35,7 @@ interface EditarSiniestroFormProps {
 	observaciones: ObservacionSiniestro[];
 	historial: HistorialSiniestro[];
 	esAdmin: boolean;
+	soloLectura?: boolean;
 }
 
 export default function EditarSiniestroForm({
@@ -45,6 +46,7 @@ export default function EditarSiniestroForm({
 	observaciones,
 	historial,
 	esAdmin,
+	soloLectura = false,
 }: EditarSiniestroFormProps) {
 	const router = useRouter();
 	const [activeTab, setActiveTab] = useState("resumen");
@@ -181,6 +183,7 @@ export default function EditarSiniestroForm({
 								items={items}
 								estadoSiniestro={siniestro.estado}
 								onItemsChange={handleRefresh}
+								soloLectura={soloLectura}
 							/>
 						</TabsContent>
 
@@ -192,6 +195,7 @@ export default function EditarSiniestroForm({
 								onDocumentosChange={handleRefresh}
 								estadoSiniestro={siniestro.estado}
 								esAdmin={esAdmin}
+								soloLectura={soloLectura}
 							/>
 						</TabsContent>
 
@@ -201,6 +205,7 @@ export default function EditarSiniestroForm({
 								siniestroId={siniestro.id}
 								observacionesIniciales={observaciones}
 								estadoSiniestro={siniestro.estado}
+								soloLectura={soloLectura}
 							/>
 						</TabsContent>
 
@@ -218,10 +223,11 @@ export default function EditarSiniestroForm({
 						siniestroId={siniestro.id}
 						estadoActual={siniestro}
 						estadoSiniestro={siniestro.estado}
+						soloLectura={soloLectura}
 					/>
 
-					{/* Zona de cierre — solo si está abierto */}
-					{estaAbierto && (
+					{/* Zona de cierre — solo si está abierto y con permiso de edición */}
+					{estaAbierto && !soloLectura && (
 						<Card className="shadow-sm" style={{ borderColor: "hsl(var(--destructive) / 0.25)" }}>
 							<CardContent className="p-4 space-y-3">
 								<p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
@@ -279,7 +285,7 @@ export default function EditarSiniestroForm({
 									)}
 								</p>
 							</div>
-							{estaAbierto && (
+							{estaAbierto && !soloLectura && (
 								<CambiarResponsable
 									siniestroId={siniestro.id}
 									responsableActualId={siniestro.responsable_id}

@@ -15,12 +15,14 @@ interface AgregarObservacionProps {
 	siniestroId: string;
 	observacionesIniciales: ObservacionSiniestro[];
 	estadoSiniestro: string;
+	soloLectura?: boolean;
 }
 
 export default function AgregarObservacion({
 	siniestroId,
 	observacionesIniciales,
 	estadoSiniestro,
+	soloLectura = false,
 }: AgregarObservacionProps) {
 	const router = useRouter();
 	const [observacion, setObservacion] = useState("");
@@ -67,47 +69,49 @@ export default function AgregarObservacion({
 
 	return (
 		<div className="space-y-4">
-			{/* Form para agregar observación */}
-			<Card>
-				<CardHeader>
-					<CardTitle className="text-lg flex items-center gap-2">
-						<MessageSquare className="h-5 w-5 text-primary" />
-						Agregar Nueva Observación interna
-					</CardTitle>
-				</CardHeader>
-				<CardContent className="space-y-3">
-					<Textarea
-						placeholder="Escribe una observación sobre el siniestro..."
-						value={observacion}
-						onChange={(e) => setObservacion(e.target.value)}
-						rows={4}
-						className="resize-none"
-						disabled={loading || estadoSiniestro !== "abierto"}
-					/>
+			{/* Form para agregar observación (oculto en solo lectura) */}
+			{!soloLectura && (
+				<Card>
+					<CardHeader>
+						<CardTitle className="text-lg flex items-center gap-2">
+							<MessageSquare className="h-5 w-5 text-primary" />
+							Agregar Nueva Observación interna
+						</CardTitle>
+					</CardHeader>
+					<CardContent className="space-y-3">
+						<Textarea
+							placeholder="Escribe una observación sobre el siniestro..."
+							value={observacion}
+							onChange={(e) => setObservacion(e.target.value)}
+							rows={4}
+							className="resize-none"
+							disabled={loading || estadoSiniestro !== "abierto"}
+						/>
 
-					{estadoSiniestro !== "abierto" && (
-						<p className="text-sm text-amber-600">
-							No se pueden agregar observaciones a siniestros cerrados
-						</p>
-					)}
+						{estadoSiniestro !== "abierto" && (
+							<p className="text-sm text-amber-600">
+								No se pueden agregar observaciones a siniestros cerrados
+							</p>
+						)}
 
-					<div className="flex justify-end">
-						<Button
-							onClick={handleSubmit}
-							disabled={loading || !observacion.trim() || estadoSiniestro !== "abierto"}
-						>
-							{loading ? (
-								<>
-									<Loader2 className="h-4 w-4 mr-2 animate-spin" />
-									Guardando...
-								</>
-							) : (
-								"Agregar Observación"
-							)}
-						</Button>
-					</div>
-				</CardContent>
-			</Card>
+						<div className="flex justify-end">
+							<Button
+								onClick={handleSubmit}
+								disabled={loading || !observacion.trim() || estadoSiniestro !== "abierto"}
+							>
+								{loading ? (
+									<>
+										<Loader2 className="h-4 w-4 mr-2 animate-spin" />
+										Guardando...
+									</>
+								) : (
+									"Agregar Observación"
+								)}
+							</Button>
+						</div>
+					</CardContent>
+				</Card>
+			)}
 
 			{/* Lista de observaciones */}
 			<Card>

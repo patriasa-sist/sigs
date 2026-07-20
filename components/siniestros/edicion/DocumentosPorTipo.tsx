@@ -36,6 +36,7 @@ interface DocumentosPorTipoProps {
 	onDocumentosChange: () => void;
 	estadoSiniestro: string;
 	esAdmin: boolean;
+	soloLectura?: boolean;
 }
 
 export default function DocumentosPorTipo({
@@ -44,6 +45,7 @@ export default function DocumentosPorTipo({
 	onDocumentosChange,
 	estadoSiniestro,
 	esAdmin,
+	soloLectura = false,
 }: DocumentosPorTipoProps) {
 	const [tipoSeleccionado, setTipoSeleccionado] = useState<TipoDocumentoSiniestro>(TIPOS_DOCUMENTO_SINIESTRO[0]);
 	const [operationLoading, setOperationLoading] = useState<string | null>(null);
@@ -237,7 +239,7 @@ export default function DocumentosPorTipo({
 		return signedUrls[archivoUrl] || "";
 	};
 
-	const puedeAgregarDocumentos = estadoSiniestro === "abierto";
+	const puedeAgregarDocumentos = estadoSiniestro === "abierto" && !soloLectura;
 
 	return (
 		<div className="grid grid-cols-1 lg:grid-cols-4 gap-4 h-[600px]">

@@ -24,9 +24,15 @@ interface SeccionEstadosProps {
 	siniestroId: string;
 	estadoActual?: EstadoActualSiniestro;
 	estadoSiniestro: string; // "abierto" | "rechazado" | etc
+	soloLectura?: boolean;
 }
 
-export default function SeccionEstados({ siniestroId, estadoActual, estadoSiniestro }: SeccionEstadosProps) {
+export default function SeccionEstados({
+	siniestroId,
+	estadoActual,
+	estadoSiniestro,
+	soloLectura = false,
+}: SeccionEstadosProps) {
 	const router = useRouter();
 	const [estados, setEstados] = useState<EstadoSiniestroCatalogo[]>([]);
 	const [estadoSeleccionado, setEstadoSeleccionado] = useState<string>("");
@@ -35,6 +41,12 @@ export default function SeccionEstados({ siniestroId, estadoActual, estadoSinies
 	const [modalOpen, setModalOpen] = useState(false);
 
 	const loadData = useCallback(async () => {
+		// En solo lectura no se muestra el selector; evitar la carga del catálogo
+		if (soloLectura) {
+			setLoading(false);
+			return;
+		}
+
 		setLoading(true);
 
 		try {
@@ -49,7 +61,7 @@ export default function SeccionEstados({ siniestroId, estadoActual, estadoSinies
 		} finally {
 			setLoading(false);
 		}
-	}, []);
+	}, [soloLectura]);
 
 	useEffect(() => {
 		loadData();
@@ -112,8 +124,8 @@ export default function SeccionEstados({ siniestroId, estadoActual, estadoSinies
 		);
 	}
 
-	// Solo permitir cambio si el siniestro está abierto
-	const puedeEditarEstado = estadoSiniestro === "abierto";
+	// Solo permitir cambio si el siniestro está abierto y el usuario tiene permiso de edición
+	const puedeEditarEstado = estadoSiniestro === "abierto" && !soloLectura;
 
 	return (
 		<>
@@ -183,7 +195,7 @@ export default function SeccionEstados({ siniestroId, estadoActual, estadoSinies
 								</Select>
 							</div>
 						</div>
-					) : (
+					) : soloLectura ? null : (
 						<div className="flex items-start gap-2 text-xs text-muted-foreground">
 							<AlertCircle className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
 							<span>Solo editable cuando el siniestro está abierto</span>
