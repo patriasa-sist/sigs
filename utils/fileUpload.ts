@@ -67,6 +67,10 @@ export function inferirContentType(file: File): string {
 			return "image/jpeg";
 		case "png":
 			return "image/png";
+		case "xls":
+			return "application/vnd.ms-excel";
+		case "xlsx":
+			return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 		default:
 			return "application/octet-stream";
 	}

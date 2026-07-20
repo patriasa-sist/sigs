@@ -794,6 +794,8 @@ export function PagosYDocumentos({
 			"application/pdf": [".pdf"],
 			"image/jpeg": [".jpg", ".jpeg"],
 			"image/png": [".png"],
+			"application/vnd.ms-excel": [".xls"],
+			"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [".xlsx"],
 		},
 		maxSize: 20 * 1024 * 1024,
 	});
@@ -1045,7 +1047,7 @@ export function PagosYDocumentos({
 					<input {...getInputProps()} />
 					<Upload className="h-8 w-8 text-gray-400 mx-auto mb-2" />
 					<p className="text-sm text-gray-600">Arrastre archivos aquí o haga clic para seleccionar</p>
-					<p className="text-xs text-gray-400 mt-1">PDF, JPG, PNG — Máximo 20MB</p>
+					<p className="text-xs text-gray-400 mt-1">PDF, JPG, PNG, XLS, XLSX — Máximo 20MB</p>
 				</div>
 
 				{documentos.length > 0 && (
