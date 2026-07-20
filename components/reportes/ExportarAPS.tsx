@@ -172,8 +172,8 @@ export default function ExportarAPS() {
 						))}
 					</div>
 					<p className="text-xs text-muted-foreground mt-2">
-						No incluye pólizas pendientes de validación. Montos en Bs (USD convertido al tipo de cambio
-						indicado).
+						El período se define por la fecha de registro en el sistema. No incluye pólizas pendientes de
+						validación. Montos en Bs (USD convertido al tipo de cambio indicado).
 					</p>
 				</div>
 

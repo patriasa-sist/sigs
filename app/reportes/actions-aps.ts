@@ -8,19 +8,24 @@ import { computarPrimaVigenciaCorrida } from "@/utils/polizas/vigenciaCorridaAnu
 
 // ============================================================================
 // REPORTES APS
-// Consolida producción para la Autoridad de Fiscalización (APS):
-// - Ingreso: pólizas validadas en el período (fecha_validacion), excluyendo
-//   pendientes y rechazadas, más los anexos de INCLUSIÓN validados en el
-//   período (prima propia del anexo). Las retroactivas (ya reportadas en meses
-//   pasados) se excluyen por defecto, pero el filtro es configurable; a los
-//   anexos no les aplica: un anexo validado en el período es movimiento nuevo
-//   aunque su póliza madre sea retroactiva (ej. inclusiones de una open-cover).
-// - Egreso: pólizas anuladas en el período (fecha_validacion del anexo de
-//   anulación), revirtiendo los montos completos de la póliza, más los anexos
-//   de EXCLUSIÓN validados en el período (prima propia, reportada en positivo:
-//   el General la resta). Parche contabilidad: si la anulación tiene vigencia
-//   corrida de COBRO, en vez de revertir la póliza completa se declaran los
-//   montos derivados de la VC (ver utils/polizas/vigenciaCorridaAnulacion.ts).
+// Consolida producción para la Autoridad de Fiscalización (APS).
+// FECHA MAESTRA (acordado con Contabilidad 2026-07): el mes de reporte lo fija
+// la fecha de REGISTRO en el sistema (created_at, zona La Paz), nunca la de
+// validación — una póliza cargada en junio es de junio aunque se valide en
+// julio. La validación sigue siendo requisito para aparecer (pendientes y
+// rechazadas quedan fuera), pero no mueve la póliza de mes: así el reporte es
+// reproducible y no cambia al re-validar.
+// - Ingreso: pólizas registradas en el período y validadas, más los anexos de
+//   INCLUSIÓN registrados en el período y validados (prima propia del anexo).
+//   Las retroactivas (ya reportadas en meses pasados) se excluyen por defecto,
+//   pero el filtro es configurable; a los anexos no les aplica: un anexo del
+//   período es movimiento nuevo aunque su madre sea retroactiva.
+// - Egreso: pólizas cuyo anexo de anulación se registró en el período (y está
+//   validado), revirtiendo los montos completos de la póliza, más los anexos
+//   de EXCLUSIÓN registrados en el período y validados (prima propia, en
+//   positivo: el General la resta). Parche contabilidad: si la anulación tiene
+//   vigencia corrida de COBRO, en vez de revertir la póliza completa se
+//   declaran los montos derivados de la VC (utils/polizas/vigenciaCorridaAnulacion.ts).
 // Todos los montos se devuelven en Bs (USD convertido con el tipo de cambio
 // indicado). La agregación es por compañía + código APS + riesgo, donde el
 // código APS = código de ramo (ej. 9105 → "91-05") + código de producto.
@@ -115,12 +120,12 @@ const POLIZA_FINANCIERA_SELECT = `
 `;
 
 /**
- * Anexos de inclusión/exclusión validados en el período, mapeados como filas
- * financieras: prima propia del anexo + compañía/producto/moneda de la madre.
- * Las exclusiones se guardan en negativo y se voltean a positivo (convención
- * del egreso APS: montos positivos que el General resta). Anexos sin prima
- * propia registrada (anteriores a la feature) se omiten para no generar filas
- * en cero.
+ * Anexos de inclusión/exclusión registrados en el período (created_at) y ya
+ * validados, mapeados como filas financieras: prima propia del anexo +
+ * compañía/producto/moneda de la madre. Las exclusiones se guardan en negativo
+ * y se voltean a positivo (convención del egreso APS: montos positivos que el
+ * General resta). Anexos sin prima propia registrada (anteriores a la feature)
+ * se omiten para no generar filas en cero.
  */
 async function obtenerAnexosFinancieros(
 	supabase: Awaited<ReturnType<typeof createClient>>,
@@ -138,8 +143,8 @@ async function obtenerAnexosFinancieros(
 			)
 			.eq("tipo_anexo", tipoAnexo)
 			.eq("estado", ESTADO_ANEXO.ACTIVO)
-			.gte("fecha_validacion", desdeTs)
-			.lte("fecha_validacion", hastaTs)
+			.gte("created_at", desdeTs)
+			.lte("created_at", hastaTs)
 			.order("id", { ascending: true })
 			.range(from, from + PAGE_SIZE - 1);
 		if (error) throw error;
@@ -254,8 +259,10 @@ export async function obtenerDatosAPS(filtros: APSFiltros): Promise<APSResponse>
 	}
 
 	const supabase = await createClient();
-	const desdeTs = `${filtros.fecha_desde}T00:00:00`;
-	const hastaTs = `${filtros.fecha_hasta}T23:59:59`;
+	// created_at es timestamptz: los límites del período van anclados a
+	// America/La_Paz (UTC-4 fijo, sin horario de verano)
+	const desdeTs = `${filtros.fecha_desde}T00:00:00-04:00`;
+	const hastaTs = `${filtros.fecha_hasta}T23:59:59.999-04:00`;
 
 	try {
 		// Nombres de los grupos APS (ramos padre: 91, 92, 93, 94)
@@ -268,15 +275,16 @@ export async function obtenerDatosAPS(filtros: APSFiltros): Promise<APSResponse>
 			(padres ?? []).map((p) => [p.codigo as string, p.nombre as string]),
 		);
 
-		// INGRESO: pólizas validadas en el período
+		// INGRESO: pólizas registradas en el período (fecha maestra) y validadas
 		const excluirRetroactivas = filtros.excluir_retroactivas !== false;
 		const polizasIngreso: PolizaFinanciera[] = [];
 		for (let from = 0; ; from += PAGE_SIZE) {
 			let query = supabase
 				.from("polizas")
 				.select(POLIZA_FINANCIERA_SELECT)
-				.gte("fecha_validacion", desdeTs)
-				.lte("fecha_validacion", hastaTs);
+				.gte("created_at", desdeTs)
+				.lte("created_at", hastaTs)
+				.not("fecha_validacion", "is", null);
 			if (excluirRetroactivas) {
 				query = query.eq("es_retroactiva", false);
 			}
@@ -286,10 +294,10 @@ export async function obtenerDatosAPS(filtros: APSFiltros): Promise<APSResponse>
 			if (!data || data.length < PAGE_SIZE) break;
 		}
 
-		// INGRESO: anexos de inclusión validados en el período (prima propia)
+		// INGRESO: anexos de inclusión registrados en el período y validados (prima propia)
 		const anexosIngreso = await obtenerAnexosFinancieros(supabase, "inclusion", desdeTs, hastaTs);
 
-		// EGRESO: pólizas cuyo anexo de anulación fue validado en el período
+		// EGRESO: pólizas cuyo anexo de anulación se registró en el período y está validado
 		const anulaciones: { anexoId: string; poliza: PolizaFinanciera }[] = [];
 		for (let from = 0; ; from += PAGE_SIZE) {
 			const { data, error } = await supabase
@@ -297,8 +305,8 @@ export async function obtenerDatosAPS(filtros: APSFiltros): Promise<APSResponse>
 				.select(`id, poliza:polizas!poliza_id (${POLIZA_FINANCIERA_SELECT})`)
 				.eq("tipo_anexo", "anulacion")
 				.eq("estado", ESTADO_ANEXO.ACTIVO)
-				.gte("fecha_validacion", desdeTs)
-				.lte("fecha_validacion", hastaTs)
+				.gte("created_at", desdeTs)
+				.lte("created_at", hastaTs)
 				.order("id", { ascending: true })
 				.range(from, from + PAGE_SIZE - 1);
 			if (error) throw error;
@@ -327,7 +335,7 @@ export async function obtenerDatosAPS(filtros: APSFiltros): Promise<APSResponse>
 			};
 		});
 
-		// EGRESO: anexos de exclusión validados en el período (prima propia en positivo)
+		// EGRESO: anexos de exclusión registrados en el período y validados (prima propia en positivo)
 		const anexosEgreso = await obtenerAnexosFinancieros(supabase, "exclusion", desdeTs, hastaTs);
 
 		return {

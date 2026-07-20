@@ -20,6 +20,7 @@ import type {
 	ComercialUser,
 	ActionResult,
 } from "@/types/policyPermission";
+import { esMesRegistroCerrado, MENSAJE_MES_CERRADO } from "@/utils/polizas/cierreMes";
 
 // ============================================
 // HELPER FUNCTIONS
@@ -147,7 +148,7 @@ export async function checkPolicyEditPermission(polizaId: string): Promise<Actio
 		// Fetch policy data for multiple checks (rejection window + team leader)
 		const { data: polizaData } = await supabase
 			.from("polizas")
-			.select("created_by, estado, puede_editar_hasta, responsable_id")
+			.select("created_by, estado, puede_editar_hasta, responsable_id, created_at")
 			.eq("id", polizaId)
 			.single();
 
@@ -174,6 +175,20 @@ export async function checkPolicyEditPermission(polizaId: string): Promise<Actio
 						expires_at: polizaData.puede_editar_hasta,
 						granted_by_name: "Sistema (Rechazo)",
 					},
+				},
+			};
+		}
+
+		// Cierre de mes: una póliza ACTIVA de un mes de registro ya cerrado solo la
+		// edita un administrador (ni el líder de equipo ni permisos por póliza).
+		if (polizaData?.estado === "activa" && polizaData.created_at && esMesRegistroCerrado(polizaData.created_at)) {
+			return {
+				success: true,
+				data: {
+					canEdit: false,
+					reason: MENSAJE_MES_CERRADO,
+					isAdmin: false,
+					isTeamLeader: false,
 				},
 			};
 		}
@@ -354,12 +369,23 @@ export async function grantPolicyEditPermission(
 		// Verify policy exists
 		const { data: policyData, error: policyError } = await supabase
 			.from("polizas")
-			.select("id, numero_poliza")
+			.select("id, numero_poliza, estado, created_at")
 			.eq("id", input.poliza_id)
 			.single();
 
 		if (policyError || !policyData) {
 			return { success: false, error: "Póliza no encontrada" };
+		}
+
+		// Cierre de mes: el líder no puede otorgar permisos sobre pólizas activas
+		// de meses cerrados; solo administración.
+		if (
+			isTeamLeader &&
+			policyData.estado === "activa" &&
+			policyData.created_at &&
+			esMesRegistroCerrado(policyData.created_at)
+		) {
+			return { success: false, error: MENSAJE_MES_CERRADO };
 		}
 
 		// UNIQUE(poliza_id, user_id): at most one row per pair, so fetch it whatever its state

@@ -52,6 +52,12 @@ export type AnexoPendiente = {
 	creado_por_email: string | null;
 	created_at: string;
 	monto_ajuste_total: number;
+	/**
+	 * Inclusión con prima propia distinta de cero pero sin ninguna cuota propia
+	 * registrada: se puede validar igual (hay anexos legítimos en cero), pero se
+	 * advierte porque saldría en el APS sin aparecer en el cuadro de comisiones.
+	 */
+	sin_plan_pagos: boolean;
 };
 
 // ============================================
@@ -93,7 +99,7 @@ export async function obtenerAnexosPendientes(): Promise<{
 			.select(
 				`
 				id, numero_anexo, tipo_anexo, fecha_anexo, fecha_efectiva,
-				observaciones, created_at,
+				observaciones, created_at, prima_total,
 				poliza:polizas!poliza_id (
 					id, numero_poliza, ramo, responsable_id,
 					companias_aseguradoras!compania_aseguradora_id (nombre)
@@ -174,6 +180,12 @@ export async function obtenerAnexosPendientes(): Promise<{
 			const clientId = polizaClientMap.get(poliza.id);
 			const client_name = (clientId ? clientNombresMap.get(clientId)?.name : null) || "Desconocido";
 
+			const pagosAnexo = pagosPorAnexo.get(a.id) || [];
+			const sinPlanPagos =
+				a.tipo_anexo === "inclusion" &&
+				Number(a.prima_total ?? 0) !== 0 &&
+				!pagosAnexo.some((p) => p.tipo === "cuota_propia");
+
 			return {
 				id: a.id,
 				numero_anexo: a.numero_anexo,
@@ -190,6 +202,7 @@ export async function obtenerAnexosPendientes(): Promise<{
 				creado_por_email: creador?.email || null,
 				created_at: a.created_at,
 				monto_ajuste_total: montoMap.get(a.id) || 0,
+				sin_plan_pagos: sinPlanPagos,
 			};
 		});
 

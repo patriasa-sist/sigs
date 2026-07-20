@@ -67,9 +67,20 @@ export default function AnexosPendientesTable({ anexos }: Props) {
 								>
 									<TableCell className="py-1.5 font-medium">{anexo.numero_anexo}</TableCell>
 									<TableCell className="py-1.5">
-										<Badge variant="outline" className={tipoBadge.className}>
-											{tipoBadge.label}
-										</Badge>
+										<div className="flex items-center gap-1.5">
+											<Badge variant="outline" className={tipoBadge.className}>
+												{tipoBadge.label}
+											</Badge>
+											{anexo.sin_plan_pagos && (
+												<Badge
+													variant="outline"
+													className="bg-warning/15 text-warning border-warning/30"
+													title="Inclusión con prima propia sin plan de pagos registrado"
+												>
+													Sin plan de pagos
+												</Badge>
+											)}
+										</div>
 									</TableCell>
 									<TableCell className="py-1.5">{anexo.numero_poliza}</TableCell>
 									<TableCell className="py-1.5">{anexo.ramo}</TableCell>
@@ -125,9 +136,16 @@ export default function AnexosPendientesTable({ anexos }: Props) {
 										Poliza {anexo.numero_poliza} · {anexo.ramo}
 									</div>
 								</div>
-								<Badge variant="outline" className={`${tipoBadge.className} shrink-0`}>
-									{tipoBadge.label}
-								</Badge>
+								<div className="flex flex-col items-end gap-1 shrink-0">
+									<Badge variant="outline" className={tipoBadge.className}>
+										{tipoBadge.label}
+									</Badge>
+									{anexo.sin_plan_pagos && (
+										<Badge variant="outline" className="bg-warning/15 text-warning border-warning/30">
+											Sin plan de pagos
+										</Badge>
+									)}
+								</div>
 							</div>
 							<div className="mt-2 flex items-center justify-between gap-3">
 								<div className="text-xs text-muted-foreground">

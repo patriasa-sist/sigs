@@ -380,4 +380,8 @@ export type AnexoResumen = {
 	items_incluidos?: number;
 	items_excluidos?: number;
 	monto_ajuste_total?: number;
+	// Inclusión con prima propia ≠ 0 pero sin cuotas propias registradas:
+	// validable (hay anexos legítimos en cero), pero se advierte porque saldría
+	// en el APS sin aparecer en el cuadro de comisiones.
+	sin_plan_pagos?: boolean;
 };

@@ -692,15 +692,13 @@ export async function exportarProduccionNuevo(
 			)
 		`);
 
-		// Fecha efectiva que ubica la póliza en un periodo de reporte:
-		// - validada: fecha_validacion (cuando se habilita la gestión a otras áreas)
-		// - pendiente (sin validar): created_at (fecha de registro)
-		const desdeTs = `${fechaDesde}T00:00:00`;
-		const hastaTs = `${fechaHasta}T23:59:59`;
-		polizaQuery = polizaQuery.or(
-			`and(fecha_validacion.gte.${desdeTs},fecha_validacion.lte.${hastaTs}),` +
-				`and(fecha_validacion.is.null,created_at.gte.${desdeTs},created_at.lte.${hastaTs})`,
-		);
+		// Fecha maestra (acordado con Contabilidad 2026-07): el período lo fija la
+		// fecha de REGISTRO en el sistema (created_at), nunca la de validación —
+		// así la póliza no cambia de mes al validarse/re-validarse. Los límites
+		// van anclados a America/La_Paz (UTC-4 fijo, sin horario de verano).
+		const desdeTs = `${fechaDesde}T00:00:00-04:00`;
+		const hastaTs = `${fechaHasta}T23:59:59.999-04:00`;
+		polizaQuery = polizaQuery.gte("created_at", desdeTs).lte("created_at", hastaTs);
 
 		// Data scoping: comercial/agente solo ven datos de su equipo
 		if (scope.needsScoping) {
@@ -809,9 +807,11 @@ export async function exportarProduccionNuevo(
 
 		// Solo anexos validados. Usar la constante: el anexo usa "activo" (no "activa"
 		// como la póliza) y el literal equivocado fallaba en silencio.
+		// El período lo fija la fecha de registro del anexo (created_at), misma
+		// fecha maestra que las pólizas — no la fecha_anexo digitada por el usuario.
 		anexoQuery = anexoQuery.eq("estado", ESTADO_ANEXO.ACTIVO);
-		anexoQuery = anexoQuery.gte("fecha_anexo", fechaDesde);
-		anexoQuery = anexoQuery.lte("fecha_anexo", fechaHasta);
+		anexoQuery = anexoQuery.gte("created_at", desdeTs);
+		anexoQuery = anexoQuery.lte("created_at", hastaTs);
 
 		// Data scoping for anexos
 		if (scope.needsScoping) {

@@ -24,6 +24,7 @@ import { generateFinalStoragePath } from "@/utils/fileUpload";
 import type { PolizaFormState, FamiliarSalud, DatosSepelio, DatosVida } from "@/types/poliza";
 import type { ActionResult } from "@/types/policyPermission";
 import { cargarPolizaFormState } from "@/utils/polizas/cargarFormState";
+import { esMesRegistroCerrado, MENSAJE_MES_CERRADO } from "@/utils/polizas/cierreMes";
 
 /**
  * Mapea errores de Supabase/PostgreSQL a mensajes legibles para el usuario.
@@ -130,7 +131,7 @@ async function verifyEditPermission(polizaId: string) {
 	// Fetch policy data for multiple checks
 	const { data: polizaData } = await supabase
 		.from("polizas")
-		.select("created_by, estado, puede_editar_hasta, responsable_id")
+		.select("created_by, estado, puede_editar_hasta, responsable_id, created_at")
 		.eq("id", polizaId)
 		.single();
 
@@ -142,6 +143,13 @@ async function verifyEditPermission(polizaId: string) {
 		new Date(polizaData.puede_editar_hasta) > new Date()
 	) {
 		return { supabase, user, profile, canEdit: true };
+	}
+
+	// Cierre de mes: una póliza ACTIVA de un mes de registro ya cerrado solo la
+	// edita un administrador (ni el líder de equipo ni permisos por póliza).
+	// Las pendientes/rechazadas quedan fuera del candado (subsanación del cierre).
+	if (polizaData?.estado === "activa" && polizaData.created_at && esMesRegistroCerrado(polizaData.created_at)) {
+		throw new Error(MENSAJE_MES_CERRADO);
 	}
 
 	// Check if user is a team leader for this policy

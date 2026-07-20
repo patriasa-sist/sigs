@@ -1456,7 +1456,7 @@ export async function obtenerAnexosPoliza(polizaId: string): Promise<{
 			.select(
 				`
 				id, numero_anexo, tipo_anexo, fecha_anexo, fecha_efectiva,
-				estado, observaciones, fecha_validacion, created_by,
+				estado, observaciones, fecha_validacion, created_by, prima_total,
 				creador:profiles!created_by (full_name),
 				validador:profiles!validado_por (full_name)
 			`,
@@ -1524,6 +1524,10 @@ export async function obtenerAnexosPoliza(polizaId: string): Promise<{
 				fecha_validacion: a.fecha_validacion || undefined,
 				cantidad_documentos: docCountMap.get(a.id) || 0,
 				monto_ajuste_total: montoAjusteMap.get(a.id) || 0,
+				sin_plan_pagos:
+					a.tipo_anexo === "inclusion" &&
+					Number(a.prima_total ?? 0) !== 0 &&
+					!(pagosPorAnexo.get(a.id) || []).some((p) => p.tipo === "cuota_propia"),
 			};
 		});
 
