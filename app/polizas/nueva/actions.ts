@@ -28,8 +28,8 @@ function mapSupabaseError(
 		case "23505": {
 			// Unique constraint violation
 			const target = msg + detail;
-			if (target.includes("numero_poliza")) {
-				return "Ya existe una póliza de esta compañía con ese número y la misma fecha de inicio de vigencia. Si es una renovación, verifique que la vigencia sea la del nuevo período.";
+			if (target.includes("numero_poliza") || target.includes("polizas_numero_compania_vigencia")) {
+				return "Ya existe una póliza de esta compañía con ese número y la misma fecha de inicio de vigencia (puede pertenecer a otro equipo y no ser visible en su listado). Si es una renovación, verifique que la vigencia sea la del nuevo período.";
 			}
 			return `${context}: ${describirErrorDuplicado(error)}`;
 		}

@@ -43,8 +43,8 @@ function mapSupabaseError(
 	switch (code) {
 		case "23505": {
 			const target = msg + detail;
-			if (target.includes("numero_poliza")) {
-				return "Ya existe una póliza con ese número de póliza. Verifique el número ingresado.";
+			if (target.includes("numero_poliza") || target.includes("polizas_numero_compania_vigencia")) {
+				return "Ya existe una póliza de esta compañía con ese número y la misma fecha de inicio de vigencia. Verifique el número y la vigencia ingresados.";
 			}
 			return `${context}: ${describirErrorDuplicado(error)}`;
 		}
