@@ -29,7 +29,8 @@ Guía para Claude Code (claude.ai/code) al trabajar en este repositorio.
 ## Autenticación y permisos
 
 - Sistema por invitación. Roles activos: admin, agente, comercial, cobranza, siniestros, uif, invitado, desactivado. El rol `usuario` existe en BD pero está deprecado: no asignarlo ni incluirlo en listas nuevas.
-- Los permisos granulares viajan en el JWT (claims `user_role`, `user_permissions`, `team_member_ids` inyectados por `custom_access_token_hook`). Cambios de permisos/equipos requieren re-login.
+- Los permisos granulares viajan en el JWT (claims `user_role`, `user_permissions`, `team_member_ids`, `team_ids` inyectados por `custom_access_token_hook`). Cambios de permisos/equipos requieren re-login.
+- Sello de equipo: `polizas.equipo_id` guarda el equipo del responsable al REGISTRAR (nunca se recalcula). Visibilidad de pólizas = responsable en mi equipo actual O póliza sellada con mi equipo — así la producción histórica no "viaja" cuando un miembro cambia de equipo. Helpers en `utils/auth/scopePolizas.ts` (`aplicarScopePolizas`, `polizaDentroDeScope`, `filtroEquipoOr`); la escritura (anexos, edición) sigue scopeada solo por responsable.
 - Admin tiene bypass hardcodeado en código (nunca consulta permisos en BD).
 - Server: helpers en `utils/auth/helpers.ts` (`getCurrentUser` cacheado, `hasPermission`/`requirePermission`, `getDataScopeFilter` — 0 queries a BD). Cliente: decodificar `session.access_token` (patrón en `components/ui/navbar.tsx` y `components/polizas/steps/DatosBasicos.tsx`).
 - Middleware/proxy: `utils/supabase/middleware.ts` con mapa `PROTECTED_ROUTES` por permiso; el matcher de rutas vive SOLO en `proxy.ts` de la raíz (Next 16 renombró `middleware.ts` → `proxy.ts`).

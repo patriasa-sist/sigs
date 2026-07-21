@@ -761,6 +761,32 @@ async function procesarDocumentos(supabase: SupabaseClient, polizaId: string, fo
 	}
 }
 
+/**
+ * Sello de equipo: equipo del responsable AL MOMENTO del registro.
+ * Si el responsable pertenece a varios equipos se prefiere uno compartido con
+ * quien registra; si no comparten, el más antiguo del responsable. NULL si el
+ * responsable no tiene equipo (la visibilidad cae solo en responsable_id).
+ */
+async function obtenerEquipoSello(
+	supabase: SupabaseClient,
+	responsableId: string | null | undefined,
+	creadorId: string,
+): Promise<string | null> {
+	if (!responsableId) return null;
+	const userIds = responsableId === creadorId ? [responsableId] : [responsableId, creadorId];
+	const { data } = await supabase
+		.from("equipo_miembros")
+		.select("equipo_id, user_id, added_at")
+		.in("user_id", userIds)
+		.order("added_at", { ascending: true });
+	if (!data?.length) return null;
+	const delResponsable = data.filter((m) => m.user_id === responsableId);
+	if (!delResponsable.length) return null;
+	const delCreador = new Set(data.filter((m) => m.user_id === creadorId).map((m) => m.equipo_id));
+	const compartido = delResponsable.find((m) => delCreador.has(m.equipo_id));
+	return (compartido ?? delResponsable[0]).equipo_id;
+}
+
 export async function guardarPoliza(formState: PolizaFormState) {
 	const supabase = await createClient();
 
@@ -852,6 +878,8 @@ export async function guardarPoliza(formState: PolizaFormState) {
 			formState.datos_especificos?.tipo_ramo === "Salud" && datosEsp && "tiene_maternidad" in datosEsp
 				? (datosEsp as { tiene_maternidad: boolean }).tiene_maternidad
 				: false;
+		const equipoSelloId = await obtenerEquipoSello(supabase, formState.datos_basicos.responsable_id, user.id);
+
 		const { data: poliza, error: errorPoliza } = await supabase
 			.from("polizas")
 			.insert({
@@ -891,6 +919,7 @@ export async function guardarPoliza(formState: PolizaFormState) {
 					: null,
 				regional_asegurado_id: regionalAseguradoId,
 				tiene_maternidad: tieneMaternidad,
+				equipo_id: equipoSelloId,
 			})
 			.select()
 			.single();

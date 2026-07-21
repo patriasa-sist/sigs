@@ -3,6 +3,7 @@
 import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
 import { checkPermission, getDataScopeFilter } from "@/utils/auth/helpers";
+import { polizaDentroDeScope } from "@/utils/auth/scopePolizas";
 import { resolverNombresCliente } from "@/utils/polizas/resolverNombresCliente";
 import { netoAporteAnexo, type PagoAnexoLite } from "@/utils/polizas/aporteAnexo";
 import { anularCuotasPorAnulacion } from "@/utils/polizas/anulacionCuotas";
@@ -78,7 +79,8 @@ export async function obtenerAnexosPendientes(): Promise<{
 		if (!user) return { success: false, error: "No autenticado" };
 
 		const { allowed } = await checkPermission("polizas.validar");
-		const { needsScoping, teamMemberIds } = await getDataScopeFilter("polizas");
+		const scope = await getDataScopeFilter("polizas");
+		const { needsScoping, teamMemberIds } = scope;
 
 		// Verificar si es líder de equipo (para usuarios sin permiso JWT pero con rol_equipo='lider')
 		let esLider = false;
@@ -101,7 +103,7 @@ export async function obtenerAnexosPendientes(): Promise<{
 				id, numero_anexo, tipo_anexo, fecha_anexo, fecha_efectiva,
 				observaciones, created_at, prima_total,
 				poliza:polizas!poliza_id (
-					id, numero_poliza, ramo, responsable_id,
+					id, numero_poliza, ramo, responsable_id, equipo_id,
 					companias_aseguradoras!compania_aseguradora_id (nombre)
 				),
 				creador:profiles!created_by (full_name, email)
@@ -123,7 +125,12 @@ export async function obtenerAnexosPendientes(): Promise<{
 
 		// Filtrar por scope: aplica para roles con aislamiento (comercial/agente) y para líderes sin permiso JWT
 		let anexosFiltrados = anexos;
-		if ((needsScoping || esLider) && teamMemberIds.length > 0) {
+		if (needsScoping) {
+			anexosFiltrados = anexos.filter((a) => {
+				const poliza = a.poliza as unknown as { responsable_id: string; equipo_id: string | null } | null;
+				return poliza !== null && polizaDentroDeScope(scope, poliza);
+			});
+		} else if (esLider && teamMemberIds.length > 0) {
 			anexosFiltrados = anexos.filter((a) => {
 				const poliza = a.poliza as unknown as { responsable_id: string } | null;
 				return poliza && teamMemberIds.includes(poliza.responsable_id);
@@ -230,12 +237,12 @@ export async function validarAnexo(anexoId: string): Promise<{
 		if (!user) return { success: false, error: "No autenticado" };
 
 		const { allowed } = await checkPermission("polizas.validar");
-		const { needsScoping, teamMemberIds } = await getDataScopeFilter("polizas");
+		const scope = await getDataScopeFilter("polizas");
 
-		// Obtener el anexo con responsable de la póliza para verificar scope
+		// Obtener el anexo con responsable y equipo sellado de la póliza para verificar scope
 		const { data: anexo } = await supabase
 			.from("polizas_anexos")
-			.select("id, estado, tipo_anexo, poliza_id, poliza:polizas!poliza_id(responsable_id)")
+			.select("id, estado, tipo_anexo, poliza_id, poliza:polizas!poliza_id(responsable_id, equipo_id)")
 			.eq("id", anexoId)
 			.single();
 
@@ -243,7 +250,8 @@ export async function validarAnexo(anexoId: string): Promise<{
 			return { success: false, error: "Anexo no encontrado" };
 		}
 
-		const responsableId = (anexo.poliza as unknown as { responsable_id: string } | null)?.responsable_id;
+		const polizaScope = anexo.poliza as unknown as { responsable_id: string; equipo_id: string | null } | null;
+		const responsableId = polizaScope?.responsable_id;
 
 		// Si no tiene permiso JWT, verificar si es líder de equipo para este anexo
 		if (!allowed) {
@@ -254,7 +262,7 @@ export async function validarAnexo(anexoId: string): Promise<{
 		}
 
 		// Enforcement de scope para usuarios con permiso pero con aislamiento de datos
-		if (needsScoping && responsableId && !teamMemberIds.includes(responsableId)) {
+		if (polizaScope && !polizaDentroDeScope(scope, polizaScope)) {
 			if (allowed) {
 				return { success: false, error: "No tiene permisos para validar este anexo" };
 			}
@@ -335,12 +343,12 @@ export async function rechazarAnexo(
 		if (!user) return { success: false, error: "No autenticado" };
 
 		const { allowed } = await checkPermission("polizas.validar");
-		const { needsScoping, teamMemberIds } = await getDataScopeFilter("polizas");
+		const scope = await getDataScopeFilter("polizas");
 
-		// Obtener el anexo con responsable de la póliza para verificar scope
+		// Obtener el anexo con responsable y equipo sellado de la póliza para verificar scope
 		const { data: anexo } = await supabase
 			.from("polizas_anexos")
-			.select("id, estado, poliza_id, poliza:polizas!poliza_id(responsable_id)")
+			.select("id, estado, poliza_id, poliza:polizas!poliza_id(responsable_id, equipo_id)")
 			.eq("id", anexoId)
 			.single();
 
@@ -348,7 +356,8 @@ export async function rechazarAnexo(
 			return { success: false, error: "Anexo no encontrado" };
 		}
 
-		const responsableId = (anexo.poliza as unknown as { responsable_id: string } | null)?.responsable_id;
+		const polizaScope = anexo.poliza as unknown as { responsable_id: string; equipo_id: string | null } | null;
+		const responsableId = polizaScope?.responsable_id;
 
 		// Si no tiene permiso JWT, verificar si es líder de equipo para este anexo
 		if (!allowed) {
@@ -359,7 +368,7 @@ export async function rechazarAnexo(
 		}
 
 		// Enforcement de scope para usuarios con permiso pero con aislamiento de datos
-		if (needsScoping && responsableId && !teamMemberIds.includes(responsableId)) {
+		if (polizaScope && !polizaDentroDeScope(scope, polizaScope)) {
 			if (allowed) {
 				return { success: false, error: "No tiene permisos para rechazar este anexo" };
 			}

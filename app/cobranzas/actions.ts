@@ -3,6 +3,7 @@
 import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
 import { checkPermission, getDataScopeFilter } from "@/utils/auth/helpers";
+import { aplicarScopePolizas, polizaDentroDeScope } from "@/utils/auth/scopePolizas";
 import { obtenerEjecutivosFiltro } from "@/utils/ejecutivos";
 import { obtenerEstadoReal } from "@/utils/estadoCuota";
 import { obtenerDetalleRamo } from "@/utils/polizas/detalleRamo";
@@ -176,9 +177,7 @@ export async function obtenerPolizasConPendientes(
 			.eq("estado", "activa")
 			.order("numero_poliza", { ascending: true });
 
-		if (scope.needsScoping) {
-			polizasQueryBase = polizasQueryBase.in("responsable_id", scope.teamMemberIds);
-		}
+		polizasQueryBase = aplicarScopePolizas(polizasQueryBase, scope);
 
 		let cobradosQueryBase = supabase
 			.from("polizas_pagos")
@@ -186,9 +185,7 @@ export async function obtenerPolizasConPendientes(
 			.eq("estado", "pagado")
 			.gte("fecha_pago", firstDayOfMonth);
 
-		if (scope.needsScoping) {
-			cobradosQueryBase = cobradosQueryBase.in("poliza.responsable_id", scope.teamMemberIds);
-		}
+		cobradosQueryBase = aplicarScopePolizas(cobradosQueryBase, scope, "poliza");
 
 		// Cobros de vigencia corrida pendientes (anexos de anulación activos). Sus
 		// pólizas están 'anulada' pero el saldo sigue siendo cobrable.
@@ -230,9 +227,7 @@ export async function obtenerPolizasConPendientes(
 				.select(POLIZA_SELECT)
 				.in("id", anuladaConVcIds)
 				.eq("estado", "anulada");
-			if (scope.needsScoping) {
-				anuladaQuery = anuladaQuery.in("responsable_id", scope.teamMemberIds);
-			}
+			anuladaQuery = aplicarScopePolizas(anuladaQuery, scope);
 			const { data: anuladas } = await anuladaQuery;
 			polizasAnuladas = anuladas || [];
 		}
@@ -795,9 +790,7 @@ export async function exportarReporte(filtros: ExportFilters): Promise<CobranzaS
 		}
 
 		// Scoping: agentes/comerciales solo ven datos de su equipo
-		if (scope.needsScoping) {
-			query = query.in("responsable_id", scope.teamMemberIds);
-		}
+		query = aplicarScopePolizas(query, scope);
 
 		const { data: polizas, error } = await query.order("numero_poliza", { ascending: true });
 
@@ -956,9 +949,7 @@ export async function obtenerOpcionesFiltroExport(): Promise<CobranzaServerRespo
 		// Ramos: derivados de las pólizas activas visibles (respetando scope).
 		let polizasQuery = supabase.from("polizas").select("ramo").eq("estado", "activa");
 
-		if (scope.needsScoping) {
-			polizasQuery = polizasQuery.in("responsable_id", scope.teamMemberIds);
-		}
+		polizasQuery = aplicarScopePolizas(polizasQuery, scope);
 
 		// Responsables: roster completo de ejecutivos activos (no solo los que ya tienen
 		// pólizas activas), respetando scoping de equipo. Ver utils/ejecutivos.ts.
@@ -2411,10 +2402,8 @@ export async function obtenerCobranzasPaginadas(
 				{ count: "exact" },
 			);
 
-		// Data scoping
-		if (scope.needsScoping) {
-			query = query.in("responsable_id", scope.teamMemberIds);
-		}
+		// Data scoping (la vista expone equipo_id para el sello de equipo)
+		query = aplicarScopePolizas(query, scope);
 
 		// Filtros opcionales
 		if (ramo) query = query.eq("ramo", ramo);
@@ -2551,11 +2540,11 @@ export async function obtenerCobranzaStats(): Promise<CobranzaServerResponse<Cob
 		let vistaQuery = supabase
 			.from("cobranzas_polizas_resumen")
 			.select("moneda,cuotas_vencidas,cuotas_pendientes,total_pendiente,proxima_fecha_vencimiento");
-		if (scope.needsScoping) vistaQuery = vistaQuery.in("responsable_id", scope.teamMemberIds);
+		vistaQuery = aplicarScopePolizas(vistaQuery, scope);
 
 		const cobradosQuery = supabase
 			.from("polizas_pagos")
-			.select("monto,fecha_pago,poliza:polizas!poliza_id(moneda,responsable_id)")
+			.select("monto,fecha_pago,poliza:polizas!poliza_id(moneda,responsable_id,equipo_id)")
 			.eq("estado", "pagado")
 			.gte("fecha_pago", firstDayOfMonth);
 		// scoping en cobrados via join filter no soportado directamente; filtrar post-fetch
@@ -2594,9 +2583,13 @@ export async function obtenerCobranzaStats(): Promise<CobranzaServerResponse<Cob
 		const cobradosMesPorMoneda = new Map<string, number>();
 
 		for (const cuota of cuotasCobradas ?? []) {
-			const polizaData = cuota.poliza as unknown as { moneda: string; responsable_id: string } | null;
+			const polizaData = cuota.poliza as unknown as {
+				moneda: string;
+				responsable_id: string;
+				equipo_id: string | null;
+			} | null;
 			if (!polizaData) continue;
-			if (scope.needsScoping && !scope.teamMemberIds.includes(polizaData.responsable_id)) continue;
+			if (!polizaDentroDeScope(scope, polizaData)) continue;
 			const moneda = polizaData.moneda;
 			cobradosMesPorMoneda.set(moneda, (cobradosMesPorMoneda.get(moneda) || 0) + cuota.monto);
 			if (cuota.fecha_pago === today) {
@@ -2651,9 +2644,7 @@ export async function obtenerFiltrosCobranza(): Promise<CobranzaServerResponse<F
 			)
 			.eq("estado", "activa");
 
-		if (scope.needsScoping) {
-			polizasQuery = polizasQuery.in("responsable_id", scope.teamMemberIds);
-		}
+		polizasQuery = aplicarScopePolizas(polizasQuery, scope);
 
 		// Responsables: roster completo de ejecutivos activos (no solo los que ya tienen
 		// pólizas activas), respetando scoping de equipo. Ver utils/ejecutivos.ts.

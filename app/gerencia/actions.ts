@@ -2,6 +2,7 @@
 
 import { createClient } from "@/utils/supabase/server";
 import { checkPermission, getDataScopeFilter } from "@/utils/auth/helpers";
+import { aplicarScopePolizas, filtroEquipoOr } from "@/utils/auth/scopePolizas";
 import type {
 	GerenciaFiltros,
 	EstadisticasProduccion,
@@ -150,12 +151,10 @@ export async function obtenerEstadisticasProduccion(
 			.lte("inicio_vigencia", prevAnioHasta);
 
 		// Aplicar filtros comunes a las cuatro queries
-		if (scope.needsScoping) {
-			prodQuery = prodQuery.in("responsable_id", scope.teamMemberIds);
-			anulQuery = anulQuery.in("responsable_id", scope.teamMemberIds);
-			vencQuery = vencQuery.in("responsable_id", scope.teamMemberIds);
-			prevQuery = prevQuery.in("responsable_id", scope.teamMemberIds);
-		}
+		prodQuery = aplicarScopePolizas(prodQuery, scope);
+		anulQuery = aplicarScopePolizas(anulQuery, scope);
+		vencQuery = aplicarScopePolizas(vencQuery, scope);
+		prevQuery = aplicarScopePolizas(prevQuery, scope);
 		if (filtros.regional_id) {
 			prodQuery = prodQuery.eq("regional_id", filtros.regional_id);
 			anulQuery = anulQuery.eq("regional_id", filtros.regional_id);
@@ -443,9 +442,7 @@ export async function obtenerEstadisticasCobranzas(
 			.gte("fecha_vencimiento", fechaAnioDesde)
 			.lte("fecha_vencimiento", fechaAnioHasta);
 
-		if (scope.needsScoping) {
-			query = query.in("poliza.responsable_id", scope.teamMemberIds);
-		}
+		query = aplicarScopePolizas(query, scope, "poliza");
 		if (filtros.regional_id) {
 			query = query.eq("poliza.regional_id", filtros.regional_id);
 		}
@@ -457,12 +454,13 @@ export async function obtenerEstadisticasCobranzas(
 				.from("equipo_miembros")
 				.select("user_id")
 				.eq("equipo_id", filtros.equipo_id);
-			if (members && members.length > 0) {
-				query = query.in(
-					"poliza.responsable_id",
-					members.map((m) => m.user_id),
-				);
-			}
+			query = query.or(
+				filtroEquipoOr(
+					filtros.equipo_id,
+					(members ?? []).map((m) => m.user_id),
+				),
+				{ referencedTable: "poliza" },
+			);
 		}
 
 		const { data: pagos, error } = await query;

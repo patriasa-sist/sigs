@@ -13,6 +13,7 @@
 
 import { createClient } from "@/utils/supabase/server";
 import { getDataScopeFilter } from "@/utils/auth/helpers";
+import { polizaDentroDeScope } from "@/utils/auth/scopePolizas";
 import { cargarPolizaFormState } from "@/utils/polizas/cargarFormState";
 import type { ActionResult } from "@/types/policyPermission";
 import type { PolizaFormState } from "@/types/poliza";
@@ -37,7 +38,7 @@ export async function obtenerPolizaParaRenovacion(polizaId: string): Promise<Act
 		// Cargar estado y responsable para validar acceso y estado renovable
 		const { data: poliza, error: errorPoliza } = await supabase
 			.from("polizas")
-			.select("estado, responsable_id")
+			.select("estado, responsable_id, equipo_id")
 			.eq("id", polizaId)
 			.single();
 
@@ -47,7 +48,7 @@ export async function obtenerPolizaParaRenovacion(polizaId: string): Promise<Act
 
 		// Mismo guard de alcance por equipo que obtenerDetallePoliza
 		const scope = await getDataScopeFilter("polizas");
-		if (scope.needsScoping && !scope.teamMemberIds.includes(poliza.responsable_id)) {
+		if (!polizaDentroDeScope(scope, poliza)) {
 			return { success: false, error: "No tiene acceso a esta póliza" };
 		}
 

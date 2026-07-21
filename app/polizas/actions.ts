@@ -2,6 +2,7 @@
 
 import { createClient } from "@/utils/supabase/server";
 import { getDataScopeFilter } from "@/utils/auth/helpers";
+import { aplicarScopePolizas, polizaDentroDeScope } from "@/utils/auth/scopePolizas";
 import { obtenerEjecutivosFiltro } from "@/utils/ejecutivos";
 import { resolverNombresCliente } from "@/utils/polizas/resolverNombresCliente";
 import { parseItemsJson } from "@/utils/polizas/itemsJson";
@@ -488,7 +489,7 @@ export async function obtenerPolizas(params: ObtenerPolizasParams = {}) {
 			.order("created_at", { ascending: false })
 			.range(from, to);
 
-		if (scope.needsScoping) query = query.in("responsable_id", scope.teamMemberIds);
+		query = aplicarScopePolizas(query, scope);
 		if (ramo) query = query.eq("ramo", ramo);
 		if (compania_id) query = query.eq("compania_aseguradora_id", compania_id);
 		if (estado) query = query.eq("estado", estado);
@@ -546,7 +547,7 @@ export async function obtenerFiltrosPolizas() {
 
 		// Ramos, compañías y categorías: derivados de las pólizas visibles (scoped, solo columnas necesarias).
 		let metaQuery = supabase.from("polizas").select("ramo, compania_aseguradora_id, categoria_id");
-		if (scope.needsScoping) metaQuery = metaQuery.in("responsable_id", scope.teamMemberIds);
+		metaQuery = aplicarScopePolizas(metaQuery, scope);
 		const { data: meta } = await metaQuery;
 
 		const ramos = [...new Set(meta?.map((p) => p.ramo).filter(Boolean) ?? [])].sort() as string[];
@@ -617,9 +618,9 @@ export async function obtenerDetallePoliza(polizaId: string) {
 			return { success: false, error: "Póliza no encontrada" };
 		}
 
-		// Verificar scoping por equipo
+		// Verificar scoping por equipo (responsable actual o sello de equipo)
 		const scope = await getDataScopeFilter("polizas");
-		if (scope.needsScoping && !scope.teamMemberIds.includes(poliza.responsable_id)) {
+		if (!polizaDentroDeScope(scope, poliza)) {
 			return { success: false, error: "No tiene acceso a esta póliza" };
 		}
 
@@ -1672,9 +1673,7 @@ export async function buscarPolizas(query: string) {
 			.order("created_at", { ascending: false })
 			.limit(50);
 
-		if (scope.needsScoping) {
-			searchQuery = searchQuery.in("responsable_id", scope.teamMemberIds);
-		}
+		searchQuery = aplicarScopePolizas(searchQuery, scope);
 
 		const { data: polizas } = await searchQuery;
 

@@ -2,6 +2,7 @@
 
 import { createClient } from "@/utils/supabase/server";
 import { requirePermission } from "@/utils/auth/helpers";
+import { filtroEquipoOr } from "@/utils/auth/scopePolizas";
 
 export interface EquipoMetricas {
 	equipo_id: string;
@@ -66,16 +67,15 @@ export async function obtenerMetricasPorEquipo(): Promise<ActionResult<EquipoMet
 			}
 
 			// Obtener metricas en paralelo
+			// Pólizas: miembros actuales + selladas con el equipo (sello histórico)
+			const orEquipo = filtroEquipoOr(equipo.id, memberIds);
 			const [polizasCount, polizasActivasResult, clientesCount, siniestrosCount, primaResult] = await Promise.all(
 				[
+					supabase.from("polizas").select("id", { count: "exact", head: true }).or(orEquipo),
 					supabase
 						.from("polizas")
 						.select("id", { count: "exact", head: true })
-						.in("responsable_id", memberIds),
-					supabase
-						.from("polizas")
-						.select("id", { count: "exact", head: true })
-						.in("responsable_id", memberIds)
+						.or(orEquipo)
 						.eq("estado", "activa"),
 					supabase
 						.from("clients")
@@ -86,11 +86,7 @@ export async function obtenerMetricasPorEquipo(): Promise<ActionResult<EquipoMet
 						.select("id", { count: "exact", head: true })
 						.in("responsable_id", memberIds)
 						.eq("estado", "abierto"),
-					supabase
-						.from("polizas")
-						.select("prima_total")
-						.in("responsable_id", memberIds)
-						.eq("estado", "activa"),
+					supabase.from("polizas").select("prima_total").or(orEquipo).eq("estado", "activa"),
 				],
 			);
 

@@ -2,6 +2,7 @@
 
 import { createClient } from "@/utils/supabase/server";
 import { checkPermission, getDataScopeFilter } from "@/utils/auth/helpers";
+import { aplicarScopePolizas, filtroEquipoOr } from "@/utils/auth/scopePolizas";
 import { resolverNombresCliente } from "@/utils/polizas/resolverNombresCliente";
 import { derivarFactorPrimaNeta, derivarPorcentajeComision } from "@/utils/polizas/factorDerivado";
 import { computarPrimaVigenciaCorrida } from "@/utils/polizas/vigenciaCorridaAnulacion";
@@ -165,9 +166,7 @@ export async function exportarProduccion(
 		query = query.lte("poliza.inicio_vigencia", fechaHasta);
 
 		// Data scoping: comercial/agente solo ven datos de su equipo
-		if (scope.needsScoping) {
-			query = query.in("poliza.responsable_id", scope.teamMemberIds);
-		}
+		query = aplicarScopePolizas(query, scope, "poliza");
 
 		// Filtrar por estado de póliza si se especifica
 		if (filtros.estado_poliza && filtros.estado_poliza !== "all") {
@@ -184,17 +183,15 @@ export async function exportarProduccion(
 			query = query.eq("poliza.compania_aseguradora_id", filtros.compania_id);
 		}
 
-		// Filtrar por equipo si se especifica
+		// Filtrar por equipo si se especifica (miembros actuales + pólizas selladas)
 		if (filtros.equipo_id) {
 			const { data: teamMemberIds } = await supabase
 				.from("equipo_miembros")
 				.select("user_id")
 				.eq("equipo_id", filtros.equipo_id);
 
-			if (teamMemberIds && teamMemberIds.length > 0) {
-				const memberIds = teamMemberIds.map((m) => m.user_id);
-				query = query.in("poliza.responsable_id", memberIds);
-			}
+			const memberIds = (teamMemberIds ?? []).map((m) => m.user_id);
+			query = query.or(filtroEquipoOr(filtros.equipo_id, memberIds), { referencedTable: "poliza" });
 		}
 
 		const { data: pagos, error } = await query
@@ -701,9 +698,7 @@ export async function exportarProduccionNuevo(
 		polizaQuery = polizaQuery.gte("created_at", desdeTs).lte("created_at", hastaTs);
 
 		// Data scoping: comercial/agente solo ven datos de su equipo
-		if (scope.needsScoping) {
-			polizaQuery = polizaQuery.in("responsable_id", scope.teamMemberIds);
-		}
+		polizaQuery = aplicarScopePolizas(polizaQuery, scope);
 
 		if (filtros.estado_poliza && filtros.estado_poliza !== "all") {
 			polizaQuery = polizaQuery.eq("estado", filtros.estado_poliza);
@@ -717,8 +712,8 @@ export async function exportarProduccionNuevo(
 		if (filtros.excluir_retroactivas) {
 			polizaQuery = polizaQuery.eq("es_retroactiva", false);
 		}
-		if (memberIds) {
-			polizaQuery = polizaQuery.in("responsable_id", memberIds);
+		if (filtros.equipo_id) {
+			polizaQuery = polizaQuery.or(filtroEquipoOr(filtros.equipo_id, memberIds ?? []));
 		}
 
 		// ---- CONSULTA 2: Anexos validados ----
@@ -814,9 +809,7 @@ export async function exportarProduccionNuevo(
 		anexoQuery = anexoQuery.lte("created_at", hastaTs);
 
 		// Data scoping for anexos
-		if (scope.needsScoping) {
-			anexoQuery = anexoQuery.in("poliza.responsable_id", scope.teamMemberIds);
-		}
+		anexoQuery = aplicarScopePolizas(anexoQuery, scope, "poliza");
 
 		if (filtros.regional_id) {
 			anexoQuery = anexoQuery.eq("poliza.regional_id", filtros.regional_id);
@@ -829,8 +822,10 @@ export async function exportarProduccionNuevo(
 		if (filtros.estado_poliza && filtros.estado_poliza !== "all") {
 			anexoQuery = anexoQuery.eq("poliza.estado", filtros.estado_poliza);
 		}
-		if (memberIds) {
-			anexoQuery = anexoQuery.in("poliza.responsable_id", memberIds);
+		if (filtros.equipo_id) {
+			anexoQuery = anexoQuery.or(filtroEquipoOr(filtros.equipo_id, memberIds ?? []), {
+				referencedTable: "poliza",
+			});
 		}
 
 		// Ejecutar ambas consultas en paralelo, paginadas (Supabase corta en 1000 filas/request,
@@ -1271,13 +1266,14 @@ export async function exportarComisionesDirector(
 			.gte("fecha_pago", filtros.fecha_desde)
 			.lte("fecha_pago", filtros.fecha_hasta);
 
-		if (scope.needsScoping) {
-			pagadasQuery = pagadasQuery.in("poliza.responsable_id", scope.teamMemberIds);
-		}
+		pagadasQuery = aplicarScopePolizas(pagadasQuery, scope, "poliza");
 		if (filtros.regional_id) pagadasQuery = pagadasQuery.eq("poliza.regional_id", filtros.regional_id);
 		if (filtros.compania_id) pagadasQuery = pagadasQuery.eq("poliza.compania_aseguradora_id", filtros.compania_id);
 		if (filtros.director_id) pagadasQuery = pagadasQuery.eq("poliza.director_cartera_id", filtros.director_id);
-		if (memberIds) pagadasQuery = pagadasQuery.in("poliza.responsable_id", memberIds);
+		if (filtros.equipo_id)
+			pagadasQuery = pagadasQuery.or(filtroEquipoOr(filtros.equipo_id, memberIds ?? []), {
+				referencedTable: "poliza",
+			});
 
 		// Query 2: cuotas por cobrar (sin parciales ni prorrogadas) con fecha_vencimiento en el rango
 		let porCobrarQuery = supabase
@@ -1290,14 +1286,15 @@ export async function exportarComisionesDirector(
 			.gte("fecha_vencimiento", filtros.fecha_desde)
 			.lte("fecha_vencimiento", filtros.fecha_hasta);
 
-		if (scope.needsScoping) {
-			porCobrarQuery = porCobrarQuery.in("poliza.responsable_id", scope.teamMemberIds);
-		}
+		porCobrarQuery = aplicarScopePolizas(porCobrarQuery, scope, "poliza");
 		if (filtros.regional_id) porCobrarQuery = porCobrarQuery.eq("poliza.regional_id", filtros.regional_id);
 		if (filtros.compania_id)
 			porCobrarQuery = porCobrarQuery.eq("poliza.compania_aseguradora_id", filtros.compania_id);
 		if (filtros.director_id) porCobrarQuery = porCobrarQuery.eq("poliza.director_cartera_id", filtros.director_id);
-		if (memberIds) porCobrarQuery = porCobrarQuery.in("poliza.responsable_id", memberIds);
+		if (filtros.equipo_id)
+			porCobrarQuery = porCobrarQuery.or(filtroEquipoOr(filtros.equipo_id, memberIds ?? []), {
+				referencedTable: "poliza",
+			});
 
 		const [pagadasRes, porCobrarRes] = await Promise.all([pagadasQuery, porCobrarQuery]);
 
@@ -1493,9 +1490,7 @@ export async function exportarVencimientos(
 		query = query.lte("fin_vigencia", fechaHasta);
 
 		// Data scoping: comercial/agente solo ven datos de su equipo
-		if (scope.needsScoping) {
-			query = query.in("responsable_id", scope.teamMemberIds);
-		}
+		query = aplicarScopePolizas(query, scope);
 
 		// Por defecto solo pólizas vigentes ("activa"); "all" incluye todas
 		if (filtros.estado_poliza && filtros.estado_poliza !== "all") {
@@ -1507,8 +1502,8 @@ export async function exportarVencimientos(
 		if (filtros.compania_id) {
 			query = query.eq("compania_aseguradora_id", filtros.compania_id);
 		}
-		if (memberIds) {
-			query = query.in("responsable_id", memberIds);
+		if (filtros.equipo_id) {
+			query = query.or(filtroEquipoOr(filtros.equipo_id, memberIds ?? []));
 		}
 
 		const { data, error } = await query.order("fin_vigencia", { ascending: true });

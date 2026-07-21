@@ -95,19 +95,21 @@ export const getCurrentUser = cache(async () => {
  *   - user_role: rol del usuario
  *   - user_permissions: permisos efectivos
  *   - team_member_ids: IDs de compañeros de equipo (Fase 4)
+ *   - team_ids: IDs de los equipos del usuario (sello de equipo en pólizas)
  */
 const getJWTClaimsServer = cache(
 	async (): Promise<{
 		user_role: string;
 		user_permissions: string[];
 		team_member_ids: string[];
+		team_ids: string[];
 	}> => {
 		const supabase = await createClient();
 		const {
 			data: { session },
 		} = await supabase.auth.getSession();
 		if (!session?.access_token) {
-			return { user_role: "invitado", user_permissions: [], team_member_ids: [] };
+			return { user_role: "invitado", user_permissions: [], team_member_ids: [], team_ids: [] };
 		}
 		try {
 			const payload = JSON.parse(
@@ -120,9 +122,10 @@ const getJWTClaimsServer = cache(
 				user_role: payload.user_role || "invitado",
 				user_permissions: Array.isArray(payload.user_permissions) ? payload.user_permissions : [],
 				team_member_ids: Array.isArray(payload.team_member_ids) ? payload.team_member_ids.map(String) : [],
+				team_ids: Array.isArray(payload.team_ids) ? payload.team_ids.map(String) : [],
 			};
 		} catch {
-			return { user_role: "invitado", user_permissions: [], team_member_ids: [] };
+			return { user_role: "invitado", user_permissions: [], team_member_ids: [], team_ids: [] };
 		}
 	},
 );
@@ -331,6 +334,19 @@ export async function getPermissionsFromSession(): Promise<string[]> {
 // ============================================================================
 
 /**
+ * Resultado de getDataScopeFilter — alcance de datos del usuario actual.
+ * teamIds: equipos del usuario (claim team_ids), usados para ver pólizas
+ * selladas (polizas.equipo_id) aunque el responsable haya cambiado de equipo.
+ */
+export interface DataScope {
+	needsScoping: boolean;
+	teamMemberIds: string[];
+	teamIds: string[];
+	userId: string;
+	role: string;
+}
+
+/**
  * Determina si el usuario actual necesita aislamiento de datos
  * y retorna los IDs de sus compañeros de equipo.
  *
@@ -342,27 +358,26 @@ export async function getPermissionsFromSession(): Promise<string[]> {
  *
  * Fase 4: Lee rol y team_member_ids del JWT, sin consultas a BD.
  * Fallback al RPC get_team_member_ids() si el JWT es anterior a la migración Fase 4.
+ *
+ * teamIds viene EXCLUSIVAMENTE del claim team_ids del JWT (sin fallback a BD):
+ * con un JWT anterior a la migración del sello queda vacío y el scoping se
+ * comporta como antes (solo responsable_id), sin romper nada.
  */
-export async function getDataScopeFilter(module?: "polizas" | "clientes" | "siniestros"): Promise<{
-	needsScoping: boolean;
-	teamMemberIds: string[];
-	userId: string;
-	role: string;
-}> {
+export async function getDataScopeFilter(module?: "polizas" | "clientes" | "siniestros"): Promise<DataScope> {
 	const user = await getCurrentUser();
-	if (!user) return { needsScoping: false, teamMemberIds: [], userId: "", role: "" };
+	if (!user) return { needsScoping: false, teamMemberIds: [], teamIds: [], userId: "", role: "" };
 
 	const claims = await getJWTClaimsServer();
 	const role = claims.user_role;
 
 	// Roles que nunca necesitan aislamiento
 	if (["admin", "usuario", "cobranza"].includes(role)) {
-		return { needsScoping: false, teamMemberIds: [], userId: user.id, role };
+		return { needsScoping: false, teamMemberIds: [], teamIds: [], userId: user.id, role };
 	}
 
 	// Rol siniestros: aislado solo en su modulo, libre en polizas/clientes
 	if (role === "siniestros" && module !== "siniestros") {
-		return { needsScoping: false, teamMemberIds: [], userId: user.id, role };
+		return { needsScoping: false, teamMemberIds: [], teamIds: [], userId: user.id, role };
 	}
 
 	// Agente, comercial, siniestros (en su módulo): necesitan aislamiento.
@@ -371,6 +386,7 @@ export async function getDataScopeFilter(module?: "polizas" | "clientes" | "sini
 		return {
 			needsScoping: true,
 			teamMemberIds: claims.team_member_ids,
+			teamIds: claims.team_ids,
 			userId: user.id,
 			role,
 		};
@@ -384,6 +400,7 @@ export async function getDataScopeFilter(module?: "polizas" | "clientes" | "sini
 	return {
 		needsScoping: true,
 		teamMemberIds: data || [user.id],
+		teamIds: [],
 		userId: user.id,
 		role,
 	};
