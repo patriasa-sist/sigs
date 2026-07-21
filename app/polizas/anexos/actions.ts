@@ -10,6 +10,7 @@ import { parseItemsJson } from "@/utils/polizas/itemsJson";
 import { netoAporteAnexo, type PagoAnexoLite } from "@/utils/polizas/aporteAnexo";
 import { restaurarCuotasPorAnulacion } from "@/utils/polizas/anulacionCuotas";
 import { calcularComisionesConProducto } from "@/utils/polizaValidation";
+import { describirErrorDuplicado } from "@/utils/supabase/dbErrors";
 import type {
 	TipoAnexo,
 	AnexoFormState,
@@ -75,7 +76,7 @@ function mapAnexoError(
 			if (target.includes("anulacion")) {
 				return "Ya existe una anulación pendiente o activa para esta póliza.";
 			}
-			return `${context}: dato duplicado${detail ? ` — ${detail}` : ""}`;
+			return `${context}: ${describirErrorDuplicado(error)}`;
 		}
 		case "23503":
 			return `${context}: referencia inválida${detail ? ` — ${detail}` : ""}`;

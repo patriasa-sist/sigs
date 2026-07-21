@@ -7,6 +7,7 @@ import { getDataScopeFilter } from "@/utils/auth/helpers";
 import { generateFinalStoragePath } from "@/utils/fileUpload";
 import { ramoRequiereDatosEspecificos, DIAS_GRACIA_CUOTA_VENCIDA } from "@/utils/polizaValidation";
 import { hoyLaPaz, restarDiasISO } from "@/utils/formatters";
+import { describirErrorDuplicado } from "@/utils/supabase/dbErrors";
 import type { PolizaFormState } from "@/types/poliza";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -30,7 +31,7 @@ function mapSupabaseError(
 			if (target.includes("numero_poliza")) {
 				return "Ya existe una póliza de esta compañía con ese número y la misma fecha de inicio de vigencia. Si es una renovación, verifique que la vigencia sea la del nuevo período.";
 			}
-			return `${context}: dato duplicado${detail ? ` — ${detail}` : ""}`;
+			return `${context}: ${describirErrorDuplicado(error)}`;
 		}
 		case "23503":
 			return `${context}: referencia inválida${detail ? ` — ${detail}` : ""}. Verifique compañía, regional, responsable o producto.`;

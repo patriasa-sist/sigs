@@ -25,6 +25,7 @@ import type { PolizaFormState, FamiliarSalud, DatosSepelio, DatosVida } from "@/
 import type { ActionResult } from "@/types/policyPermission";
 import { cargarPolizaFormState } from "@/utils/polizas/cargarFormState";
 import { esMesRegistroCerrado, MENSAJE_MES_CERRADO } from "@/utils/polizas/cierreMes";
+import { describirErrorDuplicado } from "@/utils/supabase/dbErrors";
 
 /**
  * Mapea errores de Supabase/PostgreSQL a mensajes legibles para el usuario.
@@ -45,7 +46,7 @@ function mapSupabaseError(
 			if (target.includes("numero_poliza")) {
 				return "Ya existe una póliza con ese número de póliza. Verifique el número ingresado.";
 			}
-			return `${context}: dato duplicado${detail ? ` — ${detail}` : ""}`;
+			return `${context}: ${describirErrorDuplicado(error)}`;
 		}
 		case "23503":
 			return `${context}: referencia inválida${detail ? ` — ${detail}` : ""}. Verifique compañía, regional, responsable o producto.`;
