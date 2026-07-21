@@ -224,6 +224,18 @@ export async function transferirPolizas(
 			return { success: false, error: "Usuario destino no encontrado" };
 		}
 
+		// Responsable anterior de cada póliza, para dejar constancia completa en el historial
+		const { data: previas } = await supabase
+			.from("polizas")
+			.select("id, responsable:profiles!polizas_responsable_id_fkey (full_name)")
+			.in("id", polizaIds);
+		const origenPorPoliza = new Map(
+			(previas ?? []).map((p) => [
+				p.id,
+				(p.responsable as unknown as { full_name: string } | null)?.full_name || "desconocido",
+			]),
+		);
+
 		// Actualizar responsable_id en lotes
 		const { error: updateError, count } = await supabase
 			.from("polizas")
@@ -232,13 +244,14 @@ export async function transferirPolizas(
 
 		if (updateError) throw updateError;
 
-		// Registrar en historial
+		// Registrar en historial (el sello de equipo NO se toca: la producción
+		// histórica sigue perteneciendo al equipo donde se registró)
 		const historialEntries = polizaIds.map((polizaId) => ({
 			poliza_id: polizaId,
 			accion: "transferencia",
 			usuario_id: profile.id,
 			campos_modificados: ["responsable_id"],
-			descripcion: `Transferencia de responsable a ${targetUser.full_name}${motivo ? ` - Motivo: ${motivo}` : ""}`,
+			descripcion: `Transferencia de responsable de ${origenPorPoliza.get(polizaId) || "desconocido"} a ${targetUser.full_name}${motivo ? ` - Motivo: ${motivo}` : ""}`,
 		}));
 
 		await supabase.from("polizas_historial_ediciones").insert(historialEntries);
