@@ -24,7 +24,7 @@ import { generateFinalStoragePath } from "@/utils/fileUpload";
 import type { PolizaFormState, FamiliarSalud, DatosSepelio, DatosVida } from "@/types/poliza";
 import type { ActionResult } from "@/types/policyPermission";
 import { cargarPolizaFormState } from "@/utils/polizas/cargarFormState";
-import { esMesRegistroCerrado, MENSAJE_MES_CERRADO } from "@/utils/polizas/cierreMes";
+import { esMesRegistroCerrado, MENSAJE_MES_CERRADO, tienePermisoDeAdminParaPoliza } from "@/utils/polizas/cierreMes";
 import { describirErrorDuplicado } from "@/utils/supabase/dbErrors";
 
 /**
@@ -147,10 +147,16 @@ async function verifyEditPermission(polizaId: string) {
 	}
 
 	// Cierre de mes: una póliza ACTIVA de un mes de registro ya cerrado solo la
-	// edita un administrador (ni el líder de equipo ni permisos por póliza).
+	// edita un administrador o quien tenga permiso de edición otorgado por un
+	// admin sobre esta póliza (los permisos de líderes no levantan el candado).
 	// Las pendientes/rechazadas quedan fuera del candado (subsanación del cierre).
+	// Si el permiso existe, NO se retorna aquí: la evaluación normal de permisos
+	// de abajo sigue aplicando (rol, polizas.editar, permiso explícito).
 	if (polizaData?.estado === "activa" && polizaData.created_at && esMesRegistroCerrado(polizaData.created_at)) {
-		throw new Error(MENSAJE_MES_CERRADO);
+		const permisoDeAdmin = await tienePermisoDeAdminParaPoliza(supabase, polizaId, user.id);
+		if (!permisoDeAdmin) {
+			throw new Error(MENSAJE_MES_CERRADO);
+		}
 	}
 
 	// Check if user is a team leader for this policy

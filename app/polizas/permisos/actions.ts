@@ -20,7 +20,7 @@ import type {
 	ComercialUser,
 	ActionResult,
 } from "@/types/policyPermission";
-import { esMesRegistroCerrado, MENSAJE_MES_CERRADO } from "@/utils/polizas/cierreMes";
+import { esMesRegistroCerrado, MENSAJE_MES_CERRADO, tienePermisoDeAdminParaPoliza } from "@/utils/polizas/cierreMes";
 
 // ============================================
 // HELPER FUNCTIONS
@@ -180,17 +180,22 @@ export async function checkPolicyEditPermission(polizaId: string): Promise<Actio
 		}
 
 		// Cierre de mes: una póliza ACTIVA de un mes de registro ya cerrado solo la
-		// edita un administrador (ni el líder de equipo ni permisos por póliza).
+		// edita un administrador o quien tenga permiso otorgado por un admin sobre
+		// esta póliza. Si existe ese permiso, se deja continuar la evaluación
+		// normal (que lo encontrará y mostrará su vigencia); si no, se corta aquí.
 		if (polizaData?.estado === "activa" && polizaData.created_at && esMesRegistroCerrado(polizaData.created_at)) {
-			return {
-				success: true,
-				data: {
-					canEdit: false,
-					reason: MENSAJE_MES_CERRADO,
-					isAdmin: false,
-					isTeamLeader: false,
-				},
-			};
+			const permisoDeAdmin = await tienePermisoDeAdminParaPoliza(supabase, polizaId, user.id);
+			if (!permisoDeAdmin) {
+				return {
+					success: true,
+					data: {
+						canEdit: false,
+						reason: MENSAJE_MES_CERRADO,
+						isAdmin: false,
+						isTeamLeader: false,
+					},
+				};
+			}
 		}
 
 		// Check if user is a team leader for this policy
