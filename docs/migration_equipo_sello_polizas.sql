@@ -357,17 +357,14 @@ WHERE p.equipo_id IS NULL
 
 -- 6.b CORRECCIÓN MANUAL para responsables que YA cambiaron de equipo antes de
 --     esta migración (el backfill 6.a les selló el equipo NUEVO).
---     Caso Daniela: sus pólizas registradas hasta el 30 de junio (La Paz)
---     pertenecen al equipo de Mariola. Reemplazar los placeholders y ejecutar:
---
--- UPDATE public.polizas
--- SET equipo_id = '<UUID_EQUIPO_DE_MARIOLA>'
--- WHERE responsable_id = '<UUID_DE_DANIELA>'
---   AND created_at < '2026-07-01T04:00:00Z';  -- fin del 30-jun en La Paz (UTC-4)
---
---     UUIDs de referencia:
---       SELECT id, nombre FROM equipos ORDER BY nombre;
---       SELECT id, full_name FROM profiles WHERE full_name ILIKE '%daniela%';
+--     Caso Daniela Dorado: sus pólizas registradas hasta el 30 de junio (La
+--     Paz) pertenecen al equipo "Mariola" (líderes Mariola Benavent Coock y
+--     Samuel Salaues Nacif), del que ya fue removida.
+
+UPDATE public.polizas
+SET equipo_id = '369b3fed-d853-4a26-8cf6-0308a93960e5' -- equipo "Mariola"
+WHERE responsable_id = 'c5461825-ee33-44ac-ae68-ab9d9eb38a73' -- Daniela Dorado
+	AND created_at < '2026-07-01T04:00:00Z'; -- fin del 30-jun en La Paz (UTC-4)
 
 -- ============================================================
 -- VERIFICACIÓN
@@ -389,4 +386,10 @@ WHERE p.equipo_id IS NULL
 --
 -- 5. Vista:
 --    SELECT equipo_id FROM cobranzas_polizas_resumen LIMIT 1;
+--
+-- 6. Caso Daniela (debe devolver la cantidad de pólizas pre-julio recuperadas
+--    para el equipo Mariola):
+--    SELECT count(*) FROM polizas
+--    WHERE responsable_id = 'c5461825-ee33-44ac-ae68-ab9d9eb38a73'
+--      AND equipo_id = '369b3fed-d853-4a26-8cf6-0308a93960e5';
 -- ============================================================================
