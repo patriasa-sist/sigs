@@ -3,6 +3,7 @@
 import { createClient } from "@/utils/supabase/server";
 import { requirePermission } from "@/utils/auth/helpers";
 import { revalidatePath } from "next/cache";
+import { resolverNombresCliente } from "@/utils/polizas/resolverNombresCliente";
 
 // ============================================
 // TYPES
@@ -26,6 +27,9 @@ export interface PolizaTransferible {
 	cliente_nombre: string;
 	inicio_vigencia: string;
 	fin_vigencia: string;
+	created_at: string;
+	director_cartera_id: string | null;
+	director_cartera_nombre: string;
 }
 
 export interface ClienteTransferible {
@@ -98,28 +102,39 @@ export async function obtenerPolizasPorUsuario(userId: string): Promise<ActionRe
 				estado,
 				inicio_vigencia,
 				fin_vigencia,
-				companias_aseguradoras (nombre)
+				created_at,
+				client_id,
+				director_cartera_id,
+				companias_aseguradoras (nombre),
+				directores_cartera (nombre, apellidos)
 			`,
 			)
 			.eq("responsable_id", userId)
-			.order("numero_poliza");
+			.order("created_at", { ascending: false });
 
 		if (error) throw error;
 
-		// Obtener nombres de clientes
-		const polizas: PolizaTransferible[] = [];
-		for (const p of data || []) {
-			polizas.push({
+		const clientInfoMap = await resolverNombresCliente(
+			supabase,
+			(data || []).map((p) => p.client_id),
+		);
+
+		const polizas: PolizaTransferible[] = (data || []).map((p) => {
+			const director = p.directores_cartera as unknown as { nombre: string; apellidos: string } | null;
+			return {
 				id: p.id,
 				numero_poliza: p.numero_poliza,
 				ramo: p.ramo,
 				estado: p.estado,
 				compania_nombre: (p.companias_aseguradoras as unknown as { nombre: string } | null)?.nombre || "N/A",
-				cliente_nombre: "",
+				cliente_nombre: clientInfoMap.get(p.client_id)?.name || "-",
 				inicio_vigencia: p.inicio_vigencia,
 				fin_vigencia: p.fin_vigencia,
-			});
-		}
+				created_at: p.created_at,
+				director_cartera_id: p.director_cartera_id,
+				director_cartera_nombre: director ? `${director.nombre} ${director.apellidos}`.trim() : "Sin director",
+			};
+		});
 
 		return { success: true, data: polizas };
 	} catch (error) {

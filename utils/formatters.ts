@@ -86,6 +86,23 @@ export function restarDiasISO(fechaISO: string, dias: number): string {
 }
 
 /**
+ * Convierte un timestamp (timestamptz / ISO con hora) a fecha YYYY-MM-DD en
+ * zona horaria de La Paz. Para COMPARAR contra inputs `type="date"` o columnas
+ * `date`; para mostrar al usuario usar `formatFechaLaPaz`.
+ */
+export function fechaISOLaPaz(date: string | Date | null | undefined): string {
+	if (date == null) return "";
+	const d = typeof date === "string" ? new Date(date) : date;
+	if (Number.isNaN(d.getTime())) return "";
+	return new Intl.DateTimeFormat("en-CA", {
+		timeZone: LA_PAZ_TZ,
+		year: "numeric",
+		month: "2-digit",
+		day: "2-digit",
+	}).format(d);
+}
+
+/**
  * Formatea un timestamp (timestamptz / ISO con hora, p.ej. created_at,
  * updated_at, fecha_cierre) mostrando solo la fecha en zona horaria de La Paz.
  *

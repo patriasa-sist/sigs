@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
+import { fechaISOLaPaz, formatFechaLaPaz } from "@/utils/formatters";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -42,6 +43,11 @@ export default function TransferenciasDatos({ usuarios }: Props) {
 	const [polizasSeleccionadas, setPolizasSeleccionadas] = useState<Set<string>>(new Set());
 	const [cargandoPolizas, setCargandoPolizas] = useState(false);
 
+	// Filtros de pólizas (fecha de registro en La Paz + director de cartera)
+	const [filtroDesde, setFiltroDesde] = useState("");
+	const [filtroHasta, setFiltroHasta] = useState("");
+	const [filtroDirector, setFiltroDirector] = useState("all");
+
 	// Clientes state
 	const [clientes, setClientes] = useState<ClienteTransferible[]>([]);
 	const [clientesSeleccionados, setClientesSeleccionados] = useState<Set<string>>(new Set());
@@ -55,10 +61,36 @@ export default function TransferenciasDatos({ usuarios }: Props) {
 	const origenUsuario = usuarios.find((u) => u.id === origenId);
 	const destinoUsuario = usuarios.find((u) => u.id === destinoId);
 
+	// Directores presentes en las pólizas cargadas (clave "sin" = sin director)
+	const directores = useMemo(() => {
+		const map = new Map<string, string>();
+		for (const p of polizas) map.set(p.director_cartera_id ?? "sin", p.director_cartera_nombre);
+		return [...map.entries()].sort((a, b) => a[1].localeCompare(b[1]));
+	}, [polizas]);
+
+	const polizasFiltradas = useMemo(() => {
+		return polizas.filter((p) => {
+			const fecha = fechaISOLaPaz(p.created_at);
+			if (filtroDesde && fecha < filtroDesde) return false;
+			if (filtroHasta && fecha > filtroHasta) return false;
+			if (filtroDirector !== "all" && (p.director_cartera_id ?? "sin") !== filtroDirector) return false;
+			return true;
+		});
+	}, [polizas, filtroDesde, filtroHasta, filtroDirector]);
+
+	const hayFiltros = filtroDesde !== "" || filtroHasta !== "" || filtroDirector !== "all";
+
+	function limpiarFiltros() {
+		setFiltroDesde("");
+		setFiltroHasta("");
+		setFiltroDirector("all");
+	}
+
 	async function cargarDatosOrigen(userId: string) {
 		setOrigenId(userId);
 		setPolizasSeleccionadas(new Set());
 		setClientesSeleccionados(new Set());
+		limpiarFiltros();
 
 		setCargandoPolizas(true);
 		setCargandoClientes(true);
@@ -96,12 +128,18 @@ export default function TransferenciasDatos({ usuarios }: Props) {
 		});
 	}
 
+	// Selecciona/deselecciona lo FILTRADO, preservando selecciones fuera del filtro
 	function toggleAllPolizas() {
-		if (polizasSeleccionadas.size === polizas.length) {
-			setPolizasSeleccionadas(new Set());
-		} else {
-			setPolizasSeleccionadas(new Set(polizas.map((p) => p.id)));
-		}
+		const idsFiltradas = polizasFiltradas.map((p) => p.id);
+		const todasSeleccionadas = idsFiltradas.length > 0 && idsFiltradas.every((id) => polizasSeleccionadas.has(id));
+		setPolizasSeleccionadas((prev) => {
+			const next = new Set(prev);
+			for (const id of idsFiltradas) {
+				if (todasSeleccionadas) next.delete(id);
+				else next.add(id);
+			}
+			return next;
+		});
 	}
 
 	function toggleAllClientes() {
@@ -231,14 +269,62 @@ export default function TransferenciasDatos({ usuarios }: Props) {
 							</p>
 						) : (
 							<>
+								{/* Filtros: fecha de registro (La Paz) + director de cartera */}
+								<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
+									<div className="space-y-1">
+										<Label htmlFor="filtro-desde">Registradas desde</Label>
+										<Input
+											id="filtro-desde"
+											type="date"
+											value={filtroDesde}
+											onChange={(e) => setFiltroDesde(e.target.value)}
+										/>
+									</div>
+									<div className="space-y-1">
+										<Label htmlFor="filtro-hasta">Registradas hasta</Label>
+										<Input
+											id="filtro-hasta"
+											type="date"
+											value={filtroHasta}
+											onChange={(e) => setFiltroHasta(e.target.value)}
+										/>
+									</div>
+									<div className="space-y-1">
+										<Label>Director de cartera</Label>
+										<Select value={filtroDirector} onValueChange={setFiltroDirector}>
+											<SelectTrigger>
+												<SelectValue />
+											</SelectTrigger>
+											<SelectContent>
+												<SelectItem value="all">Todos</SelectItem>
+												{directores.map(([id, nombre]) => (
+													<SelectItem key={id} value={id}>
+														{nombre}
+													</SelectItem>
+												))}
+											</SelectContent>
+										</Select>
+									</div>
+									{hayFiltros && (
+										<Button variant="outline" size="sm" onClick={limpiarFiltros}>
+											Limpiar filtros
+										</Button>
+									)}
+								</div>
+
 								<div className="flex items-center justify-between">
 									<div className="flex items-center gap-2">
 										<Checkbox
-											checked={polizasSeleccionadas.size === polizas.length}
+											checked={
+												polizasFiltradas.length > 0 &&
+												polizasFiltradas.every((p) => polizasSeleccionadas.has(p.id))
+											}
 											onCheckedChange={toggleAllPolizas}
 										/>
-										<span className="text-sm text-gray-600">
-											{polizasSeleccionadas.size} de {polizas.length} seleccionadas
+										<span className="text-sm text-muted-foreground">
+											{polizasSeleccionadas.size} seleccionadas · {polizasFiltradas.length}{" "}
+											{hayFiltros ? "filtradas" : "en total"}
+											{hayFiltros ? ` de ${polizas.length}` : ""}
 										</span>
 									</div>
 									<Button
@@ -256,14 +342,17 @@ export default function TransferenciasDatos({ usuarios }: Props) {
 											<tr>
 												<th className="p-2 w-10"></th>
 												<th className="p-2 text-left">N° Póliza</th>
+												<th className="p-2 text-left">Cliente</th>
 												<th className="p-2 text-left">Ramo</th>
 												<th className="p-2 text-left">Compañía</th>
+												<th className="p-2 text-left">Director</th>
 												<th className="p-2 text-left">Estado</th>
+												<th className="p-2 text-left">F. Registro</th>
 												<th className="p-2 text-left">Vigencia</th>
 											</tr>
 										</thead>
 										<tbody>
-											{polizas.map((p) => (
+											{polizasFiltradas.map((p) => (
 												<tr key={p.id} className="border-t hover:bg-gray-50">
 													<td className="p-2 text-center">
 														<Checkbox
@@ -272,8 +361,10 @@ export default function TransferenciasDatos({ usuarios }: Props) {
 														/>
 													</td>
 													<td className="p-2 font-mono">{p.numero_poliza}</td>
+													<td className="p-2">{p.cliente_nombre}</td>
 													<td className="p-2">{p.ramo}</td>
 													<td className="p-2">{p.compania_nombre}</td>
+													<td className="p-2">{p.director_cartera_nombre}</td>
 													<td className="p-2">
 														<Badge
 															variant={p.estado === "activa" ? "default" : "secondary"}
@@ -281,6 +372,7 @@ export default function TransferenciasDatos({ usuarios }: Props) {
 															{p.estado}
 														</Badge>
 													</td>
+													<td className="p-2 text-xs">{formatFechaLaPaz(p.created_at)}</td>
 													<td className="p-2 text-xs">
 														{p.inicio_vigencia} - {p.fin_vigencia}
 													</td>
