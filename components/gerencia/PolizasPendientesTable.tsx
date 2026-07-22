@@ -17,6 +17,8 @@ type PolizaPendiente = {
 	inicio_vigencia: string;
 	fin_vigencia: string;
 	created_at: string;
+	motivo_rechazo?: string | null;
+	fecha_rechazo?: string | null;
 	compania?: { nombre?: string } | null;
 	responsable?: { full_name?: string } | null;
 	created_by_user?: { full_name?: string } | null;
@@ -98,8 +100,18 @@ export default function PolizasPendientesTable({ polizas }: Props) {
 								className={`cursor-pointer hover:bg-secondary/50 ${urgencyClasses(poliza.created_at)}`}
 								onClick={() => irADetalle(poliza)}
 							>
-								<TableCell className="py-3 px-4 font-mono text-sm font-medium text-foreground">
-									{poliza.numero_poliza}
+								<TableCell className="py-3 px-4">
+									<span className="font-mono text-sm font-medium text-foreground">
+										{poliza.numero_poliza}
+									</span>
+									{poliza.motivo_rechazo && (
+										<span
+											className="mt-1 block w-fit rounded-md bg-warning/15 px-1.5 py-0.5 text-xs font-medium text-warning"
+											title={`Observación del rechazo: ${poliza.motivo_rechazo}`}
+										>
+											Corregida tras rechazo
+										</span>
+									)}
 								</TableCell>
 								<TableCell className="py-3 max-w-[160px]">
 									<span
@@ -165,10 +177,15 @@ export default function PolizasPendientesTable({ polizas }: Props) {
 									<div className="font-mono text-sm font-medium text-foreground">
 										{poliza.numero_poliza}
 									</div>
-									<div className="mt-1">
+									<div className="mt-1 flex flex-wrap items-center gap-1.5">
 										<Badge variant="secondary" className="text-xs rounded-md">
 											{poliza.ramo}
 										</Badge>
+										{poliza.motivo_rechazo && (
+											<span className="rounded-md bg-warning/15 px-1.5 py-0.5 text-xs font-medium text-warning">
+												Corregida tras rechazo
+											</span>
+										)}
 									</div>
 								</div>
 								<span

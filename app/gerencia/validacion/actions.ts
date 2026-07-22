@@ -85,6 +85,8 @@ export async function obtenerPolizasPendientes() {
 				fin_vigencia,
 				created_at,
 				responsable_id,
+				motivo_rechazo,
+				fecha_rechazo,
 				compania:companias_aseguradoras!compania_aseguradora_id (
 					nombre
 				),

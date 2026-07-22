@@ -417,13 +417,10 @@ export async function actualizarPoliza(
 			updatePayload.estado = "pendiente";
 			updatePayload.validado_por = null;
 			updatePayload.fecha_validacion = null;
-			// Clear rejection fields if it was rejected
-			if (currentPoliza.estado === "rechazada") {
-				updatePayload.motivo_rechazo = null;
-				updatePayload.rechazado_por = null;
-				updatePayload.fecha_rechazo = null;
-				updatePayload.puede_editar_hasta = null;
-			}
+			// motivo_rechazo, rechazado_por y fecha_rechazo se conservan: el validador
+			// necesita ver qué se observó para revisar que esté corregido. Solo se
+			// cierra la ventana de edición del flujo de rechazo.
+			updatePayload.puede_editar_hasta = null;
 		}
 
 		// 1. Update main policy

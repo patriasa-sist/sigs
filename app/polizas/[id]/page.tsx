@@ -2417,10 +2417,13 @@ export default function PolizaDetallePage() {
 									</p>
 								)}
 
-								{/* Rechazo */}
-								{poliza.estado === "rechazada" && poliza.fecha_rechazo && (
+								{/* Rechazo: visible mientras está rechazada y también ya corregida
+								    (pendiente), para que el validador vea qué fue lo observado. */}
+								{(poliza.estado === "rechazada" || poliza.estado === "pendiente") && poliza.fecha_rechazo && (
 									<div className="mt-3 p-3 rounded-md bg-orange-50 border border-orange-200">
-										<p className="font-medium text-orange-800 mb-1">Rechazada</p>
+										<p className="font-medium text-orange-800 mb-1">
+											{poliza.estado === "rechazada" ? "Rechazada" : "Rechazada anteriormente"}
+										</p>
 										<p className="text-orange-700">
 											{formatDate(poliza.fecha_rechazo)}
 											{poliza.rechazador_nombre && ` por ${poliza.rechazador_nombre}`}
