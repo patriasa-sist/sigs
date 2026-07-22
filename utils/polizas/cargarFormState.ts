@@ -386,7 +386,7 @@ export async function cargarPolizaFormState(
 		if (ramoLower.includes("automotor")) {
 			const { data: vehiculos } = await supabase
 				.from("polizas_automotor_vehiculos")
-				.select("*")
+				.select("*, tipos_vehiculo(nombre), marcas_vehiculo(nombre)")
 				.eq("poliza_id", polizaId);
 
 			const vehiculosFormateados: VehiculoAutomotor[] = (vehiculos || []).map((v) => ({
@@ -399,6 +399,8 @@ export async function cargarPolizaFormState(
 				coaseguro: v.coaseguro || 0,
 				tipo_vehiculo_id: v.tipo_vehiculo_id || undefined,
 				marca_id: v.marca_id || undefined,
+				tipo_vehiculo_nombre: v.tipos_vehiculo?.nombre || undefined,
+				marca_nombre: v.marcas_vehiculo?.nombre || undefined,
 				modelo: v.modelo || undefined,
 				ano: v.ano || undefined,
 				color: v.color || undefined,

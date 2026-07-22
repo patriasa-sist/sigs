@@ -53,27 +53,23 @@ function normalizarNombreColumna(nombre: string): string {
  * Tambi\u00e9n indexa los ids para poder detectar valores que ya vienen como UUID.
  */
 function construirResolverCatalogo(items: CatalogoItem[] = []) {
-	const porNombre = new Map<string, string>();
-	const idsValidos = new Set<string>();
+	const porNombre = new Map<string, CatalogoItem>();
+	const porId = new Map<string, CatalogoItem>();
 
 	for (const item of items) {
-		porNombre.set(normalizarNombreColumna(item.nombre), item.id);
-		idsValidos.add(item.id);
+		porNombre.set(normalizarNombreColumna(item.nombre), item);
+		porId.set(item.id, item);
 	}
 
 	/**
-	 * Resuelve un valor del Excel a un UUID v\u00e1lido del cat\u00e1logo.
-	 * - Si coincide con un nombre del cat\u00e1logo \u2192 devuelve su id.
-	 * - Si ya es un UUID v\u00e1lido del cat\u00e1logo \u2192 lo conserva.
+	 * Resuelve un valor del Excel a un item v\u00e1lido del cat\u00e1logo ({id, nombre}).
+	 * - Si coincide con un nombre del cat\u00e1logo \u2192 devuelve el item.
+	 * - Si ya es un UUID v\u00e1lido del cat\u00e1logo \u2192 lo devuelve.
 	 * - Si no coincide con nada \u2192 undefined (campo opcional, no se inserta texto inv\u00e1lido).
 	 */
-	return (valor?: string): string | undefined => {
+	return (valor?: string): CatalogoItem | undefined => {
 		if (!valor) return undefined;
-		const normalizado = normalizarNombreColumna(valor);
-		const porNombreMatch = porNombre.get(normalizado);
-		if (porNombreMatch) return porNombreMatch;
-		if (idsValidos.has(valor)) return valor;
-		return undefined;
+		return porNombre.get(normalizarNombreColumna(valor)) ?? porId.get(valor);
 	};
 }
 
@@ -130,7 +126,7 @@ function convertirAString(valor: unknown): string | undefined {
 	return String(valor).trim() || undefined;
 }
 
-type ResolverCatalogo = (valor?: string) => string | undefined;
+type ResolverCatalogo = (valor?: string) => CatalogoItem | undefined;
 
 /**
  * Parsea una fila del Excel a VehiculoAutomotor
@@ -181,16 +177,20 @@ function parsearFilaVehiculo(
 	// con ningún catálogo, dejamos el campo vacío y avisamos al usuario.
 	if (mapa.tipo_vehiculo !== undefined) {
 		const tipoTexto = convertirAString(fila[mapa.tipo_vehiculo]);
-		vehiculo.tipo_vehiculo_id = resolverTipo(tipoTexto);
-		if (tipoTexto && !vehiculo.tipo_vehiculo_id) {
+		const tipoMatch = resolverTipo(tipoTexto);
+		vehiculo.tipo_vehiculo_id = tipoMatch?.id;
+		vehiculo.tipo_vehiculo_nombre = tipoMatch?.nombre;
+		if (tipoTexto && !tipoMatch) {
 			advertencias.push(`Tipo de vehículo "${tipoTexto}" no reconocido; se dejó vacío.`);
 		}
 	}
 
 	if (mapa.marca !== undefined) {
 		const marcaTexto = convertirAString(fila[mapa.marca]);
-		vehiculo.marca_id = resolverMarca(marcaTexto);
-		if (marcaTexto && !vehiculo.marca_id) {
+		const marcaMatch = resolverMarca(marcaTexto);
+		vehiculo.marca_id = marcaMatch?.id;
+		vehiculo.marca_nombre = marcaMatch?.nombre;
+		if (marcaTexto && !marcaMatch) {
 			advertencias.push(`Marca "${marcaTexto}" no reconocida; se dejó vacía.`);
 		}
 	}

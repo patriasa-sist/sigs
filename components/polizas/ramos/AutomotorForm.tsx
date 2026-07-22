@@ -31,6 +31,7 @@ import {
 import { toast } from "sonner";
 import { VehiculoModal } from "./VehiculoModal";
 import { createClient } from "@/utils/supabase/client";
+import { captureError } from "@/utils/sentry";
 
 type Props = {
 	datos: DatosAutomotor | null;
@@ -136,17 +137,26 @@ export function AutomotorForm({ datos, onChange, onSiguiente, onAnterior }: Prop
 					]);
 
 				if (errorTipos) {
-					console.error("Error cargando tipos de vehículo:", errorTipos);
+					captureError(errorTipos, "AutomotorForm.cargarCatalogos.tipos");
 				}
 
 				if (errorMarcas) {
-					console.error("Error cargando marcas:", errorMarcas);
+					captureError(errorMarcas, "AutomotorForm.cargarCatalogos.marcas");
+				}
+
+				// RLS sin sesión devuelve 0 filas SIN error: reportarlo para no
+				// quedar ciegos si los nombres dejan de resolverse en la tabla.
+				if (!errorTipos && !errorMarcas && (tiposData?.length ?? 0) === 0 && (marcasData?.length ?? 0) === 0) {
+					captureError(
+						new Error("Catálogos de vehículo llegaron vacíos sin error (¿query sin sesión?)"),
+						"AutomotorForm.cargarCatalogos",
+					);
 				}
 
 				setTiposVehiculo(tiposData || []);
 				setMarcas(marcasData || []);
 			} catch (error) {
-				console.error("Error cargando catálogos:", error);
+				captureError(error, "AutomotorForm.cargarCatalogos");
 			}
 		};
 		cargarCatalogos();
@@ -439,11 +449,17 @@ export function AutomotorForm({ datos, onChange, onSiguiente, onAnterior }: Prop
 									index={index}
 									tipoNombre={
 										vehiculo.tipo_vehiculo_id
-											? (tiposMap.get(vehiculo.tipo_vehiculo_id) ?? vehiculo.tipo_vehiculo_id)
+											? (tiposMap.get(vehiculo.tipo_vehiculo_id) ??
+												vehiculo.tipo_vehiculo_nombre ??
+												vehiculo.tipo_vehiculo_id)
 											: "-"
 									}
 									marcaNombre={
-										vehiculo.marca_id ? (marcasMap.get(vehiculo.marca_id) ?? vehiculo.marca_id) : ""
+										vehiculo.marca_id
+											? (marcasMap.get(vehiculo.marca_id) ??
+												vehiculo.marca_nombre ??
+												vehiculo.marca_id)
+											: ""
 									}
 									onEditar={handleEditar}
 									onEliminar={handleEliminar}

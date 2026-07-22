@@ -196,6 +196,10 @@ export type VehiculoAutomotor = {
 	// Campos opcionales
 	tipo_vehiculo_id?: string;
 	marca_id?: string;
+	// Snapshot de nombres de catálogo solo para display (no se inserta en BD);
+	// evita mostrar UUIDs si la carga del catálogo llega vacía o falla.
+	tipo_vehiculo_nombre?: string;
+	marca_nombre?: string;
 	modelo?: string;
 	ano?: number; // Cambiado de string a number
 	color?: string;

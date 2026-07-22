@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { createClient } from "@/utils/supabase/client";
+import { captureError } from "@/utils/sentry";
 
 type Props = {
 	vehiculo: VehiculoAutomotor | null;
@@ -58,17 +59,17 @@ export function VehiculoModal({ vehiculo, onGuardar, onCancelar, permitirCeroAse
 					]);
 
 				if (errorTipos) {
-					console.error("Error cargando tipos de vehículo:", errorTipos);
+					captureError(errorTipos, "VehiculoModal.cargarCatalogos.tipos");
 				}
 
 				if (errorMarcas) {
-					console.error("Error cargando marcas:", errorMarcas);
+					captureError(errorMarcas, "VehiculoModal.cargarCatalogos.marcas");
 				}
 
 				setTiposVehiculo(tiposData || []);
 				setMarcas(marcasData || []);
 			} catch (error) {
-				console.error("Error cargando catálogos:", error);
+				captureError(error, "VehiculoModal.cargarCatalogos");
 			} finally {
 				setCargando(false);
 			}
@@ -102,7 +103,16 @@ export function VehiculoModal({ vehiculo, onGuardar, onCancelar, permitirCeroAse
 			return;
 		}
 
-		onGuardar(formData as VehiculoAutomotor);
+		// Snapshot del nombre junto al id: si el id cambió vía select el catálogo
+		// está cargado y el find() lo resuelve; si no, se conserva el nombre previo.
+		const tipoNombre = tiposVehiculo.find((t) => t.id === formData.tipo_vehiculo_id)?.nombre;
+		const marcaNombre = marcas.find((m) => m.id === formData.marca_id)?.nombre;
+
+		onGuardar({
+			...(formData as VehiculoAutomotor),
+			tipo_vehiculo_nombre: tipoNombre ?? formData.tipo_vehiculo_nombre,
+			marca_nombre: marcaNombre ?? formData.marca_nombre,
+		});
 	};
 
 	if (cargando) {
