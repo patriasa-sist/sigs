@@ -607,6 +607,45 @@ export async function actualizarPoliza(
 			}
 		}
 
+		// 2b. Si la edición cambió el ramo, limpiar la materia asegurada del ramo
+		// anterior: los bloques de abajo solo hacen delete-then-insert de las tablas
+		// del ramo NUEVO, por lo que las filas del ramo viejo quedarían huérfanas.
+		// Las tablas hijas sin poliza_id (items de incendio/riesgos varios,
+		// asegurados por nivel) cascadean desde sus padres.
+		if (currentPoliza.ramo !== formState.datos_basicos.ramo) {
+			const supabaseAdmin = createAdminClient();
+			const tablasRamo = [
+				"polizas_automotor_vehiculos",
+				"polizas_salud_beneficiarios",
+				"polizas_salud_asegurados",
+				"polizas_salud_niveles",
+				"polizas_beneficiarios",
+				"polizas_asegurados_nivel",
+				"polizas_niveles",
+				"polizas_incendio_bienes",
+				"polizas_incendio_asegurados",
+				"polizas_responsabilidad_civil",
+				"polizas_rc_vehiculos",
+				"polizas_desgravamen",
+				"polizas_transporte",
+				"polizas_aeronavegacion_naves",
+				"polizas_aeronavegacion_niveles_ap",
+				"polizas_aeronavegacion_asegurados",
+				"polizas_ramos_tecnicos",
+				"polizas_ramos_tecnicos_equipos",
+				"polizas_riesgos_varios_bienes",
+				"polizas_riesgos_varios_asegurados",
+			];
+			const resultados = await Promise.all(
+				tablasRamo.map((tabla) => supabaseAdmin.from(tabla).delete().eq("poliza_id", polizaId)),
+			);
+			const fallo = resultados.find((r) => r.error);
+			if (fallo?.error) {
+				console.error("[actualizarPoliza] Error limpiando datos del ramo anterior:", fallo.error);
+				return { success: false, error: "Error al limpiar los datos del ramo anterior" };
+			}
+		}
+
 		// 3. Update vehicles for Automotor ramo
 		if (formState.datos_especificos?.tipo_ramo === "Automotores") {
 			const supabaseAdmin = createAdminClient();
