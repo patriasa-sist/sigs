@@ -1180,8 +1180,9 @@ export async function obtenerDirectoresParaFiltro(): Promise<
 
 /**
  * Exporta el reporte de comisiones por director de cartera.
- * Solo incluye cuotas pagadas en el rango de fechas seleccionado.
- * Ordenado por director, póliza, número de cuota.
+ * Incluye cuotas pagadas (por fecha_pago en el rango) y cuotas por cobrar
+ * (por fecha_vencimiento en el rango). Ordenado por director, estado,
+ * póliza y número de cuota.
  */
 export async function exportarComisionesDirector(
 	filtros: ExportComisionesDirectorFilters,
@@ -1370,7 +1371,8 @@ export async function exportarComisionesDirector(
 				total_comision: totalComision,
 				director_factura: facturaDirector,
 				moneda: poliza.moneda || "Bs",
-				fecha: estadoCuota === "pagada" ? pago.fecha_pago : pago.fecha_vencimiento,
+				fecha_vencimiento: pago.fecha_vencimiento,
+				fecha_pago: pago.fecha_pago ?? null,
 			};
 		};
 

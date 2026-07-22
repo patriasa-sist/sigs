@@ -136,7 +136,8 @@ export type ExportComisionesDirectorRow = {
 	total_comision: number | null; // total_importe - retenciones
 	director_factura: boolean; // true = presenta factura fiscal
 	moneda: string;
-	fecha: string; // fecha_pago si pagada, fecha_vencimiento si por cobrar
+	fecha_vencimiento: string; // fecha de la cuota según el plan de pagos
+	fecha_pago: string | null; // fecha real de pago (null si aún no se paga)
 };
 
 // ============================================

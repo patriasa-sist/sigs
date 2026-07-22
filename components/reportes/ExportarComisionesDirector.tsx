@@ -10,6 +10,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Download, AlertCircle, Percent } from "lucide-react";
 import { exportarComisionesDirector } from "@/app/reportes/actions";
 import * as ExcelJS from "exceljs";
+import { formatDate } from "@/utils/formatters";
 import type { FilterData } from "@/types/reporte";
 
 function getDefaultDateRange() {
@@ -176,7 +177,8 @@ export default function ExportarComisionesDirector({
 				{ header: "Retención IT 3%", key: "retencion_it", width: 16 },
 				{ header: "Total Comisión", key: "total_comision", width: 15 },
 				{ header: "Moneda", key: "moneda", width: 10 },
-				{ header: "Fecha", key: "fecha", width: 14 },
+				{ header: "Fecha Vencimiento", key: "fecha_vencimiento", width: 17 },
+				{ header: "Fecha Pago", key: "fecha_pago", width: 14 },
 			];
 
 			// Aplicar anchos de columna
@@ -248,7 +250,8 @@ export default function ExportarComisionesDirector({
 					row.retencion_it ?? "",
 					row.total_comision ?? "",
 					row.moneda,
-					row.fecha ? new Date(row.fecha).toLocaleDateString("es-BO") : "",
+					row.fecha_vencimiento ? formatDate(row.fecha_vencimiento) : "",
+					row.fecha_pago ? formatDate(row.fecha_pago) : "",
 				]);
 
 				// Fórmulas Excel para las columnas derivadas (con resultado calculado como fallback)
