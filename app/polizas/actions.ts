@@ -568,7 +568,7 @@ export async function obtenerFiltrosPolizas() {
 			ramos,
 			ejecutivos: ejecutivos.map((e) => ({ id: e.id, nombre: e.full_name })),
 			companias: companiasRes.data?.map((c) => ({ id: c.id, nombre: c.nombre })) ?? [],
-			estados: ["pendiente", "activa", "vencida", "cancelada", "renovada", "anulada"],
+			estados: ["pendiente", "activa", "rechazada", "vencida", "cancelada", "renovada", "anulada"],
 			categorias: categoriasRes.data?.map((c) => ({ id: c.id, nombre: c.nombre })) ?? [],
 		};
 
