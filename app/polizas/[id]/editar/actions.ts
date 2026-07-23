@@ -153,7 +153,7 @@ async function verifyEditPermission(polizaId: string) {
 	// Si el permiso existe, NO se retorna aquí: la evaluación normal de permisos
 	// de abajo sigue aplicando (rol, polizas.editar, permiso explícito).
 	if (polizaData?.estado === "activa" && polizaData.created_at && esMesRegistroCerrado(polizaData.created_at)) {
-		const permisoDeAdmin = await tienePermisoDeAdminParaPoliza(supabase, polizaId, user.id);
+		const permisoDeAdmin = await tienePermisoDeAdminParaPoliza(polizaId, user.id);
 		if (!permisoDeAdmin) {
 			throw new Error(MENSAJE_MES_CERRADO);
 		}

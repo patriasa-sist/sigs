@@ -1,5 +1,5 @@
 import { hoyLaPaz } from "@/utils/formatters";
-import type { SupabaseClient } from "@supabase/supabase-js";
+import { createAdminClient } from "@/utils/supabase/admin";
 
 /**
  * Cierre de mes para edición de pólizas (acordado con Contabilidad 2026-07).
@@ -37,11 +37,12 @@ export const MENSAJE_MES_CERRADO =
  * cerrado para no-administradores; los permisos otorgados por líderes de
  * equipo no cuentan aquí (sí sirven para la edición normal del mes en curso).
  */
-export async function tienePermisoDeAdminParaPoliza(
-	supabase: SupabaseClient,
-	polizaId: string,
-	userId: string,
-): Promise<boolean> {
+export async function tienePermisoDeAdminParaPoliza(polizaId: string, userId: string): Promise<boolean> {
+	// Cliente admin (service role): el RLS de profiles solo deja al beneficiario
+	// leer perfiles de su propio equipo, y aquí se necesita el rol de quien
+	// otorgó (un admin, que normalmente NO es compañero de equipo). El lookup es
+	// puntual y por IDs controlados por el servidor.
+	const supabase = createAdminClient();
 	const { data } = await supabase
 		.from("policy_edit_permissions")
 		.select("id, expires_at, granter:profiles!granted_by (role)")

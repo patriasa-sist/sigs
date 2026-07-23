@@ -184,7 +184,7 @@ export async function checkPolicyEditPermission(polizaId: string): Promise<Actio
 		// esta póliza. Si existe ese permiso, se deja continuar la evaluación
 		// normal (que lo encontrará y mostrará su vigencia); si no, se corta aquí.
 		if (polizaData?.estado === "activa" && polizaData.created_at && esMesRegistroCerrado(polizaData.created_at)) {
-			const permisoDeAdmin = await tienePermisoDeAdminParaPoliza(supabase, polizaId, user.id);
+			const permisoDeAdmin = await tienePermisoDeAdminParaPoliza(polizaId, user.id);
 			if (!permisoDeAdmin) {
 				return {
 					success: true,
