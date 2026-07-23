@@ -8,10 +8,13 @@
 // Al anularse la póliza queda "muerta en todo sentido": sus cuotas no pagadas y
 // las cuotas propias de anexos de inclusión activos pasan a `estado='anulada'`
 // y dejan de cobrarse. Las cuotas con pago (pagado/parcial) se respetan.
+//
+// Escriben con el cliente admin: la RLS de polizas_pagos solo permite UPDATE a
+// cobranza/admin, y quien valida anexos suele ser agente/comercial — con el
+// cliente de sesión el UPDATE afectaba 0 filas sin error y las cuotas quedaban
+// 'pendiente' en pólizas anuladas. Los callers ya verificaron el permiso.
 
-import type { createClient } from "@/utils/supabase/server";
-
-type SupabaseServer = Awaited<ReturnType<typeof createClient>>;
+import { createAdminClient } from "@/utils/supabase/admin";
 
 /**
  * Marca como 'anulada' las cuotas cobrables de una póliza al validar su
@@ -19,10 +22,11 @@ type SupabaseServer = Awaited<ReturnType<typeof createClient>>;
  * anexos de inclusión activos. Las cuotas con pago registrado no se tocan.
  */
 export async function anularCuotasPorAnulacion(
-	supabase: SupabaseServer,
 	polizaId: string,
 	anexoId: string,
 ): Promise<{ error: string | null }> {
+	const supabase = createAdminClient();
+
 	// 1) Cuotas de la póliza madre sin pago. El estado ALMACENADO de una cuota
 	//    impaga es 'pendiente' ('vencido' solo existe como estado_real derivado),
 	//    así que filtrar por estado='pendiente' alcanza para vencidas también.
@@ -63,10 +67,11 @@ export async function anularCuotasPorAnulacion(
  * Inverso exacto de `anularCuotasPorAnulacion`.
  */
 export async function restaurarCuotasPorAnulacion(
-	supabase: SupabaseServer,
 	polizaId: string,
 	anexoId: string,
 ): Promise<{ error: string | null }> {
+	const supabase = createAdminClient();
+
 	// 1) Cuotas de la póliza madre: restauración precisa vía anulada_por_anexo_id.
 	const { error: errPoliza } = await supabase
 		.from("polizas_pagos")

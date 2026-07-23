@@ -301,7 +301,7 @@ export async function validarAnexo(anexoId: string): Promise<{
 				return { success: false, error: "Anexo validado pero error al anular la póliza" };
 			}
 
-			const { error: cuotasError } = await anularCuotasPorAnulacion(supabase, anexo.poliza_id, anexoId);
+			const { error: cuotasError } = await anularCuotasPorAnulacion(anexo.poliza_id, anexoId);
 			if (cuotasError) {
 				console.error("Error anulando cuotas de la póliza:", cuotasError);
 				return { success: false, error: "Póliza anulada pero error al anular sus cuotas pendientes" };

@@ -2846,7 +2846,7 @@ export async function actualizarAnexo(
 				return { success: false, error: "Anexo actualizado pero no se pudo reactivar la póliza" };
 			}
 			// Devolver las cuotas que esta anulación había marcado 'anulada'.
-			const { error: restaurarError } = await restaurarCuotasPorAnulacion(supabase, anexo.poliza_id, anexoId);
+			const { error: restaurarError } = await restaurarCuotasPorAnulacion(anexo.poliza_id, anexoId);
 			if (restaurarError) {
 				console.error("Error restaurando cuotas tras editar anulación:", restaurarError);
 				return { success: false, error: "Anexo actualizado pero no se pudieron restaurar las cuotas" };
