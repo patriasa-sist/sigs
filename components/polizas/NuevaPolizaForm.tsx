@@ -174,6 +174,9 @@ export function NuevaPolizaForm({ mode = "create", polizaId, initialData }: Nuev
 	// userId para uploads client-side
 	const [userId, setUserId] = useState<string | null>(null);
 
+	// Admin salta el guardrail de cuotas vencidas (cargas excepcionales autorizadas)
+	const [esAdmin, setEsAdmin] = useState(false);
+
 	// Cargar regionales y userId al montar el componente
 	useEffect(() => {
 		const cargarDatosIniciales = async () => {
@@ -184,6 +187,20 @@ export function NuevaPolizaForm({ mode = "create", polizaId, initialData }: Nuev
 				data: { user },
 			} = await supabase.auth.getUser();
 			if (user) setUserId(user.id);
+
+			// Rol desde los claims del JWT (user_role), sin consultar la BD
+			const {
+				data: { session },
+			} = await supabase.auth.getSession();
+			if (session) {
+				try {
+					const payload = session.access_token.split(".")[1];
+					const decoded = JSON.parse(atob(payload.replace(/-/g, "+").replace(/_/g, "/")));
+					setEsAdmin(decoded.user_role === "admin");
+				} catch {
+					// JWT ilegible: se continúa sin bypass (gating conservador)
+				}
+			}
 
 			// Cargar regionales
 			const { data } = await supabase.from("regionales").select("id, nombre").eq("activo", true).order("nombre");
@@ -511,6 +528,7 @@ export function NuevaPolizaForm({ mode = "create", polizaId, initialData }: Nuev
 						mode={mode === "edit" ? "edit" : "create"}
 						tipoPrima={formState.datos_basicos?.tipo_prima ?? "directa"}
 						esRetroactiva={formState.datos_basicos?.es_retroactiva ?? false}
+						esAdmin={esAdmin}
 						monedaPoliza={formState.datos_basicos?.moneda}
 						onChange={(datos) => {
 							setFormState((prev) => ({
@@ -544,6 +562,7 @@ export function NuevaPolizaForm({ mode = "create", polizaId, initialData }: Nuev
 					<Resumen
 						formState={formState}
 						mode={mode}
+						esAdmin={esAdmin}
 						onAnterior={() => retrocederDesde(6)}
 						onEditarPaso={handleActualizarPaso}
 						onGuardar={handleGuardar}

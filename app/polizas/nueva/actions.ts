@@ -112,7 +112,12 @@ async function limpiarPolizaFallida(polizaId: string): Promise<void> {
 /**
  * Inserta las cuotas de pago para la póliza. Lanza error si falla.
  */
-async function insertarPagos(supabase: SupabaseClient, polizaId: string, formState: PolizaFormState) {
+async function insertarPagos(
+	supabase: SupabaseClient,
+	polizaId: string,
+	formState: PolizaFormState,
+	omitirGuardrailCuotas = false,
+) {
 	if (!formState.modalidad_pago) return;
 
 	// Pólizas SIN PRIMA PROPIA (madre / open-cover): no se insertan cuotas.
@@ -130,8 +135,10 @@ async function insertarPagos(supabase: SupabaseClient, polizaId: string, formSta
 	// Resumen/Modalidad): una póliza NUEVA no registra cuotas ya vencidas. Solo se
 	// admiten cuotas del mes vigente en adelante, con una ventana de gracia de 60 días
 	// para pólizas recién recibidas. La edición tiene su propio action y no pasa por acá.
+	// Admin queda exento (cargas excepcionales autorizadas).
 	const limiteCuota = restarDiasISO(hoyLaPaz(), DIAS_GRACIA_CUOTA_VENCIDA);
-	const cuotaFueraDeVentana = (fecha?: string | null) => !!fecha && fecha < limiteCuota;
+	const cuotaFueraDeVentana = (fecha?: string | null) =>
+		!omitirGuardrailCuotas && !!fecha && fecha < limiteCuota;
 	const errorCuotaVencida = () =>
 		new Error(
 			`No se pueden registrar cuotas vencidas hace más de ${DIAS_GRACIA_CUOTA_VENCIDA} días en una póliza nueva. Cargue solo cuotas del mes vigente en adelante; las ya cobradas no se registran.`,
@@ -931,7 +938,7 @@ export async function guardarPoliza(formState: PolizaFormState) {
 
 		// 3. Insertar datos dependientes con cleanup automático si falla
 		try {
-			await insertarPagos(supabase, poliza.id, formState);
+			await insertarPagos(supabase, poliza.id, formState, scope.role === "admin");
 			await insertarDatosRamo(supabase, poliza.id, formState);
 		} catch (insertError) {
 			console.error("Error en inserts dependientes, ejecutando limpieza:", insertError);

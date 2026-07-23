@@ -52,6 +52,7 @@ type Props = {
 	mode?: "create" | "edit"; // Modo del formulario
 	tipoPrima?: TipoPrima; // "sin_prima_propia" → permite prima 0 y 0 cuotas (madre/open-cover)
 	esRetroactiva?: boolean; // Carga histórica → permite marcar cuotas como ya pagadas
+	esAdmin?: boolean; // Admin: sin guardrail de cuotas vencidas (cargas excepcionales autorizadas)
 	monedaPoliza?: Moneda; // Moneda definida en Datos Básicos (paso 2); aquí solo se visualiza
 	onChange: (datos: ModalidadPagoType) => void;
 	onSiguiente: () => void;
@@ -89,6 +90,7 @@ export function ModalidadPago({
 	mode = "create",
 	tipoPrima = "directa",
 	esRetroactiva = false,
+	esAdmin = false,
 	monedaPoliza,
 	onChange,
 	onSiguiente,
@@ -438,8 +440,9 @@ export function ModalidadPago({
 		// Validar campos requeridos (retroactiva: prima opcional).
 		// En creación/renovación se bloquean cuotas ya vencidas (ventana de gracia de
 		// 60 días); en edición no, porque las pólizas en curso sí tienen cuotas pasadas.
+		// Admin tampoco se bloquea: puede cargar casos excepcionales autorizados.
 		const validacion = validarModalidadPago(datosPago, tipoPrima, esRetroactiva, {
-			bloquearCuotasVencidas: mode !== "edit",
+			bloquearCuotasVencidas: mode !== "edit" && !esAdmin,
 			hoy: hoyLaPaz(),
 		});
 		if (!validacion.valido) {
