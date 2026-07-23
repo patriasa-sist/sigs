@@ -35,6 +35,16 @@ const ARCHIVOS_GENERADOS = [
 	"📊 PrimaNeta_General.xlsx",
 ];
 
+// Solo se incluyen si el período tiene saldos de vigencia corrida de anulaciones
+const ARCHIVOS_CONDICIONALES = [
+	"📊 Produccion_Devolucion.xlsx",
+	"📊 Comision_Devolucion.xlsx",
+	"📊 PrimaNeta_Devolucion.xlsx",
+	"📊 Produccion_PCorrida.xlsx",
+	"📊 Comision_PCorrida.xlsx",
+	"📊 PrimaNeta_PCorrida.xlsx",
+];
+
 export default function ExportarAPS() {
 	const rangoInicial = rangoMesAnterior();
 	const [fechaDesde, setFechaDesde] = useState<string>(rangoInicial.desde);
@@ -104,9 +114,10 @@ export default function ExportarAPS() {
 					<div>
 						<CardTitle className="text-lg">Reportes APS</CardTitle>
 						<CardDescription>
-							Genera los 9 reportes APS: Producción (PDF), Comisión y Prima Neta (Excel), cada uno en
-							variantes Ingreso (pólizas validadas + inclusiones), Egreso (anulaciones + exclusiones) y
-							General (diferencia)
+							Genera los reportes APS: Producción (PDF), Comisión y Prima Neta (Excel), en variantes
+							Ingreso (pólizas validadas + inclusiones), Egreso (anulaciones + exclusiones) y General
+							(diferencia); si el período tiene devoluciones o primas corridas de anulaciones, agrega sus
+							reportes propios
 						</CardDescription>
 					</div>
 				</div>
@@ -171,6 +182,14 @@ export default function ExportarAPS() {
 							<span key={archivo}>{archivo}</span>
 						))}
 					</div>
+					<p className="text-xs font-medium text-muted-foreground mt-3 mb-2">
+						Solo si el período tiene devoluciones o primas corridas
+					</p>
+					<div className="grid grid-cols-1 sm:grid-cols-3 gap-x-6 gap-y-1 text-xs text-muted-foreground">
+						{ARCHIVOS_CONDICIONALES.map((archivo) => (
+							<span key={archivo}>{archivo}</span>
+						))}
+					</div>
 					<p className="text-xs text-muted-foreground mt-2">
 						El período se define por la fecha de registro en el sistema. No incluye pólizas pendientes de
 						validación. Montos en Bs (USD convertido al tipo de cambio indicado).
@@ -184,7 +203,9 @@ export default function ExportarAPS() {
 							Último reporte: <strong>{lastMeta.polizas_ingreso}</strong> pólizas +{" "}
 							<strong>{lastMeta.anexos_ingreso}</strong> inclusiones en Ingreso,{" "}
 							<strong>{lastMeta.polizas_egreso}</strong> anulaciones +{" "}
-							<strong>{lastMeta.anexos_egreso}</strong> exclusiones en Egreso
+							<strong>{lastMeta.anexos_egreso}</strong> exclusiones en Egreso,{" "}
+							<strong>{lastMeta.anexos_devolucion}</strong> devoluciones,{" "}
+							<strong>{lastMeta.anexos_p_corrida}</strong> primas corridas
 						</AlertDescription>
 					</Alert>
 				)}

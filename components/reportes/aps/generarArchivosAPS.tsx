@@ -1,9 +1,10 @@
 import { pdf } from "@react-pdf/renderer";
 import JSZip from "jszip";
 import type { APSDatos, APSRegistro } from "@/app/reportes/actions-aps";
-import { type ModoAPS, calcularGeneral } from "./apsShared";
+import { type ModoAPS, MODO_LABELS, calcularGeneral } from "./apsShared";
 import { ProduccionAPSPdf } from "./ProduccionAPSPdf";
 import { buildMatrizAPSExcel, type CampoMatriz } from "./apsExcel";
+import { buildProduccionAPSExcel } from "./produccionExcel";
 
 const MODO_ARCHIVO: Record<ModoAPS, string> = {
 	ingreso: "Ingreso",
@@ -14,8 +15,11 @@ const MODO_ARCHIVO: Record<ModoAPS, string> = {
 /**
  * Genera los 9 reportes APS (3 PDF de producción + 3 Excel de comisión +
  * 3 Excel de prima neta, en variantes Ingreso/Egreso/General) y los
- * empaqueta en un ZIP. Módulo pensado para importarse dinámicamente:
- * concentra las dependencias pesadas (react-pdf, exceljs, jszip).
+ * empaqueta en un ZIP. Si el período tiene devoluciones o primas corridas
+ * (saldos de vigencia corrida de anulaciones), agrega el trío de esa variante:
+ * Producción (Excel con el layout del PDF) + Comisión + Prima Neta. Módulo
+ * pensado para importarse dinámicamente: concentra las dependencias pesadas
+ * (react-pdf, exceljs, jszip).
  */
 export async function generarArchivosAPS(opts: {
 	datos: APSDatos;
@@ -60,7 +64,7 @@ export async function generarArchivosAPS(opts: {
 		for (const campo of campos) {
 			const buffer = await buildMatrizAPSExcel({
 				campo,
-				modo,
+				etiqueta: MODO_LABELS[modo],
 				registros,
 				fechaDesde,
 				fechaHasta,
@@ -68,6 +72,37 @@ export async function generarArchivosAPS(opts: {
 			});
 			const nombreCampo = campo === "comision" ? "Comision" : "PrimaNeta";
 			zip.file(`${nombreCampo}_${MODO_ARCHIVO[modo]}.xlsx`, buffer);
+		}
+	}
+
+	// Variantes de vigencia corrida: solo si el período tiene movimientos
+	const variantesVC = [
+		{ registros: datos.devolucion, archivo: "Devolucion", etiqueta: "DEVOLUCIÓN", titulo: "Producción Devolución" },
+		{ registros: datos.p_corrida, archivo: "PCorrida", etiqueta: "P. CORRIDA", titulo: "Producción P. Corrida" },
+	];
+	for (const variante of variantesVC) {
+		if (variante.registros.length === 0) continue;
+
+		const produccionBuffer = await buildProduccionAPSExcel({
+			titulo: variante.titulo,
+			registros: variante.registros,
+			fechaDesde,
+			fechaHasta,
+			generadoEl,
+		});
+		zip.file(`Produccion_${variante.archivo}.xlsx`, produccionBuffer);
+
+		for (const campo of campos) {
+			const buffer = await buildMatrizAPSExcel({
+				campo,
+				etiqueta: variante.etiqueta,
+				registros: variante.registros,
+				fechaDesde,
+				fechaHasta,
+				generadoEl,
+			});
+			const nombreCampo = campo === "comision" ? "Comision" : "PrimaNeta";
+			zip.file(`${nombreCampo}_${variante.archivo}.xlsx`, buffer);
 		}
 	}
 

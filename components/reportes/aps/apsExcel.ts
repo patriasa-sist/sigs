@@ -1,6 +1,6 @@
 import * as ExcelJS from "exceljs";
 import type { APSRegistro } from "@/app/reportes/actions-aps";
-import { type ModoAPS, MODO_LABELS, companiasDe, ordenarRegistros, formatFechaCorta } from "./apsShared";
+import { companiasDe, ordenarRegistros, formatFechaCorta } from "./apsShared";
 
 export type CampoMatriz = "comision" | "prima_neta";
 
@@ -38,13 +38,14 @@ type FilaMatriz = {
 
 export async function buildMatrizAPSExcel(opts: {
 	campo: CampoMatriz;
-	modo: ModoAPS;
+	/** Sufijo del título y nombre de hoja: "INGRESO", "EGRESO", "GENERAL", "DEVOLUCIÓN", "P. CORRIDA" */
+	etiqueta: string;
 	registros: APSRegistro[];
 	fechaDesde: string;
 	fechaHasta: string;
 	generadoEl: string;
 }): Promise<ArrayBuffer> {
-	const { campo, modo, registros, fechaDesde, fechaHasta, generadoEl } = opts;
+	const { campo, etiqueta, registros, fechaDesde, fechaHasta, generadoEl } = opts;
 
 	const companias = companiasDe(registros);
 	const ordenados = ordenarRegistros(registros);
@@ -70,7 +71,7 @@ export async function buildMatrizAPSExcel(opts: {
 	}
 
 	const wb = new ExcelJS.Workbook();
-	const ws = wb.addWorksheet(`${CAMPO_SHEET[campo]} ${MODO_LABELS[modo]}`);
+	const ws = wb.addWorksheet(`${CAMPO_SHEET[campo]} ${etiqueta}`);
 
 	const colCompaniaInicio = 3; // A = grupo, B = riesgo
 	const colTotal = colCompaniaInicio + companias.length;
@@ -86,7 +87,7 @@ export async function buildMatrizAPSExcel(opts: {
 	// Encabezado del reporte
 	ws.mergeCells(1, 1, 1, totalCols);
 	const tituloCell = ws.getCell(1, 1);
-	tituloCell.value = `${CAMPO_TITULOS[campo]} ${MODO_LABELS[modo]}`;
+	tituloCell.value = `${CAMPO_TITULOS[campo]} ${etiqueta}`;
 	tituloCell.font = { bold: true, size: 14 };
 	tituloCell.alignment = { horizontal: "center", vertical: "middle" };
 

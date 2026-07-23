@@ -57,7 +57,17 @@ export type ExportProduccionRow = {
 // REPORTE DE PRODUCCIÓN (nuevo)
 // ============================================
 
-export type TipoPolizaReporte = "Nueva" | "Renovada" | "Exclusión" | "Inclusión" | "Anulación";
+export type TipoPolizaReporte =
+	| "Nueva"
+	| "Renovada"
+	| "Exclusión"
+	| "Inclusión"
+	| "Anulación"
+	// Segundo movimiento de una anulación con vigencia corrida: Devolución
+	// (saldo a favor del cliente, negativo) o P. Corrida (el cliente debe el
+	// período corrido, positivo).
+	| "Devolución"
+	| "P. Corrida";
 
 export type ExportProduccionNuevoRow = {
 	numero_poliza: string;

@@ -4,7 +4,11 @@ import { createClient } from "@/utils/supabase/server";
 import { checkPermission } from "@/utils/auth/helpers";
 import { captureError } from "@/utils/sentry";
 import { ESTADO_ANEXO } from "@/types/anexo";
-import { computarPrimaVigenciaCorrida } from "@/utils/polizas/vigenciaCorridaAnulacion";
+import {
+	computarPrimaDesdeMonto,
+	obtenerMontoNoPagadoPolizas,
+	obtenerVigenciasCorridasAnulacion,
+} from "@/utils/polizas/anulacionReporte";
 
 // ============================================================================
 // REPORTES APS
@@ -21,11 +25,14 @@ import { computarPrimaVigenciaCorrida } from "@/utils/polizas/vigenciaCorridaAnu
 //   pero el filtro es configurable; a los anexos no les aplica: un anexo del
 //   período es movimiento nuevo aunque su madre sea retroactiva.
 // - Egreso: pólizas cuyo anexo de anulación se registró en el período (y está
-//   validado), revirtiendo los montos completos de la póliza, más los anexos
-//   de EXCLUSIÓN registrados en el período y validados (prima propia, en
-//   positivo: el General la resta). Parche contabilidad: si la anulación tiene
-//   vigencia corrida de COBRO, en vez de revertir la póliza completa se
-//   declaran los montos derivados de la VC (utils/polizas/vigenciaCorridaAnulacion.ts).
+//   validado), declarando las cuotas que no llegaron a pagarse (madre +
+//   inclusiones, con neta y comisión derivadas de los factores congelados),
+//   más los anexos de EXCLUSIÓN registrados en el período y validados (prima
+//   propia, en positivo: el General la resta).
+// - Devolución / P. Corrida: el saldo de vigencia corrida de esas anulaciones
+//   NO entra al Egreso — se reporta en archivos propios según su dirección
+//   (devolución = favor cliente, p. corrida = el cliente debe el período
+//   corrido). Ver utils/polizas/anulacionReporte.ts.
 // Todos los montos se devuelven en Bs (USD convertido con el tipo de cambio
 // indicado). La agregación es por compañía + código APS + riesgo, donde el
 // código APS = código de ramo (ej. 9105 → "91-05") + código de producto.
@@ -46,11 +53,17 @@ export type APSRegistro = {
 export type APSDatos = {
 	ingreso: APSRegistro[];
 	egreso: APSRegistro[];
+	/** Saldos de VC a favor del cliente (magnitudes positivas; archivos propios) */
+	devolucion: APSRegistro[];
+	/** Saldos de VC que el cliente debe pagar (magnitudes positivas; archivos propios) */
+	p_corrida: APSRegistro[];
 	meta: {
 		polizas_ingreso: number;
 		anexos_ingreso: number;
 		polizas_egreso: number;
 		anexos_egreso: number;
+		anexos_devolucion: number;
+		anexos_p_corrida: number;
 	};
 };
 
@@ -163,31 +176,6 @@ async function obtenerAnexosFinancieros(
 		if (!data || data.length < PAGE_SIZE) break;
 	}
 	return resultado;
-}
-
-/**
- * Suma de vigencias corridas de COBRO por anexo de anulación. Las de
- * devolución no cuentan: esas anulaciones mantienen la reversión completa.
- */
-async function obtenerVigenciasCorridasCobro(
-	supabase: Awaited<ReturnType<typeof createClient>>,
-	anexoIds: string[],
-): Promise<Map<string, number>> {
-	const vcCobro = new Map<string, number>();
-	for (let i = 0; i < anexoIds.length; i += 500) {
-		const { data, error } = await supabase
-			.from("polizas_anexos_pagos")
-			.select("anexo_id, monto, direccion")
-			.eq("tipo", "vigencia_corrida")
-			.in("anexo_id", anexoIds.slice(i, i + 500));
-		if (error) throw error;
-		for (const pago of (data ?? []) as { anexo_id: string; monto: number | null; direccion: string | null }[]) {
-			if (pago.direccion === "devolucion") continue;
-			const monto = Math.abs(Number(pago.monto ?? 0));
-			if (monto > 0) vcCobro.set(pago.anexo_id, (vcCobro.get(pago.anexo_id) ?? 0) + monto);
-		}
-	}
-	return vcCobro;
 }
 
 function convertirABs(monto: number | null | undefined, moneda: string | null, tipoCambio: number): number {
@@ -316,24 +304,39 @@ export async function obtenerDatosAPS(filtros: APSFiltros): Promise<APSResponse>
 			if (!data || data.length < PAGE_SIZE) break;
 		}
 
-		// Parche contabilidad: anulación con VC de cobro declara los montos
-		// derivados de la VC en lugar de revertir la póliza completa.
-		const vcCobroMap = await obtenerVigenciasCorridasCobro(
-			supabase,
-			anulaciones.map((a) => a.anexoId),
-		);
-		const polizasEgreso: PolizaFinanciera[] = anulaciones.map(({ anexoId, poliza }) => {
-			const montoVC = vcCobroMap.get(anexoId);
-			if (!montoVC) return poliza;
-			const vc = computarPrimaVigenciaCorrida(montoVC, poliza);
+		// Cada anulación declara en Egreso las cuotas que no llegaron a pagarse;
+		// el saldo de su vigencia corrida se reporta aparte según la dirección
+		// (Devolución / P. Corrida), nunca dentro del Egreso.
+		const [vcMap, noPagadoMap] = await Promise.all([
+			obtenerVigenciasCorridasAnulacion(
+				supabase,
+				anulaciones.map((a) => a.anexoId),
+			),
+			obtenerMontoNoPagadoPolizas(
+				supabase,
+				anulaciones.map((a) => a.poliza.id),
+			),
+		]);
+		const conMontosDerivados = (poliza: PolizaFinanciera, monto: number): PolizaFinanciera => {
+			const m = computarPrimaDesdeMonto(monto, poliza);
 			return {
 				...poliza,
-				prima_total: vc.prima_total,
-				prima_neta: vc.prima_neta,
-				comision: vc.comision,
-				comision_empresa: vc.comision,
+				prima_total: m.prima_total,
+				prima_neta: m.prima_neta,
+				comision: m.comision,
+				comision_empresa: m.comision,
 			};
-		});
+		};
+		const polizasEgreso: PolizaFinanciera[] = [];
+		const polizasDevolucion: PolizaFinanciera[] = [];
+		const polizasPCorrida: PolizaFinanciera[] = [];
+		for (const { anexoId, poliza } of anulaciones) {
+			const noPagado = noPagadoMap.get(poliza.id) ?? 0;
+			if (noPagado > 0) polizasEgreso.push(conMontosDerivados(poliza, noPagado));
+			const vc = vcMap.get(anexoId);
+			if (vc?.devolucion) polizasDevolucion.push(conMontosDerivados(poliza, vc.devolucion));
+			if (vc?.cobro) polizasPCorrida.push(conMontosDerivados(poliza, vc.cobro));
+		}
 
 		// EGRESO: anexos de exclusión registrados en el período y validados (prima propia en positivo)
 		const anexosEgreso = await obtenerAnexosFinancieros(supabase, "exclusion", desdeTs, hastaTs);
@@ -343,11 +346,15 @@ export async function obtenerDatosAPS(filtros: APSFiltros): Promise<APSResponse>
 			data: {
 				ingreso: agregarRegistros([...polizasIngreso, ...anexosIngreso], tipoCambio, grupoNombres),
 				egreso: agregarRegistros([...polizasEgreso, ...anexosEgreso], tipoCambio, grupoNombres),
+				devolucion: agregarRegistros(polizasDevolucion, tipoCambio, grupoNombres),
+				p_corrida: agregarRegistros(polizasPCorrida, tipoCambio, grupoNombres),
 				meta: {
 					polizas_ingreso: polizasIngreso.length,
 					anexos_ingreso: anexosIngreso.length,
 					polizas_egreso: polizasEgreso.length,
 					anexos_egreso: anexosEgreso.length,
+					anexos_devolucion: polizasDevolucion.length,
+					anexos_p_corrida: polizasPCorrida.length,
 				},
 			},
 		};

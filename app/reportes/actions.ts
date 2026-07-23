@@ -5,7 +5,11 @@ import { checkPermission, getDataScopeFilter } from "@/utils/auth/helpers";
 import { aplicarScopePolizas, filtroEquipoOr } from "@/utils/auth/scopePolizas";
 import { resolverNombresCliente } from "@/utils/polizas/resolverNombresCliente";
 import { derivarFactorPrimaNeta, derivarPorcentajeComision } from "@/utils/polizas/factorDerivado";
-import { computarPrimaVigenciaCorrida } from "@/utils/polizas/vigenciaCorridaAnulacion";
+import {
+	computarPrimaDesdeMonto,
+	obtenerMontoNoPagadoPolizas,
+	obtenerVigenciasCorridasAnulacion,
+} from "@/utils/polizas/anulacionReporte";
 import { hoyLaPaz } from "@/utils/formatters";
 import { ESTADO_ANEXO } from "@/types/anexo";
 import type {
@@ -863,32 +867,26 @@ export async function exportarProduccionNuevo(
 		);
 		const valorAseguradoAnexoMap = await obtenerValoresAseguradosAnexos(supabase, anexoIds, anexoRamosSet);
 
-		// Parche contabilidad: las anulaciones con vigencia corrida de COBRO
-		// reportan la VC como producción propia en NEGATIVO (las de devolución o
-		// sin VC siguen en cero: la reversión completa vive en el APS Egreso).
-		const anulacionIds = anexos
-			.filter((a: { tipo_anexo: string }) => a.tipo_anexo === "anulacion")
-			.map((a: { id: string }) => a.id);
-		const vcCobroMap = new Map<string, number>();
-		for (let i = 0; i < anulacionIds.length; i += 500) {
-			const { data: vcData, error: vcError } = await supabase
-				.from("polizas_anexos_pagos")
-				.select("anexo_id, monto, direccion")
-				.eq("tipo", "vigencia_corrida")
-				.in("anexo_id", anulacionIds.slice(i, i + 500));
-			if (vcError) {
-				console.error("Error fetching vigencias corridas for production report:", vcError);
-				return { success: false, error: "Error al obtener vigencias corridas para el reporte" };
-			}
-			for (const pago of (vcData ?? []) as {
-				anexo_id: string;
-				monto: number | null;
-				direccion: string | null;
-			}[]) {
-				if (pago.direccion === "devolucion") continue;
-				const monto = Math.abs(Number(pago.monto ?? 0));
-				if (monto > 0) vcCobroMap.set(pago.anexo_id, (vcCobroMap.get(pago.anexo_id) ?? 0) + monto);
-			}
+		// Criterio contabilidad: una anulación reporta las cuotas que no llegaron
+		// a pagarse (en negativo) y, si tiene vigencia corrida, una segunda fila
+		// Devolución (negativa) o P. Corrida (positiva) con el saldo de la VC.
+		const anulaciones = anexos.filter((a: { tipo_anexo: string }) => a.tipo_anexo === "anulacion");
+		let vcMap: Map<string, { cobro: number; devolucion: number }>;
+		let noPagadoMap: Map<string, number>;
+		try {
+			[vcMap, noPagadoMap] = await Promise.all([
+				obtenerVigenciasCorridasAnulacion(
+					supabase,
+					anulaciones.map((a: { id: string }) => a.id),
+				),
+				obtenerMontoNoPagadoPolizas(
+					supabase,
+					anulaciones.map((a: { poliza_id: string }) => a.poliza_id),
+				),
+			]);
+		} catch (vcError) {
+			console.error("Error fetching datos de anulación for production report:", vcError);
+			return { success: false, error: "Error al obtener los datos de anulaciones para el reporte" };
 		}
 
 		// Obtener cantidad de cuotas y cuota inicial por póliza
@@ -1057,16 +1055,17 @@ export async function exportarProduccionNuevo(
 			const dc = pol.director_cartera;
 			// El anexo reporta su PROPIA producción (prima/comisión/factor calculados en #14),
 			// no la de la póliza madre. Inclusión suma, exclusión resta (montos firmados).
-			// Anulación con VC de cobro: la VC en negativo, con los factores de la madre.
-			const montoVC = anexo.tipo_anexo === "anulacion" ? vcCobroMap.get(anexo.id) : undefined;
-			const vc = montoVC ? computarPrimaVigenciaCorrida(montoVC, pol) : null;
+			// Anulación: en negativo las cuotas que no llegaron a pagarse, con los
+			// factores congelados de la madre.
+			const esAnulacion = anexo.tipo_anexo === "anulacion";
+			const anulado = esAnulacion ? computarPrimaDesdeMonto(noPagadoMap.get(anexo.poliza_id) ?? 0, pol) : null;
 			const financieros = extraerFinancieros(
-				vc
+				anulado
 					? {
-							prima_total: -vc.prima_total,
-							prima_neta: -vc.prima_neta,
-							comision: -vc.comision,
-							comision_empresa: -vc.comision,
+							prima_total: -anulado.prima_total,
+							prima_neta: -anulado.prima_neta,
+							comision: -anulado.comision,
+							comision_empresa: -anulado.comision,
 							factor_prima_neta: pol.factor_prima_neta ?? null,
 							porcentaje_comision: pol.porcentaje_comision ?? null,
 						}
@@ -1082,7 +1081,7 @@ export async function exportarProduccionNuevo(
 
 			const cuotasInfo = cuotasMap.get(pol.id);
 
-			rows.push({
+			const filaAnexo: ExportProduccionNuevoRow = {
 				numero_poliza: pol.numero_poliza,
 				numero_anexo: anexo.numero_anexo,
 				tipo_poliza: tipoAnexoMap[anexo.tipo_anexo] || anexo.tipo_anexo,
@@ -1099,7 +1098,7 @@ export async function exportarProduccionNuevo(
 				ramo: pol.ramo,
 				responsable: pol.responsable?.full_name || "N/A",
 				regional: pol.regional?.nombre || "N/A",
-				prima_total: vc ? -vc.prima_total : Number(anexo.prima_total ?? 0),
+				prima_total: anulado ? -anulado.prima_total : Number(anexo.prima_total ?? 0),
 				...financieros,
 				moneda: pol.moneda || "Bs",
 				// Valor asegurado PROPIO del anexo (firmado): inclusión suma, exclusión resta.
@@ -1116,7 +1115,37 @@ export async function exportarProduccionNuevo(
 				persona_registro: anexo.created_by_profile?.full_name || "N/A",
 				categoria: pol.categoria?.nombre || "N/A",
 				producto: pol.producto?.nombre_producto || "N/A",
-			});
+			};
+			rows.push(filaAnexo);
+
+			// Segundo movimiento de la anulación: el saldo de la vigencia corrida,
+			// como fila propia — Devolución en negativo (favor cliente) o
+			// P. Corrida en positivo (el cliente debe el período corrido).
+			if (esAnulacion) {
+				const vc = vcMap.get(anexo.id);
+				const movimientosVC: { tipo: TipoPolizaReporte; signo: 1 | -1; monto: number }[] = [
+					{ tipo: "Devolución" as const, signo: -1 as const, monto: vc?.devolucion ?? 0 },
+					{ tipo: "P. Corrida" as const, signo: 1 as const, monto: vc?.cobro ?? 0 },
+				].filter((m) => m.monto > 0);
+				for (const mov of movimientosVC) {
+					const montos = computarPrimaDesdeMonto(mov.monto, pol);
+					rows.push({
+						...filaAnexo,
+						tipo_poliza: mov.tipo,
+						prima_total: mov.signo * montos.prima_total,
+						...extraerFinancieros({
+							prima_total: mov.signo * montos.prima_total,
+							prima_neta: mov.signo * montos.prima_neta,
+							comision: mov.signo * montos.comision,
+							comision_empresa: mov.signo * montos.comision,
+							factor_prima_neta: pol.factor_prima_neta ?? null,
+							porcentaje_comision: pol.porcentaje_comision ?? null,
+						}),
+						// El valor asegurado ya viaja en la fila de la anulación
+						valor_asegurado: null,
+					});
+				}
+			}
 		}
 
 		// Ordenar por fecha de registro en el sistema (producción) y, como desempate, por número de póliza.
