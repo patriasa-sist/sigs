@@ -15,6 +15,7 @@ import {
 	Lock,
 	Check,
 	Save,
+	Trash2,
 } from "lucide-react";
 import type {
 	ModalidadPago as ModalidadPagoType,
@@ -311,6 +312,28 @@ export function ModalidadPago({
 	};
 
 	/**
+	 * Quita una cuota pendiente del plan. Necesario en cargas históricas: la póliza
+	 * lleva su prima total real, pero solo se registran las cuotas que aún están por
+	 * cobrar (las ya cobradas fuera del sistema no deben aparecer en Cobranza).
+	 * Las cuotas ya pagadas no se pueden quitar. Los errores/advertencias por índice
+	 * se descartan porque los índices se corren al eliminar.
+	 */
+	const handleEliminarCuota = (index: number) => {
+		if (cuotas[index]?.estado === "pagado") return;
+		setCuotas(cuotas.filter((_, i) => i !== index));
+		setErrores((prev) => Object.fromEntries(Object.entries(prev).filter(([k]) => !k.startsWith("cuota_"))));
+		setAdvertencias((prev) => Object.fromEntries(Object.entries(prev).filter(([k]) => !k.startsWith("cuota_"))));
+	};
+
+	const handleQuitarCuotasPendientes = () => {
+		setCuotas(cuotas.filter((c) => c.estado === "pagado"));
+		setErrores((prev) => Object.fromEntries(Object.entries(prev).filter(([k]) => !k.startsWith("cuota_"))));
+		setAdvertencias((prev) => Object.fromEntries(Object.entries(prev).filter(([k]) => !k.startsWith("cuota_"))));
+	};
+
+	const cuotasPendientes = cuotas.filter((c) => c.estado !== "pagado").length;
+
+	/**
 	 * Compone el objeto de modalidad de pago a partir del estado local actual.
 	 * Única fuente de verdad usada por "Continuar" y por el live-sync con el padre.
 	 */
@@ -578,7 +601,9 @@ export function ModalidadPago({
 						<span className="text-sm font-medium">
 							{tipoPago === "contado"
 								? "Pago al contado"
-								: `${cuotaInicial > 0 ? cuotas.length + 1 : cuotas.length} cuotas`}
+								: cuotas.length === 0 && cuotaInicial === 0
+									? "Sin cuotas pendientes"
+									: `${cuotaInicial > 0 ? cuotas.length + 1 : cuotas.length} cuotas`}
 						</span>
 					</div>
 				)}
@@ -852,7 +877,9 @@ export function ModalidadPago({
 									está <strong>pendiente de cobro</strong>. Se cargan únicamente las cuotas del{" "}
 									<strong>mes vigente en adelante</strong>; las de meses ya pasados (ya cobradas) no
 									se registran y el sistema bloquea cuotas con más de 60 días de atraso. Si lo deja
-									vacío, las cuotas se calculan dividiendo la prima total.
+									vacío, las cuotas se calculan dividiendo la prima total. Si la póliza ya está
+									totalmente cobrada, quite todas las cuotas del plan de abajo: se guardará solo la
+									prima.
 								</p>
 							</div>
 						)}
@@ -1110,13 +1137,26 @@ export function ModalidadPago({
 					{/* Tabla de Cuotas */}
 					{cuotas.length > 0 && (
 						<div className="space-y-3">
-							<div className="flex items-center justify-between">
+							<div className="flex items-center justify-between gap-3">
 								<h4 className="text-sm font-semibold text-foreground">Plan de Cuotas</h4>
-								<span className="text-xs text-muted-foreground">
-									{cuotaInicial > 0
-										? `Cuota #1 (inicial) + Cuotas #2-${cuotas.length + 1} = ${cuotas.length + 1} total`
-										: `${cuotas.length} cuota${cuotas.length !== 1 ? "s" : ""}`}
-								</span>
+								<div className="flex items-center gap-3">
+									<span className="text-xs text-muted-foreground">
+										{cuotaInicial > 0
+											? `Cuota #1 (inicial) + Cuotas #2-${cuotas.length + 1} = ${cuotas.length + 1} total`
+											: `${cuotas.length} cuota${cuotas.length !== 1 ? "s" : ""}`}
+									</span>
+									{cuotasPendientes > 0 && (
+										<Button
+											variant="ghost"
+											size="sm"
+											onClick={handleQuitarCuotasPendientes}
+											className="h-7 px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
+										>
+											<Trash2 className="mr-1 h-3.5 w-3.5" />
+											Quitar pendientes
+										</Button>
+									)}
+								</div>
 							</div>
 
 							{/* Mostrar advertencia si hay errores */}
@@ -1157,6 +1197,9 @@ export function ModalidadPago({
 												</th>
 												<th className="px-4 py-3 text-left text-xs font-medium text-foreground uppercase">
 													Estado
+												</th>
+												<th className="px-4 py-3 w-12">
+													<span className="sr-only">Acciones</span>
 												</th>
 											</tr>
 										</thead>
@@ -1216,6 +1259,8 @@ export function ModalidadPago({
 															</Badge>
 														)}
 													</td>
+													{/* La cuota inicial se quita poniendo su monto en 0 */}
+													<td className="px-4 py-3" />
 												</tr>
 											)}
 											{cuotas.map((cuota, index) => {
@@ -1335,6 +1380,20 @@ export function ModalidadPago({
 																</Badge>
 															)}
 														</td>
+														<td className="px-4 py-3">
+															{!estaPagada && (
+																<Button
+																	variant="ghost"
+																	size="icon"
+																	onClick={() => handleEliminarCuota(index)}
+																	title="Quitar esta cuota del plan"
+																	aria-label={`Quitar la cuota ${cuota.numero}`}
+																	className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+																>
+																	<Trash2 className="h-4 w-4" />
+																</Button>
+															)}
+														</td>
 													</tr>
 												);
 											})}
@@ -1350,6 +1409,19 @@ export function ModalidadPago({
 									<p className="text-sm text-warning-foreground">{advertencias.cuotas}</p>
 								</div>
 							)}
+						</div>
+					)}
+
+					{/* Carga histórica sin cuotas por cobrar: estado válido, se guarda solo la prima */}
+					{esRetroactiva && cuotas.length === 0 && cuotaInicial === 0 && (
+						<div className="p-3 bg-secondary border border-border rounded-lg flex items-start gap-2">
+							<AlertCircle className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
+							<p className="text-xs text-muted-foreground">
+								<strong>Sin cuotas pendientes.</strong> Se guardará la prima total de la póliza para
+								producción y comisiones, pero no se registrará ninguna cuota en Cobranza (se asume que
+								todas se cobraron antes de cargar la póliza). Si necesita registrar alguna, use{" "}
+								<strong>Generar Cuotas</strong> y quite las que ya estén cobradas.
+							</p>
 						</div>
 					)}
 				</TabsContent>
