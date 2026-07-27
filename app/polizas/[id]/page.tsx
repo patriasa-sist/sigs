@@ -37,6 +37,7 @@ import {
 	Flame,
 	ShieldAlert,
 	Users,
+	History,
 } from "lucide-react";
 import { formatCurrency, formatDate, calcularVigencia } from "@/utils/formatters";
 import { createClient } from "@/utils/supabase/client";
@@ -351,8 +352,17 @@ export default function PolizaDetallePage() {
 								{getEstadoLabel(poliza.estado)}
 							</span>
 							{poliza.es_renovacion && (
-								<span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800 border border-amber-200">
+								<span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-warning/15 text-warning-foreground border border-warning/30">
 									Renovación de Nº {poliza.nro_poliza_anterior}
+								</span>
+							)}
+							{poliza.es_retroactiva && (
+								<span
+									className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-info/15 text-info border border-info/30"
+									title="Carga histórica: la póliza se emitió antes de registrarse en el sistema. Solo se registran las cuotas que quedaban pendientes de cobro, por eso la suma de cuotas puede ser menor a la prima total."
+								>
+									<History className="h-3 w-3" />
+									Retroactiva
 								</span>
 							)}
 						</div>
@@ -2419,31 +2429,34 @@ export default function PolizaDetallePage() {
 
 								{/* Rechazo: visible mientras está rechazada y también ya corregida
 								    (pendiente), para que el validador vea qué fue lo observado. */}
-								{(poliza.estado === "rechazada" || poliza.estado === "pendiente") && poliza.fecha_rechazo && (
-									<div className="mt-3 p-3 rounded-md bg-orange-50 border border-orange-200">
-										<p className="font-medium text-orange-800 mb-1">
-											{poliza.estado === "rechazada" ? "Rechazada" : "Rechazada anteriormente"}
-										</p>
-										<p className="text-orange-700">
-											{formatDate(poliza.fecha_rechazo)}
-											{poliza.rechazador_nombre && ` por ${poliza.rechazador_nombre}`}
-										</p>
-										{poliza.motivo_rechazo && (
-											<p className="text-orange-900 mt-1.5">
-												<span className="font-medium">Motivo:</span> {poliza.motivo_rechazo}
+								{(poliza.estado === "rechazada" || poliza.estado === "pendiente") &&
+									poliza.fecha_rechazo && (
+										<div className="mt-3 p-3 rounded-md bg-orange-50 border border-orange-200">
+											<p className="font-medium text-orange-800 mb-1">
+												{poliza.estado === "rechazada"
+													? "Rechazada"
+													: "Rechazada anteriormente"}
 											</p>
-										)}
-										{poliza.puede_editar_hasta && (
-											<p
-												className={`mt-1 ${new Date(poliza.puede_editar_hasta) > new Date() ? "text-green-700" : "text-red-600"}`}
-											>
-												{new Date(poliza.puede_editar_hasta) > new Date()
-													? `Puede editar hasta: ${formatDate(poliza.puede_editar_hasta)}`
-													: "Ventana de edición expirada"}
+											<p className="text-orange-700">
+												{formatDate(poliza.fecha_rechazo)}
+												{poliza.rechazador_nombre && ` por ${poliza.rechazador_nombre}`}
 											</p>
-										)}
-									</div>
-								)}
+											{poliza.motivo_rechazo && (
+												<p className="text-orange-900 mt-1.5">
+													<span className="font-medium">Motivo:</span> {poliza.motivo_rechazo}
+												</p>
+											)}
+											{poliza.puede_editar_hasta && (
+												<p
+													className={`mt-1 ${new Date(poliza.puede_editar_hasta) > new Date() ? "text-green-700" : "text-red-600"}`}
+												>
+													{new Date(poliza.puede_editar_hasta) > new Date()
+														? `Puede editar hasta: ${formatDate(poliza.puede_editar_hasta)}`
+														: "Ventana de edición expirada"}
+												</p>
+											)}
+										</div>
+									)}
 
 								{/* Historial */}
 								{edicionesRelevantes.length > 0 && (

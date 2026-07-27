@@ -59,6 +59,8 @@ export type PolizaDetalle = PolizaListItem & {
 	// Renewal fields
 	es_renovacion: boolean;
 	nro_poliza_anterior: string | null;
+	// Carga histórica (póliza emitida antes de existir el sistema)
+	es_retroactiva: boolean;
 	// Campos ramo-específicos almacenados en polizas
 	regional_asegurado_id: string | null;
 	regional_asegurado_nombre: string | null;
@@ -1576,6 +1578,7 @@ export async function obtenerDetallePoliza(polizaId: string) {
 			puede_editar_hasta: poliza.puede_editar_hasta || null,
 			es_renovacion: poliza.es_renovacion || false,
 			nro_poliza_anterior: poliza.nro_poliza_anterior || null,
+			es_retroactiva: poliza.es_retroactiva || false,
 			regional_asegurado_id: poliza.regional_asegurado_id || null,
 			regional_asegurado_nombre: regionalAseguradoNombre,
 			tiene_maternidad: poliza.tiene_maternidad ?? false,
