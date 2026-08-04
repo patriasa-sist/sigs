@@ -63,6 +63,7 @@ export default function ExportarSiniestros({ siniestros, filtrosActivos }: Expor
 				"Último Estado",
 				"Último Movimiento",
 				"Última Nota",
+				"Ítems Siniestrados",
 			];
 
 			// Agregar encabezados con estilo
@@ -99,6 +100,7 @@ export default function ExportarSiniestros({ siniestros, filtrosActivos }: Expor
 					siniestro.estado_actual_nombre || "—",
 					siniestro.updated_at ? toExcelDateLaPaz(siniestro.updated_at) : "—",
 					siniestro.ultima_nota || "—",
+					siniestro.items_siniestrados || "—",
 				]);
 			});
 
@@ -132,6 +134,7 @@ export default function ExportarSiniestros({ siniestros, filtrosActivos }: Expor
 			worksheet.getColumn(17).width = 25; // Creado por
 			worksheet.getColumn(19).width = 18; // Último Estado
 			worksheet.getColumn(21).width = 40; // Última Nota
+			worksheet.getColumn(22).width = 45; // Ítems Siniestrados
 
 			// Aplicar bordes a todas las celdas con datos
 			worksheet.eachRow((row, rowNumber) => {

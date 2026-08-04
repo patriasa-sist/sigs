@@ -94,6 +94,26 @@ export async function obtenerSiniestros(): Promise<ObtenerSiniestrosResponse> {
 
 		if (siniestrosError) throw siniestrosError;
 
+		// Ítems siniestrados: descripciones agregadas por siniestro (best-effort,
+		// una sola query batcheada; si la tabla no existe no rompe el listado).
+		const itemsPorSiniestro = new Map<string, string[]>();
+		const siniestroIds = (siniestros || []).map((s) => s.id);
+		if (siniestroIds.length > 0) {
+			const { data: itemsRaw, error: itemsError } = await supabase
+				.from("siniestros_items")
+				.select("siniestro_id, descripcion")
+				.in("siniestro_id", siniestroIds);
+			if (itemsError) {
+				console.error("Error obteniendo ítems de siniestros:", itemsError);
+			}
+			for (const it of itemsRaw || []) {
+				if (!it.descripcion) continue;
+				const lista = itemsPorSiniestro.get(it.siniestro_id) || [];
+				lista.push(it.descripcion);
+				itemsPorSiniestro.set(it.siniestro_id, lista);
+			}
+		}
+
 		// Calcular requiere_atencion para cada siniestro
 		const ahora = new Date();
 		const siniestrosArray = (siniestros || []).map((s) => {
@@ -102,6 +122,7 @@ export async function obtenerSiniestros(): Promise<ObtenerSiniestrosResponse> {
 			return {
 				...s,
 				requiere_atencion: s.estado === "abierto" && diasSinActualizacion >= 10,
+				items_siniestrados: (itemsPorSiniestro.get(s.id) || []).join(" | ") || null,
 			};
 		});
 
@@ -1583,10 +1604,7 @@ export async function actualizarItemsSiniestro(
 			return { success: false, error: "Siniestro no encontrado" };
 		}
 
-		const { error: deleteError } = await supabase
-			.from("siniestros_items")
-			.delete()
-			.eq("siniestro_id", siniestroId);
+		const { error: deleteError } = await supabase.from("siniestros_items").delete().eq("siniestro_id", siniestroId);
 
 		if (deleteError) throw deleteError;
 

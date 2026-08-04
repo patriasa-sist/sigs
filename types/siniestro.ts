@@ -713,6 +713,9 @@ export type SiniestroVistaConEstado = SiniestroVista &
 		// Equipos a los que pertenece el ejecutivo (responsable) de la póliza.
 		// Enriquecido en el server action (no proviene de la vista).
 		poliza_equipo_nombres?: string[];
+		// Descripciones de los ítems siniestrados (snapshot de siniestros_items),
+		// enriquecido en el server action para listado/export.
+		items_siniestrados?: string | null;
 	};
 
 // ============================================
