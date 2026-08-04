@@ -11,6 +11,7 @@ import { Download, AlertCircle, FileSpreadsheet } from "lucide-react";
 import { exportarProduccion } from "@/app/reportes/actions";
 import * as ExcelJS from "exceljs";
 import type { ExportProduccionFilters, FilterData } from "@/types/reporte";
+import { hoyLaPaz } from "@/utils/formatters";
 
 function getDefaultDateRange() {
 	const now = new Date();
@@ -109,6 +110,10 @@ export default function ExportarContable({ regionales, companias, equipos }: Fil
 				["Rango de fechas:", `${fechaDesdeFormatted} - ${fechaHastaFormatted}`],
 				["Cantidad de cuotas:", rows.length.toString()],
 				["Filtros aplicados:", filtrosAplicados.length > 0 ? filtrosAplicados.join(", ") : "Ninguno"],
+				[
+					"Leyenda:",
+					"Verde = cuota pagada · Amarillo = cuota en mora · Gris = anulada · Sin color = por vencer",
+				],
 			];
 
 			for (const [label, value] of metaRows) {
@@ -120,8 +125,8 @@ export default function ExportarContable({ regionales, companias, equipos }: Fil
 			// Fila vacía separadora
 			worksheet.addRow([]);
 
-			// ---- Definir columnas de datos (fila 7 será el header) ----
-			const DATA_HEADER_ROW = 7;
+			// ---- Definir columnas de datos (fila 8 será el header) ----
+			const DATA_HEADER_ROW = 8;
 			const columns = [
 				{ header: "N° Póliza", key: "numero_poliza", width: 15 },
 				{ header: "Cliente", key: "cliente", width: 30 },
@@ -178,6 +183,14 @@ export default function ExportarContable({ regionales, companias, equipos }: Fil
 				)
 				.filter((i) => i > 0);
 
+			// Colores por estado de la cuota (verde = pagada, amarillo = mora, gris = anulada)
+			const hoy = hoyLaPaz();
+			const fillCuota = (argb: string): ExcelJS.Fill => ({
+				type: "pattern",
+				pattern: "solid",
+				fgColor: { argb },
+			});
+
 			// Escribir filas de datos
 			rows.forEach((row) => {
 				const values = columns.map((col) => {
@@ -190,13 +203,25 @@ export default function ExportarContable({ regionales, companias, equipos }: Fil
 
 				const excelRow = worksheet.addRow(values);
 
-				greenColumnIndices.forEach((colIdx) => {
-					excelRow.getCell(colIdx).fill = {
-						type: "pattern",
-						pattern: "solid",
-						fgColor: { argb: "FFE2EFDA" },
-					};
-				});
+				const pagada = row.estado_cuota === "pagado";
+				const anulada = row.estado_cuota === "anulada";
+				const enMora =
+					!pagada &&
+					!anulada &&
+					(row.estado_cuota === "pendiente" || row.estado_cuota === "parcial") &&
+					!!row.fecha_vencimiento &&
+					row.fecha_vencimiento < hoy;
+
+				if (pagada || anulada || enMora) {
+					const argb = pagada ? "FFC6EFCE" : enMora ? "FFFFEB9C" : "FFE7E6E6";
+					for (let c = 1; c <= columns.length; c++) {
+						excelRow.getCell(c).fill = fillCuota(argb);
+					}
+				} else {
+					greenColumnIndices.forEach((colIdx) => {
+						excelRow.getCell(colIdx).fill = fillCuota("FFE2EFDA");
+					});
+				}
 			});
 
 			// Bordes en filas de datos
