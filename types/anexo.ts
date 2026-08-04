@@ -174,6 +174,7 @@ export type PlanPagoInclusion = {
 	prima_total: number;
 	cuota_inicial: number; // crédito: monto de la primera cuota (0 = todas iguales)
 	cantidad_cuotas: number; // crédito: número total de cuotas
+	fecha_primera_cuota?: string; // vencimiento de la 1ra cuota; las demás se generan mensualmente desde esta
 	cuotas: CuotaPropia[]; // lista final de cuotas calculadas/editadas
 };
 

@@ -55,6 +55,17 @@ function fechaDefault(offsetMeses: number): string {
 	return d.toISOString().split("T")[0];
 }
 
+// Suma meses a una fecha ISO (yyyy-mm-dd) conservando el día; si el mes destino
+// no tiene ese día (p.ej. 31 → febrero), cae al último día del mes.
+function fechaDesde(fechaBase: string, offsetMeses: number): string {
+	const [y, m, d] = fechaBase.split("-").map(Number);
+	if (!y || !m || !d) return fechaDefault(offsetMeses);
+	const date = new Date(y, m - 1 + offsetMeses, d);
+	if (date.getDate() !== d) date.setDate(0);
+	const pad = (n: number) => String(n).padStart(2, "0");
+	return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
 // Los inputs type="number" del navegador aceptan e/E/+/-; los montos solo
 // admiten dígitos y punto decimal.
 function bloquearSimbolos(e: React.KeyboardEvent<HTMLInputElement>) {
@@ -68,9 +79,14 @@ function computarCuotas(
 	primaTotal: number,
 	cuotaInicial: number,
 	cantidadCuotas: number,
+	fechaPrimeraCuota?: string,
 ): CuotaPropia[] {
+	// Las cuotas se generan mensualmente a partir de la fecha de la primera
+	// (elegida por el usuario; por defecto hoy), como el Calcular de la madre.
+	const base = fechaPrimeraCuota || fechaDefault(0);
+
 	if (modalidad === "contado") {
-		return [{ numero_cuota: 1, monto: primaTotal, fecha_vencimiento: fechaDefault(0) }];
+		return [{ numero_cuota: 1, monto: primaTotal, fecha_vencimiento: base }];
 	}
 
 	if (cantidadCuotas <= 0) return [];
@@ -94,7 +110,7 @@ function computarCuotas(
 		cuotas.push({
 			numero_cuota: i + 1,
 			monto,
-			fecha_vencimiento: fechaDefault(i),
+			fecha_vencimiento: fechaDesde(base, i),
 		});
 	}
 
@@ -121,13 +137,16 @@ function SeccionPlanInclusion({
 		primaTotal: number,
 		cuotaInicial: number,
 		cantidadCuotas: number,
+		fechaPrimeraCuota?: string,
 	) => {
-		const cuotas = computarCuotas(modalidad, primaTotal, cuotaInicial, cantidadCuotas);
+		const fechaPrimera = fechaPrimeraCuota || plan.fecha_primera_cuota || fechaDefault(0);
+		const cuotas = computarCuotas(modalidad, primaTotal, cuotaInicial, cantidadCuotas, fechaPrimera);
 		onChange({
 			modalidad,
 			prima_total: primaTotal,
 			cuota_inicial: cuotaInicial,
 			cantidad_cuotas: cantidadCuotas,
+			fecha_primera_cuota: fechaPrimera,
 			cuotas,
 		});
 	};
@@ -148,6 +167,12 @@ function SeccionPlanInclusion({
 	const handleCantidadCuotas = (v: string) => {
 		const n = Math.max(1, parseInt(v) || 1);
 		recalcular(plan.modalidad, plan.prima_total, plan.cuota_inicial, n);
+	};
+
+	// Cambiar la fecha de la primera cuota regenera las fechas de todo el plan
+	const handleFechaPrimeraCuota = (v: string) => {
+		if (!v) return;
+		recalcular(plan.modalidad, plan.prima_total, plan.cuota_inicial, plan.cantidad_cuotas, v);
 	};
 
 	const handleCuotaMonto = (idx: number, v: string) => {
@@ -214,6 +239,23 @@ function SeccionPlanInclusion({
 						onKeyDown={bloquearSimbolos}
 						placeholder="0.00"
 					/>
+				</div>
+
+				<div>
+					<Label htmlFor="inc_fecha_primera">
+						{plan.modalidad === "contado" ? "Fecha de Vencimiento" : "Fecha de Primera Cuota"}
+					</Label>
+					<Input
+						id="inc_fecha_primera"
+						type="date"
+						value={plan.fecha_primera_cuota || plan.cuotas[0]?.fecha_vencimiento || ""}
+						onChange={(e) => handleFechaPrimeraCuota(e.target.value)}
+					/>
+					{plan.modalidad === "credito" && (
+						<p className="text-xs text-gray-500 mt-1">
+							Las demás cuotas se generan mensualmente desde esta.
+						</p>
+					)}
 				</div>
 
 				{plan.modalidad === "credito" && (
@@ -664,6 +706,7 @@ export function PagosYDocumentos({
 				prima_total: 0,
 				cuota_inicial: 0,
 				cantidad_cuotas: 1,
+				fecha_primera_cuota: fechaDefault(0),
 				cuotas: [{ numero_cuota: 1, monto: 0, fecha_vencimiento: fechaDefault(0) }],
 			});
 		}
