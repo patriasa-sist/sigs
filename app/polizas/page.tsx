@@ -689,6 +689,16 @@ export default function PolizasPage() {
 									<p className="text-sm text-foreground">{selectedPoliza.ramo}</p>
 								</div>
 								<div className="space-y-0.5">
+									<p className="text-xs font-medium text-muted-foreground">Producto</p>
+									<p className="text-sm text-foreground">
+										{selectedPoliza.producto_nombre
+											? selectedPoliza.producto_codigo
+												? `${selectedPoliza.producto_nombre} (${selectedPoliza.producto_codigo})`
+												: selectedPoliza.producto_nombre
+											: "—"}
+									</p>
+								</div>
+								<div className="space-y-0.5">
 									<p className="text-xs font-medium text-muted-foreground">Regional</p>
 									<p className="text-sm text-foreground">{selectedPoliza.regional_nombre}</p>
 								</div>

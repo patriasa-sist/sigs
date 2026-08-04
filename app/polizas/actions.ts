@@ -26,6 +26,8 @@ export type PolizaListItem = {
 	director_cartera_nombre: string;
 	responsable_nombre: string;
 	regional_nombre: string;
+	producto_nombre: string | null;
+	producto_codigo: string | null;
 	created_at: string;
 };
 
@@ -43,8 +45,6 @@ export type PolizaDetalle = PolizaListItem & {
 	prima_neta_manual: boolean;
 	prima_neta_ajuste_motivo: string | null;
 	categoria_nombre: string;
-	producto_nombre: string | null;
-	producto_codigo: string | null;
 	// Audit and validation fields
 	creador_nombre: string | null;
 	validado_por: string | null;
@@ -331,6 +331,7 @@ function mapPolizaToListItem(
 		directores_cartera: unknown;
 		profiles: unknown;
 		regionales: unknown;
+		producto?: unknown;
 	},
 	clientInfoMap: Map<string, { name: string; ci: string }>,
 ): PolizaListItem {
@@ -356,6 +357,8 @@ function mapPolizaToListItem(
 		})(),
 		responsable_nombre: (poliza.profiles as { full_name?: string } | null)?.full_name || "-",
 		regional_nombre: (poliza.regionales as { nombre?: string } | null)?.nombre || "-",
+		producto_nombre: (poliza.producto as { nombre_producto?: string } | null)?.nombre_producto || null,
+		producto_codigo: (poliza.producto as { codigo_producto?: string } | null)?.codigo_producto || null,
 		created_at: poliza.created_at,
 	};
 }
@@ -484,7 +487,8 @@ export async function obtenerPolizas(params: ObtenerPolizasParams = {}) {
 				companias_aseguradoras (nombre),
 				directores_cartera (nombre, apellidos),
 				profiles!polizas_responsable_id_fkey (full_name),
-				regionales!polizas_regional_id_fkey (nombre)
+				regionales!polizas_regional_id_fkey (nombre),
+				producto:productos_aseguradoras!producto_id (nombre_producto, codigo_producto)
 			`,
 				{ count: "exact" },
 			)
@@ -1669,7 +1673,8 @@ export async function buscarPolizas(query: string) {
 				companias_aseguradoras (nombre),
 				directores_cartera (nombre, apellidos),
 				profiles!polizas_responsable_id_fkey (full_name),
-				regionales!polizas_regional_id_fkey (nombre)
+				regionales!polizas_regional_id_fkey (nombre),
+				producto:productos_aseguradoras!producto_id (nombre_producto, codigo_producto)
 			`,
 			)
 			.ilike("numero_poliza", `%${query}%`)
@@ -1714,6 +1719,8 @@ export async function buscarPolizas(query: string) {
 				})(),
 				responsable_nombre: (poliza.profiles as { full_name?: string } | null)?.full_name || "-",
 				regional_nombre: (poliza.regionales as { nombre?: string } | null)?.nombre || "-",
+				producto_nombre: (poliza.producto as { nombre_producto?: string } | null)?.nombre_producto || null,
+				producto_codigo: (poliza.producto as { codigo_producto?: string } | null)?.codigo_producto || null,
 				created_at: poliza.created_at,
 			};
 		});
