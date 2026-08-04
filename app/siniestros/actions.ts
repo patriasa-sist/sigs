@@ -9,6 +9,7 @@ import { captureError } from "@/utils/sentry";
 import { generateFinalStoragePath } from "@/utils/fileUpload";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { describirAseguradoDetalle } from "@/types/siniestro";
+import { resolverNombresCliente } from "@/utils/polizas/resolverNombresCliente";
 import type {
 	RegistroSiniestroFormState,
 	GuardarSiniestroResponse,
@@ -906,6 +907,9 @@ export async function buscarPolizasActivas(query: string): Promise<BusquedaPoliz
 			{ data: clientesNaturales },
 			{ data: clientesJuridicos },
 			{ data: clientesUnipersonales },
+			{ data: clientesOng },
+			{ data: clientesClub },
+			{ data: clientesAsociacion },
 			{ data: automotorVehiculos },
 			{ data: rcVehiculos },
 			{ data: ramosTecnicosEquipos },
@@ -926,6 +930,21 @@ export async function buscarPolizasActivas(query: string): Promise<BusquedaPoliz
 				.from("unipersonal_clients")
 				.select("client_id")
 				.or(`nit.ilike.%${query}%,razon_social.ilike.%${query}%`)
+				.limit(30),
+			supabase
+				.from("ong_clients")
+				.select("client_id")
+				.or(`nit.ilike.%${query}%,nombre_ong.ilike.%${query}%`)
+				.limit(30),
+			supabase
+				.from("club_clients")
+				.select("client_id")
+				.or(`nit.ilike.%${query}%,nombre_club.ilike.%${query}%`)
+				.limit(30),
+			supabase
+				.from("asociacion_civil_clients")
+				.select("client_id")
+				.or(`nit.ilike.%${query}%,nombre_asociacion.ilike.%${query}%`)
 				.limit(30),
 			// Automotor: placa, chasis, motor
 			supabase
@@ -984,6 +1003,9 @@ export async function buscarPolizasActivas(query: string): Promise<BusquedaPoliz
 			...(clientesNaturales?.map((c) => c.client_id) || []),
 			...(clientesJuridicos?.map((c) => c.client_id) || []),
 			...(clientesUnipersonales?.map((c) => c.client_id) || []),
+			...(clientesOng?.map((c) => c.client_id) || []),
+			...(clientesClub?.map((c) => c.client_id) || []),
+			...(clientesAsociacion?.map((c) => c.client_id) || []),
 		];
 
 		// Reunir poliza_ids encontrados en tablas específicas por texto
@@ -1081,56 +1103,65 @@ export async function buscarPolizasActivas(query: string): Promise<BusquedaPoliz
 		// Enriquecer con datos relacionados
 		const polizas: PolizaParaSiniestro[] = [];
 
+		// Nombre + documento de los 6 tipos de cliente en lote (natural, unipersonal,
+		// jurídica, ONG, club y asociación civil).
+		const nombresClientes = await resolverNombresCliente(
+			supabase,
+			(polizasRaw || []).map((p) => p.client_id),
+		);
+
 		for (const pol of polizasRaw || []) {
 			// Obtener cliente
 			const { data: cliente } = await supabase.from("clients").select("*").eq("id", pol.client_id).single();
 
 			if (!cliente) continue;
 
-			let nombreCliente = "N/A";
-			let documentoCliente = "N/A";
+			const infoCliente = nombresClientes.get(cliente.id);
+			const nombreCliente = infoCliente?.name || "N/A";
+			const documentoCliente = infoCliente?.ci || "N/A";
 			let celularCliente: string | undefined;
 			let correoCliente: string | undefined;
 
 			if (cliente.client_type === "natural") {
 				const { data: natural } = await supabase
 					.from("natural_clients")
-					.select("*")
+					.select("celular, correo_electronico")
 					.eq("client_id", cliente.id)
 					.single();
-
-				if (natural) {
-					nombreCliente = `${natural.primer_nombre} ${natural.segundo_nombre || ""} ${
-						natural.primer_apellido
-					} ${natural.segundo_apellido || ""}`.trim();
-					documentoCliente = natural.numero_documento;
-					celularCliente = natural.celular || undefined;
-					correoCliente = natural.correo_electronico || undefined;
-				}
+				celularCliente = natural?.celular || undefined;
+				correoCliente = natural?.correo_electronico || undefined;
 			} else if (cliente.client_type === "juridica") {
 				const { data: juridico } = await supabase
 					.from("juridic_clients")
-					.select("*")
+					.select("correo_electronico")
 					.eq("client_id", cliente.id)
 					.single();
-
-				if (juridico) {
-					nombreCliente = juridico.razon_social;
-					documentoCliente = juridico.nit;
-					correoCliente = juridico.correo_electronico || undefined;
-				}
+				correoCliente = juridico?.correo_electronico || undefined;
 			} else if (cliente.client_type === "unipersonal") {
 				const { data: unipersonal } = await supabase
 					.from("unipersonal_clients")
-					.select("*")
+					.select("correo_electronico_comercial")
 					.eq("client_id", cliente.id)
 					.single();
-
-				if (unipersonal) {
-					nombreCliente = unipersonal.razon_social;
-					documentoCliente = unipersonal.nit;
-					correoCliente = unipersonal.correo_electronico_comercial || undefined;
-				}
+				correoCliente = unipersonal?.correo_electronico_comercial || undefined;
+			} else if (
+				cliente.client_type === "ong" ||
+				cliente.client_type === "club" ||
+				cliente.client_type === "asociacion_civil"
+			) {
+				const tablaOrg =
+					cliente.client_type === "ong"
+						? "ong_clients"
+						: cliente.client_type === "club"
+							? "club_clients"
+							: "asociacion_civil_clients";
+				const { data: org } = await supabase
+					.from(tablaOrg)
+					.select("telefono, correo_electronico")
+					.eq("client_id", cliente.id)
+					.single();
+				celularCliente = org?.telefono || undefined;
+				correoCliente = org?.correo_electronico || undefined;
 			}
 
 			// Obtener responsable
@@ -1216,43 +1247,16 @@ export async function buscarPolizasActivas(query: string): Promise<BusquedaPoliz
 }
 
 /**
- * Resuelve nombre + documento de una lista de client_ids en lote (3 queries fijas,
- * independiente de la cantidad de ids). Un cliente pertenece a un único tipo, por lo
- * que solo una de las tablas tendrá su fila.
+ * Resuelve nombre + documento de una lista de client_ids en lote, delegando en el
+ * helper canónico que cubre los 6 tipos de cliente (natural, unipersonal, jurídica,
+ * ONG, club y asociación civil).
  */
 async function resolverClientesParaDesglose(
 	supabase: SupabaseClient,
 	clientIds: string[],
 ): Promise<Map<string, { nombre: string; documento: string }>> {
-	const map = new Map<string, { nombre: string; documento: string }>();
-	const unique = [...new Set(clientIds.filter(Boolean))];
-	if (unique.length === 0) return map;
-
-	const [{ data: naturales }, { data: juridicos }, { data: unipersonales }] = await Promise.all([
-		supabase
-			.from("natural_clients")
-			.select("client_id, primer_nombre, primer_apellido, numero_documento")
-			.in("client_id", unique),
-		supabase.from("juridic_clients").select("client_id, razon_social, nit").in("client_id", unique),
-		supabase.from("unipersonal_clients").select("client_id, razon_social, nit").in("client_id", unique),
-	]);
-
-	for (const n of naturales || []) {
-		map.set(n.client_id, {
-			nombre: `${n.primer_nombre || ""} ${n.primer_apellido || ""}`.trim() || "Desconocido",
-			documento: n.numero_documento || "-",
-		});
-	}
-	for (const j of juridicos || []) {
-		map.set(j.client_id, { nombre: j.razon_social || "Desconocido", documento: j.nit || "-" });
-	}
-	for (const u of unipersonales || []) {
-		if (!map.has(u.client_id)) {
-			map.set(u.client_id, { nombre: u.razon_social || "Desconocido", documento: u.nit || "-" });
-		}
-	}
-
-	return map;
+	const nombres = await resolverNombresCliente(supabase, clientIds);
+	return new Map([...nombres].map(([id, info]) => [id, { nombre: info.name, documento: info.ci }]));
 }
 
 /**
@@ -2472,6 +2476,39 @@ export async function obtenerDetalleCompletoPoliza(polizaId: string): Promise<{
 							telefono: unipersonalClient.telefono_comercial,
 							celular: null,
 							correo: unipersonalClient.correo_electronico_comercial,
+						};
+					}
+				} else if (
+					client.client_type === "ong" ||
+					client.client_type === "club" ||
+					client.client_type === "asociacion_civil"
+				) {
+					const tablaOrg =
+						client.client_type === "ong"
+							? "ong_clients"
+							: client.client_type === "club"
+								? "club_clients"
+								: "asociacion_civil_clients";
+					const columnaNombre =
+						client.client_type === "ong"
+							? "nombre_ong"
+							: client.client_type === "club"
+								? "nombre_club"
+								: "nombre_asociacion";
+					const { data: orgClient } = await supabase
+						.from(tablaOrg)
+						.select(`${columnaNombre}, nit, telefono, correo_electronico`)
+						.eq("client_id", clientId)
+						.single();
+
+					if (orgClient) {
+						const org = orgClient as Record<string, string | null>;
+						contacto = {
+							nombre_completo: org[columnaNombre] || "Desconocido",
+							documento: org.nit,
+							telefono: org.telefono,
+							celular: null,
+							correo: org.correo_electronico,
 						};
 					}
 				}
