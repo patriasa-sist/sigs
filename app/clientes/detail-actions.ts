@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/utils/supabase/server";
+import { createAdminClient } from "@/utils/supabase/admin";
 import type { ClienteDocumento } from "@/types/clienteDocumento";
 import type {
 	NaturalClient,
@@ -278,9 +279,20 @@ export async function getClientDetailsComplete(clientId: string): Promise<Action
 		}));
 
 		// Build result
-		const commercialOwnerData = Array.isArray(clientData.commercial_owner)
+		let commercialOwnerData = Array.isArray(clientData.commercial_owner)
 			? (clientData.commercial_owner[0] ?? null)
 			: (clientData.commercial_owner ?? null);
+
+		// El embed de profiles respeta RLS (limitado al equipo): si el ejecutivo
+		// quedó fuera de la lectura del usuario, se resuelve el nombre con cliente admin.
+		if (!commercialOwnerData && clientData.commercial_owner_id) {
+			const { data: ownerAdmin } = await createAdminClient()
+				.from("profiles")
+				.select("full_name")
+				.eq("id", clientData.commercial_owner_id)
+				.single();
+			if (ownerAdmin) commercialOwnerData = ownerAdmin;
+		}
 
 		const result: ClienteDetalleCompleto = {
 			id: clientData.id,

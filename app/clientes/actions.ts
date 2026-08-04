@@ -15,6 +15,7 @@
 "use server";
 
 import { createClient } from "@/utils/supabase/server";
+import { createAdminClient } from "@/utils/supabase/admin";
 import {
 	ClientViewModel,
 	ClientQueryResult,
@@ -228,11 +229,13 @@ export async function getAllClients(options?: {
 			...new Set(clientsData.map((c) => c.commercial_owner_id).filter((id): id is string => id !== null)),
 		];
 
-		// Query executives from profiles_public view (restricted public access)
+		// Nombres de ejecutivos con cliente admin: el RLS de profiles limita la lectura
+		// al propio equipo, y el líder/comercial debe ver el ejecutivo aunque el
+		// responsable del cliente esté fuera de su lectura (solo se expone id/nombre/email).
 		const executivesMap = new Map<string, { id: string; full_name: string; email: string }>();
 		if (executiveIds.length > 0) {
-			const { data: executivesData, error: executivesError } = await supabase
-				.from("profiles_public")
+			const { data: executivesData, error: executivesError } = await createAdminClient()
+				.from("profiles")
 				.select("id, full_name, email")
 				.in("id", executiveIds);
 
@@ -445,11 +448,11 @@ export async function getClientById(clientId: string): Promise<ActionResult<Clie
 			};
 		}
 
-		// Fetch commercial owner from profiles_public view (restricted public access)
+		// Nombre del ejecutivo con cliente admin (el RLS de profiles limita al equipo)
 		let executiveData: { id: string; full_name: string; email: string } | null = null;
 		if (clientData.commercial_owner_id) {
-			const { data: execData, error: execError } = await supabase
-				.from("profiles_public")
+			const { data: execData, error: execError } = await createAdminClient()
+				.from("profiles")
 				.select("id, full_name, email")
 				.eq("id", clientData.commercial_owner_id)
 				.single();
@@ -679,7 +682,8 @@ export async function searchClients(
 
 		const [executivesRes, policiesRes] = await Promise.all([
 			executiveIds.length > 0
-				? supabase.from("profiles_public").select("id, full_name, email").in("id", executiveIds)
+				? // Cliente admin: el RLS de profiles limita al equipo (ver getAllClients)
+					createAdminClient().from("profiles").select("id, full_name, email").in("id", executiveIds)
 				: Promise.resolve({ data: [] }),
 			supabase
 				.from("polizas")
@@ -1000,8 +1004,10 @@ export async function obtenerFiltrosClientes(): Promise<ActionResult<FiltrosClie
 			return { success: true, data: { ejecutivos: [] } };
 		}
 
-		const { data: profiles, error: profilesError } = await supabase
-			.from("profiles_public")
+		// Cliente admin: el RLS de profiles limita al equipo y el dropdown debe
+		// listar a todos los ejecutivos de los clientes visibles.
+		const { data: profiles, error: profilesError } = await createAdminClient()
+			.from("profiles")
 			.select("id, full_name")
 			.in("id", ownerIds);
 

@@ -430,6 +430,9 @@ export function ClientDetailModal({ clientId, onClose }: Props) {
 												: client.client_type === "asociacion_civil"
 													? "Asociación Civil"
 													: "Persona Jurídica"}
+								{client.commercial_owner_name && (
+									<span> · Ejecutivo: {client.commercial_owner_name}</span>
+								)}
 							</p>
 						</div>
 					</div>
