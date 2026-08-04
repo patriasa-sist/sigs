@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { FileText, X, Check, ChevronLeft } from "lucide-react";
+import { FileText, X, Check, ChevronLeft, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import {
 	savePolizaDraft,
@@ -612,6 +612,18 @@ export function NuevaPolizaForm({ mode = "create", polizaId, initialData }: Nuev
 					</Button>
 				</div>
 			</div>
+
+			{/* Advertencia en renovación: los datos vienen de la póliza original */}
+			{mode === "renovacion" && (
+				<div className="mb-5 bg-warning/10 border border-warning/30 rounded-lg px-4 py-3 flex items-start gap-2.5">
+					<AlertTriangle className="h-4 w-4 text-warning mt-0.5 shrink-0" />
+					<p className="text-sm text-foreground">
+						Los datos fueron precargados desde la póliza original. <strong>Revise y valide</strong> cada paso
+						(vigencia, prima, asegurados y bienes) antes de guardar: la información puede haber cambiado para
+						la nueva vigencia.
+					</p>
+				</div>
+			)}
 
 			{/* Mobile step progress bar */}
 			<div className="lg:hidden mb-5">
