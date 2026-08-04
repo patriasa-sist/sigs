@@ -1317,7 +1317,7 @@ async function insertarItemsRamo(
 					fecha_nacimiento: item.data.fecha_nacimiento,
 					genero: item.data.genero,
 					nivel_id: item.data.nivel_id,
-					rol: "titular",
+					rol: item.data.rol || "titular",
 				}));
 				const { error } = await supabase.from("polizas_anexos_salud_beneficiarios").insert(rows);
 				throwIfAnexoError(error, "Error al guardar beneficiarios de salud del anexo");
@@ -2292,6 +2292,7 @@ async function cargarItemsCambioAnexo(
 				fecha_nacimiento: b.fecha_nacimiento || undefined,
 				genero: b.genero || undefined,
 				nivel_id: b.nivel_id,
+				rol: b.rol || undefined,
 				descendientes: [],
 			},
 		}));

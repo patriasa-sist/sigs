@@ -41,6 +41,14 @@ import { BuscadorClientes } from "../../BuscadorClientes";
 // (item que sale) e inclusión (item que entra) en un mismo formulario.
 type ModoAnexo = "inclusion" | "exclusion" | "reemplazo";
 
+// Labels de rol para beneficiarios de Salud (mismos valores que la póliza madre)
+const ROL_SALUD_LABELS: Record<string, string> = {
+	titular: "Titular",
+	conyugue: "Cónyuge",
+	descendiente: "Descendiente",
+	dependiente: "Dependiente",
+};
+
 type Props = {
 	tipoAnexo: TipoAnexo;
 	ramo: string;
@@ -1016,6 +1024,7 @@ function AnexoSalud({
 				fecha_nacimiento: datos.fecha_nacimiento,
 				genero: datos.genero,
 				nivel_id: datos.nivel_id,
+				rol: datos.rol || "titular",
 				descendientes: [],
 			},
 		};
@@ -1132,7 +1141,7 @@ function AnexoSalud({
 								{item.data.nombre_completo} ({item.data.carnet}) —{" "}
 								{niveles.find((n) => n.id === item.data.nivel_id)?.nombre || "nivel"}
 								<Badge variant="outline" className="ml-2 text-xs">
-									Beneficiario
+									{ROL_SALUD_LABELS[item.data.rol || "titular"] || item.data.rol}
 								</Badge>
 							</span>
 							<button
@@ -1227,7 +1236,11 @@ function AnexoSalud({
 								))}
 								{beneficiarios.map((b) => (
 									<div key={b.id} className="text-sm text-gray-600 flex justify-between">
-										<span>{b.nombre_completo} (titular)</span>
+										<span>
+											{b.nombre_completo} (
+											{(ROL_SALUD_LABELS[b.rol || "titular"] || b.rol || "titular").toLowerCase()}
+											)
+										</span>
 										<Badge variant="outline" className="text-xs">
 											Beneficiario
 										</Badge>
@@ -1245,7 +1258,12 @@ function AnexoSalud({
 					beneficiario={null}
 					niveles={niveles}
 					moneda={moneda}
-					hideRol
+					roles={[
+						{ value: "titular", label: "Titular" },
+						{ value: "conyugue", label: "Cónyuge" },
+						{ value: "descendiente", label: "Descendiente" },
+					]}
+					rolInicial="titular"
 					titulo="Agregar Beneficiario / Titular"
 					onGuardar={agregarBeneficiario}
 					onCancelar={() => setModalBenef(false)}

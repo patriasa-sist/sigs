@@ -263,6 +263,8 @@ export type TitularSalud = {
 	fecha_nacimiento?: string;
 	genero?: "M" | "F" | "Otro";
 	nivel_id: string;
+	// Rol del beneficiario (usado en inclusiones por anexo): titular | conyugue | descendiente | dependiente
+	rol?: string;
 	conyugue?: FamiliarSalud;
 	descendientes: FamiliarSalud[];
 };
