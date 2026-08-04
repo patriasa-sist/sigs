@@ -47,17 +47,24 @@ export function BienModal({
 	// El valor total declarado es la suma de los montos de los items (derivado).
 	const valorTotalDeclarado = items.reduce((sum, item) => sum + item.monto, 0);
 
+	const esItemSugerido = (nombre: string) => itemsDisponibles.includes(nombre);
+
 	const agregarItem = (nombre: string) => {
 		if (items.some((item) => item.nombre === nombre)) return;
 		setItems([...items, { nombre, monto: 0 }]);
 	};
 
-	const actualizarMontoItem = (nombre: string, monto: number) => {
-		setItems(items.map((item) => (item.nombre === nombre ? { ...item, monto } : item)));
+	// Item de texto libre ("Otros"): el nombre se edita en la fila.
+	const agregarItemLibre = () => {
+		setItems([...items, { nombre: "", monto: 0 }]);
 	};
 
-	const eliminarItem = (nombre: string) => {
-		setItems(items.filter((item) => item.nombre !== nombre));
+	const actualizarItem = (index: number, cambios: Partial<{ nombre: string; monto: number }>) => {
+		setItems(items.map((item, i) => (i === index ? { ...item, ...cambios } : item)));
+	};
+
+	const eliminarItem = (index: number) => {
+		setItems(items.filter((_, i) => i !== index));
 	};
 
 	const handleGuardar = () => {
@@ -67,6 +74,10 @@ export function BienModal({
 		}
 		if (items.length === 0) {
 			toast.error("Debe agregar al menos un item asegurado");
+			return;
+		}
+		if (items.some((item) => !item.nombre.trim())) {
+			toast.error("Complete el nombre de todos los items");
 			return;
 		}
 		if (!permitirCeroAsegurado && valorTotalDeclarado <= 0) {
@@ -122,21 +133,34 @@ export function BienModal({
 										{nombre}
 									</Button>
 								))}
+							<Button type="button" variant="outline" size="sm" onClick={agregarItemLibre}>
+								<Plus className="mr-1 h-3 w-3" />
+								Otros (texto libre)
+							</Button>
 						</div>
 
 						{items.length > 0 && (
 							<div className="space-y-2 mt-3">
-								{items.map((item) => (
-									<div key={item.nombre} className="flex items-center gap-2 p-3 border rounded-lg">
+								{items.map((item, idx) => (
+									<div key={idx} className="flex items-center gap-2 p-3 border rounded-lg">
 										<div className="flex-1">
-											<Label className="text-sm font-medium">{item.nombre}</Label>
+											{esItemSugerido(item.nombre) ? (
+												<Label className="text-sm font-medium">{item.nombre}</Label>
+											) : (
+												<Input
+													value={item.nombre}
+													onChange={(e) => actualizarItem(idx, { nombre: e.target.value })}
+													placeholder="Descripción del item"
+													className="text-sm font-medium"
+												/>
+											)}
 											<Input
 												type="number"
 												min="0"
 												step="0.01"
 												value={item.monto || ""}
 												onChange={(e) =>
-													actualizarMontoItem(item.nombre, parseFloat(e.target.value) || 0)
+													actualizarItem(idx, { monto: parseFloat(e.target.value) || 0 })
 												}
 												placeholder="0.00"
 												className="mt-1"
@@ -146,7 +170,7 @@ export function BienModal({
 											type="button"
 											variant="ghost"
 											size="sm"
-											onClick={() => eliminarItem(item.nombre)}
+											onClick={() => eliminarItem(idx)}
 										>
 											<Trash2 className="h-4 w-4 text-destructive" />
 										</Button>

@@ -93,17 +93,24 @@ export function RiesgosVariosForm({ datos, moneda, onChange, onSiguiente, onAnte
 		setMostrarModalBien(true);
 	};
 
-	const agregarItem = (nombreItem: ItemRiesgosVarios["nombre"]) => {
+	const esItemSugerido = (nombre: string) => ITEMS_GENERALES.includes(nombre) || ITEMS_FIDELIDAD.includes(nombre);
+
+	const agregarItem = (nombreItem: string) => {
 		if (itemsBien.some((item) => item.nombre === nombreItem)) return;
 		setItemsBien([...itemsBien, { nombre: nombreItem, monto: 0 }]);
 	};
 
-	const actualizarMontoItem = (nombreItem: ItemRiesgosVarios["nombre"], nuevoMonto: number) => {
-		setItemsBien(itemsBien.map((item) => (item.nombre === nombreItem ? { ...item, monto: nuevoMonto } : item)));
+	// Item de texto libre ("Otros"): el nombre se edita en la fila.
+	const agregarItemLibre = () => {
+		setItemsBien([...itemsBien, { nombre: "", monto: 0 }]);
 	};
 
-	const eliminarItem = (nombreItem: ItemRiesgosVarios["nombre"]) => {
-		setItemsBien(itemsBien.filter((item) => item.nombre !== nombreItem));
+	const actualizarItem = (index: number, cambios: Partial<ItemRiesgosVarios>) => {
+		setItemsBien(itemsBien.map((item, i) => (i === index ? { ...item, ...cambios } : item)));
+	};
+
+	const eliminarItem = (index: number) => {
+		setItemsBien(itemsBien.filter((_, i) => i !== index));
 	};
 
 	const guardarBien = () => {
@@ -113,6 +120,10 @@ export function RiesgosVariosForm({ datos, moneda, onChange, onSiguiente, onAnte
 		}
 		if (itemsBien.length === 0) {
 			toast.error("Debe agregar al menos un item asegurado");
+			return;
+		}
+		if (itemsBien.some((item) => !item.nombre.trim())) {
+			toast.error("Complete el nombre de todos los items");
 			return;
 		}
 		if (valorTotalDeclarado <= 0) {
@@ -446,28 +457,41 @@ export function RiesgosVariosForm({ datos, moneda, onChange, onSiguiente, onAnte
 											</div>
 										</>
 									)}
+									<div className="flex gap-2 flex-wrap pt-1">
+										<Button type="button" variant="outline" size="sm" onClick={agregarItemLibre}>
+											<Plus className="mr-1 h-3 w-3" />
+											Otros (texto libre)
+										</Button>
+									</div>
 								</div>
 
 								{/* Items agregados */}
 								{itemsBien.length > 0 && (
 									<div className="space-y-2 mt-3">
-										{itemsBien.map((item) => (
-											<div
-												key={item.nombre}
-												className="flex items-center gap-2 p-3 border rounded-lg"
-											>
+										{itemsBien.map((item, idx) => (
+											<div key={idx} className="flex items-center gap-2 p-3 border rounded-lg">
 												<div className="flex-1">
-													<Label className="text-sm font-medium">{item.nombre}</Label>
+													{esItemSugerido(item.nombre) ? (
+														<Label className="text-sm font-medium">{item.nombre}</Label>
+													) : (
+														<Input
+															value={item.nombre}
+															onChange={(e) =>
+																actualizarItem(idx, { nombre: e.target.value })
+															}
+															placeholder="Descripción del item"
+															className="text-sm font-medium"
+														/>
+													)}
 													<Input
 														type="number"
 														min="0"
 														step="0.01"
 														value={item.monto || ""}
 														onChange={(e) =>
-															actualizarMontoItem(
-																item.nombre,
-																parseFloat(e.target.value) || 0,
-															)
+															actualizarItem(idx, {
+																monto: parseFloat(e.target.value) || 0,
+															})
 														}
 														placeholder="0.00"
 														className="mt-1"
@@ -477,7 +501,7 @@ export function RiesgosVariosForm({ datos, moneda, onChange, onSiguiente, onAnte
 													type="button"
 													variant="ghost"
 													size="sm"
-													onClick={() => eliminarItem(item.nombre)}
+													onClick={() => eliminarItem(idx)}
 												>
 													<Trash2 className="h-4 w-4 text-destructive" />
 												</Button>

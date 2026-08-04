@@ -378,26 +378,29 @@ export type DatosDesgravamen = {
 // --- RIESGOS VARIOS MISCELÁNEOS ---
 // Sistema de bienes por ubicación con items asegurables (mismo patrón que Incendio)
 
+// El nombre admite texto libre ("Otros"); la lista sugerida vive en RiesgosVariosForm/BienModal.
 export type ItemRiesgosVarios = {
-	nombre:
-		| "Edificaciones, instalaciones en general"
-		| "Activos fijos en general (muebles y enseres)"
-		| "Equipos electronicos"
-		| "Maquinaria fija"
-		| "Bienes de terceros"
-		| "Existencias de mercaderias"
-		| "Dinero y valores dentro del predio"
-		| "Vidrios y cristales"
-		| "Letreros"
-		| "Perdida de beneficios"
-		| "Valor asegurado (SALUD)"
-		| "Deshonestidad de empleados"
-		| "Pérdida dentro del local"
-		| "Pérdida fuera del local"
-		| "Falsificacion de giros postales"
-		| "Falsificación de doc. bancario";
+	nombre: string;
 	monto: number;
 };
+
+export type ItemRiesgosVariosSugerido =
+	| "Edificaciones, instalaciones en general"
+	| "Activos fijos en general (muebles y enseres)"
+	| "Equipos electronicos"
+	| "Maquinaria fija"
+	| "Bienes de terceros"
+	| "Existencias de mercaderias"
+	| "Dinero y valores dentro del predio"
+	| "Vidrios y cristales"
+	| "Letreros"
+	| "Perdida de beneficios"
+	| "Valor asegurado (SALUD)"
+	| "Deshonestidad de empleados"
+	| "Pérdida dentro del local"
+	| "Pérdida fuera del local"
+	| "Falsificacion de giros postales"
+	| "Falsificación de doc. bancario";
 
 export type BienAseguradoRiesgosVarios = {
 	direccion: string;
