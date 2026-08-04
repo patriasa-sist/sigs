@@ -1274,7 +1274,7 @@ async function insertarItemsRamo(
 					placa: item.data.placa,
 					valor_asegurado: item.data.valor_asegurado,
 					franquicia: item.data.franquicia,
-					nro_chasis: item.data.nro_chasis,
+					nro_chasis: item.data.nro_chasis || "",
 					uso: item.data.uso,
 					coaseguro: item.data.coaseguro || 0,
 					tipo_vehiculo_id: item.data.tipo_vehiculo_id || null,

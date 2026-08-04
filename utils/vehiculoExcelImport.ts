@@ -153,9 +153,8 @@ function parsearFilaVehiculo(
 		vehiculo.franquicia = convertirANumero(fila[mapa.franquicia]) || 0;
 	}
 
-	if (mapa.nro_chasis !== undefined) {
-		vehiculo.nro_chasis = convertirAString(fila[mapa.nro_chasis]) || "";
-	}
+	// Chasis opcional; la columna en BD es NOT NULL, así que siempre va string
+	vehiculo.nro_chasis = mapa.nro_chasis !== undefined ? convertirAString(fila[mapa.nro_chasis]) || "" : "";
 
 	if (mapa.uso !== undefined) {
 		const usoStr = convertirAString(fila[mapa.uso])?.toLowerCase();
@@ -281,7 +280,7 @@ export async function importarVehiculosDesdeExcel(
 		const mapa = mapearColumnas(headers);
 
 		// Validar que se mapearon las columnas obligatorias
-		const columnasObligatorias = ["placa", "valor_asegurado", "franquicia", "nro_chasis", "uso", "coaseguro"];
+		const columnasObligatorias = ["placa", "valor_asegurado", "franquicia", "uso", "coaseguro"];
 		const columnasFaltantes = columnasObligatorias.filter((col) => mapa[col] === undefined);
 
 		if (columnasFaltantes.length > 0) {

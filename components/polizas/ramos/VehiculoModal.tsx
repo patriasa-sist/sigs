@@ -147,22 +147,6 @@ export function VehiculoModal({ vehiculo, onGuardar, onCancelar, permitirCeroAse
 							<h3 className="text-sm font-semibold text-foreground mb-4">Campos Obligatorios</h3>
 						</div>
 
-						{/* COLUMNA IZQUIERDA */}
-						{/* Número de Chasis - MOVIDO A PRIMERA POSICIÓN IZQUIERDA */}
-						<div className="space-y-2">
-							<Label htmlFor="nro_chasis">
-								Nº de Chasis <span className="text-destructive">*</span>
-							</Label>
-							<Input
-								id="nro_chasis"
-								value={formData.nro_chasis}
-								onChange={(e) => handleChange("nro_chasis", e.target.value.toUpperCase())}
-								placeholder="CH123456789"
-								className={errores.nro_chasis ? "border-destructive" : ""}
-							/>
-							{errores.nro_chasis && <p className="text-sm text-destructive">{errores.nro_chasis}</p>}
-						</div>
-
 						{/* COLUMNA DERECHA */}
 						{/* Valor Asegurado - PRIMERA POSICIÓN DERECHA */}
 						<div className="space-y-2">
@@ -258,6 +242,19 @@ export function VehiculoModal({ vehiculo, onGuardar, onCancelar, permitirCeroAse
 						{/* CAMPOS OPCIONALES */}
 						<div className="md:col-span-2 mt-4">
 							<h3 className="text-sm font-semibold text-foreground mb-4">Campos Opcionales</h3>
+						</div>
+
+						{/* Número de Chasis */}
+						<div className="space-y-2">
+							<Label htmlFor="nro_chasis">Nº de Chasis</Label>
+							<Input
+								id="nro_chasis"
+								value={formData.nro_chasis}
+								onChange={(e) => handleChange("nro_chasis", e.target.value.toUpperCase())}
+								placeholder="CH123456789"
+								className={errores.nro_chasis ? "border-destructive" : ""}
+							/>
+							{errores.nro_chasis && <p className="text-sm text-destructive">{errores.nro_chasis}</p>}
 						</div>
 
 						{/* Tipo de Vehículo */}

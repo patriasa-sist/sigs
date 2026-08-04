@@ -667,7 +667,7 @@ export async function actualizarPoliza(
 				placa: vehiculo.placa,
 				valor_asegurado: vehiculo.valor_asegurado,
 				franquicia: vehiculo.franquicia,
-				nro_chasis: vehiculo.nro_chasis,
+				nro_chasis: vehiculo.nro_chasis || "",
 				uso: vehiculo.uso,
 				coaseguro: vehiculo.coaseguro || 0,
 				tipo_vehiculo_id: vehiculo.tipo_vehiculo_id || null,

@@ -252,10 +252,6 @@ export function validarVehiculoAutomotor(
 		errores.push({ campo: "franquicia", mensaje: "Franquicia debe ser mayor o igual a 0" });
 	}
 
-	if (!vehiculo.nro_chasis || vehiculo.nro_chasis.trim() === "") {
-		errores.push({ campo: "nro_chasis", mensaje: "Número de chasis es requerido" });
-	}
-
 	if (!vehiculo.uso || !(VEHICULO_RULES.TIPOS_USO as readonly string[]).includes(vehiculo.uso)) {
 		errores.push({
 			campo: "uso",
