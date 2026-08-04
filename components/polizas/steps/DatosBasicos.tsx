@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { ChevronRight, ChevronLeft, CheckCircle2 } from "lucide-react";
+import { ChevronRight, ChevronLeft, CheckCircle2, AlertTriangle } from "lucide-react";
 import type {
 	DatosBasicosPoliza,
 	CompaniaAseguradora,
@@ -22,12 +22,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Combobox } from "@/components/ui/combobox";
 import { createClient } from "@/utils/supabase/client";
 import { DirectorCarteraDropdown } from "@/components/shared/DirectorCarteraDropdown";
+import { verificarNumeroPolizaExistente } from "@/app/polizas/nueva/actions";
+import { formatDate } from "@/utils/formatters";
 
 type Props = {
 	datos: DatosBasicosPoliza | null;
 	onChange: (datos: DatosBasicosPoliza) => void;
 	onSiguiente: () => void;
 	onAnterior: () => void;
+	// Solo en alta nueva: advertencia temprana si compañía + número ya existen
+	// (en edición la propia póliza daría falso positivo; en renovación el reúso es esperado).
+	chequearDuplicado?: boolean;
 };
 
 type Usuario = {
@@ -45,7 +50,7 @@ type TipoSeguro = {
 	activo: boolean;
 };
 
-export function DatosBasicos({ datos, onChange, onSiguiente, onAnterior }: Props) {
+export function DatosBasicos({ datos, onChange, onSiguiente, onAnterior, chequearDuplicado = false }: Props) {
 	const [formData, setFormData] = useState<Partial<DatosBasicosPoliza>>(
 		datos || {
 			numero_poliza: "",
@@ -85,9 +90,44 @@ export function DatosBasicos({ datos, onChange, onSiguiente, onAnterior }: Props
 	const [errorProductos, setErrorProductos] = useState<string | null>(null);
 	const [errores, setErrores] = useState<Record<string, string>>({});
 
+	// Advertencia temprana de duplicado (compañía + número), chequeada con debounce
+	const [duplicadoExistente, setDuplicadoExistente] = useState<{
+		inicio_vigencia?: string;
+		fin_vigencia?: string;
+	} | null>(null);
+
 	// Sincroniza las ediciones con el padre en vivo (sin requerir "Continuar"),
 	// para que el borrador de recovery y el resumen reflejen lo escrito.
 	useLiveSync(() => formData as DatosBasicosPoliza, onChange, [formData]);
+
+	// Chequeo temprano de duplicado (compañía + número) con debounce, para avisar
+	// apenas se escribe el número en vez de descubrirlo al guardar en el paso 6.
+	useEffect(() => {
+		if (!chequearDuplicado) return;
+		const numero = (formData.numero_poliza || "").trim();
+		const companiaId = formData.compania_aseguradora_id || "";
+		let cancelado = false;
+		const timer = setTimeout(async () => {
+			if (!numero || !companiaId) {
+				if (!cancelado) setDuplicadoExistente(null);
+				return;
+			}
+			try {
+				const res = await verificarNumeroPolizaExistente(numero, companiaId);
+				if (cancelado) return;
+				setDuplicadoExistente(
+					res.existe ? { inicio_vigencia: res.inicio_vigencia, fin_vigencia: res.fin_vigencia } : null,
+				);
+			} catch {
+				// Chequeo informativo: ante error de red se omite la advertencia
+				if (!cancelado) setDuplicadoExistente(null);
+			}
+		}, 500);
+		return () => {
+			cancelado = true;
+			clearTimeout(timer);
+		};
+	}, [chequearDuplicado, formData.numero_poliza, formData.compania_aseguradora_id]);
 
 	// Cargar catálogos
 	const cargarCatalogos = useCallback(async () => {
@@ -484,6 +524,21 @@ export function DatosBasicos({ datos, onChange, onSiguiente, onAnterior }: Props
 						className={errores.numero_poliza ? "border-destructive" : ""}
 					/>
 					{errores.numero_poliza && <p className="text-sm text-destructive">{errores.numero_poliza}</p>}
+					{duplicadoExistente && (
+						<div className="bg-warning/10 border border-warning/30 rounded-md px-3 py-2 flex items-start gap-2">
+							<AlertTriangle className="h-3.5 w-3.5 text-warning mt-0.5 shrink-0" />
+							<p className="text-xs text-foreground">
+								Ya existe una póliza de esta compañía con este número
+								{duplicadoExistente.inicio_vigencia
+									? ` (vigencia desde ${formatDate(duplicadoExistente.inicio_vigencia)})`
+									: ""}
+								.{" "}
+								{formData.es_renovacion
+									? "Se registrará como renovación."
+									: "Solo podrá guardarse si la marca como renovación."}
+							</p>
+						</div>
+					)}
 				</div>
 
 				{/* Compañía Aseguradora */}

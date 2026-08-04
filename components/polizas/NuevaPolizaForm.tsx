@@ -495,6 +495,7 @@ export function NuevaPolizaForm({ mode = "create", polizaId, initialData }: Nuev
 						}}
 						onSiguiente={() => avanzarDesde(2)}
 						onAnterior={() => retrocederDesde(2)}
+						chequearDuplicado={mode === "create"}
 					/>
 				)}
 
@@ -618,9 +619,9 @@ export function NuevaPolizaForm({ mode = "create", polizaId, initialData }: Nuev
 				<div className="mb-5 bg-warning/10 border border-warning/30 rounded-lg px-4 py-3 flex items-start gap-2.5">
 					<AlertTriangle className="h-4 w-4 text-warning mt-0.5 shrink-0" />
 					<p className="text-sm text-foreground">
-						Los datos fueron precargados desde la póliza original. <strong>Revise y valide</strong> cada paso
-						(vigencia, prima, asegurados y bienes) antes de guardar: la información puede haber cambiado para
-						la nueva vigencia.
+						Los datos fueron precargados desde la póliza original. <strong>Revise y valide</strong> cada
+						paso (vigencia, prima, asegurados y bienes) antes de guardar: la información puede haber
+						cambiado para la nueva vigencia.
 					</p>
 				</div>
 			)}

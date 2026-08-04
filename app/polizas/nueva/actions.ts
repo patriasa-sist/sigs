@@ -137,8 +137,7 @@ async function insertarPagos(
 	// para pólizas recién recibidas. La edición tiene su propio action y no pasa por acá.
 	// Admin queda exento (cargas excepcionales autorizadas).
 	const limiteCuota = restarDiasISO(hoyLaPaz(), DIAS_GRACIA_CUOTA_VENCIDA);
-	const cuotaFueraDeVentana = (fecha?: string | null) =>
-		!omitirGuardrailCuotas && !!fecha && fecha < limiteCuota;
+	const cuotaFueraDeVentana = (fecha?: string | null) => !omitirGuardrailCuotas && !!fecha && fecha < limiteCuota;
 	const errorCuotaVencida = () =>
 		new Error(
 			`No se pueden registrar cuotas vencidas hace más de ${DIAS_GRACIA_CUOTA_VENCIDA} días en una póliza nueva. Cargue solo cuotas del mes vigente en adelante; las ya cobradas no se registran.`,
@@ -846,7 +845,9 @@ export async function guardarPoliza(formState: PolizaFormState) {
 		// el duplicado exacto (compañía + número + inicio_vigencia); aquí exigimos
 		// además que, si el número ya existe para esa compañía, sea una renovación.
 		if (!formState.datos_basicos.es_renovacion) {
-			const { data: existente } = await supabase
+			// Cliente admin: el duplicado puede pertenecer a otro equipo y el RLS lo
+			// ocultaría aquí, pero el índice único en BD igual bloquearía el guardado.
+			const { data: existente } = await createAdminClient()
 				.from("polizas")
 				.select("id")
 				.eq("compania_aseguradora_id", formState.datos_basicos.compania_aseguradora_id)
@@ -966,4 +967,36 @@ export async function guardarPoliza(formState: PolizaFormState) {
 			error: error instanceof Error ? error.message : "Error desconocido",
 		};
 	}
+}
+
+/**
+ * Chequeo temprano de duplicado para el paso Datos Básicos: indica si ya existe
+ * una póliza de la compañía con ese número. Usa cliente admin porque el duplicado
+ * puede pertenecer a otro equipo (el RLS lo ocultaría) y aun así bloquearía el
+ * guardado; solo se expone la existencia y la vigencia, ningún dato sensible.
+ */
+export async function verificarNumeroPolizaExistente(
+	numeroPoliza: string,
+	companiaId: string,
+): Promise<{ existe: boolean; inicio_vigencia?: string; fin_vigencia?: string }> {
+	const numero = (numeroPoliza || "").trim();
+	if (!numero || !companiaId) return { existe: false };
+
+	const supabase = await createClient();
+	const {
+		data: { user },
+	} = await supabase.auth.getUser();
+	if (!user) return { existe: false };
+
+	const { data } = await createAdminClient()
+		.from("polizas")
+		.select("inicio_vigencia, fin_vigencia")
+		.eq("compania_aseguradora_id", companiaId)
+		.eq("numero_poliza", numero)
+		.order("inicio_vigencia", { ascending: false })
+		.limit(1)
+		.maybeSingle();
+
+	if (!data) return { existe: false };
+	return { existe: true, inicio_vigencia: data.inicio_vigencia, fin_vigencia: data.fin_vigencia };
 }
