@@ -253,23 +253,26 @@ export default function DetallesSiniestroStep({
 					</div>
 				</div>
 
-				{/* Lugar y Departamento */}
+				{/* Lugar y Departamento — en Salud el lugar es opcional */}
 				<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-					{!esSalud && (
-						<div className="space-y-2">
-							<Label htmlFor="lugar_hecho">
-								Lugar del Hecho <span className="text-destructive">*</span>
-							</Label>
-							<Input
-								id="lugar_hecho"
-								placeholder="Ej: Av. 6 de Agosto y calle Capitán Ravelo"
-								value={detalles?.lugar_hecho || ""}
-								onChange={(e) => handleFieldChange("lugar_hecho", e.target.value)}
-								className={errores.lugar_hecho ? "border-destructive" : ""}
-							/>
-							{errores.lugar_hecho && <p className="text-sm text-destructive">{errores.lugar_hecho}</p>}
-						</div>
-					)}
+					<div className="space-y-2">
+						<Label htmlFor="lugar_hecho">
+							Lugar del Hecho{" "}
+							{esSalud ? (
+								<span className="text-muted-foreground text-xs">(opcional)</span>
+							) : (
+								<span className="text-destructive">*</span>
+							)}
+						</Label>
+						<Input
+							id="lugar_hecho"
+							placeholder="Ej: Av. 6 de Agosto y calle Capitán Ravelo"
+							value={detalles?.lugar_hecho || ""}
+							onChange={(e) => handleFieldChange("lugar_hecho", e.target.value)}
+							className={errores.lugar_hecho ? "border-destructive" : ""}
+						/>
+						{errores.lugar_hecho && <p className="text-sm text-destructive">{errores.lugar_hecho}</p>}
+					</div>
 
 					<div className="space-y-2">
 						<Label htmlFor="departamento">
@@ -299,54 +302,58 @@ export default function DetallesSiniestroStep({
 					</div>
 				</div>
 
-				{/* Monto de Reserva y Moneda (no aplica en Salud) */}
-				{!esSalud && (
-					<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-						<div className="space-y-2 md:col-span-2">
-							<Label htmlFor="monto_reserva">
-								Monto de Reserva <span className="text-destructive">*</span>
-							</Label>
-							<Input
-								id="monto_reserva"
-								type="number"
-								step="0.01"
-								min="0"
-								placeholder="0.00"
-								value={detalles?.monto_reserva || ""}
-								onChange={(e) => handleFieldChange("monto_reserva", parseFloat(e.target.value))}
-								className={errores.monto_reserva ? "border-destructive" : ""}
-							/>
-							{errores.monto_reserva && (
-								<p className="text-sm text-destructive">{errores.monto_reserva}</p>
+				{/* Monto de Reserva y Moneda — en Salud son opcionales */}
+				<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+					<div className="space-y-2 md:col-span-2">
+						<Label htmlFor="monto_reserva">
+							Monto de Reserva{" "}
+							{esSalud ? (
+								<span className="text-muted-foreground text-xs">(opcional)</span>
+							) : (
+								<span className="text-destructive">*</span>
 							)}
-							<p className="text-xs text-muted-foreground">
-								Monto estimado inicial para cubrir el siniestro
-							</p>
-						</div>
-
-						<div className="space-y-2">
-							<Label htmlFor="moneda">
-								Moneda <span className="text-destructive">*</span>
-							</Label>
-							<Select
-								value={detalles?.moneda || ""}
-								onValueChange={(value) => handleFieldChange("moneda", value as Moneda)}
-							>
-								<SelectTrigger id="moneda" className={errores.moneda ? "border-destructive" : ""}>
-									<SelectValue placeholder="Selecciona" />
-								</SelectTrigger>
-								<SelectContent>
-									{MONEDAS.map((moneda) => (
-										<SelectItem key={moneda} value={moneda}>
-											{moneda}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
-							{errores.moneda && <p className="text-sm text-destructive">{errores.moneda}</p>}
-						</div>
+						</Label>
+						<Input
+							id="monto_reserva"
+							type="number"
+							step="0.01"
+							min="0"
+							placeholder="0.00"
+							value={detalles?.monto_reserva || ""}
+							onChange={(e) => handleFieldChange("monto_reserva", parseFloat(e.target.value))}
+							className={errores.monto_reserva ? "border-destructive" : ""}
+						/>
+						{errores.monto_reserva && <p className="text-sm text-destructive">{errores.monto_reserva}</p>}
+						<p className="text-xs text-muted-foreground">Monto estimado inicial para cubrir el siniestro</p>
 					</div>
-				)}
+
+					<div className="space-y-2">
+						<Label htmlFor="moneda">
+							Moneda{" "}
+							{esSalud ? (
+								<span className="text-muted-foreground text-xs">(opcional)</span>
+							) : (
+								<span className="text-destructive">*</span>
+							)}
+						</Label>
+						<Select
+							value={detalles?.moneda || ""}
+							onValueChange={(value) => handleFieldChange("moneda", value as Moneda)}
+						>
+							<SelectTrigger id="moneda" className={errores.moneda ? "border-destructive" : ""}>
+								<SelectValue placeholder="Selecciona" />
+							</SelectTrigger>
+							<SelectContent>
+								{MONEDAS.map((moneda) => (
+									<SelectItem key={moneda} value={moneda}>
+										{moneda}
+									</SelectItem>
+								))}
+							</SelectContent>
+						</Select>
+						{errores.moneda && <p className="text-sm text-destructive">{errores.moneda}</p>}
+					</div>
+				</div>
 
 				{/* Responsable del Siniestro */}
 				<div className="space-y-2">

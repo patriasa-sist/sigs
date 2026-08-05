@@ -215,7 +215,6 @@ export async function guardarSiniestro(formState: RegistroSiniestroFormState): P
 	}
 
 	// En ramo Salud no aplican lugar del hecho, monto de reserva ni moneda.
-	const esSalud = !!formState.poliza_seleccionada.ramo?.toLowerCase().includes("salud");
 
 	try {
 		// 1. Insertar siniestro principal
@@ -226,10 +225,11 @@ export async function guardarSiniestro(formState: RegistroSiniestroFormState): P
 				fecha_siniestro: formState.detalles.fecha_siniestro,
 				fecha_reporte: formState.detalles.fecha_reporte,
 				fecha_reporte_compania: formState.detalles.fecha_reporte_compania,
-				lugar_hecho: esSalud ? null : formState.detalles.lugar_hecho,
+				// En Salud son opcionales: se guardan si el usuario los completó (issue #20)
+				lugar_hecho: formState.detalles.lugar_hecho?.trim() || null,
 				departamento_id: formState.detalles.departamento_id,
-				monto_reserva: esSalud ? null : formState.detalles.monto_reserva,
-				moneda: esSalud ? null : formState.detalles.moneda,
+				monto_reserva: formState.detalles.monto_reserva || null,
+				moneda: formState.detalles.moneda || null,
 				descripcion: formState.detalles.descripcion,
 				contactos: formState.detalles.contactos, // Ahora es ContactoSiniestro[] en lugar de string[]
 				responsable_id: formState.detalles.responsable_id || null, // Si no se especifica, el trigger asignará created_by
