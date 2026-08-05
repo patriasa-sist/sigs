@@ -1015,6 +1015,12 @@ export async function buscarPolizasActivas(query: string): Promise<BusquedaPoliz
 			{ data: transporteData },
 			{ data: aeronavNaves },
 			{ data: vidaBeneficiarios },
+			{ data: anexoAutoVehiculos },
+			{ data: anexoTecEquipos },
+			{ data: anexoSaludBenef },
+			{ data: anexoNaves },
+			{ data: anexoIncendioBienes },
+			{ data: anexoRVBienes },
 		] = await Promise.all([
 			natClientesQuery.limit(30),
 			supabase
@@ -1092,6 +1098,49 @@ export async function buscarPolizasActivas(query: string): Promise<BusquedaPoliz
 				.select("poliza_id")
 				.or(`nombre_completo.ilike.%${query}%,carnet.ilike.%${query}%`)
 				.limit(30),
+			// Ítems incluidos vía ANEXO ACTIVO (vehículos, equipos, personas, bienes, naves)
+			supabase
+				.from("polizas_anexos_automotor_vehiculos")
+				.select("anexo:polizas_anexos!inner(poliza_id)")
+				.eq("anexo.estado", "activo")
+				.eq("accion", "inclusion")
+				.or(`placa.ilike.${idPat},nro_chasis.ilike.${idPat},nro_motor.ilike.${idPat}`)
+				.limit(30),
+			supabase
+				.from("polizas_anexos_ramos_tecnicos_equipos")
+				.select("anexo:polizas_anexos!inner(poliza_id)")
+				.eq("anexo.estado", "activo")
+				.eq("accion", "inclusion")
+				.or(`nro_serie.ilike.${idPat},placa.ilike.${idPat}`)
+				.limit(30),
+			supabase
+				.from("polizas_anexos_salud_beneficiarios")
+				.select("anexo:polizas_anexos!inner(poliza_id)")
+				.eq("anexo.estado", "activo")
+				.eq("accion", "inclusion")
+				.or(`nombre_completo.ilike.%${query}%,carnet.ilike.%${query}%`)
+				.limit(30),
+			supabase
+				.from("polizas_anexos_aeronavegacion_naves")
+				.select("anexo:polizas_anexos!inner(poliza_id)")
+				.eq("anexo.estado", "activo")
+				.eq("accion", "inclusion")
+				.or(`matricula.ilike.${idPat},serie.ilike.${idPat}`)
+				.limit(30),
+			supabase
+				.from("polizas_anexos_incendio_bienes")
+				.select("anexo:polizas_anexos!inner(poliza_id)")
+				.eq("anexo.estado", "activo")
+				.eq("accion", "inclusion")
+				.ilike("direccion", `%${query}%`)
+				.limit(30),
+			supabase
+				.from("polizas_anexos_riesgos_varios_bienes")
+				.select("anexo:polizas_anexos!inner(poliza_id)")
+				.eq("anexo.estado", "activo")
+				.eq("accion", "inclusion")
+				.ilike("direccion", `%${query}%`)
+				.limit(30),
 		]);
 
 		// Reunir client_ids encontrados por nombre/documento
@@ -1104,6 +1153,11 @@ export async function buscarPolizasActivas(query: string): Promise<BusquedaPoliz
 			...(clientesAsociacion?.map((c) => c.client_id) || []),
 		];
 
+		// El join embebido devuelve `anexo` como objeto { poliza_id } (relación a-uno).
+		type AnexoPolizaRef = { anexo: { poliza_id: string } | null };
+		const anexoPolizaIds = (rows: unknown): string[] =>
+			(rows as AnexoPolizaRef[] | null)?.map((r) => r.anexo?.poliza_id).filter((v): v is string => !!v) ?? [];
+
 		// Reunir poliza_ids encontrados en tablas específicas por texto
 		const polizaIdsEspecificos: string[] = [
 			...(automotorVehiculos?.map((v) => v.poliza_id) || []),
@@ -1115,6 +1169,12 @@ export async function buscarPolizasActivas(query: string): Promise<BusquedaPoliz
 			...(transporteData?.map((t) => t.poliza_id) || []),
 			...(aeronavNaves?.map((n) => n.poliza_id) || []),
 			...(vidaBeneficiarios?.map((b) => b.poliza_id) || []),
+			...anexoPolizaIds(anexoAutoVehiculos),
+			...anexoPolizaIds(anexoTecEquipos),
+			...anexoPolizaIds(anexoSaludBenef),
+			...anexoPolizaIds(anexoNaves),
+			...anexoPolizaIds(anexoIncendioBienes),
+			...anexoPolizaIds(anexoRVBienes),
 		];
 
 		// Fase 2: buscar asegurados registrados como clientes (no solo el contratante)
@@ -1125,6 +1185,8 @@ export async function buscarPolizasActivas(query: string): Promise<BusquedaPoliz
 				{ data: aeronavAsegurados },
 				{ data: aseguradosNivel },
 				{ data: riesgosVariosAsegurados },
+				{ data: anexoSaludAsegurados },
+				{ data: anexoAseguradosNivel },
 			] = await Promise.all([
 				supabase
 					.from("polizas_salud_asegurados")
@@ -1151,6 +1213,21 @@ export async function buscarPolizasActivas(query: string): Promise<BusquedaPoliz
 					.select("poliza_id")
 					.in("client_id", clientIdsEncontrados)
 					.limit(30),
+				// Personas incluidas vía ANEXO ACTIVO
+				supabase
+					.from("polizas_anexos_salud_asegurados")
+					.select("anexo:polizas_anexos!inner(poliza_id)")
+					.eq("anexo.estado", "activo")
+					.eq("accion", "inclusion")
+					.in("client_id", clientIdsEncontrados)
+					.limit(30),
+				supabase
+					.from("polizas_anexos_asegurados_nivel")
+					.select("anexo:polizas_anexos!inner(poliza_id)")
+					.eq("anexo.estado", "activo")
+					.eq("accion", "inclusion")
+					.in("client_id", clientIdsEncontrados)
+					.limit(30),
 			]);
 
 			polizaIdsEspecificos.push(
@@ -1159,6 +1236,8 @@ export async function buscarPolizasActivas(query: string): Promise<BusquedaPoliz
 				...(aeronavAsegurados?.map((a) => a.poliza_id) || []),
 				...(aseguradosNivel?.map((a) => a.poliza_id) || []),
 				...(riesgosVariosAsegurados?.map((a) => a.poliza_id) || []),
+				...anexoPolizaIds(anexoSaludAsegurados),
+				...anexoPolizaIds(anexoAseguradosNivel),
 			);
 		}
 
@@ -1373,6 +1452,29 @@ export async function obtenerAseguradosPoliza(polizaId: string, ramo: string): P
 		const ramoLower = (ramo || "").toLowerCase();
 		const asegurados: AseguradoDetalle[] = [];
 
+		// Anexos ACTIVOS de la póliza: sus inclusiones suman ítems al desglose y
+		// sus exclusiones quitan ítems (de la madre o de inclusiones previas).
+		const { data: anexosActivos } = await supabase
+			.from("polizas_anexos")
+			.select("id")
+			.eq("poliza_id", polizaId)
+			.eq("estado", "activo");
+		const anexoIds = (anexosActivos || []).map((a) => a.id);
+		const excluidos = new Set<string>();
+
+		// Carga inclusiones de una tabla espejo de anexos y acumula sus exclusiones.
+		const cargarItemsAnexo = async <T>(tabla: string, columnas: string): Promise<T[]> => {
+			if (anexoIds.length === 0) return [];
+			const [{ data: incs }, { data: excs }] = await Promise.all([
+				supabase.from(tabla).select(columnas).in("anexo_id", anexoIds).eq("accion", "inclusion"),
+				supabase.from(tabla).select("original_item_id").in("anexo_id", anexoIds).eq("accion", "exclusion"),
+			]);
+			for (const e of (excs || []) as { original_item_id: string | null }[]) {
+				if (e.original_item_id) excluidos.add(e.original_item_id);
+			}
+			return (incs || []) as T[];
+		};
+
 		// --- AUTOMOTOR (vehículos) ---
 		if (ramoLower.includes("automotor")) {
 			const { data } = await supabase
@@ -1385,6 +1487,26 @@ export async function obtenerAseguradosPoliza(polizaId: string, ramo: string): P
 					origen_id: v.id,
 					placa: v.placa || undefined,
 					marca: (v.marcas_vehiculo as { nombre?: string } | null)?.nombre || undefined,
+					modelo: v.modelo || undefined,
+					ano: v.ano?.toString() || undefined,
+					valor_asegurado: v.valor_asegurado != null ? Number(v.valor_asegurado) : undefined,
+					identificador: v.nro_chasis || undefined,
+				});
+			}
+
+			const incVehiculos = await cargarItemsAnexo<{
+				id: string;
+				placa: string | null;
+				modelo: string | null;
+				ano: number | null;
+				valor_asegurado: number | null;
+				nro_chasis: string | null;
+			}>("polizas_anexos_automotor_vehiculos", "id, placa, modelo, ano, valor_asegurado, nro_chasis");
+			for (const v of incVehiculos) {
+				asegurados.push({
+					tipo: "vehiculo",
+					origen_id: v.id,
+					placa: v.placa || undefined,
 					modelo: v.modelo || undefined,
 					ano: v.ano?.toString() || undefined,
 					valor_asegurado: v.valor_asegurado != null ? Number(v.valor_asegurado) : undefined,
@@ -1435,6 +1557,26 @@ export async function obtenerAseguradosPoliza(polizaId: string, ramo: string): P
 					identificador: e.nro_serie || undefined,
 				});
 			}
+
+			const incEquipos = await cargarItemsAnexo<{
+				id: string;
+				nro_serie: string | null;
+				placa: string | null;
+				modelo: string | null;
+				ano: number | null;
+				valor_asegurado: number | null;
+			}>("polizas_anexos_ramos_tecnicos_equipos", "id, nro_serie, placa, modelo, ano, valor_asegurado");
+			for (const e of incEquipos) {
+				asegurados.push({
+					tipo: "equipo",
+					origen_id: e.id,
+					placa: e.placa || undefined,
+					modelo: e.modelo || undefined,
+					ano: e.ano?.toString() || undefined,
+					valor_asegurado: e.valor_asegurado != null ? Number(e.valor_asegurado) : undefined,
+					identificador: e.nro_serie || undefined,
+				});
+			}
 		}
 
 		// --- SALUD (personas: asegurados con client_id + beneficiarios por nombre) ---
@@ -1463,6 +1605,44 @@ export async function obtenerAseguradosPoliza(polizaId: string, ramo: string): P
 				.select("id, nombre_completo, carnet, rol")
 				.eq("poliza_id", polizaId);
 			for (const b of benef || []) {
+				asegurados.push({
+					tipo: "persona",
+					origen_id: b.id,
+					nombre: b.nombre_completo || "Desconocido",
+					documento: b.carnet || undefined,
+					relacion: b.rol || "Beneficiario",
+				});
+			}
+
+			// Personas incluidas vía anexo
+			const incAseg = await cargarItemsAnexo<{ id: string; client_id: string; rol: string | null }>(
+				"polizas_anexos_salud_asegurados",
+				"id, client_id, rol",
+			);
+			if (incAseg.length > 0) {
+				const clientMapAnexo = await resolverClientesParaDesglose(
+					supabase,
+					incAseg.map((a) => a.client_id),
+				);
+				for (const a of incAseg) {
+					const c = clientMapAnexo.get(a.client_id);
+					asegurados.push({
+						tipo: "persona",
+						origen_id: a.id,
+						nombre: c?.nombre || "Desconocido",
+						documento: c?.documento,
+						relacion: a.rol || "Asegurado",
+					});
+				}
+			}
+
+			const incBenef = await cargarItemsAnexo<{
+				id: string;
+				nombre_completo: string | null;
+				carnet: string | null;
+				rol: string | null;
+			}>("polizas_anexos_salud_beneficiarios", "id, nombre_completo, carnet, rol");
+			for (const b of incBenef) {
 				asegurados.push({
 					tipo: "persona",
 					origen_id: b.id,
@@ -1511,6 +1691,28 @@ export async function obtenerAseguradosPoliza(polizaId: string, ramo: string): P
 					relacion: b.rol || "Beneficiario",
 				});
 			}
+
+			// Personas incluidas vía anexo
+			const incNivel = await cargarItemsAnexo<{ id: string; client_id: string; cargo: string | null }>(
+				"polizas_anexos_asegurados_nivel",
+				"id, client_id, cargo",
+			);
+			if (incNivel.length > 0) {
+				const clientMapAnexo = await resolverClientesParaDesglose(
+					supabase,
+					incNivel.map((a) => a.client_id),
+				);
+				for (const a of incNivel) {
+					const c = clientMapAnexo.get(a.client_id);
+					asegurados.push({
+						tipo: "persona",
+						origen_id: a.id,
+						nombre: c?.nombre || "Desconocido",
+						documento: c?.documento,
+						relacion: a.cargo || "Asegurado",
+					});
+				}
+			}
 		}
 
 		// --- INCENDIO (bienes + asegurados) ---
@@ -1520,6 +1722,20 @@ export async function obtenerAseguradosPoliza(polizaId: string, ramo: string): P
 				.select("id, direccion, valor_total_declarado")
 				.eq("poliza_id", polizaId);
 			for (const b of bienes || []) {
+				asegurados.push({
+					tipo: "bien",
+					origen_id: b.id,
+					direccion: b.direccion || undefined,
+					valor_asegurado: b.valor_total_declarado != null ? Number(b.valor_total_declarado) : undefined,
+				});
+			}
+
+			const incBienes = await cargarItemsAnexo<{
+				id: string;
+				direccion: string | null;
+				valor_total_declarado: number | null;
+			}>("polizas_anexos_incendio_bienes", "id, direccion, valor_total_declarado");
+			for (const b of incBienes) {
 				asegurados.push({
 					tipo: "bien",
 					origen_id: b.id,
@@ -1555,6 +1771,20 @@ export async function obtenerAseguradosPoliza(polizaId: string, ramo: string): P
 				.select("id, direccion, valor_total_declarado")
 				.eq("poliza_id", polizaId);
 			for (const b of bienes || []) {
+				asegurados.push({
+					tipo: "bien",
+					origen_id: b.id,
+					direccion: b.direccion || undefined,
+					valor_asegurado: b.valor_total_declarado != null ? Number(b.valor_total_declarado) : undefined,
+				});
+			}
+
+			const incBienesRV = await cargarItemsAnexo<{
+				id: string;
+				direccion: string | null;
+				valor_total_declarado: number | null;
+			}>("polizas_anexos_riesgos_varios_bienes", "id, direccion, valor_total_declarado");
+			for (const b of incBienesRV) {
 				asegurados.push({
 					tipo: "bien",
 					origen_id: b.id,
@@ -1623,6 +1853,27 @@ export async function obtenerAseguradosPoliza(polizaId: string, ramo: string): P
 				});
 			}
 
+			const incNaves = await cargarItemsAnexo<{
+				id: string;
+				matricula: string | null;
+				marca: string | null;
+				modelo: string | null;
+				ano: number | null;
+				serie: string | null;
+				valor_casco: number | null;
+			}>("polizas_anexos_aeronavegacion_naves", "id, matricula, marca, modelo, ano, serie, valor_casco");
+			for (const n of incNaves) {
+				asegurados.push({
+					tipo: "nave",
+					origen_id: n.id,
+					marca: n.marca || undefined,
+					modelo: n.modelo || undefined,
+					ano: n.ano?.toString() || undefined,
+					valor_asegurado: n.valor_casco != null ? Number(n.valor_casco) : undefined,
+					identificador: n.matricula || n.serie || undefined,
+				});
+			}
+
 			const { data: aseg } = await supabase
 				.from("polizas_aeronavegacion_asegurados")
 				.select("id, client_id")
@@ -1643,7 +1894,12 @@ export async function obtenerAseguradosPoliza(polizaId: string, ramo: string): P
 			}
 		}
 
-		return { success: true, data: { asegurados } };
+		// Quitar ítems excluidos por anexos activos (referencian el id original,
+		// sea de la tabla madre o de una inclusión previa).
+		const visibles =
+			excluidos.size > 0 ? asegurados.filter((a) => !a.origen_id || !excluidos.has(a.origen_id)) : asegurados;
+
+		return { success: true, data: { asegurados: visibles } };
 	} catch (error) {
 		await captureError(error, "obtenerAseguradosPoliza", { polizaId, ramo });
 		return {
