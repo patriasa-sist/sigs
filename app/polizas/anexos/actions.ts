@@ -637,6 +637,8 @@ async function computarPrimaAnexo(
 	tipoAnexo: TipoAnexo,
 	planInclusion: PlanPagoInclusion | null,
 	cuotasAjuste: CuotaAjuste[],
+	// Exclusión: devolución al cliente (saldo a favor); suma a la magnitud excluida (#46)
+	devolucionExclusion = 0,
 ): Promise<{
 	prima_total: number;
 	prima_neta: number;
@@ -654,8 +656,9 @@ async function computarPrimaAnexo(
 		grossFirmado = planInclusion.prima_total;
 	} else {
 		const descuento = cuotasAjuste.reduce((s, c) => s + Math.abs(c.monto_delta), 0);
-		if (descuento <= 0) return null;
-		grossFirmado = -descuento;
+		const totalExcluido = descuento + Math.max(0, devolucionExclusion);
+		if (totalExcluido <= 0) return null;
+		grossFirmado = -totalExcluido;
 	}
 
 	const { data: pol } = await supabase
@@ -1111,6 +1114,9 @@ export async function guardarAnexo(formState: AnexoFormState): Promise<{
 			formState.config.tipo_anexo,
 			formState.plan_pago_inclusion ?? null,
 			formState.cuotas_ajuste ?? [],
+			formState.config.tipo_anexo === "exclusion" && formState.vigencia_corrida?.direccion === "devolucion"
+				? formState.vigencia_corrida.monto
+				: 0,
 		);
 
 		// --- INSERTAR ANEXO ---
@@ -1178,6 +1184,25 @@ export async function guardarAnexo(formState: AnexoFormState): Promise<{
 				if (construido.rows.length > 0) {
 					const { error: pagosError } = await supabase.from("polizas_anexos_pagos").insert(construido.rows);
 					throwIfAnexoError(pagosError, "Error al guardar descuentos de exclusión");
+				}
+				// Devolución al cliente (saldo a favor cuando las cuotas ya están pagadas
+				// o el descuento no alcanza): registrada en el anexo, gestionada por fuera
+				// de cobranzas — mismo mecanismo que la anulación con VC devolución (#46).
+				if (formState.vigencia_corrida && formState.vigencia_corrida.monto > 0) {
+					const { error: devolError } = await supabase.from("polizas_anexos_pagos").insert({
+						anexo_id: anexo.id,
+						cuota_original_id: null,
+						tipo: "vigencia_corrida",
+						numero_cuota: 0,
+						monto: Math.abs(formState.vigencia_corrida.monto),
+						direccion: "devolucion",
+						fecha_vencimiento: formState.vigencia_corrida.fecha_vencimiento,
+						estado: "pendiente",
+						observaciones:
+							formState.vigencia_corrida.observaciones?.trim() ||
+							"Devolución a favor del cliente por exclusión",
+					});
+					throwIfAnexoError(devolError, "Error al guardar la devolución de la exclusión");
 				}
 			}
 			// Reemplazo: sin pagos (no genera prima ni toca cuotas). Solo items.
@@ -2749,6 +2774,21 @@ export async function actualizarAnexo(
 					observaciones: "Descuento por exclusión",
 				});
 			}
+			// Devolución al cliente por exclusión (saldo a favor, gestionada por fuera) (#46)
+			if (formState.vigencia_corrida && formState.vigencia_corrida.monto > 0) {
+				nuevosPagos.push({
+					tipo: "vigencia_corrida",
+					cuota_original_id: null,
+					cuota_anexo_pago_id: null,
+					numero_cuota: 0,
+					monto: Math.abs(formState.vigencia_corrida.monto),
+					direccion: "devolucion",
+					fecha_vencimiento: formState.vigencia_corrida.fecha_vencimiento,
+					observaciones:
+						formState.vigencia_corrida.observaciones?.trim() ||
+						"Devolución a favor del cliente por exclusión",
+				});
+			}
 		}
 		// Reemplazo: nuevosPagos queda vacío (no hay pagos asociados).
 
@@ -2802,6 +2842,9 @@ export async function actualizarAnexo(
 			anexo.tipo_anexo,
 			formState.plan_pago_inclusion ?? null,
 			formState.cuotas_ajuste ?? [],
+			anexo.tipo_anexo === "exclusion" && formState.vigencia_corrida?.direccion === "devolucion"
+				? formState.vigencia_corrida.monto
+				: 0,
 		);
 
 		// --- ACTUALIZAR ANEXO PRINCIPAL ---

@@ -60,10 +60,14 @@ export function ResumenAnexo({
 
 	if (config.tipo_anexo === "exclusion") {
 		const tieneDeltas = formState.cuotas_ajuste.some((c) => c.monto_delta !== 0);
-		if (!tieneDeltas && !formState.items_cambio) {
+		const tieneDevolucion =
+			!!formState.vigencia_corrida &&
+			formState.vigencia_corrida.direccion === "devolucion" &&
+			formState.vigencia_corrida.monto > 0;
+		if (!tieneDeltas && !tieneDevolucion && !formState.items_cambio) {
 			advertencias.push({
 				tipo: "warning",
-				mensaje: "No se registraron cambios en items ni descuentos de pago.",
+				mensaje: "No se registraron cambios en items, descuentos de pago ni devolución.",
 			});
 		}
 	}
@@ -282,6 +286,17 @@ export function ResumenAnexo({
 						) : (
 							<p className="text-gray-400">Sin descuentos de pago</p>
 						)}
+						{formState.vigencia_corrida &&
+							formState.vigencia_corrida.direccion === "devolucion" &&
+							formState.vigencia_corrida.monto > 0 && (
+								<p className="font-medium mt-1">
+									Devolución al cliente:{" "}
+									<span className="text-amber-700">
+										{formatCurrency(formState.vigencia_corrida.monto, moneda)}
+									</span>{" "}
+									<span className="text-xs text-gray-500">(se gestiona por fuera)</span>
+								</p>
+							)}
 					</div>
 				) : (
 					<div className="text-sm">

@@ -469,6 +469,7 @@ function SeccionAjusteExclusion({
 	producto,
 	usarFactoresContado,
 	modalidadMadre,
+	devolucionMonto = 0,
 	onChangeDelta,
 	onChangeFecha,
 }: {
@@ -477,6 +478,8 @@ function SeccionAjusteExclusion({
 	producto?: ProductoFactoresAnexo | null;
 	usarFactoresContado?: boolean;
 	modalidadMadre?: "contado" | "credito";
+	// Devolución al cliente registrada en el paso: suma a la magnitud excluida
+	devolucionMonto?: number;
 	onChangeDelta: (idx: number, v: string) => void;
 	onChangeFecha: (idx: number, v: string) => void;
 }) {
@@ -484,8 +487,8 @@ function SeccionAjusteExclusion({
 
 	// Cálculo automático en vivo de la exclusión (mismo espejo que computarPrimaAnexo):
 	// usa la modalidad de la MADRE (o contado si la madre fuerza contado) sobre el
-	// descuento total; los montos van en NEGATIVO porque la exclusión reduce producción.
-	const descuento = Math.abs(totalDelta);
+	// descuento total + devolución; en NEGATIVO porque la exclusión reduce producción.
+	const descuento = Math.abs(totalDelta) + Math.max(0, devolucionMonto);
 	const usarContado = modalidadMadre === "contado" || usarFactoresContado === true;
 	const calc: CalculoComisionResult | null =
 		producto && descuento > 0
@@ -518,8 +521,11 @@ function SeccionAjusteExclusion({
 		return (
 			<div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 flex items-start gap-2 text-xs text-amber-700">
 				<Info className="h-3 w-3 mt-0.5 flex-shrink-0" />
-				No hay cuotas con saldo cobrable sobre las que repartir el descuento. La exclusión no puede rebajar
-				cuotas ya pagadas (eso implicaría una devolución, que no se maneja por aquí).
+				No hay cuotas con saldo cobrable sobre las que repartir el descuento (las cuotas ya están pagadas).
+				Registre el saldo a favor del cliente en la sección <strong>
+					&quot;Devolución al cliente&quot;
+				</strong>{" "}
+				de abajo.
 			</div>
 		);
 	}
@@ -865,8 +871,12 @@ export function PagosYDocumentos({
 		}
 
 		if (tipoAnexo === "exclusion") {
-			if (cuotasAjuste.every((c) => c.monto_delta === 0)) {
-				newErrors.push("Debe repartir el descuento de la exclusión en al menos una cuota");
+			const hayDevolucion =
+				!!vigenciaCorrida && vigenciaCorrida.direccion === "devolucion" && vigenciaCorrida.monto > 0;
+			if (cuotasAjuste.every((c) => c.monto_delta === 0) && !hayDevolucion) {
+				newErrors.push(
+					"Reparta el descuento de la exclusión en al menos una cuota o registre una devolución al cliente",
+				);
 			}
 			if (cuotasAjuste.some((c) => c.monto_delta > 0)) {
 				newErrors.push("Los descuentos de exclusión deben restar al saldo de la cuota, no sumarlo");
@@ -929,9 +939,75 @@ export function PagosYDocumentos({
 						producto={producto}
 						usarFactoresContado={usarFactoresContado}
 						modalidadMadre={modalidadMadre}
+						devolucionMonto={vigenciaCorrida?.direccion === "devolucion" ? vigenciaCorrida.monto : 0}
 						onChangeDelta={handleDeltaChange}
 						onChangeFecha={handleFechaAjusteChange}
 					/>
+
+					{/* Devolución al cliente (saldo a favor) — registrada, gestionada por fuera */}
+					<div className="mt-6 border border-blue-200 bg-blue-50/50 rounded-lg p-4">
+						<h4 className="text-sm font-medium mb-1">Devolución al cliente (opcional)</h4>
+						<p className="text-xs text-gray-500 mb-3">
+							Si las cuotas ya están pagadas (o el descuento no alcanza a cubrir el saldo a favor),
+							registre aquí el monto a devolver. La devolución queda registrada en el anexo y se gestiona
+							por fuera de cobranzas, igual que en las anulaciones.
+						</p>
+						<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+							<div>
+								<Label htmlFor="excl_devolucion_monto">Monto a devolver ({moneda})</Label>
+								<Input
+									id="excl_devolucion_monto"
+									type="number"
+									step="0.01"
+									min="0"
+									inputMode="decimal"
+									value={vigenciaCorrida?.monto || ""}
+									onKeyDown={bloquearSimbolos}
+									onChange={(e) =>
+										onChangeVigenciaCorrida({
+											monto: Math.max(0, parseFloat(e.target.value) || 0),
+											direccion: "devolucion",
+											fecha_vencimiento: vigenciaCorrida?.fecha_vencimiento || fechaDefault(0),
+											observaciones: vigenciaCorrida?.observaciones || "",
+										})
+									}
+									placeholder="0.00"
+								/>
+							</div>
+							<div>
+								<Label htmlFor="excl_devolucion_fecha">Fecha</Label>
+								<Input
+									id="excl_devolucion_fecha"
+									type="date"
+									value={vigenciaCorrida?.fecha_vencimiento || fechaDefault(0)}
+									onChange={(e) =>
+										onChangeVigenciaCorrida({
+											monto: vigenciaCorrida?.monto || 0,
+											direccion: "devolucion",
+											fecha_vencimiento: e.target.value,
+											observaciones: vigenciaCorrida?.observaciones || "",
+										})
+									}
+								/>
+							</div>
+							<div>
+								<Label htmlFor="excl_devolucion_obs">Observaciones</Label>
+								<Input
+									id="excl_devolucion_obs"
+									value={vigenciaCorrida?.observaciones || ""}
+									onChange={(e) =>
+										onChangeVigenciaCorrida({
+											monto: vigenciaCorrida?.monto || 0,
+											direccion: "devolucion",
+											fecha_vencimiento: vigenciaCorrida?.fecha_vencimiento || fechaDefault(0),
+											observaciones: e.target.value,
+										})
+									}
+									placeholder="Ej: saldo por exclusión de dependiente"
+								/>
+							</div>
+						</div>
+					</div>
 				</div>
 			)}
 
