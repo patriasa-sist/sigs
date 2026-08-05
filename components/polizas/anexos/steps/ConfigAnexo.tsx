@@ -12,6 +12,8 @@ type Props = {
 	config: ConfigAnexoType | null;
 	tieneAnulacionPendiente: boolean;
 	tipoBloqueado?: boolean;
+	// Fin de vigencia de la póliza madre: default de la fecha fin del anexo
+	finVigenciaPoliza?: string;
 	onChange: (config: ConfigAnexoType) => void;
 	onSiguiente: () => void;
 	onAnterior: () => void;
@@ -56,15 +58,16 @@ export function ConfigAnexo({
 	config,
 	tieneAnulacionPendiente,
 	tipoBloqueado,
+	finVigenciaPoliza,
 	onChange,
 	onSiguiente,
 	onAnterior,
 }: Props) {
 	const [tipoAnexo, setTipoAnexo] = useState(config?.tipo_anexo || "");
 	const [numeroAnexo, setNumeroAnexo] = useState(config?.numero_anexo || "");
-	const [fechaEfectiva, setFechaEfectiva] = useState(
-		config?.fecha_efectiva || new Date().toISOString().split("T")[0],
-	);
+	const [fechaInicio, setFechaInicio] = useState(config?.fecha_efectiva || new Date().toISOString().split("T")[0]);
+	// Fin de vigencia del anexo: por defecto copia el fin de la póliza madre, editable
+	const [fechaFin, setFechaFin] = useState(config?.fecha_fin_vigencia || finVigenciaPoliza || "");
 	const [observaciones, setObservaciones] = useState(config?.observaciones || "");
 	const [errores, setErrores] = useState<string[]>([]);
 
@@ -79,8 +82,16 @@ export function ConfigAnexo({
 			nuevosErrores.push("El número de anexo es obligatorio");
 		}
 
-		if (!fechaEfectiva) {
-			nuevosErrores.push("La fecha efectiva es obligatoria");
+		if (!fechaInicio) {
+			nuevosErrores.push("La fecha de inicio de vigencia es obligatoria");
+		}
+
+		if (!fechaFin) {
+			nuevosErrores.push("La fecha de fin de vigencia es obligatoria");
+		}
+
+		if (fechaInicio && fechaFin && fechaFin < fechaInicio) {
+			nuevosErrores.push("La fecha de fin no puede ser anterior a la fecha de inicio");
 		}
 
 		if (nuevosErrores.length > 0) {
@@ -92,7 +103,8 @@ export function ConfigAnexo({
 		onChange({
 			tipo_anexo: tipoAnexo as "inclusion" | "exclusion" | "anulacion" | "reemplazo",
 			numero_anexo: numeroAnexo.trim(),
-			fecha_efectiva: fechaEfectiva,
+			fecha_efectiva: fechaInicio,
+			fecha_fin_vigencia: fechaFin,
 			observaciones: observaciones.trim(),
 		});
 		onSiguiente();
@@ -164,8 +176,8 @@ export function ConfigAnexo({
 				</div>
 			)}
 
-			{/* Número de Anexo */}
-			<div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+			{/* Número de Anexo y vigencia */}
+			<div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
 				<div>
 					<Label htmlFor="numero_anexo">Número de Anexo *</Label>
 					<Input
@@ -176,13 +188,23 @@ export function ConfigAnexo({
 					/>
 				</div>
 				<div>
-					<Label htmlFor="fecha_efectiva">Fecha Efectiva *</Label>
+					<Label htmlFor="fecha_inicio_anexo">Fecha de Inicio *</Label>
 					<Input
-						id="fecha_efectiva"
+						id="fecha_inicio_anexo"
 						type="date"
-						value={fechaEfectiva}
-						onChange={(e) => setFechaEfectiva(e.target.value)}
+						value={fechaInicio}
+						onChange={(e) => setFechaInicio(e.target.value)}
 					/>
+				</div>
+				<div>
+					<Label htmlFor="fecha_fin_anexo">Fecha de Fin *</Label>
+					<Input
+						id="fecha_fin_anexo"
+						type="date"
+						value={fechaFin}
+						onChange={(e) => setFechaFin(e.target.value)}
+					/>
+					<p className="text-xs text-gray-500 mt-1">Por defecto, el fin de vigencia de la póliza.</p>
 				</div>
 			</div>
 

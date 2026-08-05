@@ -85,7 +85,8 @@ export type PolizaResumenAnexo = {
 export type ConfigAnexo = {
 	tipo_anexo: TipoAnexo;
 	numero_anexo: string;
-	fecha_efectiva: string; // ISO date
+	fecha_efectiva: string; // ISO date — inicio de vigencia del anexo (se muestra como "Fecha de Inicio")
+	fecha_fin_vigencia?: string; // ISO date — fin de vigencia del anexo (default: fin de la madre)
 	observaciones: string;
 };
 
@@ -286,6 +287,7 @@ export type AnexoDB = {
 	tipo_anexo: TipoAnexo;
 	fecha_anexo: string;
 	fecha_efectiva: string;
+	fecha_fin_vigencia?: string | null;
 	observaciones?: string;
 	estado: EstadoAnexo;
 	validado_por?: string;
@@ -370,6 +372,7 @@ export type AnexoResumen = {
 	tipo_anexo: TipoAnexo;
 	fecha_anexo: string;
 	fecha_efectiva: string;
+	fecha_fin_vigencia?: string | null;
 	estado: EstadoAnexo;
 	observaciones?: string;
 	created_by?: string;

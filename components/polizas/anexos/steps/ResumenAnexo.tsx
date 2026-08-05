@@ -165,7 +165,8 @@ export function ResumenAnexo({
 						<span className="font-medium">{config.numero_anexo}</span>
 					</div>
 					<div>
-						<span className="text-gray-500">Fecha Efectiva:</span> {formatDate(config.fecha_efectiva)}
+						<span className="text-gray-500">Vigencia:</span> {formatDate(config.fecha_efectiva)}
+						{config.fecha_fin_vigencia ? ` — ${formatDate(config.fecha_fin_vigencia)}` : ""}
 					</div>
 					{config.observaciones && (
 						<div className="col-span-2 md:col-span-4">

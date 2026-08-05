@@ -264,7 +264,10 @@ export default function AnexoDetalleSection({ polizaId, moneda, puedeValidar, on
 												</Badge>
 											</div>
 											<p className="text-sm text-gray-600 ml-9">
-												Fecha efectiva: {formatDate(anexo.fecha_efectiva)}
+												Vigencia: {formatDate(anexo.fecha_efectiva)}
+												{anexo.fecha_fin_vigencia
+													? ` — ${formatDate(anexo.fecha_fin_vigencia)}`
+													: ""}
 												{anexo.created_by_nombre && (
 													<span className="ml-3">Creado por: {anexo.created_by_nombre}</span>
 												)}
@@ -762,9 +765,9 @@ export default function AnexoDetalleSection({ polizaId, moneda, puedeValidar, on
 									{dialogAnexo?.sin_plan_pagos && (
 										<span className="block mt-2 text-warning font-medium">
 											<AlertTriangle className="h-4 w-4 inline mr-1" />
-											La inclusión tiene prima propia pero ningún plan de pagos registrado: entrará
-											al reporte APS sin reflejarse en el cuadro de comisiones. Puede validarla
-											igual, pero verifique si falta crear el plan de pagos.
+											La inclusión tiene prima propia pero ningún plan de pagos registrado:
+											entrará al reporte APS sin reflejarse en el cuadro de comisiones. Puede
+											validarla igual, pero verifique si falta crear el plan de pagos.
 										</span>
 									)}
 								</>

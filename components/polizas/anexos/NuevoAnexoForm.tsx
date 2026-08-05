@@ -205,6 +205,7 @@ export function NuevoAnexoForm({ mode = "create", anexoId, anexoEstado, initialF
 					config={formState.config}
 					tieneAnulacionPendiente={datosPoliza.poliza.tiene_anulacion_pendiente}
 					tipoBloqueado={isEdit}
+					finVigenciaPoliza={datosPoliza.poliza.fin_vigencia}
 					onChange={(config) => setFormState((prev) => ({ ...prev, config }))}
 					onSiguiente={() => {
 						// Si es anulación, saltar paso 3 (datos específicos)

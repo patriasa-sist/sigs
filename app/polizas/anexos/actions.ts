@@ -1122,6 +1122,7 @@ export async function guardarAnexo(formState: AnexoFormState): Promise<{
 				tipo_anexo: formState.config.tipo_anexo,
 				fecha_anexo: new Date().toISOString().split("T")[0],
 				fecha_efectiva: formState.config.fecha_efectiva,
+				fecha_fin_vigencia: formState.config.fecha_fin_vigencia || null,
 				observaciones: formState.config.observaciones?.trim() || null,
 				estado: "pendiente",
 				created_by: user.id,
@@ -1456,7 +1457,7 @@ export async function obtenerAnexosPoliza(polizaId: string): Promise<{
 			.from("polizas_anexos")
 			.select(
 				`
-				id, numero_anexo, tipo_anexo, fecha_anexo, fecha_efectiva,
+				id, numero_anexo, tipo_anexo, fecha_anexo, fecha_efectiva, fecha_fin_vigencia,
 				estado, observaciones, fecha_validacion, created_by, prima_total,
 				creador:profiles!created_by (full_name),
 				validador:profiles!validado_por (full_name)
@@ -1517,6 +1518,7 @@ export async function obtenerAnexosPoliza(polizaId: string): Promise<{
 				tipo_anexo: a.tipo_anexo,
 				fecha_anexo: a.fecha_anexo,
 				fecha_efectiva: a.fecha_efectiva,
+				fecha_fin_vigencia: a.fecha_fin_vigencia || null,
 				estado: a.estado,
 				observaciones: a.observaciones || undefined,
 				created_by: a.created_by || undefined,
@@ -1726,6 +1728,7 @@ export type AnexoDetalle = {
 	tipo_anexo: TipoAnexo;
 	fecha_anexo: string;
 	fecha_efectiva: string;
+	fecha_fin_vigencia: string | null;
 	estado: string;
 	observaciones: string | null;
 	created_at: string;
@@ -1769,7 +1772,7 @@ export async function obtenerDetalleAnexo(anexoId: string): Promise<{
 			.from("polizas_anexos")
 			.select(
 				`
-				id, numero_anexo, tipo_anexo, fecha_anexo, fecha_efectiva,
+				id, numero_anexo, tipo_anexo, fecha_anexo, fecha_efectiva, fecha_fin_vigencia,
 				estado, observaciones, created_at,
 				fecha_validacion, motivo_rechazo, fecha_rechazo,
 				created_by, validado_por, rechazado_por,
@@ -1820,6 +1823,7 @@ export async function obtenerDetalleAnexo(anexoId: string): Promise<{
 			tipo_anexo: anexo.tipo_anexo as AnexoDetalle["tipo_anexo"],
 			fecha_anexo: anexo.fecha_anexo,
 			fecha_efectiva: anexo.fecha_efectiva,
+			fecha_fin_vigencia: anexo.fecha_fin_vigencia || null,
 			estado: anexo.estado,
 			observaciones: anexo.observaciones,
 			created_at: anexo.created_at,
@@ -2117,7 +2121,7 @@ async function verifyAnexoEditPermission(anexoId: string) {
 		.select(
 			`
 			id, estado, tipo_anexo, poliza_id, created_by,
-			numero_anexo, fecha_efectiva, observaciones,
+			numero_anexo, fecha_efectiva, fecha_fin_vigencia, observaciones,
 			poliza:polizas!poliza_id (responsable_id)
 		`,
 		)
@@ -2139,6 +2143,7 @@ async function verifyAnexoEditPermission(anexoId: string) {
 		poliza_id: anexo.poliza_id as string,
 		numero_anexo: anexo.numero_anexo as string,
 		fecha_efectiva: anexo.fecha_efectiva as string,
+		fecha_fin_vigencia: (anexo.fecha_fin_vigencia as string | null) || undefined,
 		observaciones: (anexo.observaciones as string | null) || "",
 	};
 
@@ -2584,6 +2589,7 @@ export async function obtenerAnexoParaEdicion(anexoId: string): Promise<{
 				tipo_anexo: anexo.tipo_anexo,
 				numero_anexo: anexo.numero_anexo,
 				fecha_efectiva: anexo.fecha_efectiva,
+				fecha_fin_vigencia: anexo.fecha_fin_vigencia,
 				observaciones: anexo.observaciones,
 			},
 			items_cambio: itemsCambio,
@@ -2802,6 +2808,7 @@ export async function actualizarAnexo(
 		const camposBase = {
 			numero_anexo: formState.config.numero_anexo.trim(),
 			fecha_efectiva: formState.config.fecha_efectiva,
+			fecha_fin_vigencia: formState.config.fecha_fin_vigencia || null,
 			observaciones: formState.config.observaciones?.trim() || null,
 			updated_by: user.id,
 			updated_at: new Date().toISOString(),
