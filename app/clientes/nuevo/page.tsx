@@ -71,11 +71,13 @@ import {
 	verificarNitExistente,
 	verificarRegistroClubExistente,
 	verificarPersoneriaAsociacionExistente,
+	limpiarClienteHuerfano,
 	type VerificarDocumentoResult,
 	type VerificarNitResult,
 	type VerificarRegistroClubResult,
 	type VerificarPersoneriaAsociacionResult,
 } from "@/app/clientes/actions";
+import { captureError } from "@/utils/sentry";
 
 // ---------------------------------------------------------------------------
 // Field label maps – used to display human-readable names in validation toasts
@@ -544,7 +546,10 @@ export default function NuevoClientePage() {
 			throw new Error("Usuario no autenticado");
 		}
 
-		// Upload each document
+		// Best-effort: un documento que falla NO aborta el alta (el cliente ya está
+		// creado; abortar aquí provocaba reintentos y duplicados). Los fallidos se
+		// avisan y pueden subsanarse desde el detalle del cliente (issue #47).
+		const fallidos: string[] = [];
 		for (const doc of documentos) {
 			try {
 				// Generate storage path
@@ -559,8 +564,9 @@ export default function NuevoClientePage() {
 					});
 
 				if (uploadError) {
-					console.error(`Error uploading document ${doc.nombre_archivo}:`, uploadError);
-					throw new Error(`Error al subir documento: ${doc.nombre_archivo}`);
+					captureError(uploadError, `uploadClientDocuments.${doc.nombre_archivo}`);
+					fallidos.push(doc.nombre_archivo);
+					continue;
 				}
 
 				// Insert document metadata into database
@@ -578,19 +584,32 @@ export default function NuevoClientePage() {
 				});
 
 				if (dbError) {
-					console.error(`Error saving document metadata for ${doc.nombre_archivo}:`, dbError);
-					throw new Error(`Error al guardar metadatos del documento: ${doc.nombre_archivo}`);
+					captureError(dbError, `uploadClientDocuments.metadata.${doc.nombre_archivo}`);
+					fallidos.push(doc.nombre_archivo);
 				}
 			} catch (error) {
-				console.error("Error processing document:", error);
-				throw error;
+				captureError(error, "uploadClientDocuments");
+				fallidos.push(doc.nombre_archivo);
 			}
+		}
+
+		if (fallidos.length > 0) {
+			toast.warning(
+				`El cliente se registró, pero ${fallidos.length === 1 ? "un documento no se pudo subir" : `${fallidos.length} documentos no se pudieron subir`}: ${fallidos.join(", ")}. Puede subirlos desde la pestaña Documentos del cliente.`,
+				{ duration: 10000 },
+			);
 		}
 	};
 
-	// Helper to rollback a clients record if a subsequent insert fails
+	// Helper to rollback a clients record if a subsequent insert fails.
+	// Debe ser server-side: el DELETE directo de clients está limitado a admin por
+	// RLS y borraba 0 filas en silencio, dejando clientes huérfanos (issue #47).
 	const rollbackClient = async (clientId: string) => {
-		await supabase.from("clients").delete().eq("id", clientId);
+		try {
+			await limpiarClienteHuerfano(clientId);
+		} catch (error) {
+			captureError(error, "rollbackClient");
+		}
 	};
 
 	// Natural client submission

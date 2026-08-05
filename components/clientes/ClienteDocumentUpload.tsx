@@ -105,8 +105,6 @@ export function ClienteDocumentUpload({ clientType, documentos, onDocumentosChan
 			"application/pdf": [".pdf"],
 			"image/jpeg": [".jpg", ".jpeg"],
 			"image/png": [".png"],
-			"application/msword": [".doc"],
-			"application/vnd.openxmlformats-officedocument.wordprocessingml.document": [".docx"],
 		},
 		maxSize: MAX_FILE_SIZE,
 		multiple: true,
@@ -251,7 +249,7 @@ export function ClienteDocumentUpload({ clientType, documentos, onDocumentosChan
 							<p className="text-sm text-muted-foreground mb-1">
 								Arrastre archivos aquí o haga clic para seleccionar
 							</p>
-							<p className="text-xs text-muted-foreground/70">PDF, JPG, PNG, DOC, DOCX (máx. 15MB)</p>
+							<p className="text-xs text-muted-foreground/70">PDF, JPG, PNG (máx. 10MB)</p>
 						</>
 					)}
 				</div>

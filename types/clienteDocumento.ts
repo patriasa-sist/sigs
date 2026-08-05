@@ -311,24 +311,19 @@ export type ClienteDocumentoConAuditoria = z.infer<typeof clienteDocumentoConAud
 /**
  * Allowed file types for client documents
  */
-export const ALLOWED_FILE_TYPES = [
-	"application/pdf",
-	"image/jpeg",
-	"image/jpg",
-	"image/png",
-	"application/msword",
-	"application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-] as const;
+// Alineado con el bucket `clientes-documentos` (solo image/* y application/pdf):
+// aceptar .doc/.docx aquí hacía fallar la subida recién contra Storage.
+export const ALLOWED_FILE_TYPES = ["application/pdf", "image/jpeg", "image/jpg", "image/png"] as const;
 
 /**
  * Allowed file extensions
  */
-export const ALLOWED_FILE_EXTENSIONS = [".pdf", ".jpg", ".jpeg", ".png", ".doc", ".docx"] as const;
+export const ALLOWED_FILE_EXTENSIONS = [".pdf", ".jpg", ".jpeg", ".png"] as const;
 
 /**
- * Maximum file size in bytes (15MB)
+ * Maximum file size in bytes (10MB, límite real del bucket clientes-documentos)
  */
-export const MAX_FILE_SIZE = 15 * 1024 * 1024;
+export const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
 /**
  * Human-readable file size
@@ -378,7 +373,7 @@ export function validateFile(file: File): FileValidationError | null {
 	if (!isValidFileType(file)) {
 		return {
 			field: "type",
-			message: "Tipo de archivo no permitido. Solo se permiten PDF, JPG, PNG, DOC, DOCX.",
+			message: "Tipo de archivo no permitido. Solo se permiten PDF, JPG y PNG.",
 		};
 	}
 

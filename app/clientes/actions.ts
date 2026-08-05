@@ -1026,3 +1026,55 @@ export async function obtenerFiltrosClientes(): Promise<ActionResult<FiltrosClie
 		return { success: false, error: getErrorMessage(error), details: error };
 	}
 }
+
+/**
+ * Rollback de un alta de cliente fallida: elimina la fila de `clients` SOLO si es
+ * un huérfano real (sin fila de subtipo, sin pólizas). Requiere cliente admin
+ * porque el DELETE de clients está limitado a admin por RLS — el rollback
+ * client-side borraba 0 filas en silencio y dejaba huérfanos (issue #47).
+ */
+export async function limpiarClienteHuerfano(clientId: string): Promise<ActionResult<{ eliminado: boolean }>> {
+	try {
+		const supabase = await createClient();
+		const {
+			data: { user },
+		} = await supabase.auth.getUser();
+		if (!user) return { success: false, error: "No autenticado" };
+
+		const admin = createAdminClient();
+
+		const [nat, jur, uni, ong, club, asoc, polizas] = await Promise.all([
+			admin.from("natural_clients").select("client_id").eq("client_id", clientId).limit(1).maybeSingle(),
+			admin.from("juridic_clients").select("client_id").eq("client_id", clientId).limit(1).maybeSingle(),
+			admin.from("unipersonal_clients").select("client_id").eq("client_id", clientId).limit(1).maybeSingle(),
+			admin.from("ong_clients").select("client_id").eq("client_id", clientId).limit(1).maybeSingle(),
+			admin.from("club_clients").select("client_id").eq("client_id", clientId).limit(1).maybeSingle(),
+			admin.from("asociacion_civil_clients").select("client_id").eq("client_id", clientId).limit(1).maybeSingle(),
+			admin.from("polizas").select("id").eq("client_id", clientId).limit(1).maybeSingle(),
+		]);
+
+		const tieneSubtipo = !!(nat.data || jur.data || uni.data || ong.data || club.data || asoc.data);
+		if (tieneSubtipo || polizas.data) {
+			// No es huérfano: no se toca nada.
+			return { success: true, data: { eliminado: false } };
+		}
+
+		// Dependencias débiles que pudieran haberse insertado antes del fallo
+		await Promise.all([
+			admin.from("client_partners").delete().eq("client_id", clientId),
+			admin.from("client_extra_phones").delete().eq("client_id", clientId),
+			admin.from("clientes_documentos").delete().eq("client_id", clientId),
+		]);
+
+		const { error: deleteError } = await admin.from("clients").delete().eq("id", clientId);
+		if (deleteError) {
+			console.error("[limpiarClienteHuerfano] Error:", deleteError);
+			return { success: false, error: "No se pudo limpiar el cliente huérfano", details: deleteError };
+		}
+
+		return { success: true, data: { eliminado: true } };
+	} catch (error) {
+		console.error("[limpiarClienteHuerfano] Unexpected error:", error);
+		return { success: false, error: getErrorMessage(error), details: error };
+	}
+}

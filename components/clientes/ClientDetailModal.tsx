@@ -622,6 +622,16 @@ export function ClientDetailModal({ clientId, onClose }: Props) {
 									isAdmin={permission?.isAdmin}
 									onDocumentChange={loadClientDetails}
 								/>
+							) : permission?.isAdmin || permission?.isTeamLeader || permission?.isTeamMember ? (
+								/* Subsanación sin modo edición: solo subir documentos nuevos.
+								   La autorización real la valida el server action (equipo del cliente). */
+								<ClienteDocumentUploadEdit
+									clientId={clientId}
+									clientType={client.client_type}
+									isAdmin={permission?.isAdmin}
+									soloSubir
+									onDocumentChange={loadClientDetails}
+								/>
 							) : (
 								<DocumentsList
 									documents={client.documents || []}

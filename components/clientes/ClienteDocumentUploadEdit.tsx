@@ -55,10 +55,19 @@ type Props = {
 	clientId: string;
 	clientType: "natural" | "unipersonal" | "juridica" | "ong" | "club" | "asociacion_civil";
 	isAdmin?: boolean;
+	// Modo subsanación: solo permite SUBIR documentos nuevos (sin reemplazar ni
+	// descartar). Disponible fuera del modo edición para el equipo del cliente.
+	soloSubir?: boolean;
 	onDocumentChange?: () => void;
 };
 
-export function ClienteDocumentUploadEdit({ clientId, clientType, isAdmin = false, onDocumentChange }: Props) {
+export function ClienteDocumentUploadEdit({
+	clientId,
+	clientType,
+	isAdmin = false,
+	soloSubir = false,
+	onDocumentChange,
+}: Props) {
 	const [documents, setDocuments] = useState<ClienteDocumento[]>([]);
 	const [isLoading, setIsLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
@@ -190,8 +199,6 @@ export function ClienteDocumentUploadEdit({ clientId, clientType, isAdmin = fals
 			"application/pdf": [".pdf"],
 			"image/jpeg": [".jpg", ".jpeg"],
 			"image/png": [".png"],
-			"application/msword": [".doc"],
-			"application/vnd.openxmlformats-officedocument.wordprocessingml.document": [".docx"],
 		},
 		maxSize: MAX_FILE_SIZE,
 		multiple: false,
@@ -404,7 +411,7 @@ export function ClienteDocumentUploadEdit({ clientId, clientType, isAdmin = fals
 										<p className="text-sm text-gray-600 mb-1">
 											Arrastre un archivo aquí o haga clic para seleccionar
 										</p>
-										<p className="text-xs text-gray-500">PDF, JPG, PNG, DOC, DOCX (máx. 15MB)</p>
+										<p className="text-xs text-gray-500">PDF, JPG, PNG (máx. 10MB)</p>
 									</>
 								)}
 							</>
@@ -485,14 +492,16 @@ export function ClienteDocumentUploadEdit({ clientId, clientType, isAdmin = fals
 													</Button>
 
 													{/* Replace */}
-													<Button
-														variant="ghost"
-														size="sm"
-														onClick={() => setReplaceDocId(doc.id)}
-														title="Reemplazar"
-													>
-														<RefreshCw className="h-4 w-4" />
-													</Button>
+													{!soloSubir && (
+														<Button
+															variant="ghost"
+															size="sm"
+															onClick={() => setReplaceDocId(doc.id)}
+															title="Reemplazar"
+														>
+															<RefreshCw className="h-4 w-4" />
+														</Button>
+													)}
 
 													{/* History (Admin only) */}
 													{isAdmin && doc.version > 1 && (
@@ -511,15 +520,17 @@ export function ClienteDocumentUploadEdit({ clientId, clientType, isAdmin = fals
 													)}
 
 													{/* Discard */}
-													<Button
-														variant="ghost"
-														size="sm"
-														onClick={() => setDiscardDocId(doc.id)}
-														title="Descartar"
-														className="text-red-600 hover:text-red-700 hover:bg-red-50"
-													>
-														<Trash2 className="h-4 w-4" />
-													</Button>
+													{!soloSubir && (
+														<Button
+															variant="ghost"
+															size="sm"
+															onClick={() => setDiscardDocId(doc.id)}
+															title="Descartar"
+															className="text-red-600 hover:text-red-700 hover:bg-red-50"
+														>
+															<Trash2 className="h-4 w-4" />
+														</Button>
+													)}
 												</div>
 											</div>
 										</div>
@@ -562,7 +573,7 @@ export function ClienteDocumentUploadEdit({ clientId, clientType, isAdmin = fals
 						<div className="border-2 border-dashed rounded-lg p-6 text-center">
 							<input
 								type="file"
-								accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+								accept=".pdf,.jpg,.jpeg,.png"
 								className="hidden"
 								id="replace-file-input"
 								onChange={(e) => {

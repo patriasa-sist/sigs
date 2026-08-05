@@ -86,7 +86,7 @@ export interface RegisterReplaceInput {
  * 3. Team leader for the client's commercial_owner
  * 4. Explicit per-client grant in client_edit_permissions
  */
-async function authorizeClientDocumentEdit(clientId: string) {
+async function authorizeClientDocumentEdit(clientId: string, soloSubida = false) {
 	const supabase = await createClient();
 
 	const {
@@ -164,6 +164,41 @@ async function authorizeClientDocumentEdit(clientId: string) {
 		const isActive = !permission.expires_at || new Date(permission.expires_at) > new Date();
 		if (isActive) {
 			return { supabase, user, profile };
+		}
+	}
+
+	// Path 5 (solo subida aditiva): comercial/agente cuyo equipo cubre al responsable
+	// del cliente puede SUBIR documentos sin permiso de edición. Subsana documentos
+	// faltantes sin poder modificar datos ni descartar (issue #47).
+	if (soloSubida && (profile.role === "comercial" || profile.role === "agente")) {
+		const { data: clientRow } = await supabase
+			.from("clients")
+			.select("commercial_owner_id, created_by")
+			.eq("id", clientId)
+			.single();
+
+		if (clientRow) {
+			// El creador o responsable directo siempre puede subsanar sus clientes
+			if (clientRow.commercial_owner_id === user.id || clientRow.created_by === user.id) {
+				return { supabase, user, profile };
+			}
+			if (clientRow.commercial_owner_id) {
+				const { data: misEquipos } = await supabase
+					.from("equipo_miembros")
+					.select("equipo_id")
+					.eq("user_id", user.id);
+				const equipoIds = (misEquipos ?? []).map((t: { equipo_id: string }) => t.equipo_id);
+				if (equipoIds.length > 0) {
+					const { count } = await supabase
+						.from("equipo_miembros")
+						.select("*", { count: "exact", head: true })
+						.eq("user_id", clientRow.commercial_owner_id)
+						.in("equipo_id", equipoIds);
+					if ((count ?? 0) > 0) {
+						return { supabase, user, profile };
+					}
+				}
+			}
 		}
 	}
 
@@ -623,7 +658,8 @@ export async function discardClientDocument(documentId: string): Promise<ActionR
  */
 export async function registerClientDocument(input: RegisterDocumentInput): Promise<ActionResult<{ id: string }>> {
 	try {
-		const { supabase, user } = await authorizeClientDocumentEdit(input.client_id);
+		// Subida aditiva: el equipo del cliente puede subsanar documentos (issue #47)
+		const { supabase, user } = await authorizeClientDocumentEdit(input.client_id, true);
 
 		// Check if there's an existing active document of this type
 		const { data: existingDoc } = await supabase
