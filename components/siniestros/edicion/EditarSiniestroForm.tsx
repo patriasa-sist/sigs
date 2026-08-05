@@ -7,8 +7,22 @@ import { useRouter } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, FileText, MessageSquare, History, User, UserCog } from "lucide-react";
+import { ArrowLeft, FileText, MessageSquare, History, User, UserCog, RotateCcw, Loader2 } from "lucide-react";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
+import { reabrirSiniestro } from "@/app/siniestros/actions";
 import ResumenReadonly from "./ResumenReadonly";
 import AgregarObservacion from "./AgregarObservacion";
 import HistorialCronologico from "./HistorialCronologico";
@@ -36,6 +50,8 @@ interface EditarSiniestroFormProps {
 	historial: HistorialSiniestro[];
 	esAdmin: boolean;
 	soloLectura?: boolean;
+	// Permiso granular siniestros.reabrir (admin siempre lo tiene)
+	puedeReabrir?: boolean;
 }
 
 export default function EditarSiniestroForm({
@@ -47,12 +63,36 @@ export default function EditarSiniestroForm({
 	historial,
 	esAdmin,
 	soloLectura = false,
+	puedeReabrir = false,
 }: EditarSiniestroFormProps) {
 	const router = useRouter();
 	const [activeTab, setActiveTab] = useState("resumen");
 
+	// Reapertura (permiso granular)
+	const [mostrarReabrir, setMostrarReabrir] = useState(false);
+	const [motivoReapertura, setMotivoReapertura] = useState("");
+	const [reabriendo, setReabriendo] = useState(false);
+
 	const handleRefresh = () => {
 		router.refresh();
+	};
+
+	const handleReabrir = async () => {
+		if (!motivoReapertura.trim()) {
+			toast.error("Debe indicar el motivo de la reapertura");
+			return;
+		}
+		setReabriendo(true);
+		const result = await reabrirSiniestro(siniestro.id, motivoReapertura);
+		setReabriendo(false);
+		if (result.success) {
+			toast.success("Siniestro reabierto");
+			setMostrarReabrir(false);
+			setMotivoReapertura("");
+			router.refresh();
+		} else {
+			toast.error(result.error || "No se pudo reabrir el siniestro");
+		}
 	};
 
 	const estaAbierto = siniestro.estado === "abierto";
@@ -100,6 +140,14 @@ export default function EditarSiniestroForm({
 								<span>{formatDate(siniestro.fecha_siniestro)}</span>
 							</div>
 						</div>
+
+						{/* Reabrir (solo siniestros cerrados, permiso siniestros.reabrir) */}
+						{!estaAbierto && puedeReabrir && (
+							<Button variant="outline" size="sm" onClick={() => setMostrarReabrir(true)}>
+								<RotateCcw className="h-4 w-4 mr-2" />
+								Reabrir Siniestro
+							</Button>
+						)}
 					</div>
 
 					{/* Resumen de métricas */}
@@ -317,6 +365,44 @@ export default function EditarSiniestroForm({
 					</Card>
 				</div>
 			</div>
+
+			{/* Confirmación de reapertura */}
+			<AlertDialog open={mostrarReabrir} onOpenChange={(open) => !reabriendo && setMostrarReabrir(open)}>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>Reabrir siniestro</AlertDialogTitle>
+						<AlertDialogDescription>
+							El siniestro volverá al estado abierto. Los datos del cierre (montos, motivo y documentos)
+							se conservan como traza y la reapertura queda registrada en el historial.
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<div className="space-y-2">
+						<Label htmlFor="motivo_reapertura">
+							Motivo de la reapertura <span className="text-destructive">*</span>
+						</Label>
+						<Textarea
+							id="motivo_reapertura"
+							value={motivoReapertura}
+							onChange={(e) => setMotivoReapertura(e.target.value)}
+							placeholder="Ej: la compañía solicitó documentación adicional y reconsidera el caso"
+							rows={3}
+						/>
+					</div>
+					<AlertDialogFooter>
+						<AlertDialogCancel disabled={reabriendo}>Cancelar</AlertDialogCancel>
+						<AlertDialogAction onClick={handleReabrir} disabled={reabriendo || !motivoReapertura.trim()}>
+							{reabriendo ? (
+								<>
+									<Loader2 className="h-4 w-4 mr-2 animate-spin" />
+									Reabriendo...
+								</>
+							) : (
+								"Reabrir"
+							)}
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
 		</div>
 	);
 }

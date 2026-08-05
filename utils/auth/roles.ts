@@ -37,6 +37,7 @@ export const ALL_PERMISSIONS: readonly Permission[] = [
 	"siniestros.ver",
 	"siniestros.crear",
 	"siniestros.editar",
+	"siniestros.reabrir",
 	"vencimientos.ver",
 	"vencimientos.generar",
 	"documentos.descartar",

@@ -18,6 +18,7 @@ export default async function EditarSiniestroPage({ params }: PageProps) {
 	// Ver el detalle solo requiere siniestros.ver; sin siniestros.editar se muestra en solo lectura
 	const profile = await requirePermission("siniestros.ver");
 	const puedeEditar = await hasPermission("siniestros.editar");
+	const puedeReabrir = await hasPermission("siniestros.reabrir");
 
 	// Obtener ID del siniestro desde params
 	const { id: siniestroId } = await params;
@@ -45,6 +46,7 @@ export default async function EditarSiniestroPage({ params }: PageProps) {
 				historial={historial}
 				esAdmin={esAdmin}
 				soloLectura={!puedeEditar}
+				puedeReabrir={puedeReabrir}
 			/>
 		</div>
 	);

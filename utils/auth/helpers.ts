@@ -36,6 +36,7 @@ export type Permission =
 	| "siniestros.ver"
 	| "siniestros.crear"
 	| "siniestros.editar"
+	| "siniestros.reabrir"
 	| "vencimientos.ver"
 	| "vencimientos.generar"
 	| "documentos.descartar"

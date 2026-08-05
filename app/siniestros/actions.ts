@@ -885,6 +885,81 @@ export async function cerrarSiniestro(
 }
 
 /**
+ * Reabrir un siniestro cerrado (rechazado/declinado/concluido).
+ * Restringido al permiso granular `siniestros.reabrir` (admin siempre puede).
+ * Deja registro en el historial con el motivo y el estado previo.
+ */
+export async function reabrirSiniestro(
+	siniestroId: string,
+	motivo: string,
+): Promise<{ success: boolean; error?: string }> {
+	const { allowed, profile } = await checkPermission("siniestros.reabrir");
+	if (!allowed || !profile) {
+		return { success: false, error: "No tiene permiso para reabrir siniestros" };
+	}
+
+	const motivoLimpio = (motivo || "").trim();
+	if (!motivoLimpio) {
+		return { success: false, error: "Debe indicar el motivo de la reapertura" };
+	}
+
+	const supabase = await createClient();
+
+	try {
+		const { data: siniestro, error: siniestroError } = await supabase
+			.from("siniestros")
+			.select("id, estado, codigo_siniestro")
+			.eq("id", siniestroId)
+			.single();
+
+		if (siniestroError || !siniestro) {
+			return { success: false, error: "Siniestro no encontrado" };
+		}
+
+		if (siniestro.estado === "abierto") {
+			return { success: false, error: "El siniestro ya está abierto" };
+		}
+
+		const estadoPrevio = siniestro.estado;
+
+		// Se conservan los datos del cierre (montos, motivo, documentos) como traza;
+		// solo se revierte el estado y la fecha de cierre.
+		const { error: updateError } = await supabase
+			.from("siniestros")
+			.update({ estado: "abierto", fecha_cierre: null, updated_at: new Date().toISOString() })
+			.eq("id", siniestroId);
+
+		if (updateError) throw updateError;
+
+		const { error: historialError } = await supabase.from("siniestros_historial").insert({
+			siniestro_id: siniestroId,
+			accion: "reapertura",
+			campo_modificado: "estado",
+			valor_anterior: estadoPrevio,
+			valor_nuevo: "abierto",
+			detalles: { motivo: motivoLimpio },
+		});
+
+		if (historialError) {
+			console.error("Error registrando reapertura en historial:", historialError);
+			// No fallar la reapertura si solo el historial falla
+		}
+
+		revalidatePath("/siniestros");
+		revalidatePath(`/siniestros/editar/${siniestroId}`);
+
+		return { success: true };
+	} catch (error) {
+		console.error("Error reabriendo siniestro:", error);
+		await captureError(error, "reabrirSiniestro", { siniestro_id: siniestroId }, { feature: "siniestros" });
+		return {
+			success: false,
+			error: error instanceof Error ? error.message : "Error desconocido",
+		};
+	}
+}
+
+/**
  * Buscar pólizas activas para siniestros
  */
 /**
