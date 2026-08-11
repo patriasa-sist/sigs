@@ -36,6 +36,12 @@ type FilaMatriz = {
 	valores: Map<string, number>; // compania_nombre → monto
 };
 
+/** "93-47-112" → "93-47" (los códigos sin producto quedan como su propio ramo) */
+function ramoDe(codigoAps: string): string {
+	const partes = codigoAps.split("-");
+	return partes.length > 2 ? partes.slice(0, 2).join("-") : codigoAps;
+}
+
 export async function buildMatrizAPSExcel(opts: {
 	campo: CampoMatriz;
 	/** Sufijo del título y nombre de hoja: "INGRESO", "EGRESO", "GENERAL", "DEVOLUCIÓN", "P. CORRIDA" */
@@ -75,7 +81,8 @@ export async function buildMatrizAPSExcel(opts: {
 
 	const colCompaniaInicio = 3; // A = grupo, B = riesgo
 	const colTotal = colCompaniaInicio + companias.length;
-	const totalCols = colTotal;
+	const colRamoTotal = colTotal + 1; // TOTALES: un total por ramo (93-47, 93-49, …)
+	const totalCols = colRamoTotal;
 
 	ws.getColumn(1).width = 16;
 	ws.getColumn(2).width = 48;
@@ -83,6 +90,7 @@ export async function buildMatrizAPSExcel(opts: {
 		ws.getColumn(colCompaniaInicio + i).width = 12;
 	}
 	ws.getColumn(colTotal).width = 14;
+	ws.getColumn(colRamoTotal).width = 14;
 
 	// Encabezado del reporte
 	ws.mergeCells(1, 1, 1, totalCols);
@@ -120,6 +128,11 @@ export async function buildMatrizAPSExcel(opts: {
 	totalHeaderCell.font = { size: 8, bold: true };
 	totalHeaderCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: COLOR_TOTAL } };
 	totalHeaderCell.border = THIN_BORDER;
+	const ramoTotalHeaderCell = ws.getCell(headerRowIdx, colRamoTotal);
+	ramoTotalHeaderCell.value = "TOTALES";
+	ramoTotalHeaderCell.alignment = { textRotation: 90, horizontal: "center", vertical: "middle" };
+	ramoTotalHeaderCell.font = { size: 8, bold: true };
+	ramoTotalHeaderCell.border = THIN_BORDER;
 	ws.getCell(headerRowIdx, 1).border = THIN_BORDER;
 	ws.getCell(headerRowIdx, 2).border = THIN_BORDER;
 
@@ -128,7 +141,8 @@ export async function buildMatrizAPSExcel(opts: {
 	let rowIdx = headerRowIdx + 1;
 	let g = 0;
 
-	const escribirFilaMontos = (valores: number[], opciones: { bold?: boolean; fill?: string } = {}): void => {
+	/** Escribe los montos por compañía + la columna Total, y devuelve el total de la fila */
+	const escribirFilaMontos = (valores: number[], opciones: { bold?: boolean; fill?: string } = {}): number => {
 		let totalFila = 0;
 		valores.forEach((v, i) => {
 			const cell = ws.getCell(rowIdx, colCompaniaInicio + i);
@@ -146,6 +160,21 @@ export async function buildMatrizAPSExcel(opts: {
 		totalCell.border = THIN_BORDER;
 		totalCell.font = { bold: true, size: 8 };
 		totalCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: opciones.fill ?? COLOR_TOTAL } };
+		return totalFila;
+	};
+
+	/** Bloque combinado en la columna TOTALES con la suma de todo el ramo */
+	const escribirTotalRamo = (desde: number, hasta: number, total: number): void => {
+		// El estilo va en la celda maestra antes del merge: ExcelJS lo propaga al resto del bloque
+		const cell = ws.getCell(desde, colRamoTotal);
+		cell.value = total;
+		cell.numFmt = NUM_FMT;
+		cell.font = { size: 8, bold: true };
+		cell.alignment = { horizontal: "right", vertical: "middle" };
+		cell.border = THIN_BORDER;
+		if (hasta > desde) {
+			ws.mergeCells(desde, colRamoTotal, hasta, colRamoTotal);
+		}
 	};
 
 	while (g < filas.length) {
@@ -154,24 +183,34 @@ export async function buildMatrizAPSExcel(opts: {
 		const inicioGrupo = rowIdx;
 		const subtotales = new Array<number>(companias.length).fill(0);
 
+		// Dentro del grupo, las filas ya vienen ordenadas por código APS, así que
+		// cada ramo (93-47, 93-49, …) ocupa un bloque contiguo de filas.
 		while (g < filas.length && filas[g].grupo_codigo === grupo) {
-			const fila = filas[g];
-			const riesgoCell = ws.getCell(rowIdx, 2);
-			riesgoCell.value = `${fila.codigo_aps} ||  ${fila.riesgo}`;
-			riesgoCell.font = { size: 8 };
-			riesgoCell.alignment = { wrapText: true, vertical: "middle" };
-			riesgoCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: COLOR_RIESGO } };
-			riesgoCell.border = THIN_BORDER;
-			ws.getCell(rowIdx, 1).border = THIN_BORDER;
+			const ramo = ramoDe(filas[g].codigo_aps);
+			const inicioRamo = rowIdx;
+			let totalRamo = 0;
 
-			const valores = companias.map((c, i) => {
-				const v = fila.valores.get(c.nombre) ?? 0;
-				subtotales[i] += v;
-				return v;
-			});
-			escribirFilaMontos(valores);
-			rowIdx++;
-			g++;
+			while (g < filas.length && filas[g].grupo_codigo === grupo && ramoDe(filas[g].codigo_aps) === ramo) {
+				const fila = filas[g];
+				const riesgoCell = ws.getCell(rowIdx, 2);
+				riesgoCell.value = `${fila.codigo_aps} ||  ${fila.riesgo}`;
+				riesgoCell.font = { size: 8 };
+				riesgoCell.alignment = { wrapText: true, vertical: "middle" };
+				riesgoCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: COLOR_RIESGO } };
+				riesgoCell.border = THIN_BORDER;
+				ws.getCell(rowIdx, 1).border = THIN_BORDER;
+
+				const valores = companias.map((c, i) => {
+					const v = fila.valores.get(c.nombre) ?? 0;
+					subtotales[i] += v;
+					return v;
+				});
+				totalRamo += escribirFilaMontos(valores);
+				rowIdx++;
+				g++;
+			}
+
+			escribirTotalRamo(inicioRamo, rowIdx - 1, totalRamo);
 		}
 
 		// Etiqueta del grupo en la columna A (merge vertical sobre sus filas)
@@ -193,6 +232,7 @@ export async function buildMatrizAPSExcel(opts: {
 		subTotalCell.border = THIN_BORDER;
 		ws.getCell(rowIdx, 1).border = THIN_BORDER;
 		escribirFilaMontos(subtotales, { bold: true, fill: COLOR_SUBTOTAL });
+		ws.getCell(rowIdx, colRamoTotal).border = THIN_BORDER;
 		subtotales.forEach((v, i) => {
 			totalesGenerales[i] += v;
 		});
@@ -208,6 +248,7 @@ export async function buildMatrizAPSExcel(opts: {
 	totalLabelCell.border = THIN_BORDER;
 	ws.getCell(rowIdx, 1).border = THIN_BORDER;
 	escribirFilaMontos(totalesGenerales, { bold: true, fill: COLOR_TOTAL });
+	ws.getCell(rowIdx, colRamoTotal).border = THIN_BORDER;
 
 	return await wb.xlsx.writeBuffer();
 }
