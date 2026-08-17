@@ -59,7 +59,17 @@ export interface PolicyPermissionCheckResult {
 	canEdit: boolean;
 	reason: string;
 	isAdmin: boolean;
+	/**
+	 * Líder de equipo con poder de EDICIÓN sobre esta póliza (habilita "Permisos").
+	 * Queda en false cuando el candado de mes cerrado corta la edición.
+	 */
 	isTeamLeader?: boolean;
+	/**
+	 * Líder de equipo del responsable de la póliza, sin importar el candado de
+	 * mes cerrado (que solo aplica a la edición de la póliza, no a los anexos).
+	 * Habilita la validación gerencial de anexos desde el detalle.
+	 */
+	esLiderDelResponsable?: boolean;
 	permission?: {
 		id: string;
 		expires_at: string | null;

@@ -65,6 +65,9 @@ export default function PolizaDetallePage() {
 	const [canEdit, setCanEdit] = useState(false);
 	const [isAdmin, setIsAdmin] = useState(false);
 	const [isTeamLeader, setIsTeamLeader] = useState(false);
+	// Liderazgo sobre el responsable sin el candado de mes cerrado: habilita la
+	// validación de anexos (que no se bloquea por cierre de mes).
+	const [esLiderDelResponsable, setEsLiderDelResponsable] = useState(false);
 	const [tienePermisoValidar, setTienePermisoValidar] = useState(false);
 	const [showPermissionsModal, setShowPermissionsModal] = useState(false);
 	const [showValidarModal, setShowValidarModal] = useState(false);
@@ -91,6 +94,7 @@ export default function PolizaDetallePage() {
 				setCanEdit(permResult.data.canEdit);
 				setIsAdmin(permResult.data.isAdmin);
 				setIsTeamLeader(permResult.data.isTeamLeader ?? false);
+				setEsLiderDelResponsable(permResult.data.esLiderDelResponsable ?? false);
 			}
 		} else {
 			setError(resultado.error || "Error al cargar la póliza");
@@ -148,8 +152,11 @@ export default function PolizaDetallePage() {
 	// admin, permiso polizas.validar o líder de equipo)
 	// En solo lectura (póliza de otro equipo) no se habilita ninguna acción,
 	// tampoco la validación gerencial: el enforcement real vive en el servidor.
+	// Se usa esLiderDelResponsable (no isTeamLeader) porque el candado de mes
+	// cerrado apaga la edición de la póliza, pero los anexos se validan igual.
 	const autorizadoParaValidar =
-		!soloLectura && (userRole === "admin" || userRole === "usuario" || isTeamLeader || tienePermisoValidar);
+		!soloLectura &&
+		(userRole === "admin" || userRole === "usuario" || esLiderDelResponsable || isTeamLeader || tienePermisoValidar);
 	const puedeValidar = autorizadoParaValidar && poliza?.estado === "pendiente";
 
 	// Abrir modal de confirmación de validación

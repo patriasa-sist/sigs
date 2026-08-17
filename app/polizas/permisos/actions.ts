@@ -152,6 +152,13 @@ export async function checkPolicyEditPermission(polizaId: string): Promise<Actio
 			.eq("id", polizaId)
 			.single();
 
+		// Liderazgo sobre el responsable de la póliza: se calcula ANTES de los
+		// cortes de edición porque también habilita la validación gerencial de
+		// anexos, que fluye en cualquier mes (ver utils/polizas/cierreMes.ts).
+		const esLiderDelResponsable = polizaData?.responsable_id
+			? await isUserTeamLeaderForResponsable(supabase, user.id, polizaData.responsable_id)
+			: false;
+
 		// Check if user is the creator of a rejected policy within edit window
 		if (
 			polizaData?.estado === "rechazada" &&
@@ -170,6 +177,7 @@ export async function checkPolicyEditPermission(polizaId: string): Promise<Actio
 					reason: `Ventana de edicion por rechazo (${hoursRemaining}h restantes)`,
 					isAdmin: false,
 					isTeamLeader: false,
+					esLiderDelResponsable,
 					permission: {
 						id: "rejection-window",
 						expires_at: polizaData.puede_editar_hasta,
@@ -193,25 +201,24 @@ export async function checkPolicyEditPermission(polizaId: string): Promise<Actio
 						reason: MENSAJE_MES_CERRADO,
 						isAdmin: false,
 						isTeamLeader: false,
+						esLiderDelResponsable,
 					},
 				};
 			}
 		}
 
 		// Check if user is a team leader for this policy
-		if (polizaData?.responsable_id) {
-			const teamLeader = await isUserTeamLeaderForResponsable(supabase, user.id, polizaData.responsable_id);
-			if (teamLeader) {
-				return {
-					success: true,
-					data: {
-						canEdit: true,
-						reason: "Líder de equipo",
-						isAdmin: false,
-						isTeamLeader: true,
-					},
-				};
-			}
+		if (esLiderDelResponsable) {
+			return {
+				success: true,
+				data: {
+					canEdit: true,
+					reason: "Líder de equipo",
+					isAdmin: false,
+					isTeamLeader: true,
+					esLiderDelResponsable: true,
+				},
+			};
 		}
 
 		// Only comercial and agente roles can have explicit per-policy permissions
