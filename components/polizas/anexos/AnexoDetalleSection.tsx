@@ -43,6 +43,8 @@ type Props = {
 	polizaId: string;
 	moneda: string;
 	puedeValidar: boolean;
+	/** Póliza de otro equipo: los anexos se listan y se abren, pero sin acciones (#43). */
+	soloLectura?: boolean;
 	onAnexoValidado?: () => void;
 };
 
@@ -59,7 +61,13 @@ const ESTADO_BADGE = {
 	rechazado: { label: "Rechazado", className: "bg-red-100 text-red-800 border-red-200" },
 };
 
-export default function AnexoDetalleSection({ polizaId, moneda, puedeValidar, onAnexoValidado }: Props) {
+export default function AnexoDetalleSection({
+	polizaId,
+	moneda,
+	puedeValidar,
+	soloLectura = false,
+	onAnexoValidado,
+}: Props) {
 	const router = useRouter();
 	const [anexos, setAnexos] = useState<AnexoResumen[]>([]);
 	const [loading, setLoading] = useState(true);
@@ -98,6 +106,7 @@ export default function AnexoDetalleSection({ polizaId, moneda, puedeValidar, on
 	// Acceso de edición de anexos: mismo modelo que la edición de pólizas
 	// (admin, líder de equipo, permiso explícito por póliza o polizas.editar)
 	useEffect(() => {
+		if (soloLectura) return;
 		const verificarAcceso = async () => {
 			const result = await checkAnexoEditAccess(polizaId);
 			if (result.success) {
@@ -105,9 +114,10 @@ export default function AnexoDetalleSection({ polizaId, moneda, puedeValidar, on
 			}
 		};
 		verificarAcceso();
-	}, [polizaId]);
+	}, [polizaId, soloLectura]);
 
 	const puedeEditarAnexo = (anexo: AnexoResumen) => {
+		if (soloLectura) return false;
 		// Activos también editables: revalidación condicional en el servidor
 		// (solo cambios en cuotas/montos devuelven el anexo a pendiente)
 		if (anexo.estado !== "pendiente" && anexo.estado !== "rechazado" && anexo.estado !== "activo") return false;
@@ -287,7 +297,7 @@ export default function AnexoDetalleSection({ polizaId, moneda, puedeValidar, on
 												</Button>
 											)}
 											{/* Validation buttons for pending anexos */}
-											{puedeValidar && anexo.estado === "pendiente" && (
+											{!soloLectura && puedeValidar && anexo.estado === "pendiente" && (
 												<>
 													<Button
 														variant="default"

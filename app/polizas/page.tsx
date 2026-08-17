@@ -22,6 +22,7 @@ import {
 	ChevronRight,
 	RotateCcw,
 	AlertTriangle,
+	Eye,
 } from "lucide-react";
 import { formatCurrency, formatDate } from "@/utils/formatters";
 
@@ -43,6 +44,22 @@ const DEFAULT_FILTERS: Filters = {
 	responsable_id: ALL,
 	categoria_id: ALL,
 };
+
+/**
+ * Marca una póliza que apareció por búsqueda global y está fuera del alcance
+ * de equipo del usuario: se puede consultar, pero no operar sobre ella (#43).
+ */
+function BadgeOtroEquipo({ className = "" }: { className?: string }) {
+	return (
+		<span
+			title="Póliza de otro equipo: visible solo para consulta"
+			className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-info/15 text-info border border-info/30 ${className}`}
+		>
+			<Eye className="h-3 w-3" />
+			Otro equipo
+		</span>
+	);
+}
 
 function SkeletonTable() {
 	return (
@@ -499,12 +516,17 @@ export default function PolizasPage() {
 										<tr
 											key={poliza.id}
 											onClick={() => setSelectedPoliza(poliza)}
-											className="group hover:bg-muted/40 cursor-pointer transition-colors duration-100"
+											className={`group cursor-pointer transition-colors duration-100 ${
+												poliza.fuera_de_alcance
+													? "bg-info/8 hover:bg-info/15"
+													: "hover:bg-muted/40"
+											}`}
 										>
 											<td className="px-4 py-3">
 												<span className="text-sm font-medium text-foreground font-mono">
 													{poliza.numero_poliza}
 												</span>
+												{poliza.fuera_de_alcance && <BadgeOtroEquipo className="mt-1" />}
 											</td>
 											<td className="px-4 py-3">
 												<span className="text-sm text-muted-foreground">{poliza.ramo}</span>
@@ -558,7 +580,11 @@ export default function PolizasPage() {
 								<button
 									key={poliza.id}
 									onClick={() => setSelectedPoliza(poliza)}
-									className="w-full text-left px-4 py-3 hover:bg-muted/40 active:bg-muted/40 transition-colors"
+									className={`w-full text-left px-4 py-3 transition-colors ${
+										poliza.fuera_de_alcance
+											? "bg-info/8 hover:bg-info/15 active:bg-info/15"
+											: "hover:bg-muted/40 active:bg-muted/40"
+									}`}
 								>
 									<div className="flex items-start justify-between gap-3">
 										<div className="min-w-0">
@@ -566,6 +592,7 @@ export default function PolizasPage() {
 												{poliza.numero_poliza}
 											</div>
 											<div className="text-xs text-muted-foreground mt-0.5">{poliza.ramo}</div>
+											{poliza.fuera_de_alcance && <BadgeOtroEquipo className="mt-1" />}
 										</div>
 										<StatusBadge status={poliza.estado} />
 									</div>
@@ -667,6 +694,15 @@ export default function PolizasPage() {
 							</div>
 						</div>
 						<div className="p-5 space-y-5">
+							{selectedPoliza.fuera_de_alcance && (
+								<div className="flex items-start gap-2 rounded-md border border-info/30 bg-info/10 px-3 py-2">
+									<Eye className="h-4 w-4 text-info shrink-0 mt-0.5" />
+									<p className="text-xs text-foreground">
+										Póliza registrada por otro equipo. Puedes consultarla, pero no editarla ni
+										registrar anexos, pagos o validaciones sobre ella.
+									</p>
+								</div>
+							)}
 							<div className="grid grid-cols-2 gap-4">
 								<div className="space-y-0.5">
 									<p className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">

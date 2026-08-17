@@ -1,10 +1,11 @@
 "use server";
 
 import { createClient } from "@/utils/supabase/server";
-import { getDataScopeFilter } from "@/utils/auth/helpers";
+import { getDataScopeFilter, type DataScope } from "@/utils/auth/helpers";
 import { aplicarScopePolizas, polizaDentroDeScope } from "@/utils/auth/scopePolizas";
 import { obtenerEjecutivosFiltro } from "@/utils/ejecutivos";
 import { resolverNombresCliente } from "@/utils/polizas/resolverNombresCliente";
+import { clienteLecturaGlobal } from "@/utils/polizas/lecturaGlobal";
 import { parseItemsJson } from "@/utils/polizas/itemsJson";
 import type { CuotaConsolidada, CuotaVigenciaCorrida, CuotaAnexoPropia, DireccionVigenciaCorrida } from "@/types/anexo";
 import { ESTADO_ANEXO } from "@/types/anexo";
@@ -29,6 +30,12 @@ export type PolizaListItem = {
 	producto_nombre: string | null;
 	producto_codigo: string | null;
 	created_at: string;
+	/**
+	 * true cuando la póliza cayó en el listado por una búsqueda global (#43) y
+	 * está fuera del alcance de equipo del usuario: se puede consultar, pero
+	 * ninguna acción sobre ella está habilitada.
+	 */
+	fuera_de_alcance?: boolean;
 };
 
 export type PolizaDetalle = PolizaListItem & {
@@ -325,6 +332,7 @@ function mapPolizaToListItem(
 		estado: string;
 		modalidad_pago: string;
 		responsable_id: string;
+		equipo_id?: string | null;
 		regional_id: string;
 		created_at: string;
 		companias_aseguradoras: unknown;
@@ -334,6 +342,7 @@ function mapPolizaToListItem(
 		producto?: unknown;
 	},
 	clientInfoMap: Map<string, { name: string; ci: string }>,
+	scope?: DataScope,
 ): PolizaListItem {
 	const info = clientInfoMap.get(poliza.client_id);
 
@@ -360,6 +369,7 @@ function mapPolizaToListItem(
 		producto_nombre: (poliza.producto as { nombre_producto?: string } | null)?.nombre_producto || null,
 		producto_codigo: (poliza.producto as { codigo_producto?: string } | null)?.codigo_producto || null,
 		created_at: poliza.created_at,
+		fuera_de_alcance: scope ? !polizaDentroDeScope(scope, poliza) : false,
 	};
 }
 
@@ -466,7 +476,15 @@ export async function obtenerPolizas(params: ObtenerPolizasParams = {}) {
 		const from = (page - 1) * pageSize;
 		const to = from + pageSize - 1;
 
-		let query = supabase
+		// Consulta global al buscar (#43): con un término de búsqueda el listado
+		// alcanza a TODAS las pólizas —así se puede verificar el duplicado que
+		// cargó otro equipo— y las que están fuera del alcance se marcan para
+		// mostrarlas en solo lectura. Sin término de búsqueda (vista por defecto y
+		// filtros de los desplegables) el listado sigue scopeado por equipo.
+		const busquedaGlobal = palabras.length > 0 && scope.needsScoping;
+		const lector = busquedaGlobal ? clienteLecturaGlobal() : supabase;
+
+		let query = lector
 			.from("polizas")
 			.select(
 				`
@@ -482,6 +500,7 @@ export async function obtenerPolizas(params: ObtenerPolizasParams = {}) {
 				estado,
 				modalidad_pago,
 				responsable_id,
+				equipo_id,
 				regional_id,
 				created_at,
 				companias_aseguradoras (nombre),
@@ -495,7 +514,7 @@ export async function obtenerPolizas(params: ObtenerPolizasParams = {}) {
 			.order("created_at", { ascending: false })
 			.range(from, to);
 
-		query = aplicarScopePolizas(query, scope);
+		if (!busquedaGlobal) query = aplicarScopePolizas(query, scope);
 		if (ramo) query = query.eq("ramo", ramo);
 		if (compania_id) query = query.eq("compania_aseguradora_id", compania_id);
 		if (estado) query = query.eq("estado", estado);
@@ -525,7 +544,11 @@ export async function obtenerPolizas(params: ObtenerPolizasParams = {}) {
 		);
 
 		const polizasFormateadas = polizas.map((p) =>
-			mapPolizaToListItem(p as Parameters<typeof mapPolizaToListItem>[0], clientInfoMap),
+			mapPolizaToListItem(
+				p as Parameters<typeof mapPolizaToListItem>[0],
+				clientInfoMap,
+				busquedaGlobal ? scope : undefined,
+			),
 		);
 
 		return { success: true, polizas: polizasFormateadas, total: count ?? 0 };
@@ -601,8 +624,11 @@ export async function obtenerDetallePoliza(polizaId: string) {
 			return { success: false, error: "No autenticado" };
 		}
 
-		// Obtener póliza con joins (incluye datos del cliente para evitar queries secuenciales)
-		const { data: poliza, error: errorPoliza } = await supabase
+		// Obtener póliza con joins (incluye datos del cliente para evitar queries secuenciales).
+		// Se lee con el cliente de consulta global porque el RLS de `polizas` está
+		// scopeado por equipo y una póliza fuera de alcance debe poder verse en
+		// solo lectura (#43).
+		const { data: poliza, error: errorPoliza } = await clienteLecturaGlobal()
 			.from("polizas")
 			.select(
 				`
@@ -624,20 +650,22 @@ export async function obtenerDetallePoliza(polizaId: string) {
 			return { success: false, error: "Póliza no encontrada" };
 		}
 
-		// Verificar scoping por equipo (responsable actual o sello de equipo)
+		// Scoping por equipo (responsable actual o sello de equipo): fuera de
+		// alcance la póliza se muestra igual, pero en solo lectura, y el resto de
+		// sus datos se lee con el cliente global (polizas_pagos y
+		// polizas_documentos también están scopeados por RLS).
 		const scope = await getDataScopeFilter("polizas");
-		if (!polizaDentroDeScope(scope, poliza)) {
-			return { success: false, error: "No tiene acceso a esta póliza" };
-		}
+		const enScope = polizaDentroDeScope(scope, poliza);
+		const db = enScope ? supabase : clienteLecturaGlobal();
 
 		// Obtener información del cliente (todos los tipos: natural, unipersonal,
 		// jurídica, ONG, club deportivo y asociación civil)
-		const infoCliente = (await resolverNombresCliente(supabase, [poliza.client_id])).get(poliza.client_id);
+		const infoCliente = (await resolverNombresCliente(db, [poliza.client_id])).get(poliza.client_id);
 		const client_name = infoCliente?.name || "Cliente Desconocido";
 		const client_ci = infoCliente?.ci || "-";
 
 		// Obtener pagos
-		const { data: pagos } = await supabase
+		const { data: pagos } = await db
 			.from("polizas_pagos")
 			.select("id, numero_cuota, monto, fecha_vencimiento, fecha_pago, estado, observaciones")
 			.eq("poliza_id", polizaId)
@@ -649,7 +677,7 @@ export async function obtenerDetallePoliza(polizaId: string) {
 		// --- AUTOMOTOR ---
 		let vehiculos: PolizaDetalle["vehiculos"];
 		if (ramoLower.includes("automotor")) {
-			const { data: vehiculosData } = await supabase
+			const { data: vehiculosData } = await db
 				.from("polizas_automotor_vehiculos")
 				.select(
 					`
@@ -689,7 +717,7 @@ export async function obtenerDetallePoliza(polizaId: string) {
 		let beneficiarios_salud: PolizaDetalle["beneficiarios_salud"];
 		if (ramoLower.includes("salud")) {
 			// Niveles de cobertura
-			const { data: nivelesData } = await supabase
+			const { data: nivelesData } = await db
 				.from("polizas_salud_niveles")
 				.select("id, nombre, monto")
 				.eq("poliza_id", polizaId);
@@ -700,7 +728,7 @@ export async function obtenerDetallePoliza(polizaId: string) {
 			const nivelMap = new Map(nivelesData?.map((n) => [n.id, n.nombre]) || []);
 
 			// Asegurados (contratante/titular)
-			const { data: aseguradosData } = await supabase
+			const { data: aseguradosData } = await db
 				.from("polizas_salud_asegurados")
 				.select("id, client_id, nivel_id, rol")
 				.eq("poliza_id", polizaId);
@@ -708,7 +736,7 @@ export async function obtenerDetallePoliza(polizaId: string) {
 			if (aseguradosData && aseguradosData.length > 0) {
 				// Resolver nombres de clientes (todos los tipos)
 				const clientMap = await resolverNombresCliente(
-					supabase,
+					db,
 					aseguradosData.map((a) => a.client_id),
 				);
 
@@ -723,7 +751,7 @@ export async function obtenerDetallePoliza(polizaId: string) {
 			}
 
 			// Beneficiarios (dependientes/conyugues)
-			const { data: beneficiariosData } = await supabase
+			const { data: beneficiariosData } = await db
 				.from("polizas_salud_beneficiarios")
 				.select("id, nombre_completo, carnet, fecha_nacimiento, genero, rol")
 				.eq("poliza_id", polizaId);
@@ -738,7 +766,7 @@ export async function obtenerDetallePoliza(polizaId: string) {
 		let incendio_asegurados: PolizaDetalle["incendio_asegurados"];
 		if (ramoLower.includes("incendio")) {
 			// Bienes asegurados
-			const { data: bienesData } = await supabase
+			const { data: bienesData } = await db
 				.from("polizas_incendio_bienes")
 				.select("id, direccion, valor_total_declarado, es_primer_riesgo")
 				.eq("poliza_id", polizaId);
@@ -746,7 +774,7 @@ export async function obtenerDetallePoliza(polizaId: string) {
 			if (bienesData && bienesData.length > 0) {
 				// Obtener items de cada bien
 				const bienIds = bienesData.map((b) => b.id);
-				const { data: itemsData } = await supabase
+				const { data: itemsData } = await db
 					.from("polizas_incendio_items")
 					.select("bien_id, nombre, monto")
 					.in("bien_id", bienIds);
@@ -768,14 +796,14 @@ export async function obtenerDetallePoliza(polizaId: string) {
 			}
 
 			// Asegurados adicionales
-			const { data: asegIncendio } = await supabase
+			const { data: asegIncendio } = await db
 				.from("polizas_incendio_asegurados")
 				.select("id, client_id")
 				.eq("poliza_id", polizaId);
 
 			if (asegIncendio && asegIncendio.length > 0) {
 				const clientMap = await resolverNombresCliente(
-					supabase,
+					db,
 					asegIncendio.map((a) => a.client_id),
 				);
 				const resolved: PolizaDetalle["incendio_asegurados"] = asegIncendio.map((a) => ({
@@ -791,14 +819,14 @@ export async function obtenerDetallePoliza(polizaId: string) {
 		let riesgos_varios_bienes: PolizaDetalle["riesgos_varios_bienes"];
 		let riesgos_varios_asegurados: PolizaDetalle["riesgos_varios_asegurados"];
 		if (ramoLower.includes("riesgos varios")) {
-			const { data: bienesData } = await supabase
+			const { data: bienesData } = await db
 				.from("polizas_riesgos_varios_bienes")
 				.select("id, direccion, valor_total_declarado, es_primer_riesgo")
 				.eq("poliza_id", polizaId);
 
 			if (bienesData && bienesData.length > 0) {
 				const bienIds = bienesData.map((b) => b.id);
-				const { data: itemsData } = await supabase
+				const { data: itemsData } = await db
 					.from("polizas_riesgos_varios_items")
 					.select("bien_id, nombre, monto")
 					.in("bien_id", bienIds);
@@ -819,14 +847,14 @@ export async function obtenerDetallePoliza(polizaId: string) {
 				}));
 			}
 
-			const { data: asegRV } = await supabase
+			const { data: asegRV } = await db
 				.from("polizas_riesgos_varios_asegurados")
 				.select("id, client_id")
 				.eq("poliza_id", polizaId);
 
 			if (asegRV && asegRV.length > 0) {
 				const clientMap = await resolverNombresCliente(
-					supabase,
+					db,
 					asegRV.map((a) => a.client_id),
 				);
 				riesgos_varios_asegurados = asegRV.map((a) => ({
@@ -840,7 +868,7 @@ export async function obtenerDetallePoliza(polizaId: string) {
 		// --- DESGRAVAMEN ---
 		let desgravamen: PolizaDetalle["desgravamen"];
 		if (ramoLower.includes("desgravamen")) {
-			const { data: desgData } = await supabase
+			const { data: desgData } = await db
 				.from("polizas_desgravamen")
 				.select("valor_asegurado")
 				.eq("poliza_id", polizaId)
@@ -854,12 +882,12 @@ export async function obtenerDetallePoliza(polizaId: string) {
 		let responsabilidad_civil: PolizaDetalle["responsabilidad_civil"];
 		if (ramoLower.includes("responsabilidad civil")) {
 			const [{ data: rcData }, { data: rcVehiculos }] = await Promise.all([
-				supabase
+				db
 					.from("polizas_responsabilidad_civil")
 					.select("tipo_poliza, valor_asegurado")
 					.eq("poliza_id", polizaId)
 					.single(),
-				supabase
+				db
 					.from("polizas_rc_vehiculos")
 					.select(
 						"placa, nro_chasis, uso, modelo, ano, color, nro_motor, servicio, capacidad, region_uso, tipo_carroceria, propiedad, ejes, asientos, cilindrada, tipo_vehiculo_id, marca_vehiculo_id",
@@ -874,10 +902,10 @@ export async function obtenerDetallePoliza(polizaId: string) {
 
 				const [{ data: tipos }, { data: marcas }] = await Promise.all([
 					tipoIds.length > 0
-						? supabase.from("tipos_vehiculo").select("id, nombre").in("id", tipoIds)
+						? db.from("tipos_vehiculo").select("id, nombre").in("id", tipoIds)
 						: Promise.resolve({ data: [] }),
 					marcaIds.length > 0
-						? supabase.from("marcas_vehiculo").select("id, nombre").in("id", marcaIds)
+						? db.from("marcas_vehiculo").select("id, nombre").in("id", marcaIds)
 						: Promise.resolve({ data: [] }),
 				]);
 
@@ -919,7 +947,7 @@ export async function obtenerDetallePoliza(polizaId: string) {
 			ramoLower.includes("accidentes personales") ||
 			ramoLower.includes("sepelio")
 		) {
-			const { data: nivelesData } = await supabase
+			const { data: nivelesData } = await db
 				.from("polizas_niveles")
 				.select("id, nombre, prima_nivel, coberturas")
 				.eq("poliza_id", polizaId);
@@ -934,7 +962,7 @@ export async function obtenerDetallePoliza(polizaId: string) {
 			}
 			const nivelMap = new Map(nivelesData?.map((n) => [n.id, n.nombre]) || []);
 
-			const { data: asegNivelData } = await supabase
+			const { data: asegNivelData } = await db
 				.from("polizas_asegurados_nivel")
 				.select("id, client_id, nivel_id, cargo, rol")
 				.eq("poliza_id", polizaId);
@@ -942,7 +970,7 @@ export async function obtenerDetallePoliza(polizaId: string) {
 			if (asegNivelData && asegNivelData.length > 0) {
 				// Batch resolve client names (todos los tipos)
 				const clientMap = await resolverNombresCliente(
-					supabase,
+					db,
 					asegNivelData.map((a) => a.client_id),
 				);
 
@@ -958,7 +986,7 @@ export async function obtenerDetallePoliza(polizaId: string) {
 
 			// Beneficiarios (Vida y Accidentes Personales)
 			if (ramoLower.includes("vida") || ramoLower.includes("accidentes personales")) {
-				const { data: benefData } = await supabase
+				const { data: benefData } = await db
 					.from("polizas_beneficiarios")
 					.select("id, nombre_completo, carnet, fecha_nacimiento, genero, nivel_id, rol")
 					.eq("poliza_id", polizaId);
@@ -980,7 +1008,7 @@ export async function obtenerDetallePoliza(polizaId: string) {
 		// --- TRANSPORTE ---
 		let transporte: PolizaDetalle["transporte"];
 		if (ramoLower.includes("transporte")) {
-			const { data: transporteData } = await supabase
+			const { data: transporteData } = await db
 				.from("polizas_transporte")
 				.select(
 					`
@@ -1023,7 +1051,7 @@ export async function obtenerDetallePoliza(polizaId: string) {
 			ramoLower.includes("naves") ||
 			ramoLower.includes("embarcacion")
 		) {
-			const { data: navelesAP } = await supabase
+			const { data: navelesAP } = await db
 				.from("polizas_aeronavegacion_niveles_ap")
 				.select("id, nombre, monto_muerte_accidental, monto_invalidez, monto_gastos_medicos")
 				.eq("poliza_id", polizaId);
@@ -1034,7 +1062,7 @@ export async function obtenerDetallePoliza(polizaId: string) {
 
 			const nivelesMap = new Map(navelesAP?.map((n) => [n.id, n.nombre]) || []);
 
-			const { data: navesData } = await supabase
+			const { data: navesData } = await db
 				.from("polizas_aeronavegacion_naves")
 				.select(
 					"id, matricula, marca, modelo, ano, serie, uso, nro_pasajeros, nro_tripulantes, valor_casco, valor_responsabilidad_civil, nivel_ap_id",
@@ -1052,7 +1080,7 @@ export async function obtenerDetallePoliza(polizaId: string) {
 		// --- RAMOS TÉCNICOS (Equipos Industriales) ---
 		let equipos: PolizaDetalle["equipos"];
 		if (ramoLower.includes("técnicos") || ramoLower.includes("tecnicos")) {
-			const { data: equiposData } = await supabase
+			const { data: equiposData } = await db
 				.from("polizas_ramos_tecnicos_equipos")
 				.select(
 					`
@@ -1090,13 +1118,13 @@ export async function obtenerDetallePoliza(polizaId: string) {
 
 		const [{ data: documentos }, { data: historialData }, { data: anexosActivos }, { data: profilesData }] =
 			await Promise.all([
-				supabase
+				db
 					.from("polizas_documentos")
 					.select("id, tipo_documento, nombre_archivo, archivo_url, uploaded_at")
 					.eq("poliza_id", polizaId)
 					.eq("estado", "activo")
 					.order("uploaded_at", { ascending: false }),
-				supabase
+				db
 					.from("polizas_historial_ediciones")
 					.select(
 						`
@@ -1107,7 +1135,7 @@ export async function obtenerDetallePoliza(polizaId: string) {
 					.eq("poliza_id", polizaId)
 					.order("timestamp", { ascending: false })
 					.limit(20),
-				supabase
+				db
 					.from("polizas_anexos")
 					.select(
 						`
@@ -1122,7 +1150,7 @@ export async function obtenerDetallePoliza(polizaId: string) {
 					.eq("poliza_id", polizaId)
 					.order("created_at", { ascending: false }),
 				profileIds.length > 0
-					? supabase.from("profiles").select("id, full_name").in("id", profileIds)
+					? db.from("profiles").select("id, full_name").in("id", profileIds)
 					: Promise.resolve({ data: [] as Array<{ id: string; full_name: string }> }),
 			]);
 
@@ -1174,7 +1202,7 @@ export async function obtenerDetallePoliza(polizaId: string) {
 
 			// Automotor
 			if (vehiculos) {
-				const { data: anexoVehiculos } = await supabase
+				const { data: anexoVehiculos } = await db
 					.from("polizas_anexos_automotor_vehiculos")
 					.select(
 						"id, anexo_id, accion, original_item_id, placa, valor_asegurado, franquicia, nro_chasis, uso, coaseguro, modelo, ano, color, ejes, nro_motor, nro_asientos, plaza_circulacion",
@@ -1212,7 +1240,7 @@ export async function obtenerDetallePoliza(polizaId: string) {
 
 			// Ramos técnicos
 			if (equipos) {
-				const { data: anexoEquipos } = await supabase
+				const { data: anexoEquipos } = await db
 					.from("polizas_anexos_ramos_tecnicos_equipos")
 					.select(
 						"id, anexo_id, accion, original_item_id, nro_serie, placa, valor_asegurado, franquicia, nro_chasis, uso, coaseguro, modelo, ano, color, nro_motor, plaza_circulacion",
@@ -1249,7 +1277,7 @@ export async function obtenerDetallePoliza(polizaId: string) {
 
 			// Aeronavegación/Naves
 			if (naves) {
-				const { data: anexoNaves } = await supabase
+				const { data: anexoNaves } = await db
 					.from("polizas_anexos_aeronavegacion_naves")
 					.select(
 						"id, anexo_id, accion, original_item_id, matricula, marca, modelo, ano, serie, uso, nro_pasajeros, nro_tripulantes, valor_casco, valor_responsabilidad_civil",
@@ -1283,7 +1311,7 @@ export async function obtenerDetallePoliza(polizaId: string) {
 
 			// Beneficiarios salud
 			if (beneficiarios_salud) {
-				const { data: anexoBenef } = await supabase
+				const { data: anexoBenef } = await db
 					.from("polizas_anexos_salud_beneficiarios")
 					.select(
 						"id, anexo_id, accion, original_item_id, nombre_completo, carnet, fecha_nacimiento, genero, rol",
@@ -1311,7 +1339,7 @@ export async function obtenerDetallePoliza(polizaId: string) {
 
 			// Incendio bienes
 			if (incendio_bienes) {
-				const { data: anexoBienes } = await supabase
+				const { data: anexoBienes } = await db
 					.from("polizas_anexos_incendio_bienes")
 					.select(
 						"id, anexo_id, accion, original_item_id, direccion, valor_total_declarado, es_primer_riesgo, items",
@@ -1338,7 +1366,7 @@ export async function obtenerDetallePoliza(polizaId: string) {
 
 			// Riesgos Varios bienes
 			if (riesgos_varios_bienes) {
-				const { data: anexoBienes } = await supabase
+				const { data: anexoBienes } = await db
 					.from("polizas_anexos_riesgos_varios_bienes")
 					.select(
 						"id, anexo_id, accion, original_item_id, direccion, valor_total_declarado, es_primer_riesgo, items",
@@ -1365,7 +1393,7 @@ export async function obtenerDetallePoliza(polizaId: string) {
 
 			// Asegurados con nivel (Vida/AP/Sepelio)
 			if (asegurados_nivel) {
-				const { data: anexoAseg } = await supabase
+				const { data: anexoAseg } = await db
 					.from("polizas_anexos_asegurados_nivel")
 					.select("id, anexo_id, accion, original_item_id, client_id, nivel_id, cargo")
 					.in("anexo_id", anexoIds);
@@ -1390,7 +1418,7 @@ export async function obtenerDetallePoliza(polizaId: string) {
 			}
 
 			// Cuotas consolidadas (pagos de todos los tipos de anexos activos)
-			const { data: cuotasConsolResult } = await supabase
+			const { data: cuotasConsolResult } = await db
 				.from("polizas_anexos_pagos")
 				.select(
 					`
@@ -1623,6 +1651,8 @@ export async function obtenerDetallePoliza(polizaId: string) {
 			success: true,
 			poliza: polizaDetalle,
 			userRole: profile?.role || null,
+			// Fuera del alcance del usuario: consulta permitida, acciones no (#43)
+			soloLectura: !enScope,
 		};
 	} catch (error) {
 		console.error("Error general obteniendo detalle póliza:", error);

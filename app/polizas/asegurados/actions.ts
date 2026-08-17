@@ -16,6 +16,7 @@
 
 import { createClient } from "@/utils/supabase/server";
 import { resolverNombresCliente } from "@/utils/polizas/resolverNombresCliente";
+import { clienteLecturaGlobal } from "@/utils/polizas/lecturaGlobal";
 import { ESTADO_ANEXO } from "@/types/anexo";
 
 export type EventoAsegurado = {
@@ -100,7 +101,11 @@ export async function obtenerAseguradosConsolidados(polizaId: string): Promise<A
 		} = await supabase.auth.getUser();
 		if (!user) return { success: false, error: "No autenticado" };
 
-		const { data: poliza, error: polizaError } = await supabase
+		// Cabecera de la póliza con el lector global: el RLS de `polizas` scopea
+		// por equipo y esta lista debe verse también al consultar una póliza de
+		// otro equipo (#43). Las tablas de asegurados ya son legibles por
+		// cualquier autenticado.
+		const { data: poliza, error: polizaError } = await clienteLecturaGlobal()
 			.from("polizas")
 			.select("id, ramo, inicio_vigencia")
 			.eq("id", polizaId)

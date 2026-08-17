@@ -7,6 +7,7 @@ import { getDataScopeFilter } from "@/utils/auth/helpers";
 import { generateFinalStoragePath } from "@/utils/fileUpload";
 import { resolverNombresCliente } from "@/utils/polizas/resolverNombresCliente";
 import { parseItemsJson } from "@/utils/polizas/itemsJson";
+import { clienteLecturaGlobal } from "@/utils/polizas/lecturaGlobal";
 import { netoAporteAnexo, type PagoAnexoLite } from "@/utils/polizas/aporteAnexo";
 import { restaurarCuotasPorAnulacion } from "@/utils/polizas/anulacionCuotas";
 import { calcularComisionesConProducto } from "@/utils/polizaValidation";
@@ -1797,7 +1798,7 @@ export async function obtenerDetalleAnexo(anexoId: string): Promise<{
 			.from("polizas_anexos")
 			.select(
 				`
-				id, numero_anexo, tipo_anexo, fecha_anexo, fecha_efectiva, fecha_fin_vigencia,
+				id, poliza_id, numero_anexo, tipo_anexo, fecha_anexo, fecha_efectiva, fecha_fin_vigencia,
 				estado, observaciones, created_at,
 				fecha_validacion, motivo_rechazo, fecha_rechazo,
 				created_by, validado_por, rechazado_por,
@@ -1813,7 +1814,18 @@ export async function obtenerDetalleAnexo(anexoId: string): Promise<{
 			return { success: false, error: "Anexo no encontrado" };
 		}
 
-		const ramo = (anexo.polizas as unknown as { ramo: string })?.ramo || "";
+		// El join embebido llega vacío cuando la póliza está fuera del alcance de
+		// equipo (RLS de `polizas`); en esa consulta global (#43) el ramo —que
+		// decide qué ítems cargar— se resuelve con el lector global.
+		let ramo = (anexo.polizas as unknown as { ramo: string } | null)?.ramo || "";
+		if (!ramo && anexo.poliza_id) {
+			const { data: polizaRamo } = await clienteLecturaGlobal()
+				.from("polizas")
+				.select("ramo")
+				.eq("id", anexo.poliza_id)
+				.maybeSingle();
+			ramo = polizaRamo?.ramo || "";
+		}
 
 		// Fetch items, pagos, documentos, and user names in parallel
 		const [pagosResult, docsResult, ...userResults] = await Promise.all([

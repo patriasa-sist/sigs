@@ -38,6 +38,7 @@ import {
 	ShieldAlert,
 	Users,
 	History,
+	Eye,
 } from "lucide-react";
 import { formatCurrency, formatDate, calcularVigencia } from "@/utils/formatters";
 import { createClient } from "@/utils/supabase/client";
@@ -55,6 +56,10 @@ export default function PolizaDetallePage() {
 	const [error, setError] = useState<string | null>(null);
 	const [userRole, setUserRole] = useState<string | null>(null);
 	const [validationLoading, setValidationLoading] = useState<"validar" | "rechazar" | null>(null);
+
+	// Consulta de una póliza fuera del alcance de equipo (#43): todo visible,
+	// ninguna acción disponible.
+	const [soloLectura, setSoloLectura] = useState(false);
 
 	// Edit permission state
 	const [canEdit, setCanEdit] = useState(false);
@@ -80,6 +85,7 @@ export default function PolizaDetallePage() {
 			setPoliza(resultado.poliza);
 			setUserRole(resultado.userRole || null);
 			setIsAdmin(resultado.userRole === "admin");
+			setSoloLectura(resultado.soloLectura ?? false);
 
 			if (permResult.success) {
 				setCanEdit(permResult.data.canEdit);
@@ -140,7 +146,10 @@ export default function PolizaDetallePage() {
 
 	// Verificar si el usuario está autorizado a validar (mismo criterio que /gerencia/validacion:
 	// admin, permiso polizas.validar o líder de equipo)
-	const autorizadoParaValidar = userRole === "admin" || userRole === "usuario" || isTeamLeader || tienePermisoValidar;
+	// En solo lectura (póliza de otro equipo) no se habilita ninguna acción,
+	// tampoco la validación gerencial: el enforcement real vive en el servidor.
+	const autorizadoParaValidar =
+		!soloLectura && (userRole === "admin" || userRole === "usuario" || isTeamLeader || tienePermisoValidar);
 	const puedeValidar = autorizadoParaValidar && poliza?.estado === "pendiente";
 
 	// Abrir modal de confirmación de validación
@@ -374,13 +383,22 @@ export default function PolizaDetallePage() {
 						</p>
 					</div>
 					<div className="flex items-center gap-2 flex-wrap justify-end shrink-0">
-						{(isAdmin || isTeamLeader) && (
+						{soloLectura && (
+							<span
+								title="Póliza de otro equipo: visible solo para consulta"
+								className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-info/15 text-info border border-info/30"
+							>
+								<Eye className="h-3.5 w-3.5" />
+								Solo consulta
+							</span>
+						)}
+						{!soloLectura && (isAdmin || isTeamLeader) && (
 							<Button variant="ghost" size="sm" onClick={() => setShowPermissionsModal(true)}>
 								<Shield className="h-4 w-4" />
 								Permisos
 							</Button>
 						)}
-						{canEdit && (
+						{!soloLectura && canEdit && (
 							<Button
 								variant="secondary"
 								size="sm"
@@ -390,13 +408,13 @@ export default function PolizaDetallePage() {
 								Editar
 							</Button>
 						)}
-						{poliza.estado === "activa" && (
+						{!soloLectura && poliza.estado === "activa" && (
 							<Button size="sm" onClick={() => router.push(`/polizas/anexos/nuevo?polizaId=${polizaId}`)}>
 								<Plus className="h-4 w-4" />
 								Nuevo Anexo
 							</Button>
 						)}
-						{(poliza.estado === "activa" || poliza.estado === "vencida") && (
+						{!soloLectura && (poliza.estado === "activa" || poliza.estado === "vencida") && (
 							<Button
 								variant="outline"
 								size="sm"
@@ -431,7 +449,7 @@ export default function PolizaDetallePage() {
 						{/* Rechazo de una póliza YA validada: solo admin. Devuelve la póliza
 						    al flujo de validación (rechazada → pendiente al editarse) para
 						    re-reportarla a la APS cuando un cambio real lo exige. */}
-						{isAdmin && poliza.estado === "activa" && (
+						{!soloLectura && isAdmin && poliza.estado === "activa" && (
 							<Button
 								variant="destructive"
 								size="sm"
@@ -445,6 +463,17 @@ export default function PolizaDetallePage() {
 					</div>
 				</div>
 			</div>
+
+			{/* Aviso de consulta fuera de alcance (#43) */}
+			{soloLectura && (
+				<div className="mb-5 flex items-start gap-2.5 rounded-lg border border-info/30 bg-info/10 px-4 py-3">
+					<Eye className="h-4 w-4 text-info shrink-0 mt-0.5" />
+					<p className="text-sm text-foreground">
+						Esta póliza pertenece a otro equipo. Se muestra completa para consulta —incluidos sus anexos—
+						pero no puedes editarla, registrar anexos o pagos, ni validarla.
+					</p>
+				</div>
+			)}
 
 			{/* ── Main Grid ──────────────────────────────────────── */}
 			<div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
@@ -2275,7 +2304,7 @@ export default function PolizaDetallePage() {
 												</span>
 											)}
 										</p>
-										{isAdmin && poliza.tipo_prima !== "sin_prima_propia" && (
+										{!soloLectura && isAdmin && poliza.tipo_prima !== "sin_prima_propia" && (
 											<button
 												type="button"
 												onClick={() => setShowAjustePrimaModal(true)}
@@ -2508,6 +2537,7 @@ export default function PolizaDetallePage() {
 					polizaId={polizaId}
 					moneda={poliza.moneda}
 					puedeValidar={autorizadoParaValidar}
+					soloLectura={soloLectura}
 					onAnexoValidado={cargarDetalle}
 				/>
 			</div>
