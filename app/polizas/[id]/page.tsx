@@ -322,22 +322,33 @@ export default function PolizaDetallePage() {
 	// Cuando hay anexos, las métricas usan el plan CONSOLIDADO (con descuentos de
 	// exclusión aplicados): las cuotas saldadas no suman al pendiente y el monto
 	// pendiente refleja el consolidado, no la prima bruta. Para el monto pagado se
-	// usa el monto original (el dinero que realmente entró, sin restarle descuento).
+	// usa el monto original (el dinero que realmente entró, sin restarle descuento);
+	// en una cuota saldada con abonos parciales, lo abonado sí es dinero recibido.
 	const cuotasStats = poliza.cuotas_consolidadas
 		? poliza.cuotas_consolidadas.map((c) => ({
 				estado: c.estado,
-				montoCobrable: Math.max(c.monto_consolidado, 0),
-				montoPagado: c.monto_original,
+				// Lo ya abonado no vuelve a ser cobrable (si no, se contaría a la vez
+				// como pagado y como pendiente).
+				montoCobrable: Math.max(c.monto_consolidado - (c.monto_abonado ?? 0), 0),
+				montoPagado: c.estado === "pagado" ? c.monto_original : (c.monto_abonado ?? 0),
 			}))
-		: poliza.pagos.map((p) => ({ estado: p.estado, montoCobrable: p.monto, montoPagado: p.monto }));
+		: poliza.pagos.map((p) => ({
+				estado: p.estado,
+				montoCobrable: p.monto,
+				montoPagado: p.estado === "pagado" ? p.monto : 0,
+			}));
 
 	const totalPagos = cuotasStats.filter((c) => c.estado !== "anulada").length;
 	const pagosPagados = cuotasStats.filter((c) => c.estado === "pagado").length;
+	// Saldadas por exclusión: no se cobran más, aunque no sean un pago.
+	const pagosSaldados = cuotasStats.filter((c) => c.estado === "saldado").length;
 	const pagosPendientes = cuotasStats.filter((c) => c.estado === "pendiente").length;
-	const montoPagado = cuotasStats.filter((c) => c.estado === "pagado").reduce((sum, c) => sum + c.montoPagado, 0);
+	const montoPagado = cuotasStats.filter((c) => c.estado !== "anulada").reduce((sum, c) => sum + c.montoPagado, 0);
 	const montoPendiente = cuotasStats
 		.filter((c) => c.estado !== "pagado" && c.estado !== "anulada" && c.estado !== "saldado")
 		.reduce((sum, c) => sum + c.montoCobrable, 0);
+	// Cuotas cerradas (pagadas + saldadas): base del avance de cobro.
+	const pagosCerrados = pagosPagados + pagosSaldados;
 
 	// Factor de prima neta (porcentaje) y % de comisión con que se calculó la MADRE.
 	// Se lee el valor EXACTO guardado; fallback a derivación para pólizas previas a
@@ -1972,7 +1983,11 @@ export default function PolizaDetallePage() {
 						</h2>
 
 						{/* Resumen de Pagos */}
-						<div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5 p-4 bg-muted/50 rounded-lg">
+						<div
+							className={`grid grid-cols-1 gap-4 mb-5 p-4 bg-muted/50 rounded-lg ${
+								pagosSaldados > 0 ? "sm:grid-cols-4" : "sm:grid-cols-3"
+							}`}
+						>
 							<div>
 								<label className="text-xs font-medium text-muted-foreground">Total Pagos</label>
 								<p className="text-lg font-semibold text-gray-900">{totalPagos}</p>
@@ -1981,6 +1996,12 @@ export default function PolizaDetallePage() {
 								<label className="text-xs font-medium text-muted-foreground">Pagados</label>
 								<p className="text-lg font-semibold text-green-600">{pagosPagados}</p>
 							</div>
+							{pagosSaldados > 0 && (
+								<div>
+									<label className="text-xs font-medium text-muted-foreground">Saldados</label>
+									<p className="text-lg font-semibold text-emerald-600">{pagosSaldados}</p>
+								</div>
+							)}
 							<div>
 								<label className="text-xs font-medium text-muted-foreground">Pendientes</label>
 								<p className="text-lg font-semibold text-yellow-600">{pagosPendientes}</p>
@@ -2065,6 +2086,13 @@ export default function PolizaDetallePage() {
 															}`}
 														>
 															{formatCurrency(cuota.monto_consolidado, poliza.moneda)}
+															{cuota.estado === "saldado" && (
+																<div className="text-xs font-normal text-emerald-700">
+																	{cuota.monto_abonado
+																		? `abonado ${formatCurrency(cuota.monto_abonado, poliza.moneda)} · saldada por exclusión`
+																		: "saldada por exclusión"}
+																</div>
+															)}
 														</td>
 														<td className="px-4 py-3 text-sm text-gray-600">
 															{cuota.fecha_pago ? formatDate(cuota.fecha_pago) : "-"}
@@ -2378,13 +2406,13 @@ export default function PolizaDetallePage() {
 										Cobro
 									</p>
 									<span className="text-xs font-semibold text-foreground">
-										{pagosPagados}/{totalPagos} cuotas
+										{pagosCerrados}/{totalPagos} cuotas
 									</span>
 								</div>
 								<div className="w-full bg-muted rounded-full h-1.5 mb-3">
 									<div
 										className="bg-emerald-500 h-1.5 rounded-full transition-all duration-500"
-										style={{ width: `${totalPagos > 0 ? (pagosPagados / totalPagos) * 100 : 0}%` }}
+										style={{ width: `${totalPagos > 0 ? (pagosCerrados / totalPagos) * 100 : 0}%` }}
 									/>
 								</div>
 								<div className="grid grid-cols-1 sm:grid-cols-2 gap-2">

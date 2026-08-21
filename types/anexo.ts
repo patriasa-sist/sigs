@@ -326,8 +326,10 @@ export type CuotaConsolidada = {
 	monto_original: number;
 	monto_ajustes: number; // suma de todos los deltas de anexos activos
 	monto_consolidado: number; // monto_original + monto_ajustes
+	monto_descuento?: number; // descuentos de exclusión (magnitud positiva)
+	monto_abonado?: number; // suma de abonos registrados sobre la cuota
 	fecha_vencimiento: string;
-	estado: string;
+	estado: string; // incluye "saldado" cuando descuento + abonos cubren el monto
 	fecha_pago?: string;
 	// Detalle de ajustes por anexo
 	ajustes: {

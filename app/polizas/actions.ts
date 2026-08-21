@@ -1443,18 +1443,53 @@ export async function obtenerDetallePoliza(polizaId: string) {
 					ajustesPorCuota.set(a.cuota_original_id, arr);
 				}
 
+				// Abonos de las cuotas madre con descuento de exclusión: una cuota
+				// puede quedar cubierta entre lo ya abonado y el descuento, y en ese
+				// caso ya no es cobrable (misma lectura que hace cobranzas). Solo se
+				// consultan los abonos de esas cuotas, no los de toda la póliza.
+				const cuotasConDescuento = [...ajustesPorCuota.entries()]
+					.filter(([, arr]) => arr.some((a) => Number(a.monto) < 0))
+					.map(([cuotaId]) => cuotaId);
+				const abonadoPorCuota = new Map<string, number>();
+				if (cuotasConDescuento.length > 0) {
+					const { data: abonos } = await db
+						.from("polizas_pagos_abonos")
+						.select("pago_id, monto")
+						.in("pago_id", cuotasConDescuento);
+					for (const ab of abonos || []) {
+						if (!ab.pago_id) continue;
+						abonadoPorCuota.set(ab.pago_id, (abonadoPorCuota.get(ab.pago_id) || 0) + Number(ab.monto));
+					}
+				}
+
 				// Cuotas de la póliza madre con descuentos de exclusión
 				cuotas_consolidadas = (pagos || []).map((cuota) => {
 					const cuotaAjustes = ajustesPorCuota.get(cuota.id) || [];
 					const montoAjustes = cuotaAjustes.reduce((sum, a) => sum + Number(a.monto), 0);
+					const montoOriginal = Number(cuota.monto);
+					// Descuento = solo los deltas negativos, en magnitud positiva (un
+					// ajuste positivo encarece la cuota, no ayuda a saldarla).
+					const descuento = cuotaAjustes.reduce((sum, a) => sum + Math.max(-Number(a.monto), 0), 0);
+					const abonado = abonadoPorCuota.get(cuota.id) || 0;
+					const estadoBase = cuota.estado || "pendiente";
+					// Una cuota ya pagada se respeta como tal (el descuento es no-op: el
+					// dinero entró y no se devuelve). El resto queda "saldada" cuando el
+					// descuento más lo abonado cubren el monto: no se cobra más.
+					const saldadaPorExclusion =
+						estadoBase !== "pagado" &&
+						estadoBase !== "anulada" &&
+						descuento > 0 &&
+						descuento + abonado >= montoOriginal - 0.01;
 					return {
 						cuota_original_id: cuota.id,
 						numero_cuota: cuota.numero_cuota,
-						monto_original: Number(cuota.monto),
+						monto_original: montoOriginal,
 						monto_ajustes: montoAjustes,
-						monto_consolidado: Number(cuota.monto) + montoAjustes,
+						monto_consolidado: montoOriginal + montoAjustes,
+						monto_descuento: descuento > 0 ? descuento : undefined,
+						monto_abonado: abonado > 0 ? abonado : undefined,
 						fecha_vencimiento: cuota.fecha_vencimiento,
-						estado: cuota.estado || "pendiente",
+						estado: saldadaPorExclusion ? "saldado" : estadoBase,
 						fecha_pago: cuota.fecha_pago || undefined,
 						ajustes: cuotaAjustes.map((a) => {
 							const info = a.polizas_anexos as unknown as {
