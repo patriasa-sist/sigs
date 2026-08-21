@@ -30,6 +30,32 @@ export function obtenerEstadoReal(cuota: CuotaPago): EstadoPago {
 }
 
 /**
+ * Saldo realmente cobrable de una cuota: el monto bruto menos los descuentos de
+ * exclusión activos y lo ya abonado. Es la misma regla que aplica la vista
+ * `cobranzas_polizas_resumen` y el plan consolidado del detalle de póliza.
+ *
+ * @param cuota - The quota object
+ * @param abonado - Sum of partial payments already registered on the quota
+ * @returns The remaining collectible balance (never negative)
+ */
+export function saldoCobrable(cuota: CuotaPago, abonado = 0): number {
+	return Math.max(cuota.monto - (cuota.monto_descuento || 0) - abonado, 0);
+}
+
+/**
+ * Cuota saldada: ya no tiene saldo por cobrar porque el descuento de exclusión
+ * más lo abonado cubren su monto. No es un pago (no entró todo ese dinero), pero
+ * tampoco se cobra ni se reclama.
+ *
+ * @param cuota - The quota object
+ * @param abonado - Sum of partial payments already registered on the quota
+ * @returns True if there is nothing left to collect
+ */
+export function cuotaSaldada(cuota: CuotaPago, abonado = 0): boolean {
+	return obtenerEstadoReal(cuota) !== "pagado" && saldoCobrable(cuota, abonado) <= 0.01;
+}
+
+/**
  * Count overdue quotas in a list
  *
  * @param cuotas - Array of quotas

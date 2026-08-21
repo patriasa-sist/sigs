@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { checkPermission, getDataScopeFilter } from "@/utils/auth/helpers";
 import { aplicarScopePolizas, polizaDentroDeScope } from "@/utils/auth/scopePolizas";
 import { obtenerEjecutivosFiltro } from "@/utils/ejecutivos";
-import { obtenerEstadoReal } from "@/utils/estadoCuota";
+import { cuotaSaldada, obtenerEstadoReal, saldoCobrable } from "@/utils/estadoCuota";
 import { obtenerDetalleRamo } from "@/utils/polizas/detalleRamo";
 import { resolverNombresCliente } from "@/utils/polizas/resolverNombresCliente";
 import type {
@@ -1141,29 +1141,54 @@ export async function obtenerDetallePolizaParaCuotas(polizaId: string): Promise<
 		// (madre y de inclusión). Una cuota cuyo descuento cubre todo su monto queda
 		// "saldada": no se cobra y no cuenta como dinero recibido.
 		const descuentos = await cargarDescuentosExclusion(supabase, polizaId);
+		// Abonos ya registrados por cuota. Hacen falta acá (y no solo en el historial
+		// de abonos, más abajo) porque lo abonado reduce el saldo cobrable igual que
+		// un descuento: sin esto una cuota con abono parcial se seguía sumando por su
+		// monto bruto al pendiente.
+		const abonadoPorCuota = new Map<string, number>();
+		{
+			const pagoIds = (poliza.cuotas || []).map((c: CuotaPago) => c.id);
+			if (pagoIds.length > 0) {
+				const { data: abonadoRows } = await supabase
+					.from("polizas_pagos_abonos")
+					.select("pago_id, monto")
+					.in("pago_id", pagoIds);
+				for (const r of abonadoRows || []) {
+					if (!r.pago_id) continue;
+					abonadoPorCuota.set(r.pago_id, (abonadoPorCuota.get(r.pago_id) || 0) + Number(r.monto));
+				}
+			}
+		}
 		const cuotas = (poliza.cuotas || []).map((c: CuotaPago) => {
 			const desc = descuentos.madre.get(c.id) || 0;
 			return desc > 0 ? { ...c, monto_descuento: desc } : c;
 		}) as CuotaPago[];
-		// Saldada por exclusión cuando el descuento cubre el monto bruto (coherente
-		// con el cálculo de pendiente, que no descuenta abonos parciales).
-		const saldadaPorExclusion = (c: CuotaPago) => (c.monto_descuento || 0) >= c.monto - 0.01;
+		// Saldo y estado saldado con la misma regla que la vista
+		// `cobranzas_polizas_resumen`: descuento de exclusión + abonos vs monto bruto.
+		const saldoDe = (c: CuotaPago) => saldoCobrable(c, abonadoPorCuota.get(c.id) || 0);
+		const saldada = (c: CuotaPago) => cuotaSaldada(c, abonadoPorCuota.get(c.id) || 0);
 		const polizaAnulada = poliza.estado === "anulada";
 		const todayStr = new Date().toISOString().split("T")[0];
-		const total_pagado = cuotas
-			.filter((c: CuotaPago) => c.estado === "pagado")
-			.reduce((sum: number, c: CuotaPago) => sum + c.monto, 0);
+		// Dinero efectivamente recibido: el monto de las cuotas pagadas y, en las
+		// demás, lo abonado hasta ahora.
+		const total_pagado = cuotas.reduce(
+			(sum: number, c: CuotaPago) =>
+				sum + (obtenerEstadoReal(c) === "pagado" ? c.monto : abonadoPorCuota.get(c.id) || 0),
+			0,
+		);
 		let total_pendiente = polizaAnulada
 			? 0
 			: cuotas
-					.filter((c: CuotaPago) => c.estado !== "pagado" && c.estado !== "anulada")
-					.reduce((sum: number, c: CuotaPago) => sum + Math.max(c.monto - (c.monto_descuento || 0), 0), 0);
+					.filter(
+						(c: CuotaPago) => obtenerEstadoReal(c) !== "pagado" && c.estado !== "anulada" && !saldada(c),
+					)
+					.reduce((sum: number, c: CuotaPago) => sum + saldoDe(c), 0);
 		const cuotas_pendientes = polizaAnulada
 			? 0
-			: cuotas.filter((c: CuotaPago) => c.estado === "pendiente" && !saldadaPorExclusion(c)).length;
+			: cuotas.filter((c: CuotaPago) => c.estado === "pendiente" && !saldada(c)).length;
 		const cuotas_vencidas = polizaAnulada
 			? 0
-			: cuotas.filter((c: CuotaPago) => obtenerEstadoReal(c) === "vencido" && !saldadaPorExclusion(c)).length;
+			: cuotas.filter((c: CuotaPago) => obtenerEstadoReal(c) === "vencido" && !saldada(c)).length;
 		const proxima_fecha_vencimiento = polizaAnulada
 			? null
 			: (cuotas
@@ -1171,7 +1196,7 @@ export async function obtenerDetallePolizaParaCuotas(polizaId: string): Promise<
 						(c: CuotaPago) =>
 							obtenerEstadoReal(c) !== "pagado" &&
 							obtenerEstadoReal(c) !== "anulada" &&
-							!saldadaPorExclusion(c) &&
+							!saldada(c) &&
 							c.fecha_vencimiento >= todayStr,
 					)
 					.sort((a, b) => a.fecha_vencimiento.localeCompare(b.fecha_vencimiento))[0]?.fecha_vencimiento ??
@@ -1810,8 +1835,13 @@ export async function prepararDatosAvisoMora(polizaId: string): Promise<Preparar
 
 		const poliza = polizaResponse.data;
 
-		// Filter overdue quotas
-		const cuotasVencidas = poliza.cuotas.filter((c) => obtenerEstadoReal(c) === "vencido");
+		// Filter overdue quotas. Una cuota saldada (descuento de exclusión + abonos
+		// cubren su monto) ya no se debe: no se reclama ni suma al adeudado.
+		const abonadoDe = (c: CuotaPago) => (poliza.abonos_por_cuota?.[c.id] ?? []).reduce((s, a) => s + a.monto, 0);
+		const saldoDe = (c: CuotaPago) => saldoCobrable(c, abonadoDe(c));
+		const cuotasVencidas = poliza.cuotas.filter(
+			(c) => obtenerEstadoReal(c) === "vencido" && !cuotaSaldada(c, abonadoDe(c)),
+		);
 
 		// Validate minimum 3 overdue quotas
 		if (cuotasVencidas.length < 3) {
@@ -1832,6 +1862,9 @@ export async function prepararDatosAvisoMora(polizaId: string): Promise<Preparar
 
 			return {
 				...cuota,
+				// El aviso reclama el saldo real, no el monto bruto: lo abonado y los
+				// descuentos de exclusión ya no se deben.
+				monto: saldoDe(cuota),
 				dias_mora: diasMora,
 			};
 		});

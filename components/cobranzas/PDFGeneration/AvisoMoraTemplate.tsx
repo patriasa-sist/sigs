@@ -6,6 +6,7 @@ import { PDF_ASSETS } from "@/utils/pdfAssets";
 import { ExecutiveFooter } from "@/components/vencimientos/PDFGeneration/ExecutiveFooter";
 import { resolverFirmante, type Firmante } from "@/utils/executiveHelper";
 import { cleanPhoneNumber } from "@/utils/whatsapp";
+import { cuotaSaldada } from "@/utils/estadoCuota";
 
 // Registrar fuentes - Cambria (igual que BaseTemplate)
 Font.register({
@@ -283,10 +284,14 @@ export const AvisoMoraTemplate: React.FC<AvisoMoraTemplateProps> = ({ avisoData,
 		return `${day} de ${month} del ${year}`;
 	};
 
-	// Determinar si hay cuotas próximas a vencer (para mostrar en la tabla)
+	// Determinar si hay cuotas próximas a vencer (para mostrar en la tabla).
+	// Una cuota saldada (descuento de exclusión + abonos cubren su monto) sigue
+	// figurando como "pendiente" en la BD pero ya no se cobra: no se muestra.
 	const cuotasProximas = poliza.cuotas.filter((c) => {
 		const estado = c.estado_real || c.estado;
-		return estado === "pendiente";
+		if (estado !== "pendiente") return false;
+		const abonado = (poliza.abonos_por_cuota?.[c.id] ?? []).reduce((s, a) => s + a.monto, 0);
+		return !cuotaSaldada(c, abonado);
 	});
 
 	// Combinar cuotas vencidas y próximas para la tabla
