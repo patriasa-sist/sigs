@@ -17,9 +17,6 @@ import type {
 	AnexoFormState,
 	PolizaResumenAnexo,
 	DatosPolizaParaAnexo,
-	CuotaConsolidada,
-	CuotaVigenciaCorrida,
-	CuotaAnexoPropia,
 	AnexoResumen,
 	PlanPagoInclusion,
 	AnexoItemChange,
@@ -1568,158 +1565,7 @@ export async function obtenerAnexosPoliza(polizaId: string): Promise<{
 }
 
 // ============================================
-// 5. OBTENER CUOTAS CONSOLIDADAS
-// ============================================
-
-export async function obtenerCuotasConsolidadas(polizaId: string): Promise<{
-	success: boolean;
-	cuotas?: CuotaConsolidada[];
-	cuotas_inclusion?: CuotaAnexoPropia[];
-	vigencia_corrida?: CuotaVigenciaCorrida[];
-	error?: string;
-}> {
-	const supabase = await createClient();
-
-	try {
-		const {
-			data: { user },
-		} = await supabase.auth.getUser();
-		if (!user) return { success: false, error: "No autenticado" };
-
-		const [cuotasResult, anexosPagosResult] = await Promise.all([
-			supabase
-				.from("polizas_pagos")
-				.select("id, numero_cuota, monto, fecha_vencimiento, estado, fecha_pago")
-				.eq("poliza_id", polizaId)
-				.order("numero_cuota", { ascending: true }),
-			supabase
-				.from("polizas_anexos_pagos")
-				.select(
-					`
-					id, anexo_id, cuota_original_id, cuota_anexo_pago_id, tipo, numero_cuota,
-					monto, direccion, fecha_vencimiento, estado, observaciones,
-					polizas_anexos!inner (id, numero_anexo, tipo_anexo, estado)
-				`,
-				)
-				.eq("polizas_anexos.poliza_id", polizaId)
-				.eq("polizas_anexos.estado", "activo"),
-		]);
-
-		const cuotasOriginales = cuotasResult.data || [];
-		const pagosAnexos = anexosPagosResult.data || [];
-
-		// Separar por tipo
-		const ajustes = pagosAnexos.filter((p) => p.tipo === "ajuste");
-		const cuotasPropias = pagosAnexos.filter((p) => p.tipo === "cuota_propia");
-		const vigenciaCorrida = pagosAnexos.filter((p) => p.tipo === "vigencia_corrida");
-
-		// Agrupar ajustes de exclusión: por cuota madre (cuota_original_id) y por
-		// cuota de inclusión (cuota_anexo_pago_id).
-		const ajustesPorCuota = new Map<string, typeof ajustes>();
-		const descuentoPorInclusion = new Map<string, number>();
-		for (const ajuste of ajustes) {
-			if (ajuste.cuota_original_id) {
-				const existing = ajustesPorCuota.get(ajuste.cuota_original_id) || [];
-				existing.push(ajuste);
-				ajustesPorCuota.set(ajuste.cuota_original_id, existing);
-			} else if (ajuste.cuota_anexo_pago_id && Number(ajuste.monto) < 0) {
-				// Solo ajustes negativos descuentan una cuota de inclusión.
-				descuentoPorInclusion.set(
-					ajuste.cuota_anexo_pago_id,
-					(descuentoPorInclusion.get(ajuste.cuota_anexo_pago_id) || 0) + -Number(ajuste.monto),
-				);
-			}
-		}
-
-		// Cuotas de la póliza madre con descuentos de exclusión aplicados
-		const cuotasConsolidadas: CuotaConsolidada[] = cuotasOriginales.map((cuota) => {
-			const ajustesCuota = ajustesPorCuota.get(cuota.id) || [];
-			const montoAjustes = ajustesCuota.reduce((sum, a) => sum + Number(a.monto), 0);
-			const montoConsolidado = Number(cuota.monto) + montoAjustes;
-			const estadoBase = cuota.estado || "pendiente";
-			// Si el descuento de exclusión deja el consolidado en 0 y la cuota no
-			// estaba pagada/anulada, queda "saldado" (consistente con cobranzas).
-			const estado =
-				estadoBase !== "pagado" && estadoBase !== "anulada" && montoAjustes < 0 && montoConsolidado <= 0.01
-					? "saldado"
-					: estadoBase;
-			return {
-				cuota_original_id: cuota.id,
-				numero_cuota: cuota.numero_cuota,
-				monto_original: Number(cuota.monto),
-				monto_ajustes: montoAjustes,
-				monto_consolidado: montoConsolidado,
-				fecha_vencimiento: cuota.fecha_vencimiento,
-				estado,
-				fecha_pago: cuota.fecha_pago || undefined,
-				ajustes: ajustesCuota.map((a) => {
-					const info = a.polizas_anexos as unknown as {
-						id: string;
-						numero_anexo: string;
-						tipo_anexo: string;
-					};
-					return {
-						anexo_id: info.id,
-						numero_anexo: info.numero_anexo,
-						tipo_anexo: info.tipo_anexo as TipoAnexo,
-						monto_delta: Number(a.monto),
-					};
-				}),
-			};
-		});
-
-		// Cuotas propias de anexos de inclusión (independientes de la póliza madre),
-		// con los descuentos de exclusión que las apuntan ya aplicados.
-		const inclusion: CuotaAnexoPropia[] = cuotasPropias
-			.map((p) => {
-				const info = p.polizas_anexos as unknown as { id: string; numero_anexo: string };
-				const descuento = descuentoPorInclusion.get(p.id) || 0;
-				const estadoBase = p.estado || "pendiente";
-				// Saldada por exclusión si el descuento cubre la cuota y no estaba pagada.
-				const estado =
-					estadoBase !== "pagado" && estadoBase !== "anulada" && descuento >= Number(p.monto) - 0.01
-						? "saldado"
-						: estadoBase;
-				return {
-					id: p.id,
-					anexo_id: info.id,
-					numero_anexo: info.numero_anexo,
-					numero_cuota: p.numero_cuota ?? 0,
-					monto: Number(p.monto),
-					monto_descuento: descuento > 0 ? descuento : undefined,
-					fecha_vencimiento: p.fecha_vencimiento || "",
-					estado,
-					observaciones: p.observaciones || undefined,
-				};
-			})
-			.sort((a, b) => {
-				if (a.numero_anexo !== b.numero_anexo) return a.numero_anexo.localeCompare(b.numero_anexo);
-				return a.numero_cuota - b.numero_cuota;
-			});
-
-		// Vigencia corrida de anulaciones (monto en positivo + dirección)
-		const vc: CuotaVigenciaCorrida[] = vigenciaCorrida.map((p) => {
-			const info = p.polizas_anexos as unknown as { id: string; numero_anexo: string };
-			return {
-				anexo_id: info.id,
-				numero_anexo: info.numero_anexo,
-				monto: Math.abs(Number(p.monto)),
-				direccion: ((p.direccion as DireccionVigenciaCorrida | null) ?? "cobro") as DireccionVigenciaCorrida,
-				fecha_vencimiento: p.fecha_vencimiento || "",
-				estado: p.estado || "pendiente",
-				observaciones: p.observaciones || undefined,
-			};
-		});
-
-		return { success: true, cuotas: cuotasConsolidadas, cuotas_inclusion: inclusion, vigencia_corrida: vc };
-	} catch (error) {
-		console.error("Error obteniendo cuotas consolidadas:", error);
-		return { success: false, error: error instanceof Error ? error.message : "Error desconocido" };
-	}
-}
-
-// ============================================
-// 6. OBTENER DETALLE COMPLETO DE UN ANEXO
+// 5. OBTENER DETALLE COMPLETO DE UN ANEXO
 // ============================================
 
 export type AnexoDetalleItem = {
@@ -2079,7 +1925,7 @@ async function cargarItemsAnexoRamo(
 }
 
 // ============================================
-// 7. EDICIÓN DE ANEXOS
+// 6. EDICIÓN DE ANEXOS
 // Pendientes/rechazados: toda edición vuelve a pendiente.
 // Activos: revalidación condicional — solo si cambian los pagos
 // (cuotas/montos) vuelve a pendiente; lo cosmético preserva la validación.

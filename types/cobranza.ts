@@ -279,14 +279,6 @@ export type CobranzaServerResponse<T = void> = {
 };
 
 /**
- * Respuesta de obtenerPolizasConPendientes()
- */
-export type ObtenerPolizasConPagosResponse = CobranzaServerResponse<{
-	polizas: PolizaConPagos[];
-	stats: CobranzaStats;
-}>;
-
-/**
  * Respuesta de registrarPago()
  * Incluye información sobre el tipo de pago y posible exceso generado
  */
